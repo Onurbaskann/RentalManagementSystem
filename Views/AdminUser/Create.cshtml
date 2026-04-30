@@ -1,0 +1,91 @@
+@model KiraTakip.Models.ViewModels.KullaniciEkleViewModel
+@{
+    ViewData["Title"] = "Yeni Kullanıcı";
+    string[] roller = ViewBag.Roller;
+}
+
+<div class="page-header">
+    <div>
+        <a href="/Admin/Kullanicilar" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">
+            ← Kullanıcı Yönetimi
+        </a>
+        <div class="page-title">Yeni Kullanıcı</div>
+    </div>
+</div>
+
+<div style="max-width:520px;">
+    <div class="card">
+        <form method="post" action="/Admin/Kullanicilar/Ekle" x-data="{ seciliRol: '@Model.Rol' }">
+            @Html.AntiForgeryToken()
+
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div asp-validation-summary="All" style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 14px;border-radius:8px;margin-bottom:18px;font-size:13px;"></div>
+            }
+
+            <div class="form-group">
+                <label class="form-label">Ad Soyad</label>
+                <input asp-for="AdSoyad" class="form-control" placeholder="Ad Soyad" />
+                <span asp-validation-for="AdSoyad" class="form-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">E-posta</label>
+                <input asp-for="Email" type="email" class="form-control" placeholder="ornek@kiratakip.local" />
+                <span asp-validation-for="Email" class="form-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Şifre</label>
+                <input asp-for="Password" type="password" class="form-control" placeholder="Şifre" />
+                <span asp-validation-for="Password" class="form-error"></span>
+                <div class="form-hint">En az 6 karakter, büyük harf ve rakam içermelidir.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Rol</label>
+                <select asp-for="Rol" class="form-control" x-model="seciliRol">
+                    <option value="">— Rol Seçin —</option>
+                    @foreach (var r in roller)
+                    {
+                        string label = r == "Goruntuleyici" ? "Görüntüleyici" : r;
+                        <option value="@r">@label</option>
+                    }
+                </select>
+                <span asp-validation-for="Rol" class="form-error"></span>
+            </div>
+
+            <div class="form-group" x-show="seciliRol === 'Goruntuleyici'" x-cloak style="background:var(--color-bg);padding:14px;border-radius:8px;border:1px solid var(--color-border);margin-top:16px;">
+                <label class="form-label" style="margin-bottom:10px;">Taşınmaz Görüntüleme Yetkileri</label>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    @if(Model.Tasinmazlar != null && Model.Tasinmazlar.Any())
+                    {
+                        @for (int i = 0; i < Model.Tasinmazlar.Count; i++)
+                        {
+                            <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer;">
+                                <input type="checkbox" name="SelectedTasinmazIds" value="@Model.Tasinmazlar[i].TasinmazId" @(Model.Tasinmazlar[i].Selected ? "checked" : "") style="width:16px;height:16px;accent-color:var(--color-primary);" />
+                                <div>
+                                    <span style="font-weight:600;color:var(--color-text);">@Model.Tasinmazlar[i].Ad</span>
+                                    <span style="font-size:12px;color:var(--color-muted);margin-left:4px;">(@Model.Tasinmazlar[i].Konum)</span>
+                                </div>
+                            </label>
+                        }
+                    }
+                    else
+                    {
+                        <div style="font-size:12px;color:var(--color-muted);">Sistemde tanımlı taşınmaz bulunmuyor.</div>
+                    }
+                </div>
+                <div class="form-hint" style="margin-top:8px;">Kullanıcı yalnızca seçilen taşınmazları ve bunlara bağlı bilgileri görebilir.</div>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:24px;">
+                <button type="submit" class="btn btn-primary">Kullanıcı Oluştur</button>
+                <a href="/Admin/Kullanicilar" class="btn btn-secondary">İptal</a>
+            </div>
+        </form>
+    </div>
+</div>
+<style>
+    [x-cloak] { display: none !important; }
+</style>

@@ -1,0 +1,82 @@
+@model List<KiraTakip.Models.ViewModels.KullaniciListeViewModel>
+@{
+    ViewData["Title"] = "Kullanıcı Yönetimi";
+}
+
+@if (TempData["Success"] != null)
+{
+    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">
+        ✓ @TempData["Success"]
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">
+        ✕ @TempData["Error"]
+    </div>
+}
+
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+        <div class="page-title">Kullanıcı Yönetimi</div>
+        <div class="page-subtitle">@Model.Count kayıtlı kullanıcı</div>
+    </div>
+    <a href="/Admin/Kullanicilar/Ekle" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Yeni Kullanıcı
+    </a>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Ad Soyad</th>
+                    <th>E-posta</th>
+                    <th>Rol</th>
+                    <th>Durum</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in Model)
+                {
+                    <tr>
+                        <td style="font-weight:600;">@u.AdSoyad</td>
+                        <td style="font-size:13px;color:var(--color-muted);">@u.Email</td>
+                        <td>
+                            @{
+                                string rolCls = u.Rol switch {
+                                    "Admin" => "badge-kurumsal",
+                                    "Yonetici" => "badge-kirali",
+                                    _ => "badge-bos"
+                                };
+                                string rolLabel = u.Rol switch {
+                                    "Goruntuleyici" => "Görüntüleyici",
+                                    _ => u.Rol
+                                };
+                            }
+                            <span class="badge @rolCls">@rolLabel</span>
+                        </td>
+                        <td>
+                            @if (u.IsActive)
+                            { <span class="badge badge-kirali">Aktif</span> }
+                            else
+                            { <span class="badge badge-gecmis">Pasif</span> }
+                        </td>
+                        <td style="display:flex;gap:6px;justify-content:flex-end;">
+                            <a href="/Admin/Kullanicilar/Duzenle/@u.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                            <form method="post" action="/Admin/Kullanicilar/DurumDegistir/@u.Id" style="display:inline;">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm @(u.IsActive ? "btn-danger" : "btn-amber")">
+                                    @(u.IsActive ? "Pasif Yap" : "Aktif Yap")
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,163 @@
+@model KiraTakip.Models.ViewModels.KiraciFormViewModel
+@using KiraTakip.Models
+@{
+    ViewData["Title"] = "Kiracı Düzenle";
+    string initTur = (Model.KiraciTuru?.ToString()) ?? "Gercek";
+}
+
+<div class="page-header">
+    <a href="/Kiraci/Detay/@Model.Id" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-block;margin-bottom:8px;">← Kiracı Detay</a>
+    <div class="page-title">Kiracı Düzenle</div>
+    <div class="page-subtitle">@Model.KiraciNo</div>
+</div>
+
+<div style="max-width:600px;">
+    <form asp-action="Duzenle" asp-route-id="@Model.Id" method="post" x-data="kiraciForm('@initTur')">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div asp-validation-summary="All" style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 14px;border-radius:8px;margin-bottom:18px;font-size:13px;"></div>
+        }
+
+        <!-- Temel Bilgiler -->
+        <div class="card" style="margin-bottom:16px;">
+            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Temel Bilgiler</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Kiracı No *</label>
+                    <input asp-for="KiraciNo" class="form-control" style="font-family:'JetBrains Mono',monospace;" />
+                    <span asp-validation-for="KiraciNo" class="form-error"></span>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Kiracı Türü *</label>
+                    <select asp-for="KiraciTuru" class="form-control"
+                        x-model="kiraciTuru"
+                        @@change="kiraciTuruDegisti()">
+                        <option value="">— Seçin —</option>
+                        <option value="1">Gerçek Kişi</option>
+                        <option value="2">Tüzel Kişi</option>
+                    </select>
+                    <span asp-validation-for="KiraciTuru" class="form-error"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gerçek kişi alanları -->
+        <div class="card" style="margin-bottom:16px;" x-show="kiraciTuru === '1'" x-cloak>
+            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Gerçek Kişi Bilgileri</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div class="form-group">
+                    <label class="form-label">Ad *</label>
+                    <input name="GercekAd" id="input_gercek_ad_edit" class="form-control" value="@Model.GercekAd" />
+                    <span class="form-error">@Html.ValidationMessage("GercekAd")</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Soyad *</label>
+                    <input name="Soyad" id="Soyad" class="form-control" value="@Model.Soyad" />
+                    <span class="form-error">@Html.ValidationMessage("Soyad")</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ünvan</label>
+                    <input asp-for="Unvan" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">TC Kimlik No</label>
+                    <input asp-for="TcKimlikNo" class="form-control" maxlength="11" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Pasaport No</label>
+                    <input asp-for="PasaportNo" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Doğum Tarihi</label>
+                    <input asp-for="DogumTarihi" type="date" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Doğum Yeri</label>
+                    <input asp-for="DogumYeri" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Anne Adı</label>
+                    <input asp-for="AnneAdi" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Baba Adı</label>
+                    <input asp-for="BabaAdi" class="form-control" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Tüzel kişi alanları -->
+        <div class="card" style="margin-bottom:16px;" x-show="kiraciTuru === '2'" x-cloak>
+            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Tüzel Kişi Bilgileri</div>
+            
+            <div class="form-group" style="margin-bottom:14px;">
+                <label class="form-label">Firma / Kurum Adı *</label>
+                <input name="TuzelAd" id="input_tuzel_ad_edit" class="form-control" value="@Model.TuzelAd" />
+                <span class="form-error">@Html.ValidationMessage("TuzelAd")</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div class="form-group">
+                    <label class="form-label">Vergi No</label>
+                    <input asp-for="VergiNo" class="form-control" maxlength="10" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Vergi Dairesi</label>
+                    <input asp-for="VergiDairesi" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ticaret Sicil No</label>
+                    <input asp-for="TicaretSicilNo" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mersis No</label>
+                    <input asp-for="MersisNo" class="form-control" />
+                </div>
+            </div>
+        </div>
+
+        <!-- İletişim -->
+        <div class="card" style="margin-bottom:16px;">
+            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">İletişim Bilgileri</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div class="form-group">
+                    <label class="form-label">Telefon *</label>
+                    <input asp-for="Telefon" class="form-control" />
+                    <span asp-validation-for="Telefon" class="form-error"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">E-posta *</label>
+                    <input asp-for="Email" type="email" class="form-control" />
+                    <span asp-validation-for="Email" class="form-error"></span>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Adres</label>
+                <textarea asp-for="Adres" class="form-control" rows="2"></textarea>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:12px;">
+            <button type="submit" class="btn btn-primary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Kaydet
+            </button>
+            <a href="/Kiraci/Detay/@Model.Id" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+function kiraciForm(initTur) {
+    return {
+        kiraciTuru: initTur || 'Gercek',
+        kiraciTuruDegisti() {}
+    };
+}
+</script>
+<style>[x-cloak]{display:none!important;}</style>
+}

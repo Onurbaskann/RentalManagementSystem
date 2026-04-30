@@ -1,0 +1,113 @@
+@using Microsoft.AspNetCore.Identity
+@using KiraTakip.Models
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    ApplicationUser? currentUser = null;
+    string userInitials = "KT";
+    string userAdSoyad = "Demo Kullanıcı";
+    string userRole = "Kullanıcı";
+
+    if (SignInManager.IsSignedIn(User))
+    {
+        currentUser = await UserManager.GetUserAsync(User);
+        if (currentUser != null)
+        {
+            userAdSoyad = currentUser.AdSoyad ?? currentUser.Email ?? "Kullanıcı";
+            userInitials = string.Join("", userAdSoyad.Split(' ')
+                .Where(p => p.Length > 0).Take(2).Select(p => char.ToUpper(p[0])));
+
+            var roles = await UserManager.GetRolesAsync(currentUser);
+            userRole = roles.FirstOrDefault() switch {
+                "Admin" => "Yönetici",
+                "Yonetici" => "Yönetici",
+                "Goruntuleyici" => "Görüntüleyici",
+                _ => "Kullanıcı"
+            };
+        }
+    }
+}
+
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-logo">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="28" height="28" rx="8" style="fill:var(--color-primary)"/>
+                <path d="M7 20V11L14 7L21 11V20H17V15H11V20H7Z" fill="white"/>
+            </svg>
+        </div>
+        <div>
+            <div class="sidebar-title">Kira Takip</div>
+            <div class="sidebar-subtitle">Yönetim Paneli</div>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a href="/" class="nav-item @(currentController == "Home" ? "nav-item-active" : "")">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Anasayfa
+        </a>
+        <a href="/Tasinmaz" class="nav-item @(currentController == "Tasinmaz" ? "nav-item-active" : "")">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            Taşınmazlar
+        </a>
+        <a href="/Kiraci" class="nav-item @(currentController == "Kiraci" ? "nav-item-active" : "")">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Kiracılar
+        </a>
+        <a href="/Sozlesme" class="nav-item @(currentController == "Sozlesme" ? "nav-item-active" : "")">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Sözleşmeler
+        </a>
+
+        @if (User.IsInRole("Admin"))
+        {
+            <div class="nav-separator"></div>
+            <a href="/Admin/Kullanicilar" class="nav-item @(currentController == "AdminUser" ? "nav-item-active" : "")">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                Kullanıcı Yönetimi
+            </a>
+        }
+
+        @if (User.IsInRole("Admin") || User.IsInRole("Yonetici"))
+        {
+            <div class="nav-separator"></div>
+            <div class="nav-group-label">Hızlı Ekle</div>
+            <a href="/Tasinmaz/Ekle" class="nav-item nav-item-sub">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Taşınmaz Ekle
+            </a>
+            <a href="/Kiraci/Ekle" class="nav-item nav-item-sub">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Kiracı Ekle
+            </a>
+            <a href="/Sozlesme/Ekle" class="nav-item nav-item-sub">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Sözleşme Ekle
+            </a>
+        }
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="sidebar-user">
+            <div class="sidebar-avatar">@userInitials</div>
+            <div style="flex:1;min-width:0;">
+                <div class="sidebar-user-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@userAdSoyad</div>
+                <div class="sidebar-user-role">@userRole</div>
+            </div>
+            <form asp-controller="Account" asp-action="Logout" method="post" style="flex-shrink:0;">
+                @Html.AntiForgeryToken()
+                <button type="submit" title="Çıkış Yap"
+                    style="background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;color:var(--color-muted);display:flex;align-items:center;"
+                    onmouseover="this.style.background='var(--color-bg)'" onmouseout="this.style.background='none'">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                </button>
+            </form>
+        </div>
+    </div>
+</aside>

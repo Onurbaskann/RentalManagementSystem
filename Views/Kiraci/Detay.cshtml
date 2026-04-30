@@ -1,0 +1,199 @@
+@model KiraTakip.Models.ViewModels.KiraciDetayViewModel
+@using KiraTakip.Models
+@using KiraTakip.Services
+@inject IstatistikService Istatistik
+@{
+    ViewData["Title"] = Model.Kiraci.GosterimAdi;
+    var k = Model.Kiraci;
+    bool canEdit = User.IsInRole("Admin") || User.IsInRole("Yonetici");
+    bool isTuzel = k.KiraciTuru == KiraciTuru.Tuzel;
+}
+
+@if (TempData["Success"] != null)
+{
+    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">✓ @TempData["Success"]</div>
+}
+
+<div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;">
+    <div>
+        <a href="/Kiraci" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;margin-bottom:8px;display:inline-block;">← Kiracılar</a>
+        <div style="display:flex;align-items:center;gap:10px;">
+            <div class="page-title">@k.GosterimAdi</div>
+            <span style="font-size:12px;color:var(--color-muted);font-family:'JetBrains Mono',monospace;">@k.KiraciNo</span>
+        </div>
+        <div style="margin-top:6px;display:flex;gap:6px;">
+            @if (isTuzel)
+            { <span class="badge badge-kurumsal">Tüzel Kişi</span> }
+            else
+            { <span class="badge badge-bireysel">Gerçek Kişi</span> }
+        </div>
+    </div>
+    @if (canEdit)
+    {
+        <div style="display:flex;gap:8px;">
+            <a href="/Kiraci/Duzenle/@k.Id" class="btn btn-secondary">Düzenle</a>
+            <a href="/Sozlesme/Ekle" class="btn btn-primary">Sözleşme Ekle</a>
+        </div>
+    }
+</div>
+
+<div class="three-col" style="margin-bottom:20px;">
+    <!-- İletişim -->
+    <div class="card">
+        <div class="card-title">İletişim</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--color-muted);flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.1 19.79 19.79 0 0 1 1.61 4.59 2 2 0 0 1 3.58 2.41h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.52 17z"/></svg>
+                <span style="font-size:13.5px;">@k.Telefon</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--color-muted);flex-shrink:0;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                <span style="font-size:13.5px;">@k.Email</span>
+            </div>
+            @if (!string.IsNullOrEmpty(k.Adres))
+            {
+                <div style="display:flex;align-items:flex-start;gap:8px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--color-muted);flex-shrink:0;margin-top:2px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span style="font-size:13.5px;">@k.Adres</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Kimlik Bilgisi -->
+    <div class="card">
+        <div class="card-title">@(isTuzel ? "Kurum Bilgisi" : "Kimlik Bilgisi")</div>
+        <div style="margin-top:8px;display:flex;flex-direction:column;gap:10px;">
+            @if (isTuzel)
+            {
+                @if (!string.IsNullOrEmpty(k.VergiNo))
+                {
+                    <div>
+                        <div style="font-size:11.5px;color:var(--color-muted);margin-bottom:2px;">Vergi No</div>
+                        <div style="font-size:14px;font-weight:600;font-family:'JetBrains Mono',monospace;">@k.VergiNo</div>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(k.VergiDairesi))
+                {
+                    <div>
+                        <div style="font-size:11.5px;color:var(--color-muted);margin-bottom:2px;">Vergi Dairesi</div>
+                        <div style="font-size:14px;font-weight:500;">@k.VergiDairesi</div>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(k.TicaretSicilNo))
+                {
+                    <div>
+                        <div style="font-size:11.5px;color:var(--color-muted);margin-bottom:2px;">Ticaret Sicil No</div>
+                        <div style="font-size:14px;font-weight:500;font-family:'JetBrains Mono',monospace;">@k.TicaretSicilNo</div>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(k.MersisNo))
+                {
+                    <div>
+                        <div style="font-size:11.5px;color:var(--color-muted);margin-bottom:2px;">Mersis No</div>
+                        <div style="font-size:13px;font-family:'JetBrains Mono',monospace;">@k.MersisNo</div>
+                    </div>
+                }
+            }
+            else
+            {
+                @if (!string.IsNullOrEmpty(k.TcKimlikNo))
+                {
+                    <div>
+                        <div style="font-size:11.5px;color:var(--color-muted);margin-bottom:2px;">TC Kimlik No</div>
+                        <div style="font-size:15px;font-weight:600;letter-spacing:0.08em;font-family:'JetBrains Mono',monospace;">@k.TcKimlikNo</div>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(k.Unvan))
+                {
+                    <div>
+                        <div style="font-size:11.5px;color:var(--color-muted);margin-bottom:2px;">Ünvan</div>
+                        <div style="font-size:14px;font-weight:500;">@k.Unvan</div>
+                    </div>
+                }
+                @if (k.DogumTarihi.HasValue)
+                {
+                    <div>
+                        <div style="font-size:11.5px;color:var(--color-muted);margin-bottom:2px;">Doğum Tarihi</div>
+                        <div style="font-size:14px;font-weight:500;">@k.DogumTarihi.Value.ToString("dd.MM.yyyy")</div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- Sözleşme Özeti -->
+    <div class="card">
+        <div class="card-title">Sözleşme Özeti</div>
+        @{
+            var aktifler = Model.Sozlesmeler.Where(Istatistik.Aktif).ToList();
+            var toplamAylik = aktifler.Sum(Istatistik.AylikBedel);
+        }
+        <div class="card-value" style="font-size:22px;margin-top:8px;">@aktifler.Count</div>
+        <div class="card-sub">aktif sözleşme</div>
+        @if (toplamAylik > 0)
+        {
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--color-border);font-size:13.5px;font-weight:600;color:var(--color-primary);">
+                @toplamAylik.ToString("N0") ₺/ay
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Sözleşmeler tablosu -->
+<div class="card" style="padding:0;overflow:hidden;">
+    <div style="padding:18px 20px 14px;border-bottom:1px solid var(--color-border);">
+        <div class="section-title">Sözleşmeler</div>
+    </div>
+    @if (!Model.Sozlesmeler.Any())
+    {
+        <div style="padding:32px;text-align:center;color:var(--color-muted);">Bu kiracıya ait sözleşme yok.</div>
+    }
+    else
+    {
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Taşınmaz / Birim</th>
+                        <th>Başlangıç</th>
+                        <th>Bitiş</th>
+                        <th>Aylık Bedel</th>
+                        <th>Depozito</th>
+                        <th>Durum</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model.Sozlesmeler)
+                    {
+                        bool aktif = Istatistik.Aktif(s);
+                        int kalanGun = Istatistik.KalanGun(s);
+                        bool surek = aktif && kalanGun <= 30;
+                        bool feshedildi = s.Durum == SozlesmeDurumu.Feshedildi;
+                        <tr>
+                            <td>
+                                <div style="font-weight:600;">@s.Birim.Tasinmaz.Ad</div>
+                                <div style="font-size:12px;color:var(--color-muted);">@s.Birim.Ad</div>
+                            </td>
+                            <td>@s.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
+                            <td>
+                                @s.BitisTarihi.ToString("dd.MM.yyyy")
+                                @if (surek) { <span class="day-badge day-badge-amber" style="margin-left:6px;font-size:11px;">@kalanGun g</span> }
+                            </td>
+                            <td style="font-weight:600;">@Istatistik.AylikBedel(s).ToString("N0") ₺</td>
+                            <td>@(s.Depozito.HasValue ? s.Depozito.Value.ToString("N0") + " ₺" : "—")</td>
+                            <td>
+                                @if (feshedildi) { <span class="badge badge-gecmis">Feshedildi</span> }
+                                else if (surek) { <span class="badge badge-surek">Dolmak Üzere</span> }
+                                else if (aktif) { <span class="badge badge-kirali">Aktif</span> }
+                                else { <span class="badge badge-gecmis">Geçmiş</span> }
+                            </td>
+                            <td><a href="/Sozlesme/Detay/@s.Id" class="btn btn-sm btn-secondary">Detay</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

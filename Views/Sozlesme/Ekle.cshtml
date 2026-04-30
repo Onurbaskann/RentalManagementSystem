@@ -1,0 +1,156 @@
+@model KiraTakip.Models.ViewModels.SozlesmeEkleViewModel
+@using KiraTakip.Models
+@{
+    ViewData["Title"] = "Yeni Sözleşme";
+}
+
+<div class="page-header">
+    <a href="/Sozlesme" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-block;margin-bottom:8px;">← Sözleşmeler</a>
+    <div class="page-title">Yeni Sözleşme Oluştur</div>
+</div>
+
+<div style="max-width:640px;">
+    <form asp-action="Ekle" method="post" id="sozlesmeForm">
+        <div class="card">
+            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Taşınmaz ve Kiracı</div>
+
+            <div class="form-group">
+                <label class="form-label">Birim *</label>
+                <select asp-for="BirimId" class="form-control" id="birimSelect" onchange="handleBirimChange(this.value)">
+                    <option value="">— Boş birim seçin —</option>
+                    @foreach (var b in Model.MevcutBirimler)
+                    {
+                        string birimLabel = b.BirimTipi == KiraTakip.Models.BirimTipi.Ofis
+                            ? $"{b.Tasinmaz.Ad} — Ofis {b.OfisNo}{(b.KatNo.HasValue ? $" • {b.KatNo}. Kat" : "")} • {b.Yuzolcumu.ToString("N0")} m²"
+                            : $"{b.Tasinmaz.Ad} — Komple • {b.Yuzolcumu.ToString("N0")} m² • {b.Tasinmaz.Ilce}";
+                        if (Model.BirimId.HasValue && Model.BirimId == b.Id)
+                        {
+                            <option value="@b.Id" selected>@birimLabel</option>
+                        }
+                        else
+                        {
+                            <option value="@b.Id">@birimLabel</option>
+                        }
+                    }
+                </select>
+                <span asp-validation-for="BirimId" class="form-error"></span>
+            </div>
+
+            <!-- Birim info card -->
+            <div id="birimInfoCard" style="display:none;margin-bottom:16px;">
+                <div class="info-card">
+                    <div id="birimInfoText" style="font-size:13.5px;font-weight:500;color:var(--color-primary);"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Kiracı *</label>
+                <select asp-for="KiraciId" class="form-control">
+                    <option value="">— Kiracı seçin —</option>
+                    @foreach (var k in Model.Kiraciler)
+                    {
+                        <option value="@k.Id">@k.GosterimAdi (@(k.KiraciTuru == KiraTakip.Models.KiraciTuru.Tuzel ? "Tüzel" : "Gerçek"))</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Süre ve Bedel</div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div class="form-group">
+                    <label class="form-label">Başlangıç Tarihi *</label>
+                    <input asp-for="BaslangicTarihi" type="date" class="form-control" id="baslangicInput" onchange="validateDates()" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Bitiş Tarihi *</label>
+                    <input asp-for="BitisTarihi" type="date" class="form-control" id="bitisInput" onchange="validateDates()" />
+                    <span asp-validation-for="BitisTarihi" class="form-error"></span>
+                    <div id="dateError" class="form-error" style="display:none;">Bitiş tarihi başlangıçtan büyük olmalıdır.</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Kira Periyodu</label>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" asp-for="Periyot" value="1" checked onchange="updateBedelLabel(1)" />
+                        <span>Aylık</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" asp-for="Periyot" value="2" onchange="updateBedelLabel(2)" />
+                        <span>Yıllık</span>
+                    </label>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div class="form-group">
+                    <label class="form-label" id="bedelLabel">Aylık Bedel (₺) *</label>
+                    <input asp-for="KiraBedeli" type="number" min="0" step="0.01" class="form-control" placeholder="Örn: 10000" />
+                    <span asp-validation-for="KiraBedeli" class="form-error"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Depozito (₺)</label>
+                    <input asp-for="Depozito" type="number" min="0" step="0.01" class="form-control" placeholder="Opsiyonel" />
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">KDV</div>
+            <div class="form-group">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;">
+                    <input asp-for="KdvUygulanacakMi" type="checkbox" id="kdvCheck" style="width:16px;height:16px;" onchange="document.getElementById('kdvOraniBox').style.display=this.checked?'':'none'" />
+                    KDV Uygulanacak
+                </label>
+            </div>
+            <div id="kdvOraniBox" style="display:none;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">KDV Oranı (%)</label>
+                    <input asp-for="KdvOrani" type="number" min="0" max="100" step="0.01" class="form-control" style="max-width:160px;" />
+                    <div class="form-hint">Varsayılan: %20</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Notlar</label>
+                <textarea asp-for="Notlar" class="form-control" rows="3" placeholder="Sözleşmeye ait ek notlar..."></textarea>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:20px;">
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Sözleşme Oluştur
+            </button>
+            <a href="/Sozlesme" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script src="~/js/sozlesme-form.js"></script>
+<script>
+    // Seed birim verisi (info card için)
+    const birimler = {
+        @foreach (var b in Model.MevcutBirimler)
+        {
+            string birimAd = b.BirimTipi == KiraTakip.Models.BirimTipi.Ofis
+                ? $"{b.Tasinmaz.Ad} — Ofis {b.OfisNo}"
+                : $"{b.Tasinmaz.Ad} — Komple";
+            string meta = b.BirimTipi == KiraTakip.Models.BirimTipi.Ofis && b.KatNo.HasValue
+                ? $"{b.KatNo}. Kat • {b.Yuzolcumu.ToString("N0")} m²"
+                : $"{b.Yuzolcumu.ToString("N0")} m²";
+            @Html.Raw($"{b.Id}: {{ad: '{birimAd}', m2: '{meta}', ilce: '{b.Tasinmaz.Ilce}', il: '{b.Tasinmaz.Il}'}},")
+        }
+    };
+
+    // Seçili birim varsa init
+    const preSelected = @(Model.BirimId.HasValue ? Model.BirimId.Value.ToString() : "null");
+    if (preSelected) handleBirimChange(preSelected);
+</script>
+}

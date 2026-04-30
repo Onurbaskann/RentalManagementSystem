@@ -1,0 +1,34 @@
+## [Visual Studio]
+.vs/
+.vscode/
+*.user
+*.userosscache
+*.sln.docuser
+*.suo
+
+## [Build Artifacts]
+bin/
+obj/
+publish/
+
+## [Databases & Local Data]
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+## [ASP.NET Core]
+appsettings.Development.json
+
+## [User-specific / AI Metadata]
+.claude/
+.gemini/
+.antigravity/
+.mcp.json
+.DS_Store
+Thumbs.db
+
+## [Logs]
+logs/
+*.log

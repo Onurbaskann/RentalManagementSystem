@@ -1,0 +1,105 @@
+@model List<KiraTakip.Models.KiraSozlesmesi>
+@using KiraTakip.Models
+@using KiraTakip.Services
+@inject IstatistikService Istatistik
+@{
+    ViewData["Title"] = "Sözleşmeler";
+    string filtre = ViewBag.Filtre ?? "tum";
+    bool canEdit = User.IsInRole("Admin") || User.IsInRole("Yonetici");
+}
+
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+        <div class="page-title">Sözleşmeler</div>
+        <div class="page-subtitle">@Model.Count kayıt listeleniyor</div>
+    </div>
+    @if (canEdit)
+    {
+        <a href="/Sozlesme/Ekle" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Yeni Sözleşme
+        </a>
+    }
+</div>
+
+<!-- Filtreler -->
+<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+    @{
+        var filters = new[] {
+            ("tum",         "Tümü"),
+            ("aktif",       "Aktif"),
+            ("surek",       "Dolmak Üzere"),
+            ("gecmis",      "Sona Erdi"),
+            ("feshedildi",  "Feshedildi")
+        };
+    }
+    @foreach (var (key, label) in filters)
+    {
+        string cls = filtre == key ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm";
+        <a href="/Sozlesme?filtre=@key" class="@cls">@label</a>
+    }
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Kiracı</th>
+                    <th>Taşınmaz / Birim</th>
+                    <th>Başlangıç</th>
+                    <th>Bitiş</th>
+                    <th>Aylık Bedel</th>
+                    <th>Kalan</th>
+                    <th>Durum</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in Model)
+                {
+                    bool aktif = Istatistik.Aktif(s);
+                    int kalanGun = Istatistik.KalanGun(s);
+                    bool surek = aktif && kalanGun <= 30;
+                    bool feshedildi = s.Durum == SozlesmeDurumu.Feshedildi;
+                    string dayBadge = kalanGun <= 10 ? "day-badge-red" : kalanGun <= 30 ? "day-badge-amber" : "day-badge-green";
+
+                    <tr>
+                        <td style="color:var(--color-muted);font-size:12.5px;">@s.Id</td>
+                        <td>
+                            <a href="/Kiraci/Detay/@s.KiraciId" style="font-weight:600;color:var(--color-primary);text-decoration:none;">@s.Kiraci.GosterimAdi</a>
+                            @if (s.Kiraci.KiraciTuru == KiraciTuru.Tuzel) { <span class="badge badge-kurumsal" style="font-size:10.5px;margin-left:4px;">T</span> }
+                        </td>
+                        <td>
+                            <a href="/Tasinmaz/Detay/@s.Birim.TasinmazId" style="font-weight:500;color:var(--color-text);text-decoration:none;">@s.Birim.Tasinmaz.Ad</a>
+                            <div style="font-size:12px;color:var(--color-muted);">@s.Birim.Ad</div>
+                        </td>
+                        <td style="font-size:13px;">@s.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
+                        <td style="font-size:13px;">@s.BitisTarihi.ToString("dd.MM.yyyy")</td>
+                        <td style="font-weight:600;">@Istatistik.AylikBedel(s).ToString("N0") ₺</td>
+                        <td>
+                            @if (feshedildi)
+                            { <span style="color:var(--color-muted);font-size:12.5px;">Feshedildi</span> }
+                            else if (aktif)
+                            { <span class="day-badge @dayBadge">@kalanGun gün</span> }
+                            else
+                            { <span style="color:var(--color-muted);font-size:12.5px;">Sona erdi</span> }
+                        </td>
+                        <td>
+                            @if (feshedildi) { <span class="badge badge-gecmis">Feshedildi</span> }
+                            else if (surek) { <span class="badge badge-surek">Dolmak Üzere</span> }
+                            else if (aktif) { <span class="badge badge-kirali">Aktif</span> }
+                            else { <span class="badge badge-gecmis">Sona Erdi</span> }
+                        </td>
+                        <td><a href="/Sozlesme/Detay/@s.Id" class="btn btn-sm btn-secondary">Detay</a></td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="9" style="text-align:center;color:var(--color-muted);padding:32px;">Bu filtreye uygun sözleşme bulunamadı.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

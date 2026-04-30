@@ -1,0 +1,197 @@
+@model KiraTakip.Models.ViewModels.TasinmazEkleViewModel
+@using KiraTakip.Models
+@{
+    ViewData["Title"] = "Yeni Taşınmaz";
+}
+
+<div class="page-header">
+    <a href="/Tasinmaz" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">← Taşınmazlar</a>
+    <div class="page-title">Yeni Taşınmaz Ekle</div>
+</div>
+
+@if (!ViewData.ModelState.IsValid && ViewData.ModelState.ContainsKey("Ofisler"))
+{
+    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">
+        @ViewData.ModelState["Ofisler"]!.Errors.First().ErrorMessage
+    </div>
+}
+
+<div style="max-width:760px;" x-data="tasinmazFormData()">
+
+    <form asp-action="Ekle" method="post">
+        <div class="card">
+            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Temel Bilgiler</div>
+
+            <div class="form-group">
+                <label class="form-label">Taşınmaz Adı *</label>
+                <input asp-for="Ad" class="form-control" placeholder="Örn: Teknokent A Blok" />
+                <span asp-validation-for="Ad" class="form-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Taşınmaz Tipi *</label>
+                <select asp-for="Tipi" class="form-control" x-model="tip">
+                    <option value="">Seçiniz...</option>
+                    <option value="1">Bina</option>
+                    <option value="2">Arazi</option>
+                    <option value="3">Tarla</option>
+                    <option value="4">Depo</option>
+                    <option value="5">Diğer</option>
+                </select>
+                <span asp-validation-for="Tipi" class="form-error"></span>
+            </div>
+
+            <!-- Bina'ya özel alanlar -->
+            <div x-show="tip == '1'" x-transition>
+                <div class="form-group">
+                    <label class="form-label">Kiralama Şekli</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" asp-for="KiralamaSekli" value="1" x-model="sekli" />
+                            <span>Tek Parça</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" asp-for="KiralamaSekli" value="2" x-model="sekli" />
+                            <span>Ofis Bazlı</span>
+                        </label>
+                    </div>
+                    <div class="form-hint" x-show="sekli == '2'">Bina içindeki ofisler ayrı ayrı kiralanabilir. Ofisleri aşağıda tanımlayın.</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Kat Sayısı <span style="color:var(--color-muted);font-weight:400;">(bilgi amaçlı)</span></label>
+                    <input asp-for="KatSayisi" type="number" min="1" max="50" class="form-control" style="max-width:160px;" placeholder="Örn: 5" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Açıklama</label>
+                <textarea asp-for="Aciklama" class="form-control" rows="2" placeholder="Opsiyonel not..."></textarea>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Adres</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div class="form-group">
+                    <label class="form-label">İl *</label>
+                    <input asp-for="Il" class="form-control" placeholder="Örn: İzmir" />
+                    <span asp-validation-for="Il" class="form-error"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">İlçe *</label>
+                    <input asp-for="Ilce" class="form-control" placeholder="Örn: Bornova" />
+                    <span asp-validation-for="Ilce" class="form-error"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mahalle</label>
+                    <input asp-for="Mahalle" class="form-control" placeholder="Mahalle adı" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Açık Adres</label>
+                    <input asp-for="AcikAdres" class="form-control" placeholder="Cadde, sokak, no..." />
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Yüzölçüm</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div class="form-group">
+                    <label class="form-label">Kapalı Alan (m²)</label>
+                    <input asp-for="KapaliYuzolcumu" type="number" min="0" step="0.01" class="form-control" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Açık Alan (m²)</label>
+                    <input asp-for="AcikYuzolcumu" type="number" min="0" step="0.01" class="form-control" placeholder="0" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Ofis Bazlı bölümü -->
+        <div class="card" style="margin-top:16px;" x-show="tip == '1' && sekli == '2'" x-transition>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">
+                <div style="font-size:15px;font-weight:700;">Ofisler</div>
+                <button type="button" class="btn btn-secondary btn-sm" @@click="addOfis()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Ofis Ekle
+                </button>
+            </div>
+
+            <template x-for="(ofis, i) in ofisler" :key="i">
+                <div style="display:grid;grid-template-columns:100px 80px 1fr 100px 1fr auto;gap:10px;align-items:end;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--color-border);">
+                    <div>
+                        <div class="form-label" style="margin-bottom:4px;">Ofis No *</div>
+                        <input class="form-control" :name="'Ofisler['+i+'].OfisNo'" x-model="ofis.ofisNo"
+                               placeholder="101" @@blur="autoAd(ofis)" />
+                    </div>
+                    <div>
+                        <div class="form-label" style="margin-bottom:4px;">Kat No</div>
+                        <input class="form-control" type="number" min="0" :name="'Ofisler['+i+'].KatNo'" x-model="ofis.katNo" placeholder="1" />
+                    </div>
+                    <div>
+                        <div class="form-label" style="margin-bottom:4px;">Ad</div>
+                        <input class="form-control" :name="'Ofisler['+i+'].Ad'" x-model="ofis.ad" placeholder="Boşsa otomatik doldurulur" />
+                    </div>
+                    <div>
+                        <div class="form-label" style="margin-bottom:4px;">m² *</div>
+                        <input class="form-control" type="number" min="1" step="0.01" :name="'Ofisler['+i+'].Yuzolcumu'" x-model="ofis.yuzolcumu" placeholder="0" />
+                    </div>
+                    <div>
+                        <div class="form-label" style="margin-bottom:4px;">Açıklama</div>
+                        <input class="form-control" :name="'Ofisler['+i+'].Aciklama'" x-model="ofis.aciklama" placeholder="Opsiyonel" />
+                    </div>
+                    <div style="padding-bottom:2px;">
+                        <button type="button" class="btn btn-sm" style="color:#dc2626;border-color:#fecaca;background:#fef2f2;"
+                                @@click="removeOfis(i)" :disabled="ofisler.length <= 1"
+                                :style="ofisler.length <= 1 ? 'opacity:0.4;cursor:not-allowed;' : ''">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </template>
+
+            <div style="font-size:12.5px;color:var(--color-muted);margin-top:4px;">
+                Ofis No aynı bina içinde benzersiz olmalıdır. Ad boş bırakılırsa "Ofis {OfisNo}" olarak oluşturulur.
+            </div>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:20px;">
+            <button type="submit" class="btn btn-primary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Kaydet
+            </button>
+            <a href="/Tasinmaz" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+@{
+    var ofislerJson = System.Text.Json.JsonSerializer.Serialize(
+        Model.Ofisler.Count > 0
+            ? (IEnumerable<object>)Model.Ofisler.Select(o => new {
+                ofisNo = o.OfisNo ?? "",
+                katNo = o.KatNo?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "",
+                ad = o.Ad ?? "",
+                yuzolcumu = o.Yuzolcumu.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                aciklama = o.Aciklama ?? ""
+              })
+            : (IEnumerable<object>)new[] { new { ofisNo = "", katNo = "", ad = "", yuzolcumu = "", aciklama = "" } }
+    );
+    var initTip = (int)Model.Tipi;
+    var initSekli = (int)Model.KiralamaSekli;
+}
+<script>
+    function tasinmazFormData() {
+        return {
+            tip: '@initTip',
+            sekli: '@initSekli',
+            ofisler: @Html.Raw(ofislerJson),
+            addOfis() { this.ofisler.push({ ofisNo: '', katNo: '', ad: '', yuzolcumu: '', aciklama: '' }); },
+            removeOfis(i) { if (this.ofisler.length > 1) this.ofisler.splice(i, 1); },
+            autoAd(o) { if (!o.ad && o.ofisNo) o.ad = 'Ofis ' + o.ofisNo; }
+        };
+    }
+</script>
+}

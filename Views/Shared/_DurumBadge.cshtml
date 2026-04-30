@@ -1,0 +1,13 @@
+@using KiraTakip.Models
+@model KiraDurumu
+
+@{
+    var (cls, label) = Model switch
+    {
+        KiraDurumu.Kirali => ("badge-kirali", "Kiralı"),
+        KiraDurumu.SuresiDolmakUzere => ("badge-surek", "Süresi Dolmak Üzere"),
+        KiraDurumu.Bos => ("badge-bos", "Boş"),
+        _ => ("badge-bos", "Bilinmiyor")
+    };
+}
+<span class="badge @cls">@label</span>

@@ -1,0 +1,228 @@
+@model KiraTakip.Models.ViewModels.DashboardViewModel
+@{
+    ViewData["Title"] = "Anasayfa";
+    bool canEdit = User.IsInRole("Admin") || User.IsInRole("Yonetici");
+
+    string TLFormat(decimal v) => v.ToString("N0") + " ₺";
+
+    string TipiStr(KiraTakip.Models.TasinmazTipi t) => t switch {
+        KiraTakip.Models.TasinmazTipi.Bina => "Bina",
+        KiraTakip.Models.TasinmazTipi.Arazi => "Arazi",
+        KiraTakip.Models.TasinmazTipi.Tarla => "Tarla",
+        KiraTakip.Models.TasinmazTipi.Depo => "Depo",
+        _ => "Diğer"
+    };
+
+    string DayBadgeCls(int gun) => gun <= 10 ? "day-badge-red" : gun <= 30 ? "day-badge-amber" : "day-badge-green";
+
+    int toplamBirim = Model.KiraliBirim + Model.BosBirim + Model.SuresiDolmakUzereBirim;
+    double kiraliPct = toplamBirim > 0 ? (double)Model.KiraliBirim / toplamBirim * 100 : 0;
+    double surekPct = toplamBirim > 0 ? (double)Model.SuresiDolmakUzereBirim / toplamBirim * 100 : 0;
+    double bosPct = toplamBirim > 0 ? (double)Model.BosBirim / toplamBirim * 100 : 0;
+}
+
+<div class="page-header">
+    <div class="page-title">Genel Bakış</div>
+    <div class="page-subtitle">Tüm taşınmazlarınızın özet durumu</div>
+</div>
+
+<!-- İstatistik Kartları -->
+<div class="stats-grid">
+    <div class="card">
+        <div class="card-title">Toplam Taşınmaz</div>
+        <div class="card-value">@Model.ToplamTasinmaz</div>
+        <div class="card-sub">
+            @string.Join(", ", Model.TipiDagilim.Select(kv => $"{kv.Value} {TipiStr(kv.Key)}"))
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Toplam Birim</div>
+        <div class="card-value">@Model.ToplamBirim</div>
+        <div class="card-sub" style="margin-top:10px;">
+            <div style="display:flex;gap:6px;font-size:11px;margin-bottom:6px;">
+                <span class="badge badge-kirali">@Model.KiraliBirim Kiralı</span>
+                <span class="badge badge-bos">@Model.BosBirim Boş</span>
+                <span class="badge badge-surek">@Model.SuresiDolmakUzereBirim Dolmak Üzere</span>
+            </div>
+            <div class="progress-bar">
+                <div style="display:flex;height:6px;border-radius:999px;overflow:hidden;">
+                    <div style="width:@kiraliPct.ToString("F0")%;background:#10b981;"></div>
+                    <div style="width:@surekPct.ToString("F0")%;background:#f59e0b;"></div>
+                    <div style="width:@bosPct.ToString("F0")%;background:#cbd5e1;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Aktif Sözleşme</div>
+        <div class="card-value">@Model.AktifSozlesme</div>
+        <div class="card-sub">Bu ay yenilenmesi gereken: <strong>@Model.BuAyYenilenecek</strong></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Aylık Kira Geliri</div>
+        <div class="card-value" style="font-size:22px;">@TLFormat(Model.AylikToplamGelir)</div>
+        <div class="card-sub">Tüm aktif sözleşmeler</div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Yıllık Projeksiyon</div>
+        <div class="card-value" style="font-size:22px;">@TLFormat(Model.YillikProj)</div>
+        <div class="card-sub">Mevcut sözleşme bazlı</div>
+    </div>
+</div>
+
+<!-- İki Kolon: Süresi Dolmak Üzere + Boş Birimler -->
+<div class="two-col" style="margin-bottom:24px;">
+    <!-- Sol: Süresi Dolmak Üzere -->
+    <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:18px 20px 14px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;">
+            <div class="section-title">⏰ Süresi Dolmak Üzere</div>
+            <a href="/Sozlesme?filtre=surek" class="btn btn-sm btn-secondary">Tümü</a>
+        </div>
+        @if (!Model.SuresiDolmakUzere.Any())
+        {
+            <div style="padding:32px 20px;text-align:center;color:var(--color-muted);font-size:13.5px;">Yakında dolacak sözleşme yok.</div>
+        }
+        else
+        {
+            <div>
+                @foreach (var s in Model.SuresiDolmakUzere)
+                {
+                    <a href="/Sozlesme/Detay/@s.SozlesmeId" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #f1f3f5;text-decoration:none;color:inherit;transition:background 0.1s;" onmouseover="this.style.background='#fafbfc'" onmouseout="this.style.background=''">
+                        <div>
+                            <div style="font-size:13.5px;font-weight:600;">@s.KiraciAdi</div>
+                            <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">@s.TasinmazAdi — @s.BirimAdi</div>
+                            <div style="font-size:11.5px;color:var(--color-muted);">Bitiş: @s.BitisTarihi.ToString("dd.MM.yyyy")</div>
+                        </div>
+                        <span class="day-badge @DayBadgeCls(s.KalanGun)">@s.KalanGun gün</span>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Sağ: Boş Birimler -->
+    <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:18px 20px 14px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;">
+            <div class="section-title">🏢 Boş Birimler</div>
+            @if (canEdit) { <a href="/Sozlesme/Ekle" class="btn btn-sm btn-primary">Kiraya Ver</a> }
+        </div>
+        @if (!Model.BosBirimler.Any())
+        {
+            <div style="padding:32px 20px;text-align:center;color:var(--color-muted);font-size:13.5px;">Tüm birimler kiralı!</div>
+        }
+        else
+        {
+            <div>
+                @foreach (var b in Model.BosBirimler)
+                {
+                    <a href="/Sozlesme/Ekle?birimId=@b.BirimId" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #f1f3f5;text-decoration:none;color:inherit;transition:background 0.1s;" onmouseover="this.style.background='#fafbfc'" onmouseout="this.style.background=''">
+                        <div>
+                            <div style="font-size:13.5px;font-weight:600;">@b.TasinmazAdi</div>
+                            <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">@b.BirimAdi • @b.Ilce</div>
+                            <div style="font-size:11.5px;color:var(--color-muted);">@b.Yuzolcumu m²</div>
+                        </div>
+                        <span class="badge badge-bos">Boş</span>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Doluluk Grafiği -->
+<div class="card">
+    <div class="section-header" style="margin-bottom:20px;">
+        <div class="section-title">Doluluk Dağılımı</div>
+        <span style="font-size:12.5px;color:var(--color-muted);">Birim bazında</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:48px;">
+        <!-- Donut Chart -->
+        <div style="flex-shrink:0;position:relative;width:160px;height:160px;">
+            <svg width="160" height="160" viewBox="0 0 160 160">
+                @{
+                    double total = Model.KiraliBirim + Model.SuresiDolmakUzereBirim + Model.BosBirim;
+                    if (total == 0) { total = 1; }
+                    double r = 60; double cx = 80; double cy = 80; double strokeW = 22;
+                    double gap = 2;
+
+                    double kiralAngle = (double)Model.KiraliBirim / total * 360;
+                    double surekAngle = (double)Model.SuresiDolmakUzereBirim / total * 360;
+                    double bosAngle = (double)Model.BosBirim / total * 360;
+
+                    double Rad(double deg) => deg * Math.PI / 180;
+                    string Arc(double startDeg, double sweepDeg, string color) {
+                        if (sweepDeg <= 0) return "";
+                        double endDeg = startDeg + sweepDeg - gap;
+                        double x1 = cx + r * Math.Cos(Rad(startDeg - 90));
+                        double y1 = cy + r * Math.Sin(Rad(startDeg - 90));
+                        double x2 = cx + r * Math.Cos(Rad(endDeg - 90));
+                        double y2 = cy + r * Math.Sin(Rad(endDeg - 90));
+                        int large = sweepDeg - gap > 180 ? 1 : 0;
+                        return $"<path d='M {x1:F2} {y1:F2} A {r} {r} 0 {large} 1 {x2:F2} {y2:F2}' fill='none' stroke='{color}' stroke-width='{strokeW}' stroke-linecap='round'/>";
+                    }
+
+                    double start = 0;
+                    string arcKirali = Arc(start, kiralAngle, "#10b981"); start += kiralAngle;
+                    string arcSurek = Arc(start, surekAngle, "#f59e0b"); start += surekAngle;
+                    string arcBos = Arc(start, bosAngle, "#cbd5e1");
+                }
+                @Html.Raw(arcKirali)
+                @Html.Raw(arcSurek)
+                @Html.Raw(arcBos)
+                <text x="80" y="74" text-anchor="middle" dominant-baseline="middle" font-size="24" font-weight="700" fill="#1a2332" font-family="Fraunces,serif">@Model.ToplamBirim</text>
+                <text x="80" y="95" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#6b7c93" font-family="Plus Jakarta Sans,sans-serif">Birim</text>
+            </svg>
+        </div>
+
+        <!-- Legend -->
+        <div style="display:flex;flex-direction:column;gap:14px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:12px;height:12px;border-radius:50%;background:#10b981;flex-shrink:0;"></div>
+                <div>
+                    <div style="font-size:13.5px;font-weight:600;">Kiralı</div>
+                    <div style="font-size:12px;color:var(--color-muted);">@Model.KiraliBirim birim • %@kiraliPct.ToString("F0")</div>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:12px;height:12px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></div>
+                <div>
+                    <div style="font-size:13.5px;font-weight:600;">Süresi Dolmak Üzere</div>
+                    <div style="font-size:12px;color:var(--color-muted);">@Model.SuresiDolmakUzereBirim birim • %@surekPct.ToString("F0")</div>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:12px;height:12px;border-radius:50%;background:#cbd5e1;flex-shrink:0;"></div>
+                <div>
+                    <div style="font-size:13.5px;font-weight:600;">Boş</div>
+                    <div style="font-size:12px;color:var(--color-muted);">@Model.BosBirim birim • %@bosPct.ToString("F0")</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bar grafik -->
+        <div style="flex:1;max-width:400px;">
+            <div style="margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:500;margin-bottom:4px;">
+                    <span>Kiralı</span><span>@Model.KiraliBirim/@Model.ToplamBirim</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" style="width:@kiraliPct.ToString("F0")%;background:#10b981;"></div></div>
+            </div>
+            <div style="margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:500;margin-bottom:4px;">
+                    <span>Süresi Dolmak Üzere</span><span>@Model.SuresiDolmakUzereBirim/@Model.ToplamBirim</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" style="width:@surekPct.ToString("F0")%;background:#f59e0b;"></div></div>
+            </div>
+            <div>
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:500;margin-bottom:4px;">
+                    <span>Boş</span><span>@Model.BosBirim/@Model.ToplamBirim</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" style="width:@bosPct.ToString("F0")%;background:#cbd5e1;"></div></div>
+            </div>
+        </div>
+    </div>
+</div>

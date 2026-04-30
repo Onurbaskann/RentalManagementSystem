@@ -1,0 +1,24 @@
+@{
+    ViewData["Title"] = "Erişim Reddedildi";
+}
+
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;">
+    <div style="width:64px;height:64px;background:#fef2f2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:20px;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+        </svg>
+    </div>
+    <h1 style="font-family:'Fraunces',Georgia,serif;font-size:28px;font-weight:700;color:var(--color-text);margin-bottom:8px;">Erişim Reddedildi</h1>
+    <p style="font-size:14px;color:var(--color-muted);max-width:360px;margin-bottom:24px;">
+        Bu sayfaya erişim için gerekli yetkiye sahip değilsiniz.
+        Farklı bir hesapla giriş yapmayı deneyin veya yönetici ile iletişime geçin.
+    </p>
+    <div style="display:flex;gap:12px;">
+        <a href="/" class="btn btn-primary">Anasayfaya Dön</a>
+        <form asp-controller="Account" asp-action="Logout" method="post" style="display:inline;">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-secondary">Çıkış Yap</button>
+        </form>
+    </div>
+</div>

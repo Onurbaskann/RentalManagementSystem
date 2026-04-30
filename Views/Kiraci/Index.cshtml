@@ -1,0 +1,88 @@
+@model List<KiraTakip.Models.Kiraci>
+@using KiraTakip.Models
+@using KiraTakip.Services
+@inject IstatistikService Istatistik
+@inject KiraTakip.Services.DummyDataService Data
+@{
+    ViewData["Title"] = "Kiracılar";
+    bool canEdit = User.IsInRole("Admin") || User.IsInRole("Yonetici");
+}
+
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+        <div class="page-title">Kiracılar</div>
+        <div class="page-subtitle">@Model.Count kayıtlı kiracı</div>
+    </div>
+    @if (canEdit)
+    {
+        <a href="/Kiraci/Ekle" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Yeni Kiracı
+        </a>
+    }
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Kiracı No</th>
+                    <th>Ad / Firma</th>
+                    <th>Tür</th>
+                    <th>Telefon</th>
+                    <th>E-posta</th>
+                    <th>Aktif Sözleşme</th>
+                    <th>Kayıt Tarihi</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var k in Model)
+                {
+                    var aktifSozlesme = Data.Sozlesmeler.Where(s => s.KiraciId == k.Id && Istatistik.Aktif(s)).ToList();
+                    <tr>
+                        <td style="font-size:12.5px;color:var(--color-muted);font-family:'JetBrains Mono',monospace;">@k.KiraciNo</td>
+                        <td>
+                            <div style="font-weight:600;">@k.GosterimAdi</div>
+                            @if (k.KiraciTuru == KiraciTuru.Tuzel && !string.IsNullOrEmpty(k.VergiNo))
+                            {
+                                <div style="font-size:11.5px;color:var(--color-muted);">VKN: @k.VergiNo</div>
+                            }
+                            else if (k.KiraciTuru == KiraciTuru.Gercek && !string.IsNullOrEmpty(k.TcKimlikNo))
+                            {
+                                <div style="font-size:11.5px;color:var(--color-muted);">TC: @k.TcKimlikNo</div>
+                            }
+                        </td>
+                        <td>
+                            @if (k.KiraciTuru == KiraciTuru.Tuzel)
+                            { <span class="badge badge-kurumsal">Tüzel</span> }
+                            else
+                            { <span class="badge badge-bireysel">Gerçek</span> }
+                        </td>
+                        <td style="font-size:13px;">@k.Telefon</td>
+                        <td style="font-size:13px;">@k.Email</td>
+                        <td>
+                            @if (aktifSozlesme.Any())
+                            {
+                                <span class="badge badge-kirali">@aktifSozlesme.Count sözleşme</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-bos">Yok</span>
+                            }
+                        </td>
+                        <td style="font-size:13px;color:var(--color-muted);">@k.KayitTarihi.ToString("dd.MM.yyyy")</td>
+                        <td style="display:flex;gap:6px;justify-content:flex-end;">
+                            <a href="/Kiraci/Detay/@k.Id" class="btn btn-sm btn-secondary">Detay</a>
+                            @if (canEdit)
+                            {
+                                <a href="/Kiraci/Duzenle/@k.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

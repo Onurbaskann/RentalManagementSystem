@@ -1,0 +1,568 @@
+@model KiraTakip.Models.ViewModels.SozlesmeDetayViewModel
+@using KiraTakip.Models
+@using KiraTakip.Services
+@inject IstatistikService Istatistik
+@{
+    ViewData["Title"] = $"Sözleşme #{Model.Sozlesme.Id}";
+    var s = Model.Sozlesme;
+    var kiraci = s.Kiraci;
+    var birim = s.Birim;
+    var tasinmaz = birim.Tasinmaz;
+
+    bool feshedildi = s.Durum == SozlesmeDurumu.Feshedildi;
+    bool sonaErdi = s.Durum == SozlesmeDurumu.SonaErdi;
+
+    string sozlesmeDurumBadgeCls = s.Durum switch {
+        SozlesmeDurumu.Feshedildi => "badge-gecmis",
+        SozlesmeDurumu.SonaErdi   => "badge-bos",
+        _                          => Model.Durum == KiraDurumu.SuresiDolmakUzere ? "badge-surek" : "badge-kirali"
+    };
+    string sozlesmeDurumLabel = s.Durum switch {
+        SozlesmeDurumu.Feshedildi => "Feshedildi",
+        SozlesmeDurumu.SonaErdi   => "Sona Erdi",
+        _                          => Model.Durum == KiraDurumu.SuresiDolmakUzere ? "Süresi Dolmak Üzere" : "Aktif"
+    };
+
+    string gunBadgeCls = Model.KalanGun <= 10 ? "day-badge-red" : Model.KalanGun <= 30 ? "day-badge-amber" : "day-badge-green";
+    string gunMesaj = feshedildi ? "Sözleşme feshedildi." : Model.KalanGun <= 0 ? "Sözleşme sona erdi." : Model.KalanGun <= 30 ? "Süresi dolmak üzere!" : "Sözleşme aktif.";
+
+    string TLFormat(decimal v) => v.ToString("N0") + " ₺";
+    bool canEdit = User.IsInRole("Admin") || User.IsInRole("Yonetici");
+
+    decimal kdvTutari = s.KdvUygulanacakMi ? s.KiraBedeli * s.KdvOrani / 100 : 0;
+    decimal kdvDahilToplam = s.KiraBedeli + kdvTutari;
+    decimal aylikBedel = Istatistik.AylikBedel(s);
+    decimal aylikKdv = s.KdvUygulanacakMi ? aylikBedel * s.KdvOrani / 100 : 0;
+}
+
+@if (TempData["Success"] != null)
+{
+    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">✓ @TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">✕ @TempData["Error"]</div>
+}
+
+@if (feshedildi)
+{
+    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">
+        Bu sözleşme <strong>@s.FesihTarihi?.ToString("dd.MM.yyyy")</strong> tarihinde feshedildi.
+        @if (!string.IsNullOrEmpty(s.FesihNedeni)) { <span> Neden: @s.FesihNedeni</span> }
+    </div>
+}
+
+<div x-data="{
+    showUzat: false,
+    showFesih: false,
+    tufeEnabled: false,
+    kdvEnabled: @(s.KdvUygulanacakMi ? "true" : "false"),
+    tufeOrani: 25,
+    kdvOrani: @s.KdvOrani,
+    currentBedel: @s.KiraBedeli,
+    yeniKiraBedeli: @s.KiraBedeli,
+    get tufeArtisTutari() { return this.tufeEnabled ? Math.round(this.currentBedel * this.tufeOrani / 100) : 0; },
+    get tufeSonrasiBedel() { return this.currentBedel + this.tufeArtisTutari; },
+    get kdvTutari() { return this.kdvEnabled ? Math.round(this.yeniKiraBedeli * this.kdvOrani / 100) : 0; },
+    get kdvDahilToplam() { return this.yeniKiraBedeli + this.kdvTutari; },
+    formatTl(v) { return new Intl.NumberFormat('tr-TR').format(v) + ' ₺'; },
+    applyTufe() { if (this.tufeEnabled) this.yeniKiraBedeli = this.tufeSonrasiBedel; }
+}">
+
+<!-- Breadcrumb + Butonlar -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <a href="/Sozlesme" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;">← Sözleşmeler</a>
+    <div style="display:flex;gap:10px;">
+        @if (canEdit && !feshedildi)
+        {
+            <button class="btn btn-amber" type="button" @@click="showUzat = true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                Sözleşmeyi Uzat
+            </button>
+            <button class="btn btn-danger" type="button" @@click="showFesih = true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                Sözleşmeyi Feshet
+            </button>
+        }
+    </div>
+</div>
+
+<!-- Ana Kart -->
+<div class="card" style="margin-bottom:16px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+        <!-- Sol: Kiracı -->
+        <div>
+            <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Kiracı</div>
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+                <div style="width:48px;height:48px;border-radius:50%;background:var(--color-primary);color:white;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;flex-shrink:0;">
+                    @(kiraci.GosterimAdi.Split(' ').Where(p => p.Length > 0).Take(2).Select(p => p[0].ToString().ToUpper()).Aggregate("", (a, b) => a + b))
+                </div>
+                <div>
+                    <div style="font-family:'Fraunces',Georgia,serif;font-size:22px;font-weight:700;line-height:1.1;">@kiraci.GosterimAdi</div>
+                    <div style="margin-top:5px;display:flex;gap:6px;align-items:center;">
+                        @if (kiraci.KiraciTuru == KiraciTuru.Tuzel)
+                        { <span class="badge badge-kurumsal">Tüzel Kişi</span> }
+                        else
+                        { <span class="badge badge-bireysel">Gerçek Kişi</span> }
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--color-muted);flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.1 19.79 19.79 0 0 1 1.61 4.59 2 2 0 0 1 3.58 2.41h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.52 17z"/></svg>
+                    @kiraci.Telefon
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--color-muted);flex-shrink:0;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    @kiraci.Email
+                </div>
+            </div>
+            <div style="margin-top:12px;">
+                <a href="/Kiraci/Detay/@kiraci.Id" class="btn btn-sm btn-secondary">Kiracı Profili</a>
+            </div>
+        </div>
+
+        <!-- Sağ: Taşınmaz + Sözleşme Durumu -->
+        <div style="text-align:right;">
+            <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Taşınmaz</div>
+            <div style="font-family:'Fraunces',Georgia,serif;font-size:20px;font-weight:700;margin-bottom:4px;">@tasinmaz.Ad</div>
+            @if (birim.BirimTipi == BirimTipi.Ofis)
+            {
+                <div style="font-size:14px;color:var(--color-muted);margin-bottom:4px;">Ofis @birim.OfisNo@(birim.KatNo.HasValue ? $" • {birim.KatNo}. Kat" : "") • @birim.Yuzolcumu.ToString("N0") m²</div>
+                <div style="font-size:13px;color:var(--color-muted);margin-bottom:10px;">@tasinmaz.Ilce, @tasinmaz.Il</div>
+            }
+            else
+            {
+                <div style="font-size:14px;color:var(--color-muted);margin-bottom:10px;">@birim.Ad • @tasinmaz.Ilce, @tasinmaz.Il</div>
+            }
+            <div style="margin-bottom:12px;">
+                <span class="badge @sozlesmeDurumBadgeCls" style="font-size:12.5px;padding:5px 14px;">@sozlesmeDurumLabel</span>
+            </div>
+            <a href="/Tasinmaz/Detay/@tasinmaz.Id" class="btn btn-sm btn-secondary">Taşınmaz Detayı</a>
+        </div>
+    </div>
+</div>
+
+<!-- 3 Kolonlu Özet -->
+<div class="three-col" style="margin-bottom:16px;">
+    <!-- Kira Bedeli -->
+    <div class="card">
+        <div class="card-title">Kira Bedeli</div>
+        <div style="margin-top:10px;">
+            <div style="font-size:12px;color:var(--color-muted);margin-bottom:2px;">Aylık (KDV Hariç)</div>
+            <div style="font-family:'Fraunces',Georgia,serif;font-size:26px;font-weight:700;color:var(--color-primary);">@TLFormat(aylikBedel)</div>
+        </div>
+        @if (s.KdvUygulanacakMi)
+        {
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--color-border);">
+                <div style="font-size:11.5px;color:var(--color-muted);margin-bottom:2px;">KDV (%@s.KdvOrani.ToString("G"))</div>
+                <div style="font-size:14px;font-weight:600;">+ @TLFormat(aylikKdv)</div>
+                <div style="font-size:12px;color:var(--color-muted);margin-top:4px;">KDV Dahil: <strong>@TLFormat(aylikBedel + aylikKdv)</strong></div>
+            </div>
+        }
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--color-border);">
+            <div style="font-size:11.5px;color:var(--color-muted);margin-bottom:2px;">Yıllık</div>
+            <div style="font-size:16px;font-weight:700;">@TLFormat(Istatistik.YillikBedel(s))</div>
+        </div>
+        <div style="margin-top:6px;font-size:11.5px;color:var(--color-muted);">
+            @(s.Periyot == KiraPeriyodu.Aylik ? "Aylık periyot" : "Yıllık periyot")
+        </div>
+    </div>
+
+    <!-- Sözleşme Süresi -->
+    <div class="card">
+        <div class="card-title">Sözleşme Süresi</div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;">
+            <span>@s.BaslangicTarihi.ToString("dd.MM.yyyy")</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--color-muted);flex-shrink:0;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            <span>@s.BitisTarihi.ToString("dd.MM.yyyy")</span>
+        </div>
+        <div style="margin-top:14px;">
+            <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--color-muted);margin-bottom:5px;">
+                <span>Geçen süre</span>
+                <span>%@Model.SureYuzdesi.ToString("F0")</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill @(Model.SureYuzdesi > 85 ? "progress-fill-amber" : "")" style="width:@Model.SureYuzdesi.ToString("F0")%;"></div>
+            </div>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--color-muted);">
+            Toplam @((int)(s.BitisTarihi - s.BaslangicTarihi).TotalDays) gün
+        </div>
+    </div>
+
+    <!-- Kalan Gün -->
+    <div class="card" style="text-align:center;">
+        <div class="card-title" style="text-align:center;">Kalan Gün</div>
+        <div style="margin-top:14px;">
+            <div style="font-family:'Fraunces',Georgia,serif;font-size:52px;font-weight:700;line-height:1;
+                color:@(feshedildi ? "#dc2626" : Model.KalanGun <= 10 ? "#dc2626" : Model.KalanGun <= 30 ? "#b45309" : "var(--color-primary)");">
+                @(feshedildi ? "—" : Math.Max(0, Model.KalanGun).ToString())
+            </div>
+            <div style="font-size:13px;color:var(--color-muted);margin-top:4px;">@(feshedildi ? "" : "gün kaldı")</div>
+        </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--color-border);">
+            <span style="font-size:13px;font-weight:600;color:@(feshedildi || Model.KalanGun <= 0 ? "#dc2626" : Model.KalanGun <= 30 ? "#b45309" : "#065f46");">
+                @gunMesaj
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Alt Tab'lı Bölüm -->
+<div id="sozlesme-tabs">
+    <div class="tabs">
+        <button class="tab">Detaylar</button>
+        <button class="tab">Birim Bilgisi</button>
+        <button class="tab">Geçmiş Sözleşmeler (@Model.GecmisSozlesmeler.Count)</button>
+        <button class="tab">İşlem Geçmişi (@s.IslemGecmisi.Count)</button>
+    </div>
+
+    <!-- Tab 1: Detaylar -->
+    <div class="tab-content">
+        <div class="card">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
+                @{
+                    void Row(string label, string value) {
+                        <div style="padding:12px 16px;border-bottom:1px solid var(--color-border);">
+                            <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">@label</div>
+                            <div style="font-size:14px;font-weight:500;">@value</div>
+                        </div>
+                    }
+                }
+                @{
+                    var trCulture = new System.Globalization.CultureInfo("tr-TR");
+                    var periyotStr = s.Periyot == KiraPeriyodu.Aylik ? "ay" : "yıl";
+                    Row("Sözleşme No", $"#{s.Id}");
+                    Row("Periyot", s.Periyot == KiraPeriyodu.Aylik ? "Aylık" : "Yıllık");
+                    Row("Kira Bedeli (KDV Hariç)", $"{s.KiraBedeli.ToString("N0")} ₺ / {periyotStr}");
+                    Row("Depozito", s.Depozito.HasValue ? s.Depozito.Value.ToString("N0") + " ₺" : "—");
+                    Row("Başlangıç", s.BaslangicTarihi.ToString("dd MMMM yyyy", trCulture));
+                    Row("Bitiş", s.BitisTarihi.ToString("dd MMMM yyyy", trCulture));
+                    if (s.KdvUygulanacakMi)
+                    {
+                        Row("KDV Oranı", "%" + s.KdvOrani.ToString("G"));
+                        Row("KDV Tutarı", $"{kdvTutari.ToString("N0")} ₺ / {periyotStr}");
+                        Row("KDV Dahil Toplam", $"{kdvDahilToplam.ToString("N0")} ₺ / {periyotStr}");
+                    }
+                    else
+                    {
+                        Row("KDV", "Uygulanmıyor");
+                    }
+                    if (feshedildi)
+                    {
+                        Row("Fesih Tarihi", s.FesihTarihi?.ToString("dd MMMM yyyy", trCulture) ?? "—");
+                        Row("Fesih Nedeni", s.FesihNedeni ?? "—");
+                    }
+                }
+            </div>
+            @if (!string.IsNullOrEmpty(s.Notlar))
+            {
+                <div style="padding:14px 16px;background:#fafbfc;border-radius:0 0 12px 12px;">
+                    <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Notlar</div>
+                    <div style="font-size:14px;line-height:1.6;">@s.Notlar</div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Tab 2: Birim Bilgisi -->
+    <div class="tab-content">
+        <div class="card">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div>
+                    <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:12px;">Birim</div>
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                        <div>
+                            <div style="font-size:12px;color:var(--color-muted);">Ad</div>
+                            <div style="font-size:15px;font-weight:600;">@birim.Ad</div>
+                        </div>
+                        <div>
+                            <div style="font-size:12px;color:var(--color-muted);">Yüzölçüm</div>
+                            <div style="font-size:15px;font-weight:600;">@birim.Yuzolcumu.ToString("N0") m²</div>
+                        </div>
+                        <div>
+                            <div style="font-size:12px;color:var(--color-muted);">Tip</div>
+                            <div style="font-size:15px;font-weight:600;">
+                                @if (birim.BirimTipi == BirimTipi.Ofis)
+                                {
+                                    <span>Ofis @birim.OfisNo</span>
+                                    if (birim.KatNo.HasValue) { <span style="font-size:13px;font-weight:400;color:var(--color-muted);"> • @birim.KatNo. Kat</span> }
+                                }
+                                else { <span>Komple</span> }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:12px;">Taşınmaz</div>
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                        <div>
+                            <div style="font-size:12px;color:var(--color-muted);">Ad</div>
+                            <div style="font-size:15px;font-weight:600;">@tasinmaz.Ad</div>
+                        </div>
+                        <div>
+                            <div style="font-size:12px;color:var(--color-muted);">Konum</div>
+                            <div style="font-size:15px;font-weight:600;">@tasinmaz.Mahalle, @tasinmaz.Ilce / @tasinmaz.Il</div>
+                        </div>
+                        <div>
+                            <div style="font-size:12px;color:var(--color-muted);">Adres</div>
+                            <div style="font-size:14px;">@tasinmaz.AcikAdres</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 3: Geçmiş Sözleşmeler -->
+    <div class="tab-content">
+        @if (!Model.GecmisSozlesmeler.Any())
+        {
+            <div class="card" style="text-align:center;color:var(--color-muted);padding:32px;">Bu birime ait başka sözleşme yok.</div>
+        }
+        else
+        {
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Kiracı</th>
+                                <th>Başlangıç</th>
+                                <th>Bitiş</th>
+                                <th>Aylık Bedel</th>
+                                <th>Durum</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var gs in Model.GecmisSozlesmeler)
+                            {
+                                bool gAktif = Istatistik.Aktif(gs);
+                                bool gFesih = gs.Durum == SozlesmeDurumu.Feshedildi;
+                                <tr>
+                                    <td style="font-weight:600;">@gs.Kiraci.GosterimAdi</td>
+                                    <td>@gs.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
+                                    <td>@gs.BitisTarihi.ToString("dd.MM.yyyy")</td>
+                                    <td>@Istatistik.AylikBedel(gs).ToString("N0") ₺</td>
+                                    <td>
+                                        @if (gFesih) { <span class="badge badge-gecmis">Feshedildi</span> }
+                                        else if (gAktif) { <span class="badge badge-kirali">Aktif</span> }
+                                        else { <span class="badge badge-gecmis">Geçmiş</span> }
+                                    </td>
+                                    <td><a href="/Sozlesme/Detay/@gs.Id" class="btn btn-sm btn-secondary">Detay</a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Tab 4: İşlem Geçmişi -->
+    <div class="tab-content">
+        @if (!s.IslemGecmisi.Any())
+        {
+            <div class="card" style="text-align:center;color:var(--color-muted);padding:32px;">İşlem geçmişi yok.</div>
+        }
+        else
+        {
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tarih</th>
+                                <th>İşlem</th>
+                                <th>Açıklama</th>
+                                <th>Kira Değişimi</th>
+                                <th>Süre Değişimi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var islem in s.IslemGecmisi.OrderByDescending(i => i.IslemTarihi))
+                            {
+                                string islemLabel = islem.IslemTipi switch {
+                                    SozlesmeIslemTipi.Olusturma   => "Oluşturma",
+                                    SozlesmeIslemTipi.SureUzatma  => "Süre Uzatma",
+                                    SozlesmeIslemTipi.Fesih       => "Fesih",
+                                    SozlesmeIslemTipi.TufeArtis   => "TÜFE Artış",
+                                    SozlesmeIslemTipi.KdvGuncelleme => "KDV Güncelleme",
+                                    _ => islem.IslemTipi.ToString()
+                                };
+                                string islemBadgeCls = islem.IslemTipi switch {
+                                    SozlesmeIslemTipi.Olusturma  => "badge-kirali",
+                                    SozlesmeIslemTipi.SureUzatma => "badge-surek",
+                                    SozlesmeIslemTipi.Fesih      => "badge-gecmis",
+                                    _ => "badge-bos"
+                                };
+                                <tr>
+                                    <td style="font-size:13px;white-space:nowrap;">@islem.IslemTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+                                    <td><span class="badge @islemBadgeCls">@islemLabel</span></td>
+                                    <td style="font-size:13px;color:var(--color-muted);">@islem.Aciklama</td>
+                                    <td style="font-size:13px;">
+                                        @if (islem.EskiKiraBedeli.HasValue && islem.YeniKiraBedeli.HasValue)
+                                        {
+                                            <span>@islem.EskiKiraBedeli.Value.ToString("N0") ₺ → @islem.YeniKiraBedeli.Value.ToString("N0") ₺</span>
+                                        }
+                                        else if (islem.YeniKiraBedeli.HasValue)
+                                        {
+                                            <span>@islem.YeniKiraBedeli.Value.ToString("N0") ₺</span>
+                                        }
+                                        else { <span style="color:var(--color-muted);">—</span> }
+                                    </td>
+                                    <td style="font-size:13px;">
+                                        @if (islem.EskiBitisTarihi.HasValue && islem.YeniBitisTarihi.HasValue)
+                                        {
+                                            <span>@islem.EskiBitisTarihi.Value.ToString("dd.MM.yyyy") → @islem.YeniBitisTarihi.Value.ToString("dd.MM.yyyy")</span>
+                                        }
+                                        else { <span style="color:var(--color-muted);">—</span> }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- MODAL: Sözleşmeyi Uzat -->
+<div x-show="showUzat" x-cloak
+    style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;"
+    @@click.self="showUzat = false">
+    <div style="background:white;border-radius:16px;width:100%;max-width:520px;padding:28px;max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div style="font-size:18px;font-weight:700;">Sözleşmeyi Uzat</div>
+            <button @@click="showUzat = false" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--color-muted);">✕</button>
+        </div>
+
+        <div style="background:#f7f8fa;border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:13px;">
+            Mevcut bitiş: <strong>@s.BitisTarihi.ToString("dd.MM.yyyy")</strong> •
+            Mevcut kira: <strong>@TLFormat(s.KiraBedeli)</strong>
+        </div>
+
+        <form method="post" action="/Sozlesme/Uzat/@s.Id">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="SozlesmeId" value="@s.Id" />
+
+            <div class="form-group">
+                <label class="form-label">Yeni Bitiş Tarihi *</label>
+                <input type="date" name="YeniBitisTarihi" class="form-control"
+                    value="@s.BitisTarihi.AddYears(1).ToString("yyyy-MM-dd")" required />
+            </div>
+
+            <!-- TÜFE bölümü -->
+            <div class="form-group">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;">
+                    <input type="checkbox" name="TufeUygulanacakMi" value="true"
+                        x-model="tufeEnabled" @@change="applyTufe()"
+                        style="width:16px;height:16px;cursor:pointer;" />
+                    TÜFE Artışı Uygula
+                </label>
+            </div>
+            <div x-show="tufeEnabled" x-cloak style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px;margin-bottom:14px;">
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label class="form-label">TÜFE Oranı (%)</label>
+                    <input type="number" name="TufeOrani" step="0.01" min="0" class="form-control"
+                        x-model="tufeOrani" @@input="applyTufe()" placeholder="Örn: 25" />
+                </div>
+                <div style="font-size:13px;display:flex;flex-direction:column;gap:4px;">
+                    <div>Artış tutarı: <strong x-text="formatTl(tufeArtisTutari)"></strong></div>
+                    <div>TÜFE sonrası kira: <strong x-text="formatTl(tufeSonrasiBedel)"></strong></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Yeni Kira Bedeli (KDV Hariç) *</label>
+                <input type="number" name="YeniKiraBedeli" step="0.01" min="0.01" class="form-control"
+                    x-model="yeniKiraBedeli" required />
+                <div class="form-hint">TÜFE etkinleştirilince otomatik hesaplanır, manuel olarak da düzenleyebilirsiniz.</div>
+            </div>
+
+            <!-- KDV bölümü -->
+            <div class="form-group">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;">
+                    <input type="checkbox" name="KdvUygulanacakMi" value="true"
+                        x-model="kdvEnabled"
+                        style="width:16px;height:16px;cursor:pointer;" />
+                    KDV Uygula
+                </label>
+            </div>
+            <div x-show="kdvEnabled" x-cloak style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px;margin-bottom:14px;">
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label class="form-label">KDV Oranı (%)</label>
+                    <input type="number" name="KdvOrani" step="0.01" min="0" max="100" class="form-control"
+                        x-model="kdvOrani" value="20" />
+                </div>
+                <div style="font-size:13px;display:flex;flex-direction:column;gap:4px;">
+                    <div>KDV Tutarı: <strong x-text="formatTl(kdvTutari)"></strong></div>
+                    <div>KDV Dahil Toplam: <strong x-text="formatTl(kdvDahilToplam)"></strong></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Açıklama</label>
+                <textarea name="Aciklama" class="form-control" rows="2" placeholder="Opsiyonel açıklama"></textarea>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:4px;">
+                <button type="submit" class="btn btn-primary">Uzat</button>
+                <button type="button" class="btn btn-secondary" @@click="showUzat = false">İptal</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: Sözleşmeyi Feshet -->
+<div x-show="showFesih" x-cloak
+    style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;"
+    @@click.self="showFesih = false">
+    <div style="background:white;border-radius:16px;width:100%;max-width:460px;padding:28px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div style="font-size:18px;font-weight:700;color:#dc2626;">Sözleşmeyi Feshet</div>
+            <button @@click="showFesih = false" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--color-muted);">✕</button>
+        </div>
+
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:13px;color:#991b1b;">
+            Bu işlem geri alınamaz. Feshedilen sözleşme aktif gelir hesaplarına dahil edilmez ve birim yeniden kiralanabilir hale gelir.
+        </div>
+
+        <form method="post" action="/Sozlesme/Feshet/@s.Id">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="SozlesmeId" value="@s.Id" />
+
+            <div class="form-group">
+                <label class="form-label">Fesih Tarihi *</label>
+                <input type="date" name="FesihTarihi" class="form-control"
+                    value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Fesih Nedeni *</label>
+                <input type="text" name="FesihNedeni" class="form-control"
+                    placeholder="Örn: Kiracı tarafından erken fesih" required />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Açıklama</label>
+                <textarea name="Aciklama" class="form-control" rows="2" placeholder="Opsiyonel ek not"></textarea>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:4px;">
+                <button type="submit" class="btn btn-danger">Feshet</button>
+                <button type="button" class="btn btn-secondary" @@click="showFesih = false">İptal</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</div><!-- /x-data -->
+
+@section Scripts {
+    <script>initTabs('sozlesme-tabs');</script>
+    <style>[x-cloak]{display:none!important;}</style>
+}
