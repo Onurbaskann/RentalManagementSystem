@@ -34,6 +34,7 @@ public class UserTasinmazYetkiService
             .ToListAsync();
 
         _context.UserTasinmazYetkileri.RemoveRange(existing);
+        await _context.SaveChangesAsync();
 
         if (tasinmazIds != null && tasinmazIds.Any())
         {
@@ -45,8 +46,7 @@ public class UserTasinmazYetkiService
                 AtayanUserId = atayanUserId
             });
             await _context.UserTasinmazYetkileri.AddRangeAsync(newRecords);
+            await _context.SaveChangesAsync();
         }
-
-        await _context.SaveChangesAsync();
     }
 }

@@ -1,0 +1,141 @@
+@model KiraTakip.Models.ViewModels.AylikRaporViewModel
+@{
+    ViewData["Title"] = "Tahsilat Raporu";
+    string TLFormat(decimal v) => v.ToString("N0") + " ₺";
+    var yillar = ViewBag.MevcutYillar as List<int> ?? new List<int> { Model.Yil };
+}
+
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+        <div class="page-title">Tahsilat Raporu</div>
+        <div class="page-subtitle">@Model.Yil yılı — aylık tahakkuk özeti</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <form method="get" style="display:flex;gap:8px;align-items:center;">
+            <select name="yil" class="form-control" style="width:auto;" onchange="this.form.submit()">
+                @foreach (var y in yillar)
+                {
+                    <option value="@y" selected="@(y == Model.Yil ? "selected" : null)">@y</option>
+                }
+            </select>
+        </form>
+    </div>
+</div>
+
+<!-- Özet Kartlar -->
+<div class="stats-grid" style="margin-bottom:24px;">
+    <div class="card">
+        <div class="card-title">Yıllık Beklenen</div>
+        <div class="card-value" style="font-size:22px;">@TLFormat(Model.ToplamBeklenen)</div>
+        <div class="card-sub">@Model.Satirlar.Sum(s => s.TahakkukSayisi) tahakkuk</div>
+    </div>
+    <div class="card">
+        <div class="card-title">Yıllık Tahsil Edilen</div>
+        <div class="card-value" style="font-size:22px;color:#065f46;">@TLFormat(Model.ToplamTahsil)</div>
+        <div class="card-sub">%@Model.GenelTahsilOrani.ToString("F0") tahsilat oranı</div>
+    </div>
+    <div class="card">
+        <div class="card-title">Tahsil Edilemeyen</div>
+        <div class="card-value" style="font-size:22px;color:@(Model.ToplamBeklenen - Model.ToplamTahsil > 0 ? "#ef4444" : "#065f46");">@TLFormat(Model.ToplamBeklenen - Model.ToplamTahsil)</div>
+        <div class="card-sub">@Model.ToplamGecikmiş gecikmiş tahakkuk</div>
+    </div>
+</div>
+
+<!-- Aylık Tablo -->
+<div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Ay</th>
+                    <th>Tahakkuk</th>
+                    <th>Beklenen</th>
+                    <th>Tahsil Edilen</th>
+                    <th>Kalan</th>
+                    <th style="width:140px;">Tahsilat Oranı</th>
+                    <th>Gecikmiş</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var satir in Model.Satirlar)
+                {
+                    bool buAy = satir.Ay == DateTime.Today.Month && Model.Yil == DateTime.Today.Year;
+                    decimal kalan = satir.Beklenen - satir.TahsilEdilen;
+                    <tr style="@(buAy ? "background:#fffbeb;" : "")">
+                        <td style="font-weight:@(buAy ? "700" : "500");">
+                            @satir.AyAdi
+                            @if (buAy) { <span class="badge badge-surek" style="font-size:10px;margin-left:4px;">Bu Ay</span> }
+                        </td>
+                        <td style="text-align:center;color:var(--color-muted);">
+                            @(satir.TahakkukSayisi > 0 ? satir.TahakkukSayisi.ToString() : "—")
+                        </td>
+                        <td style="font-weight:600;">
+                            @(satir.Beklenen > 0 ? TLFormat(satir.Beklenen) : "—")
+                        </td>
+                        <td style="color:#065f46;font-weight:600;">
+                            @(satir.TahsilEdilen > 0 ? TLFormat(satir.TahsilEdilen) : (satir.Beklenen > 0 ? "0 ₺" : "—"))
+                        </td>
+                        <td style="color:@(kalan > 0 ? "#ef4444" : "#065f46");font-weight:600;">
+                            @(satir.Beklenen > 0 ? TLFormat(kalan) : "—")
+                        </td>
+                        <td>
+                            @if (satir.Beklenen > 0)
+                            {
+                                string barColor = satir.TahsilOrani >= 100 ? "#10b981" : satir.TahsilOrani >= 50 ? "#f59e0b" : "#ef4444";
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div class="progress-bar" style="flex:1;margin-bottom:0;">
+                                        <div class="progress-fill" style="width:@Math.Min(satir.TahsilOrani,100).ToString("F0")%;background:@barColor;"></div>
+                                    </div>
+                                    <span style="font-size:12px;font-weight:600;color:@barColor;width:32px;">%@satir.TahsilOrani.ToString("F0")</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <span style="color:var(--color-muted);font-size:13px;">—</span>
+                            }
+                        </td>
+                        <td>
+                            @if (satir.GecikmisTahakkukAdet > 0)
+                            {
+                                <span class="badge badge-gecmis">@satir.GecikmisTahakkukAdet</span>
+                            }
+                            else if (satir.TahakkukSayisi > 0)
+                            {
+                                <span style="color:#10b981;font-size:13px;">✓</span>
+                            }
+                            else
+                            {
+                                <span style="color:var(--color-muted);font-size:13px;">—</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr style="border-top:2px solid var(--color-border);background:#fafbfc;">
+                    <td style="font-weight:700;">Toplam</td>
+                    <td style="text-align:center;font-weight:600;">@Model.Satirlar.Sum(s => s.TahakkukSayisi)</td>
+                    <td style="font-weight:700;">@TLFormat(Model.ToplamBeklenen)</td>
+                    <td style="font-weight:700;color:#065f46;">@TLFormat(Model.ToplamTahsil)</td>
+                    <td style="font-weight:700;color:@(Model.ToplamBeklenen - Model.ToplamTahsil > 0 ? "#ef4444" : "#065f46");">@TLFormat(Model.ToplamBeklenen - Model.ToplamTahsil)</td>
+                    <td>
+                        @{
+                            string totalColor = Model.GenelTahsilOrani >= 100 ? "#10b981" : Model.GenelTahsilOrani >= 50 ? "#f59e0b" : "#ef4444";
+                        }
+                        <span style="font-weight:700;color:@totalColor;">%@Model.GenelTahsilOrani.ToString("F0")</span>
+                    </td>
+                    <td>
+                        @if (Model.ToplamGecikmiş > 0)
+                        {
+                            <span class="badge badge-gecmis">@Model.ToplamGecikmiş</span>
+                        }
+                        else
+                        {
+                            <span style="color:#10b981;font-size:13px;">✓</span>
+                        }
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>

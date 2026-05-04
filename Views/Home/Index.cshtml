@@ -74,6 +74,86 @@
     </div>
 </div>
 
+<!-- Ödeme KPI'ları -->
+@if (Model.HasOdemeAccess)
+{
+    decimal kalanTahsilat = Model.BuAyBeklenenTahsilat - Model.BuAyTahsilEdilen;
+    double tahsilPct = Model.BuAyBeklenenTahsilat > 0 ? (double)(Model.BuAyTahsilEdilen / Model.BuAyBeklenenTahsilat * 100) : 0;
+
+    <div style="margin-bottom:24px;">
+        <div style="font-size:13px;font-weight:700;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">Ödeme Durumu</div>
+        <div class="stats-grid">
+            <!-- Bu Ay Tahsilat -->
+            <div class="card">
+                <div class="card-title">Bu Ay Beklenen Tahsilat</div>
+                <div class="card-value" style="font-size:22px;">@TLFormat(Model.BuAyBeklenenTahsilat)</div>
+                <div class="card-sub" style="margin-top:8px;">
+                    <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:4px;">
+                        <span>Tahsil Edilen</span>
+                        <span style="font-weight:600;color:#10b981;">@TLFormat(Model.BuAyTahsilEdilen)</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width:@Math.Min(tahsilPct,100).ToString("F0")%;background:#10b981;"></div>
+                    </div>
+                    @if (kalanTahsilat > 0)
+                    {
+                        <div style="font-size:11px;color:var(--color-muted);margin-top:4px;">Kalan: @TLFormat(kalanTahsilat)</div>
+                    }
+                </div>
+            </div>
+
+            <!-- Gecikmiş -->
+            <div class="card" style="@(Model.GecikmisTahakkukAdet > 0 ? "border-left:3px solid #ef4444;" : "")">
+                <div class="card-title">Gecikmiş Tahakkuk</div>
+                <div class="card-value" style="@(Model.GecikmisTahakkukAdet > 0 ? "color:#ef4444;" : "")">@Model.GecikmisTahakkukAdet</div>
+                <div class="card-sub">
+                    @if (Model.GecikmisTahakkukAdet > 0)
+                    {
+                        <span style="color:#ef4444;font-weight:600;">@TLFormat(Model.GecikmisTutarToplam)</span><span style="color:var(--color-muted);"> bekliyor</span>
+                        <div style="margin-top:6px;"><a href="/Tahakkuk?durum=gecikti" style="font-size:12px;color:#ef4444;text-decoration:none;">Görüntüle →</a></div>
+                    }
+                    else
+                    {
+                        <span style="color:#10b981;">Gecikmiş ödeme yok</span>
+                    }
+                </div>
+            </div>
+
+            <!-- Onay Bekleyen -->
+            <div class="card" style="@(Model.OnayBekleyenOdemeAdet > 0 ? "border-left:3px solid #f59e0b;" : "")">
+                <div class="card-title">Onay Bekleyen Ödeme</div>
+                <div class="card-value" style="@(Model.OnayBekleyenOdemeAdet > 0 ? "color:#f59e0b;" : "")">@Model.OnayBekleyenOdemeAdet</div>
+                <div class="card-sub">
+                    @if (Model.OnayBekleyenOdemeAdet > 0)
+                    {
+                        <a href="/Odeme?durum=onaybekliyor" style="font-size:12px;color:#f59e0b;text-decoration:none;">İncele →</a>
+                    }
+                    else
+                    {
+                        <span style="color:var(--color-muted);">Bekleyen yok</span>
+                    }
+                </div>
+            </div>
+
+            <!-- Eşleşmemiş Banka Hareketi -->
+            <div class="card" style="@(Model.EslesmemisHareketAdet > 0 ? "border-left:3px solid #6366f1;" : "")">
+                <div class="card-title">Eşleşmemiş Banka Hareketi</div>
+                <div class="card-value" style="@(Model.EslesmemisHareketAdet > 0 ? "color:#6366f1;" : "")">@Model.EslesmemisHareketAdet</div>
+                <div class="card-sub">
+                    @if (Model.EslesmemisHareketAdet > 0)
+                    {
+                        <a href="/BankaHareketi?durum=eslestirilmedi" style="font-size:12px;color:#6366f1;text-decoration:none;">Eşleştir →</a>
+                    }
+                    else
+                    {
+                        <span style="color:var(--color-muted);">Tümü eşleştirildi</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 <!-- İki Kolon: Süresi Dolmak Üzere + Boş Birimler -->
 <div class="two-col" style="margin-bottom:24px;">
     <!-- Sol: Süresi Dolmak Üzere -->

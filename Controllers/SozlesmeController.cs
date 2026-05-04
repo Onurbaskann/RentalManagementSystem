@@ -15,6 +15,7 @@ public class SozlesmeController : Controller
     private readonly ITasinmazService _tasinmazService;
     private readonly IKiraciService _kiraciService;
     private readonly IIstatistikService _istatistik;
+    private readonly ITahakkukService _tahakkukService;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public SozlesmeController(
@@ -22,12 +23,14 @@ public class SozlesmeController : Controller
         ITasinmazService tasinmazService,
         IKiraciService kiraciService,
         IIstatistikService istatistik,
+        ITahakkukService tahakkukService,
         UserManager<ApplicationUser> userManager)
     {
         _sozlesmeService = sozlesmeService;
         _tasinmazService = tasinmazService;
         _kiraciService = kiraciService;
         _istatistik = istatistik;
+        _tahakkukService = tahakkukService;
         _userManager = userManager;
     }
 
@@ -68,6 +71,12 @@ public class SozlesmeController : Controller
             Durum = _istatistik.GetBirimDurumu(s.Birim),
             GecmisSozlesmeler = gecmis.Where(x => x.Id != id).ToList()
         };
+
+        if (User.HasClaim("permission", "Odeme.View"))
+        {
+            vm.HasOdemeAccess = true;
+            vm.Tahakkuklar = await _tahakkukService.GetAllAsync(sozlesmeId: id);
+        }
 
         return View(vm);
     }

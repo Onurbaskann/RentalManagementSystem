@@ -18,6 +18,15 @@ public class DashboardViewModel
 
     public List<SuresiDolmakUzereSozlesme> SuresiDolmakUzere { get; set; } = new();
     public List<BosBirimOzet> BosBirimler { get; set; } = new();
+
+    // Ödeme KPI'ları
+    public bool HasOdemeAccess { get; set; }
+    public decimal BuAyBeklenenTahsilat { get; set; }
+    public decimal BuAyTahsilEdilen { get; set; }
+    public int GecikmisTahakkukAdet { get; set; }
+    public decimal GecikmisTutarToplam { get; set; }
+    public int OnayBekleyenOdemeAdet { get; set; }
+    public int EslesmemisHareketAdet { get; set; }
 }
 
 public class SuresiDolmakUzereSozlesme

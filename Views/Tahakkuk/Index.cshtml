@@ -1,0 +1,104 @@
+@model List<KiraTakip.Models.KiraTahakkuk>
+@using KiraTakip.Models
+@{
+    ViewData["Title"] = "Tahakkuklar";
+    bool canCreate = User.HasClaim("permission", "Odeme.Create");
+    string durum = ViewBag.Durum ?? "tum";
+}
+
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+        <div class="page-title">Tahakkuklar</div>
+        <div class="page-subtitle">@Model.Count dönem kaydı</div>
+    </div>
+    @if (canCreate)
+    {
+        <a href="/Tahakkuk/Olustur" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Tahakkuk Oluştur
+        </a>
+    }
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">✓ @TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">✕ @TempData["Error"]</div>
+}
+
+<!-- Filtreler -->
+<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+    @{
+        var filters = new[] { ("tum","Tümü"), ("gecikti","Gecikti"), ("bekliyor","Bekliyor") };
+    }
+    @foreach (var (key, label) in filters)
+    {
+        string cls = durum == key ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm";
+        <a href="/Tahakkuk?durum=@key" class="@cls">@label</a>
+    }
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Dönem</th>
+                    <th>Kiracı</th>
+                    <th>Taşınmaz</th>
+                    <th>Vade</th>
+                    <th>Beklenen</th>
+                    <th>Ödenen</th>
+                    <th>Kalan</th>
+                    <th>Durum</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in Model)
+                {
+                    var kalan = t.ToplamTutar - t.OdenenTutar;
+                    string durumCls = t.Durum switch {
+                        TahakkukDurumu.TamOdendi    => "badge-kirali",
+                        TahakkukDurumu.KismenOdendi => "badge-surek",
+                        TahakkukDurumu.Gecikti      => "badge-gecmis",
+                        _                           => "badge-bos"
+                    };
+                    string durumLabel = t.Durum switch {
+                        TahakkukDurumu.TamOdendi    => "Tam Ödendi",
+                        TahakkukDurumu.KismenOdendi => "Kısmi Ödendi",
+                        TahakkukDurumu.Gecikti      => "Gecikti",
+                        _                           => "Bekleniyor"
+                    };
+                    <tr>
+                        <td style="font-weight:600;">@t.DonemBaslangic.ToString("MMMM yyyy")</td>
+                        <td>@t.KiraSozlesmesi.Kiraci.GosterimAdi</td>
+                        <td>
+                            <div style="font-weight:500;">@t.KiraSozlesmesi.Birim.Tasinmaz.Ad</div>
+                            <div style="font-size:12px;color:var(--color-muted);">@t.KiraSozlesmesi.Birim.Ad</div>
+                        </td>
+                        <td style="font-size:13px;">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
+                        <td style="font-weight:600;">@t.ToplamTutar.ToString("N0") ₺</td>
+                        <td style="color:#065f46;font-weight:600;">@t.OdenenTutar.ToString("N0") ₺</td>
+                        <td style="@(kalan > 0 ? "color:#991b1b;" : "")font-weight:600;">@kalan.ToString("N0") ₺</td>
+                        <td><span class="badge @durumCls">@durumLabel</span></td>
+                        <td>
+                            <a href="/Odeme?tahakkukId=@t.Id" class="btn btn-sm btn-secondary">Ödemeler</a>
+                            @if (canCreate && t.Durum != TahakkukDurumu.TamOdendi)
+                            {
+                                <a href="/Odeme/Ekle?tahakkukId=@t.Id" class="btn btn-sm btn-primary" style="margin-left:4px;">Ödeme Ekle</a>
+                            }
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="9" style="text-align:center;color:var(--color-muted);padding:32px;">Tahakkuk kaydı bulunamadı.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

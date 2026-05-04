@@ -14,17 +14,26 @@ public class HomeController : Controller
     private readonly ITasinmazService _tasinmazService;
     private readonly ISozlesmeService _sozlesmeService;
     private readonly IIstatistikService _istatistik;
+    private readonly ITahakkukService _tahakkukService;
+    private readonly IOdemeService _odemeService;
+    private readonly IBankaHareketiService _bankaHareketiService;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public HomeController(
         ITasinmazService tasinmazService,
         ISozlesmeService sozlesmeService,
         IIstatistikService istatistik,
+        ITahakkukService tahakkukService,
+        IOdemeService odemeService,
+        IBankaHareketiService bankaHareketiService,
         UserManager<ApplicationUser> userManager)
     {
         _tasinmazService = tasinmazService;
         _sozlesmeService = sozlesmeService;
         _istatistik = istatistik;
+        _tahakkukService = tahakkukService;
+        _odemeService = odemeService;
+        _bankaHareketiService = bankaHareketiService;
         _userManager = userManager;
     }
 
@@ -84,6 +93,24 @@ public class HomeController : Controller
                 Ilce = b.Tasinmaz.Ilce,
                 Yuzolcumu = b.Yuzolcumu
             }).ToList();
+
+        if (User.HasClaim("permission", "Odeme.View"))
+        {
+            vm.HasOdemeAccess = true;
+            var tahakkuklar = await _tahakkukService.GetAllAsync(userId: filterUserId);
+            var buAyTahakkuklar = tahakkuklar.Where(t => t.DonemBaslangic.Year == now.Year && t.DonemBaslangic.Month == now.Month).ToList();
+
+            vm.BuAyBeklenenTahsilat = buAyTahakkuklar.Sum(t => t.ToplamTutar);
+            vm.BuAyTahsilEdilen     = buAyTahakkuklar.Sum(t => t.OdenenTutar);
+            vm.GecikmisTahakkukAdet = tahakkuklar.Count(t => t.Durum == TahakkukDurumu.Gecikti);
+            vm.GecikmisTutarToplam  = tahakkuklar.Where(t => t.Durum == TahakkukDurumu.Gecikti).Sum(t => t.ToplamTutar - t.OdenenTutar);
+
+            var odemeler = await _odemeService.GetAllAsync(userId: filterUserId);
+            vm.OnayBekleyenOdemeAdet = odemeler.Count(o => o.Durum == OdemeDurumu.OnayBekliyor);
+
+            var eslesmemisler = await _bankaHareketiService.GetAllAsync(BankaEslesmeDurumu.Eslestirilmedi);
+            vm.EslesmemisHareketAdet = eslesmemisler.Count;
+        }
 
         return View(vm);
     }

@@ -55,3 +55,39 @@ public enum BirimTipi
     Komple = 1,
     Ofis = 2
 }
+
+public enum TahakkukDurumu
+{
+    Bekleniyor = 1,
+    KismenOdendi = 2,
+    TamOdendi = 3,
+    Gecikti = 4
+}
+
+public enum OdemeDurumu
+{
+    OnayBekliyor = 1,
+    Onaylandi = 2,
+    Reddedildi = 3
+}
+
+public enum OdemeKanali
+{
+    Havale = 1,
+    EFT = 2,
+    Nakit = 3,
+    Diger = 4
+}
+
+public enum BankaEslesmeDurumu
+{
+    Eslestirilmedi = 1,
+    Eslesti = 2,
+    ManuelEslesti = 3
+}
+
+public enum EslesmeTipi
+{
+    Otomatik = 1,
+    Manuel = 2
+}

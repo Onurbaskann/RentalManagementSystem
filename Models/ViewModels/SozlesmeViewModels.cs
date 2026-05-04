@@ -13,6 +13,8 @@ public class SozlesmeDetayViewModel
     public double SureYuzdesi { get; set; }
     public KiraDurumu Durum { get; set; }
     public List<KiraSozlesmesi> GecmisSozlesmeler { get; set; } = new();
+    public List<KiraTahakkuk> Tahakkuklar { get; set; } = new();
+    public bool HasOdemeAccess { get; set; }
 }
 
 public class SozlesmeEkleViewModel

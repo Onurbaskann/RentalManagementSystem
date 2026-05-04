@@ -216,6 +216,10 @@
         <button class="tab">Birim Bilgisi</button>
         <button class="tab">Geçmiş Sözleşmeler (@Model.GecmisSozlesmeler.Count)</button>
         <button class="tab">İşlem Geçmişi (@s.IslemGecmisi.Count)</button>
+        @if (Model.HasOdemeAccess)
+        {
+            <button class="tab">Ödemeler (@Model.Tahakkuklar.Count)</button>
+        }
     </div>
 
     <!-- Tab 1: Detaylar -->
@@ -429,6 +433,90 @@
         }
     </div>
 </div>
+
+    <!-- Tab 5: Ödemeler (tahakkuk özeti) -->
+    @if (Model.HasOdemeAccess)
+    {
+        <div class="tab-content">
+        @if (!Model.Tahakkuklar.Any())
+        {
+            <div class="card" style="text-align:center;color:var(--color-muted);padding:32px;">
+                Bu sözleşme için henüz tahakkuk oluşturulmamış.
+                @if (User.HasClaim("permission", "Odeme.Create"))
+                {
+                    <div style="margin-top:12px;"><a href="/Tahakkuk/Olustur" class="btn btn-primary btn-sm">Tahakkuk Oluştur</a></div>
+                }
+            </div>
+        }
+        else
+        {
+            decimal toplamBeklenen = Model.Tahakkuklar.Sum(t => t.ToplamTutar);
+            decimal toplamOdenen   = Model.Tahakkuklar.Sum(t => t.OdenenTutar);
+            decimal toplamKalan    = toplamBeklenen - toplamOdenen;
+            int gecikmisSayisi     = Model.Tahakkuklar.Count(t => t.Durum == KiraTakip.Models.TahakkukDurumu.Gecikti);
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+                <div class="card" style="text-align:center;">
+                    <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;margin-bottom:6px;">Toplam Beklenen</div>
+                    <div style="font-size:20px;font-weight:700;">@toplamBeklenen.ToString("N0") ₺</div>
+                    <div style="font-size:11.5px;color:var(--color-muted);">@Model.Tahakkuklar.Count tahakkuk</div>
+                </div>
+                <div class="card" style="text-align:center;">
+                    <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;margin-bottom:6px;">Tahsil Edilen</div>
+                    <div style="font-size:20px;font-weight:700;color:#065f46;">@toplamOdenen.ToString("N0") ₺</div>
+                    @{ double pct = toplamBeklenen > 0 ? (double)(toplamOdenen / toplamBeklenen * 100) : 0; }
+                    <div style="font-size:11.5px;color:var(--color-muted);">%@pct.ToString("F0")</div>
+                </div>
+                <div class="card" style="text-align:center;@(toplamKalan > 0 ? "border-left:3px solid #ef4444;" : "")">
+                    <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;margin-bottom:6px;">Kalan / Gecikmiş</div>
+                    <div style="font-size:20px;font-weight:700;color:@(toplamKalan > 0 ? "#ef4444" : "#065f46");">@toplamKalan.ToString("N0") ₺</div>
+                    <div style="font-size:11.5px;color:var(--color-muted);">@(gecikmisSayisi > 0 ? $"{gecikmisSayisi} gecikmiş" : "Gecikme yok")</div>
+                </div>
+            </div>
+
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Dönem</th>
+                                <th>Vade</th>
+                                <th>Beklenen</th>
+                                <th>Ödenen</th>
+                                <th>Durum</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var t in Model.Tahakkuklar.OrderByDescending(x => x.DonemBaslangic))
+                            {
+                                string tDurumCls = t.Durum switch {
+                                    KiraTakip.Models.TahakkukDurumu.TamOdendi    => "badge-kirali",
+                                    KiraTakip.Models.TahakkukDurumu.KismenOdendi => "badge-surek",
+                                    KiraTakip.Models.TahakkukDurumu.Gecikti      => "badge-gecmis",
+                                    _                                              => "badge-bos"
+                                };
+                                string tDurumLabel = t.Durum switch {
+                                    KiraTakip.Models.TahakkukDurumu.TamOdendi    => "Tam Ödendi",
+                                    KiraTakip.Models.TahakkukDurumu.KismenOdendi => "Kısmi",
+                                    KiraTakip.Models.TahakkukDurumu.Gecikti      => "Gecikti",
+                                    _                                              => "Bekleniyor"
+                                };
+                                <tr>
+                                    <td style="font-weight:600;">@t.DonemBaslangic.ToString("MMMM yyyy")</td>
+                                    <td style="font-size:13px;">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
+                                    <td style="font-weight:600;">@t.ToplamTutar.ToString("N0") ₺</td>
+                                    <td style="color:#065f46;">@t.OdenenTutar.ToString("N0") ₺</td>
+                                    <td><span class="badge @tDurumCls">@tDurumLabel</span></td>
+                                    <td><a href="/Odeme?tahakkukId=@t.Id" class="btn btn-sm btn-secondary">Ödemeler</a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+        </div>
+    }
 
 <!-- MODAL: Sözleşmeyi Uzat -->
 <div x-show="showUzat" x-cloak

@@ -15,6 +15,8 @@ public class SeedDataService
         if (await _ctx.Tasinmazlar.AnyAsync()) return;
 
         var now = DateTime.Now;
+        var adminUser = await _ctx.Users.FirstOrDefaultAsync(u => u.Email == "admin@kiratakip.local");
+        var adminId = adminUser?.Id ?? "";
 
         // --- Kiracılar ---
         var ahmet = Kiraci("KRC-000001", KiraciTuru.Gercek, "Ahmet", "Yılmaz",
@@ -99,11 +101,99 @@ public class SeedDataService
 
         foreach (var s in sozlesmeler)
         {
-            if (s.BitisTarihi < DateTime.Now)
+            if (s.BitisTarihi < now)
                 s.Durum = SozlesmeDurumu.SonaErdi;
         }
 
         _ctx.Sozlesmeler.AddRange(sozlesmeler);
+        await _ctx.SaveChangesAsync();
+
+        // --- 2. Ödeme Takip Verileri (Tahakkuk, Ödeme, Banka Hareketi) ---
+        // 1. Bu Ay Beklenen Tahsilat
+        var s1 = sozlesmeler[0];
+        var t1 = new KiraTahakkuk
+        {
+            KiraSozlesmesiId = s1.Id,
+            DonemBaslangic = new DateTime(now.Year, now.Month, 1),
+            DonemBitis = new DateTime(now.Year, now.Month, 1).AddMonths(1).AddDays(-1),
+            VadeTarihi = new DateTime(now.Year, now.Month, 5),
+            BeklenenTutar = s1.KiraBedeli,
+            KdvTutari = s1.KdvUygulanacakMi ? (s1.KiraBedeli * s1.KdvOrani / 100) : 0,
+            ToplamTutar = s1.KiraBedeli + (s1.KdvUygulanacakMi ? (s1.KiraBedeli * s1.KdvOrani / 100) : 0),
+            OdenenTutar = 0,
+            Durum = TahakkukDurumu.Bekleniyor
+        };
+
+        // 2. Gecikmiş Tahakkuk
+        var s2 = sozlesmeler[1];
+        var t2 = new KiraTahakkuk
+        {
+            KiraSozlesmesiId = s2.Id,
+            DonemBaslangic = now.AddMonths(-1),
+            DonemBitis = now.AddDays(-1),
+            VadeTarihi = now.AddMonths(-1).AddDays(5),
+            BeklenenTutar = s2.KiraBedeli,
+            ToplamTutar = s2.KiraBedeli,
+            OdenenTutar = 0,
+            Durum = TahakkukDurumu.Gecikti
+        };
+
+        // 3. Onay Bekleyen Ödeme
+        var s3 = sozlesmeler[2];
+        var t3 = new KiraTahakkuk
+        {
+            KiraSozlesmesiId = s3.Id,
+            DonemBaslangic = now.AddMonths(-1),
+            DonemBitis = now.AddDays(-1),
+            VadeTarihi = now.AddMonths(-1).AddDays(5),
+            BeklenenTutar = s3.KiraBedeli,
+            ToplamTutar = s3.KiraBedeli,
+            OdenenTutar = 0,
+            Durum = TahakkukDurumu.Bekleniyor
+        };
+
+        _ctx.KiraTahakkuklar.AddRange(t1, t2, t3);
+        await _ctx.SaveChangesAsync();
+
+        var o1 = new KiraOdeme
+        {
+            KiraTahakkukId = t3.Id,
+            KiraSozlesmesiId = s3.Id,
+            OdemeTarihi = now.AddDays(-2),
+            Tutar = t3.ToplamTutar,
+            OdemeKanali = OdemeKanali.Havale,
+            Aciklama = "Ayşe Demir kira ödemesi",
+            Durum = OdemeDurumu.OnayBekliyor,
+            GirenUserId = adminId
+        };
+        _ctx.KiraOdemeler.Add(o1);
+
+        // 4. Eşleşmemiş Banka Hareketi
+        var b1 = new BankaHareketi
+        {
+            ImportBatchId = Guid.NewGuid(),
+            HareketTarihi = now.AddDays(-1),
+            Tutar = 12000,
+            Aciklama = "Gelen Havale: Mehmet Kaya Kira",
+            KarsiUnvan = "MEHMET KAYA",
+            BankaKodu = "AKB",
+            EslesmeDurumu = BankaEslesmeDurumu.Eslestirilmedi,
+            ImportEdenUserId = adminId
+        };
+
+        var b2 = new BankaHareketi
+        {
+            ImportBatchId = Guid.NewGuid(),
+            HareketTarihi = now.AddDays(-3),
+            Tutar = 8500,
+            Aciklama = "MAVİ CAFE KİRA ÖDEMESİ",
+            KarsiUnvan = "MAVİ CAFE LTD",
+            BankaKodu = "AKB",
+            EslesmeDurumu = BankaEslesmeDurumu.Eslestirilmedi,
+            ImportEdenUserId = adminId
+        };
+        _ctx.BankaHareketleri.AddRange(b1, b2);
+
         await _ctx.SaveChangesAsync();
     }
 

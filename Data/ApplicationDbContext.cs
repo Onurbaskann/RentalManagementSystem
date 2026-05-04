@@ -19,6 +19,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<UserTasinmazYetki> UserTasinmazYetkileri { get; set; }
     public DbSet<UserPermission> UserPermissions { get; set; }
 
+    public DbSet<KiraTahakkuk> KiraTahakkuklar { get; set; }
+    public DbSet<KiraOdeme> KiraOdemeler { get; set; }
+    public DbSet<Dekont> Dekontlar { get; set; }
+    public DbSet<BankaHareketi> BankaHareketleri { get; set; }
+    public DbSet<OdemeBankaEslesme> OdemeBankaEslesmeleri { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -100,6 +106,88 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             entity.HasIndex(p => new { p.UserId, p.Permission }).IsUnique();
             entity.Property(p => p.Permission).HasMaxLength(100);
+        });
+
+        builder.Entity<KiraTahakkuk>(entity =>
+        {
+            entity.Property(t => t.BeklenenTutar).HasPrecision(18, 2);
+            entity.Property(t => t.KdvTutari).HasPrecision(18, 2);
+            entity.Property(t => t.ToplamTutar).HasPrecision(18, 2);
+            entity.Property(t => t.OdenenTutar).HasPrecision(18, 2);
+            entity.HasOne(t => t.KiraSozlesmesi)
+                  .WithMany()
+                  .HasForeignKey(t => t.KiraSozlesmesiId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(t => new { t.KiraSozlesmesiId, t.DonemBaslangic }).IsUnique();
+        });
+
+        builder.Entity<KiraOdeme>(entity =>
+        {
+            entity.Property(o => o.Tutar).HasPrecision(18, 2);
+            entity.Property(o => o.RedNedeni).HasMaxLength(500);
+            entity.HasOne(o => o.KiraTahakkuk)
+                  .WithMany(t => t.Odemeler)
+                  .HasForeignKey(o => o.KiraTahakkukId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(o => o.KiraSozlesmesi)
+                  .WithMany()
+                  .HasForeignKey(o => o.KiraSozlesmesiId)
+                  .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(o => o.GirenUser)
+                  .WithMany()
+                  .HasForeignKey(o => o.GirenUserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(o => o.OnaylayanUser)
+                  .WithMany()
+                  .HasForeignKey(o => o.OnaylayanUserId)
+                  .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        builder.Entity<Dekont>(entity =>
+        {
+            entity.Property(d => d.OrijinalDosyaAdi).HasMaxLength(255);
+            entity.Property(d => d.DiskDosyaAdi).HasMaxLength(255);
+            entity.Property(d => d.DosyaYolu).HasMaxLength(500);
+            entity.Property(d => d.DosyaTipi).HasMaxLength(100);
+            entity.HasOne(d => d.KiraOdeme)
+                  .WithMany(o => o.Dekontlar)
+                  .HasForeignKey(d => d.KiraOdemeId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(d => d.YukleyenUser)
+                  .WithMany()
+                  .HasForeignKey(d => d.YukleyenUserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<BankaHareketi>(entity =>
+        {
+            entity.Property(b => b.Tutar).HasPrecision(18, 2);
+            entity.Property(b => b.Bakiye).HasPrecision(18, 2);
+            entity.Property(b => b.Aciklama).HasMaxLength(500);
+            entity.Property(b => b.KarsiHesap).HasMaxLength(50);
+            entity.Property(b => b.KarsiUnvan).HasMaxLength(200);
+            entity.Property(b => b.BankaKodu).HasMaxLength(20);
+            entity.HasOne(b => b.ImportEdenUser)
+                  .WithMany()
+                  .HasForeignKey(b => b.ImportEdenUserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(b => b.ImportBatchId);
+        });
+
+        builder.Entity<OdemeBankaEslesme>(entity =>
+        {
+            entity.HasOne(e => e.KiraOdeme)
+                  .WithMany(o => o.BankaEslesmeleri)
+                  .HasForeignKey(e => e.KiraOdemeId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.BankaHareketi)
+                  .WithMany(b => b.OdemeEslesmeleri)
+                  .HasForeignKey(e => e.BankaHareketiId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.EslestirenUser)
+                  .WithMany()
+                  .HasForeignKey(e => e.EslestirenUserId)
+                  .OnDelete(DeleteBehavior.NoAction);
         });
     }
 }

@@ -30,6 +30,7 @@ public class PermissionService(ApplicationDbContext context) : IPermissionServic
             .ToListAsync();
 
         context.UserPermissions.RemoveRange(existing);
+        await context.SaveChangesAsync();
 
         var now = DateTime.UtcNow;
         var newPermissions = permissionList.Select(p => new UserPermission

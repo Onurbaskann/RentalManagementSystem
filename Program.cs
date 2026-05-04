@@ -2,6 +2,7 @@ using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Services;
+using KiraTakip.Services.Banka;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -49,6 +50,11 @@ builder.Services.AddScoped<IKiraciService, KiraciService>();
 builder.Services.AddScoped<ISozlesmeService, SozlesmeService>();
 builder.Services.AddScoped<IIstatistikService, IstatistikService>();
 builder.Services.AddScoped<SeedDataService>();
+builder.Services.AddScoped<ITahakkukService, TahakkukService>();
+builder.Services.AddScoped<IOdemeService, OdemeService>();
+builder.Services.AddScoped<IDekontService, DekontService>();
+builder.Services.AddScoped<IBankaHareketiService, BankaHareketiService>();
+builder.Services.AddSingleton<IBankaHareketiParser, AkbankCsvParser>();
 
 var app = builder.Build();
 
