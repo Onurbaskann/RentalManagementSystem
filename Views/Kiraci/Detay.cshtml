@@ -1,7 +1,7 @@
 @model KiraTakip.Models.ViewModels.KiraciDetayViewModel
 @using KiraTakip.Models
-@using KiraTakip.Services
-@inject IstatistikService Istatistik
+@using KiraTakip.Services.Interfaces
+@inject IIstatistikService Istatistik
 @{
     ViewData["Title"] = Model.Kiraci.GosterimAdi;
     var k = Model.Kiraci;

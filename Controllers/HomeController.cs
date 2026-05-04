@@ -4,27 +4,27 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
-using KiraTakip.Services;
+using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Controllers;
 
 [Authorize]
 public class HomeController : Controller
 {
-    private readonly DummyDataService _data;
-    private readonly IstatistikService _istatistik;
-    private readonly UserTasinmazYetkiService _yetkiService;
+    private readonly ITasinmazService _tasinmazService;
+    private readonly ISozlesmeService _sozlesmeService;
+    private readonly IIstatistikService _istatistik;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public HomeController(
-        DummyDataService data, 
-        IstatistikService istatistik,
-        UserTasinmazYetkiService yetkiService,
+        ITasinmazService tasinmazService,
+        ISozlesmeService sozlesmeService,
+        IIstatistikService istatistik,
         UserManager<ApplicationUser> userManager)
     {
-        _data = data;
+        _tasinmazService = tasinmazService;
+        _sozlesmeService = sozlesmeService;
         _istatistik = istatistik;
-        _yetkiService = yetkiService;
         _userManager = userManager;
     }
 
@@ -32,24 +32,12 @@ public class HomeController : Controller
     {
         var now = DateTime.Now;
         var userId = _userManager.GetUserId(User);
-        List<int> yetkiliIds = null!;
+        var filterUserId = User.IsInRole("Goruntuleyici") ? userId : null;
 
-        if (User.IsInRole("Goruntuleyici"))
-        {
-            yetkiliIds = await _yetkiService.GetYetkiliTasinmazIdsAsync(userId!);
-        }
-
-        var tasinmazlar = _data.Tasinmazlar
-            .Where(t => yetkiliIds == null || yetkiliIds.Contains(t.Id))
-            .ToList();
-
-        var tumBirimler = _data.GetTumBirimler()
-            .Where(b => yetkiliIds == null || yetkiliIds.Contains(b.TasinmazId))
-            .ToList();
-
-        var sozlesmeler = _data.Sozlesmeler
-            .Where(s => yetkiliIds == null || yetkiliIds.Contains(s.Birim.TasinmazId))
-            .ToList();
+        var tasinmazlar = await _tasinmazService.GetAllAsync(filterUserId);
+        var tumBirimler = tasinmazlar.SelectMany(t => t.Birimler).ToList();
+        var sozlesmeler = await _sozlesmeService.GetAllAsync(userId: filterUserId);
+        var bosBirimler = await _tasinmazService.GetBosBirimlerAsync(filterUserId);
 
         var vm = new DashboardViewModel
         {
@@ -86,8 +74,7 @@ public class HomeController : Controller
                 BitisTarihi = s.BitisTarihi
             }).ToList();
 
-        vm.BosBirimler = _data.GetBosBirimler()
-            .Where(b => yetkiliIds == null || yetkiliIds.Contains(b.TasinmazId))
+        vm.BosBirimler = bosBirimler
             .Take(5)
             .Select(b => new BosBirimOzet
             {

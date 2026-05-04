@@ -1,17 +1,11 @@
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-public class IstatistikService
+public class IstatistikService : IIstatistikService
 {
-    private readonly DummyDataService _data;
-
-    public IstatistikService(DummyDataService data)
-    {
-        _data = data;
-    }
-
     public KiraDurumu GetBirimDurumu(Birim birim)
     {
         var aktif = birim.Sozlesmeler
@@ -60,22 +54,6 @@ public class IstatistikService
         return Math.Min(100, Math.Max(0, gecen / toplam * 100));
     }
 
-    public decimal ToplamAylikGelir()
-    {
-        return _data.Sozlesmeler
-            .Where(Aktif)
-            .Sum(AylikBedel);
-    }
-
-    public decimal ToplamYillikProj()
-    {
-        return _data.Sozlesmeler
-            .Where(Aktif)
-            .Sum(YillikBedel);
-    }
-
-    // --- TÜFE / KDV Hesaplama ---
-
     public decimal TufeArtisliBedel(decimal mevcutBedel, decimal tufeOrani)
     {
         if (tufeOrani < 0) throw new ArgumentException("TÜFE oranı negatif olamaz.");
@@ -110,7 +88,6 @@ public class IstatistikService
             : 0;
 
         var tufeSonrasiBedel = mevcutKiraBedeli + tufeArtisTutari;
-
         sonuc.TufeArtisTutari = tufeArtisTutari;
         sonuc.TufeSonrasiKiraBedeli = tufeSonrasiBedel;
 

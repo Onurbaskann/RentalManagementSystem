@@ -1,72 +1,61 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using KiraTakip.Authorization;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
-using KiraTakip.Services;
+using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Controllers;
 
 [Authorize]
 public class SozlesmeController : Controller
 {
-    private readonly DummyDataService _data;
-    private readonly IstatistikService _istatistik;
-    private readonly UserTasinmazYetkiService _yetkiService;
+    private readonly ISozlesmeService _sozlesmeService;
+    private readonly ITasinmazService _tasinmazService;
+    private readonly IKiraciService _kiraciService;
+    private readonly IIstatistikService _istatistik;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public SozlesmeController(
-        DummyDataService data, 
-        IstatistikService istatistik,
-        UserTasinmazYetkiService yetkiService,
+        ISozlesmeService sozlesmeService,
+        ITasinmazService tasinmazService,
+        IKiraciService kiraciService,
+        IIstatistikService istatistik,
         UserManager<ApplicationUser> userManager)
     {
-        _data = data;
+        _sozlesmeService = sozlesmeService;
+        _tasinmazService = tasinmazService;
+        _kiraciService = kiraciService;
         _istatistik = istatistik;
-        _yetkiService = yetkiService;
         _userManager = userManager;
     }
 
+    [Authorize(Policy = PermissionCatalog.Sozlesme.View)]
     public async Task<IActionResult> Index(string? filtre)
     {
-        var sozlesmeler = _data.Sozlesmeler.AsEnumerable();
-
-        if (User.IsInRole("Goruntuleyici"))
-        {
-            var userId = _userManager.GetUserId(User);
-            var yetkiliIds = await _yetkiService.GetYetkiliTasinmazIdsAsync(userId!);
-            sozlesmeler = sozlesmeler.Where(s => yetkiliIds.Contains(s.Birim.TasinmazId));
-        }
-
-        sozlesmeler = filtre switch
-        {
-            "aktif"      => sozlesmeler.Where(_istatistik.Aktif),
-            "surek"      => sozlesmeler.Where(s => _istatistik.Aktif(s) && _istatistik.KalanGun(s) <= 30),
-            "gecmis"     => sozlesmeler.Where(s => s.Durum == SozlesmeDurumu.SonaErdi),
-            "feshedildi" => sozlesmeler.Where(s => s.Durum == SozlesmeDurumu.Feshedildi),
-            _            => sozlesmeler
-        };
+        var userId = _userManager.GetUserId(User);
+        var filterUserId = User.IsInRole("Goruntuleyici") ? userId : null;
+        var sozlesmeler = await _sozlesmeService.GetAllAsync(filtre, filterUserId);
 
         ViewBag.Filtre = filtre ?? "tum";
-        return View(sozlesmeler.OrderByDescending(s => s.BaslangicTarihi).ToList());
+        return View(sozlesmeler);
     }
 
+    [Authorize(Policy = PermissionCatalog.Sozlesme.View)]
     public async Task<IActionResult> Detay(int id)
     {
-        var s = _data.GetSozlesme(id);
+        var s = await _sozlesmeService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
         if (User.IsInRole("Goruntuleyici"))
         {
             var userId = _userManager.GetUserId(User);
-            var canView = await _yetkiService.CanViewTasinmazAsync(userId!, s.Birim.TasinmazId);
-            if (!canView) return Forbid();
+            var tasinmazlar = await _tasinmazService.GetAllAsync(userId);
+            if (!tasinmazlar.Any(t => t.Id == s.Birim.TasinmazId)) return Forbid();
         }
 
-        var gecmis = s.Birim.Sozlesmeler
-            .Where(x => x.Id != id)
-            .OrderByDescending(x => x.BaslangicTarihi)
-            .ToList();
+        var gecmis = await _sozlesmeService.GetByBirimIdAsync(s.BirimId);
 
         var vm = new SozlesmeDetayViewModel
         {
@@ -77,31 +66,33 @@ public class SozlesmeController : Controller
             Aktif = _istatistik.Aktif(s),
             SureYuzdesi = _istatistik.SureYuzdesi(s),
             Durum = _istatistik.GetBirimDurumu(s.Birim),
-            GecmisSozlesmeler = gecmis
+            GecmisSozlesmeler = gecmis.Where(x => x.Id != id).ToList()
         };
 
         return View(vm);
     }
 
     [HttpGet]
-    [Authorize(Roles = "Admin,Yonetici")]
-    public IActionResult Ekle(int? birimId)
+    [Authorize(Policy = PermissionCatalog.Sozlesme.Create)]
+    public async Task<IActionResult> Ekle(int? birimId)
     {
+        var bosBirimler = await _tasinmazService.GetBosBirimlerAsync();
+        var kiraciler = await _kiraciService.GetAllAsync();
         var vm = new SozlesmeEkleViewModel
         {
             BirimId = birimId,
-            MevcutBirimler = _data.GetBosBirimler(),
-            Kiraciler = _data.Kiraciler
+            MevcutBirimler = bosBirimler,
+            Kiraciler = kiraciler
         };
         return View(vm);
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Yonetici")]
-    public IActionResult Ekle(SozlesmeEkleViewModel vm)
+    [Authorize(Policy = PermissionCatalog.Sozlesme.Create)]
+    public async Task<IActionResult> Ekle(SozlesmeEkleViewModel vm)
     {
-        vm.MevcutBirimler = _data.GetBosBirimler();
-        vm.Kiraciler = _data.Kiraciler;
+        vm.MevcutBirimler = await _tasinmazService.GetBosBirimlerAsync();
+        vm.Kiraciler = await _kiraciService.GetAllAsync();
 
         if (vm.BirimId == null || vm.BirimId == 0)
             ModelState.AddModelError("BirimId", "Lütfen bir birim seçin.");
@@ -126,16 +117,16 @@ public class SozlesmeController : Controller
             KdvOrani = vm.KdvUygulanacakMi ? vm.KdvOrani : 0
         };
 
-        _data.SozlesmeEkle(s);
+        await _sozlesmeService.CreateAsync(s);
         TempData["Success"] = "Sözleşme başarıyla oluşturuldu.";
         return RedirectToAction("Detay", new { id = s.Id });
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Yonetici")]
-    public IActionResult Uzat(int id, SozlesmeUzatViewModel vm)
+    [Authorize(Policy = PermissionCatalog.Sozlesme.Extend)]
+    public async Task<IActionResult> Uzat(int id, SozlesmeUzatViewModel vm)
     {
-        var s = _data.GetSozlesme(id);
+        var s = await _sozlesmeService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
         if (s.Durum == SozlesmeDurumu.Feshedildi)
@@ -160,7 +151,7 @@ public class SozlesmeController : Controller
             return RedirectToAction("Detay", new { id });
         }
 
-        _data.UzatSozlesme(id, vm.YeniBitisTarihi, vm.YeniKiraBedeli,
+        await _sozlesmeService.UzatAsync(id, vm.YeniBitisTarihi, vm.YeniKiraBedeli,
             vm.KdvUygulanacakMi, vm.KdvOrani ?? 20, vm.TufeOrani, vm.Aciklama);
 
         TempData["Success"] = "Sözleşme süresi başarıyla uzatıldı.";
@@ -168,10 +159,10 @@ public class SozlesmeController : Controller
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Yonetici")]
-    public IActionResult Feshet(int id, SozlesmeFesihViewModel vm)
+    [Authorize(Policy = PermissionCatalog.Sozlesme.Terminate)]
+    public async Task<IActionResult> Feshet(int id, SozlesmeFesihViewModel vm)
     {
-        var s = _data.GetSozlesme(id);
+        var s = await _sozlesmeService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
         if (s.Durum == SozlesmeDurumu.Feshedildi)
@@ -190,13 +181,13 @@ public class SozlesmeController : Controller
             return RedirectToAction("Detay", new { id });
         }
 
-        _data.FeshetSozlesme(id, vm.FesihTarihi, vm.FesihNedeni, vm.Aciklama);
+        await _sozlesmeService.FeshetAsync(id, vm.FesihTarihi, vm.FesihNedeni, vm.Aciklama);
         TempData["Success"] = "Sözleşme başarıyla feshedildi.";
         return RedirectToAction("Detay", new { id });
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Yonetici")]
+    [Authorize(Policy = PermissionCatalog.Sozlesme.Edit)]
     public IActionResult HesaplaTufeKdv(decimal mevcutBedel, decimal? tufeOrani, bool kdvUygulanacakMi, decimal? kdvOrani)
     {
         var sonuc = _istatistik.HesaplaKiraArtisi(mevcutBedel, tufeOrani, kdvUygulanacakMi, kdvOrani);

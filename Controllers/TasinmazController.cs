@@ -1,54 +1,50 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using KiraTakip.Authorization;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
-using KiraTakip.Services;
+using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Controllers;
 
 [Authorize]
 public class TasinmazController : Controller
 {
-    private readonly DummyDataService _data;
-    private readonly IstatistikService _istatistik;
-    private readonly UserTasinmazYetkiService _yetkiService;
+    private readonly ITasinmazService _tasinmazService;
+    private readonly IIstatistikService _istatistik;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public TasinmazController(
-        DummyDataService data, 
-        IstatistikService istatistik,
-        UserTasinmazYetkiService yetkiService,
+        ITasinmazService tasinmazService,
+        IIstatistikService istatistik,
         UserManager<ApplicationUser> userManager)
     {
-        _data = data;
+        _tasinmazService = tasinmazService;
         _istatistik = istatistik;
-        _yetkiService = yetkiService;
         _userManager = userManager;
     }
 
+    [Authorize(Policy = PermissionCatalog.Tasinmaz.View)]
     public async Task<IActionResult> Index()
     {
-        if (User.IsInRole("Goruntuleyici"))
-        {
-            var userId = _userManager.GetUserId(User);
-            var yetkiliIds = await _yetkiService.GetYetkiliTasinmazIdsAsync(userId!);
-            var filtered = _data.Tasinmazlar.Where(t => yetkiliIds.Contains(t.Id)).ToList();
-            return View(filtered);
-        }
-        return View(_data.Tasinmazlar);
+        var userId = _userManager.GetUserId(User);
+        var filterUserId = User.IsInRole("Goruntuleyici") ? userId : null;
+        var tasinmazlar = await _tasinmazService.GetAllAsync(filterUserId);
+        return View(tasinmazlar);
     }
 
+    [Authorize(Policy = PermissionCatalog.Tasinmaz.View)]
     public async Task<IActionResult> Detay(int id)
     {
         if (User.IsInRole("Goruntuleyici"))
         {
             var userId = _userManager.GetUserId(User);
-            var canView = await _yetkiService.CanViewTasinmazAsync(userId!, id);
-            if (!canView) return Forbid();
+            var tasinmazlar = await _tasinmazService.GetAllAsync(userId);
+            if (!tasinmazlar.Any(t => t.Id == id)) return Forbid();
         }
 
-        var t = _data.GetTasinmaz(id);
+        var t = await _tasinmazService.GetByIdAsync(id);
         if (t == null) return NotFound();
 
         var vm = new TasinmazDetayViewModel
@@ -65,15 +61,15 @@ public class TasinmazController : Controller
     }
 
     [HttpGet]
-    [Authorize(Roles = "Admin,Yonetici")]
+    [Authorize(Policy = PermissionCatalog.Tasinmaz.Create)]
     public IActionResult Ekle()
     {
         return View(new TasinmazEkleViewModel());
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Yonetici")]
-    public IActionResult Ekle(TasinmazEkleViewModel vm)
+    [Authorize(Policy = PermissionCatalog.Tasinmaz.Create)]
+    public async Task<IActionResult> Ekle(TasinmazEkleViewModel vm)
     {
         if (vm.Tipi != TasinmazTipi.Bina)
         {
@@ -124,7 +120,7 @@ public class TasinmazController : Controller
             Aciklama = vm.Aciklama
         };
 
-        _data.TasinmazEkle(t, vm.Ofisler.Count > 0 ? vm.Ofisler : null);
+        await _tasinmazService.CreateAsync(t, vm.Ofisler.Count > 0 ? vm.Ofisler : null);
         TempData["Success"] = $"'{t.Ad}' başarıyla eklendi.";
         return RedirectToAction("Detay", new { id = t.Id });
     }

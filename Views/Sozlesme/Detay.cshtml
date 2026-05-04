@@ -1,7 +1,7 @@
 @model KiraTakip.Models.ViewModels.SozlesmeDetayViewModel
 @using KiraTakip.Models
-@using KiraTakip.Services
-@inject IstatistikService Istatistik
+@using KiraTakip.Services.Interfaces
+@inject IIstatistikService Istatistik
 @{
     ViewData["Title"] = $"Sözleşme #{Model.Sozlesme.Id}";
     var s = Model.Sozlesme;

@@ -1,107 +1,95 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using KiraTakip.Authorization;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
-using KiraTakip.Services;
+using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Controllers;
 
 [Authorize]
 public class KiraciController : Controller
 {
-    private readonly DummyDataService _data;
-    private readonly IstatistikService _istatistik;
-    private readonly UserTasinmazYetkiService _yetkiService;
+    private readonly IKiraciService _kiraciService;
+    private readonly ISozlesmeService _sozlesmeService;
+    private readonly IIstatistikService _istatistik;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public KiraciController(
-        DummyDataService data, 
-        IstatistikService istatistik,
-        UserTasinmazYetkiService yetkiService,
+        IKiraciService kiraciService,
+        ISozlesmeService sozlesmeService,
+        IIstatistikService istatistik,
         UserManager<ApplicationUser> userManager)
     {
-        _data = data;
+        _kiraciService = kiraciService;
+        _sozlesmeService = sozlesmeService;
         _istatistik = istatistik;
-        _yetkiService = yetkiService;
         _userManager = userManager;
     }
 
+    [Authorize(Policy = PermissionCatalog.Kiraci.View)]
     public async Task<IActionResult> Index()
     {
-        if (User.IsInRole("Goruntuleyici"))
-        {
-            var userId = _userManager.GetUserId(User);
-            var yetkiliIds = await _yetkiService.GetYetkiliTasinmazIdsAsync(userId!);
-            
-            // Bu kullanıcının yetkili olduğu taşınmazlarda sözleşmesi olan kiracıları bul
-            var kiraciIds = _data.Sozlesmeler
-                .Where(s => yetkiliIds.Contains(s.Birim.TasinmazId))
-                .Select(s => s.KiraciId)
-                .Distinct();
-
-            var filtered = _data.Kiraciler.Where(k => kiraciIds.Contains(k.Id)).ToList();
-            return View(filtered);
-        }
-        return View(_data.Kiraciler);
+        var userId = _userManager.GetUserId(User);
+        var filterUserId = User.IsInRole("Goruntuleyici") ? userId : null;
+        var kiraciler = await _kiraciService.GetAllAsync(filterUserId);
+        var sozlesmeler = await _sozlesmeService.GetAllAsync(userId: filterUserId);
+        ViewBag.AktifSozlesme = sozlesmeler
+            .Where(_istatistik.Aktif)
+            .GroupBy(s => s.KiraciId)
+            .ToDictionary(g => g.Key, g => g.Count());
+        return View(kiraciler);
     }
 
+    [Authorize(Policy = PermissionCatalog.Kiraci.View)]
     public async Task<IActionResult> Detay(int id)
     {
         if (User.IsInRole("Goruntuleyici"))
         {
             var userId = _userManager.GetUserId(User);
-            var yetkiliIds = await _yetkiService.GetYetkiliTasinmazIdsAsync(userId!);
-            
-            // Kiracının yetkili taşınmazlarda en az bir sözleşmesi var mı?
-            var hasAccess = _data.Sozlesmeler
-                .Any(s => s.KiraciId == id && yetkiliIds.Contains(s.Birim.TasinmazId));
-            
-            if (!hasAccess) return Forbid();
+            var kiraciler = await _kiraciService.GetAllAsync(userId);
+            if (!kiraciler.Any(k => k.Id == id)) return Forbid();
         }
 
-        var k = _data.GetKiraci(id);
+        var k = await _kiraciService.GetByIdAsync(id);
         if (k == null) return NotFound();
+
+        var sozlesmeler = await _sozlesmeService.GetByKiraciIdAsync(id);
 
         var vm = new KiraciDetayViewModel
         {
             Kiraci = k,
-            Sozlesmeler = _data.Sozlesmeler
-                .Where(s => s.KiraciId == id)
-                .OrderByDescending(s => s.BaslangicTarihi)
-                .ToList()
+            Sozlesmeler = sozlesmeler
         };
         return View(vm);
     }
 
     [HttpGet]
-    [Authorize(Roles = "Admin,Yonetici")]
-    public IActionResult Ekle()
+    [Authorize(Policy = PermissionCatalog.Kiraci.Create)]
+    public async Task<IActionResult> Ekle()
     {
         var vm = new KiraciFormViewModel
         {
-            KiraciNo = _data.GenerateKiraciNo()
+            KiraciNo = await _kiraciService.GenerateKiraciNoAsync()
         };
         return View(vm);
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Yonetici")]
-    public IActionResult Ekle(KiraciFormViewModel vm)
+    [Authorize(Policy = PermissionCatalog.Kiraci.Create)]
+    public async Task<IActionResult> Ekle(KiraciFormViewModel vm)
     {
-        // Otomatik validation hatalarını temizle (Ad ve Soyad için biz manuel yapıyoruz)
         ModelState.Remove("Ad");
         ModelState.Remove("GercekAd");
         ModelState.Remove("TuzelAd");
         ModelState.Remove("Soyad");
 
-        // Tür bazlı Ad eşlemesi ve validasyonu
         if (vm.KiraciTuru == KiraciTuru.Gercek)
         {
             vm.Ad = vm.GercekAd;
             if (string.IsNullOrWhiteSpace(vm.GercekAd))
                 ModelState.AddModelError("GercekAd", "Lütfen bir Ad giriniz.");
-            
             if (string.IsNullOrWhiteSpace(vm.Soyad))
                 ModelState.AddModelError("Soyad", "Lütfen bir Soyad giriniz.");
         }
@@ -112,22 +100,22 @@ public class KiraciController : Controller
                 ModelState.AddModelError("TuzelAd", "Lütfen bir Firma / Kurum adı giriniz.");
         }
 
-        if (_data.KiraciNoExists(vm.KiraciNo))
+        if (await _kiraciService.KiraciNoExistsAsync(vm.KiraciNo))
             ModelState.AddModelError("KiraciNo", "Bu Kiracı No zaten kullanımda.");
 
         if (!ModelState.IsValid) return View(vm);
 
         var k = BuildKiraciFromVm(vm);
-        _data.AddKiraci(k);
+        await _kiraciService.CreateAsync(k);
         TempData["Success"] = $"'{k.GosterimAdi}' başarıyla eklendi.";
         return RedirectToAction("Detay", new { id = k.Id });
     }
 
     [HttpGet]
-    [Authorize(Roles = "Admin,Yonetici")]
-    public IActionResult Duzenle(int id)
+    [Authorize(Policy = PermissionCatalog.Kiraci.Edit)]
+    public async Task<IActionResult> Duzenle(int id)
     {
-        var k = _data.GetKiraci(id);
+        var k = await _kiraciService.GetByIdAsync(id);
         if (k == null) return NotFound();
 
         var vm = new KiraciFormViewModel
@@ -158,24 +146,21 @@ public class KiraciController : Controller
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Yonetici")]
-    public IActionResult Duzenle(int id, KiraciFormViewModel vm)
+    [Authorize(Policy = PermissionCatalog.Kiraci.Edit)]
+    public async Task<IActionResult> Duzenle(int id, KiraciFormViewModel vm)
     {
         if (id != vm.Id) return BadRequest();
 
-        // Otomatik validation hatalarını temizle
         ModelState.Remove("Ad");
         ModelState.Remove("GercekAd");
         ModelState.Remove("TuzelAd");
         ModelState.Remove("Soyad");
 
-        // Tür bazlı Ad eşlemesi ve validasyonu
         if (vm.KiraciTuru == KiraciTuru.Gercek)
         {
             vm.Ad = vm.GercekAd;
             if (string.IsNullOrWhiteSpace(vm.GercekAd))
                 ModelState.AddModelError("GercekAd", "Lütfen bir Ad giriniz.");
-            
             if (string.IsNullOrWhiteSpace(vm.Soyad))
                 ModelState.AddModelError("Soyad", "Lütfen bir Soyad giriniz.");
         }
@@ -186,14 +171,14 @@ public class KiraciController : Controller
                 ModelState.AddModelError("TuzelAd", "Lütfen bir Firma / Kurum adı giriniz.");
         }
 
-        if (_data.KiraciNoExists(vm.KiraciNo, excludeId: id))
+        if (await _kiraciService.KiraciNoExistsAsync(vm.KiraciNo, excludeId: id))
             ModelState.AddModelError("KiraciNo", "Bu Kiracı No zaten kullanımda.");
 
         if (!ModelState.IsValid) return View(vm);
 
         var k = BuildKiraciFromVm(vm);
         k.Id = id;
-        _data.UpdateKiraci(k);
+        await _kiraciService.UpdateAsync(k);
         TempData["Success"] = "Kiracı bilgileri güncellendi.";
         return RedirectToAction("Detay", new { id });
     }
@@ -221,7 +206,6 @@ public class KiraciController : Controller
             k.BabaAdi = vm.BabaAdi;
             k.DogumTarihi = vm.DogumTarihi;
             k.DogumYeri = vm.DogumYeri;
-            // Tüzel alanlar temizlenir
             k.TicaretSicilNo = null;
             k.VergiNo = null;
             k.VergiDairesi = null;
@@ -233,7 +217,6 @@ public class KiraciController : Controller
             k.VergiNo = vm.VergiNo;
             k.VergiDairesi = vm.VergiDairesi;
             k.MersisNo = vm.MersisNo;
-            // Gerçek kişi alanları temizlenir
             k.Soyad = null;
             k.TcKimlikNo = null;
             k.PasaportNo = null;

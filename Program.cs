@@ -1,13 +1,16 @@
+using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Services;
+using KiraTakip.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
@@ -28,11 +31,24 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
 });
 
+builder.Services.AddAuthorization(options =>
+{
+    foreach (var perm in PermissionCatalog.All)
+        options.AddPolicy(perm, policy => policy.RequireClaim("permission", perm));
+});
+
 builder.Services.AddControllersWithViews();
-builder.Services.AddSingleton<DummyDataService>();
-builder.Services.AddSingleton<IstatistikService>();
 builder.Services.AddScoped<IdentitySeedService>();
 builder.Services.AddScoped<UserTasinmazYetkiService>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, PermissionClaimsTransformer>();
+builder.Services.AddSingleton<IAuthorizationHandler, AdminBypassHandler>();
+builder.Services.AddScoped<ITasinmazService, TasinmazService>();
+builder.Services.AddScoped<IBirimService, BirimService>();
+builder.Services.AddScoped<IKiraciService, KiraciService>();
+builder.Services.AddScoped<ISozlesmeService, SozlesmeService>();
+builder.Services.AddScoped<IIstatistikService, IstatistikService>();
+builder.Services.AddScoped<SeedDataService>();
 
 var app = builder.Build();
 
@@ -53,11 +69,16 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
-// Seed Identity data on startup
 using (var scope = app.Services.CreateScope())
 {
     var seedService = scope.ServiceProvider.GetRequiredService<IdentitySeedService>();
     await seedService.SeedAsync();
+
+    if (app.Environment.IsDevelopment())
+    {
+        var domainSeed = scope.ServiceProvider.GetRequiredService<SeedDataService>();
+        await domainSeed.SeedDomainDataAsync();
+    }
 }
 
 app.Run();

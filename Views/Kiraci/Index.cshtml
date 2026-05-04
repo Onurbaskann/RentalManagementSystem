@@ -1,8 +1,7 @@
 @model List<KiraTakip.Models.Kiraci>
 @using KiraTakip.Models
-@using KiraTakip.Services
-@inject IstatistikService Istatistik
-@inject KiraTakip.Services.DummyDataService Data
+@using KiraTakip.Services.Interfaces
+@inject IIstatistikService Istatistik
 @{
     ViewData["Title"] = "Kiracılar";
     bool canEdit = User.IsInRole("Admin") || User.IsInRole("Yonetici");
@@ -40,7 +39,7 @@
             <tbody>
                 @foreach (var k in Model)
                 {
-                    var aktifSozlesme = Data.Sozlesmeler.Where(s => s.KiraciId == k.Id && Istatistik.Aktif(s)).ToList();
+                    var aktifSozlesmeCount = ((Dictionary<int,int>)ViewBag.AktifSozlesme).GetValueOrDefault(k.Id, 0);
                     <tr>
                         <td style="font-size:12.5px;color:var(--color-muted);font-family:'JetBrains Mono',monospace;">@k.KiraciNo</td>
                         <td>
@@ -63,9 +62,9 @@
                         <td style="font-size:13px;">@k.Telefon</td>
                         <td style="font-size:13px;">@k.Email</td>
                         <td>
-                            @if (aktifSozlesme.Any())
+                            @if (aktifSozlesmeCount > 0)
                             {
-                                <span class="badge badge-kirali">@aktifSozlesme.Count sözleşme</span>
+                                <span class="badge badge-kirali">@aktifSozlesmeCount sözleşme</span>
                             }
                             else
                             {

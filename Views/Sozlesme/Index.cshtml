@@ -1,7 +1,7 @@
 @model List<KiraTakip.Models.KiraSozlesmesi>
 @using KiraTakip.Models
-@using KiraTakip.Services
-@inject IstatistikService Istatistik
+@using KiraTakip.Services.Interfaces
+@inject IIstatistikService Istatistik
 @{
     ViewData["Title"] = "Sözleşmeler";
     string filtre = ViewBag.Filtre ?? "tum";

@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using KiraTakip.Authorization;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services;
+using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Controllers;
 
@@ -14,19 +16,22 @@ public class AdminUserController : Controller
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
-    private readonly DummyDataService _data;
+    private readonly ITasinmazService _tasinmazService;
     private readonly UserTasinmazYetkiService _yetkiService;
+    private readonly IPermissionService _permissionService;
 
     public AdminUserController(
-        UserManager<ApplicationUser> userManager, 
+        UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole> roleManager,
-        DummyDataService data,
-        UserTasinmazYetkiService yetkiService)
+        ITasinmazService tasinmazService,
+        UserTasinmazYetkiService yetkiService,
+        IPermissionService permissionService)
     {
         _userManager = userManager;
         _roleManager = roleManager;
-        _data = data;
+        _tasinmazService = tasinmazService;
         _yetkiService = yetkiService;
+        _permissionService = permissionService;
     }
 
     private static readonly string[] Roller = ["Admin", "Yonetici", "Goruntuleyici"];
@@ -54,11 +59,11 @@ public class AdminUserController : Controller
     }
 
     [HttpGet("Ekle")]
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
         ViewBag.Roller = Roller;
         var model = new KullaniciEkleViewModel();
-        PopulateTasinmazlar(model.Tasinmazlar, new List<int>());
+        await PopulateTasinmazlarAsync(model.Tasinmazlar, new List<int>());
         return View(model);
     }
 
@@ -70,14 +75,14 @@ public class AdminUserController : Controller
 
         if (!ModelState.IsValid)
         {
-            PopulateTasinmazlar(model.Tasinmazlar, model.SelectedTasinmazIds);
+            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
             return View(model);
         }
 
         if (!Roller.Contains(model.Rol))
         {
             ModelState.AddModelError("Rol", "Geçersiz rol seçildi.");
-            PopulateTasinmazlar(model.Tasinmazlar, model.SelectedTasinmazIds);
+            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
             return View(model);
         }
 
@@ -95,8 +100,8 @@ public class AdminUserController : Controller
         {
             foreach (var e in result.Errors)
                 ModelState.AddModelError(string.Empty, e.Description);
-            
-            PopulateTasinmazlar(model.Tasinmazlar, model.SelectedTasinmazIds);
+
+            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
             return View(model);
         }
 
@@ -121,6 +126,7 @@ public class AdminUserController : Controller
         var currentUserId = _userManager.GetUserId(User);
         var roles = await _userManager.GetRolesAsync(user);
         var yetkiliIds = await _yetkiService.GetYetkiliTasinmazIdsAsync(user.Id);
+        var mevcutPermissions = await _permissionService.GetUserPermissionsAsync(user.Id);
 
         ViewBag.Roller = Roller;
         var model = new KullaniciDuzenleViewModel
@@ -131,10 +137,12 @@ public class AdminUserController : Controller
             Rol = roles.FirstOrDefault() ?? string.Empty,
             IsActive = user.IsActive,
             IsCurrentUser = user.Id == currentUserId,
-            SelectedTasinmazIds = yetkiliIds
+            SelectedTasinmazIds = yetkiliIds,
+            SelectedPermissions = mevcutPermissions.ToList()
         };
-        
-        PopulateTasinmazlar(model.Tasinmazlar, yetkiliIds);
+
+        await PopulateTasinmazlarAsync(model.Tasinmazlar, yetkiliIds);
+        PopulatePermissions(model);
         return View(model);
     }
 
@@ -152,52 +160,64 @@ public class AdminUserController : Controller
 
         if (!ModelState.IsValid)
         {
-            PopulateTasinmazlar(model.Tasinmazlar, model.SelectedTasinmazIds);
+            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
+            PopulatePermissions(model);
             return View(model);
         }
 
         if (!Roller.Contains(model.Rol))
         {
             ModelState.AddModelError("Rol", "Geçersiz rol seçildi.");
-            PopulateTasinmazlar(model.Tasinmazlar, model.SelectedTasinmazIds);
+            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
+            PopulatePermissions(model);
             return View(model);
         }
 
-        // Admin kendi rolünü değiştiremez
         if (user.Id == currentUserId)
         {
             var currentRoles = await _userManager.GetRolesAsync(user);
             if (currentRoles.FirstOrDefault() != model.Rol)
             {
                 ModelState.AddModelError("Rol", "Kendi rolünüzü değiştiremezsiniz.");
-                PopulateTasinmazlar(model.Tasinmazlar, model.SelectedTasinmazIds);
+                await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
+                PopulatePermissions(model);
                 return View(model);
             }
         }
 
-        // Son aktif Admin koruması (rol Admin'den başka bir role çekiliyorsa)
         var existingRoles = await _userManager.GetRolesAsync(user);
         if (existingRoles.Contains("Admin") && model.Rol != "Admin")
         {
             if (await AktifAdminSayisi() <= 1)
             {
                 ModelState.AddModelError("Rol", "Sistemde en az bir aktif Admin bulunmalıdır.");
-                PopulateTasinmazlar(model.Tasinmazlar, model.SelectedTasinmazIds);
+                await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
+                PopulatePermissions(model);
                 return View(model);
             }
         }
 
-        // Rol güncelle
         await _userManager.RemoveFromRolesAsync(user, existingRoles);
         await _userManager.AddToRoleAsync(user, model.Rol);
 
-        if (model.Rol == "Goruntuleyici")
+        var selectedPerms = model.SelectedPermissions ?? new List<string>();
+
+        if (model.Rol == "Admin")
         {
-            await _yetkiService.SetUserTasinmazYetkileriAsync(user.Id, model.SelectedTasinmazIds, currentUserId ?? "system");
-        }
-        else
-        {
+            await _permissionService.SetUserPermissionsAsync(user.Id, Array.Empty<string>(), currentUserId ?? "system");
             await _yetkiService.SetUserTasinmazYetkileriAsync(user.Id, new List<int>(), currentUserId ?? "system");
+        }
+        else if (model.Rol == "Yonetici")
+        {
+            var allowed = selectedPerms.Where(p => PermissionCatalog.AssignableToYonetici.Contains(p)).ToList();
+            await _permissionService.SetUserPermissionsAsync(user.Id, allowed, currentUserId ?? "system");
+            await _yetkiService.SetUserTasinmazYetkileriAsync(user.Id, new List<int>(), currentUserId ?? "system");
+        }
+        else if (model.Rol == "Goruntuleyici")
+        {
+            var allowed = selectedPerms.Where(p => PermissionCatalog.AssignableToGoruntuleyici.Contains(p)).ToList();
+            await _permissionService.SetUserPermissionsAsync(user.Id, allowed, currentUserId ?? "system");
+            await _yetkiService.SetUserTasinmazYetkileriAsync(user.Id, model.SelectedTasinmazIds, currentUserId ?? "system");
         }
 
         user.AdSoyad = model.AdSoyad;
@@ -216,14 +236,12 @@ public class AdminUserController : Controller
 
         var currentUserId = _userManager.GetUserId(User);
 
-        // Admin kendi hesabını pasif yapamaz
         if (user.Id == currentUserId)
         {
             TempData["Error"] = "Kendi hesabınızı pasif hale getiremezsiniz.";
             return RedirectToAction(nameof(Index));
         }
 
-        // Son aktif Admin koruması
         if (user.IsActive)
         {
             var roles = await _userManager.GetRolesAsync(user);
@@ -247,12 +265,13 @@ public class AdminUserController : Controller
         return admins.Count(u => u.IsActive);
     }
 
-    private void PopulateTasinmazlar(List<TasinmazYetkiCheckboxViewModel> tasinmazlarListesi, List<int> selectedIds)
+    private async Task PopulateTasinmazlarAsync(List<TasinmazYetkiCheckboxViewModel> liste, List<int> selectedIds)
     {
-        tasinmazlarListesi.Clear();
-        foreach (var t in _data.Tasinmazlar)
+        liste.Clear();
+        var tasinmazlar = await _tasinmazService.GetAllAsync();
+        foreach (var t in tasinmazlar)
         {
-            tasinmazlarListesi.Add(new TasinmazYetkiCheckboxViewModel
+            liste.Add(new TasinmazYetkiCheckboxViewModel
             {
                 TasinmazId = t.Id,
                 Ad = t.Ad,
@@ -261,4 +280,59 @@ public class AdminUserController : Controller
             });
         }
     }
+
+    private static void PopulatePermissions(KullaniciDuzenleViewModel model)
+    {
+        var selected = model.SelectedPermissions ?? new List<string>();
+
+        model.YoneticiPermissions = PermissionCatalog.AssignableToYonetici
+            .GroupBy(p => p.Split('.')[0])
+            .Select(g => new PermissionGrupViewModel
+            {
+                GrupAdi = GetModuleLabel(g.Key),
+                Permissions = g.Select(p => new PermissionCheckboxViewModel
+                {
+                    Value = p,
+                    Etiket = GetActionLabel(p.Split('.')[1]),
+                    Selected = selected.Contains(p)
+                }).ToList()
+            })
+            .ToList();
+
+        model.GoruntuleyiciPermissions = PermissionCatalog.AssignableToGoruntuleyici
+            .Select(p => new PermissionCheckboxViewModel
+            {
+                Value = p,
+                Etiket = $"{GetModuleLabel(p.Split('.')[0])} — Görüntüle",
+                Selected = selected.Contains(p)
+            })
+            .ToList();
+    }
+
+    private static string GetModuleLabel(string module) => module switch
+    {
+        "Tasinmaz" => "Taşınmaz",
+        "Birim"    => "Birim / Ofis",
+        "Kiraci"   => "Kiracı",
+        "Sozlesme" => "Sözleşme",
+        "Odeme"    => "Ödeme",
+        "Kullanici" => "Kullanıcı Yönetimi",
+        _          => module
+    };
+
+    private static string GetActionLabel(string action) => action switch
+    {
+        "View"                => "Görüntüle",
+        "Create"              => "Ekle",
+        "Edit"                => "Düzenle",
+        "Extend"              => "Süre Uzat",
+        "Terminate"           => "Feshet",
+        "Approve"             => "Onayla",
+        "Reject"              => "Reddet",
+        "UploadDekont"        => "Dekont Yükle",
+        "ImportBankStatement" => "Banka Hareketleri İçe Aktar",
+        "MatchBankTransaction" => "Banka Hareketi Eşleştir",
+        "AssignPermission"    => "Yetki Ata",
+        _                     => action
+    };
 }

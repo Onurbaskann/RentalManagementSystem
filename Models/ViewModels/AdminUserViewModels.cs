@@ -46,6 +46,23 @@ public class KullaniciDuzenleViewModel
 
     public List<int> SelectedTasinmazIds { get; set; } = new();
     public List<TasinmazYetkiCheckboxViewModel> Tasinmazlar { get; set; } = new();
+
+    public List<string> SelectedPermissions { get; set; } = new();
+    public List<PermissionGrupViewModel> YoneticiPermissions { get; set; } = new();
+    public List<PermissionCheckboxViewModel> GoruntuleyiciPermissions { get; set; } = new();
+}
+
+public class PermissionCheckboxViewModel
+{
+    public string Value { get; set; } = string.Empty;
+    public string Etiket { get; set; } = string.Empty;
+    public bool Selected { get; set; }
+}
+
+public class PermissionGrupViewModel
+{
+    public string GrupAdi { get; set; } = string.Empty;
+    public List<PermissionCheckboxViewModel> Permissions { get; set; } = new();
 }
 
 public class TasinmazYetkiCheckboxViewModel
