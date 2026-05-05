@@ -1,15 +1,18 @@
-@model List<KiraTakip.Models.KiraTahakkuk>
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.KiraTahakkuk>
 @using KiraTakip.Models
+@using KiraTakip.Models.Common
 @{
     ViewData["Title"] = "Tahakkuklar";
     bool canCreate = User.HasClaim("permission", "Odeme.Create");
     string durum = ViewBag.Durum ?? "tum";
+    var q = (TableQuery)ViewBag.Query;
+    var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/Tahakkuk", Extra = q.ToQueryDict() };
 }
 
 <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
     <div>
         <div class="page-title">Tahakkuklar</div>
-        <div class="page-subtitle">@Model.Count dönem kaydı</div>
+        <div class="page-subtitle">@Model.Total dönem kaydı</div>
     </div>
     @if (canCreate)
     {
@@ -32,16 +35,30 @@
 <!-- Filtreler -->
 <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
     @{
-        var filters = new[] { ("tum","Tümü"), ("gecikti","Gecikti"), ("bekliyor","Bekliyor") };
+        var filters = new[] { ("tum","Tümü"), ("bekliyor","Bekliyor"), ("kismi","Kısmi"), ("tamodendi","Tam Ödendi"), ("gecikti","Gecikti") };
     }
     @foreach (var (key, label) in filters)
     {
         string cls = durum == key ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm";
-        <a href="/Tahakkuk?durum=@key" class="@cls">@label</a>
+        var url = key == "tum" ? "/Tahakkuk" : $"/Tahakkuk?durum={key}";
+        <a href="@url" class="@cls">@label</a>
     }
 </div>
 
 <div class="card" style="padding:0;overflow:hidden;">
+    <form method="get" class="table-toolbar" action="/Tahakkuk">
+        <input type="search" name="q" value="@q.Q" class="form-control toolbar-search" placeholder="Ara: kiracı, taşınmaz…" />
+        <input type="date" name="from" value="@(q.From?.ToString("yyyy-MM-dd"))" class="form-control toolbar-input" data-tip="Dönem başlangıç" />
+        <input type="date" name="to" value="@(q.To?.ToString("yyyy-MM-dd"))" class="form-control toolbar-input" data-tip="Dönem bitiş" />
+        <input type="number" name="min" value="@q.Min" step="0.01" class="form-control toolbar-input" placeholder="Min ₺" />
+        <input type="number" name="max" value="@q.Max" step="0.01" class="form-control toolbar-input" placeholder="Max ₺" />
+        @if (durum != "tum") { <input type="hidden" name="durum" value="@durum" /> }
+        <button type="submit" class="btn btn-primary btn-sm">Filtrele</button>
+        @if (!string.IsNullOrEmpty(q.Q) || q.From.HasValue || q.To.HasValue || q.Min.HasValue || q.Max.HasValue)
+        {
+            <a href="/Tahakkuk@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm">Temizle</a>
+        }
+    </form>
     <div class="table-wrapper">
         <table>
             <thead>
@@ -58,7 +75,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var t in Model)
+                @foreach (var t in Model.Items)
                 {
                     var kalan = t.ToplamTutar - t.OdenenTutar;
                     string durumCls = t.Durum switch {
@@ -73,6 +90,12 @@
                         TahakkukDurumu.Gecikti      => "Gecikti",
                         _                           => "Bekleniyor"
                     };
+                    string durumTip = t.Durum switch {
+                        TahakkukDurumu.TamOdendi    => "Toplam tutar tamamı tahsil edildi.",
+                        TahakkukDurumu.KismenOdendi => $"Kısmi ödeme alındı; kalan {kalan:N0} ₺.",
+                        TahakkukDurumu.Gecikti      => "Vade geçti, ödeme henüz alınmadı.",
+                        _                           => "Vade gelmedi; ödeme bekleniyor."
+                    };
                     <tr>
                         <td style="font-weight:600;">@t.DonemBaslangic.ToString("MMMM yyyy")</td>
                         <td>@t.KiraSozlesmesi.Kiraci.GosterimAdi</td>
@@ -84,7 +107,7 @@
                         <td style="font-weight:600;">@t.ToplamTutar.ToString("N0") ₺</td>
                         <td style="color:#065f46;font-weight:600;">@t.OdenenTutar.ToString("N0") ₺</td>
                         <td style="@(kalan > 0 ? "color:#991b1b;" : "")font-weight:600;">@kalan.ToString("N0") ₺</td>
-                        <td><span class="badge @durumCls">@durumLabel</span></td>
+                        <td><span class="badge @durumCls" data-tip="@durumTip">@durumLabel</span></td>
                         <td>
                             <a href="/Odeme?tahakkukId=@t.Id" class="btn btn-sm btn-secondary">Ödemeler</a>
                             @if (canCreate && t.Durum != TahakkukDurumu.TamOdendi)
@@ -94,11 +117,12 @@
                         </td>
                     </tr>
                 }
-                @if (!Model.Any())
+                @if (Model.Total == 0)
                 {
-                    <tr><td colspan="9" style="text-align:center;color:var(--color-muted);padding:32px;">Tahakkuk kaydı bulunamadı.</td></tr>
+                    <tr><td colspan="9" style="text-align:center;color:var(--color-muted);padding:32px;">Filtreye uygun tahakkuk bulunamadı.</td></tr>
                 }
             </tbody>
         </table>
     </div>
+    @await Html.PartialAsync("_Pagination", pagination)
 </div>

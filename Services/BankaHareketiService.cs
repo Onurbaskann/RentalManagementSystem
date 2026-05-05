@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Services.Banka;
 using KiraTakip.Services.Interfaces;
 
@@ -41,6 +42,44 @@ public class BankaHareketiService : IBankaHareketiService
             query = query.Where(b => b.EslesmeDurumu == durum.Value);
 
         return await query.OrderByDescending(b => b.HareketTarihi).ToListAsync();
+    }
+
+    public async Task<PagedResult<BankaHareketi>> GetPagedAsync(TableQuery q)
+    {
+        var query = _ctx.BankaHareketleri
+            .Include(b => b.ImportEdenUser)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(q.Q))
+        {
+            var s = q.Q.Trim();
+            query = query.Where(b =>
+                EF.Functions.Like(b.Aciklama, $"%{s}%") ||
+                (b.KarsiUnvan != null && EF.Functions.Like(b.KarsiUnvan, $"%{s}%")) ||
+                (b.KarsiHesap != null && EF.Functions.Like(b.KarsiHesap, $"%{s}%")));
+        }
+        if (q.From.HasValue) query = query.Where(b => b.HareketTarihi >= q.From.Value);
+        if (q.To.HasValue) query = query.Where(b => b.HareketTarihi <= q.To.Value);
+        if (q.Min.HasValue) query = query.Where(b => b.Tutar >= q.Min.Value);
+        if (q.Max.HasValue) query = query.Where(b => b.Tutar <= q.Max.Value);
+        if (!string.IsNullOrWhiteSpace(q.Durum) && q.Durum != "tum")
+        {
+            BankaEslesmeDurumu? d = q.Durum switch
+            {
+                "eslestirilmedi" => BankaEslesmeDurumu.Eslestirilmedi,
+                "eslesti" => BankaEslesmeDurumu.Eslesti,
+                "manuel" => BankaEslesmeDurumu.ManuelEslesti,
+                _ => null
+            };
+            if (d.HasValue) query = query.Where(b => b.EslesmeDurumu == d.Value);
+        }
+
+        int total = await query.CountAsync();
+        var items = await query
+            .OrderByDescending(b => b.HareketTarihi)
+            .Skip(q.Skip).Take(q.Take)
+            .ToListAsync();
+        return new PagedResult<BankaHareketi> { Items = items, Total = total, Page = Math.Max(1, q.Page), Size = q.SafeSize };
     }
 
     public async Task<BankaHareketi?> GetByIdAsync(int id)

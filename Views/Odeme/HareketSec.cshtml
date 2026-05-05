@@ -64,11 +64,11 @@
                             bool tutarClose = Math.Abs(b.Tutar - o.Tutar) <= o.Tutar * 0.02m;
                             int gunFark = Math.Abs((b.HareketTarihi - o.OdemeTarihi).Days);
 
-                            string uyumLabel, uyumCls;
-                            if (tutarExact && gunFark <= 15)      { uyumLabel = "Yüksek"; uyumCls = "badge-kirali"; }
-                            else if (tutarExact)                   { uyumLabel = "Orta";   uyumCls = "badge-surek"; }
-                            else if (tutarClose && gunFark <= 15)  { uyumLabel = "Zayıf";  uyumCls = "badge-bos"; }
-                            else                                   { uyumLabel = "Düşük";  uyumCls = "badge-gecmis"; }
+                            string uyumLabel, uyumCls, uyumTip;
+                            if (tutarExact && gunFark <= 15)      { uyumLabel = "Yüksek"; uyumCls = "badge-kirali"; uyumTip = $"Tutar birebir eşleşiyor • Tarih farkı {gunFark} gün (≤15)"; }
+                            else if (tutarExact)                   { uyumLabel = "Orta";   uyumCls = "badge-surek";  uyumTip = $"Tutar birebir eşleşiyor • Tarih farkı {gunFark} gün (>15)"; }
+                            else if (tutarClose && gunFark <= 15)  { uyumLabel = "Zayıf";  uyumCls = "badge-bos";    uyumTip = $"Tutar %2 toleransta • Tarih farkı {gunFark} gün"; }
+                            else                                   { uyumLabel = "Düşük";  uyumCls = "badge-gecmis"; uyumTip = $"Tutar farkı %2'den fazla veya tarih uzak ({gunFark} gün)"; }
                             sira++;
                         <tr style="@(sira == 1 ? "background:#f0fdf4;" : "")">
                             <td style="font-weight:600;">@b.HareketTarihi.ToString("dd.MM.yyyy")</td>
@@ -81,7 +81,7 @@
                                     <span style="font-size:11px;color:var(--color-muted);"> (fark: @Math.Abs(b.Tutar - o.Tutar).ToString("N0") ₺)</span>
                                 }
                             </td>
-                            <td><span class="badge @uyumCls">@uyumLabel</span></td>
+                            <td><span class="badge @uyumCls" data-tip="@uyumTip">@uyumLabel</span></td>
                             <td>
                                 <form method="post" action="/BankaHareketi/Eslestir">
                                     @Html.AntiForgeryToken()

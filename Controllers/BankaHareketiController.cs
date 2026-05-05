@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using KiraTakip.Authorization;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 
@@ -26,19 +27,12 @@ public class BankaHareketiController : Controller
     }
 
     [Authorize(Policy = PermissionCatalog.Odeme.View)]
-    public async Task<IActionResult> Index(string? durum)
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
-        BankaEslesmeDurumu? durumFilter = durum switch
-        {
-            "eslestirilmedi" => BankaEslesmeDurumu.Eslestirilmedi,
-            "eslesti"        => BankaEslesmeDurumu.Eslesti,
-            "manuel"         => BankaEslesmeDurumu.ManuelEslesti,
-            _                => null
-        };
-
-        var hareketler = await _bankaService.GetAllAsync(durumFilter);
-        ViewBag.Durum = durum ?? "tum";
-        return View(hareketler);
+        var paged = await _bankaService.GetPagedAsync(query);
+        ViewBag.Query = query;
+        ViewBag.Durum = query.Durum ?? "tum";
+        return View(paged);
     }
 
     [HttpGet]

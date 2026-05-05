@@ -1,16 +1,19 @@
-@model List<KiraTakip.Models.BankaHareketi>
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.BankaHareketi>
 @using KiraTakip.Models
+@using KiraTakip.Models.Common
 @{
     ViewData["Title"] = "Banka Hareketleri";
     string durum = ViewBag.Durum ?? "tum";
+    var q = (TableQuery)ViewBag.Query;
     bool canImport = User.HasClaim("permission", "Odeme.ImportBankStatement");
     bool canMatch  = User.HasClaim("permission", "Odeme.MatchBankTransaction");
+    var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/BankaHareketi", Extra = q.ToQueryDict() };
 }
 
 <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
     <div>
         <div class="page-title">Banka Hareketleri</div>
-        <div class="page-subtitle">@Model.Count kayıt</div>
+        <div class="page-subtitle">@Model.Total kayıt</div>
     </div>
     @if (canImport)
     {
@@ -31,11 +34,25 @@
     @foreach (var (key, label) in filters)
     {
         string cls = durum == key ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm";
-        <a href="/BankaHareketi?durum=@key" class="@cls">@label</a>
+        var url = key == "tum" ? "/BankaHareketi" : $"/BankaHareketi?durum={key}";
+        <a href="@url" class="@cls">@label</a>
     }
 </div>
 
 <div class="card" style="padding:0;overflow:hidden;">
+    <form method="get" class="table-toolbar" action="/BankaHareketi">
+        <input type="search" name="q" value="@q.Q" class="form-control toolbar-search" placeholder="Ara: açıklama, karşı taraf…" />
+        <input type="date" name="from" value="@(q.From?.ToString("yyyy-MM-dd"))" class="form-control toolbar-input" data-tip="Hareket tarihi başlangıç" />
+        <input type="date" name="to" value="@(q.To?.ToString("yyyy-MM-dd"))" class="form-control toolbar-input" data-tip="Hareket tarihi bitiş" />
+        <input type="number" name="min" value="@q.Min" step="0.01" class="form-control toolbar-input" placeholder="Min ₺" />
+        <input type="number" name="max" value="@q.Max" step="0.01" class="form-control toolbar-input" placeholder="Max ₺" />
+        @if (durum != "tum") { <input type="hidden" name="durum" value="@durum" /> }
+        <button type="submit" class="btn btn-primary btn-sm">Filtrele</button>
+        @if (!string.IsNullOrEmpty(q.Q) || q.From.HasValue || q.To.HasValue || q.Min.HasValue || q.Max.HasValue)
+        {
+            <a href="/BankaHareketi@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm">Temizle</a>
+        }
+    </form>
     <div class="table-wrapper">
         <table>
             <thead>
@@ -50,7 +67,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var b in Model)
+                @foreach (var b in Model.Items)
                 {
                     string eslesmeCls = b.EslesmeDurumu switch {
                         BankaEslesmeDurumu.Eslesti        => "badge-kirali",
@@ -62,13 +79,18 @@
                         BankaEslesmeDurumu.ManuelEslesti  => "Manuel",
                         _                                 => "Eşleştirilmedi"
                     };
+                    string eslesmeTip = b.EslesmeDurumu switch {
+                        BankaEslesmeDurumu.Eslesti        => "Sistem tarafından otomatik eşleştirildi.",
+                        BankaEslesmeDurumu.ManuelEslesti  => "Bir kullanıcı tarafından manuel eşleştirildi.",
+                        _                                 => "Henüz hiçbir ödemeye bağlanmadı."
+                    };
                     <tr>
                         <td style="font-size:13px;">@b.HareketTarihi.ToString("dd.MM.yyyy")</td>
                         <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;">@b.Aciklama</td>
                         <td style="font-size:12.5px;color:var(--color-muted);">@(b.KarsiUnvan ?? b.KarsiHesap ?? "—")</td>
                         <td style="font-weight:700;">@b.Tutar.ToString("N0") ₺</td>
                         <td style="font-size:12.5px;">@b.BankaKodu</td>
-                        <td><span class="badge @eslesmeCls">@eslesmeLabel</span></td>
+                        <td><span class="badge @eslesmeCls" data-tip="@eslesmeTip">@eslesmeLabel</span></td>
                         @if (canMatch)
                         {
                             <td>
@@ -80,11 +102,12 @@
                         }
                     </tr>
                 }
-                @if (!Model.Any())
+                @if (Model.Total == 0)
                 {
-                    <tr><td colspan="7" style="text-align:center;color:var(--color-muted);padding:32px;">Hareket bulunamadı.</td></tr>
+                    <tr><td colspan="7" style="text-align:center;color:var(--color-muted);padding:32px;">Filtreye uygun hareket bulunamadı.</td></tr>
                 }
             </tbody>
         </table>
     </div>
+    @await Html.PartialAsync("_Pagination", pagination)
 </div>

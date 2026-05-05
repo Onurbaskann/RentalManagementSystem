@@ -40,7 +40,11 @@
     }
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card" style="padding:0;overflow:hidden;" x-data="clientTable({ pageSize: 25 })" x-init="init()">
+    <div class="table-toolbar">
+        <input type="search" class="form-control toolbar-search" placeholder="Ara: kiracı, taşınmaz, birim…" x-model.debounce.250ms="q" />
+        <span class="pagination-info" style="margin-left:auto;"><span x-text="total"></span> kayıt</span>
+    </div>
     <div class="table-wrapper">
         <table>
             <thead>
@@ -56,7 +60,7 @@
                     <th></th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody x-ref="tbody">
                 @foreach (var s in Model)
                 {
                     bool aktif = Istatistik.Aktif(s);
@@ -64,8 +68,9 @@
                     bool surek = aktif && kalanGun <= 30;
                     bool feshedildi = s.Durum == SozlesmeDurumu.Feshedildi;
                     string dayBadge = kalanGun <= 10 ? "day-badge-red" : kalanGun <= 30 ? "day-badge-amber" : "day-badge-green";
+                    var search = $"{s.Id} {s.Kiraci.GosterimAdi} {s.Birim.Tasinmaz.Ad} {s.Birim.Ad}".ToLower();
 
-                    <tr>
+                    <tr data-row data-search="@search">
                         <td style="color:var(--color-muted);font-size:12.5px;">@s.Id</td>
                         <td>
                             <a href="/Kiraci/Detay/@s.KiraciId" style="font-weight:600;color:var(--color-primary);text-decoration:none;">@s.Kiraci.GosterimAdi</a>
@@ -101,5 +106,18 @@
                 }
             </tbody>
         </table>
+    </div>
+    <div class="pagination-wrap" x-show="totalPages > 1">
+        <div class="pagination-info"><span x-text="from"></span>–<span x-text="to"></span> / <strong x-text="total"></strong></div>
+        <nav class="pagination" aria-label="Sayfalar">
+            <button type="button" class="page-btn" :class="{ 'page-btn-disabled': page === 1 }" :disabled="page === 1" @@click="prev()">‹</button>
+            <template x-for="p in pageList" :key="p">
+                <button type="button" class="page-btn" :class="{ 'page-btn-active': p === page }" @@click="goto(p)" x-text="p"></button>
+            </template>
+            <button type="button" class="page-btn" :class="{ 'page-btn-disabled': page === totalPages }" :disabled="page === totalPages" @@click="next()">›</button>
+        </nav>
+    </div>
+    <div class="pagination-wrap" x-show="total === 0 && q.length > 0" x-cloak>
+        <div class="pagination-info" style="margin:auto;">Aramaya uyan kayıt yok.</div>
     </div>
 </div>

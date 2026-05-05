@@ -1,0 +1,48 @@
+@model KiraTakip.Models.Common.PaginationModel
+@{
+    if (Model == null || Model.Total == 0) { return; }
+}
+<div class="pagination-wrap">
+    <div class="pagination-info">
+        <span>@Model.From–@Model.To / <strong>@Model.Total</strong></span>
+    </div>
+    <nav class="pagination" aria-label="Sayfalar">
+        @if (Model.HasPrev)
+        {
+            <a class="page-btn" href="@Model.Url(Model.Page - 1)" rel="prev">‹</a>
+        }
+        else
+        {
+            <span class="page-btn page-btn-disabled">‹</span>
+        }
+
+        @{
+            int? lastShown = null;
+        }
+        @foreach (var p in Model.PageNumbers())
+        {
+            if (lastShown.HasValue && p - lastShown.Value > 1)
+            {
+                <span class="page-ellipsis">…</span>
+            }
+            if (p == Model.Page)
+            {
+                <span class="page-btn page-btn-active">@p</span>
+            }
+            else
+            {
+                <a class="page-btn" href="@Model.Url(p)">@p</a>
+            }
+            lastShown = p;
+        }
+
+        @if (Model.HasNext)
+        {
+            <a class="page-btn" href="@Model.Url(Model.Page + 1)" rel="next">›</a>
+        }
+        else
+        {
+            <span class="page-btn page-btn-disabled">›</span>
+        }
+    </nav>
+</div>

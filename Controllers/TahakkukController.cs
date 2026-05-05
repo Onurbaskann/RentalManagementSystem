@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 
@@ -25,21 +26,16 @@ public class TahakkukController : Controller
     }
 
     [Authorize(Policy = PermissionCatalog.Odeme.View)]
-    public async Task<IActionResult> Index(string? durum = null)
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
         await _tahakkukService.GecikmeleriGuncelleAsync();
 
         var userId = User.IsInRole("Goruntuleyici") ? _userManager.GetUserId(User) : null;
-        var tahakkuklar = await _tahakkukService.GetAllAsync(userId: userId);
+        var paged = await _tahakkukService.GetPagedAsync(query, userId: userId);
 
-        tahakkuklar = durum switch {
-            "gecikti"  => tahakkuklar.Where(t => t.Durum == TahakkukDurumu.Gecikti).ToList(),
-            "bekliyor" => tahakkuklar.Where(t => t.Durum == TahakkukDurumu.Bekleniyor).ToList(),
-            _          => tahakkuklar
-        };
-
-        ViewBag.Durum = durum ?? "tum";
-        return View(tahakkuklar);
+        ViewBag.Query = query;
+        ViewBag.Durum = query.Durum ?? "tum";
+        return View(paged);
     }
 
     [HttpGet]

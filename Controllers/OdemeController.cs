@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using KiraTakip.Authorization;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 
@@ -35,21 +36,15 @@ public class OdemeController : Controller
     }
 
     [Authorize(Policy = PermissionCatalog.Odeme.View)]
-    public async Task<IActionResult> Index(int? tahakkukId, string? durum = null)
+    public async Task<IActionResult> Index([FromQuery] TableQuery query, int? tahakkukId = null)
     {
         var userId = User.IsInRole("Goruntuleyici") ? _userManager.GetUserId(User) : null;
-        var odemeler = await _odemeService.GetAllAsync(tahakkukId, userId);
-
-        odemeler = durum switch {
-            "onaybekliyor" => odemeler.Where(o => o.Durum == OdemeDurumu.OnayBekliyor).ToList(),
-            "onaylandi"    => odemeler.Where(o => o.Durum == OdemeDurumu.Onaylandi).ToList(),
-            "reddedildi"   => odemeler.Where(o => o.Durum == OdemeDurumu.Reddedildi).ToList(),
-            _              => odemeler
-        };
+        var paged = await _odemeService.GetPagedAsync(query, tahakkukId, userId);
 
         ViewBag.TahakkukId = tahakkukId;
-        ViewBag.Durum = durum ?? "tum";
-        return View(odemeler);
+        ViewBag.Query = query;
+        ViewBag.Durum = query.Durum ?? "tum";
+        return View(paged);
     }
 
     [Authorize(Policy = PermissionCatalog.Odeme.View)]

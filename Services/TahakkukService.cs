@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
@@ -34,6 +35,61 @@ public class TahakkukService : ITahakkukService
         }
 
         return await query.OrderByDescending(t => t.DonemBaslangic).ToListAsync();
+    }
+
+    public async Task<PagedResult<KiraTahakkuk>> GetPagedAsync(TableQuery q, int? sozlesmeId = null, string? userId = null)
+    {
+        var query = _ctx.KiraTahakkuklar
+            .Include(t => t.KiraSozlesmesi)
+                .ThenInclude(s => s.Birim)
+                    .ThenInclude(b => b.Tasinmaz)
+            .Include(t => t.KiraSozlesmesi)
+                .ThenInclude(s => s.Kiraci)
+            .AsQueryable();
+
+        if (sozlesmeId.HasValue)
+            query = query.Where(t => t.KiraSozlesmesiId == sozlesmeId.Value);
+
+        if (userId != null)
+        {
+            var yetkiliIds = await _ctx.UserTasinmazYetkileri
+                .Where(u => u.UserId == userId)
+                .Select(u => u.TasinmazId)
+                .ToListAsync();
+            query = query.Where(t => yetkiliIds.Contains(t.KiraSozlesmesi.Birim.TasinmazId));
+        }
+
+        if (!string.IsNullOrWhiteSpace(q.Q))
+        {
+            var s = q.Q.Trim();
+            query = query.Where(t =>
+                EF.Functions.Like(t.KiraSozlesmesi.Kiraci.Ad, $"%{s}%") ||
+                (t.KiraSozlesmesi.Kiraci.Soyad != null && EF.Functions.Like(t.KiraSozlesmesi.Kiraci.Soyad, $"%{s}%")) ||
+                EF.Functions.Like(t.KiraSozlesmesi.Birim.Tasinmaz.Ad, $"%{s}%"));
+        }
+        if (q.From.HasValue) query = query.Where(t => t.DonemBaslangic >= q.From.Value);
+        if (q.To.HasValue) query = query.Where(t => t.DonemBaslangic <= q.To.Value);
+        if (q.Min.HasValue) query = query.Where(t => t.ToplamTutar >= q.Min.Value);
+        if (q.Max.HasValue) query = query.Where(t => t.ToplamTutar <= q.Max.Value);
+        if (!string.IsNullOrWhiteSpace(q.Durum) && q.Durum != "tum")
+        {
+            TahakkukDurumu? d = q.Durum switch
+            {
+                "bekliyor" => TahakkukDurumu.Bekleniyor,
+                "kismi" => TahakkukDurumu.KismenOdendi,
+                "tamodendi" => TahakkukDurumu.TamOdendi,
+                "gecikti" => TahakkukDurumu.Gecikti,
+                _ => null
+            };
+            if (d.HasValue) query = query.Where(t => t.Durum == d.Value);
+        }
+
+        int total = await query.CountAsync();
+        var items = await query
+            .OrderByDescending(t => t.DonemBaslangic)
+            .Skip(q.Skip).Take(q.Take)
+            .ToListAsync();
+        return new PagedResult<KiraTahakkuk> { Items = items, Total = total, Page = Math.Max(1, q.Page), Size = q.SafeSize };
     }
 
     public async Task<KiraTahakkuk?> GetByIdAsync(int id)

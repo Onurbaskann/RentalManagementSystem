@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
@@ -43,6 +44,64 @@ public class OdemeService : IOdemeService
         }
 
         return await query.OrderByDescending(o => o.GirisTarihi).ToListAsync();
+    }
+
+    public async Task<PagedResult<KiraOdeme>> GetPagedAsync(TableQuery q, int? tahakkukId = null, string? userId = null)
+    {
+        var query = _ctx.KiraOdemeler
+            .Include(o => o.KiraTahakkuk)
+                .ThenInclude(t => t.KiraSozlesmesi)
+                    .ThenInclude(s => s.Birim)
+                        .ThenInclude(b => b.Tasinmaz)
+            .Include(o => o.KiraSozlesmesi)
+                .ThenInclude(s => s.Kiraci)
+            .Include(o => o.GirenUser)
+            .Include(o => o.OnaylayanUser)
+            .Include(o => o.Dekontlar)
+            .AsQueryable();
+
+        if (tahakkukId.HasValue)
+            query = query.Where(o => o.KiraTahakkukId == tahakkukId.Value);
+
+        if (userId != null)
+        {
+            var yetkiliIds = await _ctx.UserTasinmazYetkileri
+                .Where(u => u.UserId == userId)
+                .Select(u => u.TasinmazId)
+                .ToListAsync();
+            query = query.Where(o => yetkiliIds.Contains(o.KiraTahakkuk.KiraSozlesmesi.Birim.TasinmazId));
+        }
+
+        if (!string.IsNullOrWhiteSpace(q.Q))
+        {
+            var s = q.Q.Trim();
+            query = query.Where(o =>
+                EF.Functions.Like(o.KiraSozlesmesi.Kiraci.Ad, $"%{s}%") ||
+                (o.KiraSozlesmesi.Kiraci.Soyad != null && EF.Functions.Like(o.KiraSozlesmesi.Kiraci.Soyad, $"%{s}%")) ||
+                (o.Aciklama != null && EF.Functions.Like(o.Aciklama, $"%{s}%")));
+        }
+        if (q.From.HasValue) query = query.Where(o => o.OdemeTarihi >= q.From.Value);
+        if (q.To.HasValue) query = query.Where(o => o.OdemeTarihi <= q.To.Value);
+        if (q.Min.HasValue) query = query.Where(o => o.Tutar >= q.Min.Value);
+        if (q.Max.HasValue) query = query.Where(o => o.Tutar <= q.Max.Value);
+        if (!string.IsNullOrWhiteSpace(q.Durum) && q.Durum != "tum")
+        {
+            OdemeDurumu? d = q.Durum switch
+            {
+                "onaybekliyor" => OdemeDurumu.OnayBekliyor,
+                "onaylandi" => OdemeDurumu.Onaylandi,
+                "reddedildi" => OdemeDurumu.Reddedildi,
+                _ => null
+            };
+            if (d.HasValue) query = query.Where(o => o.Durum == d.Value);
+        }
+
+        int total = await query.CountAsync();
+        var items = await query
+            .OrderByDescending(o => o.GirisTarihi)
+            .Skip(q.Skip).Take(q.Take)
+            .ToListAsync();
+        return new PagedResult<KiraOdeme> { Items = items, Total = total, Page = Math.Max(1, q.Page), Size = q.SafeSize };
     }
 
     public async Task<KiraOdeme?> GetByIdAsync(int id)

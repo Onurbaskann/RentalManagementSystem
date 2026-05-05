@@ -18,6 +18,11 @@
         OdemeDurumu.Reddedildi => "Reddedildi",
         _                      => "Onay Bekliyor"
     };
+    string durumTip = Model.Durum switch {
+        OdemeDurumu.Onaylandi  => "Ödeme onaylandı; tahakkuk kapandı.",
+        OdemeDurumu.Reddedildi => "Ödeme reddedildi; tahakkuk açık kalır.",
+        _                      => "Onay yetkisi olan kullanıcı bekleniyor."
+    };
     string kanalLabel = Model.OdemeKanali switch {
         OdemeKanali.Havale => "Havale",
         OdemeKanali.EFT    => "EFT",
@@ -32,7 +37,7 @@
         <div class="page-title">Ödeme #@Model.Id</div>
         <div class="page-subtitle">@Model.KiraTahakkuk.KiraSozlesmesi.Kiraci.GosterimAdi — @Model.KiraTahakkuk.DonemBaslangic.ToString("MMMM yyyy")</div>
     </div>
-    <span class="badge @durumCls" style="font-size:13px;padding:6px 14px;">@durumLabel</span>
+    <span class="badge @durumCls" style="font-size:13px;padding:6px 14px;" data-tip="@durumTip">@durumLabel</span>
 </div>
 
 @if (TempData["Success"] != null)
@@ -151,10 +156,10 @@
                                 <a href="/Odeme/DekontIndir/@d.Id" class="btn btn-sm btn-secondary" target="_blank">İndir</a>
                                 @if (canUpload)
                                 {
-                                    <form method="post" action="/Odeme/DekontSil/@d.Id">
+                                    <form method="post" action="/Odeme/DekontSil/@d.Id" data-confirm="Dekont kalıcı olarak silinsin mi?">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="odemeId" value="@Model.Id" />
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Dekont silinsin mi?')">Sil</button>
+                                        <button type="submit" class="btn btn-sm btn-danger">Sil</button>
                                     </form>
                                 }
                             </div>
@@ -202,11 +207,11 @@
                         </div>
                         @if (canMatch)
                         {
-                            <form method="post" action="/Odeme/BankaEslesmeKaldir" style="flex-shrink:0;">
+                            <form method="post" action="/Odeme/BankaEslesmeKaldir" data-confirm="Banka eşleşmesi kaldırılsın mı?" style="flex-shrink:0;">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="eslesmeId" value="@e.Id" />
                                 <input type="hidden" name="odemeId" value="@Model.Id" />
-                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Eşleşme kaldırılsın mı?')">Çöz</button>
+                                <button type="submit" class="btn btn-sm btn-danger" data-tip="Banka eşleşmesini kaldır (ödeme silinmez)">Çöz</button>
                             </form>
                         }
                     </div>

@@ -27,7 +27,11 @@
     </a>
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card" style="padding:0;overflow:hidden;" x-data="clientTable({ pageSize: 25 })" x-init="init()">
+    <div class="table-toolbar">
+        <input type="search" class="form-control toolbar-search" placeholder="Ara: ad, e-posta, rol…" x-model.debounce.250ms="q" />
+        <span class="pagination-info" style="margin-left:auto;"><span x-text="total"></span> kayıt</span>
+    </div>
     <div class="table-wrapper">
         <table>
             <thead>
@@ -39,10 +43,11 @@
                     <th></th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody x-ref="tbody">
                 @foreach (var u in Model)
                 {
-                    <tr>
+                    var search = $"{u.AdSoyad} {u.Email} {u.Rol}".ToLower();
+                    <tr data-row data-search="@search">
                         <td style="font-weight:600;">@u.AdSoyad</td>
                         <td style="font-size:13px;color:var(--color-muted);">@u.Email</td>
                         <td>
@@ -67,7 +72,7 @@
                         </td>
                         <td style="display:flex;gap:6px;justify-content:flex-end;">
                             <a href="/Admin/Kullanicilar/Duzenle/@u.Id" class="btn btn-sm btn-secondary">Düzenle</a>
-                            <form method="post" action="/Admin/Kullanicilar/DurumDegistir/@u.Id" style="display:inline;">
+                            <form method="post" action="/Admin/Kullanicilar/DurumDegistir/@u.Id" data-confirm="@(u.IsActive ? "Kullanıcı pasif yapılsın mı? Oturum açamaz." : "Kullanıcı aktif yapılsın mı?")" style="display:inline;">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-sm @(u.IsActive ? "btn-danger" : "btn-amber")">
                                     @(u.IsActive ? "Pasif Yap" : "Aktif Yap")
@@ -78,5 +83,18 @@
                 }
             </tbody>
         </table>
+    </div>
+    <div class="pagination-wrap" x-show="totalPages > 1">
+        <div class="pagination-info"><span x-text="from"></span>–<span x-text="to"></span> / <strong x-text="total"></strong></div>
+        <nav class="pagination" aria-label="Sayfalar">
+            <button type="button" class="page-btn" :class="{ 'page-btn-disabled': page === 1 }" :disabled="page === 1" @@click="prev()">‹</button>
+            <template x-for="p in pageList" :key="p">
+                <button type="button" class="page-btn" :class="{ 'page-btn-active': p === page }" @@click="goto(p)" x-text="p"></button>
+            </template>
+            <button type="button" class="page-btn" :class="{ 'page-btn-disabled': page === totalPages }" :disabled="page === totalPages" @@click="next()">›</button>
+        </nav>
+    </div>
+    <div class="pagination-wrap" x-show="total === 0 && q.length > 0" x-cloak>
+        <div class="pagination-info" style="margin:auto;">Aramaya uyan kayıt yok.</div>
     </div>
 </div>
