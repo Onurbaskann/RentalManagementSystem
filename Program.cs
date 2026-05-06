@@ -55,6 +55,8 @@ builder.Services.AddScoped<IOdemeService, OdemeService>();
 builder.Services.AddScoped<IDekontService, DekontService>();
 builder.Services.AddScoped<IBankaHareketiService, BankaHareketiService>();
 builder.Services.AddSingleton<IBankaHareketiParser, AkbankCsvParser>();
+builder.Services.AddScoped<IRateResolverService, RateResolverService>();
+builder.Services.AddScoped<ITahakkukUretimService, TahakkukUretimService>();
 
 var app = builder.Build();
 
@@ -80,10 +82,15 @@ using (var scope = app.Services.CreateScope())
     var seedService = scope.ServiceProvider.GetRequiredService<IdentitySeedService>();
     await seedService.SeedAsync();
 
+    var domainSeed = scope.ServiceProvider.GetRequiredService<SeedDataService>();
+    await domainSeed.SeedBorcTipleriAsync();
+    await domainSeed.EnsureDepozitoBorcTipiAsync();
+    await domainSeed.SeedTarifelerAsync();
+
     if (app.Environment.IsDevelopment())
     {
-        var domainSeed = scope.ServiceProvider.GetRequiredService<SeedDataService>();
         await domainSeed.SeedDomainDataAsync();
+        await domainSeed.SeedTahakkuklarAsync();
     }
 }
 

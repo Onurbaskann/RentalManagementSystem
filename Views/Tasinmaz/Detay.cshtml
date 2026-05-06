@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = Model.Tasinmaz.Ad;
     bool canEdit = User.IsInRole("Admin") || User.IsInRole("Yonetici");
+    bool canManageRate = User.IsInRole("Admin") || User.HasClaim("permission", "Birim.ManageRate");
 
     string TipiStr(TasinmazTipi t) => t switch {
         TasinmazTipi.Bina => "Bina",
@@ -225,18 +226,18 @@
                                                 }
                                                 else { <span style="color:#c8cfd8;">—</span> }
                                             </td>
-                                            <td style="text-align:center;">
+                                            <td style="text-align:center;display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
                                                 @if (b.AktifSozlesme != null)
                                                 {
-                                                    <a href="/Sozlesme/Detay/@b.AktifSozlesme.Id" class="btn btn-sm btn-secondary" style="min-width:88px;justify-content:center;">Sözleşme</a>
+                                                    <a href="/Sozlesme/Detay/@b.AktifSozlesme.Id" class="btn btn-sm btn-secondary">Sözleşme</a>
                                                 }
                                                 else if (canEdit)
                                                 {
-                                                    <a href="/Sozlesme/Ekle?birimId=@b.Birim.Id" class="btn btn-sm btn-primary" style="min-width:88px;justify-content:center;">Kiraya Ver</a>
+                                                    <a href="/Sozlesme/Ekle?birimId=@b.Birim.Id" class="btn btn-sm btn-primary">Kiraya Ver</a>
                                                 }
-                                                else
+                                                @if (canManageRate)
                                                 {
-                                                    <span style="color:#c8cfd8;">—</span>
+                                                    <a href="/Birim/@b.Birim.Id/OzelFiyat" class="btn btn-sm btn-secondary" title="Özel Fiyatlar">₺</a>
                                                 }
                                             </td>
                                         </tr>
@@ -311,18 +312,18 @@
                                         }
                                         else { <span style="color:#c8cfd8;">—</span> }
                                     </td>
-                                    <td style="text-align:center;">
+                                    <td style="text-align:center;display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
                                         @if (b.AktifSozlesme != null)
                                         {
-                                            <a href="/Sozlesme/Detay/@b.AktifSozlesme.Id" class="btn btn-sm btn-secondary" style="min-width:88px;justify-content:center;">Sözleşme</a>
+                                            <a href="/Sozlesme/Detay/@b.AktifSozlesme.Id" class="btn btn-sm btn-secondary">Sözleşme</a>
                                         }
                                         else if (canEdit)
                                         {
-                                            <a href="/Sozlesme/Ekle?birimId=@b.Birim.Id" class="btn btn-sm btn-primary" style="min-width:88px;justify-content:center;">Kiraya Ver</a>
+                                            <a href="/Sozlesme/Ekle?birimId=@b.Birim.Id" class="btn btn-sm btn-primary">Kiraya Ver</a>
                                         }
-                                        else
+                                        @if (canManageRate)
                                         {
-                                            <span style="color:#c8cfd8;">—</span>
+                                            <a href="/Birim/@b.Birim.Id/OzelFiyat" class="btn btn-sm btn-secondary" title="Özel Fiyatlar">₺</a>
                                         }
                                     </td>
                                 </tr>

@@ -20,4 +20,5 @@ public class KiraTahakkuk
     public DateTime OlusturmaTarihi { get; set; } = DateTime.Now;
 
     public List<KiraOdeme> Odemeler { get; set; } = new();
+    public ICollection<TahakkukKalemi> Kalemler { get; set; } = new List<TahakkukKalemi>();
 }

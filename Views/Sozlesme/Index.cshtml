@@ -13,13 +13,26 @@
         <div class="page-title">Sözleşmeler</div>
         <div class="page-subtitle">@Model.Count kayıt listeleniyor</div>
     </div>
-    @if (canEdit)
-    {
-        <a href="/Sozlesme/Ekle" class="btn btn-primary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Yeni Sözleşme
-        </a>
-    }
+    <div style="display:flex;gap:8px;align-items:center;">
+        @{
+            int borcluSayisi = ViewBag.BorcluSayisi ?? 0;
+        }
+        @if (borcluSayisi > 0)
+        {
+            <button type="button" class="btn btn-secondary"
+                onclick="showToast('Yakında: @borcluSayisi kiracıya hatırlatma maili gönderilecek.', 'warning')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                Borçlulara Mail (@borcluSayisi)
+            </button>
+        }
+        @if (canEdit)
+        {
+            <a href="/Sozlesme/Ekle" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Yeni Sözleşme
+            </a>
+        }
+    </div>
 </div>
 
 <!-- Filtreler -->

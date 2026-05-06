@@ -15,6 +15,22 @@ public class SozlesmeDetayViewModel
     public List<KiraSozlesmesi> GecmisSozlesmeler { get; set; } = new();
     public List<KiraTahakkuk> Tahakkuklar { get; set; } = new();
     public bool HasOdemeAccess { get; set; }
+    public List<SozlesmeRateSatiri> PazarlikFiyatlari { get; set; } = new();
+    public bool HasRateAccess { get; set; }
+    public List<TahakkukKalemi> GuncelKalemler { get; set; } = new();
+    public DateTime? GuncelKalemDonemi { get; set; }
+}
+
+public class SozlesmeRateSatiri
+{
+    public int RateId { get; set; }
+    public int BorcTipiId { get; set; }
+    public string BorcTipiAd { get; set; } = "";
+    public string BorcTipiKod { get; set; } = "";
+    public bool OzelFiyatAktif { get; set; }
+    public HesaplamaYontemi HesaplamaYontemi { get; set; }
+    public decimal BirimDeger { get; set; }
+    public decimal KdvOrani { get; set; }
 }
 
 public class SozlesmeEkleViewModel

@@ -74,7 +74,7 @@
                     <th></th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody x-data="{ open: {} }">
                 @foreach (var t in Model.Items)
                 {
                     var kalan = t.ToplamTutar - t.OdenenTutar;
@@ -82,22 +82,29 @@
                         TahakkukDurumu.TamOdendi    => "badge-kirali",
                         TahakkukDurumu.KismenOdendi => "badge-surek",
                         TahakkukDurumu.Gecikti      => "badge-gecmis",
+                        TahakkukDurumu.IptalEdildi  => "badge-bos",
                         _                           => "badge-bos"
                     };
                     string durumLabel = t.Durum switch {
                         TahakkukDurumu.TamOdendi    => "Tam Ödendi",
                         TahakkukDurumu.KismenOdendi => "Kısmi Ödendi",
                         TahakkukDurumu.Gecikti      => "Gecikti",
+                        TahakkukDurumu.IptalEdildi  => "İptal Edildi",
                         _                           => "Bekleniyor"
                     };
                     string durumTip = t.Durum switch {
                         TahakkukDurumu.TamOdendi    => "Toplam tutar tamamı tahsil edildi.",
                         TahakkukDurumu.KismenOdendi => $"Kısmi ödeme alındı; kalan {kalan:N0} ₺.",
                         TahakkukDurumu.Gecikti      => "Vade geçti, ödeme henüz alınmadı.",
+                        TahakkukDurumu.IptalEdildi  => "Sözleşme feshi nedeniyle iptal edildi.",
                         _                           => "Vade gelmedi; ödeme bekleniyor."
                     };
-                    <tr>
-                        <td style="font-weight:600;">@t.DonemBaslangic.ToString("MMMM yyyy")</td>
+                    <tr @@click="open[@t.Id] = !open[@t.Id]" style="cursor:pointer;">
+                        <td style="font-weight:600;">
+                            <svg x-show="open[@t.Id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;vertical-align:middle;"><polyline points="18 15 12 9 6 15"/></svg>
+                            <svg x-show="!open[@t.Id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;vertical-align:middle;"><polyline points="6 9 12 15 18 9"/></svg>
+                            @t.DonemBaslangic.ToString("MMMM yyyy")
+                        </td>
                         <td>@t.KiraSozlesmesi.Kiraci.GosterimAdi</td>
                         <td>
                             <div style="font-weight:500;">@t.KiraSozlesmesi.Birim.Tasinmaz.Ad</div>
@@ -108,11 +115,70 @@
                         <td style="color:#065f46;font-weight:600;">@t.OdenenTutar.ToString("N0") ₺</td>
                         <td style="@(kalan > 0 ? "color:#991b1b;" : "")font-weight:600;">@kalan.ToString("N0") ₺</td>
                         <td><span class="badge @durumCls" data-tip="@durumTip">@durumLabel</span></td>
-                        <td>
-                            <a href="/Odeme?tahakkukId=@t.Id" class="btn btn-sm btn-secondary">Ödemeler</a>
-                            @if (canCreate && t.Durum != TahakkukDurumu.TamOdendi)
+                        <td @@click.stop="">
+                            <a href="/Tahakkuk/Detay/@t.Id" class="btn btn-sm btn-secondary">Detay</a>
+                            <a href="/Odeme?tahakkukId=@t.Id" class="btn btn-sm btn-secondary" style="margin-left:4px;">Ödemeler</a>
+                            @if (canCreate && t.Durum != TahakkukDurumu.TamOdendi && t.Durum != TahakkukDurumu.IptalEdildi)
                             {
                                 <a href="/Odeme/Ekle?tahakkukId=@t.Id" class="btn btn-sm btn-primary" style="margin-left:4px;">Ödeme Ekle</a>
+                            }
+                        </td>
+                    </tr>
+                    <tr x-show="open[@t.Id]" x-cloak style="background:#f7f8fb;">
+                        <td colspan="9" style="padding:10px 20px 14px;">
+                            @if (t.Kalemler.Any())
+                            {
+                                <div style="font-size:11.5px;font-weight:700;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Kalem Dökümü</div>
+                                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                                    <thead>
+                                        <tr style="color:var(--color-muted);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">
+                                            <th style="padding:4px 8px;text-align:left;font-weight:600;">Kod</th>
+                                            <th style="padding:4px 8px;text-align:left;font-weight:600;">Açıklama</th>
+                                            <th style="padding:4px 8px;text-align:right;font-weight:600;">Birim Değer</th>
+                                            <th style="padding:4px 8px;text-align:right;font-weight:600;">Çarpan</th>
+                                            <th style="padding:4px 8px;text-align:right;font-weight:600;">Tutar</th>
+                                            <th style="padding:4px 8px;text-align:right;font-weight:600;">KDV</th>
+                                            <th style="padding:4px 8px;text-align:right;font-weight:600;">Toplam</th>
+                                            <th style="padding:4px 8px;text-align:center;font-weight:600;">Kaynak</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var k in t.Kalemler.OrderBy(k => k.BorcTipi.Sira))
+                                        {
+                                            string kaynakCls = k.KaynakTipi switch {
+                                                KaynakTipi.Sozlesme => "badge-surek",
+                                                KaynakTipi.Birim    => "badge-kirali",
+                                                _                   => "badge-bos"
+                                            };
+                                            string kaynakLabel = k.KaynakTipi switch {
+                                                KaynakTipi.Sozlesme => "Pazarlık",
+                                                KaynakTipi.Birim    => "Birim",
+                                                _                   => "Tarife"
+                                            };
+                                            <tr style="border-top:1px solid var(--color-border);">
+                                                <td style="padding:5px 8px;font-family:monospace;font-weight:700;font-size:12px;">@k.BorcTipi.Kod</td>
+                                                <td style="padding:5px 8px;">@k.Aciklama</td>
+                                                <td style="padding:5px 8px;text-align:right;">@k.BirimDeger.ToString("N4") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
+                                                <td style="padding:5px 8px;text-align:right;color:var(--color-muted);">@k.Carpan.ToString("F4")</td>
+                                                <td style="padding:5px 8px;text-align:right;font-weight:600;">@k.Tutar.ToString("N2") ₺</td>
+                                                <td style="padding:5px 8px;text-align:right;color:var(--color-muted);">@k.KdvTutari.ToString("N2") ₺</td>
+                                                <td style="padding:5px 8px;text-align:right;font-weight:700;">@k.ToplamTutar.ToString("N2") ₺</td>
+                                                <td style="padding:5px 8px;text-align:center;"><span class="badge @kaynakCls" style="font-size:11px;">@kaynakLabel</span></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr style="border-top:2px solid var(--color-border);background:#eef0f4;">
+                                            <td colspan="6" style="padding:5px 8px;font-weight:700;font-size:12px;">Toplam</td>
+                                            <td style="padding:5px 8px;text-align:right;font-weight:700;">@t.ToplamTutar.ToString("N2") ₺</td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            }
+                            else
+                            {
+                                <span style="font-size:13px;color:var(--color-muted);">Kalem bilgisi yok (eski tahakkuk).</span>
                             }
                         </td>
                     </tr>

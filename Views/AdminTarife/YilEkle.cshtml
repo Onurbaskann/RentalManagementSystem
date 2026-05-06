@@ -1,0 +1,49 @@
+@model KiraTakip.Models.ViewModels.TarifeYilEkleViewModel
+@{
+    ViewData["Title"] = "Yeni Tarife Yılı";
+    var mevcutYillar = ViewBag.MevcutYillar as IEnumerable<dynamic> ?? [];
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Yeni Tarife Yılı</div>
+    </div>
+</div>
+
+<div class="card" style="max-width:480px;">
+    <form method="post" action="/Admin/Tarife/YilEkle">
+        @Html.AntiForgeryToken()
+
+        <div class="form-group">
+            <label class="form-label">Yıl <span style="color:red">*</span></label>
+            <input asp-for="Yil" type="number" class="form-control" min="2000" max="2100" required style="width:120px;" />
+            <span asp-validation-for="Yil" class="text-danger" style="font-size:12px;"></span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Açıklama</label>
+            <input asp-for="Aciklama" class="form-control" placeholder="Opsiyonel not…" />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Önceki yıldan kopyala</label>
+            <select asp-for="KopyalaYilId" class="form-control" style="max-width:200px;">
+                <option value="">— Kopyalama (boş başlat) —</option>
+                @foreach (var y in mevcutYillar)
+                {
+                    <option value="@y.Id">@y.Yil</option>
+                }
+            </select>
+            <div style="font-size:12px;color:var(--color-muted);margin-top:4px;">Seçilirse o yılın fiyatları kopyalanır.</div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:8px;">
+            <button type="submit" class="btn btn-primary">Oluştur</button>
+            <a href="/Admin/Tarife" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

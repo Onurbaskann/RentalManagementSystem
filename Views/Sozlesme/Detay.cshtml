@@ -1,6 +1,7 @@
 @model KiraTakip.Models.ViewModels.SozlesmeDetayViewModel
 @using KiraTakip.Models
 @using KiraTakip.Services.Interfaces
+@using System.Globalization
 @inject IIstatistikService Istatistik
 @{
     ViewData["Title"] = $"Sözleşme #{Model.Sozlesme.Id}";
@@ -8,6 +9,7 @@
     var kiraci = s.Kiraci;
     var birim = s.Birim;
     var tasinmaz = birim.Tasinmaz;
+    var trCulture = new CultureInfo("tr-TR");
 
     bool feshedildi = s.Durum == SozlesmeDurumu.Feshedildi;
     bool sonaErdi = s.Durum == SozlesmeDurumu.SonaErdi;
@@ -28,6 +30,7 @@
 
     string TLFormat(decimal v) => v.ToString("N0") + " ₺";
     bool canEdit = User.IsInRole("Admin") || User.IsInRole("Yonetici");
+    bool canRegenerate = User.HasClaim("permission", "Tahakkuk.Regenerate") || User.IsInRole("Admin");
 
     decimal kdvTutari = s.KdvUygulanacakMi ? s.KiraBedeli * s.KdvOrani / 100 : 0;
     decimal kdvDahilToplam = s.KiraBedeli + kdvTutari;
@@ -55,12 +58,13 @@
 <div x-data="{
     showUzat: false,
     showFesih: false,
+    showYenidenUret: false,
     tufeEnabled: false,
     kdvEnabled: @(s.KdvUygulanacakMi ? "true" : "false"),
     tufeOrani: 25,
-    kdvOrani: @s.KdvOrani,
-    currentBedel: @s.KiraBedeli,
-    yeniKiraBedeli: @s.KiraBedeli,
+    kdvOrani: @s.KdvOrani.ToString(CultureInfo.InvariantCulture),
+    currentBedel: @s.KiraBedeli.ToString(CultureInfo.InvariantCulture),
+    yeniKiraBedeli: @s.KiraBedeli.ToString(CultureInfo.InvariantCulture),
     get tufeArtisTutari() { return this.tufeEnabled ? Math.round(this.currentBedel * this.tufeOrani / 100) : 0; },
     get tufeSonrasiBedel() { return this.currentBedel + this.tufeArtisTutari; },
     get kdvTutari() { return this.kdvEnabled ? Math.round(this.yeniKiraBedeli * this.kdvOrani / 100) : 0; },
@@ -73,6 +77,13 @@
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
     <a href="/Sozlesme" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;">← Sözleşmeler</a>
     <div style="display:flex;gap:10px;">
+        @if (canRegenerate && !feshedildi)
+        {
+            <button class="btn btn-secondary" type="button" @@click="showYenidenUret = true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.43"/></svg>
+                Tahakkuk Yeniden Üret
+            </button>
+        }
         @if (canEdit && !feshedildi)
         {
             <button class="btn btn-amber" type="button" @@click="showUzat = true">
@@ -209,6 +220,66 @@
     </div>
 </div>
 
+<!-- Aylık Tahakkuk Kalemleri -->
+@if (Model.GuncelKalemler.Any())
+{
+    <div class="card" style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <div>
+                <span style="font-size:12px;font-weight:600;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;">Aylık Tahakkuk Kalemleri</span>
+                @if (Model.GuncelKalemDonemi.HasValue)
+                {
+                    <span style="font-size:12px;color:var(--color-muted);margin-left:8px;">— @Model.GuncelKalemDonemi.Value.ToString("MMMM yyyy", trCulture)</span>
+                }
+            </div>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Kalem</th>
+                        <th>Yöntem</th>
+                        <th style="text-align:right;">Birim Değer</th>
+                        <th style="text-align:right;">Çarpan</th>
+                        <th style="text-align:right;">Net Tutar</th>
+                        <th style="text-align:right;">KDV</th>
+                        <th style="text-align:right;">Toplam</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var k in Model.GuncelKalemler)
+                    {
+                        <tr>
+                            <td>
+                                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;background:#f1f5f9;padding:2px 7px;border-radius:4px;color:#475569;">@k.BorcTipi.Kod</span>
+                                <span style="font-weight:500;margin-left:6px;font-size:13.5px;">@k.BorcTipi.Ad</span>
+                            </td>
+                            <td style="font-size:12.5px;color:var(--color-muted);">@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m²" : "Sabit")</td>
+                            <td style="text-align:right;font-size:13px;">@k.BirimDeger.ToString("N0") ₺</td>
+                            <td style="text-align:right;font-size:13px;color:var(--color-muted);">
+                                @if (k.Carpan == 1m) { <span>—</span> }
+                                else { <span>× @k.Carpan.ToString("F4")</span> }
+                            </td>
+                            <td style="text-align:right;font-weight:600;">@k.Tutar.ToString("N0") ₺</td>
+                            <td style="text-align:right;font-size:13px;color:var(--color-muted);">
+                                @if (k.KdvOrani > 0) { <span>%@k.KdvOrani.ToString("G") → @k.KdvTutari.ToString("N0") ₺</span> }
+                                else { <span>—</span> }
+                            </td>
+                            <td style="text-align:right;font-weight:700;color:var(--color-primary);">@k.ToplamTutar.ToString("N0") ₺</td>
+                        </tr>
+                    }
+                    <tr style="background:#fafbfc;border-top:2px solid var(--color-border);">
+                        <td colspan="4" style="font-weight:600;text-align:right;font-size:13px;padding-right:16px;color:var(--color-muted);">Toplam</td>
+                        <td style="text-align:right;font-weight:700;">@Model.GuncelKalemler.Sum(k => k.Tutar).ToString("N0") ₺</td>
+                        <td style="text-align:right;font-weight:600;font-size:13px;">@Model.GuncelKalemler.Sum(k => k.KdvTutari).ToString("N0") ₺</td>
+                        <td style="text-align:right;font-weight:700;color:var(--color-primary);font-size:15px;">@Model.GuncelKalemler.Sum(k => k.ToplamTutar).ToString("N0") ₺</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
 <!-- Alt Tab'lı Bölüm -->
 <div id="sozlesme-tabs">
     <div class="tabs">
@@ -219,6 +290,10 @@
         @if (Model.HasOdemeAccess)
         {
             <button class="tab">Ödemeler (@Model.Tahakkuklar.Count)</button>
+        }
+        @if (Model.HasRateAccess)
+        {
+            <button class="tab">Pazarlık Fiyatları @(Model.PazarlikFiyatlari.Any(r => r.OzelFiyatAktif) ? $"({Model.PazarlikFiyatlari.Count(r => r.OzelFiyatAktif)})" : "")</button>
         }
     </div>
 
@@ -235,7 +310,6 @@
                     }
                 }
                 @{
-                    var trCulture = new System.Globalization.CultureInfo("tr-TR");
                     var periyotStr = s.Periyot == KiraPeriyodu.Aylik ? "ay" : "yıl";
                     Row("Sözleşme No", $"#{s.Id}");
                     Row("Periyot", s.Periyot == KiraPeriyodu.Aylik ? "Aylık" : "Yıllık");
@@ -389,17 +463,19 @@
                             @foreach (var islem in s.IslemGecmisi.OrderByDescending(i => i.IslemTarihi))
                             {
                                 string islemLabel = islem.IslemTipi switch {
-                                    SozlesmeIslemTipi.Olusturma   => "Oluşturma",
-                                    SozlesmeIslemTipi.SureUzatma  => "Süre Uzatma",
-                                    SozlesmeIslemTipi.Fesih       => "Fesih",
-                                    SozlesmeIslemTipi.TufeArtis   => "TÜFE Artış",
-                                    SozlesmeIslemTipi.KdvGuncelleme => "KDV Güncelleme",
+                                    SozlesmeIslemTipi.Olusturma            => "Oluşturma",
+                                    SozlesmeIslemTipi.SureUzatma           => "Süre Uzatma",
+                                    SozlesmeIslemTipi.Fesih                => "Fesih",
+                                    SozlesmeIslemTipi.TufeArtis            => "TÜFE Artış",
+                                    SozlesmeIslemTipi.KdvGuncelleme        => "KDV Güncelleme",
+                                    SozlesmeIslemTipi.TahakkukYenidenUretim => "Tahakkuk Yeniden Üretim",
                                     _ => islem.IslemTipi.ToString()
                                 };
                                 string islemBadgeCls = islem.IslemTipi switch {
-                                    SozlesmeIslemTipi.Olusturma  => "badge-kirali",
-                                    SozlesmeIslemTipi.SureUzatma => "badge-surek",
-                                    SozlesmeIslemTipi.Fesih      => "badge-gecmis",
+                                    SozlesmeIslemTipi.Olusturma             => "badge-kirali",
+                                    SozlesmeIslemTipi.SureUzatma            => "badge-surek",
+                                    SozlesmeIslemTipi.Fesih                 => "badge-gecmis",
+                                    SozlesmeIslemTipi.TahakkukYenidenUretim => "badge-surek",
                                     _ => "badge-bos"
                                 };
                                 <tr>
@@ -514,6 +590,82 @@
                 </div>
             </div>
         }
+        </div>
+    }
+    @if (Model.HasRateAccess)
+    {
+        <div class="tab-content">
+            <div style="margin-bottom:12px;font-size:13px;color:var(--color-muted);">
+                İşaretlenen borç tipleri için tarife ve birim fiyatı yerine bu sözleşmeye özel fiyatlar kullanılır.
+            </div>
+            <form method="post" action="/Sozlesme/PazarlikFiyatGuncelle/@s.Id">
+                @Html.AntiForgeryToken()
+                <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width:48px;">Aktif</th>
+                                    <th style="width:100px;">Kod</th>
+                                    <th>Borç Tipi</th>
+                                    <th style="width:160px;">Hesaplama Yöntemi</th>
+                                    <th style="width:160px;">Birim Değer (₺)</th>
+                                    <th style="width:130px;">KDV Oranı (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < Model.PazarlikFiyatlari.Count; i++)
+                                {
+                                    var k = Model.PazarlikFiyatlari[i];
+                                    <tr x-data="{ aktif: @k.OzelFiyatAktif.ToString().ToLower() }">
+                                        <td style="text-align:center;">
+                                            <input type="hidden" name="pazarlikFiyatlari[@i].BorcTipiId" value="@k.BorcTipiId" />
+                                            <input type="hidden" name="pazarlikFiyatlari[@i].RateId"     value="@k.RateId" />
+                                            <input type="checkbox" name="pazarlikFiyatlari[@i].OzelFiyatAktif" value="true"
+                                                   @(k.OzelFiyatAktif ? "checked" : "") x-model="aktif" />
+                                        </td>
+                                        <td><span style="font-family:monospace;font-weight:600;font-size:13px;">@k.BorcTipiKod</span></td>
+                                        <td style="font-weight:500;">@k.BorcTipiAd</td>
+                                        <td>
+                                            <select name="pazarlikFiyatlari[@i].HesaplamaYontemi" class="form-control form-control-sm"
+                                                    :disabled="!aktif" x-bind:style="!aktif ? 'opacity:.4' : ''">
+                                                @if (k.HesaplamaYontemi == KiraTakip.Models.HesaplamaYontemi.Sabit)
+                                                {
+                                                    <option value="1" selected>Sabit</option>
+                                                    <option value="2">m²</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="1">Sabit</option>
+                                                    <option value="2" selected>m²</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="number" name="pazarlikFiyatlari[@i].BirimDeger" value="@k.BirimDeger"
+                                                   class="form-control form-control-sm" step="0.0001" min="0"
+                                                   :disabled="!aktif" x-bind:style="!aktif ? 'opacity:.4' : ''" />
+                                        </td>
+                                        <td>
+                                            <input type="number" name="pazarlikFiyatlari[@i].KdvOrani" value="@k.KdvOrani"
+                                                   class="form-control form-control-sm" step="0.01" min="0" max="100"
+                                                   :disabled="!aktif" x-bind:style="!aktif ? 'opacity:.4' : ''" />
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!Model.PazarlikFiyatlari.Any())
+                                {
+                                    <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--color-muted);">Aktif borç tipi bulunmuyor.</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @if (Model.PazarlikFiyatlari.Any())
+                {
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                }
+            </form>
         </div>
     }
 </div><!-- /#sozlesme-tabs -->
@@ -643,6 +795,38 @@
             <div style="display:flex;gap:10px;margin-top:4px;">
                 <button type="submit" class="btn btn-danger">Feshet</button>
                 <button type="button" class="btn btn-secondary" @@click="showFesih = false">İptal</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: Tahakkuk Yeniden Üret -->
+<div x-show="showYenidenUret" x-cloak
+    style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;"
+    @@click.self="showYenidenUret = false">
+    <div style="background:white;border-radius:16px;width:100%;max-width:480px;padding:28px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div style="font-size:18px;font-weight:700;">Tahakkuk Yeniden Üret</div>
+            <button @@click="showYenidenUret = false" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--color-muted);">✕</button>
+        </div>
+
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:13px;color:#92400e;">
+            Seçilen tarihten itibaren <strong>ödeme alınmamış</strong> tahakkuklar silinip yeniden üretilir. Ödeme kaydı olan tahakkuklara dokunulmaz.
+        </div>
+
+        <form method="post" action="/Sozlesme/YenidenUret/@s.Id">
+            @Html.AntiForgeryToken()
+
+            <div class="form-group">
+                <label class="form-label">Başlangıç Tarihi *</label>
+                <input type="date" name="baslangicTarihi" class="form-control"
+                    value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                <div class="form-hint">Bu tarihten (dahil) itibaren ödenmemiş tahakkuklar etkilenir.</div>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:4px;">
+                <button type="submit" class="btn btn-primary">Yeniden Üret</button>
+                <button type="button" class="btn btn-secondary" @@click="showYenidenUret = false">İptal</button>
             </div>
         </form>
     </div>

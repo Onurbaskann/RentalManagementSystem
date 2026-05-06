@@ -1,0 +1,75 @@
+@model List<KiraTakip.Models.BorcTipi>
+@{
+    ViewData["Title"] = "Borç Tipleri";
+}
+
+@if (TempData["Success"] != null)
+{
+    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">
+        ✓ @TempData["Success"]
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">
+        ✕ @TempData["Error"]
+    </div>
+}
+
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+        <div class="page-title">Borç Tipleri</div>
+        <div class="page-subtitle">@Model.Count kayıt</div>
+    </div>
+    <a href="/Admin/BorcTipi/Ekle" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Yeni Borç Tipi
+    </a>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:60px;">Sıra</th>
+                    <th style="width:100px;">Kod</th>
+                    <th>Ad</th>
+                    <th style="width:100px;">Durum</th>
+                    <th style="width:160px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var bt in Model)
+                {
+                    <tr>
+                        <td style="text-align:center;color:var(--color-muted);font-size:13px;">@bt.Sira</td>
+                        <td><span style="font-family:monospace;font-weight:600;font-size:13px;">@bt.Kod</span></td>
+                        <td style="font-weight:500;">@bt.Ad</td>
+                        <td>
+                            @if (bt.Aktif)
+                            { <span class="badge badge-kirali">Aktif</span> }
+                            else
+                            { <span class="badge badge-gecmis">Pasif</span> }
+                        </td>
+                        <td style="display:flex;gap:6px;justify-content:flex-end;">
+                            <a href="/Admin/BorcTipi/Duzenle/@bt.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                            <form method="post" action="/Admin/BorcTipi/DurumDegistir/@bt.Id"
+                                  data-confirm="@(bt.Aktif ? $"'{bt.Ad}' pasif yapılsın mı?" : $"'{bt.Ad}' aktif yapılsın mı?")"
+                                  style="display:inline;">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm @(bt.Aktif ? "btn-danger" : "btn-amber")">
+                                    @(bt.Aktif ? "Pasif Yap" : "Aktif Yap")
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--color-muted);">Henüz borç tipi tanımlanmamış.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

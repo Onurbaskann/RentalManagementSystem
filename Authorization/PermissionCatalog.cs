@@ -11,9 +11,10 @@ public static class PermissionCatalog
 
     public static class Birim
     {
-        public const string View   = "Birim.View";
-        public const string Create = "Birim.Create";
-        public const string Edit   = "Birim.Edit";
+        public const string View       = "Birim.View";
+        public const string Create     = "Birim.Create";
+        public const string Edit       = "Birim.Edit";
+        public const string ManageRate = "Birim.ManageRate";
     }
 
     public static class Kiraci
@@ -25,11 +26,12 @@ public static class PermissionCatalog
 
     public static class Sozlesme
     {
-        public const string View      = "Sozlesme.View";
-        public const string Create    = "Sozlesme.Create";
-        public const string Edit      = "Sozlesme.Edit";
-        public const string Extend    = "Sozlesme.Extend";
-        public const string Terminate = "Sozlesme.Terminate";
+        public const string View         = "Sozlesme.View";
+        public const string Create       = "Sozlesme.Create";
+        public const string Edit         = "Sozlesme.Edit";
+        public const string Extend       = "Sozlesme.Extend";
+        public const string Terminate    = "Sozlesme.Terminate";
+        public const string OverrideRate = "Sozlesme.OverrideRate";
     }
 
     public static class Odeme
@@ -41,6 +43,22 @@ public static class PermissionCatalog
         public const string Reject              = "Odeme.Reject";
         public const string ImportBankStatement = "Odeme.ImportBankStatement";
         public const string MatchBankTransaction = "Odeme.MatchBankTransaction";
+    }
+
+    public static class BorcTipi
+    {
+        public const string Manage = "BorcTipi.Manage";
+    }
+
+    public static class Tarife
+    {
+        public const string View   = "Tarife.View";
+        public const string Manage = "Tarife.Manage";
+    }
+
+    public static class Tahakkuk
+    {
+        public const string Regenerate = "Tahakkuk.Regenerate";
     }
 
     public static class Kullanici
@@ -82,5 +100,10 @@ public static class PermissionCatalog
         Odeme.View, Odeme.Create, Odeme.UploadDekont, Odeme.Approve, Odeme.Reject,
         Odeme.ImportBankStatement, Odeme.MatchBankTransaction,
         Kullanici.View, Kullanici.Create, Kullanici.Edit, Kullanici.AssignPermission,
+        BorcTipi.Manage,
+        Tarife.View, Tarife.Manage,
+        Birim.ManageRate,
+        Sozlesme.OverrideRate,
+        Tahakkuk.Regenerate,
     ];
 }

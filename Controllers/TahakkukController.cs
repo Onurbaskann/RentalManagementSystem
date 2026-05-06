@@ -38,6 +38,26 @@ public class TahakkukController : Controller
         return View(paged);
     }
 
+    [Authorize(Policy = PermissionCatalog.Odeme.View)]
+    public async Task<IActionResult> Detay(int id)
+    {
+        var t = await _tahakkukService.GetByIdAsync(id);
+        if (t == null) return NotFound();
+
+        if (User.IsInRole("Goruntuleyici"))
+        {
+            var userId = _userManager.GetUserId(User);
+            var yetkiliIds = await _ctx.UserTasinmazYetkileri
+                .Where(u => u.UserId == userId)
+                .Select(u => u.TasinmazId)
+                .ToListAsync();
+            if (!yetkiliIds.Contains(t.KiraSozlesmesi.Birim.TasinmazId))
+                return Forbid();
+        }
+
+        return View(t);
+    }
+
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.Odeme.Create)]
     public async Task<IActionResult> Olustur()

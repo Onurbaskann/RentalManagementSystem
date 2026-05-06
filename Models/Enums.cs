@@ -19,7 +19,8 @@ public enum SozlesmeIslemTipi
     SureUzatma = 2,
     Fesih = 3,
     TufeArtis = 4,
-    KdvGuncelleme = 5
+    KdvGuncelleme = 5,
+    TahakkukYenidenUretim = 6
 }
 
 public enum TasinmazTipi
@@ -61,7 +62,8 @@ public enum TahakkukDurumu
     Bekleniyor = 1,
     KismenOdendi = 2,
     TamOdendi = 3,
-    Gecikti = 4
+    Gecikti = 4,
+    IptalEdildi = 5
 }
 
 public enum OdemeDurumu
@@ -90,4 +92,17 @@ public enum EslesmeTipi
 {
     Otomatik = 1,
     Manuel = 2
+}
+
+public enum HesaplamaYontemi
+{
+    Sabit = 1,
+    M2    = 2
+}
+
+public enum KaynakTipi
+{
+    Sozlesme = 1,
+    Birim    = 2,
+    Tarife   = 3
 }

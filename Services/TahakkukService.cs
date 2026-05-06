@@ -45,6 +45,8 @@ public class TahakkukService : ITahakkukService
                     .ThenInclude(b => b.Tasinmaz)
             .Include(t => t.KiraSozlesmesi)
                 .ThenInclude(s => s.Kiraci)
+            .Include(t => t.Kalemler)
+                .ThenInclude(k => k.BorcTipi)
             .AsQueryable();
 
         if (sozlesmeId.HasValue)
@@ -100,6 +102,8 @@ public class TahakkukService : ITahakkukService
                     .ThenInclude(b => b.Tasinmaz)
             .Include(t => t.KiraSozlesmesi)
                 .ThenInclude(s => s.Kiraci)
+            .Include(t => t.Kalemler)
+                .ThenInclude(k => k.BorcTipi)
             .Include(t => t.Odemeler)
             .FirstOrDefaultAsync(t => t.Id == id);
     }
@@ -148,7 +152,9 @@ public class TahakkukService : ITahakkukService
     {
         var bugun = DateTime.Today;
         var guncellenmesi = await _ctx.KiraTahakkuklar
-            .Where(t => t.Durum != TahakkukDurumu.TamOdendi && t.VadeTarihi < bugun)
+            .Where(t => t.Durum != TahakkukDurumu.TamOdendi
+                && t.Durum != TahakkukDurumu.IptalEdildi
+                && t.VadeTarihi < bugun)
             .ToListAsync();
 
         foreach (var t in guncellenmesi)

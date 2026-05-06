@@ -1,5 +1,6 @@
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Services;
@@ -7,8 +8,64 @@ namespace KiraTakip.Services;
 public class SeedDataService
 {
     private readonly ApplicationDbContext _ctx;
+    private readonly ITahakkukUretimService _tahakkukUretim;
 
-    public SeedDataService(ApplicationDbContext ctx) => _ctx = ctx;
+    public SeedDataService(ApplicationDbContext ctx, ITahakkukUretimService tahakkukUretim)
+    {
+        _ctx = ctx;
+        _tahakkukUretim = tahakkukUretim;
+    }
+
+    public async Task SeedBorcTipleriAsync()
+    {
+        if (await _ctx.BorcTipleri.AnyAsync()) return;
+
+        _ctx.BorcTipleri.AddRange(
+            new BorcTipi { Ad = "Kira Bedeli",   Kod = "KIRA",     Aktif = true, Sira = 1 },
+            new BorcTipi { Ad = "Ortak Gider",   Kod = "ORTAK",    Aktif = true, Sira = 2 },
+            new BorcTipi { Ad = "Portal Gideri", Kod = "PORTAL",   Aktif = true, Sira = 3 },
+            new BorcTipi { Ad = "Depozito",      Kod = "DEPOZITO", Aktif = true, Sira = 99, TekSeferlikMi = true }
+        );
+        await _ctx.SaveChangesAsync();
+    }
+
+    public async Task EnsureDepozitoBorcTipiAsync()
+    {
+        if (await _ctx.BorcTipleri.AnyAsync(b => b.Kod == "DEPOZITO")) return;
+        _ctx.BorcTipleri.Add(new BorcTipi { Ad = "Depozito", Kod = "DEPOZITO", Aktif = true, Sira = 99, TekSeferlikMi = true });
+        await _ctx.SaveChangesAsync();
+    }
+
+    public async Task SeedTarifelerAsync()
+    {
+        if (await _ctx.Tarifeler.AnyAsync()) return;
+
+        var aktifBorcTipleri = await _ctx.BorcTipleri.Where(b => b.Aktif && !b.TekSeferlikMi).ToListAsync();
+        if (!aktifBorcTipleri.Any()) return;
+
+        var cariYil = DateTime.Now.Year;
+        var tarife = new Tarife
+        {
+            Yil             = cariYil,
+            Aciklama        = $"{cariYil} Yılı Tarifesi",
+            Aktif           = true,
+            OlusturmaTarihi = DateTime.Now
+        };
+
+        foreach (var bt in aktifBorcTipleri)
+        {
+            tarife.Kalemler.Add(new TarifeKalemi
+            {
+                BorcTipiId       = bt.Id,
+                HesaplamaYontemi = HesaplamaYontemi.Sabit,
+                BirimDeger       = bt.Kod switch { "KIRA" => 10000m, "ORTAK" => 500m, _ => 0m },
+                KdvOrani         = bt.Kod == "ORTAK" ? 20m : 0m
+            });
+        }
+
+        _ctx.Tarifeler.Add(tarife);
+        await _ctx.SaveChangesAsync();
+    }
 
     public async Task SeedDomainDataAsync()
     {
@@ -108,93 +165,20 @@ public class SeedDataService
         _ctx.Sozlesmeler.AddRange(sozlesmeler);
         await _ctx.SaveChangesAsync();
 
-        // --- 2. Ödeme Takip Verileri (Tahakkuk, Ödeme, Banka Hareketi) ---
-        // 1. Bu Ay Beklenen Tahsilat
-        var s1 = sozlesmeler[0];
-        var t1 = new KiraTahakkuk
-        {
-            KiraSozlesmesiId = s1.Id,
-            DonemBaslangic = new DateTime(now.Year, now.Month, 1),
-            DonemBitis = new DateTime(now.Year, now.Month, 1).AddMonths(1).AddDays(-1),
-            VadeTarihi = new DateTime(now.Year, now.Month, 5),
-            BeklenenTutar = s1.KiraBedeli,
-            KdvTutari = s1.KdvUygulanacakMi ? (s1.KiraBedeli * s1.KdvOrani / 100) : 0,
-            ToplamTutar = s1.KiraBedeli + (s1.KdvUygulanacakMi ? (s1.KiraBedeli * s1.KdvOrani / 100) : 0),
-            OdenenTutar = 0,
-            Durum = TahakkukDurumu.Bekleniyor
-        };
+        foreach (var s in sozlesmeler.Where(s => s.Durum == SozlesmeDurumu.Aktif))
+            await _tahakkukUretim.UretSozlesmeIcinAsync(s.Id);
+    }
 
-        // 2. Gecikmiş Tahakkuk
-        var s2 = sozlesmeler[1];
-        var t2 = new KiraTahakkuk
-        {
-            KiraSozlesmesiId = s2.Id,
-            DonemBaslangic = now.AddMonths(-1),
-            DonemBitis = now.AddDays(-1),
-            VadeTarihi = now.AddMonths(-1).AddDays(5),
-            BeklenenTutar = s2.KiraBedeli,
-            ToplamTutar = s2.KiraBedeli,
-            OdenenTutar = 0,
-            Durum = TahakkukDurumu.Gecikti
-        };
+    public async Task SeedTahakkuklarAsync()
+    {
+        if (await _ctx.KiraTahakkuklar.AnyAsync()) return;
 
-        // 3. Onay Bekleyen Ödeme
-        var s3 = sozlesmeler[2];
-        var t3 = new KiraTahakkuk
-        {
-            KiraSozlesmesiId = s3.Id,
-            DonemBaslangic = now.AddMonths(-1),
-            DonemBitis = now.AddDays(-1),
-            VadeTarihi = now.AddMonths(-1).AddDays(5),
-            BeklenenTutar = s3.KiraBedeli,
-            ToplamTutar = s3.KiraBedeli,
-            OdenenTutar = 0,
-            Durum = TahakkukDurumu.Bekleniyor
-        };
+        var aktifSozlesmeler = await _ctx.Sozlesmeler
+            .Where(s => s.Durum == SozlesmeDurumu.Aktif)
+            .ToListAsync();
 
-        _ctx.KiraTahakkuklar.AddRange(t1, t2, t3);
-        await _ctx.SaveChangesAsync();
-
-        var o1 = new KiraOdeme
-        {
-            KiraTahakkukId = t3.Id,
-            KiraSozlesmesiId = s3.Id,
-            OdemeTarihi = now.AddDays(-2),
-            Tutar = t3.ToplamTutar,
-            OdemeKanali = OdemeKanali.Havale,
-            Aciklama = "Ayşe Demir kira ödemesi",
-            Durum = OdemeDurumu.OnayBekliyor,
-            GirenUserId = adminId
-        };
-        _ctx.KiraOdemeler.Add(o1);
-
-        // 4. Eşleşmemiş Banka Hareketi
-        var b1 = new BankaHareketi
-        {
-            ImportBatchId = Guid.NewGuid(),
-            HareketTarihi = now.AddDays(-1),
-            Tutar = 12000,
-            Aciklama = "Gelen Havale: Mehmet Kaya Kira",
-            KarsiUnvan = "MEHMET KAYA",
-            BankaKodu = "AKB",
-            EslesmeDurumu = BankaEslesmeDurumu.Eslestirilmedi,
-            ImportEdenUserId = adminId
-        };
-
-        var b2 = new BankaHareketi
-        {
-            ImportBatchId = Guid.NewGuid(),
-            HareketTarihi = now.AddDays(-3),
-            Tutar = 8500,
-            Aciklama = "MAVİ CAFE KİRA ÖDEMESİ",
-            KarsiUnvan = "MAVİ CAFE LTD",
-            BankaKodu = "AKB",
-            EslesmeDurumu = BankaEslesmeDurumu.Eslestirilmedi,
-            ImportEdenUserId = adminId
-        };
-        _ctx.BankaHareketleri.AddRange(b1, b2);
-
-        await _ctx.SaveChangesAsync();
+        foreach (var s in aktifSozlesmeler)
+            await _tahakkukUretim.UretSozlesmeIcinAsync(s.Id);
     }
 
     private static Kiraci Kiraci(string kiraciNo, KiraciTuru tur, string ad, string? soyad = null,

@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using KiraTakip.Authorization;
+using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
@@ -16,7 +18,9 @@ public class SozlesmeController : Controller
     private readonly IKiraciService _kiraciService;
     private readonly IIstatistikService _istatistik;
     private readonly ITahakkukService _tahakkukService;
+    private readonly ITahakkukUretimService _tahakkukUretim;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ApplicationDbContext _ctx;
 
     public SozlesmeController(
         ISozlesmeService sozlesmeService,
@@ -24,14 +28,18 @@ public class SozlesmeController : Controller
         IKiraciService kiraciService,
         IIstatistikService istatistik,
         ITahakkukService tahakkukService,
-        UserManager<ApplicationUser> userManager)
+        ITahakkukUretimService tahakkukUretim,
+        UserManager<ApplicationUser> userManager,
+        ApplicationDbContext ctx)
     {
         _sozlesmeService = sozlesmeService;
         _tasinmazService = tasinmazService;
         _kiraciService = kiraciService;
         _istatistik = istatistik;
         _tahakkukService = tahakkukService;
+        _tahakkukUretim = tahakkukUretim;
         _userManager = userManager;
+        _ctx = ctx;
     }
 
     [Authorize(Policy = PermissionCatalog.Sozlesme.View)]
@@ -40,6 +48,16 @@ public class SozlesmeController : Controller
         var userId = _userManager.GetUserId(User);
         var filterUserId = User.IsInRole("Goruntuleyici") ? userId : null;
         var sozlesmeler = await _sozlesmeService.GetAllAsync(filtre, filterUserId);
+
+        var now = DateTime.Today;
+        var borcluSayisi = await _ctx.KiraTahakkuklar
+            .Where(t => t.DonemBaslangic <= now
+                && t.Durum != TahakkukDurumu.TamOdendi
+                && t.Durum != TahakkukDurumu.IptalEdildi)
+            .Select(t => t.KiraSozlesmesi.KiraciId)
+            .Distinct()
+            .CountAsync();
+        ViewBag.BorcluSayisi = borcluSayisi;
 
         ViewBag.Filtre = filtre ?? "tum";
         return View(sozlesmeler);
@@ -76,6 +94,40 @@ public class SozlesmeController : Controller
         {
             vm.HasOdemeAccess = true;
             vm.Tahakkuklar = await _tahakkukService.GetAllAsync(sozlesmeId: id);
+        }
+
+        var guncelTahakkuk = await _ctx.KiraTahakkuklar
+            .Include(t => t.Kalemler).ThenInclude(k => k.BorcTipi)
+            .Where(t => t.KiraSozlesmesiId == id && t.Durum != TahakkukDurumu.IptalEdildi)
+            .OrderByDescending(t => t.DonemBaslangic)
+            .FirstOrDefaultAsync();
+        vm.GuncelKalemler = guncelTahakkuk?.Kalemler
+            .Where(k => !k.BorcTipi.TekSeferlikMi)
+            .OrderBy(k => k.BorcTipi.Sira).ToList() ?? new();
+        vm.GuncelKalemDonemi = guncelTahakkuk?.DonemBaslangic;
+
+        if (User.HasClaim("permission", PermissionCatalog.Sozlesme.OverrideRate) || User.IsInRole("Admin"))
+        {
+            vm.HasRateAccess = true;
+            var aktifBorcTipleri = await _ctx.BorcTipleri
+                .Where(b => b.Aktif).OrderBy(b => b.Sira).ToListAsync();
+            var mevcutRateler = await _ctx.SozlesmeRateler
+                .Where(r => r.SozlesmeId == id).ToListAsync();
+            vm.PazarlikFiyatlari = aktifBorcTipleri.Select(bt =>
+            {
+                var rate = mevcutRateler.FirstOrDefault(r => r.BorcTipiId == bt.Id);
+                return new SozlesmeRateSatiri
+                {
+                    RateId           = rate?.Id ?? 0,
+                    BorcTipiId       = bt.Id,
+                    BorcTipiAd       = bt.Ad,
+                    BorcTipiKod      = bt.Kod,
+                    OzelFiyatAktif   = rate != null,
+                    HesaplamaYontemi = rate?.HesaplamaYontemi ?? HesaplamaYontemi.Sabit,
+                    BirimDeger       = rate?.BirimDeger ?? 0,
+                    KdvOrani         = rate?.KdvOrani ?? 0
+                };
+            }).ToList();
         }
 
         return View(vm);
@@ -127,6 +179,7 @@ public class SozlesmeController : Controller
         };
 
         await _sozlesmeService.CreateAsync(s);
+        await _tahakkukUretim.UretSozlesmeIcinAsync(s.Id);
         TempData["Success"] = "Sözleşme başarıyla oluşturuldu.";
         return RedirectToAction("Detay", new { id = s.Id });
     }
@@ -162,6 +215,7 @@ public class SozlesmeController : Controller
 
         await _sozlesmeService.UzatAsync(id, vm.YeniBitisTarihi, vm.YeniKiraBedeli,
             vm.KdvUygulanacakMi, vm.KdvOrani ?? 20, vm.TufeOrani, vm.Aciklama);
+        await _tahakkukUretim.UretSozlesmeIcinAsync(id);
 
         TempData["Success"] = "Sözleşme süresi başarıyla uzatıldı.";
         return RedirectToAction("Detay", new { id });
@@ -191,7 +245,69 @@ public class SozlesmeController : Controller
         }
 
         await _sozlesmeService.FeshetAsync(id, vm.FesihTarihi, vm.FesihNedeni, vm.Aciklama);
+        await _tahakkukUretim.IptalEtFutureTahakkuklarAsync(id, vm.FesihTarihi);
         TempData["Success"] = "Sözleşme başarıyla feshedildi.";
+        return RedirectToAction("Detay", new { id });
+    }
+
+    [HttpPost]
+    [Authorize(Policy = PermissionCatalog.Sozlesme.OverrideRate)]
+    public async Task<IActionResult> PazarlikFiyatGuncelle(int id, List<SozlesmeRateSatiri> pazarlikFiyatlari)
+    {
+        var mevcutRateler = await _ctx.SozlesmeRateler
+            .Where(r => r.SozlesmeId == id).ToListAsync();
+
+        foreach (var satir in pazarlikFiyatlari)
+        {
+            var mevcut = mevcutRateler.FirstOrDefault(r => r.BorcTipiId == satir.BorcTipiId);
+            if (satir.OzelFiyatAktif)
+            {
+                if (mevcut == null)
+                    _ctx.SozlesmeRateler.Add(new SozlesmeRate
+                    {
+                        SozlesmeId       = id,
+                        BorcTipiId       = satir.BorcTipiId,
+                        HesaplamaYontemi = satir.HesaplamaYontemi,
+                        BirimDeger       = satir.BirimDeger,
+                        KdvOrani         = satir.KdvOrani
+                    });
+                else
+                {
+                    mevcut.HesaplamaYontemi = satir.HesaplamaYontemi;
+                    mevcut.BirimDeger       = satir.BirimDeger;
+                    mevcut.KdvOrani         = satir.KdvOrani;
+                }
+            }
+            else if (mevcut != null)
+                _ctx.SozlesmeRateler.Remove(mevcut);
+        }
+
+        await _ctx.SaveChangesAsync();
+        TempData["Success"] = "Pazarlık fiyatları güncellendi.";
+        return RedirectToAction("Detay", new { id });
+    }
+
+    [HttpPost]
+    [Authorize(Policy = PermissionCatalog.Tahakkuk.Regenerate)]
+    public async Task<IActionResult> YenidenUret(int id, DateTime baslangicTarihi)
+    {
+        var s = await _ctx.Sozlesmeler
+            .Include(x => x.IslemGecmisi)
+            .FirstOrDefaultAsync(x => x.Id == id);
+        if (s == null) return NotFound();
+
+        await _tahakkukUretim.YenidenUretAsync(id, baslangicTarihi);
+
+        s.IslemGecmisi.Add(new SozlesmeIslemGecmisi
+        {
+            KiraSozlesmesiId = id,
+            IslemTipi = SozlesmeIslemTipi.TahakkukYenidenUretim,
+            IslemTarihi = DateTime.Now,
+            Aciklama = $"{baslangicTarihi:MMMM yyyy} tarihinden itibaren ödenmemiş tahakkuklar yeniden üretildi."
+        });
+
+        await _ctx.SaveChangesAsync();
+        TempData["Success"] = $"{baslangicTarihi:MMMM yyyy} tarihinden itibaren ödenmemiş tahakkuklar yeniden üretildi.";
         return RedirectToAction("Detay", new { id });
     }
 

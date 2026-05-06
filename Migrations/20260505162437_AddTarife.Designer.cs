@@ -4,6 +4,7 @@ using KiraTakip.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KiraTakip.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260505162437_AddTarife")]
+    partial class AddTarife
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -192,41 +195,6 @@ namespace KiraTakip.Migrations
                     b.ToTable("Birimler");
                 });
 
-            modelBuilder.Entity("KiraTakip.Models.BirimRate", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("BirimDeger")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<int>("BirimId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("BorcTipiId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("HesaplamaYontemi")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("KdvOrani")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BorcTipiId");
-
-                    b.HasIndex("BirimId", "BorcTipiId")
-                        .IsUnique();
-
-                    b.ToTable("BirimRateler");
-                });
-
             modelBuilder.Entity("KiraTakip.Models.BorcTipi", b =>
                 {
                     b.Property<int>("Id")
@@ -250,9 +218,6 @@ namespace KiraTakip.Migrations
 
                     b.Property<int>("Sira")
                         .HasColumnType("int");
-
-                    b.Property<bool>("TekSeferlikMi")
-                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 
@@ -661,99 +626,6 @@ namespace KiraTakip.Migrations
                     b.ToTable("SozlesmeIslemGecmisleri");
                 });
 
-            modelBuilder.Entity("KiraTakip.Models.SozlesmeRate", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("BirimDeger")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<int>("BorcTipiId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("HesaplamaYontemi")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("KdvOrani")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<int>("SozlesmeId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BorcTipiId");
-
-                    b.HasIndex("SozlesmeId", "BorcTipiId")
-                        .IsUnique();
-
-                    b.ToTable("SozlesmeRateler");
-                });
-
-            modelBuilder.Entity("KiraTakip.Models.TahakkukKalemi", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Aciklama")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<decimal>("BirimDeger")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<int>("BorcTipiId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Carpan")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<int>("HesaplamaYontemi")
-                        .HasColumnType("int");
-
-                    b.Property<int>("KaynakTipi")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("KdvOrani")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal>("KdvTutari")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("TahakkukId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("ToplamTutar")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("Tutar")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BorcTipiId");
-
-                    b.HasIndex("TahakkukId");
-
-                    b.ToTable("TahakkukKalemleri");
-                });
-
             modelBuilder.Entity("KiraTakip.Models.Tarife", b =>
                 {
                     b.Property<int>("Id")
@@ -1096,25 +968,6 @@ namespace KiraTakip.Migrations
                     b.Navigation("Tasinmaz");
                 });
 
-            modelBuilder.Entity("KiraTakip.Models.BirimRate", b =>
-                {
-                    b.HasOne("KiraTakip.Models.Birim", "Birim")
-                        .WithMany()
-                        .HasForeignKey("BirimId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("KiraTakip.Models.BorcTipi", "BorcTipi")
-                        .WithMany()
-                        .HasForeignKey("BorcTipiId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Birim");
-
-                    b.Navigation("BorcTipi");
-                });
-
             modelBuilder.Entity("KiraTakip.Models.Dekont", b =>
                 {
                     b.HasOne("KiraTakip.Models.KiraOdeme", "KiraOdeme")
@@ -1233,44 +1086,6 @@ namespace KiraTakip.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("KiraTakip.Models.SozlesmeRate", b =>
-                {
-                    b.HasOne("KiraTakip.Models.BorcTipi", "BorcTipi")
-                        .WithMany()
-                        .HasForeignKey("BorcTipiId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("KiraTakip.Models.KiraSozlesmesi", "Sozlesme")
-                        .WithMany()
-                        .HasForeignKey("SozlesmeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("BorcTipi");
-
-                    b.Navigation("Sozlesme");
-                });
-
-            modelBuilder.Entity("KiraTakip.Models.TahakkukKalemi", b =>
-                {
-                    b.HasOne("KiraTakip.Models.BorcTipi", "BorcTipi")
-                        .WithMany()
-                        .HasForeignKey("BorcTipiId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("KiraTakip.Models.KiraTahakkuk", "Tahakkuk")
-                        .WithMany("Kalemler")
-                        .HasForeignKey("TahakkukId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("BorcTipi");
-
-                    b.Navigation("Tahakkuk");
-                });
-
             modelBuilder.Entity("KiraTakip.Models.TarifeKalemi", b =>
                 {
                     b.HasOne("KiraTakip.Models.BorcTipi", "BorcTipi")
@@ -1374,8 +1189,6 @@ namespace KiraTakip.Migrations
 
             modelBuilder.Entity("KiraTakip.Models.KiraTahakkuk", b =>
                 {
-                    b.Navigation("Kalemler");
-
                     b.Navigation("Odemeler");
                 });
 
