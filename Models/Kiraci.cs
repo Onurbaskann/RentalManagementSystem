@@ -32,6 +32,12 @@ public class Kiraci
     public string Email { get; set; } = string.Empty;
     public string? Adres { get; set; }
 
+    public int? KiraciKategoriId { get; set; }
+    public KiraciKategori? KiraciKategori { get; set; }
+
+    public int? SektorId { get; set; }
+    public Sektor? Sektor { get; set; }
+
     public DateTime KayitTarihi { get; set; }
 
     public string GosterimAdi =>

@@ -23,19 +23,11 @@ public enum SozlesmeIslemTipi
     TahakkukYenidenUretim = 6
 }
 
-public enum TasinmazTipi
-{
-    Bina = 1,
-    Arazi = 2,
-    Tarla = 3,
-    Depo = 4,
-    Diger = 5
-}
 
 public enum KiralamaSekli
 {
     TekParca = 1,
-    OfisBazli = 2
+    BirimBazli = 2
 }
 
 public enum KiraDurumu
@@ -102,7 +94,23 @@ public enum HesaplamaYontemi
 
 public enum KaynakTipi
 {
-    Sozlesme = 1,
-    Birim    = 2,
-    Tarife   = 3
+    Sozlesme              = 1,
+    Birim                 = 2,
+    Tarife                = 3,
+    TasinmazKategoriCarpan = 4
+}
+
+public enum TahakkukKaynakTipi
+{
+    Otomatik    = 1,
+    Manuel      = 2,
+    Rezervasyon = 3
+}
+
+public enum RezervasyonDurumu
+{
+    Planlandi          = 1,
+    Tamamlandi         = 2,
+    IptalEdildi        = 3,
+    TahakkukaAktarildi = 4
 }

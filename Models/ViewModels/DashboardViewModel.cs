@@ -3,7 +3,7 @@ namespace KiraTakip.Models.ViewModels;
 public class DashboardViewModel
 {
     public int ToplamTasinmaz { get; set; }
-    public Dictionary<TasinmazTipi, int> TipiDagilim { get; set; } = new();
+    public Dictionary<string, int> TipiDagilim { get; set; } = new();
 
     public int ToplamBirim { get; set; }
     public int KiraliBirim { get; set; }
@@ -27,6 +27,11 @@ public class DashboardViewModel
     public decimal GecikmisTutarToplam { get; set; }
     public int OnayBekleyenOdemeAdet { get; set; }
     public int EslesmemisHareketAdet { get; set; }
+
+    // Rezervasyon ve manuel borç metrikleri
+    public decimal BuAyManuelBorcToplami { get; set; }
+    public decimal BuAyRezervasyonGeliri { get; set; }
+    public int TahakkukaAktarilmamisRezervasyonAdet { get; set; }
 }
 
 public class SuresiDolmakUzereSozlesme

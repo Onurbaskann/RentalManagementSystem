@@ -21,7 +21,7 @@ public class TahakkukOlusturViewModel
 public class OdemeEkleViewModel
 {
     public int KiraTahakkukId { get; set; }
-    public int KiraSozlesmesiId { get; set; }
+    public int? KiraSozlesmesiId { get; set; }
 
     [Required(ErrorMessage = "Ödeme tarihi zorunludur.")]
     public DateTime OdemeTarihi { get; set; } = DateTime.Today;

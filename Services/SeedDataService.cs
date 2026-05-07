@@ -36,6 +36,106 @@ public class SeedDataService
         await _ctx.SaveChangesAsync();
     }
 
+    public async Task EnsureManuelBorcTipiAsync()
+    {
+        if (await _ctx.BorcTipleri.AnyAsync(b => b.Kod == "MANUEL")) return;
+        _ctx.BorcTipleri.Add(new BorcTipi { Ad = "Manuel Borç", Kod = "MANUEL", Aktif = true, Sira = 50, TekSeferlikMi = false });
+        await _ctx.SaveChangesAsync();
+    }
+
+    public async Task EnsureToplantiBorcTipiAsync()
+    {
+        if (await _ctx.BorcTipleri.AnyAsync(b => b.Kod == "TOPLANTI")) return;
+        _ctx.BorcTipleri.Add(new BorcTipi
+        {
+            Ad = "Toplantı Salonu Kullanım Bedeli",
+            Kod = "TOPLANTI",
+            Aktif = true,
+            Sira = 60,
+            TekSeferlikMi = false
+        });
+        await _ctx.SaveChangesAsync();
+    }
+
+    public async Task EnsureVarsayilanRezervasyonUcretKuralAsync()
+    {
+        if (await _ctx.RezervasyonUcretKurallari.AnyAsync()) return;
+        _ctx.RezervasyonUcretKurallari.Add(new RezervasyonUcretKural
+        {
+            BirimId = null,
+            UcretsizSureDakika = 120,
+            UcretlendirmePeriyoduDakika = 60,
+            PeriyotUcreti = 500,
+            KdvOrani = 20,
+            Aktif = true,
+            Aciklama = "Varsayılan genel kural — 2 saat ücretsiz, sonrası 500 ₺/saat",
+            OlusturmaTarihi = DateTime.UtcNow
+        });
+        await _ctx.SaveChangesAsync();
+    }
+
+    public async Task SeedTasinmazTipleriAsync()
+    {
+        if (await _ctx.TasinmazTipleri.AnyAsync()) return;
+
+        _ctx.TasinmazTipleri.AddRange(
+            new TasinmazTipi { Ad = "Bina",      Kod = "BINA",       Aktif = true, Sira = 1,  OlusturmaTarihi = DateTime.UtcNow },
+            new TasinmazTipi { Ad = "Arazi",     Kod = "ARAZI",      Aktif = true, Sira = 2,  OlusturmaTarihi = DateTime.UtcNow },
+            new TasinmazTipi { Ad = "Tarla",     Kod = "TARLA",      Aktif = true, Sira = 3,  OlusturmaTarihi = DateTime.UtcNow },
+            new TasinmazTipi { Ad = "Depo",      Kod = "DEPO",       Aktif = true, Sira = 4,  OlusturmaTarihi = DateTime.UtcNow },
+            new TasinmazTipi { Ad = "Otomat",    Kod = "OTOMAT",     Aktif = true, Sira = 5,  OlusturmaTarihi = DateTime.UtcNow },
+            new TasinmazTipi { Ad = "Bankamatik",Kod = "BANKAMATIK", Aktif = true, Sira = 6,  OlusturmaTarihi = DateTime.UtcNow },
+            new TasinmazTipi { Ad = "Kantin",    Kod = "KANTIN",     Aktif = true, Sira = 7,  OlusturmaTarihi = DateTime.UtcNow },
+            new TasinmazTipi { Ad = "Diğer",     Kod = "DIGER",      Aktif = true, Sira = 99, OlusturmaTarihi = DateTime.UtcNow }
+        );
+        await _ctx.SaveChangesAsync();
+    }
+
+    public async Task SeedBirimTurleriAsync()
+    {
+        if (await _ctx.BirimTurleri.AnyAsync()) return;
+
+        _ctx.BirimTurleri.AddRange(
+            new BirimTuru { Ad = "Ofis",             Kod = "OFIS",      Aktif = true, KiralanabilirMi = true,  RezervasyonYapilabilirMi = false, Sira = 1,  OlusturmaTarihi = DateTime.UtcNow },
+            new BirimTuru { Ad = "Toplantı Salonu",  Kod = "TOPLANTI",  Aktif = true, KiralanabilirMi = false, RezervasyonYapilabilirMi = true,  Sira = 10, OlusturmaTarihi = DateTime.UtcNow },
+            new BirimTuru { Ad = "Etkinlik Alanı",   Kod = "ETKINLIK",  Aktif = true, KiralanabilirMi = false, RezervasyonYapilabilirMi = true,  Sira = 11, OlusturmaTarihi = DateTime.UtcNow },
+            new BirimTuru { Ad = "Konferans Salonu", Kod = "KONFERANS", Aktif = true, KiralanabilirMi = false, RezervasyonYapilabilirMi = true,  Sira = 12, OlusturmaTarihi = DateTime.UtcNow },
+            new BirimTuru { Ad = "Diğer",            Kod = "DIGER",     Aktif = true, KiralanabilirMi = true,  RezervasyonYapilabilirMi = false, Sira = 99, OlusturmaTarihi = DateTime.UtcNow }
+        );
+        await _ctx.SaveChangesAsync();
+    }
+
+    public async Task SeedKiraciKategorileriAsync()
+    {
+        if (await _ctx.KiraciKategorileri.AnyAsync()) return;
+
+        _ctx.KiraciKategorileri.AddRange(
+            new KiraciKategori { Ad = "Akademisyen",         Kod = "AKADEMISYEN",  Aktif = true, Sira = 1,  OlusturmaTarihi = DateTime.UtcNow },
+            new KiraciKategori { Ad = "Akademisyen Olmayan", Kod = "AKAD_OLMAYAN", Aktif = true, Sira = 2,  OlusturmaTarihi = DateTime.UtcNow },
+            new KiraciKategori { Ad = "Firma",               Kod = "FIRMA",        Aktif = true, Sira = 3,  OlusturmaTarihi = DateTime.UtcNow },
+            new KiraciKategori { Ad = "Kamu Kurumu",         Kod = "KAMU",         Aktif = true, Sira = 4,  OlusturmaTarihi = DateTime.UtcNow },
+            new KiraciKategori { Ad = "Diğer",               Kod = "DIGER",        Aktif = true, Sira = 99, OlusturmaTarihi = DateTime.UtcNow }
+        );
+        await _ctx.SaveChangesAsync();
+    }
+
+    public async Task SeedSektorlerAsync()
+    {
+        if (await _ctx.Sektorler.AnyAsync()) return;
+
+        _ctx.Sektorler.AddRange(
+            new Sektor { Ad = "Yazılım",  Kod = "YAZILIM",  Aktif = true, Sira = 1,  OlusturmaTarihi = DateTime.UtcNow },
+            new Sektor { Ad = "Lojistik", Kod = "LOJISTIK", Aktif = true, Sira = 2,  OlusturmaTarihi = DateTime.UtcNow },
+            new Sektor { Ad = "Gıda",     Kod = "GIDA",     Aktif = true, Sira = 3,  OlusturmaTarihi = DateTime.UtcNow },
+            new Sektor { Ad = "Tarım",    Kod = "TARIM",    Aktif = true, Sira = 4,  OlusturmaTarihi = DateTime.UtcNow },
+            new Sektor { Ad = "Finans",   Kod = "FINANS",   Aktif = true, Sira = 5,  OlusturmaTarihi = DateTime.UtcNow },
+            new Sektor { Ad = "Eğitim",   Kod = "EGITIM",   Aktif = true, Sira = 6,  OlusturmaTarihi = DateTime.UtcNow },
+            new Sektor { Ad = "Kamu",     Kod = "KAMU",     Aktif = true, Sira = 7,  OlusturmaTarihi = DateTime.UtcNow },
+            new Sektor { Ad = "Diğer",    Kod = "DIGER",    Aktif = true, Sira = 99, OlusturmaTarihi = DateTime.UtcNow }
+        );
+        await _ctx.SaveChangesAsync();
+    }
+
     public async Task SeedTarifelerAsync()
     {
         if (await _ctx.Tarifeler.AnyAsync()) return;
@@ -75,6 +175,8 @@ public class SeedDataService
         var adminUser = await _ctx.Users.FirstOrDefaultAsync(u => u.Email == "admin@kiratakip.local");
         var adminId = adminUser?.Id ?? "";
 
+        var tipiMap = await _ctx.TasinmazTipleri.ToDictionaryAsync(t => t.Kod, t => t.Id);
+
         // --- Kiracılar ---
         var ahmet = Kiraci("KRC-000001", KiraciTuru.Gercek, "Ahmet", "Yılmaz",
             tcNo: "12345678901", telefon: "0532 111 2233", email: "ahmet@example.com", adres: "İzmir, Bornova");
@@ -98,7 +200,7 @@ public class SeedDataService
         _ctx.Kiraciler.AddRange(ahmet, ayse, mehmet, yildiz, anadolu, egeTarim, maviCafe);
 
         // --- Taşınmazlar ---
-        var teknokent = MakeTasinmaz("Teknokent A Blok", TasinmazTipi.Bina, KiralamaSekli.OfisBazli,
+        var teknokent = MakeTasinmaz("Teknokent A Blok", tipiMap.GetValueOrDefault("BINA"), KiralamaSekli.BirimBazli,
             "İzmir", "Bornova", "Ege Üniversitesi", "Ege Üniversitesi Teknokent Kampüsü", 500, 4500, 5,
             "Ofis bazlı kiralanabilir teknokent binası",
             new[] { ("101",1,55m,"Girişe yakın ofis"), ("102",1,65m,"Cephe görünümlü"),
@@ -106,23 +208,23 @@ public class SeedDataService
                     ("301",3,90m,(string?)null), ("302",3,70m,"Toplantı odalı"),
                     ("401",4,110m,(string?)null), ("501",5,120m,"Teras erişimi") });
 
-        var camlık = MakeTasinmaz("Çamlık Kantini", TasinmazTipi.Bina, KiralamaSekli.TekParca,
+        var camlık = MakeTasinmaz("Çamlık Kantini", tipiMap.GetValueOrDefault("BINA"), KiralamaSekli.TekParca,
             "İzmir", "Karşıyaka", "Çamlık", "Çamlık Mahallesi No: 45", 200, 350, null,
             "Bütün olarak kiralanan kantin binası");
-        var tarla = MakeTasinmaz("Bornova Tarlası", TasinmazTipi.Tarla, KiralamaSekli.TekParca,
+        var tarla = MakeTasinmaz("Bornova Tarlası", tipiMap.GetValueOrDefault("TARLA"), KiralamaSekli.TekParca,
             "İzmir", "Bornova", "Doğanlar", "Doğanlar Köyü Mevkii", 12000, 0, null,
             "12.000 m² ekilebilir tarla alanı");
-        var dukkan = MakeTasinmaz("Atatürk Cd. Dükkan", TasinmazTipi.Bina, KiralamaSekli.TekParca,
+        var dukkan = MakeTasinmaz("Atatürk Cd. Dükkan", tipiMap.GetValueOrDefault("BINA"), KiralamaSekli.TekParca,
             "İzmir", "Konak", "Alsancak", "Atatürk Caddesi No: 112", 0, 180, null,
             "Alsancak'ta sokak cepheli dükkan");
-        var sanayiB = MakeTasinmaz("Sanayi Sitesi B Blok", TasinmazTipi.Bina, KiralamaSekli.OfisBazli,
+        var sanayiB = MakeTasinmaz("Sanayi Sitesi B Blok", tipiMap.GetValueOrDefault("BINA"), KiralamaSekli.BirimBazli,
             "İzmir", "Kemalpaşa", "OSB", "Kemalpaşa OSB 5. Cadde", 300, 2700, 3,
             "3 katlı sanayi binası",
             new[] { ("101",1,180m,"Zemin kat depo bölümü"), ("201",2,220m,(string?)null), ("301",3,240m,"Yönetim katı") });
-        var arazi = MakeTasinmaz("Menemen Arazi", TasinmazTipi.Arazi, KiralamaSekli.TekParca,
+        var arazi = MakeTasinmaz("Menemen Arazi", tipiMap.GetValueOrDefault("ARAZI"), KiralamaSekli.TekParca,
             "İzmir", "Menemen", "Görece", "Görece Köyü Arazi Parseli 412", 8500, 0, null,
             "8.500 m² imarsız arazi");
-        var depo = MakeTasinmaz("Buca Deposu", TasinmazTipi.Depo, KiralamaSekli.TekParca,
+        var depo = MakeTasinmaz("Buca Deposu", tipiMap.GetValueOrDefault("DEPO"), KiralamaSekli.TekParca,
             "İzmir", "Buca", "Sanayi", "Buca Sanayi Sitesi B-12", 150, 1200, null,
             "1.200 m² kapalı lojistik deposu");
 
@@ -201,21 +303,21 @@ public class SeedDataService
         KayitTarihi = DateTime.Now.AddMonths(-Random.Shared.Next(6, 36))
     };
 
-    private static Tasinmaz MakeTasinmaz(string ad, TasinmazTipi tipi, KiralamaSekli sekli,
+    private static Tasinmaz MakeTasinmaz(string ad, int? tasinmazTipiId, KiralamaSekli sekli,
         string il, string ilce, string mahalle, string acikAdres,
         decimal acikM2, decimal kapaliM2, int? katSayisi, string? aciklama,
         IEnumerable<(string ofisNo, int katNo, decimal m2, string? ofisAciklama)>? ofisler = null)
     {
         var t = new Tasinmaz
         {
-            Ad = ad, Tipi = tipi, KiralamaSekli = sekli,
+            Ad = ad, TasinmazTipiId = tasinmazTipiId, KiralamaSekli = sekli,
             Il = il, Ilce = ilce, Mahalle = mahalle, AcikAdres = acikAdres,
             AcikYuzolcumu = acikM2, KapaliYuzolcumu = kapaliM2,
             KatSayisi = katSayisi, Aciklama = aciklama,
             KayitTarihi = DateTime.Now.AddMonths(-Random.Shared.Next(12, 60))
         };
 
-        if (sekli == KiralamaSekli.OfisBazli && ofisler != null)
+        if (sekli == KiralamaSekli.BirimBazli && ofisler != null)
         {
             foreach (var (ofisNo, katNo, m2, ofisAciklama) in ofisler)
                 t.Birimler.Add(new Birim

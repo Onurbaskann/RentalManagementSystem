@@ -50,6 +50,36 @@ public static class PermissionCatalog
         public const string Manage = "BorcTipi.Manage";
     }
 
+    public static class Parametre
+    {
+        public const string View   = "Parametre.View";
+        public const string Manage = "Parametre.Manage";
+    }
+
+    public static class TasinmazTipiPerm
+    {
+        public const string View   = "TasinmazTipi.View";
+        public const string Manage = "TasinmazTipi.Manage";
+    }
+
+    public static class BirimTuruPerm
+    {
+        public const string View   = "BirimTuru.View";
+        public const string Manage = "BirimTuru.Manage";
+    }
+
+    public static class KiraciKategoriPerm
+    {
+        public const string View   = "KiraciKategori.View";
+        public const string Manage = "KiraciKategori.Manage";
+    }
+
+    public static class SektorPerm
+    {
+        public const string View   = "Sektor.View";
+        public const string Manage = "Sektor.Manage";
+    }
+
     public static class Tarife
     {
         public const string View   = "Tarife.View";
@@ -59,6 +89,33 @@ public static class PermissionCatalog
     public static class Tahakkuk
     {
         public const string Regenerate = "Tahakkuk.Regenerate";
+    }
+
+    public static class ManuelBorc
+    {
+        public const string View   = "ManuelBorc.View";
+        public const string Create = "ManuelBorc.Create";
+        public const string Cancel = "ManuelBorc.Cancel";
+    }
+
+    public static class Rezervasyon
+    {
+        public const string View              = "Rezervasyon.View";
+        public const string Create            = "Rezervasyon.Create";
+        public const string Edit              = "Rezervasyon.Edit";
+        public const string Cancel            = "Rezervasyon.Cancel";
+        public const string TransferToTahakkuk = "Rezervasyon.TransferToTahakkuk";
+    }
+
+    public static class TasinmazCarpanPerm
+    {
+        public const string View   = "TasinmazCarpan.View";
+        public const string Manage = "TasinmazCarpan.Manage";
+    }
+
+    public static class RezervasyonUcretKuralPerm
+    {
+        public const string Manage = "RezervasyonUcretKural.Manage";
     }
 
     public static class Kullanici
@@ -78,6 +135,9 @@ public static class PermissionCatalog
         Sozlesme.View, Sozlesme.Create, Sozlesme.Edit, Sozlesme.Extend, Sozlesme.Terminate,
         Odeme.View, Odeme.Create, Odeme.UploadDekont, Odeme.Approve, Odeme.Reject,
         Odeme.ImportBankStatement, Odeme.MatchBankTransaction,
+        ManuelBorc.View, ManuelBorc.Create, ManuelBorc.Cancel,
+        Rezervasyon.View, Rezervasyon.Create, Rezervasyon.Edit, Rezervasyon.Cancel, Rezervasyon.TransferToTahakkuk,
+        TasinmazCarpanPerm.View, TasinmazCarpanPerm.Manage,
     ];
 
     // Goruntuleyici rolüne atanabilecek permission'lar (sadece View)
@@ -88,6 +148,8 @@ public static class PermissionCatalog
         Kiraci.View,
         Sozlesme.View,
         Odeme.View,
+        ManuelBorc.View,
+        Rezervasyon.View,
     ];
 
     // Sistemdeki tüm permission'lar (policy kayıtları için)
@@ -105,5 +167,14 @@ public static class PermissionCatalog
         Birim.ManageRate,
         Sozlesme.OverrideRate,
         Tahakkuk.Regenerate,
+        Parametre.View, Parametre.Manage,
+        TasinmazTipiPerm.View, TasinmazTipiPerm.Manage,
+        BirimTuruPerm.View, BirimTuruPerm.Manage,
+        KiraciKategoriPerm.View, KiraciKategoriPerm.Manage,
+        SektorPerm.View, SektorPerm.Manage,
+        ManuelBorc.View, ManuelBorc.Create, ManuelBorc.Cancel,
+        Rezervasyon.View, Rezervasyon.Create, Rezervasyon.Edit, Rezervasyon.Cancel, Rezervasyon.TransferToTahakkuk,
+        TasinmazCarpanPerm.View, TasinmazCarpanPerm.Manage,
+        RezervasyonUcretKuralPerm.Manage,
     ];
 }

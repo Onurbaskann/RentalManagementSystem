@@ -57,6 +57,8 @@ builder.Services.AddScoped<IBankaHareketiService, BankaHareketiService>();
 builder.Services.AddSingleton<IBankaHareketiParser, AkbankCsvParser>();
 builder.Services.AddScoped<IRateResolverService, RateResolverService>();
 builder.Services.AddScoped<ITahakkukUretimService, TahakkukUretimService>();
+builder.Services.AddScoped<IManuelBorcService, ManuelBorcService>();
+builder.Services.AddScoped<IRezervasyonService, RezervasyonService>();
 
 var app = builder.Build();
 
@@ -85,7 +87,14 @@ using (var scope = app.Services.CreateScope())
     var domainSeed = scope.ServiceProvider.GetRequiredService<SeedDataService>();
     await domainSeed.SeedBorcTipleriAsync();
     await domainSeed.EnsureDepozitoBorcTipiAsync();
+    await domainSeed.EnsureManuelBorcTipiAsync();
     await domainSeed.SeedTarifelerAsync();
+    await domainSeed.SeedTasinmazTipleriAsync();
+    await domainSeed.SeedBirimTurleriAsync();
+    await domainSeed.SeedKiraciKategorileriAsync();
+    await domainSeed.SeedSektorlerAsync();
+    await domainSeed.EnsureToplantiBorcTipiAsync();
+    await domainSeed.EnsureVarsayilanRezervasyonUcretKuralAsync();
 
     if (app.Environment.IsDevelopment())
     {

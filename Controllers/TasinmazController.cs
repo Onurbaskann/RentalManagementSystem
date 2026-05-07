@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using KiraTakip.Authorization;
+using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
@@ -14,15 +16,18 @@ public class TasinmazController : Controller
     private readonly ITasinmazService _tasinmazService;
     private readonly IIstatistikService _istatistik;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ApplicationDbContext _ctx;
 
     public TasinmazController(
         ITasinmazService tasinmazService,
         IIstatistikService istatistik,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        ApplicationDbContext ctx)
     {
         _tasinmazService = tasinmazService;
         _istatistik = istatistik;
         _userManager = userManager;
+        _ctx = ctx;
     }
 
     [Authorize(Policy = PermissionCatalog.Tasinmaz.View)]
@@ -47,6 +52,12 @@ public class TasinmazController : Controller
         var t = await _tasinmazService.GetByIdAsync(id);
         if (t == null) return NotFound();
 
+        var carpanlar = await _ctx.TasinmazKategoriCarpanlari
+            .Include(c => c.KiraciKategori)
+            .Where(c => c.TasinmazId == id)
+            .OrderBy(c => c.KiraciKategori.Ad)
+            .ToListAsync();
+
         var vm = new TasinmazDetayViewModel
         {
             Tasinmaz = t,
@@ -55,15 +66,25 @@ public class TasinmazController : Controller
                 Birim = b,
                 Durum = _istatistik.GetBirimDurumu(b),
                 AktifSozlesme = _istatistik.GetAktifSozlesme(b)
-            }).ToList()
+            }).ToList(),
+            Carpanlar = carpanlar
         };
         return View(vm);
     }
 
+    private async Task PopulateViewBagAsync()
+    {
+        var birimTurleri = await _ctx.BirimTurleri.Where(b => b.Aktif).OrderBy(b => b.Sira).ToListAsync();
+        ViewBag.BirimTurleri = birimTurleri.Where(b => b.KiralanabilirMi).ToList();
+        ViewBag.RezervasyonBirimTurleri = birimTurleri.Where(b => b.RezervasyonYapilabilirMi).ToList();
+        ViewBag.TasinmazTipleri = await _ctx.TasinmazTipleri.Where(t => t.Aktif).OrderBy(t => t.Sira).ToListAsync();
+    }
+
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.Tasinmaz.Create)]
-    public IActionResult Ekle()
+    public async Task<IActionResult> Ekle()
     {
+        await PopulateViewBagAsync();
         return View(new TasinmazEkleViewModel());
     }
 
@@ -71,18 +92,11 @@ public class TasinmazController : Controller
     [Authorize(Policy = PermissionCatalog.Tasinmaz.Create)]
     public async Task<IActionResult> Ekle(TasinmazEkleViewModel vm)
     {
-        if (vm.Tipi != TasinmazTipi.Bina)
-        {
-            vm.KiralamaSekli = KiralamaSekli.TekParca;
-            vm.KatSayisi = null;
-            vm.Ofisler.Clear();
-        }
-
-        if (vm.Tipi == TasinmazTipi.Bina && vm.KiralamaSekli == KiralamaSekli.OfisBazli)
+        if (vm.KiralamaSekli == KiralamaSekli.BirimBazli)
         {
             var gecerliOfisler = vm.Ofisler.Where(o => !string.IsNullOrWhiteSpace(o.OfisNo)).ToList();
             if (gecerliOfisler.Count == 0)
-                ModelState.AddModelError("Ofisler", "En az bir ofis tanımlanmalıdır.");
+                ModelState.AddModelError("Ofisler", "En az bir birim tanımlanmalıdır.");
 
             var tekrarlayanOfisNo = gecerliOfisler
                 .GroupBy(o => o.OfisNo.Trim().ToUpper())
@@ -90,11 +104,11 @@ public class TasinmazController : Controller
                 .Select(g => g.Key)
                 .FirstOrDefault();
             if (tekrarlayanOfisNo != null)
-                ModelState.AddModelError("Ofisler", $"Ofis No '{tekrarlayanOfisNo}' aynı bina içinde tekrar kullanılamaz.");
+                ModelState.AddModelError("Ofisler", $"Birim No '{tekrarlayanOfisNo}' aynı taşınmaz içinde tekrar kullanılamaz.");
 
             var sifirM2 = gecerliOfisler.FirstOrDefault(o => o.Yuzolcumu <= 0);
             if (sifirM2 != null)
-                ModelState.AddModelError("Ofisler", $"Ofis No '{sifirM2.OfisNo}' için yüzölçümü 0'dan büyük olmalıdır.");
+                ModelState.AddModelError("Ofisler", $"Birim No '{sifirM2.OfisNo}' için yüzölçümü 0'dan büyük olmalıdır.");
 
             vm.Ofisler = gecerliOfisler;
         }
@@ -103,12 +117,16 @@ public class TasinmazController : Controller
             vm.Ofisler.Clear();
         }
 
-        if (!ModelState.IsValid) return View(vm);
+        if (!ModelState.IsValid)
+        {
+            await PopulateViewBagAsync();
+            return View(vm);
+        }
 
         var t = new Tasinmaz
         {
             Ad = vm.Ad,
-            Tipi = vm.Tipi,
+            TasinmazTipiId = vm.TasinmazTipiId,
             KiralamaSekli = vm.KiralamaSekli,
             Il = vm.Il,
             Ilce = vm.Ilce,
@@ -116,11 +134,17 @@ public class TasinmazController : Controller
             AcikAdres = vm.AcikAdres,
             AcikYuzolcumu = vm.AcikYuzolcumu,
             KapaliYuzolcumu = vm.KapaliYuzolcumu,
-            KatSayisi = vm.Tipi == TasinmazTipi.Bina ? vm.KatSayisi : null,
+            KatSayisi = vm.KatSayisi,
             Aciklama = vm.Aciklama
         };
 
-        await _tasinmazService.CreateAsync(t, vm.Ofisler.Count > 0 ? vm.Ofisler : null);
+        var rezervasyonAlanlari = vm.RezervasyonAlanlari
+            .Where(r => !string.IsNullOrWhiteSpace(r.Ad))
+            .ToList();
+
+        await _tasinmazService.CreateAsync(t,
+            vm.Ofisler.Count > 0 ? vm.Ofisler : null,
+            rezervasyonAlanlari.Count > 0 ? rezervasyonAlanlari : null);
         TempData["Success"] = $"'{t.Ad}' başarıyla eklendi.";
         return RedirectToAction("Detay", new { id = t.Id });
     }

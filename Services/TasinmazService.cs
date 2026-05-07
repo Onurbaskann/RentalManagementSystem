@@ -15,6 +15,7 @@ public class TasinmazService : ITasinmazService
     public async Task<List<Tasinmaz>> GetAllAsync(string? userId = null)
     {
         var query = _ctx.Tasinmazlar
+            .Include(t => t.TasinmazTipi)
             .Include(t => t.Birimler)
                 .ThenInclude(b => b.Sozlesmeler)
                     .ThenInclude(s => s.Kiraci)
@@ -35,6 +36,9 @@ public class TasinmazService : ITasinmazService
     public async Task<Tasinmaz?> GetByIdAsync(int id)
     {
         return await _ctx.Tasinmazlar
+            .Include(t => t.TasinmazTipi)
+            .Include(t => t.Birimler)
+                .ThenInclude(b => b.BirimTuru)
             .Include(t => t.Birimler)
                 .ThenInclude(b => b.Sozlesmeler)
                     .ThenInclude(s => s.Kiraci)
@@ -44,15 +48,15 @@ public class TasinmazService : ITasinmazService
             .FirstOrDefaultAsync(t => t.Id == id);
     }
 
-    public async Task<Tasinmaz> CreateAsync(Tasinmaz t, List<OfisBirimInputViewModel>? ofisler = null)
+    public async Task<Tasinmaz> CreateAsync(Tasinmaz t, List<OfisBirimInputViewModel>? ofisler = null, List<RezervasyonAlaniInputViewModel>? rezervasyonAlanlari = null)
     {
         t.KayitTarihi = DateTime.Now;
 
-        if (t.KiralamaSekli == KiralamaSekli.OfisBazli && ofisler != null && ofisler.Count > 0)
+        if (t.KiralamaSekli == KiralamaSekli.BirimBazli && ofisler != null && ofisler.Count > 0)
         {
             foreach (var o in ofisler)
             {
-                var ad = string.IsNullOrWhiteSpace(o.Ad) ? $"Ofis {o.OfisNo}" : o.Ad;
+                var ad = string.IsNullOrWhiteSpace(o.Ad) ? $"Birim {o.OfisNo}" : o.Ad;
                 t.Birimler.Add(new Birim
                 {
                     BirimTipi = BirimTipi.Ofis,
@@ -60,7 +64,8 @@ public class TasinmazService : ITasinmazService
                     KatNo = o.KatNo,
                     Ad = ad,
                     Yuzolcumu = o.Yuzolcumu,
-                    Aciklama = o.Aciklama
+                    Aciklama = o.Aciklama,
+                    BirimTuruId = o.BirimTuruId
                 });
             }
         }
@@ -72,6 +77,21 @@ public class TasinmazService : ITasinmazService
                 Ad = "Komple",
                 Yuzolcumu = t.KapaliYuzolcumu > 0 ? t.KapaliYuzolcumu : t.AcikYuzolcumu
             });
+        }
+
+        if (rezervasyonAlanlari != null && rezervasyonAlanlari.Count > 0)
+        {
+            foreach (var r in rezervasyonAlanlari)
+            {
+                t.Birimler.Add(new Birim
+                {
+                    BirimTipi = BirimTipi.Ofis,
+                    Ad = string.IsNullOrWhiteSpace(r.Ad) ? "Rezervasyon Alanı" : r.Ad,
+                    Yuzolcumu = r.Yuzolcumu,
+                    Aciklama = r.Aciklama,
+                    BirimTuruId = r.BirimTuruId
+                });
+            }
         }
 
         _ctx.Tasinmazlar.Add(t);

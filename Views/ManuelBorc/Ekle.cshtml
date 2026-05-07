@@ -1,0 +1,175 @@
+@model KiraTakip.Models.ViewModels.ManuelBorcCreateViewModel
+@using KiraTakip.Models
+@{
+    ViewData["Title"] = "Manuel Borç Ekle";
+}
+
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+        <div class="page-title">Manuel Borç Ekle</div>
+        <div class="page-subtitle">Aktif sözleşmeye tek seferlik borç kalemi ekleyin</div>
+    </div>
+    <a href="/ManuelBorc" class="btn btn-secondary">← Geri</a>
+</div>
+
+<div style="max-width:640px;" x-data="manuelBorcForm()">
+    <form asp-action="Ekle" method="post">
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="ModelOnly" class="form-error" style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:20px;"></div>
+
+        <div class="card">
+            <div class="section-title" style="margin-bottom:20px;">Sözleşme Seçimi</div>
+
+            <div class="form-group">
+                <label asp-for="SozlesmeId" class="form-label">Sözleşme <span style="color:#dc2626;">*</span></label>
+                <select asp-for="SozlesmeId" class="form-control" x-on:change="sozlesmeSecildi($event)">
+                    <option value="">— Sözleşme seçin —</option>
+                    @foreach (var s in Model.AktifSozlesmeler)
+                    {
+                        <option value="@s.Id"
+                            data-kiraci="@s.Kiraci.GosterimAdi"
+                            data-birim="@(s.Birim.Tasinmaz.Ad) — @s.Birim.Ad">
+                            @s.Kiraci.GosterimAdi — @s.Birim.Tasinmaz.Ad / @s.Birim.Ad
+                        </option>
+                    }
+                </select>
+                <span asp-validation-for="SozlesmeId" class="form-error"></span>
+            </div>
+
+            <template x-if="sozlesme.kiraci">
+                <div style="background:var(--color-primary-light);border:1px solid #a3e0d2;border-radius:8px;padding:12px 14px;font-size:13px;display:flex;gap:24px;">
+                    <div><span style="color:var(--color-muted);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">Kiracı</span><br><strong x-text="sozlesme.kiraci"></strong></div>
+                    <div><span style="color:var(--color-muted);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">Taşınmaz / Birim</span><br><strong x-text="sozlesme.birim"></strong></div>
+                </div>
+            </template>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+            <div class="section-title" style="margin-bottom:20px;">Borç Detayı</div>
+
+            <div class="two-col">
+                <div class="form-group">
+                    <label asp-for="BorcTipiId" class="form-label">Borç Tipi <span style="color:#dc2626;">*</span></label>
+                    <select asp-for="BorcTipiId" class="form-control">
+                        <option value="">— Borç tipi seçin —</option>
+                        @foreach (var bt in Model.BorcTipleri)
+                        {
+                            <option value="@bt.Id">@bt.Ad (@bt.Kod)</option>
+                        }
+                    </select>
+                    <span asp-validation-for="BorcTipiId" class="form-error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="VadeTarihi" class="form-label">Vade Tarihi <span style="color:#dc2626;">*</span></label>
+                    <input asp-for="VadeTarihi" type="date" class="form-control"
+                           value="@Model.VadeTarihi.ToString("yyyy-MM-dd")" />
+                    <span asp-validation-for="VadeTarihi" class="form-error"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Aciklama" class="form-label">Açıklama <span style="color:#dc2626;">*</span></label>
+                <input asp-for="Aciklama" type="text" class="form-control" placeholder="Ör: Anahtar bedeli, hasar tazminatı…" />
+                <span asp-validation-for="Aciklama" class="form-error"></span>
+            </div>
+
+            <div class="two-col">
+                <div class="form-group">
+                    <label asp-for="Tutar" class="form-label">Tutar (₺) <span style="color:#dc2626;">*</span></label>
+                    <input asp-for="Tutar" type="number" step="0.01" min="0.01" class="form-control"
+                           placeholder="0,00" x-model.number="tutar" x-on:input="hesapla()" />
+                    <span asp-validation-for="Tutar" class="form-error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">KDV</label>
+                    <div style="display:flex;align-items:center;gap:10px;padding-top:4px;">
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13.5px;font-weight:500;">
+                            <input asp-for="KdvUygulanacakMi" type="checkbox" x-model="kdvAktif" x-on:change="hesapla()" style="width:16px;height:16px;accent-color:var(--color-primary);" />
+                            KDV uygula
+                        </label>
+                        <template x-if="kdvAktif">
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <input asp-for="KdvOrani" type="number" step="1" min="0" max="100" class="form-control"
+                                       style="width:80px;" x-model.number="kdvOrani" x-on:input="hesapla()" />
+                                <span style="font-size:13px;color:var(--color-muted);">%</span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <template x-if="tutar > 0">
+                <div style="background:#f7f8fa;border:1px solid var(--color-border);border-radius:8px;padding:14px 16px;margin-bottom:18px;">
+                    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+                        <span style="color:var(--color-muted);">Ara Toplam</span>
+                        <span x-text="tutar.toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ₺'"></span>
+                    </div>
+                    <template x-if="kdvAktif">
+                        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+                            <span style="color:var(--color-muted);">KDV (<span x-text="kdvOrani"></span>%)</span>
+                            <span x-text="kdvTutari.toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ₺'"></span>
+                        </div>
+                    </template>
+                    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;border-top:1px solid var(--color-border);padding-top:8px;margin-top:4px;">
+                        <span>Toplam</span>
+                        <span style="color:var(--color-primary);" x-text="toplamTutar.toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ₺'"></span>
+                    </div>
+                </div>
+            </template>
+
+            <div class="form-group" style="margin-bottom:0;">
+                <label asp-for="Not" class="form-label">Not <span style="color:var(--color-muted);font-weight:400;">(opsiyonel)</span></label>
+                <textarea asp-for="Not" class="form-control" rows="2" placeholder="İç not, açıklama…"></textarea>
+                <span asp-validation-for="Not" class="form-error"></span>
+            </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+            <a href="/ManuelBorc" class="btn btn-secondary">İptal</a>
+            <button type="submit" class="btn btn-primary">Manuel Borç Oluştur</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+function manuelBorcForm() {
+    return {
+        sozlesme: { kiraci: '', birim: '' },
+        tutar: @(Model.Tutar > 0 ? Model.Tutar.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "0"),
+        kdvAktif: @(Model.KdvUygulanacakMi ? "true" : "false"),
+        kdvOrani: @Model.KdvOrani.ToString("F0", System.Globalization.CultureInfo.InvariantCulture),
+        kdvTutari: 0,
+        toplamTutar: 0,
+
+        init() {
+            this.hesapla();
+            const sel = document.querySelector('select[name="SozlesmeId"]');
+            if (sel && sel.value) this.sozlesmeSecildi({ target: sel });
+        },
+
+        sozlesmeSecildi(e) {
+            const opt = e.target.selectedOptions[0];
+            if (!opt || !opt.value) {
+                this.sozlesme = { kiraci: '', birim: '' };
+                return;
+            }
+            this.sozlesme = {
+                kiraci: opt.dataset.kiraci,
+                birim: opt.dataset.birim
+            };
+        },
+
+        hesapla() {
+            const t = parseFloat(this.tutar) || 0;
+            const oran = parseFloat(this.kdvOrani) || 0;
+            this.kdvTutari = this.kdvAktif ? Math.round(t * oran / 100 * 100) / 100 : 0;
+            this.toplamTutar = t + this.kdvTutari;
+        }
+    };
+}
+</script>
+}

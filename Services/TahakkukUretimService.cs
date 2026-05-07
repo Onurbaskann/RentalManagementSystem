@@ -35,7 +35,9 @@ public class TahakkukUretimService : ITahakkukUretimService
         foreach (var donemIlkGunu in GetDonemler(sozlesme.BaslangicTarihi, sozlesme.BitisTarihi))
         {
             var mevcutVar = await _ctx.KiraTahakkuklar
-                .AnyAsync(t => t.KiraSozlesmesiId == sozlesmeId && t.DonemBaslangic == donemIlkGunu);
+                .AnyAsync(t => t.KiraSozlesmesiId == sozlesmeId
+                    && t.DonemBaslangic == donemIlkGunu
+                    && t.KaynakTipi == TahakkukKaynakTipi.Otomatik);
             if (mevcutVar) continue;
 
             var proRata = HesaplaProRataKatsayi(donemIlkGunu, sozlesme.BaslangicTarihi, sozlesme.BitisTarihi);
@@ -101,6 +103,7 @@ public class TahakkukUretimService : ITahakkukUretimService
                 ToplamTutar = kalemler.Sum(k => k.ToplamTutar),
                 OdenenTutar = 0,
                 Durum = TahakkukDurumu.Bekleniyor,
+                KaynakTipi = TahakkukKaynakTipi.Otomatik,
                 OlusturmaTarihi = DateTime.Now,
                 Kalemler = kalemler
             };
@@ -118,7 +121,8 @@ public class TahakkukUretimService : ITahakkukUretimService
         var silinecekler = await _ctx.KiraTahakkuklar
             .Where(t => t.KiraSozlesmesiId == sozlesmeId
                 && t.DonemBaslangic >= ilkGun
-                && t.Durum != TahakkukDurumu.TamOdendi)
+                && t.Durum != TahakkukDurumu.TamOdendi
+                && t.KaynakTipi == TahakkukKaynakTipi.Otomatik)
             .ToListAsync();
 
         _ctx.KiraTahakkuklar.RemoveRange(silinecekler);
@@ -134,7 +138,8 @@ public class TahakkukUretimService : ITahakkukUretimService
         var iptalEdilecekler = await _ctx.KiraTahakkuklar
             .Where(t => t.KiraSozlesmesiId == sozlesmeId
                 && t.DonemBaslangic >= ilkGun
-                && t.Durum != TahakkukDurumu.TamOdendi)
+                && t.Durum != TahakkukDurumu.TamOdendi
+                && t.KaynakTipi == TahakkukKaynakTipi.Otomatik)
             .ToListAsync();
 
         foreach (var t in iptalEdilecekler)

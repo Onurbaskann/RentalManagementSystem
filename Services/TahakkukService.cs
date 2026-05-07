@@ -119,7 +119,9 @@ public class TahakkukService : ITahakkukService
 
         var donemIlkGunu = new DateTime(donemBaslangic.Year, donemBaslangic.Month, 1);
         var mevcutVar = await _ctx.KiraTahakkuklar
-            .AnyAsync(t => t.KiraSozlesmesiId == sozlesmeId && t.DonemBaslangic == donemIlkGunu);
+            .AnyAsync(t => t.KiraSozlesmesiId == sozlesmeId
+                && t.DonemBaslangic == donemIlkGunu
+                && t.KaynakTipi == TahakkukKaynakTipi.Otomatik);
 
         if (mevcutVar)
             return (false, $"{donemIlkGunu:MMMM yyyy} dönemi için tahakkuk zaten mevcut.");
@@ -140,6 +142,7 @@ public class TahakkukService : ITahakkukService
             ToplamTutar = sozlesme.KiraBedeli + kdvTutari,
             OdenenTutar = 0,
             Durum = TahakkukDurumu.Bekleniyor,
+            KaynakTipi = TahakkukKaynakTipi.Otomatik,
             OlusturmaTarihi = DateTime.Now
         };
 

@@ -4,14 +4,7 @@
     ViewData["Title"] = Model.Tasinmaz.Ad;
     bool canEdit = User.IsInRole("Admin") || User.IsInRole("Yonetici");
     bool canManageRate = User.IsInRole("Admin") || User.HasClaim("permission", "Birim.ManageRate");
-
-    string TipiStr(TasinmazTipi t) => t switch {
-        TasinmazTipi.Bina => "Bina",
-        TasinmazTipi.Arazi => "Arazi",
-        TasinmazTipi.Tarla => "Tarla",
-        TasinmazTipi.Depo => "Depo",
-        _ => "Diğer"
-    };
+    bool canManageCarpan = User.HasClaim("permission", "TasinmazCarpan.Manage");
 
     string DurumBadge(KiraDurumu d) => d switch {
         KiraDurumu.Kirali => "<span class='badge badge-kirali'>Kiralı</span>",
@@ -50,6 +43,7 @@
         <button class="tab">Genel Bilgiler</button>
         <button class="tab">Birimler (@Model.Birimler.Count)</button>
         <button class="tab">Sözleşme Geçmişi</button>
+        <button class="tab" id="tab-carpanlar">Kategori Çarpanları (@Model.Carpanlar.Count)</button>
     </div>
 
     <!-- Tab 1: Genel Bilgiler -->
@@ -57,9 +51,9 @@
         <div class="three-col">
             <div class="card">
                 <div class="card-title">Taşınmaz Tipi</div>
-                <div style="font-size:18px;font-weight:700;margin-bottom:6px;">@TipiStr(Model.Tasinmaz.Tipi)</div>
+                <div style="font-size:18px;font-weight:700;margin-bottom:6px;">@(Model.Tasinmaz.TasinmazTipi?.Ad ?? "—")</div>
                 <div style="font-size:13px;color:var(--color-muted);">
-                    @(Model.Tasinmaz.KiralamaSekli == KiralamaSekli.OfisBazli ? "Ofis bazlı kiralama" : "Tek parça kiralama")
+                    @(Model.Tasinmaz.KiralamaSekli == KiralamaSekli.BirimBazli ? "Birim bazlı kiralama" : "Tek parça kiralama")
                 </div>
             </div>
             <div class="card">
@@ -116,7 +110,7 @@
     <!-- Tab 2: Birimler -->
     <div class="tab-content">
         @{
-            bool isOfisBazli = Model.Tasinmaz.KiralamaSekli == KiralamaSekli.OfisBazli;
+            bool isOfisBazli = Model.Tasinmaz.KiralamaSekli == KiralamaSekli.BirimBazli;
             int totalBirim = Model.Birimler.Count;
             int kirali = Model.Birimler.Count(b => b.Durum == KiraDurumu.Kirali || b.Durum == KiraDurumu.SuresiDolmakUzere);
             int bos = totalBirim - kirali;
@@ -385,6 +379,79 @@
                         }
                     </tbody>
                 </table>
+            </div>
+        }
+    </div>
+</div>
+
+    <!-- Tab 4: Kategori Çarpanları -->
+    <div class="tab-content">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div>
+                <div style="font-size:14px;font-weight:600;">m² Bazlı Kira Çarpanları</div>
+                <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">Kira = Birim m² × Çarpan. SözleşmeRate veya BirimRate varsa öncelik onlara aittir.</div>
+            </div>
+            @if (canManageCarpan)
+            {
+                <a href="/Tasinmaz/@Model.Tasinmaz.Id/Carpanlar/Ekle" class="btn btn-primary" style="font-size:13px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Çarpan Ekle
+                </a>
+            }
+        </div>
+
+        @if (!Model.Carpanlar.Any())
+        {
+            <div class="card" style="padding:32px;text-align:center;color:var(--color-muted);">
+                <div style="font-size:14px;font-weight:500;margin-bottom:6px;">Henüz kategori çarpanı tanımlı değil</div>
+                <div style="font-size:13px;">Kiracı kategorisi bazında m² fiyatı belirlemek için çarpan ekleyin.</div>
+            </div>
+        }
+        else
+        {
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div class="table-wrapper" style="margin:0;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Kiracı Kategorisi</th>
+                                <th>Çarpan (₺/m²)</th>
+                                <th>Durum</th>
+                                <th>Açıklama</th>
+                                <th style="text-align:center;">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in Model.Carpanlar)
+                            {
+                                <tr>
+                                    <td style="font-weight:600;">@c.KiraciKategori.Ad</td>
+                                    <td>
+                                        <span style="font-family:'Fraunces',Georgia,serif;font-size:15px;font-weight:700;">@c.Carpan.ToString("N2")</span>
+                                        <span style="font-size:11px;color:var(--color-muted);margin-left:2px;">₺/m²</span>
+                                    </td>
+                                    <td>
+                                        @if (c.Aktif) { <span class="badge badge-kirali">Aktif</span> }
+                                        else { <span class="badge badge-bos">Pasif</span> }
+                                    </td>
+                                    <td style="color:var(--color-muted);font-size:13px;">@(c.Aciklama ?? "—")</td>
+                                    <td style="text-align:center;display:flex;gap:4px;justify-content:center;">
+                                        @if (canManageCarpan)
+                                        {
+                                            <a href="/Tasinmaz/Carpanlar/Duzenle/@c.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                                            <form asp-controller="TasinmazCarpan" asp-action="DurumDegistir" asp-route-id="@c.Id" method="post" style="display:inline;">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-secondary">
+                                                    @(c.Aktif ? "Pasif Yap" : "Aktif Yap")
+                                                </button>
+                                            </form>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
         }
     </div>

@@ -1,0 +1,170 @@
+@model List<KiraTakip.Models.ToplantiSalonuRezervasyon>
+@using KiraTakip.Models
+@{
+    ViewData["Title"] = "Rezervasyonlar";
+    bool canCreate   = User.HasClaim("permission", "Rezervasyon.Create");
+    bool canCancel   = User.HasClaim("permission", "Rezervasyon.Cancel");
+    bool canTransfer = User.HasClaim("permission", "Rezervasyon.TransferToTahakkuk");
+}
+
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+        <div class="page-title">Toplantı Salonu Rezervasyonları</div>
+        <div class="page-subtitle">@Model.Count kayıt</div>
+    </div>
+    @if (canCreate)
+    {
+        <a href="/Rezervasyon/Ekle" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Rezervasyon Ekle
+        </a>
+    }
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">✓ @TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">✕ @TempData["Error"]</div>
+}
+
+<div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Toplantı Salonu</th>
+                    <th>Kiracı</th>
+                    <th>Başlangıç</th>
+                    <th>Bitiş</th>
+                    <th style="text-align:center;">Toplam</th>
+                    <th style="text-align:center;">Ücretsiz</th>
+                    <th style="text-align:center;">Ücretli</th>
+                    <th style="text-align:right;">Toplam Tutar</th>
+                    <th>Durum</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model)
+                {
+                    string durumCls = r.Durum switch {
+                        RezervasyonDurumu.Tamamlandi         => "badge-kirali",
+                        RezervasyonDurumu.TahakkukaAktarildi => "badge-surek",
+                        RezervasyonDurumu.IptalEdildi        => "badge-bos",
+                        _                                    => "badge-gecmis"
+                    };
+                    string durumLabel = r.Durum switch {
+                        RezervasyonDurumu.Planlandi          => "Planlandı",
+                        RezervasyonDurumu.Tamamlandi         => "Tamamlandı",
+                        RezervasyonDurumu.IptalEdildi        => "İptal Edildi",
+                        RezervasyonDurumu.TahakkukaAktarildi => "Tahakkuka Aktarıldı",
+                        _                                    => r.Durum.ToString()
+                    };
+
+                    <tr>
+                        <td>
+                            <div style="font-weight:600;">@r.Birim.Ad</div>
+                            <div style="font-size:12px;color:var(--color-muted);">@r.Birim.Tasinmaz.Ad</div>
+                        </td>
+                        <td style="font-weight:500;">@r.Kiraci.GosterimAdi</td>
+                        <td style="font-size:13px;">@r.BaslangicTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td style="font-size:13px;">@r.BitisTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td style="text-align:center;font-size:13px;">@r.ToplamSureDakika dk</td>
+                        <td style="text-align:center;font-size:13px;color:var(--color-muted);">@r.UcretsizSureDakika dk</td>
+                        <td style="text-align:center;font-size:13px;">@r.UcretliSureDakika dk</td>
+                        <td style="text-align:right;font-weight:@(r.ToplamTutar > 0 ? "700" : "400");color:@(r.ToplamTutar > 0 ? "inherit" : "var(--color-muted)");">
+                            @(r.ToplamTutar > 0 ? $"{r.ToplamTutar:N2} ₺" : "Ücretsiz")
+                        </td>
+                        <td>
+                            <span class="badge @durumCls">@durumLabel</span>
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:4px;flex-wrap:nowrap;">
+                                @if (canTransfer && r.Durum == RezervasyonDurumu.Planlandi && r.ToplamTutar > 0 && r.KiraTahakkukId == null)
+                                {
+                                    <form method="post" action="/Rezervasyon/TahakkukaAktar/@r.Id" style="display:inline;">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-primary"
+                                            onclick="return confirm('Bu rezervasyonu tahakkuka aktarmak istediğinize emin misiniz?')">
+                                            Tahakkuka Aktar
+                                        </button>
+                                    </form>
+                                }
+                                @if (canCancel && r.Durum == RezervasyonDurumu.Planlandi)
+                                {
+                                    <button type="button" class="btn btn-sm btn-danger"
+                                        data-confirm="Bu rezervasyonu iptal etmek istediğinize emin misiniz?"
+                                        data-confirm-title="Rezervasyon İptali"
+                                        data-confirm-action="/Rezervasyon/Iptal/@r.Id"
+                                        data-confirm-method="POST"
+                                        data-confirm-needs-reason="true"
+                                        data-confirm-reason-label="İptal nedeni">
+                                        İptal
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="10" style="text-align:center;color:var(--color-muted);padding:40px;">
+                        <div style="font-size:32px;margin-bottom:8px;">📅</div>
+                        <div style="font-weight:600;margin-bottom:4px;">Rezervasyon bulunamadı</div>
+                        @if (canCreate)
+                        {
+                            <div style="font-size:13px;">
+                                <a href="/Rezervasyon/Ekle" style="color:var(--color-primary);font-weight:600;">Rezervasyon Ekle</a> butonuyla ilk kaydı oluşturun.
+                            </div>
+                        }
+                    </td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+document.querySelectorAll('[data-confirm]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const needsReason = this.dataset.confirmNeedsReason === 'true';
+        const action = this.dataset.confirmAction;
+        const title = this.dataset.confirmTitle || 'Onay';
+        const message = this.dataset.confirm;
+        const reasonLabel = this.dataset.confirmReasonLabel || 'Neden';
+
+        if (needsReason) {
+            const neden = prompt(`${title}\n\n${message}\n\n${reasonLabel}:`);
+            if (neden === null || neden.trim() === '') return;
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = action;
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (token) {
+                const t = document.createElement('input');
+                t.type = 'hidden';
+                t.name = '__RequestVerificationToken';
+                t.value = token.value;
+                form.appendChild(t);
+            }
+
+            const n = document.createElement('input');
+            n.type = 'hidden';
+            n.name = 'neden';
+            n.value = neden.trim();
+            form.appendChild(n);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
+});
+</script>
+@Html.AntiForgeryToken()
+}

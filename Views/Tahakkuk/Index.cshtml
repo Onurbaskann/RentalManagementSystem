@@ -71,6 +71,7 @@
                     <th>Ödenen</th>
                     <th>Kalan</th>
                     <th>Durum</th>
+                    <th>Kaynak</th>
                     <th></th>
                 </tr>
             </thead>
@@ -99,6 +100,16 @@
                         TahakkukDurumu.IptalEdildi  => "Sözleşme feshi nedeniyle iptal edildi.",
                         _                           => "Vade gelmedi; ödeme bekleniyor."
                     };
+                    string tahakkukKaynakCls = t.KaynakTipi switch {
+                        TahakkukKaynakTipi.Manuel      => "badge-surek",
+                        TahakkukKaynakTipi.Rezervasyon => "badge-bireysel",
+                        _                              => "badge-bos"
+                    };
+                    string tahakkukKaynakLabel = t.KaynakTipi switch {
+                        TahakkukKaynakTipi.Manuel      => "Manuel",
+                        TahakkukKaynakTipi.Rezervasyon => "Rezervasyon",
+                        _                              => "Otomatik"
+                    };
                     <tr @@click="open[@t.Id] = !open[@t.Id]" style="cursor:pointer;">
                         <td style="font-weight:600;">
                             <svg x-show="open[@t.Id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;vertical-align:middle;"><polyline points="18 15 12 9 6 15"/></svg>
@@ -115,6 +126,7 @@
                         <td style="color:#065f46;font-weight:600;">@t.OdenenTutar.ToString("N0") ₺</td>
                         <td style="@(kalan > 0 ? "color:#991b1b;" : "")font-weight:600;">@kalan.ToString("N0") ₺</td>
                         <td><span class="badge @durumCls" data-tip="@durumTip">@durumLabel</span></td>
+                        <td><span class="badge @tahakkukKaynakCls">@tahakkukKaynakLabel</span></td>
                         <td @@click.stop="">
                             <a href="/Tahakkuk/Detay/@t.Id" class="btn btn-sm btn-secondary">Detay</a>
                             <a href="/Odeme?tahakkukId=@t.Id" class="btn btn-sm btn-secondary" style="margin-left:4px;">Ödemeler</a>
@@ -125,7 +137,7 @@
                         </td>
                     </tr>
                     <tr x-show="open[@t.Id]" x-cloak style="background:#f7f8fb;">
-                        <td colspan="9" style="padding:10px 20px 14px;">
+                        <td colspan="10" style="padding:10px 20px 14px;">
                             @if (t.Kalemler.Any())
                             {
                                 <div style="font-size:11.5px;font-weight:700;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Kalem Dökümü</div>
@@ -185,7 +197,7 @@
                 }
                 @if (Model.Total == 0)
                 {
-                    <tr><td colspan="9" style="text-align:center;color:var(--color-muted);padding:32px;">Filtreye uygun tahakkuk bulunamadı.</td></tr>
+                    <tr><td colspan="10" style="text-align:center;color:var(--color-muted);padding:32px;">Filtreye uygun tahakkuk bulunamadı.</td></tr>
                 }
             </tbody>
         </table>

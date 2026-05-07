@@ -13,5 +13,8 @@ public class Birim
     public decimal Yuzolcumu { get; set; }
     public string? Aciklama { get; set; }
 
+    public int? BirimTuruId { get; set; }
+    public BirimTuru? BirimTuru { get; set; }
+
     public List<KiraSozlesmesi> Sozlesmeler { get; set; } = new();
 }

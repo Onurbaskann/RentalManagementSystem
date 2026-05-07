@@ -4,8 +4,8 @@ public class KiraTahakkuk
 {
     public int Id { get; set; }
 
-    public int KiraSozlesmesiId { get; set; }
-    public KiraSozlesmesi KiraSozlesmesi { get; set; } = null!;
+    public int? KiraSozlesmesiId { get; set; }
+    public KiraSozlesmesi? KiraSozlesmesi { get; set; }
 
     public DateTime DonemBaslangic { get; set; }
     public DateTime DonemBitis { get; set; }
@@ -17,6 +17,8 @@ public class KiraTahakkuk
     public decimal OdenenTutar { get; set; }
 
     public TahakkukDurumu Durum { get; set; } = TahakkukDurumu.Bekleniyor;
+    public TahakkukKaynakTipi KaynakTipi { get; set; } = TahakkukKaynakTipi.Otomatik;
+    public string? IptalNotu { get; set; }
     public DateTime OlusturmaTarihi { get; set; } = DateTime.Now;
 
     public List<KiraOdeme> Odemeler { get; set; } = new();

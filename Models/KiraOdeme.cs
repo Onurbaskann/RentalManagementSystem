@@ -7,8 +7,8 @@ public class KiraOdeme
     public int KiraTahakkukId { get; set; }
     public KiraTahakkuk KiraTahakkuk { get; set; } = null!;
 
-    public int KiraSozlesmesiId { get; set; }
-    public KiraSozlesmesi KiraSozlesmesi { get; set; } = null!;
+    public int? KiraSozlesmesiId { get; set; }
+    public KiraSozlesmesi? KiraSozlesmesi { get; set; }
 
     public DateTime OdemeTarihi { get; set; }
     public decimal Tutar { get; set; }

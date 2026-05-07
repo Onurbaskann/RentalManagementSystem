@@ -1,0 +1,50 @@
+@model KiraTakip.Models.TasinmazTipi
+@{
+    ViewData["Title"] = "Taşınmaz Tipi Düzenle";
+}
+
+<div class="page-header">
+    <div class="page-title">Taşınmaz Tipi Düzenle</div>
+</div>
+
+<div class="card" style="max-width:480px;">
+    <form method="post" action="/Admin/TasinmazTipi/Duzenle/@Model.Id">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        <input asp-for="OlusturmaTarihi" type="hidden" />
+
+        <div class="form-group">
+            <label class="form-label">Ad <span style="color:red">*</span></label>
+            <input asp-for="Ad" class="form-control" required />
+            <span asp-validation-for="Ad" class="text-danger" style="font-size:12px;"></span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Kod <span style="color:red">*</span></label>
+            <input asp-for="Kod" class="form-control" style="font-family:monospace;text-transform:uppercase;" required maxlength="20" />
+            <div style="font-size:12px;color:var(--color-muted);margin-top:4px;">Kısa tanımlayıcı (büyük harf, boşluksuz)</div>
+            <span asp-validation-for="Kod" class="text-danger" style="font-size:12px;"></span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Sıra</label>
+            <input asp-for="Sira" type="number" class="form-control" min="1" style="width:100px;" />
+        </div>
+
+        <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input asp-for="Aktif" type="checkbox" />
+                <span class="form-label" style="margin:0;">Aktif</span>
+            </label>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:8px;">
+            <button type="submit" class="btn btn-primary">Kaydet</button>
+            <a href="/Admin/TasinmazTipi" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

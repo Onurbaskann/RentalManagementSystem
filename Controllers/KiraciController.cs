@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using KiraTakip.Authorization;
+using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
@@ -15,17 +17,20 @@ public class KiraciController : Controller
     private readonly ISozlesmeService _sozlesmeService;
     private readonly IIstatistikService _istatistik;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ApplicationDbContext _ctx;
 
     public KiraciController(
         IKiraciService kiraciService,
         ISozlesmeService sozlesmeService,
         IIstatistikService istatistik,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        ApplicationDbContext ctx)
     {
         _kiraciService = kiraciService;
         _sozlesmeService = sozlesmeService;
         _istatistik = istatistik;
         _userManager = userManager;
+        _ctx = ctx;
     }
 
     [Authorize(Policy = PermissionCatalog.Kiraci.View)]
@@ -65,10 +70,17 @@ public class KiraciController : Controller
         return View(vm);
     }
 
+    private async Task PopulateKiraciViewBagAsync()
+    {
+        ViewBag.Kategoriler = await _ctx.KiraciKategorileri.Where(k => k.Aktif).OrderBy(k => k.Sira).ToListAsync();
+        ViewBag.Sektorler = await _ctx.Sektorler.Where(s => s.Aktif).OrderBy(s => s.Sira).ToListAsync();
+    }
+
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.Kiraci.Create)]
     public async Task<IActionResult> Ekle()
     {
+        await PopulateKiraciViewBagAsync();
         var vm = new KiraciFormViewModel
         {
             KiraciNo = await _kiraciService.GenerateKiraciNoAsync()
@@ -103,7 +115,11 @@ public class KiraciController : Controller
         if (await _kiraciService.KiraciNoExistsAsync(vm.KiraciNo))
             ModelState.AddModelError("KiraciNo", "Bu Kiracı No zaten kullanımda.");
 
-        if (!ModelState.IsValid) return View(vm);
+        if (!ModelState.IsValid)
+        {
+            await PopulateKiraciViewBagAsync();
+            return View(vm);
+        }
 
         var k = BuildKiraciFromVm(vm);
         await _kiraciService.CreateAsync(k);
@@ -118,6 +134,7 @@ public class KiraciController : Controller
         var k = await _kiraciService.GetByIdAsync(id);
         if (k == null) return NotFound();
 
+        await PopulateKiraciViewBagAsync();
         var vm = new KiraciFormViewModel
         {
             Id = k.Id,
@@ -140,7 +157,9 @@ public class KiraciController : Controller
             MersisNo = k.MersisNo,
             Telefon = k.Telefon,
             Email = k.Email,
-            Adres = k.Adres
+            Adres = k.Adres,
+            KiraciKategoriId = k.KiraciKategoriId,
+            SektorId = k.SektorId
         };
         return View(vm);
     }
@@ -174,7 +193,11 @@ public class KiraciController : Controller
         if (await _kiraciService.KiraciNoExistsAsync(vm.KiraciNo, excludeId: id))
             ModelState.AddModelError("KiraciNo", "Bu Kiracı No zaten kullanımda.");
 
-        if (!ModelState.IsValid) return View(vm);
+        if (!ModelState.IsValid)
+        {
+            await PopulateKiraciViewBagAsync();
+            return View(vm);
+        }
 
         var k = BuildKiraciFromVm(vm);
         k.Id = id;
@@ -193,7 +216,9 @@ public class KiraciController : Controller
             Ad = vm.Ad,
             Telefon = vm.Telefon,
             Email = vm.Email,
-            Adres = vm.Adres
+            Adres = vm.Adres,
+            KiraciKategoriId = vm.KiraciKategoriId,
+            SektorId = vm.SektorId
         };
 
         if (tur == KiraciTuru.Gercek)

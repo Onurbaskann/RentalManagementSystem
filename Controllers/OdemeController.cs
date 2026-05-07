@@ -57,7 +57,8 @@ public class OdemeController : Controller
         {
             var userId = _userManager.GetUserId(User)!;
             var yetkiliTasinmazIds = await GetYetkiliTasinmazIdsAsync(userId);
-            if (!yetkiliTasinmazIds.Contains(odeme.KiraTahakkuk.KiraSozlesmesi.Birim.TasinmazId))
+            var tasinmazId = odeme.KiraTahakkuk.KiraSozlesmesi?.Birim?.TasinmazId;
+            if (tasinmazId == null || !yetkiliTasinmazIds.Contains(tasinmazId.Value))
                 return Forbid();
         }
 
@@ -181,7 +182,8 @@ public class OdemeController : Controller
             var userId = _userManager.GetUserId(User)!;
             var yetkiliIds = await GetYetkiliTasinmazIdsAsync(userId);
             var odeme = await _odemeService.GetByIdAsync(dekont.KiraOdemeId);
-            if (odeme == null || !yetkiliIds.Contains(odeme.KiraTahakkuk.KiraSozlesmesi.Birim.TasinmazId))
+            var tasinmazId2 = odeme?.KiraTahakkuk?.KiraSozlesmesi?.Birim?.TasinmazId;
+            if (tasinmazId2 == null || !yetkiliIds.Contains(tasinmazId2.Value))
                 return Forbid();
         }
 
@@ -202,7 +204,8 @@ public class OdemeController : Controller
         {
             var userId = _userManager.GetUserId(User)!;
             var yetkiliIds = await GetYetkiliTasinmazIdsAsync(userId);
-            if (!yetkiliIds.Contains(odeme.KiraTahakkuk.KiraSozlesmesi.Birim.TasinmazId))
+            var tasinmazId3 = odeme.KiraTahakkuk.KiraSozlesmesi?.Birim?.TasinmazId;
+            if (tasinmazId3 == null || !yetkiliIds.Contains(tasinmazId3.Value))
                 return Forbid();
         }
 

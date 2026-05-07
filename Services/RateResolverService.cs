@@ -35,6 +35,38 @@ public class RateResolverService : IRateResolverService
                 KaynakTipi = KaynakTipi.Birim
             };
 
+        var borcTipiKod = await _ctx.BorcTipleri
+            .Where(b => b.Id == borcTipiId)
+            .Select(b => b.Kod)
+            .FirstOrDefaultAsync();
+        if (borcTipiKod == "KIRA")
+        {
+            var birimInfo = await _ctx.Birimler
+                .Where(b => b.Id == birimId)
+                .Select(b => new { b.TasinmazId })
+                .FirstOrDefaultAsync();
+            var kiraciKategoriId = await _ctx.Sozlesmeler
+                .Where(s => s.Id == sozlesmeId)
+                .Select(s => s.Kiraci.KiraciKategoriId)
+                .FirstOrDefaultAsync();
+
+            if (birimInfo != null && kiraciKategoriId.HasValue)
+            {
+                var carpan = await _ctx.TasinmazKategoriCarpanlari
+                    .FirstOrDefaultAsync(c => c.TasinmazId == birimInfo.TasinmazId
+                        && c.KiraciKategoriId == kiraciKategoriId.Value
+                        && c.Aktif);
+                if (carpan != null)
+                    return new RateSnapshot
+                    {
+                        HesaplamaYontemi = HesaplamaYontemi.M2,
+                        BirimDeger = carpan.Carpan,
+                        KdvOrani = 0,
+                        KaynakTipi = KaynakTipi.TasinmazKategoriCarpan
+                    };
+            }
+        }
+
         var tarife = await _ctx.Tarifeler
                          .Where(t => t.Aktif && t.Yil == donem.Year)
                          .FirstOrDefaultAsync()

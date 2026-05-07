@@ -47,4 +47,7 @@ public class KiraciFormViewModel
     public string Email { get; set; } = string.Empty;
 
     public string? Adres { get; set; }
+
+    public int? KiraciKategoriId { get; set; }
+    public int? SektorId { get; set; }
 }

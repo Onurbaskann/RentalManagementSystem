@@ -17,6 +17,7 @@ public class HomeController : Controller
     private readonly ITahakkukService _tahakkukService;
     private readonly IOdemeService _odemeService;
     private readonly IBankaHareketiService _bankaHareketiService;
+    private readonly IRezervasyonService _rezervasyonService;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public HomeController(
@@ -26,6 +27,7 @@ public class HomeController : Controller
         ITahakkukService tahakkukService,
         IOdemeService odemeService,
         IBankaHareketiService bankaHareketiService,
+        IRezervasyonService rezervasyonService,
         UserManager<ApplicationUser> userManager)
     {
         _tasinmazService = tasinmazService;
@@ -34,6 +36,7 @@ public class HomeController : Controller
         _tahakkukService = tahakkukService;
         _odemeService = odemeService;
         _bankaHareketiService = bankaHareketiService;
+        _rezervasyonService = rezervasyonService;
         _userManager = userManager;
     }
 
@@ -51,7 +54,7 @@ public class HomeController : Controller
         var vm = new DashboardViewModel
         {
             ToplamTasinmaz = tasinmazlar.Count,
-            TipiDagilim = tasinmazlar.GroupBy(t => t.Tipi).ToDictionary(g => g.Key, g => g.Count()),
+            TipiDagilim = tasinmazlar.GroupBy(t => t.TasinmazTipi?.Ad ?? "Diğer").ToDictionary(g => g.Key, g => g.Count()),
             ToplamBirim = tumBirimler.Count,
             AktifSozlesme = sozlesmeler.Count(_istatistik.Aktif),
             AylikToplamGelir = sozlesmeler.Where(_istatistik.Aktif).Sum(_istatistik.AylikBedel),
@@ -110,6 +113,17 @@ public class HomeController : Controller
 
             var eslesmemisler = await _bankaHareketiService.GetAllAsync(BankaEslesmeDurumu.Eslestirilmedi);
             vm.EslesmemisHareketAdet = eslesmemisler.Count;
+
+            vm.BuAyManuelBorcToplami = buAyTahakkuklar
+                .Where(t => t.KaynakTipi == TahakkukKaynakTipi.Manuel && t.Durum != TahakkukDurumu.IptalEdildi)
+                .Sum(t => t.ToplamTutar);
+            vm.BuAyRezervasyonGeliri = buAyTahakkuklar
+                .Where(t => t.KaynakTipi == TahakkukKaynakTipi.Rezervasyon && t.Durum != TahakkukDurumu.IptalEdildi)
+                .Sum(t => t.ToplamTutar);
+
+            var rezervasyonlar = await _rezervasyonService.GetAllAsync(userId: filterUserId);
+            vm.TahakkukaAktarilmamisRezervasyonAdet = rezervasyonlar
+                .Count(r => r.Durum == RezervasyonDurumu.Planlandi && r.ToplamTutar > 0 && r.KiraTahakkukId == null);
         }
 
         return View(vm);

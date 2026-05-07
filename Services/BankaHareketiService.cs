@@ -138,7 +138,7 @@ public class BankaHareketiService : IBankaHareketiService
                 .Where(u => u.UserId == userId)
                 .Select(u => u.TasinmazId)
                 .ToListAsync();
-            query = query.Where(o => yetkiliIds.Contains(o.KiraTahakkuk.KiraSozlesmesi.Birim.TasinmazId));
+            query = query.Where(o => o.KiraTahakkuk.KiraSozlesmesiId != null && yetkiliIds.Contains(o.KiraTahakkuk.KiraSozlesmesi!.Birim.TasinmazId));
         }
 
         var liste = await query.ToListAsync();

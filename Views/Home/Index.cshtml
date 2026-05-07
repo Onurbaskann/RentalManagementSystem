@@ -5,14 +5,6 @@
 
     string TLFormat(decimal v) => v.ToString("N0") + " ₺";
 
-    string TipiStr(KiraTakip.Models.TasinmazTipi t) => t switch {
-        KiraTakip.Models.TasinmazTipi.Bina => "Bina",
-        KiraTakip.Models.TasinmazTipi.Arazi => "Arazi",
-        KiraTakip.Models.TasinmazTipi.Tarla => "Tarla",
-        KiraTakip.Models.TasinmazTipi.Depo => "Depo",
-        _ => "Diğer"
-    };
-
     string DayBadgeCls(int gun) => gun <= 10 ? "day-badge-red" : gun <= 30 ? "day-badge-amber" : "day-badge-green";
 
     int toplamBirim = Model.KiraliBirim + Model.BosBirim + Model.SuresiDolmakUzereBirim;
@@ -32,7 +24,7 @@
         <div class="card-title">Toplam Taşınmaz</div>
         <div class="card-value">@Model.ToplamTasinmaz</div>
         <div class="card-sub">
-            @string.Join(", ", Model.TipiDagilim.Select(kv => $"{kv.Value} {TipiStr(kv.Key)}"))
+            @string.Join(", ", Model.TipiDagilim.Select(kv => $"{kv.Value} {kv.Key}"))
         </div>
     </div>
 
@@ -147,6 +139,46 @@
                     else
                     {
                         <span style="color:var(--color-muted);">Tümü eşleştirildi</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Rezervasyon ve Manuel Borç Metrikleri -->
+@if (Model.HasOdemeAccess && (Model.BuAyManuelBorcToplami > 0 || Model.BuAyRezervasyonGeliri > 0 || Model.TahakkukaAktarilmamisRezervasyonAdet > 0))
+{
+    <div style="margin-bottom:24px;">
+        <div style="font-size:13px;font-weight:700;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">Rezervasyon & Manuel Borç</div>
+        <div class="stats-grid">
+            <div class="card">
+                <div class="card-title">Bu Ay Manuel Borç</div>
+                <div class="card-value" style="font-size:22px;">@TLFormat(Model.BuAyManuelBorcToplami)</div>
+                <div class="card-sub">
+                    <a href="/ManuelBorc" style="font-size:12px;color:var(--color-muted);text-decoration:none;">Tüm manuel borçlar →</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Bu Ay Rezervasyon Geliri</div>
+                <div class="card-value" style="font-size:22px;">@TLFormat(Model.BuAyRezervasyonGeliri)</div>
+                <div class="card-sub">
+                    <a href="/Rezervasyon" style="font-size:12px;color:var(--color-muted);text-decoration:none;">Tüm rezervasyonlar →</a>
+                </div>
+            </div>
+
+            <div class="card" style="@(Model.TahakkukaAktarilmamisRezervasyonAdet > 0 ? "border-left:3px solid #f59e0b;" : "")">
+                <div class="card-title">Aktarılmamış Ücretli Rezervasyon</div>
+                <div class="card-value" style="@(Model.TahakkukaAktarilmamisRezervasyonAdet > 0 ? "color:#b45309;" : "")">@Model.TahakkukaAktarilmamisRezervasyonAdet</div>
+                <div class="card-sub">
+                    @if (Model.TahakkukaAktarilmamisRezervasyonAdet > 0)
+                    {
+                        <a href="/Rezervasyon" style="font-size:12px;color:#b45309;text-decoration:none;">Tahakkuka aktar →</a>
+                    }
+                    else
+                    {
+                        <span style="color:var(--color-muted);">Bekleyen yok</span>
                     }
                 </div>
             </div>

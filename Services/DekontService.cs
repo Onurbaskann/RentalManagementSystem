@@ -34,7 +34,8 @@ public class DekontService : IDekontService
             ?? throw new InvalidOperationException("Ödeme bulunamadı.");
 
         var kok = StorageKokYolu();
-        var klasor = Path.Combine(kok, odeme.KiraSozlesmesiId.ToString());
+        var folderName = odeme.KiraSozlesmesiId?.ToString() ?? $"t{odeme.KiraTahakkukId}";
+        var klasor = Path.Combine(kok, folderName);
         Directory.CreateDirectory(klasor);
 
         var uzanti = Path.GetExtension(dosya.FileName);
@@ -46,7 +47,7 @@ public class DekontService : IDekontService
 
         var relativePath = Path.Combine(
             _config["DekontStoragePath"] ?? "Storage/Dekontlar",
-            odeme.KiraSozlesmesiId.ToString(),
+            folderName,
             diskAdi);
 
         var dekont = new Dekont

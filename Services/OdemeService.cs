@@ -40,7 +40,7 @@ public class OdemeService : IOdemeService
                 .Where(u => u.UserId == userId)
                 .Select(u => u.TasinmazId)
                 .ToListAsync();
-            query = query.Where(o => yetkiliIds.Contains(o.KiraTahakkuk.KiraSozlesmesi.Birim.TasinmazId));
+            query = query.Where(o => o.KiraTahakkuk.KiraSozlesmesiId != null && yetkiliIds.Contains(o.KiraTahakkuk.KiraSozlesmesi!.Birim.TasinmazId));
         }
 
         return await query.OrderByDescending(o => o.GirisTarihi).ToListAsync();
@@ -69,7 +69,7 @@ public class OdemeService : IOdemeService
                 .Where(u => u.UserId == userId)
                 .Select(u => u.TasinmazId)
                 .ToListAsync();
-            query = query.Where(o => yetkiliIds.Contains(o.KiraTahakkuk.KiraSozlesmesi.Birim.TasinmazId));
+            query = query.Where(o => o.KiraTahakkuk.KiraSozlesmesiId != null && yetkiliIds.Contains(o.KiraTahakkuk.KiraSozlesmesi!.Birim.TasinmazId));
         }
 
         if (!string.IsNullOrWhiteSpace(q.Q))

@@ -1,0 +1,64 @@
+@model KiraTakip.Models.BirimTuru
+@{
+    ViewData["Title"] = "Yeni Birim Türü";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Yeni Birim Türü</div>
+    </div>
+</div>
+
+<div class="card" style="max-width:480px;">
+    <form method="post" action="/Admin/BirimTuru/Ekle">
+        @Html.AntiForgeryToken()
+
+        <div class="form-group">
+            <label class="form-label">Ad <span style="color:red">*</span></label>
+            <input asp-for="Ad" class="form-control" placeholder="Ofis" required />
+            <span asp-validation-for="Ad" class="text-danger" style="font-size:12px;"></span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Kod <span style="color:red">*</span></label>
+            <input asp-for="Kod" class="form-control" placeholder="OFIS" style="font-family:monospace;text-transform:uppercase;" required maxlength="20" />
+            <div style="font-size:12px;color:var(--color-muted);margin-top:4px;">Kısa tanımlayıcı (büyük harf, boşluksuz). Ör: OFIS, TOPLANTI, DEPO</div>
+            <span asp-validation-for="Kod" class="text-danger" style="font-size:12px;"></span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Sıra</label>
+            <input asp-for="Sira" type="number" class="form-control" min="1" style="width:100px;" />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Kullanım Türü</label>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input asp-for="KiralanabilirMi" type="checkbox" />
+                    <span style="font-size:14px;">Kiralanabilir <span style="color:var(--color-muted);font-size:12px;">(kira sözleşmesine bağlanabilir)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input asp-for="RezervasyonYapilabilirMi" type="checkbox" />
+                    <span style="font-size:14px;">Rezervasyon yapılabilir <span style="color:var(--color-muted);font-size:12px;">(sözleşmeye bağlı değil)</span></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input asp-for="Aktif" type="checkbox" />
+                <span class="form-label" style="margin:0;">Aktif</span>
+            </label>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:8px;">
+            <button type="submit" class="btn btn-primary">Kaydet</button>
+            <a href="/Admin/BirimTuru" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

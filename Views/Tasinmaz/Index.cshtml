@@ -5,21 +5,6 @@
 @{
     ViewData["Title"] = "Taşınmazlar";
 
-    string TipiStr(TasinmazTipi t) => t switch {
-        TasinmazTipi.Bina => "🏢 Bina",
-        TasinmazTipi.Arazi => "🌱 Arazi",
-        TasinmazTipi.Tarla => "🌾 Tarla",
-        TasinmazTipi.Depo => "📦 Depo",
-        _ => "📌 Diğer"
-    };
-
-    string TipiCls(TasinmazTipi t) => t switch {
-        TasinmazTipi.Bina => "badge-kurumsal",
-        TasinmazTipi.Arazi => "badge-kirali",
-        TasinmazTipi.Tarla => "badge-kirali",
-        TasinmazTipi.Depo => "badge-bos",
-        _ => "badge-bos"
-    };
     bool canEdit = User.IsInRole("Admin") || User.IsInRole("Yonetici");
 }
 
@@ -54,7 +39,7 @@
                         <div style="font-size:15px;font-weight:700;color:var(--color-text);">@t.Ad</div>
                         <div style="font-size:12px;color:var(--color-muted);margin-top:3px;">@t.Ilce, @t.Il</div>
                     </div>
-                    <span class="badge @TipiCls(t.Tipi)">@TipiStr(t.Tipi)</span>
+                    <span class="badge badge-bos">@(t.TasinmazTipi?.Ad ?? "—")</span>
                 </div>
 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
@@ -72,7 +57,7 @@
                             <div style="font-size:14px;font-weight:700;">@t.AcikYuzolcumu.ToString("N0") m²</div>
                         </div>
                     }
-                    @if (t.KiralamaSekli == KiralamaSekli.OfisBazli)
+                    @if (t.KiralamaSekli == KiralamaSekli.BirimBazli)
                     {
                         <div style="background:#f7f8fa;border-radius:8px;padding:8px 10px;">
                             <div style="font-size:11px;color:var(--color-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">Ofis Sayısı</div>
