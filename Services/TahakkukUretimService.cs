@@ -24,13 +24,11 @@ public class TahakkukUretimService : ITahakkukUretimService
         if (sozlesme == null) return;
 
         var aktifBorcTipleri = await _ctx.BorcTipleri
-            .Where(b => b.Aktif && !b.TekSeferlikMi)
+            .Where(b => b.Aktif && (b.Davranis == BorcTipiDavranisi.AylikSabit || b.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik))
             .OrderBy(b => b.Sira)
             .ToListAsync();
 
-        var depozitoBt = (sozlesme.Depozito.HasValue && sozlesme.Depozito.Value > 0)
-            ? await _ctx.BorcTipleri.FirstOrDefaultAsync(b => b.Kod == "DEPOZITO" && b.Aktif)
-            : null;
+
 
         foreach (var donemIlkGunu in GetDonemler(sozlesme.BaslangicTarihi, sozlesme.BitisTarihi))
         {
@@ -41,53 +39,32 @@ public class TahakkukUretimService : ITahakkukUretimService
             if (mevcutVar) continue;
 
             var proRata = HesaplaProRataKatsayi(donemIlkGunu, sozlesme.BaslangicTarihi, sozlesme.BitisTarihi);
+            
+            var composedPreviews = await ComposeKalemlerAsync(sozlesme.BirimId, sozlesme.KiraciId, donemIlkGunu, sozlesmeId);
             var kalemler = new List<TahakkukKalemi>();
 
-            foreach (var bt in aktifBorcTipleri)
+            foreach (var preview in composedPreviews)
             {
-                var snapshot = await _rateResolver.ResolveAsync(sozlesmeId, sozlesme.BirimId, bt.Id, donemIlkGunu);
-                if (snapshot == null) continue;
-
-                var carpanBase = snapshot.HesaplamaYontemi == HesaplamaYontemi.M2
-                    ? sozlesme.Birim.Yuzolcumu
-                    : 1m;
-
-                var tutar = Math.Round(snapshot.BirimDeger * carpanBase * proRata, 2);
-                var kdvTutari = Math.Round(tutar * snapshot.KdvOrani / 100, 2);
+                var kalemProRata = preview.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik ? 1m : proRata;
+                var tutar = Math.Round(preview.Tutar * kalemProRata, 2);
+                var kdvTutari = Math.Round(tutar * preview.KdvOrani / 100, 2);
 
                 kalemler.Add(new TahakkukKalemi
                 {
-                    BorcTipiId = bt.Id,
-                    Aciklama = bt.Ad,
-                    HesaplamaYontemi = snapshot.HesaplamaYontemi,
-                    BirimDeger = snapshot.BirimDeger,
-                    Carpan = Math.Round(carpanBase * proRata, 6),
+                    BorcTipiId = preview.BorcTipiId,
+                    Aciklama = preview.Aciklama ?? preview.BorcTipiAd,
+                    HesaplamaYontemi = preview.HesaplamaYontemi,
+                    BirimDeger = preview.BirimDeger,
+                    Carpan = Math.Round(preview.Carpan * kalemProRata, 6),
                     Tutar = tutar,
-                    KdvOrani = snapshot.KdvOrani,
+                    KdvOrani = preview.KdvOrani,
                     KdvTutari = kdvTutari,
                     ToplamTutar = tutar + kdvTutari,
-                    KaynakTipi = snapshot.KaynakTipi
+                    KaynakTipi = preview.KaynakTipi
                 });
             }
 
-            bool isFirstPeriod = donemIlkGunu.Year == sozlesme.BaslangicTarihi.Year
-                && donemIlkGunu.Month == sozlesme.BaslangicTarihi.Month;
-            if (isFirstPeriod && depozitoBt != null)
-            {
-                kalemler.Add(new TahakkukKalemi
-                {
-                    BorcTipiId       = depozitoBt.Id,
-                    Aciklama         = depozitoBt.Ad,
-                    HesaplamaYontemi = HesaplamaYontemi.Sabit,
-                    BirimDeger       = sozlesme.Depozito!.Value,
-                    Carpan           = 1m,
-                    Tutar            = sozlesme.Depozito.Value,
-                    KdvOrani         = 0m,
-                    KdvTutari        = 0m,
-                    ToplamTutar      = sozlesme.Depozito.Value,
-                    KaynakTipi       = KaynakTipi.Sozlesme
-                });
-            }
+
 
             var ayBitis = donemIlkGunu.AddMonths(1).AddDays(-1);
             var donemBitis = sozlesme.BitisTarihi < ayBitis ? sozlesme.BitisTarihi : ayBitis;
@@ -170,5 +147,93 @@ public class TahakkukUretimService : ITahakkukUretimService
             yield return ay;
             ay = ay.AddMonths(1);
         }
+    }
+
+    public async Task<IList<Models.DTOs.TahakkukKalemiPreview>> ComposeKalemlerAsync(int birimId, int kiraciId, DateTime donem, int? sozlesmeId = null)
+    {
+        var birim = await _ctx.Birimler.FindAsync(birimId);
+        if (birim == null) return new List<Models.DTOs.TahakkukKalemiPreview>();
+
+        var aktifBorcTipleri = await _ctx.BorcTipleri
+            .Where(b => b.Aktif && (b.Davranis == BorcTipiDavranisi.AylikSabit || b.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik))
+            .OrderBy(b => b.Sira)
+            .ToListAsync();
+
+        var previewList = new List<Models.DTOs.TahakkukKalemiPreview>();
+
+        foreach (var bt in aktifBorcTipleri)
+        {
+            // Tek seferlik kalemleri sadece ilk ayda göster/hesapla
+            if (bt.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik)
+            {
+                DateTime? start = null;
+                if (sozlesmeId.HasValue)
+                {
+                    start = await _ctx.Sozlesmeler
+                        .Where(s => s.Id == sozlesmeId.Value)
+                        .Select(s => s.BaslangicTarihi)
+                        .FirstOrDefaultAsync();
+                }
+                else
+                {
+                    // Yeni sözleşme oluştururken 'donem' başlangıç tarihi olarak kabul edilir
+                    start = donem;
+                }
+
+                if (start.HasValue && (donem.Year != start.Value.Year || donem.Month != start.Value.Month))
+                {
+                    continue; // İlk ay değilse tek seferlik kalemi ekleme
+                }
+            }
+
+            RateSnapshot? snapshot = await _rateResolver.ResolveAsync(sozlesmeId, kiraciId, birimId, bt.Id, donem);
+
+            if (snapshot != null)
+            {
+                var carpanBase = snapshot.HesaplamaYontemi == HesaplamaYontemi.M2 ? birim.Yuzolcumu : 1m;
+                var tutar = Math.Round(snapshot.BirimDeger * carpanBase, 2);
+                var kdvTutari = Math.Round(tutar * snapshot.KdvOrani / 100, 2);
+
+                previewList.Add(new Models.DTOs.TahakkukKalemiPreview
+                {
+                    BorcTipiId = bt.Id,
+                    BorcTipiAd = bt.Ad,
+                    BorcTipiKod = bt.Kod,
+                    Davranis = bt.Davranis,
+                    HesaplamaYontemi = snapshot.HesaplamaYontemi,
+                    BirimDeger = snapshot.BirimDeger,
+                    Carpan = carpanBase,
+                    Tutar = tutar,
+                    KdvOrani = snapshot.KdvOrani,
+                    KdvTutari = kdvTutari,
+                    ToplamTutar = tutar + kdvTutari,
+                    KaynakTipi = snapshot.KaynakTipi,
+                    RateBulundu = true,
+                    Aciklama = bt.Ad
+                });
+            }
+            else
+            {
+                previewList.Add(new Models.DTOs.TahakkukKalemiPreview
+                {
+                    BorcTipiId = bt.Id,
+                    BorcTipiAd = bt.Ad,
+                    BorcTipiKod = bt.Kod,
+                    Davranis = bt.Davranis,
+                    HesaplamaYontemi = HesaplamaYontemi.Sabit,
+                    BirimDeger = 0m,
+                    Carpan = 0m,
+                    Tutar = 0m,
+                    KdvOrani = 0m,
+                    KdvTutari = 0m,
+                    ToplamTutar = 0m,
+                    KaynakTipi = KaynakTipi.Bulunamadi,
+                    RateBulundu = false,
+                    Aciklama = $"{bt.Ad} (Fiyat Tanımsız)"
+                });
+            }
+        }
+
+        return previewList;
     }
 }

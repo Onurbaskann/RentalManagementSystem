@@ -119,6 +119,20 @@
                     </div>
                 }
             }
+            @if (k.KiraciKategori != null)
+            {
+                <div>
+                    <div style="font-size:11.5px;color:var(--color-muted);margin-bottom:2px;">Kategori</div>
+                    <div style="font-size:13px;font-weight:500;">@k.KiraciKategori.Ad</div>
+                </div>
+            }
+            @if (k.Sektor != null)
+            {
+                <div>
+                    <div style="font-size:11.5px;color:var(--color-muted);margin-bottom:2px;">Sektör</div>
+                    <div style="font-size:13px;font-weight:500;">@k.Sektor.Ad</div>
+                </div>
+            }
         </div>
     </div>
 

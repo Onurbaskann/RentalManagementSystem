@@ -83,13 +83,27 @@ public class TasinmazService : ITasinmazService
         {
             foreach (var r in rezervasyonAlanlari)
             {
-                t.Birimler.Add(new Birim
+                var birim = new Birim
                 {
                     BirimTipi = BirimTipi.Ofis,
                     Ad = string.IsNullOrWhiteSpace(r.Ad) ? "Rezervasyon Alanı" : r.Ad,
                     Yuzolcumu = r.Yuzolcumu,
                     Aciklama = r.Aciklama,
                     BirimTuruId = r.BirimTuruId
+                };
+                t.Birimler.Add(birim);
+
+                // Ücret kuralını ekle
+                _ctx.RezervasyonUcretKurallari.Add(new RezervasyonUcretKural
+                {
+                    Birim = birim,
+                    UcretsizSureDakika = r.UcretsizSureDakika,
+                    UcretlendirmePeriyoduDakika = 60, // Varsayılan 60 dk (1 saat)
+                    PeriyotUcreti = r.SaatlikUcret,
+                    KdvOrani = r.KdvOrani,
+                    Aktif = true,
+                    OlusturmaTarihi = DateTime.Now,
+                    Aciklama = $"{r.Ad} için otomatik oluşturuldu"
                 });
             }
         }

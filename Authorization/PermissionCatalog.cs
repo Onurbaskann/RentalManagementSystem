@@ -4,43 +4,43 @@ public static class PermissionCatalog
 {
     public static class Tasinmaz
     {
-        public const string View   = "Tasinmaz.View";
+        public const string View = "Tasinmaz.View";
         public const string Create = "Tasinmaz.Create";
-        public const string Edit   = "Tasinmaz.Edit";
+        public const string Edit = "Tasinmaz.Edit";
     }
 
     public static class Birim
     {
-        public const string View       = "Birim.View";
-        public const string Create     = "Birim.Create";
-        public const string Edit       = "Birim.Edit";
+        public const string View = "Birim.View";
+        public const string Create = "Birim.Create";
+        public const string Edit = "Birim.Edit";
         public const string ManageRate = "Birim.ManageRate";
     }
 
     public static class Kiraci
     {
-        public const string View   = "Kiraci.View";
+        public const string View = "Kiraci.View";
         public const string Create = "Kiraci.Create";
-        public const string Edit   = "Kiraci.Edit";
+        public const string Edit = "Kiraci.Edit";
     }
 
     public static class Sozlesme
     {
-        public const string View         = "Sozlesme.View";
-        public const string Create       = "Sozlesme.Create";
-        public const string Edit         = "Sozlesme.Edit";
-        public const string Extend       = "Sozlesme.Extend";
-        public const string Terminate    = "Sozlesme.Terminate";
+        public const string View = "Sozlesme.View";
+        public const string Create = "Sozlesme.Create";
+        public const string Edit = "Sozlesme.Edit";
+        public const string Extend = "Sozlesme.Extend";
+        public const string Terminate = "Sozlesme.Terminate";
         public const string OverrideRate = "Sozlesme.OverrideRate";
     }
 
     public static class Odeme
     {
-        public const string View                = "Odeme.View";
-        public const string Create              = "Odeme.Create";
-        public const string UploadDekont        = "Odeme.UploadDekont";
-        public const string Approve             = "Odeme.Approve";
-        public const string Reject              = "Odeme.Reject";
+        public const string View = "Odeme.View";
+        public const string Create = "Odeme.Create";
+        public const string UploadDekont = "Odeme.UploadDekont";
+        public const string Approve = "Odeme.Approve";
+        public const string Reject = "Odeme.Reject";
         public const string ImportBankStatement = "Odeme.ImportBankStatement";
         public const string MatchBankTransaction = "Odeme.MatchBankTransaction";
     }
@@ -52,37 +52,37 @@ public static class PermissionCatalog
 
     public static class Parametre
     {
-        public const string View   = "Parametre.View";
+        public const string View = "Parametre.View";
         public const string Manage = "Parametre.Manage";
     }
 
     public static class TasinmazTipiPerm
     {
-        public const string View   = "TasinmazTipi.View";
+        public const string View = "TasinmazTipi.View";
         public const string Manage = "TasinmazTipi.Manage";
     }
 
     public static class BirimTuruPerm
     {
-        public const string View   = "BirimTuru.View";
+        public const string View = "BirimTuru.View";
         public const string Manage = "BirimTuru.Manage";
     }
 
     public static class KiraciKategoriPerm
     {
-        public const string View   = "KiraciKategori.View";
+        public const string View = "KiraciKategori.View";
         public const string Manage = "KiraciKategori.Manage";
     }
 
     public static class SektorPerm
     {
-        public const string View   = "Sektor.View";
+        public const string View = "Sektor.View";
         public const string Manage = "Sektor.Manage";
     }
 
     public static class Tarife
     {
-        public const string View   = "Tarife.View";
+        public const string View = "Tarife.View";
         public const string Manage = "Tarife.Manage";
     }
 
@@ -93,23 +93,23 @@ public static class PermissionCatalog
 
     public static class ManuelBorc
     {
-        public const string View   = "ManuelBorc.View";
+        public const string View = "ManuelBorc.View";
         public const string Create = "ManuelBorc.Create";
         public const string Cancel = "ManuelBorc.Cancel";
     }
 
     public static class Rezervasyon
     {
-        public const string View              = "Rezervasyon.View";
-        public const string Create            = "Rezervasyon.Create";
-        public const string Edit              = "Rezervasyon.Edit";
-        public const string Cancel            = "Rezervasyon.Cancel";
+        public const string View = "Rezervasyon.View";
+        public const string Create = "Rezervasyon.Create";
+        public const string Edit = "Rezervasyon.Edit";
+        public const string Cancel = "Rezervasyon.Cancel";
         public const string TransferToTahakkuk = "Rezervasyon.TransferToTahakkuk";
     }
 
     public static class TasinmazCarpanPerm
     {
-        public const string View   = "TasinmazCarpan.View";
+        public const string View = "TasinmazCarpan.View";
         public const string Manage = "TasinmazCarpan.Manage";
     }
 
@@ -120,9 +120,9 @@ public static class PermissionCatalog
 
     public static class Kullanici
     {
-        public const string View             = "Kullanici.View";
-        public const string Create           = "Kullanici.Create";
-        public const string Edit             = "Kullanici.Edit";
+        public const string View = "Kullanici.View";
+        public const string Create = "Kullanici.Create";
+        public const string Edit = "Kullanici.Edit";
         public const string AssignPermission = "Kullanici.AssignPermission";
     }
 

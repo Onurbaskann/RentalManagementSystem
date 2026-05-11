@@ -7,7 +7,7 @@
 <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
     <div>
         <div class="page-title">Rezervasyon Ekle</div>
-        <div class="page-subtitle">Toplantı salonu için tarih ve saat belirleyin</div>
+        <div class="page-subtitle">Seçilen birim için tarih ve saat belirleyin</div>
     </div>
     <a href="/Rezervasyon" class="btn btn-secondary">← Geri</a>
 </div>
@@ -19,12 +19,12 @@
         <div asp-validation-summary="ModelOnly" class="form-error" style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:20px;"></div>
 
         <div class="card">
-            <div class="section-title" style="margin-bottom:20px;">Salon ve Kiracı</div>
+            <div class="section-title" style="margin-bottom:20px;">Birim ve Kiracı</div>
 
             <div class="form-group">
-                <label asp-for="BirimId" class="form-label">Toplantı Salonu <span style="color:#dc2626;">*</span></label>
+                <label asp-for="BirimId" class="form-label">Taşınmaz Birimi <span style="color:#dc2626;">*</span></label>
                 <select asp-for="BirimId" class="form-control" x-on:change="birimSecildi($event)">
-                    <option value="">— Salon seçin —</option>
+                    <option value="">— Birim seçin —</option>
                     @foreach (var b in Model.RezervasyonBirimleri)
                     {
                         <option value="@b.Id"
@@ -131,7 +131,7 @@
         <div class="card" style="margin-top:16px;">
             <div class="form-group" style="margin-bottom:0;">
                 <label asp-for="Aciklama" class="form-label">Açıklama <span style="color:var(--color-muted);font-weight:400;">(opsiyonel)</span></label>
-                <textarea asp-for="Aciklama" class="form-control" rows="2" placeholder="Toplantı konusu, katılımcılar vb."></textarea>
+                <textarea asp-for="Aciklama" class="form-control" rows="2" placeholder="Rezervasyon konusu, katılımcılar vb."></textarea>
             </div>
         </div>
 

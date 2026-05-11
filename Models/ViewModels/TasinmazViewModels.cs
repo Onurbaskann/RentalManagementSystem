@@ -6,7 +6,17 @@ public class TasinmazDetayViewModel
 {
     public Tasinmaz Tasinmaz { get; set; } = null!;
     public List<BirimDetayViewModel> Birimler { get; set; } = new();
-    public List<TasinmazKategoriCarpan> Carpanlar { get; set; } = new();
+    public TasinmazFiyatMatrisiViewModel FiyatMatrisi { get; set; } = new();
+    public List<ToplantiSalonuRezervasyon> Rezervasyonlar { get; set; } = new();
+    public RezervasyonUcretKural? GlobalRezervasyonKural { get; set; }
+    public List<RezervasyonUcretKural> BirimRezervasyonKurallari { get; set; } = new();
+    public List<BirimOzelFiyatOzeti> BirimOzelFiyatlari { get; set; } = new();
+}
+
+public class BirimOzelFiyatOzeti
+{
+    public Birim Birim { get; set; } = null!;
+    public List<BirimRate> Rateler { get; set; } = new();
 }
 
 public class BirimDetayViewModel
@@ -14,6 +24,7 @@ public class BirimDetayViewModel
     public Birim Birim { get; set; } = null!;
     public KiraDurumu Durum { get; set; }
     public KiraSozlesmesi? AktifSozlesme { get; set; }
+    public RezervasyonUcretKural? RezKural { get; set; }
 }
 
 public class TasinmazEkleViewModel
@@ -41,6 +52,8 @@ public class TasinmazEkleViewModel
 
     public List<OfisBirimInputViewModel> Ofisler { get; set; } = new();
     public List<RezervasyonAlaniInputViewModel> RezervasyonAlanlari { get; set; } = new();
+
+    public TasinmazFiyatMatrisiViewModel FiyatMatrisi { get; set; } = new();
 }
 
 public class OfisBirimInputViewModel
@@ -59,4 +72,8 @@ public class RezervasyonAlaniInputViewModel
     public decimal Yuzolcumu { get; set; }
     public int? BirimTuruId { get; set; }
     public string? Aciklama { get; set; }
+    
+    public int UcretsizSureDakika { get; set; }
+    public decimal SaatlikUcret { get; set; }
+    public decimal KdvOrani { get; set; } = 20;
 }

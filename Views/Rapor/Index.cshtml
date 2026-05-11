@@ -1,7 +1,7 @@
 @model KiraTakip.Models.ViewModels.AylikRaporViewModel
 @{
     ViewData["Title"] = "Tahsilat Raporu";
-    string TLFormat(decimal v) => v.ToString("N0") + " ₺";
+    string TLFormat(decimal v) => v.ToString("N2") + " ₺";
     var yillar = ViewBag.MevcutYillar as List<int> ?? new List<int> { Model.Yil };
 }
 
@@ -37,7 +37,7 @@
     <div class="card">
         <div class="card-title">Tahsil Edilemeyen</div>
         <div class="card-value" style="font-size:22px;color:@(Model.ToplamBeklenen - Model.ToplamTahsil > 0 ? "#ef4444" : "#065f46");">@TLFormat(Model.ToplamBeklenen - Model.ToplamTahsil)</div>
-        <div class="card-sub">@Model.ToplamGecikmiş gecikmiş tahakkuk</div>
+        <div class="card-sub">@Model.ToplamGecikmiş gecikmiş tahakkuk · @TLFormat(Model.ToplamGecikmisTutar) gecikmiş tutar</div>
     </div>
 </div>
 
@@ -53,7 +53,10 @@
                     <th>Tahsil Edilen</th>
                     <th>Kalan</th>
                     <th style="width:140px;">Tahsilat Oranı</th>
-                    <th>Gecikmiş</th>
+                    <th title="Vade tarihi geçmiş ve henüz tamamı tahsil edilmemiş tahakkukların adedi ve kalan toplam tutarı.">
+                        Gecikmiş Tahakkuk
+                        <span style="display:inline-block;width:14px;height:14px;line-height:14px;text-align:center;border-radius:50%;background:#e5e7eb;color:#6b7280;font-size:10px;font-weight:700;margin-left:4px;cursor:help;">i</span>
+                    </th>
                 </tr>
             </thead>
             <tbody>
@@ -97,7 +100,13 @@
                         <td>
                             @if (satir.GecikmisTahakkukAdet > 0)
                             {
-                                <span class="badge badge-gecmis">@satir.GecikmisTahakkukAdet</span>
+                                var ayBas = new DateTime(Model.Yil, satir.Ay, 1).ToString("yyyy-MM-dd");
+                                var aySon = new DateTime(Model.Yil, satir.Ay, DateTime.DaysInMonth(Model.Yil, satir.Ay)).ToString("yyyy-MM-dd");
+                                var drillUrl = $"/Tahakkuk?durum=gecikti&from={ayBas}&to={aySon}";
+                                <a href="@drillUrl" style="text-decoration:none;display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;" title="@satir.AyAdi ayının gecikmiş tahakkuklarını görüntüle">
+                                    <span class="badge badge-gecmis">@satir.GecikmisTahakkukAdet</span>
+                                    <span style="font-size:11px;color:#ef4444;font-weight:600;">@TLFormat(satir.GecikmisTutar)</span>
+                                </a>
                             }
                             else if (satir.TahakkukSayisi > 0)
                             {
@@ -127,7 +136,13 @@
                     <td>
                         @if (Model.ToplamGecikmiş > 0)
                         {
-                            <span class="badge badge-gecmis">@Model.ToplamGecikmiş</span>
+                            var yilBas = new DateTime(Model.Yil, 1, 1).ToString("yyyy-MM-dd");
+                            var yilSon = new DateTime(Model.Yil, 12, 31).ToString("yyyy-MM-dd");
+                            var drillUrlTotal = $"/Tahakkuk?durum=gecikti&from={yilBas}&to={yilSon}";
+                            <a href="@drillUrlTotal" style="text-decoration:none;display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;" title="@Model.Yil yılının gecikmiş tahakkuklarını görüntüle">
+                                <span class="badge badge-gecmis">@Model.ToplamGecikmiş</span>
+                                <span style="font-size:11px;color:#ef4444;font-weight:700;">@TLFormat(Model.ToplamGecikmisTutar)</span>
+                            </a>
                         }
                         else
                         {

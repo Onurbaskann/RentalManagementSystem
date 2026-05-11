@@ -33,13 +33,15 @@ public class RaporController : Controller
 
         var satirlar = Enumerable.Range(1, 12).Select(ay => {
             var ayTahakkuklar = tahakkuklar.Where(t => t.DonemBaslangic.Year == secilenYil && t.DonemBaslangic.Month == ay).ToList();
+            var gecikmisler = ayTahakkuklar.Where(t => t.Durum == TahakkukDurumu.Gecikti).ToList();
             return new AylikRaporSatir {
                 Ay = ay,
                 AyAdi = new DateTime(secilenYil, ay, 1).ToString("MMMM", trCulture),
                 TahakkukSayisi = ayTahakkuklar.Count,
                 Beklenen = ayTahakkuklar.Sum(t => t.ToplamTutar),
                 TahsilEdilen = ayTahakkuklar.Sum(t => t.OdenenTutar),
-                GecikmisTahakkukAdet = ayTahakkuklar.Count(t => t.Durum == TahakkukDurumu.Gecikti)
+                GecikmisTahakkukAdet = gecikmisler.Count,
+                GecikmisTutar = gecikmisler.Sum(t => t.ToplamTutar - t.OdenenTutar)
             };
         }).ToList();
 

@@ -1,6 +1,8 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Repositories;
+using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services;
 using KiraTakip.Services.Banka;
 using KiraTakip.Services.Interfaces;
@@ -38,7 +40,20 @@ builder.Services.AddAuthorization(options =>
         options.AddPolicy(perm, policy => policy.RequireClaim("permission", perm));
 });
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.ModelBindingMessageProvider.SetAttemptedValueIsInvalidAccessor((x, y) => $"'{x}' değeri '{y}' alanı için geçersizdir.");
+    options.ModelBindingMessageProvider.SetMissingBindRequiredValueAccessor((x) => $"'{x}' alanı için bir değer belirtilmelidir.");
+    options.ModelBindingMessageProvider.SetMissingKeyOrValueAccessor(() => "Bir değer girilmelidir.");
+    options.ModelBindingMessageProvider.SetMissingRequestBodyRequiredValueAccessor(() => "İstek gövdesi boş olamaz.");
+    options.ModelBindingMessageProvider.SetNonPropertyAttemptedValueIsInvalidAccessor((x) => $"'{x}' değeri geçersizdir.");
+    options.ModelBindingMessageProvider.SetNonPropertyUnknownValueIsInvalidAccessor(() => "Geçersiz değer.");
+    options.ModelBindingMessageProvider.SetNonPropertyValueMustBeANumberAccessor(() => "Alan sayı olmalıdır.");
+    options.ModelBindingMessageProvider.SetUnknownValueIsInvalidAccessor((x) => $"'{x}' alanı için değer geçersizdir.");
+    options.ModelBindingMessageProvider.SetValueIsInvalidAccessor((x) => $"'{x}' değeri geçersizdir.");
+    options.ModelBindingMessageProvider.SetValueMustBeANumberAccessor((x) => $"'{x}' alanı sayı olmalıdır.");
+    options.ModelBindingMessageProvider.SetValueMustNotBeNullAccessor((x) => $"'{x}' alanı boş bırakılamaz.");
+});
 builder.Services.AddScoped<IdentitySeedService>();
 builder.Services.AddScoped<UserTasinmazYetkiService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
@@ -50,6 +65,7 @@ builder.Services.AddScoped<IKiraciService, KiraciService>();
 builder.Services.AddScoped<ISozlesmeService, SozlesmeService>();
 builder.Services.AddScoped<IIstatistikService, IstatistikService>();
 builder.Services.AddScoped<SeedDataService>();
+builder.Services.AddScoped<ITahakkukRepository, TahakkukRepository>();
 builder.Services.AddScoped<ITahakkukService, TahakkukService>();
 builder.Services.AddScoped<IOdemeService, OdemeService>();
 builder.Services.AddScoped<IDekontService, DekontService>();
@@ -59,8 +75,13 @@ builder.Services.AddScoped<IRateResolverService, RateResolverService>();
 builder.Services.AddScoped<ITahakkukUretimService, TahakkukUretimService>();
 builder.Services.AddScoped<IManuelBorcService, ManuelBorcService>();
 builder.Services.AddScoped<IRezervasyonService, RezervasyonService>();
+builder.Services.AddScoped<ITasinmazFiyatService, TasinmazFiyatService>();
 
 var app = builder.Build();
+
+var cultureInfo = new System.Globalization.CultureInfo("tr-TR");
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
 if (!app.Environment.IsDevelopment())
 {
@@ -95,6 +116,7 @@ using (var scope = app.Services.CreateScope())
     await domainSeed.SeedSektorlerAsync();
     await domainSeed.EnsureToplantiBorcTipiAsync();
     await domainSeed.EnsureVarsayilanRezervasyonUcretKuralAsync();
+    await domainSeed.SeedTasinmazFiyatlarAsync();
 
     if (app.Environment.IsDevelopment())
     {

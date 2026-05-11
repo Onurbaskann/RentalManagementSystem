@@ -34,16 +34,22 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label">Kullanım Türü</label>
-            <div style="display:flex;flex-direction:column;gap:8px;">
+            <label class="form-label">Kullanım Türü <span style="color:red">*</span></label>
+            @{ var editInitialTur = Model.RezervasyonYapilabilirMi ? "rez" : "kira"; }
+            <div x-data="{ tur: '@editInitialTur' }" style="display:flex;flex-direction:column;gap:8px;">
                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                    <input asp-for="KiralanabilirMi" type="checkbox" />
+                    <input asp-for="KiralanabilirMi" type="checkbox"
+                           x-bind:checked="tur === 'kira'"
+                           @@click.prevent="tur = 'kira'" />
                     <span style="font-size:14px;">Kiralanabilir <span style="color:var(--color-muted);font-size:12px;">(kira sözleşmesine bağlanabilir)</span></span>
                 </label>
                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                    <input asp-for="RezervasyonYapilabilirMi" type="checkbox" />
+                    <input asp-for="RezervasyonYapilabilirMi" type="checkbox"
+                           x-bind:checked="tur === 'rez'"
+                           @@click.prevent="tur = 'rez'" />
                     <span style="font-size:14px;">Rezervasyon yapılabilir <span style="color:var(--color-muted);font-size:12px;">(sözleşmeye bağlı değil)</span></span>
                 </label>
+                <div style="font-size:12px;color:var(--color-muted);">Tam olarak bir seçenek işaretli olmalıdır.</div>
             </div>
         </div>
 

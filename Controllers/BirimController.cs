@@ -5,6 +5,7 @@ using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Controllers;
 
@@ -13,52 +14,87 @@ namespace KiraTakip.Controllers;
 public class BirimController : Controller
 {
     private readonly ApplicationDbContext _ctx;
+    private readonly IRezervasyonService _rezervasyonService;
 
-    public BirimController(ApplicationDbContext ctx) => _ctx = ctx;
+    public BirimController(ApplicationDbContext ctx, IRezervasyonService rezervasyonService)
+    {
+        _ctx = ctx;
+        _rezervasyonService = rezervasyonService;
+    }
 
     [Authorize(Policy = PermissionCatalog.Birim.ManageRate)]
     [HttpGet("{id:int}/OzelFiyat")]
     public async Task<IActionResult> OzelFiyat(int id)
     {
         var birim = await _ctx.Birimler
+            .Include(b => b.BirimTuru)
             .Include(b => b.Tasinmaz)
             .FirstOrDefaultAsync(b => b.Id == id);
 
         if (birim == null) return NotFound();
 
-        var aktifBorcTipleri = await _ctx.BorcTipleri
-            .Where(b => b.Aktif)
-            .OrderBy(b => b.Sira)
-            .ToListAsync();
-
-        var mevcutRateler = await _ctx.BirimRateler
-            .Where(r => r.BirimId == id)
-            .ToListAsync();
-
-        var kalemler = aktifBorcTipleri.Select(bt =>
+        var vm = new BirimOzelFiyatViewModel
         {
-            var rate = mevcutRateler.FirstOrDefault(r => r.BorcTipiId == bt.Id);
-            return new BirimRateSatiri
+            BirimId                  = birim.Id,
+            BirimAd                  = birim.Ad,
+            TasinmazId               = birim.TasinmazId,
+            TasinmazAd               = birim.Tasinmaz.Ad,
+            KiralanabilirMi          = birim.BirimTuru?.KiralanabilirMi ?? true,
+            RezervasyonYapilabilirMi = birim.BirimTuru?.RezervasyonYapilabilirMi ?? false,
+        };
+
+        if (vm.KiralanabilirMi)
+        {
+            var aktifBorcTipleri = await _ctx.BorcTipleri
+                .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.ManuelTetiklemeli)
+                .OrderBy(b => b.Sira)
+                .ToListAsync();
+
+            var kategoriler = await _ctx.KiraciKategorileri
+                .Where(k => k.Aktif)
+                .OrderBy(k => k.Sira)
+                .ToListAsync();
+
+            var mevcutRateler = await _ctx.BirimRateler
+                .Where(r => r.BirimId == id)
+                .ToListAsync();
+
+            vm.Kolonlar = aktifBorcTipleri.Select(bt => new BirimRateKolonu
             {
-                RateId           = rate?.Id ?? 0,
                 BorcTipiId       = bt.Id,
                 BorcTipiAd       = bt.Ad,
                 BorcTipiKod      = bt.Kod,
-                OzelFiyatAktif   = rate != null,
-                HesaplamaYontemi = rate?.HesaplamaYontemi ?? HesaplamaYontemi.Sabit,
-                BirimDeger       = rate?.BirimDeger ?? 0,
-                KdvOrani         = rate?.KdvOrani ?? 0
-            };
-        }).ToList();
+                BorcTipiDavranisi = bt.Davranis
+            }).ToList();
 
-        var vm = new BirimOzelFiyatViewModel
+            vm.Satirlar = kategoriler.Select(kat => new BirimRateKategoriSatiri
+            {
+                KiraciKategoriId  = kat.Id,
+                KiraciKategoriAd  = kat.Ad,
+                Hucreler = aktifBorcTipleri.Select(bt =>
+                {
+                    var rate = mevcutRateler.FirstOrDefault(r =>
+                        r.KiraciKategoriId == kat.Id && r.BorcTipiId == bt.Id);
+                    return new BirimRateHucre
+                    {
+                        RateId           = rate?.Id ?? 0,
+                        KiraciKategoriId  = kat.Id,
+                        BorcTipiId        = bt.Id,
+                        OzelFiyatAktif    = rate != null,
+                        HesaplamaYontemi  = rate?.HesaplamaYontemi ?? HesaplamaYontemi.Sabit,
+                        BirimDeger        = rate?.BirimDeger ?? 0,
+                        KdvOrani          = rate?.KdvOrani ?? 0
+                    };
+                }).ToList()
+            }).ToList();
+        }
+        else if (vm.RezervasyonYapilabilirMi)
         {
-            BirimId     = birim.Id,
-            BirimAd     = birim.Ad,
-            TasinmazId  = birim.TasinmazId,
-            TasinmazAd  = birim.Tasinmaz.Ad,
-            Kalemler    = kalemler
-        };
+            vm.OzelRezervasyonKural = await _ctx.RezervasyonUcretKurallari
+                .FirstOrDefaultAsync(r => r.BirimId == id);
+            vm.GlobalRezervasyonKural = await _ctx.RezervasyonUcretKurallari
+                .FirstOrDefaultAsync(r => r.BirimId == null && r.Aktif);
+        }
 
         return View(vm);
     }
@@ -72,38 +108,78 @@ public class BirimController : Controller
             .Where(r => r.BirimId == id)
             .ToListAsync();
 
-        foreach (var satir in vm.Kalemler)
+        foreach (var satir in vm.Satirlar)
         {
-            var mevcut = mevcutRateler.FirstOrDefault(r => r.BorcTipiId == satir.BorcTipiId);
+            foreach (var hucre in satir.Hucreler)
+            {
+                var mevcut = mevcutRateler.FirstOrDefault(r =>
+                    r.KiraciKategoriId == hucre.KiraciKategoriId &&
+                    r.BorcTipiId == hucre.BorcTipiId);
 
-            if (satir.OzelFiyatAktif)
-            {
-                if (mevcut == null)
+                if (hucre.OzelFiyatAktif)
                 {
-                    _ctx.BirimRateler.Add(new BirimRate
+                    if (mevcut == null)
                     {
-                        BirimId          = id,
-                        BorcTipiId       = satir.BorcTipiId,
-                        HesaplamaYontemi = satir.HesaplamaYontemi,
-                        BirimDeger       = satir.BirimDeger,
-                        KdvOrani         = satir.KdvOrani
-                    });
+                        _ctx.BirimRateler.Add(new BirimRate
+                        {
+                            BirimId           = id,
+                            KiraciKategoriId   = hucre.KiraciKategoriId,
+                            BorcTipiId         = hucre.BorcTipiId,
+                            HesaplamaYontemi   = hucre.HesaplamaYontemi,
+                            BirimDeger         = hucre.BirimDeger,
+                            KdvOrani           = hucre.KdvOrani
+                        });
+                    }
+                    else
+                    {
+                        mevcut.HesaplamaYontemi = hucre.HesaplamaYontemi;
+                        mevcut.BirimDeger       = hucre.BirimDeger;
+                        mevcut.KdvOrani         = hucre.KdvOrani;
+                    }
                 }
-                else
+                else if (mevcut != null)
                 {
-                    mevcut.HesaplamaYontemi = satir.HesaplamaYontemi;
-                    mevcut.BirimDeger       = satir.BirimDeger;
-                    mevcut.KdvOrani         = satir.KdvOrani;
+                    _ctx.BirimRateler.Remove(mevcut);
                 }
-            }
-            else if (mevcut != null)
-            {
-                _ctx.BirimRateler.Remove(mevcut);
             }
         }
 
         await _ctx.SaveChangesAsync();
         TempData["Success"] = "Özel fiyatlar güncellendi.";
+        return RedirectToAction(nameof(OzelFiyat), new { id });
+    }
+
+    [Authorize(Policy = PermissionCatalog.Birim.ManageRate)]
+    [HttpPost("{id:int}/RezKuralKaydet")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RezKuralKaydet(int id, RezervasyonUcretKuralViewModel vm)
+    {
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = "Form alanlarını kontrol edin.";
+            return RedirectToAction(nameof(OzelFiyat), new { id });
+        }
+        vm.BirimId = id;
+        var (basarili, hata, _) = await _rezervasyonService.SaveUcretKuralAsync(vm);
+        TempData[basarili ? "Success" : "Error"] = basarili
+            ? "Özel rezervasyon kuralı kaydedildi."
+            : hata;
+        return RedirectToAction(nameof(OzelFiyat), new { id });
+    }
+
+    [Authorize(Policy = PermissionCatalog.Birim.ManageRate)]
+    [HttpPost("{id:int}/RezKuralSifirla")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RezKuralSifirla(int id)
+    {
+        var kural = await _ctx.RezervasyonUcretKurallari
+            .FirstOrDefaultAsync(r => r.BirimId == id);
+        if (kural != null)
+        {
+            _ctx.RezervasyonUcretKurallari.Remove(kural);
+            await _ctx.SaveChangesAsync();
+        }
+        TempData["Success"] = "Özel kural kaldırıldı. Global kural uygulanacak.";
         return RedirectToAction(nameof(OzelFiyat), new { id });
     }
 }

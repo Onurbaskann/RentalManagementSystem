@@ -12,5 +12,5 @@ public class RateSnapshot
 
 public interface IRateResolverService
 {
-    Task<RateSnapshot?> ResolveAsync(int sozlesmeId, int birimId, int borcTipiId, DateTime donem);
+    Task<RateSnapshot?> ResolveAsync(int? sozlesmeId, int? kiraciId, int birimId, int borcTipiId, DateTime donem);
 }

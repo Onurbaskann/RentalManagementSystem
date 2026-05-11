@@ -1,13 +1,13 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
@@ -31,18 +31,27 @@ public class TahakkukController : Controller
         await _tahakkukService.GecikmeleriGuncelleAsync();
 
         var userId = User.IsInRole("Goruntuleyici") ? _userManager.GetUserId(User) : null;
-        var paged = await _tahakkukService.GetPagedAsync(query, userId: userId);
+        var pagedResult = await _tahakkukService.GetPagedAsync(query, userId: userId);
+
+        ViewBag.Tasinmazlar = await _ctx.Tasinmazlar.OrderBy(t => t.Ad).ToListAsync();
+        ViewBag.Birimler = await _ctx.Birimler.OrderBy(b => b.TasinmazId).ThenBy(b => b.Ad).ToListAsync();
+        ViewBag.Kiracilar = await _ctx.Kiraciler.OrderBy(k => k.Ad).ToListAsync();
+        ViewBag.MevcutYillar = await _ctx.KiraTahakkuklar
+            .Select(t => t.DonemBaslangic.Year)
+            .Distinct()
+            .OrderByDescending(y => y)
+            .ToListAsync();
 
         ViewBag.Query = query;
         ViewBag.Durum = query.Durum ?? "tum";
-        return View(paged);
+        return View(pagedResult);
     }
 
     [Authorize(Policy = PermissionCatalog.Odeme.View)]
     public async Task<IActionResult> Detay(int id)
     {
-        var t = await _tahakkukService.GetByIdAsync(id);
-        if (t == null) return NotFound();
+        var tahakkuk = await _tahakkukService.GetByIdAsync(id);
+        if (tahakkuk == null) return NotFound();
 
         if (User.IsInRole("Goruntuleyici"))
         {
@@ -51,50 +60,50 @@ public class TahakkukController : Controller
                 .Where(u => u.UserId == userId)
                 .Select(u => u.TasinmazId)
                 .ToListAsync();
-            if (!yetkiliIds.Contains(t.KiraSozlesmesi.Birim.TasinmazId))
+            if (!yetkiliIds.Contains(tahakkuk.KiraSozlesmesi.Birim.TasinmazId))
                 return Forbid();
         }
 
-        return View(t);
+        return View(tahakkuk);
     }
 
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.Odeme.Create)]
     public async Task<IActionResult> Olustur()
     {
-        var vm = new TahakkukOlusturViewModel();
-        await PopulateSozlesmelerAsync(vm);
-        return View(vm);
+        var viewModel = new TahakkukOlusturViewModel();
+        await PopulateSozlesmelerAsync(viewModel);
+        return View(viewModel);
     }
 
     [HttpPost]
     [Authorize(Policy = PermissionCatalog.Odeme.Create)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Olustur(TahakkukOlusturViewModel vm)
+    public async Task<IActionResult> Olustur(TahakkukOlusturViewModel viewModel)
     {
         if (!ModelState.IsValid)
         {
-            await PopulateSozlesmelerAsync(vm);
-            return View(vm);
+            await PopulateSozlesmelerAsync(viewModel);
+            return View(viewModel);
         }
 
-        var donem = new DateTime(vm.DonemYil, vm.DonemAy, 1);
-        var (basarili, hata) = await _tahakkukService.OlusturAsync(vm.KiraSozlesmesiId, donem);
+        var period = new DateTime(viewModel.DonemYil, viewModel.DonemAy, 1);
+        var (isSuccess, errorMessage) = await _tahakkukService.OlusturAsync(viewModel.KiraSozlesmesiId, period);
 
-        if (!basarili)
+        if (!isSuccess)
         {
-            ModelState.AddModelError(string.Empty, hata!);
-            await PopulateSozlesmelerAsync(vm);
-            return View(vm);
+            ModelState.AddModelError(string.Empty, errorMessage!);
+            await PopulateSozlesmelerAsync(viewModel);
+            return View(viewModel);
         }
 
-        TempData["Success"] = $"{donem:MMMM yyyy} dönemi için tahakkuk oluşturuldu.";
+        TempData["Success"] = $"{period:MMMM yyyy} dönemi için tahakkuk oluşturuldu.";
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task PopulateSozlesmelerAsync(TahakkukOlusturViewModel vm)
+    private async Task PopulateSozlesmelerAsync(TahakkukOlusturViewModel viewModel)
     {
-        vm.AktifSozlesmeler = await _ctx.Sozlesmeler
+        viewModel.AktifSozlesmeler = await _ctx.Sozlesmeler
             .Include(s => s.Birim).ThenInclude(b => b.Tasinmaz)
             .Include(s => s.Kiraci)
             .Where(s => s.Durum == SozlesmeDurumu.Aktif)

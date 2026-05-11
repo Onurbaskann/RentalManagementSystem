@@ -1,0 +1,86 @@
+@model KiraTakip.Models.ViewModels.TasinmazFiyatMatrisiViewModel
+@{
+    ViewData["Title"] = $"{Model.TasinmazAd} - Parametreler";
+    var currentPage = ViewBag.Page ?? 1;
+    var pageSize = ViewBag.PageSize ?? 10;
+}
+
+
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <h2 class="page-title" style="margin:0;">@Model.TasinmazAd - Fiyat Parametreleri</h2>
+        <div style="font-size:13px; color:var(--color-muted);">Bu sayfa salt-okunurdur. Düzenleme için Taşınmaz düzenleme ekranını kullanın.</div>
+    </div>
+
+    <div class="table-wrapper" style="overflow-x:auto;">
+        <table class="table table-bordered" style="min-width: 800px;">
+            <thead>
+                <tr>
+                    <th style="width:180px;">Kiracı Kategorisi</th>
+                    @foreach (var col in Model.Kolonlar)
+                    {
+                        <th style="text-align:center;">
+                            <div style="font-size:11px; color:var(--color-muted);">@col.BorcTipiKod</div>
+                            <div style="font-size:13px;">@col.BorcTipiAd</div>
+                        </th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var satir in Model.Satirlar)
+                {
+                    <tr>
+                        <td style="font-weight:600; vertical-align:middle;">@satir.KiraciKategoriAd</td>
+                        @foreach (var hucre in satir.Hucreler)
+                        {
+                            <td style="padding:12px; text-align:center; background: @(hucre.RateVarMi ? "transparent" : "#f9fafb");">
+                                @if (hucre.RateVarMi)
+                                {
+                                    <div style="font-family:'Fraunces',Georgia,serif; font-weight:700; font-size:15px;">
+                                        @hucre.BirimDeger.ToString("N2") ₺
+                                        <small style="font-family:sans-serif; font-size:11px; font-weight:400; color:var(--color-muted);">
+                                            @(hucre.HesaplamaYontemi == KiraTakip.Models.HesaplamaYontemi.Sabit ? "/sabit" : "/m²")
+                                        </small>
+                                    </div>
+                                    <div style="font-size:11px; color:var(--color-muted); margin-top:4px;">
+                                        KDV: %@hucre.KdvOrani.ToString("N0")
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(hucre.Aciklama))
+                                    {
+                                        <div style="font-size:10px; font-style:italic; color:var(--color-muted); margin-top:4px;">
+                                            @hucre.Aciklama
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div style="color:#c8cfd8; font-size:12px;">Tanımsız</div>
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.TotalRows > pageSize)
+    {
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div style="font-size:13px; color:var(--color-muted);">
+                Sayfa @currentPage / @Math.Ceiling((double)Model.TotalRows / pageSize)
+            </div>
+            <div class="btn-group">
+                @if (currentPage > 1)
+                {
+                    <a class="btn btn-sm btn-secondary" asp-action="Index" asp-route-tasinmazId="@Model.TasinmazId" asp-route-page="@(currentPage - 1)" asp-route-pageSize="@pageSize">← Önceki</a>
+                }
+                @if (currentPage * pageSize < Model.TotalRows)
+                {
+                    <a class="btn btn-sm btn-secondary" asp-action="Index" asp-route-tasinmazId="@Model.TasinmazId" asp-route-page="@(currentPage + 1)" asp-route-pageSize="@pageSize">Sonraki →</a>
+                }
+            </div>
+        </div>
+    }
+</div>
+

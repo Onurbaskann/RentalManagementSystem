@@ -4,6 +4,7 @@ using KiraTakip.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KiraTakip.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260511113847_BirimRate_AddKiraciKategori")]
+    partial class BirimRate_AddKiraciKategori
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -222,16 +225,11 @@ namespace KiraTakip.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
 
-                    b.Property<int>("KiraciKategoriId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("BorcTipiId");
 
-                    b.HasIndex("KiraciKategoriId");
-
-                    b.HasIndex("BirimId", "KiraciKategoriId", "BorcTipiId")
+                    b.HasIndex("BirimId", "BorcTipiId")
                         .IsUnique();
 
                     b.ToTable("BirimRateler");
@@ -1466,17 +1464,9 @@ namespace KiraTakip.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("KiraTakip.Models.KiraciKategori", "KiraciKategori")
-                        .WithMany()
-                        .HasForeignKey("KiraciKategoriId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.Navigation("Birim");
 
                     b.Navigation("BorcTipi");
-
-                    b.Navigation("KiraciKategori");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Dekont", b =>

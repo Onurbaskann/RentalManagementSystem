@@ -3,7 +3,7 @@
     ViewData["Title"] = "Anasayfa";
     bool canEdit = User.IsInRole("Admin") || User.IsInRole("Yonetici");
 
-    string TLFormat(decimal v) => v.ToString("N0") + " ₺";
+    string TLFormat(decimal v) => v.ToString("N2") + " ₺";
 
     string DayBadgeCls(int gun) => gun <= 10 ? "day-badge-red" : gun <= 30 ? "day-badge-amber" : "day-badge-green";
 

@@ -45,16 +45,92 @@
     }
 </div>
 
+<script>
+    window._tahakkukBirimler = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        ((List<KiraTakip.Models.Birim>)ViewBag.Birimler)
+            .Select(b => new { id = b.Id, ad = b.Ad, tasinmazId = b.TasinmazId })
+    ));
+</script>
 <div class="card" style="padding:0;overflow:hidden;">
-    <form method="get" class="table-toolbar" action="/Tahakkuk">
-        <input type="search" name="q" value="@q.Q" class="form-control toolbar-search" placeholder="Ara: kiracı, taşınmaz…" />
-        <input type="date" name="from" value="@(q.From?.ToString("yyyy-MM-dd"))" class="form-control toolbar-input" data-tip="Dönem başlangıç" />
-        <input type="date" name="to" value="@(q.To?.ToString("yyyy-MM-dd"))" class="form-control toolbar-input" data-tip="Dönem bitiş" />
-        <input type="number" name="min" value="@q.Min" step="0.01" class="form-control toolbar-input" placeholder="Min ₺" />
-        <input type="number" name="max" value="@q.Max" step="0.01" class="form-control toolbar-input" placeholder="Max ₺" />
+    <form method="get" class="table-toolbar" action="/Tahakkuk" style="gap:10px;padding:12px;"
+          x-data="{
+              tasinmazId: '@(q.TasinmazId?.ToString() ?? "")',
+              birimId: '@(q.BirimId?.ToString() ?? "")',
+              get filtrelenmisBirimler() {
+                  if (!this.tasinmazId) return [];
+                  var tid = parseInt(this.tasinmazId);
+                  return window._tahakkukBirimler.filter(function(b) { return b.tasinmazId === tid; });
+              }
+          }">
+        <input type="search" name="q" value="@q.Q" class="form-control toolbar-search" placeholder="Ara: kiracı, taşınmaz…" style="flex:1;min-width:150px;" />
+
+        <select name="tasinmazId" x-model="tasinmazId" @@change="birimId = ''"
+                class="form-control toolbar-input" style="width:160px;">
+            <option value="">— Tüm Taşınmazlar —</option>
+            @foreach (var t in (List<Tasinmaz>)ViewBag.Tasinmazlar)
+            {
+                <option value="@t.Id">@t.Ad</option>
+            }
+        </select>
+
+        <select name="birimId" x-model="birimId" x-show="filtrelenmisBirimler.length > 0"
+                class="form-control toolbar-input" style="width:160px;">
+            <option value="">— Tüm Birimler —</option>
+            <template x-for="b in filtrelenmisBirimler" :key="b.id">
+                <option :value="b.id" x-text="b.ad" :selected="b.id.toString() === birimId"></option>
+            </template>
+        </select>
+
+        <select name="kiraciId" class="form-control toolbar-input" style="width:160px;">
+            <option value="">— Tüm Kiracılar —</option>
+            @foreach (var k in (List<Kiraci>)ViewBag.Kiracilar)
+            {
+                <option value="@k.Id" selected="@(q.KiraciId == k.Id ? "selected" : null)">@k.GosterimAdi</option>
+            }
+        </select>
+
+        <select name="kaynak" class="form-control toolbar-input" style="width:120px;">
+            <option value="">— Kaynak —</option>
+            <option value="otomatik" selected="@(q.Kaynak == "otomatik" ? "selected" : null)">Otomatik</option>
+            <option value="manuel" selected="@(q.Kaynak == "manuel" ? "selected" : null)">Manuel</option>
+            <option value="rezervasyon" selected="@(q.Kaynak == "rezervasyon" ? "selected" : null)">Rezervasyon</option>
+        </select>
+
+        <select name="yil" class="form-control toolbar-input" style="width:100px;">
+            <option value="">— Yıl —</option>
+            @foreach (var y in (List<int>)ViewBag.MevcutYillar)
+            {
+                <option value="@y" selected="@(q.Yil == y ? "selected" : null)">@y</option>
+            }
+        </select>
+
+        <input type="date" name="from" value="@(q.From?.ToString("yyyy-MM-dd"))" class="form-control toolbar-input" style="width:130px;" />
+        <input type="date" name="to" value="@(q.To?.ToString("yyyy-MM-dd"))" class="form-control toolbar-input" style="width:130px;" />
+        
+        <div style="display:flex;gap:4px;">
+            <input type="number" name="min" value="@q.Min" step="0.01" class="form-control toolbar-input" placeholder="Min ₺" style="width:90px;" />
+            <input type="number" name="max" value="@q.Max" step="0.01" class="form-control toolbar-input" placeholder="Max ₺" style="width:90px;" />
+        </div>
+
         @if (durum != "tum") { <input type="hidden" name="durum" value="@durum" /> }
-        <button type="submit" class="btn btn-primary btn-sm">Filtrele</button>
-        @if (!string.IsNullOrEmpty(q.Q) || q.From.HasValue || q.To.HasValue || q.Min.HasValue || q.Max.HasValue)
+        @{
+            int aktifFiltreSayisi = (string.IsNullOrEmpty(q.Q) ? 0 : 1)
+                + (q.TasinmazId.HasValue ? 1 : 0)
+                + (q.BirimId.HasValue ? 1 : 0)
+                + (q.KiraciId.HasValue ? 1 : 0)
+                + (!string.IsNullOrEmpty(q.Kaynak) ? 1 : 0)
+                + (q.Yil.HasValue ? 1 : 0)
+                + (q.From.HasValue || q.To.HasValue ? 1 : 0)
+                + (q.Min.HasValue || q.Max.HasValue ? 1 : 0);
+        }
+        <button type="submit" class="btn btn-primary btn-sm">
+            Filtrele
+            @if (aktifFiltreSayisi > 0)
+            {
+                <span style="display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;background:rgba(255,255,255,0.3);border-radius:50%;font-size:11px;font-weight:700;margin-left:4px;">@aktifFiltreSayisi</span>
+            }
+        </button>
+        @if (aktifFiltreSayisi > 0)
         {
             <a href="/Tahakkuk@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm">Temizle</a>
         }
@@ -95,7 +171,7 @@
                     };
                     string durumTip = t.Durum switch {
                         TahakkukDurumu.TamOdendi    => "Toplam tutar tamamı tahsil edildi.",
-                        TahakkukDurumu.KismenOdendi => $"Kısmi ödeme alındı; kalan {kalan:N0} ₺.",
+                        TahakkukDurumu.KismenOdendi => $"Kısmi ödeme alındı; kalan {kalan:N2} ₺.",
                         TahakkukDurumu.Gecikti      => "Vade geçti, ödeme henüz alınmadı.",
                         TahakkukDurumu.IptalEdildi  => "Sözleşme feshi nedeniyle iptal edildi.",
                         _                           => "Vade gelmedi; ödeme bekleniyor."
@@ -116,15 +192,15 @@
                             <svg x-show="!open[@t.Id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;vertical-align:middle;"><polyline points="6 9 12 15 18 9"/></svg>
                             @t.DonemBaslangic.ToString("MMMM yyyy")
                         </td>
-                        <td>@t.KiraSozlesmesi.Kiraci.GosterimAdi</td>
+                        <td>@(t.KiraSozlesmesi?.Kiraci?.GosterimAdi ?? "Rezervasyon Ücreti")</td>
                         <td>
-                            <div style="font-weight:500;">@t.KiraSozlesmesi.Birim.Tasinmaz.Ad</div>
-                            <div style="font-size:12px;color:var(--color-muted);">@t.KiraSozlesmesi.Birim.Ad</div>
+                            <div style="font-weight:500;">@(t.KiraSozlesmesi?.Birim?.Tasinmaz?.Ad ?? "Toplantı Salonu")</div>
+                            <div style="font-size:12px;color:var(--color-muted);">@(t.KiraSozlesmesi?.Birim?.Ad ?? "Rezervasyon")</div>
                         </td>
                         <td style="font-size:13px;">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
-                        <td style="font-weight:600;">@t.ToplamTutar.ToString("N0") ₺</td>
-                        <td style="color:#065f46;font-weight:600;">@t.OdenenTutar.ToString("N0") ₺</td>
-                        <td style="@(kalan > 0 ? "color:#991b1b;" : "")font-weight:600;">@kalan.ToString("N0") ₺</td>
+                        <td style="font-weight:600;">@t.ToplamTutar.ToString("N2") ₺</td>
+                        <td style="color:#065f46;font-weight:600;">@t.OdenenTutar.ToString("N2") ₺</td>
+                        <td style="@(kalan > 0 ? "color:#991b1b;" : "")font-weight:600;">@kalan.ToString("N2") ₺</td>
                         <td><span class="badge @durumCls" data-tip="@durumTip">@durumLabel</span></td>
                         <td><span class="badge @tahakkukKaynakCls">@tahakkukKaynakLabel</span></td>
                         <td @@click.stop="">
@@ -158,20 +234,24 @@
                                         @foreach (var k in t.Kalemler.OrderBy(k => k.BorcTipi.Sira))
                                         {
                                             string kaynakCls = k.KaynakTipi switch {
+                                                KaynakTipi.Bulunamadi => "badge-bos",
                                                 KaynakTipi.Sozlesme => "badge-surek",
                                                 KaynakTipi.Birim    => "badge-kirali",
+                                                KaynakTipi.TasinmazKiraciKategoriFiyat => "badge-bireysel",
                                                 _                   => "badge-bos"
                                             };
                                             string kaynakLabel = k.KaynakTipi switch {
+                                                KaynakTipi.Bulunamadi => "Bulunamadı",
                                                 KaynakTipi.Sozlesme => "Pazarlık",
                                                 KaynakTipi.Birim    => "Birim",
+                                                KaynakTipi.TasinmazKiraciKategoriFiyat => "Fiyat Matrisi",
                                                 _                   => "Tarife"
                                             };
                                             <tr style="border-top:1px solid var(--color-border);">
                                                 <td style="padding:5px 8px;font-family:monospace;font-weight:700;font-size:12px;">@k.BorcTipi.Kod</td>
                                                 <td style="padding:5px 8px;">@k.Aciklama</td>
-                                                <td style="padding:5px 8px;text-align:right;">@k.BirimDeger.ToString("N4") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
-                                                <td style="padding:5px 8px;text-align:right;color:var(--color-muted);">@k.Carpan.ToString("F4")</td>
+                                                <td style="padding:5px 8px;text-align:right;">@k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
+                                                <td style="padding:5px 8px;text-align:right;color:var(--color-muted);">@k.Carpan.ToString("F2")</td>
                                                 <td style="padding:5px 8px;text-align:right;font-weight:600;">@k.Tutar.ToString("N2") ₺</td>
                                                 <td style="padding:5px 8px;text-align:right;color:var(--color-muted);">@k.KdvTutari.ToString("N2") ₺</td>
                                                 <td style="padding:5px 8px;text-align:right;font-weight:700;">@k.ToplamTutar.ToString("N2") ₺</td>

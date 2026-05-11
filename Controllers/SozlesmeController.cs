@@ -7,6 +7,7 @@ using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
+using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Controllers;
 
@@ -96,13 +97,14 @@ public class SozlesmeController : Controller
             vm.Tahakkuklar = await _tahakkukService.GetAllAsync(sozlesmeId: id);
         }
 
+        var bugun = DateTime.Today;
         var guncelTahakkuk = await _ctx.KiraTahakkuklar
             .Include(t => t.Kalemler).ThenInclude(k => k.BorcTipi)
-            .Where(t => t.KiraSozlesmesiId == id && t.Durum != TahakkukDurumu.IptalEdildi)
+            .Where(t => t.KiraSozlesmesiId == id && t.Durum != TahakkukDurumu.IptalEdildi && t.DonemBaslangic <= bugun)
             .OrderByDescending(t => t.DonemBaslangic)
             .FirstOrDefaultAsync();
         vm.GuncelKalemler = guncelTahakkuk?.Kalemler
-            .Where(k => !k.BorcTipi.TekSeferlikMi)
+            .Where(k => k.BorcTipi.Davranis == BorcTipiDavranisi.AylikSabit)
             .OrderBy(k => k.BorcTipi.Sira).ToList() ?? new();
         vm.GuncelKalemDonemi = guncelTahakkuk?.DonemBaslangic;
 
@@ -110,7 +112,7 @@ public class SozlesmeController : Controller
         {
             vm.HasRateAccess = true;
             var aktifBorcTipleri = await _ctx.BorcTipleri
-                .Where(b => b.Aktif).OrderBy(b => b.Sira).ToListAsync();
+                .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.ManuelTetiklemeli).OrderBy(b => b.Sira).ToListAsync();
             var mevcutRateler = await _ctx.SozlesmeRateler
                 .Where(r => r.SozlesmeId == id).ToListAsync();
             vm.PazarlikFiyatlari = aktifBorcTipleri.Select(bt =>
@@ -163,22 +165,49 @@ public class SozlesmeController : Controller
 
         if (!ModelState.IsValid) return View(vm);
 
+        var kiraKalemi = vm.SozlesmeKalemleri.FirstOrDefault(k => k.BorcTipiKod == "KIRA");
+        var depozitoKalemi = vm.SozlesmeKalemleri.FirstOrDefault(k => k.BorcTipiKod == "DEPOZITO");
+
+        var kdvUygulanacakMi = kiraKalemi != null && kiraKalemi.KdvOrani > 0;
+        var kdvOrani = kdvUygulanacakMi ? kiraKalemi!.KdvOrani : 0;
+        var kiraBedeli = kiraKalemi?.Tutar ?? 0;
+        var depozito = depozitoKalemi?.Tutar ?? 0;
+
         var s = new KiraSozlesmesi
         {
             BirimId = vm.BirimId!.Value,
             KiraciId = vm.KiraciId,
             BaslangicTarihi = vm.BaslangicTarihi,
             BitisTarihi = vm.BitisTarihi,
-            KiraBedeli = vm.KiraBedeli,
+            KiraBedeli = kiraBedeli,
             Periyot = vm.Periyot,
-            Depozito = vm.Depozito,
+            Depozito = depozito,
             Notlar = vm.Notlar,
             Durum = SozlesmeDurumu.Aktif,
-            KdvUygulanacakMi = vm.KdvUygulanacakMi,
-            KdvOrani = vm.KdvUygulanacakMi ? vm.KdvOrani : 0
+            KdvUygulanacakMi = kdvUygulanacakMi,
+            KdvOrani = kdvOrani
         };
 
         await _sozlesmeService.CreateAsync(s);
+
+        // Override kalemlerini kaydet
+        if (vm.SozlesmeKalemleri != null && vm.SozlesmeKalemleri.Any())
+        {
+            foreach (var k in vm.SozlesmeKalemleri.Where(x => x.KullaniciDegistirdiMi))
+            {
+                var rate = new SozlesmeRate
+                {
+                    SozlesmeId = s.Id,
+                    BorcTipiId = k.BorcTipiId,
+                    BirimDeger = k.Tutar,
+                    HesaplamaYontemi = HesaplamaYontemi.Sabit, // Basitlik için Sabit
+                    KdvOrani = k.KdvOrani
+                };
+                _ctx.SozlesmeRateler.Add(rate);
+            }
+            await _ctx.SaveChangesAsync();
+        }
+
         await _tahakkukUretim.UretSozlesmeIcinAsync(s.Id);
         TempData["Success"] = "Sözleşme başarıyla oluşturuldu.";
         return RedirectToAction("Detay", new { id = s.Id });
@@ -317,5 +346,27 @@ public class SozlesmeController : Controller
     {
         var sonuc = _istatistik.HesaplaKiraArtisi(mevcutBedel, tufeOrani, kdvUygulanacakMi, kdvOrani);
         return Json(sonuc);
+    }
+
+    [HttpGet]
+    [Authorize(Policy = PermissionCatalog.Sozlesme.Create)]
+    public async Task<IActionResult> GetVarsayilanKalemler(int birimId, int kiraciId, DateTime baslangic)
+    {
+        var previews = await _tahakkukUretim.ComposeKalemlerAsync(birimId, kiraciId, baslangic);
+        var result = previews.Select(p => new SozlesmeKalemInputDto
+        {
+            BorcTipiId = p.BorcTipiId,
+            BorcTipiAd = p.BorcTipiAd,
+            BorcTipiKod = p.BorcTipiKod,
+            VarsayilanTutar = p.Tutar,
+            Tutar = p.Tutar,
+            KdvOrani = p.KdvOrani,
+            HesaplamaYontemi = p.HesaplamaYontemi,
+            KaynakTipi = p.KaynakTipi.ToString(),
+            RateBulundu = p.RateBulundu,
+            KullaniciDegistirdiMi = false
+        }).ToList();
+
+        return Json(result);
     }
 }

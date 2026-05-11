@@ -1,4 +1,5 @@
 @model List<KiraTakip.Models.BorcTipi>
+@using KiraTakip.Models
 @{
     ViewData["Title"] = "Borç Tipleri";
 }
@@ -35,8 +36,9 @@
                     <th style="width:60px;">Sıra</th>
                     <th style="width:100px;">Kod</th>
                     <th>Ad</th>
+                    <th style="width:160px;">Davranış</th>
                     <th style="width:100px;">Durum</th>
-                    <th style="width:160px;"></th>
+                    <th style="width:180px;"></th>
                 </tr>
             </thead>
             <tbody>
@@ -46,6 +48,18 @@
                         <td style="text-align:center;color:var(--color-muted);font-size:13px;">@bt.Sira</td>
                         <td><span style="font-family:monospace;font-weight:600;font-size:13px;">@bt.Kod</span></td>
                         <td style="font-weight:500;">@bt.Ad</td>
+                        <td>
+                            @{
+                                var (davranisLabel, davranisColor) = bt.Davranis switch
+                                {
+                                    BorcTipiDavranisi.AylikSabit       => ("Aylık Sabit",        "#1d4ed8"),
+                                    BorcTipiDavranisi.IlkAyTekSeferlik => ("İlk Ay Tek Seferlik","#6d28d9"),
+                                    BorcTipiDavranisi.ManuelTetiklemeli=> ("Manuel Tetiklemeli", "#b45309"),
+                                    _                                  => (bt.Davranis.ToString(), "#374151")
+                                };
+                            }
+                            <span style="font-size:12px;font-weight:600;color:@davranisColor;">@davranisLabel</span>
+                        </td>
                         <td>
                             @if (bt.Aktif)
                             { <span class="badge badge-kirali">Aktif</span> }
@@ -67,7 +81,7 @@
                 }
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--color-muted);">Henüz borç tipi tanımlanmamış.</td></tr>
+                    <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--color-muted);">Henüz borç tipi tanımlanmamış.</td></tr>
                 }
             </tbody>
         </table>

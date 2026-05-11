@@ -4,6 +4,7 @@ using KiraTakip.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KiraTakip.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260508105826_ReplaceTekSeferlikWithDavranis")]
+    partial class ReplaceTekSeferlikWithDavranis
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -222,16 +225,11 @@ namespace KiraTakip.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
 
-                    b.Property<int>("KiraciKategoriId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("BorcTipiId");
 
-                    b.HasIndex("KiraciKategoriId");
-
-                    b.HasIndex("BirimId", "KiraciKategoriId", "BorcTipiId")
+                    b.HasIndex("BirimId", "BorcTipiId")
                         .IsUnique();
 
                     b.ToTable("BirimRateler");
@@ -1060,7 +1058,7 @@ namespace KiraTakip.Migrations
                     b.ToTable("Tasinmazlar");
                 });
 
-            modelBuilder.Entity("KiraTakip.Models.TasinmazKiraciKategoriFiyat", b =>
+            modelBuilder.Entity("KiraTakip.Models.TasinmazKategoriCarpan", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1075,19 +1073,9 @@ namespace KiraTakip.Migrations
                     b.Property<bool>("Aktif")
                         .HasColumnType("bit");
 
-                    b.Property<decimal>("BirimDeger")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("BorcTipiId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("HesaplamaYontemi")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("KdvOrani")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
+                    b.Property<decimal>("Carpan")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<int>("KiraciKategoriId")
                         .HasColumnType("int");
@@ -1100,14 +1088,12 @@ namespace KiraTakip.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BorcTipiId");
-
                     b.HasIndex("KiraciKategoriId");
 
-                    b.HasIndex("TasinmazId", "KiraciKategoriId", "BorcTipiId")
+                    b.HasIndex("TasinmazId", "KiraciKategoriId")
                         .IsUnique();
 
-                    b.ToTable("TasinmazKiraciKategoriFiyatlari");
+                    b.ToTable("TasinmazKategoriCarpanlari");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.TasinmazTipi", b =>
@@ -1466,17 +1452,9 @@ namespace KiraTakip.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("KiraTakip.Models.KiraciKategori", "KiraciKategori")
-                        .WithMany()
-                        .HasForeignKey("KiraciKategoriId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.Navigation("Birim");
 
                     b.Navigation("BorcTipi");
-
-                    b.Navigation("KiraciKategori");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Dekont", b =>
@@ -1689,14 +1667,8 @@ namespace KiraTakip.Migrations
                     b.Navigation("TasinmazTipi");
                 });
 
-            modelBuilder.Entity("KiraTakip.Models.TasinmazKiraciKategoriFiyat", b =>
+            modelBuilder.Entity("KiraTakip.Models.TasinmazKategoriCarpan", b =>
                 {
-                    b.HasOne("KiraTakip.Models.BorcTipi", "BorcTipi")
-                        .WithMany()
-                        .HasForeignKey("BorcTipiId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("KiraTakip.Models.KiraciKategori", "KiraciKategori")
                         .WithMany()
                         .HasForeignKey("KiraciKategoriId")
@@ -1708,8 +1680,6 @@ namespace KiraTakip.Migrations
                         .HasForeignKey("TasinmazId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("BorcTipi");
 
                     b.Navigation("KiraciKategori");
 

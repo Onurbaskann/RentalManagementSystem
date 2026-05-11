@@ -3,9 +3,9 @@
 @{
     ViewData["Title"] = $"Tahakkuk #{Model.Id}";
     var s = Model.KiraSozlesmesi;
-    var kiraci = s.Kiraci;
-    var birim = s.Birim;
-    var tasinmaz = birim.Tasinmaz;
+    var kiraci = s?.Kiraci;
+    var birim = s?.Birim;
+    var tasinmaz = birim?.Tasinmaz;
 
     var kalan = Model.ToplamTutar - Model.OdenenTutar;
 
@@ -42,7 +42,10 @@
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
     <a href="/Tahakkuk" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;">← Tahakkuklar</a>
     <div style="display:flex;gap:8px;">
-        <a href="/Sozlesme/Detay/@s.Id" class="btn btn-sm btn-secondary">Sözleşme Detayı</a>
+        @if (s != null)
+        {
+            <a href="/Sozlesme/Detay/@s.Id" class="btn btn-sm btn-secondary">Sözleşme Detayı</a>
+        }
         @if (canCreate && !iptal && !tamOdendi)
         {
             <a href="/Odeme/Ekle?tahakkukId=@Model.Id" class="btn btn-sm btn-primary">Ödeme Ekle</a>
@@ -81,20 +84,30 @@
     <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--color-border);display:flex;gap:32px;flex-wrap:wrap;font-size:13px;">
         <div>
             <span style="color:var(--color-muted);">Kiracı: </span>
-            <a href="/Kiraci/Detay/@kiraci.Id" style="font-weight:600;text-decoration:none;">@kiraci.GosterimAdi</a>
+            @if (kiraci != null) {
+                <a href="/Kiraci/Detay/@kiraci.Id" style="font-weight:600;text-decoration:none;">@kiraci.GosterimAdi</a>
+            } else {
+                <span style="font-weight:600;">Rezervasyon Sahibi</span>
+            }
         </div>
         <div>
             <span style="color:var(--color-muted);">Taşınmaz: </span>
-            <a href="/Tasinmaz/Detay/@tasinmaz.Id" style="font-weight:600;text-decoration:none;">@tasinmaz.Ad</a>
+            @if (tasinmaz != null) {
+                <a href="/Tasinmaz/Detay/@tasinmaz.Id" style="font-weight:600;text-decoration:none;">@tasinmaz.Ad</a>
+            } else {
+                <span style="font-weight:600;">Toplantı Salonu</span>
+            }
         </div>
         <div>
             <span style="color:var(--color-muted);">Birim: </span>
-            <span style="font-weight:600;">@birim.Ad</span>
+            <span style="font-weight:600;">@(birim?.Ad ?? "Rezervasyon")</span>
         </div>
-        <div>
-            <span style="color:var(--color-muted);">Sözleşme: </span>
-            <a href="/Sozlesme/Detay/@s.Id" style="font-weight:600;text-decoration:none;">#@s.Id</a>
-        </div>
+        @if (s != null) {
+            <div>
+                <span style="color:var(--color-muted);">Sözleşme: </span>
+                <a href="/Sozlesme/Detay/@s.Id" style="font-weight:600;text-decoration:none;">#@s.Id</a>
+            </div>
+        }
     </div>
 </div>
 
@@ -126,18 +139,24 @@
                     @foreach (var k in Model.Kalemler.OrderBy(k => k.BorcTipi.Sira))
                     {
                         string kaynakCls = k.KaynakTipi switch {
+                            KaynakTipi.Bulunamadi => "badge-bos",
                             KaynakTipi.Sozlesme => "badge-surek",
                             KaynakTipi.Birim    => "badge-kirali",
+                            KaynakTipi.TasinmazKiraciKategoriFiyat => "badge-bireysel",
                             _                   => "badge-bos"
                         };
                         string kaynakLabel = k.KaynakTipi switch {
+                            KaynakTipi.Bulunamadi => "Bulunamadı",
                             KaynakTipi.Sozlesme => "Pazarlık",
                             KaynakTipi.Birim    => "Birim",
+                            KaynakTipi.TasinmazKiraciKategoriFiyat => "Fiyat Matrisi",
                             _                   => "Tarife"
                         };
                         string kaynakTip = k.KaynakTipi switch {
+                            KaynakTipi.Bulunamadi => "Fiyat tanımı bulunamadığı için 0₺ olarak üretildi.",
                             KaynakTipi.Sozlesme => "Sözleşmeye özel pazarlık fiyatı kullanıldı.",
                             KaynakTipi.Birim    => "Birim düzeyinde özel fiyat kullanıldı.",
+                            KaynakTipi.TasinmazKiraciKategoriFiyat => "Taşınmaz ve kiracı kategorisine özel matris fiyatı kullanıldı.",
                             _                   => "Genel tarife fiyatı uygulandı."
                         };
                         <tr>
@@ -147,9 +166,9 @@
                                 @(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m² Bazlı" : "Sabit")
                             </td>
                             <td style="text-align:right;font-size:13px;">
-                                @k.BirimDeger.ToString("N4") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")
+                                @k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")
                             </td>
-                            <td style="text-align:right;font-size:13px;color:var(--color-muted);">@k.Carpan.ToString("F4")</td>
+                            <td style="text-align:right;font-size:13px;color:var(--color-muted);">@k.Carpan.ToString("F2")</td>
                             <td style="text-align:right;font-weight:600;">@k.Tutar.ToString("N2") ₺</td>
                             <td style="text-align:right;font-size:13px;color:var(--color-muted);">%@k.KdvOrani.ToString("G")</td>
                             <td style="text-align:right;font-size:13px;color:var(--color-muted);">@k.KdvTutari.ToString("N2") ₺</td>

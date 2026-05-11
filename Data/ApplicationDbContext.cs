@@ -24,7 +24,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<KiraciKategori> KiraciKategorileri { get; set; }
     public DbSet<Sektor> Sektorler { get; set; }
 
-    public DbSet<TasinmazKategoriCarpan> TasinmazKategoriCarpanlari { get; set; }
+    public DbSet<TasinmazKiraciKategoriFiyat> TasinmazKiraciKategoriFiyatlari { get; set; }
 
     public DbSet<RezervasyonUcretKural> RezervasyonUcretKurallari { get; set; }
     public DbSet<ToplantiSalonuRezervasyon> ToplantiSalonuRezervasyonlari { get; set; }
@@ -169,18 +169,23 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(s => s.Kod).IsUnique();
         });
 
-        builder.Entity<TasinmazKategoriCarpan>(entity =>
+        builder.Entity<TasinmazKiraciKategoriFiyat>(entity =>
         {
-            entity.Property(c => c.Carpan).HasPrecision(18, 4);
-            entity.Property(c => c.Aciklama).HasMaxLength(300);
-            entity.HasIndex(c => new { c.TasinmazId, c.KiraciKategoriId }).IsUnique();
-            entity.HasOne(c => c.Tasinmaz)
+            entity.Property(f => f.BirimDeger).HasPrecision(18, 2);
+            entity.Property(f => f.KdvOrani).HasPrecision(5, 2);
+            entity.Property(f => f.Aciklama).HasMaxLength(300);
+            entity.HasIndex(f => new { f.TasinmazId, f.KiraciKategoriId, f.BorcTipiId }).IsUnique();
+            entity.HasOne(f => f.Tasinmaz)
                   .WithMany()
-                  .HasForeignKey(c => c.TasinmazId)
+                  .HasForeignKey(f => f.TasinmazId)
                   .OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(c => c.KiraciKategori)
+            entity.HasOne(f => f.KiraciKategori)
                   .WithMany()
-                  .HasForeignKey(c => c.KiraciKategoriId)
+                  .HasForeignKey(f => f.KiraciKategoriId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(f => f.BorcTipi)
+                  .WithMany()
+                  .HasForeignKey(f => f.BorcTipiId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -231,11 +236,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             entity.Property(r => r.BirimDeger).HasPrecision(18, 4);
             entity.Property(r => r.KdvOrani).HasPrecision(5, 2);
-            entity.HasIndex(r => new { r.BirimId, r.BorcTipiId }).IsUnique();
+            entity.HasIndex(r => new { r.BirimId, r.KiraciKategoriId, r.BorcTipiId }).IsUnique();
             entity.HasOne(r => r.Birim)
                   .WithMany()
                   .HasForeignKey(r => r.BirimId)
                   .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(r => r.KiraciKategori)
+                  .WithMany()
+                  .HasForeignKey(r => r.KiraciKategoriId)
+                  .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(r => r.BorcTipi)
                   .WithMany()
                   .HasForeignKey(r => r.BorcTipiId)

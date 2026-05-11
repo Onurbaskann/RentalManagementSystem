@@ -1,12 +1,22 @@
 @model KiraTakip.Models.ViewModels.BirimOzelFiyatViewModel
+@using KiraTakip.Models
 @{
     ViewData["Title"] = $"{Model.BirimAd} — Özel Fiyatlar";
+    var subtitle = Model.KiralanabilirMi
+        ? "İşaretlenen hücreler için tarife yerine bu fiyatlar kullanılır"
+        : "Bu birim için özel rezervasyon ücreti kuralı tanımlayın";
 }
 
 @if (TempData["Success"] != null)
 {
     <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">
         ✓ @TempData["Success"]
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div style="background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">
+        ✗ @TempData["Error"]
     </div>
 }
 
@@ -16,83 +26,267 @@
             ← @Model.TasinmazAd
         </a>
         <div class="page-title">@Model.BirimAd — Özel Fiyatlar</div>
-        <div class="page-subtitle">İşaretlenen borç tipleri için tarife yerine bu fiyatlar kullanılır</div>
+        <div class="page-subtitle">@subtitle</div>
     </div>
 </div>
 
-<form method="post" action="/Birim/@Model.BirimId/OzelFiyat">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="BirimId" value="@Model.BirimId" />
-    <input type="hidden" name="TasinmazId" value="@Model.TasinmazId" />
+@if (Model.KiralanabilirMi)
+{
+    <!-- Senaryo A: Kiralanabilir birim — KiraciKategori × BorcTipi matrisi -->
+    <form method="post" action="/Birim/@Model.BirimId/OzelFiyat">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="BirimId" value="@Model.BirimId" />
+        <input type="hidden" name="TasinmazId" value="@Model.TasinmazId" />
 
-    <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width:48px;">Aktif</th>
-                        <th style="width:100px;">Kod</th>
-                        <th>Borç Tipi</th>
-                        <th style="width:160px;">Hesaplama Yöntemi</th>
-                        <th style="width:160px;">Birim Değer (₺)</th>
-                        <th style="width:130px;">KDV Oranı (%)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (int i = 0; i < Model.Kalemler.Count; i++)
-                    {
-                        var k = Model.Kalemler[i];
-                        <tr x-data="{ aktif: @k.OzelFiyatAktif.ToString().ToLower() }">
-                            <td style="text-align:center;">
-                                <input type="hidden" name="Kalemler[@i].BorcTipiId" value="@k.BorcTipiId" />
-                                <input type="hidden" name="Kalemler[@i].RateId"     value="@k.RateId" />
-                                <input type="checkbox" name="Kalemler[@i].OzelFiyatAktif" value="true"
-                                       @(k.OzelFiyatAktif ? "checked" : "")
-                                       x-model="aktif" />
-                            </td>
-                            <td><span style="font-family:monospace;font-weight:600;font-size:13px;">@k.BorcTipiKod</span></td>
-                            <td style="font-weight:500;">@k.BorcTipiAd</td>
-                            <td>
-                                <select name="Kalemler[@i].HesaplamaYontemi" class="form-control form-control-sm"
-                                        :disabled="!aktif" x-bind:style="!aktif ? 'opacity:.4' : ''">
-                                    @if (k.HesaplamaYontemi == KiraTakip.Models.HesaplamaYontemi.Sabit)
-                                    {
-                                        <option value="1" selected>Sabit</option>
-                                        <option value="2">m²</option>
-                                    }
-                                    else
-                                    {
-                                        <option value="1">Sabit</option>
-                                        <option value="2" selected>m²</option>
-                                    }
-                                </select>
-                            </td>
-                            <td>
-                                <input type="number" name="Kalemler[@i].BirimDeger" value="@k.BirimDeger"
-                                       class="form-control form-control-sm" step="0.0001" min="0"
-                                       :disabled="!aktif" x-bind:style="!aktif ? 'opacity:.4' : ''" />
-                            </td>
-                            <td>
-                                <input type="number" name="Kalemler[@i].KdvOrani" value="@k.KdvOrani"
-                                       class="form-control form-control-sm" step="0.01" min="0" max="100"
-                                       :disabled="!aktif" x-bind:style="!aktif ? 'opacity:.4' : ''" />
-                            </td>
-                        </tr>
-                    }
-                    @if (!Model.Kalemler.Any())
-                    {
-                        <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--color-muted);">Aktif borç tipi bulunmuyor.</td></tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
+        @if (!Model.Satirlar.Any())
+        {
+            <div class="card" style="padding:24px;text-align:center;color:var(--color-muted);">
+                Aktif kiracı kategorisi veya borç tipi bulunamadı.
+            </div>
+        }
+        else
+        {
+            @for (int i = 0; i < Model.Satirlar.Count; i++)
+            {
+                var satir = Model.Satirlar[i];
+                <div class="card fiyat-kategori-blok" style="margin-bottom:16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--color-border);">
+                        <div style="font-size:14px;font-weight:700;">@satir.KiraciKategoriAd</div>
+                        <button type="button" onclick="topluKdvAta(this, 20)"
+                                style="font-size:11px;color:var(--color-muted);background:none;border:1px solid var(--color-border);border-radius:5px;cursor:pointer;padding:3px 10px;">
+                            Tüm KDV'leri 20 yap
+                        </button>
+                    </div>
 
-    @if (Model.Kalemler.Any())
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left;font-size:11px;color:var(--color-muted);font-weight:500;padding:4px 12px 6px 0;">Borç Tipi</th>
+                                <th style="text-align:center;font-size:11px;color:var(--color-muted);font-weight:500;padding:4px 12px 6px;width:56px;">Aktif</th>
+                                <th style="text-align:left;font-size:11px;color:var(--color-muted);font-weight:500;padding:4px 12px 6px;width:145px;">Tutar (₺)</th>
+                                <th style="text-align:left;font-size:11px;color:var(--color-muted);font-weight:500;padding:4px 12px 6px;width:110px;">Yöntem</th>
+                                <th style="text-align:left;font-size:11px;color:var(--color-muted);font-weight:500;padding:4px 0 6px 12px;width:105px;">KDV %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int j = 0; j < satir.Hucreler.Count; j++)
+                            {
+                                var hucre = satir.Hucreler[j];
+                                var kolon = Model.Kolonlar[j];
+                                var isDepozito = kolon.BorcTipiKod == "DEPOZITO";
+                                var isIlkAy = kolon.BorcTipiDavranisi == BorcTipiDavranisi.IlkAyTekSeferlik;
+                                <tr data-depozito="@(isDepozito ? "true" : "false")"
+                                    x-data="{ aktif: @hucre.OzelFiyatAktif.ToString().ToLower() }">
+                                    <td style="padding:6px 12px 6px 0;vertical-align:middle;">
+                                        <input type="hidden" name="Satirlar[@i].Hucreler[@j].KiraciKategoriId" value="@hucre.KiraciKategoriId" />
+                                        <input type="hidden" name="Satirlar[@i].Hucreler[@j].BorcTipiId" value="@hucre.BorcTipiId" />
+                                        <input type="hidden" name="Satirlar[@i].Hucreler[@j].RateId" value="@hucre.RateId" />
+                                        <div style="display:flex;align-items:center;gap:8px;">
+                                            <span :style="aktif ? 'background:#22c55e' : 'background:#d1d5db'"
+                                                  style="width:8px;height:8px;border-radius:50%;flex-shrink:0;"></span>
+                                            <div>
+                                                <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
+                                                    <span style="font-size:10px;color:var(--color-muted);">@kolon.BorcTipiKod</span>
+                                                    @if (isIlkAy)
+                                                    {
+                                                        <span style="font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;background:#fff3e0;color:#e65100;">İlk Ay</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span style="font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;background:#e3f2fd;color:#1565c0;">Aylık</span>
+                                                    }
+                                                </div>
+                                                <div style="font-size:12.5px;font-weight:500;">@kolon.BorcTipiAd</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="padding:6px 12px;vertical-align:middle;text-align:center;">
+                                        <input type="checkbox" name="Satirlar[@i].Hucreler[@j].OzelFiyatAktif" value="true"
+                                               @(hucre.OzelFiyatAktif ? "checked" : "")
+                                               x-model="aktif" />
+                                    </td>
+                                    <td style="padding:6px 12px;vertical-align:middle;">
+                                        <div style="display:flex;align-items:stretch;border:1px solid #ced4da;border-radius:6px;overflow:hidden;"
+                                             :style="!aktif ? 'opacity:.4' : ''">
+                                            <span style="padding:5px 8px;background:#f8f9fa;font-size:12px;color:#6c757d;border-right:1px solid #ced4da;display:flex;align-items:center;">₺</span>
+                                            <input type="number" step="0.01" min="0"
+                                                   name="Satirlar[@i].Hucreler[@j].BirimDeger" value="@hucre.BirimDeger"
+                                                   :disabled="!aktif"
+                                                   style="border:none;outline:none;padding:5px 8px;width:85px;font-size:13px;background:transparent;" />
+                                        </div>
+                                    </td>
+                                    <td style="padding:6px 12px;vertical-align:middle;">
+                                        @if (isDepozito)
+                                        {
+                                            <input type="hidden" name="Satirlar[@i].Hucreler[@j].HesaplamaYontemi" value="@((int)HesaplamaYontemi.Sabit)" />
+                                            <select class="form-control form-control-sm" disabled style="width:90px;opacity:0.45;cursor:not-allowed;">
+                                                <option>Sabit</option>
+                                            </select>
+                                        }
+                                        else
+                                        {
+                                            <select class="form-control form-control-sm" style="width:90px;"
+                                                    name="Satirlar[@i].Hucreler[@j].HesaplamaYontemi"
+                                                    :disabled="!aktif" :style="!aktif ? 'opacity:.4' : ''">
+                                                <option value="@((int)HesaplamaYontemi.Sabit)" selected="@(hucre.HesaplamaYontemi == HesaplamaYontemi.Sabit)">Sabit</option>
+                                                <option value="@((int)HesaplamaYontemi.M2)" selected="@(hucre.HesaplamaYontemi == HesaplamaYontemi.M2)">m²</option>
+                                            </select>
+                                        }
+                                    </td>
+                                    <td style="padding:6px 0 6px 12px;vertical-align:middle;">
+                                        <div style="display:flex;align-items:stretch;border:1px solid #ced4da;border-radius:6px;overflow:hidden;"
+                                             :style="!aktif ? 'opacity:.4' : ''">
+                                            <input type="number" step="0.01" min="0" max="100"
+                                                   name="Satirlar[@i].Hucreler[@j].KdvOrani" value="@hucre.KdvOrani"
+                                                   :disabled="!aktif"
+                                                   style="border:none;outline:none;padding:5px 8px;width:60px;font-size:13px;background:transparent;" />
+                                            <span style="padding:5px 8px;background:#f8f9fa;font-size:12px;color:#6c757d;border-left:1px solid #ced4da;display:flex;align-items:center;">%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            <div style="display:flex;gap:8px;margin-top:4px;">
+                <button type="submit" class="btn btn-primary">Kaydet</button>
+                <a href="/Tasinmaz/Detay/@Model.TasinmazId" class="btn btn-secondary">İptal</a>
+            </div>
+        }
+    </form>
+
+    <script>
+        function topluKdvAta(btn, value) {
+            const blok = btn.closest('.fiyat-kategori-blok');
+            blok.querySelectorAll('tr[data-depozito="false"] input[name*="KdvOrani"]').forEach(function(inp) {
+                inp.value = value;
+            });
+        }
+    </script>
+}
+else if (Model.RezervasyonYapilabilirMi)
+{
+    <!-- Senaryo B: Rezervasyon birimi — RezervasyonUcretKural formu -->
+    @if (Model.GlobalRezervasyonKural != null)
     {
-        <div style="display:flex;gap:8px;">
-            <button type="submit" class="btn btn-primary">Kaydet</button>
-            <a href="/Tasinmaz/Detay/@Model.TasinmazId" class="btn btn-secondary">İptal</a>
+        <div class="card" style="margin-bottom:16px;background:#f8faff;border-color:#c7d8f8;">
+            <div style="font-size:12.5px;color:#4b6cb7;font-weight:600;margin-bottom:6px;">Global Kural (Varsayılan)</div>
+            <div style="font-size:13px;color:var(--color-muted);">
+                @Model.GlobalRezervasyonKural.PeriyotUcreti.ToString("N0") ₺ /
+                @Model.GlobalRezervasyonKural.UcretlendirmePeriyoduDakika dk ·
+                Ücretsiz: @Model.GlobalRezervasyonKural.UcretsizSureDakika dk ·
+                KDV: %@Model.GlobalRezervasyonKural.KdvOrani.ToString("N0")
+            </div>
         </div>
     }
-</form>
+
+    @if (Model.OzelRezervasyonKural == null)
+    {
+        <div class="card" style="display:flex;align-items:center;gap:16px;padding:20px 24px;">
+            <div style="flex:1;">
+                <div style="font-size:14px;font-weight:600;margin-bottom:4px;">Özel rezervasyon kuralı yok</div>
+                <div style="font-size:13px;color:var(--color-muted);">Bu birim için global kural uygulanır. Özel kural tanımlamak için aşağıdaki formu kullanın.</div>
+            </div>
+        </div>
+        <form method="post" action="/Birim/@Model.BirimId/RezKuralKaydet" style="margin-top:16px;">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="Id" value="0" />
+            @{
+                int defPeriyot = Model.GlobalRezervasyonKural?.UcretlendirmePeriyoduDakika ?? 60;
+                int defUcretsiz = Model.GlobalRezervasyonKural?.UcretsizSureDakika ?? 0;
+                decimal defUcret = Model.GlobalRezervasyonKural?.PeriyotUcreti ?? 0;
+                decimal defKdv   = Model.GlobalRezervasyonKural?.KdvOrani ?? 20;
+            }
+            <div class="card" style="max-width:520px;">
+                <div class="card-title" style="margin-bottom:16px;">Özel Kural Tanımla</div>
+                <div class="form-group">
+                    <label class="form-label">Ücretsiz Süre (dk)</label>
+                    <input type="number" name="UcretsizSureDakika" value="@defUcretsiz" class="form-control" min="0" max="1440" style="width:140px;" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ücretlendirme Periyodu (dk)</label>
+                    <input type="number" name="UcretlendirmePeriyoduDakika" value="@defPeriyot" class="form-control" min="1" max="1440" style="width:140px;" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Periyot Ücreti (₺)</label>
+                    <input type="number" name="PeriyotUcreti" value="@defUcret" class="form-control" min="0" step="0.01" style="width:180px;" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">KDV Oranı (%)</label>
+                    <input type="number" name="KdvOrani" value="@defKdv" class="form-control" min="0" max="100" step="0.01" style="width:120px;" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Açıklama</label>
+                    <input type="text" name="Aciklama" class="form-control" maxlength="300" />
+                </div>
+                <input type="hidden" name="Aktif" value="true" />
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                    <a href="/Tasinmaz/Detay/@Model.TasinmazId" class="btn btn-secondary">İptal</a>
+                </div>
+            </div>
+        </form>
+    }
+    else
+    {
+        <form method="post" action="/Birim/@Model.BirimId/RezKuralKaydet">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="Id" value="@Model.OzelRezervasyonKural.Id" />
+            <div class="card" style="max-width:520px;">
+                <div class="card-title" style="margin-bottom:16px;">Özel Rezervasyon Kuralı</div>
+                <div class="form-group">
+                    <label class="form-label">Ücretsiz Süre (dk)</label>
+                    <input type="number" name="UcretsizSureDakika" value="@Model.OzelRezervasyonKural.UcretsizSureDakika" class="form-control" min="0" max="1440" style="width:140px;" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ücretlendirme Periyodu (dk)</label>
+                    <input type="number" name="UcretlendirmePeriyoduDakika" value="@Model.OzelRezervasyonKural.UcretlendirmePeriyoduDakika" class="form-control" min="1" max="1440" style="width:140px;" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Periyot Ücreti (₺)</label>
+                    <input type="number" name="PeriyotUcreti" value="@Model.OzelRezervasyonKural.PeriyotUcreti" class="form-control" min="0" step="0.01" style="width:180px;" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">KDV Oranı (%)</label>
+                    <input type="number" name="KdvOrani" value="@Model.OzelRezervasyonKural.KdvOrani" class="form-control" min="0" max="100" step="0.01" style="width:120px;" />
+                </div>
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox" name="Aktif" value="true" @(Model.OzelRezervasyonKural.Aktif ? "checked" : "") />
+                        <span class="form-label" style="margin:0;">Aktif</span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Açıklama</label>
+                    <input type="text" name="Aciklama" value="@Model.OzelRezervasyonKural.Aciklama" class="form-control" maxlength="300" />
+                </div>
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                    <a href="/Tasinmaz/Detay/@Model.TasinmazId" class="btn btn-secondary">İptal</a>
+                </div>
+            </div>
+        </form>
+
+        <form method="post" action="/Birim/@Model.BirimId/RezKuralSifirla" style="margin-top:12px;">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-secondary"
+                    data-confirm="Özel kural silinecek. Global kural devreye girecek. Onaylıyor musunuz?">
+                Sıfırla (Global Kuralı Kullan)
+            </button>
+        </form>
+    }
+}
+else
+{
+    <!-- Senaryo C: Hibrit — hata kartı -->
+    <div class="card" style="border-color:#fca5a5;background:#fef2f2;padding:20px 24px;">
+        <div style="font-size:14px;font-weight:700;color:#991b1b;margin-bottom:6px;">Birim türü hatalı tanımlı</div>
+        <div style="font-size:13px;color:#7f1d1d;">
+            Bu birim türünde hem Kiralanabilir hem de Rezervasyon yapılabilir işaretli değil veya ikisi de işaretli.
+            Lütfen yöneticiye bildirin.
+        </div>
+        <a href="/Tasinmaz/Detay/@Model.TasinmazId" class="btn btn-secondary" style="margin-top:14px;">Geri Dön</a>
+    </div>
+}

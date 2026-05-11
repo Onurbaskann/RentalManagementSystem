@@ -11,7 +11,16 @@
         KiraDurumu.SuresiDolmakUzere => "<span class='badge badge-surek'>Süresi Dolmak Üzere</span>",
         _ => "<span class='badge badge-bos'>Boş</span>"
     };
+}
 
+@functions {
+    string KatEtiketi(int? katNo) => katNo switch
+    {
+        null  => "Kat Belirtilmemiş",
+        0     => "Zemin Kat",
+        < 0   => $"{Math.Abs(katNo.Value)}. Bodrum",
+        _     => $"{katNo}. Kat"
+    };
 }
 
 @if (TempData["Success"] != null)
@@ -43,7 +52,8 @@
         <button class="tab">Genel Bilgiler</button>
         <button class="tab">Birimler (@Model.Birimler.Count)</button>
         <button class="tab">Sözleşme Geçmişi</button>
-        <button class="tab" id="tab-carpanlar">Kategori Çarpanları (@Model.Carpanlar.Count)</button>
+        <button class="tab">Rezervasyonlar (@Model.Rezervasyonlar.Count)</button>
+        <button class="tab">Kira Tarifeleri</button>
     </div>
 
     <!-- Tab 1: Genel Bilgiler -->
@@ -136,112 +146,189 @@
         {
             var katGruplari = Model.Birimler
                 .GroupBy(b => b.Birim.KatNo)
-                .OrderBy(g => g.Key ?? 999)
+                .OrderByDescending(g => g.Key ?? int.MinValue)
                 .ToList();
 
-            foreach (var grup in katGruplari)
-            {
-                int katKirali = grup.Count(b => b.Durum == KiraDurumu.Kirali || b.Durum == KiraDurumu.SuresiDolmakUzere);
-                <div style="margin-bottom:24px;">
-                    <!-- Kat Başlığı -->
-                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-                        <div style="display:inline-flex;align-items:center;gap:8px;background:var(--color-primary-light);border:1px solid #a3e0d2;border-radius:8px;padding:6px 14px;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-                            <span style="font-size:13px;font-weight:700;color:var(--color-primary);">@(grup.Key.HasValue ? $"{grup.Key}. Kat" : "Kat Belirtilmemiş")</span>
-                        </div>
-                        <span style="font-size:12px;color:var(--color-muted);font-weight:500;">@grup.Count() birim · @katKirali kiralı</span>
-                        <div style="height:1px;flex:1;background:var(--color-border);"></div>
-                    </div>
+            var katBosMapRaw = katGruplari.ToDictionary(
+                g => g.Key.HasValue ? g.Key.Value.ToString() : "none",
+                g => g.Any(b => b.AktifSozlesme == null)
+            );
+            var katKiraliMapRaw = katGruplari.ToDictionary(
+                g => g.Key.HasValue ? g.Key.Value.ToString() : "none",
+                g => g.Any(b => b.AktifSozlesme != null)
+            );
+            var katBosMapJson = System.Text.Json.JsonSerializer.Serialize(katBosMapRaw);
+            var katKiraliMapJson = System.Text.Json.JsonSerializer.Serialize(katKiraliMapRaw);
 
-                    <!-- Kat Tablosu -->
-                    <div class="card" style="padding:0;overflow:hidden;">
-                        <div class="table-wrapper" style="margin:0;">
-                            <table style="table-layout:fixed;width:100%;">
-                                <colgroup>
-                                    <col style="width:72px;" />
-                                    <col style="width:auto;" />
-                                    <col style="width:80px;" />
-                                    <col style="width:140px;" />
-                                    <col style="width:auto;" />
-                                    <col style="width:130px;" />
-                                    <col style="width:120px;" />
-                                    <col style="width:110px;" />
-                                </colgroup>
-                                <thead>
-                                    <tr>
-                                        <th>Ofis No</th>
-                                        <th>Ad</th>
-                                        <th>m²</th>
-                                        <th>Durum</th>
-                                        <th>Kiracı</th>
-                                        <th>Bitiş</th>
-                                        <th>Kira Bedeli</th>
-                                        <th style="text-align:center;">İşlem</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var b in grup.OrderBy(x => x.Birim.OfisNo))
-                                    {
-                                        <tr>
-                                            <td>
-                                                <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--color-primary);background:var(--color-primary-light);padding:3px 8px;border-radius:6px;">@b.Birim.OfisNo</span>
-                                            </td>
-                                            <td style="font-weight:600;font-size:13.5px;">@b.Birim.Ad</td>
-                                            <td>
-                                                <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--color-muted);">@b.Birim.Yuzolcumu.ToString("N0")</span>
-                                                <span style="font-size:11px;color:var(--color-muted);">m²</span>
-                                            </td>
-                                            <td>@Html.Raw(DurumBadge(b.Durum))</td>
-                                            <td>
-                                                @if (b.AktifSozlesme != null)
-                                                {
-                                                    <a href="/Kiraci/Detay/@b.AktifSozlesme.KiraciId" style="font-weight:600;color:var(--color-primary);text-decoration:none;font-size:13px;">@b.AktifSozlesme.Kiraci.GosterimAdi</a>
-                                                }
-                                                else { <span style="color:#c8cfd8;">—</span> }
-                                            </td>
-                                            <td>
-                                                @if (b.AktifSozlesme != null)
-                                                {
-                                                    var kalanGun = (int)(b.AktifSozlesme.BitisTarihi - DateTime.Now).TotalDays;
-                                                    <div style="display:flex;align-items:center;gap:6px;">
-                                                        <span style="font-size:13px;font-weight:500;">@b.AktifSozlesme.BitisTarihi.ToString("dd.MM.yyyy")</span>
-                                                        @if (kalanGun <= 30) { <span class="day-badge @(kalanGun <= 10 ? "day-badge-red" : "day-badge-amber")" style="font-size:10.5px;padding:2px 7px;">@kalanGun g</span> }
-                                                    </div>
-                                                }
-                                                else { <span style="color:#c8cfd8;">—</span> }
-                                            </td>
-                                            <td>
-                                                @if (b.AktifSozlesme != null)
-                                                {
-                                                    <div>
-                                                        <span style="font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:14px;">@b.AktifSozlesme.KiraBedeli.ToString("N0") ₺</span>
-                                                        <span style="font-size:11px;color:var(--color-muted);margin-left:1px;">/@(b.AktifSozlesme.Periyot == KiraPeriyodu.Aylik ? "ay" : "yıl")</span>
-                                                    </div>
-                                                }
-                                                else { <span style="color:#c8cfd8;">—</span> }
-                                            </td>
-                                            <td style="text-align:center;display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
-                                                @if (b.AktifSozlesme != null)
-                                                {
-                                                    <a href="/Sozlesme/Detay/@b.AktifSozlesme.Id" class="btn btn-sm btn-secondary">Sözleşme</a>
-                                                }
-                                                else if (canEdit)
-                                                {
-                                                    <a href="/Sozlesme/Ekle?birimId=@b.Birim.Id" class="btn btn-sm btn-primary">Kiraya Ver</a>
-                                                }
-                                                @if (canManageRate)
-                                                {
-                                                    <a href="/Birim/@b.Birim.Id/OzelFiyat" class="btn btn-sm btn-secondary" title="Özel Fiyatlar">₺</a>
-                                                }
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
+            <div x-data='{ "filter": "tum", "openFloors": {}, "search": "", "katBosMap": @Html.Raw(katBosMapJson), "katKiraliMap": @Html.Raw(katKiraliMapJson) }'
+                 x-init="$watch('filter', v => {
+                     if (v !== 'tum') {
+                         for (const [k, hasEmpty] of Object.entries(katBosMap)) {
+                             if (v === 'bos') openFloors[k] = hasEmpty;
+                             else if (v === 'kirali') openFloors[k] = katKiraliMap[k];
+                             else openFloors[k] = false;
+                         }
+                     }
+                 })">
+
+                <!-- Filtre Bar -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;">
+                    <select x-model="filter" class="form-control" style="width:auto;min-width:150px;font-size:13px;padding:6px 10px;">
+                        <option value="tum">Tüm Birimler</option>
+                        <option value="bos">Boş</option>
+                        <option value="kirali">Kiralı</option>
+                    </select>
+                    <input type="text" x-model="search" placeholder="Birim ara..." class="form-control" style="width:180px;font-size:13px;padding:6px 10px;" />
+                    <button type="button" class="btn btn-sm btn-secondary"
+                            @@click="filter = 'tum'; Object.keys(katBosMap).forEach(k => { openFloors[k] = true })">
+                        Tümünü Aç
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary"
+                            @@click="filter = 'tum'; Object.keys(katBosMap).forEach(k => { openFloors[k] = false })">
+                        Tümünü Kapat
+                    </button>
+                </div>
+
+                <!-- Kat Accordion'ları -->
+                @foreach (var grup in katGruplari)
+                {
+                    var katKey = grup.Key.HasValue ? grup.Key.Value.ToString() : "none";
+                    int katBirimSayisi = grup.Count();
+                    int katBos = grup.Count(b => b.AktifSozlesme == null);
+                    int katRez = grup.Count(b => b.Birim.BirimTuru?.RezervasyonYapilabilirMi == true);
+
+                    <div style="margin-bottom:8px;">
+                        <!-- Accordion Header -->
+                        <div @@click="openFloors['@katKey'] = !openFloors['@katKey']"
+                             style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--color-primary-light);border:1px solid #a3e0d2;border-radius:8px;cursor:pointer;user-select:none;"
+                             :style="openFloors['@katKey'] ? 'border-radius:8px 8px 0 0;border-bottom-color:transparent;' : ''">
+                            <svg :style="openFloors['@katKey'] ? 'transform:rotate(90deg)' : ''"
+                                 style="transition:transform 0.18s;flex-shrink:0;"
+                                 width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5">
+                                <polyline points="9 18 15 12 9 6"/>
+                            </svg>
+                            <span style="font-size:13px;font-weight:700;color:var(--color-primary);">@KatEtiketi(grup.Key)</span>
+                            <span style="font-size:12px;color:var(--color-muted);font-weight:500;">
+                                @katBirimSayisi birim@(katBos > 0 ? $" · {katBos} boş" : "")@(katRez > 0 ? $" · {katRez} rezervasyon" : "")
+                            </span>
+                            <div style="height:1px;flex:1;background:#a3e0d2;"></div>
+                        </div>
+
+                        <!-- Accordion Body -->
+                        <div x-show="openFloors['@katKey']" style="display:none;">
+                            <div class="card" style="padding:0;overflow:hidden;border-radius:0 0 8px 8px;border-top:none;">
+                                <div class="table-wrapper" style="margin:0;">
+                                    <table style="table-layout:fixed;width:100%;">
+                                        <colgroup>
+                                            <col style="width:72px;" />
+                                            <col style="width:auto;" />
+                                            <col style="width:80px;" />
+                                            <col style="width:130px;" />
+                                            <col style="width:auto;" />
+                                            <col style="width:125px;" />
+                                            <col style="width:140px;" />
+                                            <col style="width:110px;" />
+                                        </colgroup>
+                                        <thead>
+                                            <tr>
+                                                <th>No</th>
+                                                <th>Ad</th>
+                                                <th>m²</th>
+                                                <th>Durum</th>
+                                                <th>Kiracı</th>
+                                                <th>Bitiş</th>
+                                                <th>Bedel</th>
+                                                <th style="text-align:center;">İşlem</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var b in grup.OrderBy(x => x.Birim.OfisNo))
+                                            {
+                                                var durumData = b.AktifSozlesme != null ? "kirali" : "bos";
+                                                var searchData = ((b.Birim.OfisNo ?? "") + " " + (b.Birim.Ad ?? "")).ToLowerInvariant();
+                                                <tr data-durum="@durumData"
+                                                    data-search="@searchData"
+                                                    x-show="(filter === 'tum' || $el.getAttribute('data-durum') === filter) && (search === '' || $el.getAttribute('data-search').includes(search.toLowerCase()))">
+                                                    <td>
+                                                        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--color-primary);background:var(--color-primary-light);padding:3px 8px;border-radius:6px;">@b.Birim.OfisNo</span>
+                                                    </td>
+                                                    <td style="font-weight:600;font-size:13.5px;">@b.Birim.Ad</td>
+                                                    <td>
+                                                        <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--color-muted);">@b.Birim.Yuzolcumu.ToString("N0")</span>
+                                                        <span style="font-size:11px;color:var(--color-muted);">m²</span>
+                                                    </td>
+                                                    <td>@Html.Raw(DurumBadge(b.Durum))</td>
+                                                    <td>
+                                                        @if (b.AktifSozlesme != null)
+                                                        {
+                                                            <a href="/Kiraci/Detay/@b.AktifSozlesme.KiraciId" style="font-weight:600;color:var(--color-primary);text-decoration:none;font-size:13px;">@b.AktifSozlesme.Kiraci.GosterimAdi</a>
+                                                        }
+                                                        else { <span style="color:#c8cfd8;">—</span> }
+                                                    </td>
+                                                    <td>
+                                                        @if (b.AktifSozlesme != null)
+                                                        {
+                                                            var kalanGun = (int)(b.AktifSozlesme.BitisTarihi - DateTime.Now).TotalDays;
+                                                            <div style="display:flex;align-items:center;gap:6px;">
+                                                                <span style="font-size:13px;font-weight:500;">@b.AktifSozlesme.BitisTarihi.ToString("dd.MM.yyyy")</span>
+                                                                @if (kalanGun <= 30) { <span class="day-badge @(kalanGun <= 10 ? "day-badge-red" : "day-badge-amber")" style="font-size:10.5px;padding:2px 7px;">@kalanGun g</span> }
+                                                            </div>
+                                                        }
+                                                        else { <span style="color:#c8cfd8;">—</span> }
+                                                    </td>
+                                                    <td>
+                                                        @if (b.Birim.BirimTuru?.RezervasyonYapilabilirMi == true)
+                                                        {
+                                                            @if (b.RezKural != null)
+                                                            {
+                                                                <span style="font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:13.5px;">@b.RezKural.PeriyotUcreti.ToString("N0") ₺</span>
+                                                                <span style="font-size:11px;color:var(--color-muted);margin-left:1px;">/ @b.RezKural.UcretlendirmePeriyoduDakika dk</span>
+                                                            }
+                                                            else { <span style="color:#c8cfd8;font-size:12px;">global kural</span> }
+                                                        }
+                                                        else if (b.AktifSozlesme != null)
+                                                        {
+                                                            <div>
+                                                                <span style="font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:14px;">@b.AktifSozlesme.KiraBedeli.ToString("N0") ₺</span>
+                                                                <span style="font-size:11px;color:var(--color-muted);margin-left:1px;">/@(b.AktifSozlesme.Periyot == KiraPeriyodu.Aylik ? "ay" : "yıl")</span>
+                                                            </div>
+                                                        }
+                                                        else { <span style="color:#c8cfd8;">—</span> }
+                                                    </td>
+                                                    <td style="text-align:center;display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
+                                                        @if (b.Birim.BirimTuru?.RezervasyonYapilabilirMi == true)
+                                                        {
+                                                            @if (canEdit)
+                                                            {
+                                                                <a href="/Rezervasyon/Ekle?birimId=@b.Birim.Id" class="btn btn-sm btn-primary">Rezervasyon Yap</a>
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            @if (b.AktifSozlesme != null)
+                                                            {
+                                                                <a href="/Sozlesme/Detay/@b.AktifSozlesme.Id" class="btn btn-sm btn-secondary">Sözleşme</a>
+                                                            }
+                                                            else if (canEdit)
+                                                            {
+                                                                <a href="/Sozlesme/Ekle?birimId=@b.Birim.Id" class="btn btn-sm btn-primary">Kiraya Ver</a>
+                                                            }
+                                                        }
+                                                        @if (canManageRate)
+                                                        {
+                                                            <a href="/Birim/@b.Birim.Id/OzelFiyat" class="btn btn-sm btn-secondary" title="Özel Fiyatlar">₺</a>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            }
+                }
+            </div>
         }
         else
         {
@@ -254,7 +341,7 @@
                             <col style="width:140px;" />
                             <col style="width:auto;" />
                             <col style="width:130px;" />
-                            <col style="width:120px;" />
+                            <col style="width:140px;" />
                             <col style="width:110px;" />
                         </colgroup>
                         <thead>
@@ -264,7 +351,7 @@
                                 <th>Durum</th>
                                 <th>Kiracı</th>
                                 <th>Bitiş Tarihi</th>
-                                <th>Kira Bedeli</th>
+                                <th>Bedel</th>
                                 <th style="text-align:center;">İşlem</th>
                             </tr>
                         </thead>
@@ -297,7 +384,16 @@
                                         else { <span style="color:#c8cfd8;">—</span> }
                                     </td>
                                     <td>
-                                        @if (b.AktifSozlesme != null)
+                                        @if (b.Birim.BirimTuru?.RezervasyonYapilabilirMi == true)
+                                        {
+                                            @if (b.RezKural != null)
+                                            {
+                                                <span style="font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:13.5px;">@b.RezKural.PeriyotUcreti.ToString("N0") ₺</span>
+                                                <span style="font-size:11px;color:var(--color-muted);margin-left:1px;">/ @b.RezKural.UcretlendirmePeriyoduDakika dk</span>
+                                            }
+                                            else { <span style="color:#c8cfd8;font-size:12px;">global kural</span> }
+                                        }
+                                        else if (b.AktifSozlesme != null)
                                         {
                                             <div>
                                                 <span style="font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:14px;">@b.AktifSozlesme.KiraBedeli.ToString("N0") ₺</span>
@@ -307,13 +403,23 @@
                                         else { <span style="color:#c8cfd8;">—</span> }
                                     </td>
                                     <td style="text-align:center;display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
-                                        @if (b.AktifSozlesme != null)
+                                        @if (b.Birim.BirimTuru?.RezervasyonYapilabilirMi == true)
                                         {
-                                            <a href="/Sozlesme/Detay/@b.AktifSozlesme.Id" class="btn btn-sm btn-secondary">Sözleşme</a>
+                                            @if (canEdit)
+                                            {
+                                                <a href="/Rezervasyon/Ekle?birimId=@b.Birim.Id" class="btn btn-sm btn-primary">Rezervasyon Yap</a>
+                                            }
                                         }
-                                        else if (canEdit)
+                                        else
                                         {
-                                            <a href="/Sozlesme/Ekle?birimId=@b.Birim.Id" class="btn btn-sm btn-primary">Kiraya Ver</a>
+                                            @if (b.AktifSozlesme != null)
+                                            {
+                                                <a href="/Sozlesme/Detay/@b.AktifSozlesme.Id" class="btn btn-sm btn-secondary">Sözleşme</a>
+                                            }
+                                            else if (canEdit)
+                                            {
+                                                <a href="/Sozlesme/Ekle?birimId=@b.Birim.Id" class="btn btn-sm btn-primary">Kiraya Ver</a>
+                                            }
                                         }
                                         @if (canManageRate)
                                         {
@@ -382,79 +488,252 @@
             </div>
         }
     </div>
-</div>
 
-    <!-- Tab 4: Kategori Çarpanları -->
+    <!-- Tab 4: Rezervasyonlar -->
     <div class="tab-content">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-            <div>
-                <div style="font-size:14px;font-weight:600;">m² Bazlı Kira Çarpanları</div>
-                <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">Kira = Birim m² × Çarpan. SözleşmeRate veya BirimRate varsa öncelik onlara aittir.</div>
+        @if (!Model.Rezervasyonlar.Any())
+        {
+            <div style="padding:32px;text-align:center;color:var(--color-muted);">Henüz rezervasyon kaydı yok.</div>
+        }
+        else
+        {
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Birim</th>
+                            <th>Kiracı</th>
+                            <th>Başlangıç</th>
+                            <th>Bitiş</th>
+                            <th>Süre</th>
+                            <th>Tutar</th>
+                            <th>Durum</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model.Rezervasyonlar)
+                        {
+                            var rezDurumBadge = r.Durum switch {
+                                KiraTakip.Models.RezervasyonDurumu.Planlandi         => "<span class='badge' style='background:#e3f2fd;color:#1565c0;'>Planlandı</span>",
+                                KiraTakip.Models.RezervasyonDurumu.Tamamlandi        => "<span class='badge badge-kirali'>Tamamlandı</span>",
+                                KiraTakip.Models.RezervasyonDurumu.IptalEdildi       => "<span class='badge badge-gecmis'>İptal</span>",
+                                KiraTakip.Models.RezervasyonDurumu.TahakkukaAktarildi => "<span class='badge badge-surek'>Aktarıldı</span>",
+                                _ => "<span class='badge'>—</span>"
+                            };
+                            <tr>
+                                <td style="font-weight:600;">@r.Birim.Ad</td>
+                                <td>
+                                    <a href="/Kiraci/Detay/@r.KiraciId" style="color:var(--color-primary);text-decoration:none;font-weight:500;">@r.Kiraci.GosterimAdi</a>
+                                </td>
+                                <td>@r.BaslangicTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td>@r.BitisTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td>
+                                    <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;">@r.ToplamSureDakika dk</span>
+                                    @if (r.UcretsizSureDakika > 0)
+                                    {
+                                        <span style="font-size:11px;color:var(--color-muted);"> (@r.UcretsizSureDakika dk ücretsiz)</span>
+                                    }
+                                </td>
+                                <td style="font-weight:600;">@r.ToplamTutar.ToString("N0") ₺</td>
+                                <td>@Html.Raw(rezDurumBadge)</td>
+                                <td><a href="/Rezervasyon/Detay/@r.Id" class="btn btn-sm btn-secondary">Detay</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
-            @if (canManageCarpan)
-            {
-                <a href="/Tasinmaz/@Model.Tasinmaz.Id/Carpanlar/Ekle" class="btn btn-primary" style="font-size:13px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Çarpan Ekle
-                </a>
-            }
+        }
+    </div>
+
+    <!-- Tab 5: Kira Tarifeleri -->
+    <div class="tab-content">
+
+        <!-- Bölüm 1: Taşınmaz Tarifeleri (Varsayılan) -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid var(--color-border);">
+            <div>
+                <div style="font-size:15px;font-weight:700;">Taşınmaz Tarifeleri</div>
+                <div style="font-size:12px;color:var(--color-muted);margin-top:3px;">Sözleşme oluşturulurken varsayılan olarak kullanılır. Birim bazlı özel fiyat tanımlıysa bu tarife geçersiz kalır.</div>
+            </div>
         </div>
 
-        @if (!Model.Carpanlar.Any())
+        <div class="table-wrapper" style="overflow-x:auto;margin:0 0 32px;">
+            <table class="table table-bordered" style="min-width:800px;">
+                <thead>
+                    <tr>
+                        <th style="width:180px;">Kiracı Kategorisi</th>
+                        @foreach (var col in Model.FiyatMatrisi.Kolonlar)
+                        {
+                            <th style="text-align:center;">
+                                <div style="font-size:11px;color:var(--color-muted);margin-bottom:2px;">@col.BorcTipiKod</div>
+                                <div style="font-size:13px;">@col.BorcTipiAd</div>
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var satir in Model.FiyatMatrisi.Satirlar)
+                    {
+                        <tr>
+                            <td style="font-weight:600;vertical-align:middle;background:#fafbfc;">@satir.KiraciKategoriAd</td>
+                            @foreach (var hucre in satir.Hucreler)
+                            {
+                                <td style="padding:12px;text-align:center;background:@(hucre.RateVarMi ? "transparent" : "#f9fafb");">
+                                    @if (hucre.RateVarMi)
+                                    {
+                                        <div style="font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:15px;">
+                                            @hucre.BirimDeger.ToString("N2") ₺
+                                            <small style="font-family:sans-serif;font-size:11px;font-weight:400;color:var(--color-muted);">
+                                                @(hucre.HesaplamaYontemi == HesaplamaYontemi.Sabit ? "/sabit" : "/m²")
+                                            </small>
+                                        </div>
+                                        <div style="font-size:11px;color:var(--color-muted);margin-top:4px;">KDV: %@hucre.KdvOrani.ToString("N0")</div>
+                                    }
+                                    else
+                                    {
+                                        <div style="color:#c8cfd8;font-size:12px;">Tanımsız</div>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Bölüm 2: Birim Bazlı Özel Fiyatlar -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid var(--color-border);">
+            <div>
+                <div style="font-size:15px;font-weight:700;">Birim Bazlı Özel Fiyatlar</div>
+                <div style="font-size:12px;color:var(--color-muted);margin-top:3px;">Aşağıdaki birimler için taşınmaz tarifesi yerine bu özel fiyatlar geçerlidir.</div>
+            </div>
+        </div>
+
+        @if (Model.BirimOzelFiyatlari.Any())
         {
-            <div class="card" style="padding:32px;text-align:center;color:var(--color-muted);">
-                <div style="font-size:14px;font-weight:500;margin-bottom:6px;">Henüz kategori çarpanı tanımlı değil</div>
-                <div style="font-size:13px;">Kiracı kategorisi bazında m² fiyatı belirlemek için çarpan ekleyin.</div>
+            <div style="margin-bottom:32px;">
+                @foreach (var birimOzet in Model.BirimOzelFiyatlari)
+                {
+                    <div class="card" style="margin-bottom:10px;padding:0;overflow:hidden;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fafbfc;border-bottom:1px solid var(--color-border);">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                @if (!string.IsNullOrEmpty(birimOzet.Birim.OfisNo))
+                                {
+                                    <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--color-primary);background:var(--color-primary-light);padding:2px 8px;border-radius:6px;">@birimOzet.Birim.OfisNo</span>
+                                }
+                                <span style="font-size:13.5px;font-weight:700;">@(birimOzet.Birim.Ad ?? "—")</span>
+                                <span class="badge badge-kirali" style="font-size:10.5px;">@birimOzet.Rateler.Count özel fiyat</span>
+                            </div>
+                            @if (canManageRate)
+                            {
+                                <a href="/Birim/@birimOzet.Birim.Id/OzelFiyat" class="btn btn-sm btn-secondary">Düzenle</a>
+                            }
+                        </div>
+                        <div class="table-wrapper" style="margin:0;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Kiracı Kategorisi</th>
+                                        <th>Ücret Tipi</th>
+                                        <th>Hesaplama</th>
+                                        <th>Fiyat</th>
+                                        <th>KDV</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var r in birimOzet.Rateler)
+                                    {
+                                        <tr>
+                                            <td style="font-weight:600;">@r.KiraciKategori.Ad</td>
+                                            <td>@r.BorcTipi.Ad</td>
+                                            <td style="font-size:12px;color:var(--color-muted);">@(r.HesaplamaYontemi == HesaplamaYontemi.Sabit ? "Sabit" : "m² bazlı")</td>
+                                            <td style="font-family:'Fraunces',Georgia,serif;font-weight:700;">@r.BirimDeger.ToString("N2") ₺</td>
+                                            <td style="font-size:12.5px;color:var(--color-muted);">%@r.KdvOrani.ToString("N0")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
             </div>
         }
         else
         {
-            <div class="card" style="padding:0;overflow:hidden;">
-                <div class="table-wrapper" style="margin:0;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Kiracı Kategorisi</th>
-                                <th>Çarpan (₺/m²)</th>
-                                <th>Durum</th>
-                                <th>Açıklama</th>
-                                <th style="text-align:center;">İşlem</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var c in Model.Carpanlar)
-                            {
-                                <tr>
-                                    <td style="font-weight:600;">@c.KiraciKategori.Ad</td>
-                                    <td>
-                                        <span style="font-family:'Fraunces',Georgia,serif;font-size:15px;font-weight:700;">@c.Carpan.ToString("N2")</span>
-                                        <span style="font-size:11px;color:var(--color-muted);margin-left:2px;">₺/m²</span>
-                                    </td>
-                                    <td>
-                                        @if (c.Aktif) { <span class="badge badge-kirali">Aktif</span> }
-                                        else { <span class="badge badge-bos">Pasif</span> }
-                                    </td>
-                                    <td style="color:var(--color-muted);font-size:13px;">@(c.Aciklama ?? "—")</td>
-                                    <td style="text-align:center;display:flex;gap:4px;justify-content:center;">
-                                        @if (canManageCarpan)
-                                        {
-                                            <a href="/Tasinmaz/Carpanlar/Duzenle/@c.Id" class="btn btn-sm btn-secondary">Düzenle</a>
-                                            <form asp-controller="TasinmazCarpan" asp-action="DurumDegistir" asp-route-id="@c.Id" method="post" style="display:inline;">
-                                                @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-sm btn-secondary">
-                                                    @(c.Aktif ? "Pasif Yap" : "Aktif Yap")
-                                                </button>
-                                            </form>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+            <div style="padding:14px 18px;background:#f9fafb;border:1px solid var(--color-border);border-radius:8px;font-size:13px;color:var(--color-muted);margin-bottom:32px;">
+                Tüm birimler için taşınmaz tarifeleri geçerlidir. Birim bazlı özel fiyat tanımlı değil.
+            </div>
+        }
+
+        <!-- Bölüm 3: Rezervasyon Ücret Kuralları -->
+        @{
+            var rezBirimler = Model.Birimler.Where(b => b.Birim.BirimTuru?.RezervasyonYapilabilirMi == true).ToList();
+        }
+        @if (rezBirimler.Any())
+        {
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid var(--color-border);">
+                <div>
+                    <div style="font-size:15px;font-weight:700;">Rezervasyon Ücret Kuralları</div>
+                    <div style="font-size:12px;color:var(--color-muted);margin-top:3px;">Rezervasyon birimi olan birimlerin saatlik/periyotluk ücretlendirme kuralları.</div>
                 </div>
+            </div>
+            <div class="table-wrapper" style="margin:0;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Birim</th>
+                            <th>Kural</th>
+                            <th>Periyot Ücreti</th>
+                            <th>Periyot</th>
+                            <th>Ücretsiz Süre</th>
+                            <th>KDV</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var b in rezBirimler)
+                        {
+                            var ozelKural = Model.BirimRezervasyonKurallari.FirstOrDefault(k => k.BirimId == b.Birim.Id);
+                            var aktifKural = ozelKural ?? Model.GlobalRezervasyonKural;
+                            <tr>
+                                <td style="font-weight:600;">@(b.Birim.Ad ?? b.Birim.OfisNo)</td>
+                                <td>
+                                    @if (ozelKural != null)
+                                    {
+                                        <span class="badge badge-kirali">Özel</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="font-size:12px;color:var(--color-muted);">Global</span>
+                                    }
+                                </td>
+                                @if (aktifKural != null)
+                                {
+                                    <td style="font-weight:600;">@aktifKural.PeriyotUcreti.ToString("N0") ₺</td>
+                                    <td>@aktifKural.UcretlendirmePeriyoduDakika dk</td>
+                                    <td>@aktifKural.UcretsizSureDakika dk</td>
+                                    <td>%@aktifKural.KdvOrani.ToString("N0")</td>
+                                }
+                                else
+                                {
+                                    <td colspan="4" style="color:#c8cfd8;font-size:12px;">Kural tanımlı değil</td>
+                                }
+                                <td>
+                                    @if (canManageRate)
+                                    {
+                                        <a href="/Birim/@b.Birim.Id/OzelFiyat" class="btn btn-sm btn-secondary">Düzenle</a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         }
     </div>
+</div>
+
+
 </div>
 
 @section Scripts {

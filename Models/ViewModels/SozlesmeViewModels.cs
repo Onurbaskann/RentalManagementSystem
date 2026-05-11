@@ -39,16 +39,17 @@ public class SozlesmeEkleViewModel
     public int KiraciId { get; set; }
     public DateTime BaslangicTarihi { get; set; } = DateTime.Today;
     public DateTime BitisTarihi { get; set; } = DateTime.Today.AddYears(1);
-    public decimal KiraBedeli { get; set; }
-    public KiraPeriyodu Periyot { get; set; } = KiraPeriyodu.Aylik;
-    public decimal? Depozito { get; set; }
+
+    public KiraPeriyodu Periyot { get; set; } = KiraPeriyodu.Yillik;
+
     public string? Notlar { get; set; }
 
-    public bool KdvUygulanacakMi { get; set; }
-    public decimal KdvOrani { get; set; } = 20;
+
 
     public List<Birim> MevcutBirimler { get; set; } = new();
     public List<Kiraci> Kiraciler { get; set; } = new();
+
+    public List<KiraTakip.Models.Dtos.SozlesmeKalemInputDto> SozlesmeKalemleri { get; set; } = new();
 }
 
 public class SozlesmeUzatViewModel

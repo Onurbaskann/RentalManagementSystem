@@ -35,6 +35,13 @@ public class AdminBirimTuruController : Controller
     {
         if (!ModelState.IsValid) return View(model);
 
+        if (model.KiralanabilirMi == model.RezervasyonYapilabilirMi)
+        {
+            ModelState.AddModelError(string.Empty,
+                "Tam olarak bir kullanım türü seçilmelidir: Kiralanabilir VEYA Rezervasyon yapılabilir.");
+            return View(model);
+        }
+
         model.Kod = model.Kod.Trim().ToUpper();
         if (await _ctx.BirimTurleri.AnyAsync(b => b.Kod == model.Kod))
         {
@@ -63,6 +70,13 @@ public class AdminBirimTuruController : Controller
     {
         if (id != model.Id) return BadRequest();
         if (!ModelState.IsValid) return View(model);
+
+        if (model.KiralanabilirMi == model.RezervasyonYapilabilirMi)
+        {
+            ModelState.AddModelError(string.Empty,
+                "Tam olarak bir kullanım türü seçilmelidir: Kiralanabilir VEYA Rezervasyon yapılabilir.");
+            return View(model);
+        }
 
         model.Kod = model.Kod.Trim().ToUpper();
         if (await _ctx.BirimTurleri.AnyAsync(b => b.Kod == model.Kod && b.Id != id))

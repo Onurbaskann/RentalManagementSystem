@@ -86,6 +86,7 @@ public class AylikRaporViewModel
     public decimal ToplamBeklenen => Satirlar.Sum(s => s.Beklenen);
     public decimal ToplamTahsil   => Satirlar.Sum(s => s.TahsilEdilen);
     public int ToplamGecikmiş     => Satirlar.Sum(s => s.GecikmisTahakkukAdet);
+    public decimal ToplamGecikmisTutar => Satirlar.Sum(s => s.GecikmisTutar);
     public double GenelTahsilOrani => ToplamBeklenen > 0 ? (double)(ToplamTahsil / ToplamBeklenen * 100) : 0;
 }
 
@@ -97,5 +98,6 @@ public class AylikRaporSatir
     public decimal Beklenen { get; set; }
     public decimal TahsilEdilen { get; set; }
     public int GecikmisTahakkukAdet { get; set; }
+    public decimal GecikmisTutar { get; set; }
     public double TahsilOrani => Beklenen > 0 ? (double)(TahsilEdilen / Beklenen * 100) : 0;
 }

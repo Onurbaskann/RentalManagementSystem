@@ -7,5 +7,5 @@ public class BorcTipi
     public string Kod { get; set; } = "";
     public bool Aktif { get; set; } = true;
     public int Sira { get; set; }
-    public bool TekSeferlikMi { get; set; }
+    public BorcTipiDavranisi Davranis { get; set; } = BorcTipiDavranisi.AylikSabit;
 }

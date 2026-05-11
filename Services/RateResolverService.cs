@@ -11,18 +11,21 @@ public class RateResolverService : IRateResolverService
 
     public RateResolverService(ApplicationDbContext ctx) => _ctx = ctx;
 
-    public async Task<RateSnapshot?> ResolveAsync(int sozlesmeId, int birimId, int borcTipiId, DateTime donem)
+    public async Task<RateSnapshot?> ResolveAsync(int? sozlesmeId, int? kiraciId, int birimId, int borcTipiId, DateTime donem)
     {
-        var sozRate = await _ctx.SozlesmeRateler
-            .FirstOrDefaultAsync(r => r.SozlesmeId == sozlesmeId && r.BorcTipiId == borcTipiId);
-        if (sozRate != null)
-            return new RateSnapshot
-            {
-                HesaplamaYontemi = sozRate.HesaplamaYontemi,
-                BirimDeger = sozRate.BirimDeger,
-                KdvOrani = sozRate.KdvOrani,
-                KaynakTipi = KaynakTipi.Sozlesme
-            };
+        if (sozlesmeId.HasValue)
+        {
+            var sozRate = await _ctx.SozlesmeRateler
+                .FirstOrDefaultAsync(r => r.SozlesmeId == sozlesmeId.Value && r.BorcTipiId == borcTipiId);
+            if (sozRate != null)
+                return new RateSnapshot
+                {
+                    HesaplamaYontemi = sozRate.HesaplamaYontemi,
+                    BirimDeger = sozRate.BirimDeger,
+                    KdvOrani = sozRate.KdvOrani,
+                    KaynakTipi = KaynakTipi.Sozlesme
+                };
+        }
 
         var birimRate = await _ctx.BirimRateler
             .FirstOrDefaultAsync(r => r.BirimId == birimId && r.BorcTipiId == borcTipiId);
@@ -35,35 +38,47 @@ public class RateResolverService : IRateResolverService
                 KaynakTipi = KaynakTipi.Birim
             };
 
-        var borcTipiKod = await _ctx.BorcTipleri
-            .Where(b => b.Id == borcTipiId)
-            .Select(b => b.Kod)
-            .FirstOrDefaultAsync();
-        if (borcTipiKod == "KIRA")
-        {
-            var birimInfo = await _ctx.Birimler
-                .Where(b => b.Id == birimId)
-                .Select(b => new { b.TasinmazId })
-                .FirstOrDefaultAsync();
-            var kiraciKategoriId = await _ctx.Sozlesmeler
-                .Where(s => s.Id == sozlesmeId)
-                .Select(s => s.Kiraci.KiraciKategoriId)
-                .FirstOrDefaultAsync();
+        int? tasinmazId = null;
+        int? kategoriId = null;
 
-            if (birimInfo != null && kiraciKategoriId.HasValue)
+        if (sozlesmeId.HasValue)
+        {
+            var info = await _ctx.Sozlesmeler
+                .Where(s => s.Id == sozlesmeId.Value)
+                .Select(s => new { s.Birim.TasinmazId, s.Kiraci.KiraciKategoriId })
+                .FirstOrDefaultAsync();
+            if (info != null)
             {
-                var carpan = await _ctx.TasinmazKategoriCarpanlari
-                    .FirstOrDefaultAsync(c => c.TasinmazId == birimInfo.TasinmazId
-                        && c.KiraciKategoriId == kiraciKategoriId.Value
-                        && c.Aktif);
-                if (carpan != null)
-                    return new RateSnapshot
-                    {
-                        HesaplamaYontemi = HesaplamaYontemi.M2,
-                        BirimDeger = carpan.Carpan,
-                        KdvOrani = 0,
-                        KaynakTipi = KaynakTipi.TasinmazKategoriCarpan
-                    };
+                tasinmazId = info.TasinmazId;
+                kategoriId = info.KiraciKategoriId;
+            }
+        }
+        else if (kiraciId.HasValue)
+        {
+            var birim = await _ctx.Birimler.FindAsync(birimId);
+            tasinmazId = birim?.TasinmazId;
+            
+            var kiraci = await _ctx.Kiraciler.FindAsync(kiraciId.Value);
+            kategoriId = kiraci?.KiraciKategoriId;
+        }
+
+        if (tasinmazId.HasValue && kategoriId.HasValue)
+        {
+            var fiyatMatrisi = await _ctx.TasinmazKiraciKategoriFiyatlari
+                .FirstOrDefaultAsync(f => f.TasinmazId == tasinmazId.Value
+                    && f.KiraciKategoriId == kategoriId.Value
+                    && f.BorcTipiId == borcTipiId
+                    && f.Aktif);
+
+            if (fiyatMatrisi != null)
+            {
+                return new RateSnapshot
+                {
+                    HesaplamaYontemi = fiyatMatrisi.HesaplamaYontemi,
+                    BirimDeger = fiyatMatrisi.BirimDeger,
+                    KdvOrani = fiyatMatrisi.KdvOrani,
+                    KaynakTipi = KaynakTipi.TasinmazKiraciKategoriFiyat
+                };
             }
         }
 

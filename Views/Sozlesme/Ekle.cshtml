@@ -9,43 +9,37 @@
     <div class="page-title">Yeni Sözleşme Oluştur</div>
 </div>
 
-<div style="max-width:640px;">
+<div style="max-width:760px;" x-data="sozlesmeForm()" x-init="init()" x-cloak>
     <form asp-action="Ekle" method="post" id="sozlesmeForm">
         <div class="card">
             <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Taşınmaz ve Kiracı</div>
 
             <div class="form-group">
                 <label class="form-label">Birim *</label>
-                <select asp-for="BirimId" class="form-control" id="birimSelect" onchange="handleBirimChange(this.value)">
+                <select asp-for="BirimId" class="form-control" x-model="birimId" id="birimSelect">
                     <option value="">— Boş birim seçin —</option>
                     @foreach (var b in Model.MevcutBirimler)
                     {
                         string birimLabel = b.BirimTipi == KiraTakip.Models.BirimTipi.Ofis
                             ? $"{b.Tasinmaz.Ad} — Ofis {b.OfisNo}{(b.KatNo.HasValue ? $" • {b.KatNo}. Kat" : "")} • {b.Yuzolcumu.ToString("N0")} m²"
                             : $"{b.Tasinmaz.Ad} — Komple • {b.Yuzolcumu.ToString("N0")} m² • {b.Tasinmaz.Ilce}";
-                        if (Model.BirimId.HasValue && Model.BirimId == b.Id)
-                        {
-                            <option value="@b.Id" selected>@birimLabel</option>
-                        }
-                        else
-                        {
-                            <option value="@b.Id">@birimLabel</option>
-                        }
+                        <option value="@b.Id">@birimLabel</option>
                     }
                 </select>
                 <span asp-validation-for="BirimId" class="form-error"></span>
             </div>
 
             <!-- Birim info card -->
-            <div id="birimInfoCard" style="display:none;margin-bottom:16px;">
+            <div x-show="birimId && birimler[birimId]" style="margin-bottom:16px;" x-cloak>
                 <div class="info-card">
-                    <div id="birimInfoText" style="font-size:13.5px;font-weight:500;color:var(--color-primary);"></div>
+                    <div style="font-size:13.5px;font-weight:500;color:var(--color-primary);" 
+                         x-text="birimler[birimId] ? `${birimler[birimId].ad} • ${birimler[birimId].m2} • ${birimler[birimId].ilce}, ${birimler[birimId].il}` : ''"></div>
                 </div>
             </div>
 
             <div class="form-group">
                 <label class="form-label">Kiracı *</label>
-                <select asp-for="KiraciId" class="form-control">
+                <select asp-for="KiraciId" class="form-control" x-model="kiraciId">
                     <option value="">— Kiracı seçin —</option>
                     @foreach (var k in Model.Kiraciler)
                     {
@@ -61,13 +55,13 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
                 <div class="form-group">
                     <label class="form-label">Başlangıç Tarihi *</label>
-                    <input asp-for="BaslangicTarihi" type="date" class="form-control" id="baslangicInput" onchange="validateDates()" />
+                    <input asp-for="BaslangicTarihi" type="date" class="form-control" x-model="baslangicTarihi" id="baslangicInput" />
                 </div>
                 <div class="form-group">
                     <label class="form-label">Bitiş Tarihi *</label>
-                    <input asp-for="BitisTarihi" type="date" class="form-control" id="bitisInput" onchange="validateDates()" />
+                    <input asp-for="BitisTarihi" type="date" class="form-control" x-model="bitisTarihi" id="bitisInput" />
                     <span asp-validation-for="BitisTarihi" class="form-error"></span>
-                    <div id="dateError" class="form-error" style="display:none;">Bitiş tarihi başlangıçtan büyük olmalıdır.</div>
+                    <div class="form-error" x-show="bitisTarihi && baslangicTarihi && bitisTarihi <= baslangicTarihi" x-cloak>Bitiş tarihi başlangıçtan büyük olmalıdır.</div>
                 </div>
             </div>
 
@@ -75,43 +69,95 @@
                 <label class="form-label">Kira Periyodu</label>
                 <div class="radio-group">
                     <label class="radio-option">
-                        <input type="radio" asp-for="Periyot" value="1" checked onchange="updateBedelLabel(1)" />
+                        <input type="radio" asp-for="Periyot" value="1" x-model.number="periyot" />
                         <span>Aylık</span>
                     </label>
                     <label class="radio-option">
-                        <input type="radio" asp-for="Periyot" value="2" onchange="updateBedelLabel(2)" />
+                        <input type="radio" asp-for="Periyot" value="2" x-model.number="periyot" />
                         <span>Yıllık</span>
                     </label>
                 </div>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-                <div class="form-group">
-                    <label class="form-label" id="bedelLabel">Aylık Bedel (₺) *</label>
-                    <input asp-for="KiraBedeli" type="number" min="0" step="0.01" class="form-control" placeholder="Örn: 10000" />
-                    <span asp-validation-for="KiraBedeli" class="form-error"></span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Depozito (₺)</label>
-                    <input asp-for="Depozito" type="number" min="0" step="0.01" class="form-control" placeholder="Opsiyonel" />
-                </div>
-            </div>
         </div>
 
-        <div class="card" style="margin-top:16px;">
-            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">KDV</div>
-            <div class="form-group">
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;">
-                    <input asp-for="KdvUygulanacakMi" type="checkbox" id="kdvCheck" style="width:16px;height:16px;" onchange="document.getElementById('kdvOraniBox').style.display=this.checked?'':'none'" />
-                    KDV Uygulanacak
-                </label>
-            </div>
-            <div id="kdvOraniBox" style="display:none;">
-                <div class="form-group" style="margin-bottom:0;">
-                    <label class="form-label">KDV Oranı (%)</label>
-                    <input asp-for="KdvOrani" type="number" min="0" max="100" step="0.01" class="form-control" style="max-width:160px;" />
-                    <div class="form-hint">Varsayılan: %20</div>
+
+        <!-- Sözleşme Kalemleri Bölümü -->
+        <div class="card" style="margin-top:16px;" x-show="birimId && kiraciId && baslangicTarihi" x-cloak>
+            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border); display:flex; justify-content:space-between; align-items:center;">
+                <span>Sözleşme Kalemleri</span>
+                <div x-show="loading" class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Yükleniyor...</span>
                 </div>
+            </div>
+
+            <div x-show="error" class="alert alert-danger" x-text="error"></div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px;">
+                <template x-for="(k, index) in kalemler" :key="k.borcTipiId">
+                    <div style="background: #fafbfc; border: 1px solid var(--color-border); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                                <div style="font-size: 14px; font-weight: 700; color: var(--color-text);" x-text="k.borcTipiAd"></div>
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: 150px;">
+                                    <!-- Kaynak Tipi Rozeti -->
+                                    <span class="badge" style="font-size: 10px; padding: 2px 6px;"
+                                          :class="k.kaynakTipi === 'SozlesmeRate' ? 'bg-primary' : 
+                                                  k.kaynakTipi === 'BirimRate' ? 'bg-success' : 
+                                                  k.kaynakTipi === 'TasinmazKiraciKategoriFiyat' ? 'bg-info text-dark' : 
+                                                  k.kaynakTipi === 'TarifeKalemi' ? 'bg-warning text-dark' : 'bg-secondary'"
+                                          x-text="getKaynakTipiLabel(k.kaynakTipi)"></span>
+                                    
+                                    <!-- Durum Rozeti -->
+                                    <span class="badge" style="font-size: 10px; padding: 2px 6px;"
+                                          :class="k.kullaniciDegistirdiMi ? 'bg-danger' : 'bg-dark'"
+                                          x-text="k.kullaniciDegistirdiMi ? 'Override' : 'Otomatik'"></span>
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 80px; gap: 12px; align-items: end; margin-bottom: 12px;">
+                                <div>
+                                    <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">Tutar (₺)</label>
+                                    <input type="number" step="0.01" min="0" class="form-control form-control-sm"
+                                           x-model.number="k.tutar"
+                                           @@input="k.kullaniciDegistirdiMi = (k.tutar !== k.varsayilanTutar); validateKalem(k)"
+                                           :name="`SozlesmeKalemleri[${index}].Tutar`" required>
+                                </div>
+                                <div>
+                                    <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">KDV (%)</label>
+                                    <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm"
+                                           x-model.number="k.kdvOrani"
+                                           @@input="k.kullaniciDegistirdiMi = true"
+                                           :name="`SozlesmeKalemleri[${index}].KdvOrani`">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto;">
+                            <!-- Hata Mesajı -->
+                            <div style="color: #dc2626; font-size: 11.5px; font-weight: 500;" x-show="k._error" x-text="k._error"></div>
+                            <div x-show="!k._error"></div> <!-- spacer -->
+                            
+                            <!-- Sıfırla Butonu -->
+                            <button type="button" class="btn btn-sm" style="padding: 4px 10px; font-size: 11.5px; color: #475569; border-color: #cbd5e1; background: #fff;"
+                                    x-show="k.kullaniciDegistirdiMi"
+                                    @@click="resetKalem(k)">Sıfırla</button>
+                        </div>
+
+                        <!-- Gizli Alanlar -->
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].BorcTipiId`" :value="k.borcTipiId">
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].BorcTipiAd`" :value="k.borcTipiAd">
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].BorcTipiKod`" :value="k.borcTipiKod">
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].VarsayilanTutar`" :value="k.varsayilanTutar">
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].KullaniciDegistirdiMi`" :value="k.kullaniciDegistirdiMi">
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].RateBulundu`" :value="k.rateBulundu">
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].KaynakTipi`" :value="k.kaynakTipi">
+                    </div>
+                </template>
+            </div>
+            
+            <div x-show="!loading && kalemler.length === 0" class="text-muted small">
+                Bu seçimlere uygun varsayılan kalem bulunamadı.
             </div>
         </div>
 
@@ -123,7 +169,7 @@
         </div>
 
         <div style="display:flex;gap:12px;margin-top:20px;">
-            <button type="submit" class="btn btn-primary" id="submitBtn">
+            <button type="submit" class="btn btn-primary" :disabled="isSubmitDisabled()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Sözleşme Oluştur
             </button>
@@ -133,24 +179,90 @@
 </div>
 
 @section Scripts {
-<script src="~/js/sozlesme-form.js"></script>
 <script>
-    // Seed birim verisi (info card için)
-    const birimler = {
-        @foreach (var b in Model.MevcutBirimler)
-        {
-            string birimAd = b.BirimTipi == KiraTakip.Models.BirimTipi.Ofis
-                ? $"{b.Tasinmaz.Ad} — Ofis {b.OfisNo}"
-                : $"{b.Tasinmaz.Ad} — Komple";
-            string meta = b.BirimTipi == KiraTakip.Models.BirimTipi.Ofis && b.KatNo.HasValue
-                ? $"{b.KatNo}. Kat • {b.Yuzolcumu.ToString("N0")} m²"
-                : $"{b.Yuzolcumu.ToString("N0")} m²";
-            @Html.Raw($"{b.Id}: {{ad: '{birimAd}', m2: '{meta}', ilce: '{b.Tasinmaz.Ilce}', il: '{b.Tasinmaz.Il}'}},")
-        }
-    };
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('sozlesmeForm', () => ({
+            birimId: @(Model.BirimId.HasValue ? Model.BirimId.Value.ToString() : "null"),
+            kiraciId: @(Model.KiraciId != 0 ? Model.KiraciId.ToString() : "null"),
+            baslangicTarihi: '@Model.BaslangicTarihi.ToString("yyyy-MM-dd")',
+            bitisTarihi: '@Model.BitisTarihi.ToString("yyyy-MM-dd")',
+            periyot: @((int)Model.Periyot),
+            kalemler: [],
+            loading: false,
+            error: null,
+            birimler: {
+                @foreach (var b in Model.MevcutBirimler)
+                {
+                    string birimAd = b.BirimTipi == KiraTakip.Models.BirimTipi.Ofis
+                        ? $"{b.Tasinmaz.Ad} — Ofis {b.OfisNo}"
+                        : $"{b.Tasinmaz.Ad} — Komple";
+                    string meta = b.BirimTipi == KiraTakip.Models.BirimTipi.Ofis && b.KatNo.HasValue
+                        ? $"{b.KatNo}. Kat • {b.Yuzolcumu.ToString("N0")} m²"
+                        : $"{b.Yuzolcumu.ToString("N0")} m²";
+                    @Html.Raw($"{b.Id}: {{ad: '{birimAd.Replace("'", "\\'")}', m2: '{meta.Replace("'", "\\'")}', ilce: '{b.Tasinmaz.Ilce.Replace("'", "\\'")}', il: '{b.Tasinmaz.Il.Replace("'", "\\'")}'}},")
+                }
+            },
+            init() {
+                this.$watch('birimId', () => this.fetchKalemler());
+                this.$watch('kiraciId', () => this.fetchKalemler());
+                this.$watch('baslangicTarihi', () => this.fetchKalemler());
+                
+                if (this.birimId && this.kiraciId && this.baslangicTarihi) {
+                    this.fetchKalemler();
+                }
+            },
+            async fetchKalemler() {
+                console.log('fetchKalemler tetiklendi:', { birimId: this.birimId, kiraciId: this.kiraciId, baslangic: this.baslangicTarihi });
+                if (!this.birimId || !this.kiraciId || !this.baslangicTarihi) {
+                    this.kalemler = [];
+                    return;
+                }
+                this.loading = true;
+                this.error = null;
+                try {
+                    const url = `/Sozlesme/GetVarsayilanKalemler?birimId=${this.birimId}&kiraciId=${this.kiraciId}&baslangic=${this.baslangicTarihi}`;
+                    console.log('API çağrılıyor:', url);
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Kalemler alınırken hata oluştu.');
+                    const data = await response.json();
+                    console.log('API cevabı:', data);
+                    this.kalemler = data.map(k => ({ ...k, _error: null }));
+                    
 
-    // Seçili birim varsa init
-    const preSelected = @(Model.BirimId.HasValue ? Model.BirimId.Value.ToString() : "null");
-    if (preSelected) handleBirimChange(preSelected);
+
+
+                } catch (err) {
+                    console.error('Hata:', err);
+                    this.error = err.message;
+                } finally {
+                    this.loading = false;
+                }
+            },
+            resetKalem(k) {
+                k.tutar = k.varsayilanTutar;
+                // k.kdvOrani = k.varsayilanKdvOrani; // If we wanted to reset KDV
+                k.kullaniciDegistirdiMi = false;
+                k._error = null;
+            },
+            validateKalem(k) {
+                k._error = null;
+                if (k.tutar < 0) k._error = 'Tutar negatif olamaz.';
+            },
+            getKaynakTipiLabel(val) {
+                const map = {
+                    'SozlesmeRate': 'Sözleşme',
+                    'BirimRate': 'Birim',
+                    'TasinmazKiraciKategoriFiyat': 'Kiracı Kategorisi',
+                    'TarifeKalemi': 'Tarife'
+                };
+                return map[val] || 'Fiyat Tanımı Yok';
+            },
+            isSubmitDisabled() {
+                const dateError = this.bitisTarihi && this.baslangicTarihi && this.bitisTarihi <= this.baslangicTarihi;
+                const kalemError = this.kalemler.some(k => k._error);
+                return dateError || kalemError;
+            }
+        }));
+    });
 </script>
 }

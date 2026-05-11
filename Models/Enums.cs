@@ -94,10 +94,11 @@ public enum HesaplamaYontemi
 
 public enum KaynakTipi
 {
+    Bulunamadi            = 0,
     Sozlesme              = 1,
     Birim                 = 2,
     Tarife                = 3,
-    TasinmazKategoriCarpan = 4
+    TasinmazKiraciKategoriFiyat = 4
 }
 
 public enum TahakkukKaynakTipi
@@ -113,4 +114,11 @@ public enum RezervasyonDurumu
     Tamamlandi         = 2,
     IptalEdildi        = 3,
     TahakkukaAktarildi = 4
+}
+
+public enum BorcTipiDavranisi
+{
+    AylikSabit = 1,
+    IlkAyTekSeferlik = 2,
+    ManuelTetiklemeli = 3
 }

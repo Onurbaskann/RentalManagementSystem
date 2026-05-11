@@ -37,7 +37,10 @@ public class KiraciService : IKiraciService
 
     public async Task<Kiraci?> GetByIdAsync(int id)
     {
-        return await _ctx.Kiraciler.FirstOrDefaultAsync(k => k.Id == id);
+        return await _ctx.Kiraciler
+            .Include(k => k.KiraciKategori)
+            .Include(k => k.Sektor)
+            .FirstOrDefaultAsync(k => k.Id == id);
     }
 
     public async Task<Kiraci> CreateAsync(Kiraci k)
