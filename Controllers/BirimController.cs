@@ -15,11 +15,13 @@ public class BirimController : Controller
 {
     private readonly ApplicationDbContext _ctx;
     private readonly IRezervasyonService _rezervasyonService;
+    private readonly ITarifeHiyerarsiService _tarifeHiyerarsisi;
 
-    public BirimController(ApplicationDbContext ctx, IRezervasyonService rezervasyonService)
+    public BirimController(ApplicationDbContext ctx, IRezervasyonService rezervasyonService, ITarifeHiyerarsiService tarifeHiyerarsisi)
     {
         _ctx = ctx;
         _rezervasyonService = rezervasyonService;
+        _tarifeHiyerarsisi = tarifeHiyerarsisi;
     }
 
     [Authorize(Policy = PermissionCatalog.Birim.ManageRate)]
@@ -45,6 +47,9 @@ public class BirimController : Controller
 
         if (vm.KiralanabilirMi)
         {
+            vm.ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(
+                TarifeHiyerarsiKatmani.Birim, tasinmazId: birim.TasinmazId, yil: DateTime.Now.Year);
+
             var aktifBorcTipleri = await _ctx.BorcTipleri
                 .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.ManuelTetiklemeli)
                 .OrderBy(b => b.Sira)
@@ -179,7 +184,7 @@ public class BirimController : Controller
             _ctx.RezervasyonUcretKurallari.Remove(kural);
             await _ctx.SaveChangesAsync();
         }
-        TempData["Success"] = "Özel kural kaldırıldı. Global kural uygulanacak.";
+        TempData["Success"] = "Özel kural kaldırıldı. Genel tarife uygulanacak.";
         return RedirectToAction(nameof(OzelFiyat), new { id });
     }
 }

@@ -86,8 +86,14 @@
                     <tr data-row data-search="@search">
                         <td style="color:var(--color-muted);font-size:12.5px;">@s.Id</td>
                         <td>
-                            <a href="/Kiraci/Detay/@s.KiraciId" style="font-weight:600;color:var(--color-primary);text-decoration:none;">@s.Kiraci.GosterimAdi</a>
-                            @if (s.Kiraci.KiraciTuru == KiraciTuru.Tuzel) { <span class="badge badge-kurumsal" style="font-size:10.5px;margin-left:4px;">T</span> }
+                            <div style="display:flex;align-items:center;gap:4px;">
+                                <a href="/Kiraci/Detay/@s.KiraciId" style="font-weight:600;color:var(--color-primary);text-decoration:none;">@s.Kiraci.GosterimAdi</a>
+                                @if (s.Kiraci.KiraciTuru == KiraciTuru.Tuzel) { <span class="badge badge-kurumsal" style="font-size:10.5px;">T</span> }
+                            </div>
+                            @if (s.Kiraci.KiraciKategori != null)
+                            {
+                                <div style="font-size:11.5px;color:var(--color-muted);margin-top:1px;font-weight:500;">@s.Kiraci.KiraciKategori.Ad</div>
+                            }
                         </td>
                         <td>
                             <a href="/Tasinmaz/Detay/@s.Birim.TasinmazId" style="font-weight:500;color:var(--color-text);text-decoration:none;">@s.Birim.Tasinmaz.Ad</a>

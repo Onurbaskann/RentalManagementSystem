@@ -4,6 +4,7 @@ using KiraTakip.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KiraTakip.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260511131655_AddKiraciKategoriToTarifeKalemi")]
+    partial class AddKiraciKategoriToTarifeKalemi
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -984,9 +987,6 @@ namespace KiraTakip.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
 
-                    b.Property<int>("KiraciKategoriId")
-                        .HasColumnType("int");
-
                     b.Property<int>("TarifeId")
                         .HasColumnType("int");
 
@@ -994,9 +994,7 @@ namespace KiraTakip.Migrations
 
                     b.HasIndex("BorcTipiId");
 
-                    b.HasIndex("KiraciKategoriId");
-
-                    b.HasIndex("TarifeId", "KiraciKategoriId", "BorcTipiId")
+                    b.HasIndex("TarifeId", "BorcTipiId")
                         .IsUnique();
 
                     b.ToTable("TarifeKalemleri");
@@ -1673,12 +1671,6 @@ namespace KiraTakip.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("KiraTakip.Models.KiraciKategori", "KiraciKategori")
-                        .WithMany()
-                        .HasForeignKey("KiraciKategoriId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("KiraTakip.Models.Tarife", "Tarife")
                         .WithMany("Kalemler")
                         .HasForeignKey("TarifeId")
@@ -1686,8 +1678,6 @@ namespace KiraTakip.Migrations
                         .IsRequired();
 
                     b.Navigation("BorcTipi");
-
-                    b.Navigation("KiraciKategori");
 
                     b.Navigation("Tarife");
                 });

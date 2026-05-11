@@ -82,6 +82,8 @@ public class RateResolverService : IRateResolverService
             }
         }
 
+        if (!kategoriId.HasValue) return null;
+
         var tarife = await _ctx.Tarifeler
                          .Where(t => t.Aktif && t.Yil == donem.Year)
                          .FirstOrDefaultAsync()
@@ -92,7 +94,9 @@ public class RateResolverService : IRateResolverService
         if (tarife == null) return null;
 
         var kalem = await _ctx.TarifeKalemleri
-            .FirstOrDefaultAsync(k => k.TarifeId == tarife.Id && k.BorcTipiId == borcTipiId);
+            .FirstOrDefaultAsync(k => k.TarifeId == tarife.Id
+                && k.KiraciKategoriId == kategoriId.Value
+                && k.BorcTipiId == borcTipiId);
         if (kalem == null) return null;
 
         return new RateSnapshot

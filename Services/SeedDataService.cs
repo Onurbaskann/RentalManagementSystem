@@ -135,27 +135,47 @@ public class SeedDataService
     {
         if (await _ctx.Tarifeler.AnyAsync()) return;
 
-        var aktifBorcTipleri = await _ctx.BorcTipleri.Where(b => b.Aktif && b.Davranis == BorcTipiDavranisi.AylikSabit).ToListAsync();
-        if (!aktifBorcTipleri.Any()) return;
+        var kategoriler = await _ctx.KiraciKategorileri
+            .Where(k => k.Aktif)
+            .OrderBy(k => k.Sira)
+            .ToListAsync();
+
+        var borcTipleri = await _ctx.BorcTipleri
+            .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.ManuelTetiklemeli)
+            .OrderBy(b => b.Sira)
+            .ToListAsync();
+
+        if (!kategoriler.Any() || !borcTipleri.Any()) return;
 
         var cariYil = DateTime.Now.Year;
         var tarife = new Tarife
         {
             Yil             = cariYil,
-            Aciklama        = $"{cariYil} Yılı Tarifesi",
+            Aciklama        = $"{cariYil} Yılı Genel Tarifesi",
             Aktif           = true,
             OlusturmaTarihi = DateTime.Now
         };
 
-        foreach (var bt in aktifBorcTipleri)
+        foreach (var kat in kategoriler)
         {
-            tarife.Kalemler.Add(new TarifeKalemi
+            foreach (var bt in borcTipleri)
             {
-                BorcTipiId       = bt.Id,
-                HesaplamaYontemi = HesaplamaYontemi.Sabit,
-                BirimDeger       = bt.Kod switch { "KIRA" => 20000m, "ORTAK" => 1250m, "PORTAL" => 350m, _ => 0m },
-                KdvOrani         = (bt.Kod == "ORTAK" || bt.Kod == "PORTAL") ? 20m : 20m
-            });
+                tarife.Kalemler.Add(new TarifeKalemi
+                {
+                    KiraciKategoriId = kat.Id,
+                    BorcTipiId       = bt.Id,
+                    HesaplamaYontemi = bt.Kod == "KIRA" ? HesaplamaYontemi.M2 : HesaplamaYontemi.Sabit,
+                    BirimDeger       = bt.Kod switch
+                    {
+                        "KIRA"     => kat.Kod == "AKADEMISYEN" ? 300m : 400m,
+                        "ORTAK"    => kat.Kod == "AKADEMISYEN" ? 1000m : 1500m,
+                        "PORTAL"   => kat.Kod == "AKADEMISYEN" ? 300m : 500m,
+                        "DEPOZITO" => kat.Kod == "AKADEMISYEN" ? 8000m : 15000m,
+                        _          => 0m
+                    },
+                    KdvOrani = bt.Kod == "DEPOZITO" ? 0m : 20m
+                });
+            }
         }
 
         _ctx.Tarifeler.Add(tarife);

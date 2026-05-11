@@ -26,7 +26,9 @@ public class TahakkukRepository : ITahakkukRepository
 
     public async Task<List<KiraTahakkuk>> GetAllAsync(int? sozlesmeId, List<int>? yetkiliTasinmazIds)
     {
-        IQueryable<KiraTahakkuk> query = BaseQuery();
+        IQueryable<KiraTahakkuk> query = BaseQuery()
+            .Include(t => t.Kalemler)
+                .ThenInclude(k => k.BorcTipi);
 
         if (sozlesmeId.HasValue)
             query = query.Where(t => t.KiraSozlesmesiId == sozlesmeId.Value);

@@ -22,6 +22,7 @@ public class SozlesmeController : Controller
     private readonly ITahakkukUretimService _tahakkukUretim;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _ctx;
+    private readonly ITarifeHiyerarsiService _tarifeHiyerarsisi;
 
     public SozlesmeController(
         ISozlesmeService sozlesmeService,
@@ -31,7 +32,8 @@ public class SozlesmeController : Controller
         ITahakkukService tahakkukService,
         ITahakkukUretimService tahakkukUretim,
         UserManager<ApplicationUser> userManager,
-        ApplicationDbContext ctx)
+        ApplicationDbContext ctx,
+        ITarifeHiyerarsiService tarifeHiyerarsisi)
     {
         _sozlesmeService = sozlesmeService;
         _tasinmazService = tasinmazService;
@@ -41,6 +43,7 @@ public class SozlesmeController : Controller
         _tahakkukUretim = tahakkukUretim;
         _userManager = userManager;
         _ctx = ctx;
+        _tarifeHiyerarsisi = tarifeHiyerarsisi;
     }
 
     [Authorize(Policy = PermissionCatalog.Sozlesme.View)]
@@ -130,6 +133,13 @@ public class SozlesmeController : Controller
                     KdvOrani         = rate?.KdvOrani ?? 0
                 };
             }).ToList();
+
+            vm.ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(
+                TarifeHiyerarsiKatmani.Sozlesme,
+                tasinmazId: s.Birim.TasinmazId,
+                birimId:    s.BirimId,
+                kategoriId: s.Kiraci.KiraciKategoriId,
+                yil:        s.BaslangicTarihi.Year);
         }
 
         return View(vm);

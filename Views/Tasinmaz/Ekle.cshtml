@@ -147,9 +147,17 @@
             </div>
         </div>
 
+        @if (Model.ParentTarife != null)
+        {
+            <div style="margin-top:16px;">
+                <div style="font-size:12px;color:var(--color-muted);margin-bottom:4px;">Aşağıda tanımlama yapmazsanız genel tarife uygulanır:</div>
+                @await Html.PartialAsync("_ParentTarifeKart", Model.ParentTarife)
+            </div>
+        }
+
         <!-- Fiyat Parametreleri Kartı -->
         <div class="card" style="margin-top:16px;">
-            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Fiyat Parametreleri (Varsayılan)</div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Fiyat Parametreleri (Genel Tarife)</div>
             <div style="font-size:12.5px;color:var(--color-muted);margin-bottom:16px;">Sözleşme eklerken bu matristeki fiyatlar otomatik olarak getirilir.</div>
 
             <div>

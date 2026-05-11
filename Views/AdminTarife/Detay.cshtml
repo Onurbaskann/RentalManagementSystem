@@ -1,6 +1,7 @@
-@model KiraTakip.Models.ViewModels.TarifeDetayViewModel
+@model KiraTakip.Models.ViewModels.TarifeMatrisViewModel
 @{
     ViewData["Title"] = $"{Model.Yil} Tarifeleri";
+    int idx = 0;
 }
 
 @if (TempData["Success"] != null)
@@ -13,7 +14,7 @@
 <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
     <div>
         <div class="page-title">@Model.Yil Tarifeleri</div>
-        <div class="page-subtitle">Borç tipi bazında yıllık birim fiyatlar</div>
+        <div class="page-subtitle">Kiracı kategorisi × borç tipi bazında yıllık birim fiyatlar</div>
     </div>
     <a href="/Admin/Tarife" class="btn btn-secondary">← Geri</a>
 </div>
@@ -29,64 +30,83 @@
             <label class="form-label">Açıklama</label>
             <input name="Aciklama" value="@Model.Aciklama" class="form-control" style="max-width:400px;" placeholder="Opsiyonel not…" />
         </div>
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width:100px;">Kod</th>
-                        <th>Borç Tipi</th>
-                        <th style="width:160px;">Hesaplama Yöntemi</th>
-                        <th style="width:160px;">Birim Değer (₺)</th>
-                        <th style="width:130px;">KDV Oranı (%)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (int i = 0; i < Model.Kalemler.Count; i++)
-                    {
-                        var k = Model.Kalemler[i];
-                        <tr>
-                            <td><span style="font-family:monospace;font-weight:600;font-size:13px;">@k.BorcTipiKod</span></td>
-                            <td style="font-weight:500;">@k.BorcTipiAd</td>
-                            <td>
-                                <input type="hidden" name="Kalemler[@i].KalemId"    value="@k.KalemId" />
-                                <input type="hidden" name="Kalemler[@i].BorcTipiId" value="@k.BorcTipiId" />
-                                <select name="Kalemler[@i].HesaplamaYontemi" class="form-control form-control-sm">
-                                    @if (k.HesaplamaYontemi == KiraTakip.Models.HesaplamaYontemi.Sabit)
-                                    {
-                                        <option value="1" selected>Sabit</option>
-                                        <option value="2">m²</option>
-                                    }
-                                    else
-                                    {
-                                        <option value="1">Sabit</option>
-                                        <option value="2" selected>m²</option>
-                                    }
-                                </select>
-                            </td>
-                            <td>
-                                <input type="number" name="Kalemler[@i].BirimDeger" value="@k.BirimDeger"
-                                       class="form-control form-control-sm" step="0.0001" min="0" />
-                            </td>
-                            <td>
-                                <input type="number" name="Kalemler[@i].KdvOrani" value="@k.KdvOrani"
-                                       class="form-control form-control-sm" step="0.01" min="0" max="100" />
-                            </td>
-                        </tr>
-                    }
-                    @if (!Model.Kalemler.Any())
-                    {
-                        <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--color-muted);">Aktif borç tipi bulunmuyor.</td></tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
 
-    @if (Model.Kalemler.Any())
-    {
-        <div style="display:flex;gap:8px;">
-            <button type="submit" class="btn btn-primary">Kaydet</button>
-            <a href="/Admin/Tarife" class="btn btn-secondary">İptal</a>
-        </div>
-    }
+        @if (!Model.Satirlar.Any() || !Model.Kolonlar.Any())
+        {
+            <div style="padding:24px;text-align:center;color:var(--color-muted);">
+                Aktif kiracı kategorisi veya borç tipi bulunmuyor.
+            </div>
+        }
+        else
+        {
+            <div class="table-wrapper" style="overflow-x:auto;">
+                <table style="min-width:700px;border-collapse:collapse;width:100%;">
+                    <thead>
+                        <tr>
+                            <th style="padding:10px 16px;text-align:left;background:var(--color-surface-muted, #f8fafc);border-bottom:1px solid var(--color-border);min-width:160px;">
+                                Kiracı Kategorisi
+                            </th>
+                            @foreach (var kolon in Model.Kolonlar)
+                            {
+                                <th style="padding:10px 12px;text-align:center;background:var(--color-surface-muted, #f8fafc);border-bottom:1px solid var(--color-border);min-width:200px;">
+                                    <div style="font-size:11px;color:var(--color-muted);font-weight:500;">@kolon.BorcTipiKod</div>
+                                    <div style="font-size:13px;font-weight:600;">@kolon.BorcTipiAd</div>
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var satir in Model.Satirlar)
+                        {
+                            <tr>
+                                <td style="padding:12px 16px;font-weight:600;font-size:13.5px;border-bottom:1px solid var(--color-border);vertical-align:middle;">
+                                    @satir.KiraciKategoriAd
+                                </td>
+                                @foreach (var hucre in satir.Hucreler)
+                                {
+                                    <td style="padding:10px 12px;border-bottom:1px solid var(--color-border);vertical-align:top;">
+                                        <input type="hidden" name="Hucreler[@idx].KalemId"          value="@hucre.KalemId" />
+                                        <input type="hidden" name="Hucreler[@idx].KiraciKategoriId" value="@hucre.KiraciKategoriId" />
+                                        <input type="hidden" name="Hucreler[@idx].BorcTipiId"       value="@hucre.BorcTipiId" />
+
+                                        <div style="margin-bottom:6px;">
+                                            <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:2px;">Yöntem</label>
+                                            <select name="Hucreler[@idx].HesaplamaYontemi" class="form-control form-control-sm">
+                                                @if (hucre.HesaplamaYontemi == KiraTakip.Models.HesaplamaYontemi.Sabit)
+                                                {
+                                                    <option value="1" selected>Sabit</option>
+                                                    <option value="2">m²</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="1">Sabit</option>
+                                                    <option value="2" selected>m²</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div style="margin-bottom:6px;">
+                                            <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:2px;">Birim Değer (₺)</label>
+                                            <input type="number" name="Hucreler[@idx].BirimDeger" value="@hucre.BirimDeger"
+                                                   class="form-control form-control-sm" step="0.0001" min="0" />
+                                        </div>
+                                        <div>
+                                            <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:2px;">KDV (%)</label>
+                                            <input type="number" name="Hucreler[@idx].KdvOrani" value="@hucre.KdvOrani"
+                                                   class="form-control form-control-sm" step="0.01" min="0" max="100" />
+                                        </div>
+                                    </td>
+                                    idx++;
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="padding:16px;border-top:1px solid var(--color-border);display:flex;gap:8px;">
+                <button type="submit" class="btn btn-primary">Kaydet</button>
+                <a href="/Admin/Tarife" class="btn btn-secondary">İptal</a>
+            </div>
+        }
+    </div>
 </form>

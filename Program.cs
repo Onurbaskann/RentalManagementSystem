@@ -76,6 +76,7 @@ builder.Services.AddScoped<ITahakkukUretimService, TahakkukUretimService>();
 builder.Services.AddScoped<IManuelBorcService, ManuelBorcService>();
 builder.Services.AddScoped<IRezervasyonService, RezervasyonService>();
 builder.Services.AddScoped<ITasinmazFiyatService, TasinmazFiyatService>();
+builder.Services.AddScoped<ITarifeHiyerarsiService, TarifeHiyerarsiService>();
 
 var app = builder.Build();
 
@@ -106,6 +107,7 @@ using (var scope = app.Services.CreateScope())
     await seedService.SeedAsync();
 
     var domainSeed = scope.ServiceProvider.GetRequiredService<SeedDataService>();
+    await domainSeed.ClearDomainDataAsync(); // Geçici temizleme
     await domainSeed.SeedBorcTipleriAsync();
     await domainSeed.EnsureDepozitoBorcTipiAsync();
     await domainSeed.EnsureManuelBorcTipiAsync();

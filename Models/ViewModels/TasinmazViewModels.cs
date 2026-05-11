@@ -32,6 +32,8 @@ public class TasinmazEkleViewModel
     [Required(ErrorMessage = "Taşınmaz adı zorunludur.")]
     public string Ad { get; set; } = string.Empty;
 
+    public ParentTarifeKartViewModel? ParentTarife { get; set; }
+
     public int? TasinmazTipiId { get; set; }
     public KiralamaSekli KiralamaSekli { get; set; } = KiralamaSekli.TekParca;
 

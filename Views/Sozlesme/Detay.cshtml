@@ -293,7 +293,7 @@
         }
         @if (Model.HasRateAccess)
         {
-            <button class="tab">Pazarlık Fiyatları @(Model.PazarlikFiyatlari.Any(r => r.OzelFiyatAktif) ? $"({Model.PazarlikFiyatlari.Count(r => r.OzelFiyatAktif)})" : "")</button>
+            <button class="tab">Sözleşme Tarifesi @(Model.PazarlikFiyatlari.Any(r => r.OzelFiyatAktif) ? $"({Model.PazarlikFiyatlari.Count(r => r.OzelFiyatAktif)})" : "")</button>
         }
     </div>
 
@@ -561,7 +561,7 @@
                                 <th></th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{ open: {} }">
                             @foreach (var t in Model.Tahakkuklar.OrderByDescending(x => x.DonemBaslangic))
                             {
                                 string tDurumCls = t.Durum switch {
@@ -576,13 +576,81 @@
                                     KiraTakip.Models.TahakkukDurumu.Gecikti      => "Gecikti",
                                     _                                              => "Bekleniyor"
                                 };
-                                <tr>
-                                    <td style="font-weight:600;">@t.DonemBaslangic.ToString("MMMM yyyy")</td>
+                                <tr @@click="open[@t.Id] = !open[@t.Id]" style="cursor:pointer;">
+                                    <td style="font-weight:600;">
+                                        <svg x-show="open[@t.Id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;vertical-align:middle;"><polyline points="18 15 12 9 6 15"/></svg>
+                                        <svg x-show="!open[@t.Id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;vertical-align:middle;"><polyline points="6 9 12 15 18 9"/></svg>
+                                        @t.DonemBaslangic.ToString("MMMM yyyy")
+                                    </td>
                                     <td style="font-size:13px;">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
                                     <td style="font-weight:600;">@t.ToplamTutar.ToString("N0") ₺</td>
                                     <td style="color:#065f46;">@t.OdenenTutar.ToString("N0") ₺</td>
                                     <td><span class="badge @tDurumCls">@tDurumLabel</span></td>
-                                    <td><a href="/Odeme?tahakkukId=@t.Id" class="btn btn-sm btn-secondary">Ödemeler</a></td>
+                                    <td @@click.stop="">
+                                        <a href="/Odeme?tahakkukId=@t.Id" class="btn btn-sm btn-secondary">Ödemeler</a>
+                                    </td>
+                                </tr>
+                                <tr x-show="open[@t.Id]" x-cloak style="background:#f7f8fb;">
+                                    <td colspan="6" style="padding:10px 20px 14px;">
+                                        @if (t.Kalemler.Any())
+                                        {
+                                            <div style="font-size:11.5px;font-weight:700;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Kalem Dökümü</div>
+                                            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                                                <thead>
+                                                    <tr style="color:var(--color-muted);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">
+                                                        <th style="padding:4px 8px;text-align:left;font-weight:600;">Kod</th>
+                                                        <th style="padding:4px 8px;text-align:left;font-weight:600;">Açıklama</th>
+                                                        <th style="padding:4px 8px;text-align:right;font-weight:600;">Birim Değer</th>
+                                                        <th style="padding:4px 8px;text-align:right;font-weight:600;">Çarpan</th>
+                                                        <th style="padding:4px 8px;text-align:right;font-weight:600;">Tutar</th>
+                                                        <th style="padding:4px 8px;text-align:right;font-weight:600;">KDV</th>
+                                                        <th style="padding:4px 8px;text-align:right;font-weight:600;">Toplam</th>
+                                                        <th style="padding:4px 8px;text-align:center;font-weight:600;">Kaynak</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var k in t.Kalemler.OrderBy(k => k.BorcTipi.Sira))
+                                                    {
+                                                        string kaynakCls = k.KaynakTipi switch {
+                                                            KaynakTipi.Bulunamadi                  => "badge-bos",
+                                                            KaynakTipi.Sozlesme                    => "badge-surek",
+                                                            KaynakTipi.Birim                       => "badge-kirali",
+                                                            KaynakTipi.TasinmazKiraciKategoriFiyat => "badge-bireysel",
+                                                            _                                      => "badge-bos"
+                                                        };
+                                                        string kaynakLabel = k.KaynakTipi switch {
+                                                            KaynakTipi.Bulunamadi                  => "Bulunamadı",
+                                                            KaynakTipi.Sozlesme                    => "Pazarlık",
+                                                            KaynakTipi.Birim                       => "Birim",
+                                                            KaynakTipi.TasinmazKiraciKategoriFiyat => "Fiyat Matrisi",
+                                                            _                                      => "Tarife"
+                                                        };
+                                                        <tr style="border-top:1px solid var(--color-border);">
+                                                            <td style="padding:5px 8px;font-family:monospace;font-weight:700;font-size:12px;">@k.BorcTipi.Kod</td>
+                                                            <td style="padding:5px 8px;">@k.Aciklama</td>
+                                                            <td style="padding:5px 8px;text-align:right;">@k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
+                                                            <td style="padding:5px 8px;text-align:right;color:var(--color-muted);">@k.Carpan.ToString("F2")</td>
+                                                            <td style="padding:5px 8px;text-align:right;font-weight:600;">@k.Tutar.ToString("N2") ₺</td>
+                                                            <td style="padding:5px 8px;text-align:right;color:var(--color-muted);">@k.KdvTutari.ToString("N2") ₺</td>
+                                                            <td style="padding:5px 8px;text-align:right;font-weight:700;">@k.ToplamTutar.ToString("N2") ₺</td>
+                                                            <td style="padding:5px 8px;text-align:center;"><span class="badge @kaynakCls" style="font-size:11px;">@kaynakLabel</span></td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr style="border-top:2px solid var(--color-border);background:#eef0f4;">
+                                                        <td colspan="6" style="padding:5px 8px;font-weight:700;font-size:12px;">Toplam</td>
+                                                        <td style="padding:5px 8px;text-align:right;font-weight:700;">@t.ToplamTutar.ToString("N2") ₺</td>
+                                                        <td></td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        }
+                                        else
+                                        {
+                                            <span style="font-size:13px;color:var(--color-muted);">Kalem bilgisi yok (eski tahakkuk).</span>
+                                        }
+                                    </td>
                                 </tr>
                             }
                         </tbody>
@@ -598,6 +666,13 @@
             <div style="margin-bottom:12px;font-size:13px;color:var(--color-muted);">
                 İşaretlenen borç tipleri için tarife ve birim fiyatı yerine bu sözleşmeye özel fiyatlar kullanılır.
             </div>
+            @if (Model.ParentTarife != null)
+            {
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:12px;color:var(--color-muted);margin-bottom:4px;">İşaretlenmemiş borç tipleri için geçerli üst tarife:</div>
+                    @await Html.PartialAsync("_ParentTarifeKart", Model.ParentTarife)
+                </div>
+            }
             <div style="margin-bottom:16px;padding:10px 14px;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;font-size:13px;color:#7a5c00;">
                 ⚠ Bu değişiklikler yalnızca bundan sonra üretilecek tahakkuklara yansır. Daha önce oluşturulmuş tahakkukları etkilemez.
             </div>

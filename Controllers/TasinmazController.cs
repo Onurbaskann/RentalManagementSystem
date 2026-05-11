@@ -18,19 +18,22 @@ public class TasinmazController : Controller
     private readonly IIstatistikService _istatistik;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _ctx;
+    private readonly ITarifeHiyerarsiService _tarifeHiyerarsisi;
 
     public TasinmazController(
         ITasinmazService tasinmazService,
         ITasinmazFiyatService tasinmazFiyatService,
         IIstatistikService istatistik,
         UserManager<ApplicationUser> userManager,
-        ApplicationDbContext ctx)
+        ApplicationDbContext ctx,
+        ITarifeHiyerarsiService tarifeHiyerarsisi)
     {
         _tasinmazService = tasinmazService;
         _tasinmazFiyatService = tasinmazFiyatService;
         _istatistik = istatistik;
         _userManager = userManager;
         _ctx = ctx;
+        _tarifeHiyerarsisi = tarifeHiyerarsisi;
     }
 
     [Authorize(Policy = PermissionCatalog.Tasinmaz.View)]
@@ -147,7 +150,8 @@ public class TasinmazController : Controller
         await PopulateViewBagAsync();
         var vm = new TasinmazEkleViewModel
         {
-            FiyatMatrisi = await _tasinmazFiyatService.GetMatrisiAsync(0, pageSize: 100) // Tüm kategoriler gelsin
+            FiyatMatrisi = await _tasinmazFiyatService.GetMatrisiAsync(0, pageSize: 100),
+            ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(TarifeHiyerarsiKatmani.Tasinmaz, yil: DateTime.Now.Year)
         };
         return View(vm);
     }

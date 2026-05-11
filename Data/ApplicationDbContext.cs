@@ -206,11 +206,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             entity.Property(k => k.BirimDeger).HasPrecision(18, 4);
             entity.Property(k => k.KdvOrani).HasPrecision(5, 2);
-            entity.HasIndex(k => new { k.TarifeId, k.BorcTipiId }).IsUnique();
+            entity.HasIndex(k => new { k.TarifeId, k.KiraciKategoriId, k.BorcTipiId }).IsUnique();
             entity.HasOne(k => k.Tarife)
                   .WithMany(t => t.Kalemler)
                   .HasForeignKey(k => k.TarifeId)
                   .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(k => k.KiraciKategori)
+                  .WithMany()
+                  .HasForeignKey(k => k.KiraciKategoriId)
+                  .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(k => k.BorcTipi)
                   .WithMany()
                   .HasForeignKey(k => k.BorcTipiId)

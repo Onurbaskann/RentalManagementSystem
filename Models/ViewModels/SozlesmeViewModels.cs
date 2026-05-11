@@ -17,6 +17,7 @@ public class SozlesmeDetayViewModel
     public bool HasOdemeAccess { get; set; }
     public List<SozlesmeRateSatiri> PazarlikFiyatlari { get; set; } = new();
     public bool HasRateAccess { get; set; }
+    public ParentTarifeKartViewModel? ParentTarife { get; set; }
     public List<TahakkukKalemi> GuncelKalemler { get; set; } = new();
     public DateTime? GuncelKalemDonemi { get; set; }
 }

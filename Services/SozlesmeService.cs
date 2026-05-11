@@ -18,6 +18,7 @@ public class SozlesmeService : ISozlesmeService
             .Include(s => s.Birim)
                 .ThenInclude(b => b.Tasinmaz)
             .Include(s => s.Kiraci)
+                .ThenInclude(k => k.KiraciKategori)
             .Include(s => s.IslemGecmisi)
             .AsQueryable();
 

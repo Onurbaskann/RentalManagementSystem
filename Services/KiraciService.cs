@@ -27,12 +27,16 @@ public class KiraciService : IKiraciService
                 .ToListAsync();
 
             return await _ctx.Kiraciler
+                .Include(k => k.KiraciKategori)
                 .Where(k => yetkiliKiraciIds.Contains(k.Id))
                 .OrderBy(k => k.Ad)
                 .ToListAsync();
         }
 
-        return await _ctx.Kiraciler.OrderBy(k => k.Ad).ToListAsync();
+        return await _ctx.Kiraciler
+            .Include(k => k.KiraciKategori)
+            .OrderBy(k => k.Ad)
+            .ToListAsync();
     }
 
     public async Task<Kiraci?> GetByIdAsync(int id)

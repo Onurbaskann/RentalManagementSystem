@@ -31,38 +31,52 @@ public class AdminTarifeController : Controller
     public async Task<IActionResult> Detay(int yil)
     {
         var tarife = await _ctx.Tarifeler
-            .Include(t => t.Kalemler).ThenInclude(k => k.BorcTipi)
+            .Include(t => t.Kalemler)
             .FirstOrDefaultAsync(t => t.Yil == yil);
 
         if (tarife == null) return NotFound();
 
-        var aktifBorcTipleri = await _ctx.BorcTipleri
-            .Where(b => b.Aktif)
+        var kategoriler = await _ctx.KiraciKategorileri
+            .Where(k => k.Aktif)
+            .OrderBy(k => k.Sira)
+            .ToListAsync();
+
+        var borcTipleri = await _ctx.BorcTipleri
+            .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.ManuelTetiklemeli)
             .OrderBy(b => b.Sira)
             .ToListAsync();
 
-        var kalemler = aktifBorcTipleri.Select(bt =>
-        {
-            var mevcut = tarife.Kalemler.FirstOrDefault(k => k.BorcTipiId == bt.Id);
-            return new TarifeKalemSatiri
-            {
-                KalemId           = mevcut?.Id ?? 0,
-                BorcTipiId        = bt.Id,
-                BorcTipiAd        = bt.Ad,
-                BorcTipiKod       = bt.Kod,
-                HesaplamaYontemi  = mevcut?.HesaplamaYontemi ?? HesaplamaYontemi.Sabit,
-                BirimDeger        = mevcut?.BirimDeger ?? 0,
-                KdvOrani          = mevcut?.KdvOrani ?? 0
-            };
-        }).ToList();
-
-        var vm = new TarifeDetayViewModel
+        var vm = new TarifeMatrisViewModel
         {
             TarifeId = tarife.Id,
             Yil      = tarife.Yil,
             Aciklama = tarife.Aciklama,
             Aktif    = tarife.Aktif,
-            Kalemler = kalemler
+            Kolonlar = borcTipleri.Select(bt => new TarifeMatrisBorcTipiKolon
+            {
+                BorcTipiId  = bt.Id,
+                BorcTipiAd  = bt.Ad,
+                BorcTipiKod = bt.Kod
+            }).ToList(),
+            Satirlar = kategoriler.Select(kat => new TarifeMatrisSatir
+            {
+                KiraciKategoriId  = kat.Id,
+                KiraciKategoriAd  = kat.Ad,
+                Hucreler = borcTipleri.Select(bt =>
+                {
+                    var mevcut = tarife.Kalemler.FirstOrDefault(k =>
+                        k.KiraciKategoriId == kat.Id && k.BorcTipiId == bt.Id);
+                    return new TarifeMatrisHucre
+                    {
+                        KalemId          = mevcut?.Id ?? 0,
+                        KiraciKategoriId = kat.Id,
+                        BorcTipiId       = bt.Id,
+                        HesaplamaYontemi = mevcut?.HesaplamaYontemi ?? HesaplamaYontemi.Sabit,
+                        BirimDeger       = mevcut?.BirimDeger ?? 0,
+                        KdvOrani         = mevcut?.KdvOrani ?? 0
+                    };
+                }).ToList()
+            }).ToList()
         };
 
         return View(vm);
@@ -71,7 +85,7 @@ public class AdminTarifeController : Controller
     [Authorize(Policy = PermissionCatalog.Tarife.Manage)]
     [HttpPost("Yil/{yil:int}/KalemGuncelle")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> KalemGuncelle(int yil, TarifeDetayViewModel vm)
+    public async Task<IActionResult> KalemGuncelle(int yil, TarifeMatrisPostViewModel vm)
     {
         var tarife = await _ctx.Tarifeler
             .Include(t => t.Kalemler)
@@ -81,25 +95,27 @@ public class AdminTarifeController : Controller
 
         tarife.Aciklama = vm.Aciklama;
 
-        foreach (var satir in vm.Kalemler)
+        foreach (var hucre in vm.Hucreler)
         {
-            var mevcut = tarife.Kalemler.FirstOrDefault(k => k.BorcTipiId == satir.BorcTipiId);
+            var mevcut = tarife.Kalemler.FirstOrDefault(k =>
+                k.KiraciKategoriId == hucre.KiraciKategoriId && k.BorcTipiId == hucre.BorcTipiId);
             if (mevcut == null)
             {
                 tarife.Kalemler.Add(new TarifeKalemi
                 {
                     TarifeId         = tarife.Id,
-                    BorcTipiId       = satir.BorcTipiId,
-                    HesaplamaYontemi = satir.HesaplamaYontemi,
-                    BirimDeger       = satir.BirimDeger,
-                    KdvOrani         = satir.KdvOrani
+                    KiraciKategoriId = hucre.KiraciKategoriId,
+                    BorcTipiId       = hucre.BorcTipiId,
+                    HesaplamaYontemi = hucre.HesaplamaYontemi,
+                    BirimDeger       = hucre.BirimDeger,
+                    KdvOrani         = hucre.KdvOrani
                 });
             }
             else
             {
-                mevcut.HesaplamaYontemi = satir.HesaplamaYontemi;
-                mevcut.BirimDeger       = satir.BirimDeger;
-                mevcut.KdvOrani         = satir.KdvOrani;
+                mevcut.HesaplamaYontemi = hucre.HesaplamaYontemi;
+                mevcut.BirimDeger       = hucre.BirimDeger;
+                mevcut.KdvOrani         = hucre.KdvOrani;
             }
         }
 
@@ -160,6 +176,7 @@ public class AdminTarifeController : Controller
                 {
                     yeniTarife.Kalemler.Add(new TarifeKalemi
                     {
+                        KiraciKategoriId = kalem.KiraciKategoriId,
                         BorcTipiId       = kalem.BorcTipiId,
                         HesaplamaYontemi = kalem.HesaplamaYontemi,
                         BirimDeger       = kalem.BirimDeger,
@@ -170,16 +187,23 @@ public class AdminTarifeController : Controller
         }
         else
         {
-            var aktifBorcTipleri = await _ctx.BorcTipleri.Where(b => b.Aktif).ToListAsync();
-            foreach (var bt in aktifBorcTipleri)
+            var kategoriler = await _ctx.KiraciKategorileri.Where(k => k.Aktif).OrderBy(k => k.Sira).ToListAsync();
+            var aktifBorcTipleri = await _ctx.BorcTipleri
+                .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.ManuelTetiklemeli)
+                .OrderBy(b => b.Sira).ToListAsync();
+            foreach (var kat in kategoriler)
             {
-                yeniTarife.Kalemler.Add(new TarifeKalemi
+                foreach (var bt in aktifBorcTipleri)
                 {
-                    BorcTipiId       = bt.Id,
-                    HesaplamaYontemi = HesaplamaYontemi.Sabit,
-                    BirimDeger       = 0,
-                    KdvOrani         = 0
-                });
+                    yeniTarife.Kalemler.Add(new TarifeKalemi
+                    {
+                        KiraciKategoriId = kat.Id,
+                        BorcTipiId       = bt.Id,
+                        HesaplamaYontemi = HesaplamaYontemi.Sabit,
+                        BirimDeger       = 0,
+                        KdvOrani         = 0
+                    });
+                }
             }
         }
 
