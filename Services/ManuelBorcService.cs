@@ -66,7 +66,7 @@ public class ManuelBorcService : IManuelBorcService
             return (false, "Feshedilmiş sözleşme için manuel borç oluşturulamaz.", 0);
 
         var borcTipi = await _ctx.BorcTipleri
-            .FirstOrDefaultAsync(b => b.Id == model.BorcTipiId && b.Aktif);
+            .FirstOrDefaultAsync(b => b.Id == model.BorcTipiId && b.Aktif && b.Davranis == BorcTipiDavranisi.KullaniciManuel);
 
         if (borcTipi == null)
             return (false, "Geçersiz borç tipi.", 0);

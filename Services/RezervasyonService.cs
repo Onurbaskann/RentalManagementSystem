@@ -216,9 +216,9 @@ public class RezervasyonService : IRezervasyonService
             return (false, "Ücretsiz rezervasyonlar için tahakkuk oluşturulamaz.", null);
 
         var borcTipi = await _ctx.BorcTipleri
-            .FirstOrDefaultAsync(b => b.Kod == "TOPLANTI" && b.Aktif);
+            .FirstOrDefaultAsync(b => b.Davranis == BorcTipiDavranisi.RezervasyonOzel && b.Aktif);
         if (borcTipi == null)
-            return (false, "'TOPLANTI' borç tipi bulunamadı. Lütfen yöneticinize başvurun.", null);
+            return (false, "Rezervasyon borç tipi bulunamadı. Lütfen yöneticinize başvurun.", null);
 
         var aciklama = $"Toplantı salonu: {rezervasyon.Birim.Ad} " +
                        $"({rezervasyon.BaslangicTarihi:dd.MM.yyyy HH:mm} – {rezervasyon.BitisTarihi:HH:mm})";

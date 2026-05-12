@@ -8,6 +8,7 @@ public class SozlesmeKalemInputDto
     public int BorcTipiId { get; set; }
     public string BorcTipiAd { get; set; } = string.Empty;
     public string BorcTipiKod { get; set; } = string.Empty;
+    public BorcTipiDavranisi Davranis { get; set; }
     public decimal VarsayilanTutar { get; set; }
     public decimal Tutar { get; set; }
     public decimal KdvOrani { get; set; }

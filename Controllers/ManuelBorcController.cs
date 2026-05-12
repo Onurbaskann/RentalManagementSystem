@@ -104,7 +104,7 @@ public class ManuelBorcController : Controller
             .ToListAsync();
 
         vm.BorcTipleri = await _ctx.BorcTipleri
-            .Where(b => b.Aktif)
+            .Where(b => b.Aktif && b.Davranis == BorcTipiDavranisi.KullaniciManuel)
             .OrderBy(b => b.Sira)
             .ToListAsync();
     }

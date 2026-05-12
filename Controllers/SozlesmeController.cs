@@ -115,7 +115,7 @@ public class SozlesmeController : Controller
         {
             vm.HasRateAccess = true;
             var aktifBorcTipleri = await _ctx.BorcTipleri
-                .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.ManuelTetiklemeli).OrderBy(b => b.Sira).ToListAsync();
+                .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.KullaniciManuel && b.Davranis != BorcTipiDavranisi.RezervasyonOzel).OrderBy(b => b.Sira).ToListAsync();
             var mevcutRateler = await _ctx.SozlesmeRateler
                 .Where(r => r.SozlesmeId == id).ToListAsync();
             vm.PazarlikFiyatlari = aktifBorcTipleri.Select(bt =>
@@ -175,8 +175,11 @@ public class SozlesmeController : Controller
 
         if (!ModelState.IsValid) return View(vm);
 
-        var kiraKalemi = vm.SozlesmeKalemleri.FirstOrDefault(k => k.BorcTipiKod == "KIRA");
-        var depozitoKalemi = vm.SozlesmeKalemleri.FirstOrDefault(k => k.BorcTipiKod == "DEPOZITO");
+        // Kalemler servisten Sira sırasıyla gelir; ilk AylikSabit = ana kira bedeli
+        var kiraKalemi = vm.SozlesmeKalemleri
+            .FirstOrDefault(k => k.Davranis == BorcTipiDavranisi.AylikSabit);
+        var depozitoKalemi = vm.SozlesmeKalemleri
+            .FirstOrDefault(k => k.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik);
 
         var kdvUygulanacakMi = kiraKalemi != null && kiraKalemi.KdvOrani > 0;
         var kdvOrani = kdvUygulanacakMi ? kiraKalemi!.KdvOrani : 0;
@@ -368,6 +371,7 @@ public class SozlesmeController : Controller
             BorcTipiId = p.BorcTipiId,
             BorcTipiAd = p.BorcTipiAd,
             BorcTipiKod = p.BorcTipiKod,
+            Davranis = p.Davranis,
             VarsayilanTutar = p.Tutar,
             Tutar = p.Tutar,
             KdvOrani = p.KdvOrani,

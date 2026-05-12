@@ -2,6 +2,7 @@
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Borç Tipi Düzenle";
+    var sistemKilidi = Model.Sistem;
 }
 
 <div class="page-header">
@@ -14,6 +15,7 @@
     <form method="post" action="/Admin/BorcTipi/Duzenle/@Model.Id">
         @Html.AntiForgeryToken()
         <input asp-for="Id" type="hidden" />
+        <input asp-for="Sistem" type="hidden" />
 
         <div class="form-group">
             <label class="form-label">Ad <span style="color:red">*</span></label>
@@ -22,10 +24,18 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label">Kod <span style="color:red">*</span></label>
-            <input asp-for="Kod" class="form-control" style="font-family:monospace;text-transform:uppercase;" required maxlength="20" />
-            <div style="font-size:12px;color:var(--color-muted);margin-top:4px;">Kısa tanımlayıcı (büyük harf, boşluksuz)</div>
-            <span asp-validation-for="Kod" class="text-danger" style="font-size:12px;"></span>
+            <label class="form-label">Kod @if (!sistemKilidi) { <span style="color:red">*</span> }</label>
+            @if (sistemKilidi)
+            {
+                <input asp-for="Kod" class="form-control" style="font-family:monospace;font-weight:600;background:#f3f4f6;color:#6b7280;" readonly />
+                <div style="font-size:12px;color:var(--color-muted);margin-top:4px;">🔒 Sistem kaydı — kod değiştirilemez.</div>
+            }
+            else
+            {
+                <input asp-for="Kod" class="form-control" style="font-family:monospace;text-transform:uppercase;" required maxlength="20" />
+                <div style="font-size:12px;color:var(--color-muted);margin-top:4px;">Kısa tanımlayıcı (büyük harf, rakam, alt çizgi — 2-20 karakter)</div>
+                <span asp-validation-for="Kod" class="text-danger" style="font-size:12px;"></span>
+            }
         </div>
 
         <div class="form-group">
@@ -33,7 +43,8 @@
             <select asp-for="Davranis" class="form-control">
                 <option value="@((int)BorcTipiDavranisi.AylikSabit)">Aylık Sabit — Her ay tahakkuka eklenir</option>
                 <option value="@((int)BorcTipiDavranisi.IlkAyTekSeferlik)">İlk Ay Tek Seferlik — Sadece sözleşmenin ilk ayında eklenir (ör. depozito)</option>
-                <option value="@((int)BorcTipiDavranisi.ManuelTetiklemeli)">Manuel Tetiklemeli — Kullanıcı tarafından manuel eklenir</option>
+                <option value="@((int)BorcTipiDavranisi.KullaniciManuel)">Kullanıcı Manuel — Kullanıcı tarafından manuel eklenir</option>
+                <option value="@((int)BorcTipiDavranisi.RezervasyonOzel)">Rezervasyon Özel — Yalnızca rezervasyon akışı tarafından oluşturulur</option>
             </select>
             <div style="font-size:12px;color:var(--color-muted);margin-top:4px;">Borç kaleminin tahakkuklarda nasıl oluşturulacağını belirler.</div>
             <span asp-validation-for="Davranis" class="text-danger" style="font-size:12px;"></span>

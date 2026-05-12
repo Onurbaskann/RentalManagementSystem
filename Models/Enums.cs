@@ -120,5 +120,6 @@ public enum BorcTipiDavranisi
 {
     AylikSabit = 1,
     IlkAyTekSeferlik = 2,
-    ManuelTetiklemeli = 3
+    KullaniciManuel = 3,
+    RezervasyonOzel = 4
 }

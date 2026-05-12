@@ -51,7 +51,7 @@ public class BirimController : Controller
                 TarifeHiyerarsiKatmani.Birim, tasinmazId: birim.TasinmazId, yil: DateTime.Now.Year);
 
             var aktifBorcTipleri = await _ctx.BorcTipleri
-                .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.ManuelTetiklemeli)
+                .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.KullaniciManuel && b.Davranis != BorcTipiDavranisi.RezervasyonOzel)
                 .OrderBy(b => b.Sira)
                 .ToListAsync();
 

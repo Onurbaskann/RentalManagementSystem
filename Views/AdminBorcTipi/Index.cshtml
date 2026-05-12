@@ -28,62 +28,108 @@
     </a>
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;">
-    <div class="table-wrapper">
-        <table>
-            <thead>
-                <tr>
-                    <th style="width:60px;">Sıra</th>
-                    <th style="width:100px;">Kod</th>
-                    <th>Ad</th>
-                    <th style="width:160px;">Davranış</th>
-                    <th style="width:100px;">Durum</th>
-                    <th style="width:180px;"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var bt in Model)
-                {
+<div x-data="borcTipiFilter()" style="margin-bottom:12px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button @@click="filtre=''" :class="filtre==='' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Tümü</button>
+        <button @@click="filtre='AylikSabit'" :class="filtre==='AylikSabit' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Aylık Sabit</button>
+        <button @@click="filtre='IlkAyTekSeferlik'" :class="filtre==='IlkAyTekSeferlik' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">İlk Ay Tek Seferlik</button>
+        <button @@click="filtre='KullaniciManuel'" :class="filtre==='KullaniciManuel' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Kullanıcı Manuel</button>
+        <button @@click="filtre='RezervasyonOzel'" :class="filtre==='RezervasyonOzel' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Rezervasyon Özel</button>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden;margin-top:12px;">
+        <div class="table-wrapper">
+            <table>
+                <thead>
                     <tr>
-                        <td style="text-align:center;color:var(--color-muted);font-size:13px;">@bt.Sira</td>
-                        <td><span style="font-family:monospace;font-weight:600;font-size:13px;">@bt.Kod</span></td>
-                        <td style="font-weight:500;">@bt.Ad</td>
-                        <td>
-                            @{
-                                var (davranisLabel, davranisColor) = bt.Davranis switch
-                                {
-                                    BorcTipiDavranisi.AylikSabit       => ("Aylık Sabit",        "#1d4ed8"),
-                                    BorcTipiDavranisi.IlkAyTekSeferlik => ("İlk Ay Tek Seferlik","#6d28d9"),
-                                    BorcTipiDavranisi.ManuelTetiklemeli=> ("Manuel Tetiklemeli", "#b45309"),
-                                    _                                  => (bt.Davranis.ToString(), "#374151")
-                                };
-                            }
-                            <span style="font-size:12px;font-weight:600;color:@davranisColor;">@davranisLabel</span>
-                        </td>
-                        <td>
-                            @if (bt.Aktif)
-                            { <span class="badge badge-kirali">Aktif</span> }
-                            else
-                            { <span class="badge badge-gecmis">Pasif</span> }
-                        </td>
-                        <td style="display:flex;gap:6px;justify-content:flex-end;">
-                            <a href="/Admin/BorcTipi/Duzenle/@bt.Id" class="btn btn-sm btn-secondary">Düzenle</a>
-                            <form method="post" action="/Admin/BorcTipi/DurumDegistir/@bt.Id"
-                                  data-confirm="@(bt.Aktif ? $"'{bt.Ad}' pasif yapılsın mı?" : $"'{bt.Ad}' aktif yapılsın mı?")"
-                                  style="display:inline;">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm @(bt.Aktif ? "btn-danger" : "btn-amber")">
-                                    @(bt.Aktif ? "Pasif Yap" : "Aktif Yap")
-                                </button>
-                            </form>
-                        </td>
+                        <th style="width:80px;">Sıra</th>
+                        <th style="width:100px;">Kod</th>
+                        <th>Ad</th>
+                        <th style="width:160px;">Davranış</th>
+                        <th style="width:80px;">Tip</th>
+                        <th style="width:100px;">Durum</th>
+                        <th style="width:200px;"></th>
                     </tr>
-                }
-                @if (!Model.Any())
-                {
-                    <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--color-muted);">Henüz borç tipi tanımlanmamış.</td></tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var bt in Model)
+                    {
+                        var davranisKey = bt.Davranis.ToString();
+                        var (davranisLabel, davranisColor) = bt.Davranis switch
+                        {
+                            BorcTipiDavranisi.AylikSabit        => ("Aylık Sabit",         "#1d4ed8"),
+                            BorcTipiDavranisi.IlkAyTekSeferlik  => ("İlk Ay Tek Seferlik", "#6d28d9"),
+                            BorcTipiDavranisi.KullaniciManuel   => ("Kullanıcı Manuel",    "#b45309"),
+                            BorcTipiDavranisi.RezervasyonOzel   => ("Rezervasyon Özel",    "#0f766e"),
+                            _                                   => (bt.Davranis.ToString(), "#374151")
+                        };
+                        <tr x-show="filtre==='' || filtre==='@davranisKey'">
+                            <td style="text-align:center;">
+                                <div style="display:flex;align-items:center;justify-content:center;gap:2px;">
+                                    <form method="post" action="/Admin/BorcTipi/SiraDegistir/@bt.Id" style="display:inline;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="yeniSira" value="@(bt.Sira - 1)" />
+                                        <button type="submit" class="btn btn-sm btn-secondary" style="padding:1px 5px;font-size:11px;line-height:1.2;" title="Yukarı taşı" @(bt.Sira <= 1 ? "disabled" : "")>▲</button>
+                                    </form>
+                                    <span style="color:var(--color-muted);font-size:13px;min-width:20px;text-align:center;">@bt.Sira</span>
+                                    <form method="post" action="/Admin/BorcTipi/SiraDegistir/@bt.Id" style="display:inline;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="yeniSira" value="@(bt.Sira + 1)" />
+                                        <button type="submit" class="btn btn-sm btn-secondary" style="padding:1px 5px;font-size:11px;line-height:1.2;" title="Aşağı taşı">▼</button>
+                                    </form>
+                                </div>
+                            </td>
+                            <td><span style="font-family:monospace;font-weight:600;font-size:13px;">@bt.Kod</span></td>
+                            <td style="font-weight:500;">@bt.Ad</td>
+                            <td>
+                                <span style="font-size:12px;font-weight:600;color:@davranisColor;">@davranisLabel</span>
+                            </td>
+                            <td>
+                                @if (bt.Sistem)
+                                {
+                                    <span style="font-size:11px;font-weight:600;color:#6b7280;background:#f3f4f6;padding:2px 7px;border-radius:4px;" title="Sistem kaydı: kod ve pasifleştirme kilitli">Sistem</span>
+                                }
+                            </td>
+                            <td>
+                                @if (bt.Aktif)
+                                { <span class="badge badge-kirali">Aktif</span> }
+                                else
+                                { <span class="badge badge-gecmis">Pasif</span> }
+                            </td>
+                            <td style="display:flex;gap:6px;justify-content:flex-end;">
+                                <a href="/Admin/BorcTipi/Duzenle/@bt.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                                @if (!bt.Sistem)
+                                {
+                                    <form method="post" action="/Admin/BorcTipi/DurumDegistir/@bt.Id"
+                                          data-confirm="@(bt.Aktif ? $"'{bt.Ad}' pasif yapılsın mı?" : $"'{bt.Ad}' aktif yapılsın mı?")"
+                                          style="display:inline;">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm @(bt.Aktif ? "btn-danger" : "btn-amber")">
+                                            @(bt.Aktif ? "Pasif Yap" : "Aktif Yap")
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span style="font-size:12px;color:var(--color-muted);padding:4px 8px;" title="Sistem kaydları pasifleştirilemez">🔒</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--color-muted);">Henüz borç tipi tanımlanmamış.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function borcTipiFilter() {
+            return { filtre: '' };
+        }
+    </script>
+}

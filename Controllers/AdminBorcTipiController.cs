@@ -61,6 +61,14 @@ public class AdminBorcTipiController : Controller
     public async Task<IActionResult> Edit(int id, BorcTipi model)
     {
         if (id != model.Id) return BadRequest();
+
+        var entity = await _ctx.BorcTipleri.FindAsync(id);
+        if (entity == null) return NotFound();
+
+        // Sistem tiplerinde Kod değiştirilemez — form değeri yok sayılır
+        if (entity.Sistem)
+            model.Kod = entity.Kod;
+
         if (!ModelState.IsValid) return View(model);
 
         model.Kod = model.Kod.Trim().ToUpper();
@@ -70,9 +78,15 @@ public class AdminBorcTipiController : Controller
             return View(model);
         }
 
-        _ctx.BorcTipleri.Update(model);
+        entity.Ad = model.Ad;
+        entity.Kod = model.Kod;
+        entity.Davranis = model.Davranis;
+        entity.Sira = model.Sira;
+        entity.Aktif = model.Aktif;
+        // entity.Sistem hiç değiştirilmez
+
         await _ctx.SaveChangesAsync();
-        TempData["Success"] = $"'{model.Ad}' güncellendi.";
+        TempData["Success"] = $"'{entity.Ad}' güncellendi.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -82,6 +96,13 @@ public class AdminBorcTipiController : Controller
     {
         var entity = await _ctx.BorcTipleri.FindAsync(id);
         if (entity == null) return NotFound();
+
+        if (entity.Sistem && entity.Aktif)
+        {
+            TempData["Error"] = $"'{entity.Ad}' bir sistem kaydıdır ve pasif yapılamaz.";
+            return RedirectToAction(nameof(Index));
+        }
+
         entity.Aktif = !entity.Aktif;
         await _ctx.SaveChangesAsync();
         TempData["Success"] = $"'{entity.Ad}' {(entity.Aktif ? "aktif" : "pasif")} yapıldı.";

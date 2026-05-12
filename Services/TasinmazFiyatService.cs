@@ -31,9 +31,8 @@ namespace KiraTakip.Services
                 .OrderBy(k => k.Ad)
                 .ToListAsync();
 
-            // Borç tipleri (ManuelTetiklemeli olmayanlar)
             var borcTipleri = await _ctx.BorcTipleri
-                .Where(b => b.Davranis != BorcTipiDavranisi.ManuelTetiklemeli)
+                .Where(b => b.Davranis != BorcTipiDavranisi.KullaniciManuel && b.Davranis != BorcTipiDavranisi.RezervasyonOzel)
                 .OrderBy(b => b.Sira)
                 .ToListAsync();
 
@@ -95,7 +94,7 @@ namespace KiraTakip.Services
                             BorcTipiId = bt.Id,
                             BirimDeger = 0m,
                             HesaplamaYontemi = HesaplamaYontemi.Sabit,
-                            KdvOrani = bt.Kod == "DEPOZITO" ? 0m : 20m,
+                            KdvOrani = bt.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik ? 0m : 20m,
                             Aktif = true,
                             Aciklama = null,
                             RateVarMi = false

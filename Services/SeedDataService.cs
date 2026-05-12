@@ -21,18 +21,33 @@ public class SeedDataService
         var existingCodes = await _ctx.BorcTipleri.Select(b => b.Kod).ToListAsync();
         var toAdd = new List<BorcTipi>();
 
-        if (!existingCodes.Contains("KIRA")) toAdd.Add(new BorcTipi { Ad = "Kira Bedeli", Kod = "KIRA", Aktif = true, Sira = 1, Davranis = BorcTipiDavranisi.AylikSabit });
-        if (!existingCodes.Contains("ORTAK")) toAdd.Add(new BorcTipi { Ad = "Ortak Gider", Kod = "ORTAK", Aktif = true, Sira = 2, Davranis = BorcTipiDavranisi.AylikSabit });
-        if (!existingCodes.Contains("PORTAL")) toAdd.Add(new BorcTipi { Ad = "Portal Gideri", Kod = "PORTAL", Aktif = true, Sira = 3, Davranis = BorcTipiDavranisi.AylikSabit });
-        if (!existingCodes.Contains("MANUEL")) toAdd.Add(new BorcTipi { Ad = "Manuel Borç", Kod = "MANUEL", Aktif = true, Sira = 50, Davranis = BorcTipiDavranisi.ManuelTetiklemeli });
-        if (!existingCodes.Contains("TOPLANTI")) toAdd.Add(new BorcTipi { Ad = "Toplantı Salonu Kullanım Bedeli", Kod = "TOPLANTI", Aktif = true, Sira = 60, Davranis = BorcTipiDavranisi.ManuelTetiklemeli });
-        if (!existingCodes.Contains("DEPOZITO")) toAdd.Add(new BorcTipi { Ad = "Depozito", Kod = "DEPOZITO", Aktif = true, Sira = 99, Davranis = BorcTipiDavranisi.IlkAyTekSeferlik });
+        if (!existingCodes.Contains("KIRA")) toAdd.Add(new BorcTipi { Ad = "Kira Bedeli", Kod = "KIRA", Aktif = true, Sira = 1, Davranis = BorcTipiDavranisi.AylikSabit, Sistem = true });
+        if (!existingCodes.Contains("ORTAK")) toAdd.Add(new BorcTipi { Ad = "Ortak Gider", Kod = "ORTAK", Aktif = true, Sira = 2, Davranis = BorcTipiDavranisi.AylikSabit, Sistem = false });
+        if (!existingCodes.Contains("PORTAL")) toAdd.Add(new BorcTipi { Ad = "Portal Gideri", Kod = "PORTAL", Aktif = true, Sira = 3, Davranis = BorcTipiDavranisi.AylikSabit, Sistem = false });
+        if (!existingCodes.Contains("MANUEL")) toAdd.Add(new BorcTipi { Ad = "Manuel Borç", Kod = "MANUEL", Aktif = true, Sira = 50, Davranis = BorcTipiDavranisi.KullaniciManuel, Sistem = false });
+        if (!existingCodes.Contains("TOPLANTI")) toAdd.Add(new BorcTipi { Ad = "Toplantı Salonu Kullanım Bedeli", Kod = "TOPLANTI", Aktif = true, Sira = 60, Davranis = BorcTipiDavranisi.RezervasyonOzel, Sistem = true });
+        if (!existingCodes.Contains("DEPOZITO")) toAdd.Add(new BorcTipi { Ad = "Depozito", Kod = "DEPOZITO", Aktif = true, Sira = 99, Davranis = BorcTipiDavranisi.IlkAyTekSeferlik, Sistem = false });
 
         if (toAdd.Any())
         {
             _ctx.BorcTipleri.AddRange(toAdd);
             await _ctx.SaveChangesAsync();
         }
+
+        // Mevcut seed kayıtlarında Sistem flag eksikse güncelle
+        await _ctx.BorcTipleri
+            .Where(b => b.Kod == "KIRA")
+            .ExecuteUpdateAsync(s => s.SetProperty(b => b.Sistem, true));
+
+        await _ctx.BorcTipleri
+            .Where(b => b.Kod == "TOPLANTI")
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(b => b.Sistem, true)
+                .SetProperty(b => b.Davranis, BorcTipiDavranisi.RezervasyonOzel));
+
+        await _ctx.BorcTipleri
+            .Where(b => new[] { "ORTAK", "PORTAL", "MANUEL", "DEPOZITO" }.Contains(b.Kod))
+            .ExecuteUpdateAsync(s => s.SetProperty(b => b.Sistem, false));
     }
 
     public async Task EnsureDepozitoBorcTipiAsync() { }
@@ -141,7 +156,7 @@ public class SeedDataService
             .ToListAsync();
 
         var borcTipleri = await _ctx.BorcTipleri
-            .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.ManuelTetiklemeli)
+            .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.KullaniciManuel && b.Davranis != BorcTipiDavranisi.RezervasyonOzel)
             .OrderBy(b => b.Sira)
             .ToListAsync();
 
@@ -173,7 +188,7 @@ public class SeedDataService
                         "DEPOZITO" => kat.Kod == "AKADEMISYEN" ? 8000m : 15000m,
                         _          => 0m
                     },
-                    KdvOrani = bt.Kod == "DEPOZITO" ? 0m : 20m
+                    KdvOrani = bt.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik ? 0m : 20m
                 });
             }
         }
@@ -516,26 +531,93 @@ public class SeedDataService
 
     private async Task SeedRezervasyonlarAsync()
     {
-        var salon = await _ctx.Birimler.FirstOrDefaultAsync(b => b.Ad == "Ana Toplantı Salonu");
+        var salon = await _ctx.Birimler.Include(b => b.Tasinmaz).FirstOrDefaultAsync(b => b.Ad == "Ana Toplantı Salonu");
         var kiraci = await _ctx.Kiraciler.FirstOrDefaultAsync();
+        var sozlesme = await _ctx.Sozlesmeler.FirstOrDefaultAsync(s => s.KiraciId == kiraci.Id);
+        
         if (salon == null || kiraci == null) return;
 
-        // Geçmiş Rezervasyon (Tamamlandı)
-        _ctx.ToplantiSalonuRezervasyonlari.Add(new ToplantiSalonuRezervasyon
-        {
-            BirimId = salon.Id, KiraciId = kiraci.Id,
-            BaslangicTarihi = DateTime.Today.AddDays(-10).AddHours(10), BitisTarihi = DateTime.Today.AddDays(-10).AddHours(13),
-            ToplamSureDakika = 180, UcretsizSureDakika = 60, UcretliSureDakika = 120, BirimUcret = 500, UcretTutar = 1000, ToplamTutar = 1200, KdvOrani = 20,
-            Durum = RezervasyonDurumu.Tamamlandi, OlusturmaTarihi = DateTime.Now.AddDays(-15)
-        });
+        var btRezervasyon = await _ctx.BorcTipleri.FirstOrDefaultAsync(b => b.Kod == "TOPLANTI");
 
-        // Gelecek Rezervasyon (Planlandı)
+        // 1. Geçmiş Rezervasyon (Tahakkuka Aktarıldı)
+        var rezervasyon1 = new ToplantiSalonuRezervasyon
+        {
+            BirimId = salon.Id,
+            KiraciId = kiraci.Id,
+            KiraSozlesmesiId = sozlesme?.Id,
+            BaslangicTarihi = DateTime.Today.AddDays(-10).AddHours(10),
+            BitisTarihi = DateTime.Today.AddDays(-10).AddHours(13),
+            ToplamSureDakika = 180,
+            UcretsizSureDakika = 60,
+            UcretliSureDakika = 120,
+            BirimUcret = 500,
+            UcretTutar = 1000,
+            KdvOrani = 20,
+            KdvTutari = 200,
+            ToplamTutar = 1200,
+            Durum = RezervasyonDurumu.TahakkukaAktarildi,
+            OlusturmaTarihi = DateTime.Now.AddDays(-15)
+        };
+        _ctx.ToplantiSalonuRezervasyonlari.Add(rezervasyon1);
+        await _ctx.SaveChangesAsync();
+
+        if (btRezervasyon != null)
+        {
+            var tahakkuk = new KiraTahakkuk
+            {
+                KiraSozlesmesiId = sozlesme?.Id,
+                DonemBaslangic = rezervasyon1.BaslangicTarihi.Date,
+                DonemBitis = rezervasyon1.BitisTarihi.Date,
+                VadeTarihi = rezervasyon1.BitisTarihi.Date,
+                BeklenenTutar = 1000,
+                KdvTutari = 200,
+                ToplamTutar = 1200,
+                OdenenTutar = 0,
+                Durum = TahakkukDurumu.Bekleniyor,
+                KaynakTipi = TahakkukKaynakTipi.Rezervasyon,
+                OlusturmaTarihi = DateTime.Now.AddDays(-10),
+                Kalemler = new List<TahakkukKalemi>
+                {
+                    new TahakkukKalemi
+                    {
+                        BorcTipiId = btRezervasyon.Id,
+                        Aciklama = $"Toplantı salonu: {salon.Ad} ({rezervasyon1.BaslangicTarihi:dd.MM.yyyy HH:mm} – {rezervasyon1.BitisTarihi:HH:mm})",
+                        HesaplamaYontemi = HesaplamaYontemi.Sabit,
+                        BirimDeger = 1000,
+                        Carpan = 1,
+                        Tutar = 1000,
+                        KdvOrani = 20,
+                        KdvTutari = 200,
+                        ToplamTutar = 1200,
+                        KaynakTipi = KaynakTipi.Sozlesme
+                    }
+                }
+            };
+            _ctx.KiraTahakkuklar.Add(tahakkuk);
+            await _ctx.SaveChangesAsync();
+
+            rezervasyon1.KiraTahakkukId = tahakkuk.Id;
+            await _ctx.SaveChangesAsync();
+        }
+
+        // 2. Gelecek Rezervasyon (Planlandı)
         _ctx.ToplantiSalonuRezervasyonlari.Add(new ToplantiSalonuRezervasyon
         {
-            BirimId = salon.Id, KiraciId = kiraci.Id,
-            BaslangicTarihi = DateTime.Today.AddDays(3).AddHours(14), BitisTarihi = DateTime.Today.AddDays(3).AddHours(17),
-            ToplamSureDakika = 180, UcretsizSureDakika = 60, UcretliSureDakika = 120, BirimUcret = 500, UcretTutar = 1000, ToplamTutar = 1200, KdvOrani = 20,
-            Durum = RezervasyonDurumu.Planlandi, OlusturmaTarihi = DateTime.Now
+            BirimId = salon.Id,
+            KiraciId = kiraci.Id,
+            KiraSozlesmesiId = sozlesme?.Id,
+            BaslangicTarihi = DateTime.Today.AddDays(3).AddHours(14),
+            BitisTarihi = DateTime.Today.AddDays(3).AddHours(17),
+            ToplamSureDakika = 180,
+            UcretsizSureDakika = 60,
+            UcretliSureDakika = 120,
+            BirimUcret = 500,
+            UcretTutar = 1000,
+            KdvOrani = 20,
+            KdvTutari = 200,
+            ToplamTutar = 1200,
+            Durum = RezervasyonDurumu.Planlandi,
+            OlusturmaTarihi = DateTime.Now
         });
 
         await _ctx.SaveChangesAsync();

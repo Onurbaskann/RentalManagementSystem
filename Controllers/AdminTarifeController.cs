@@ -42,7 +42,7 @@ public class AdminTarifeController : Controller
             .ToListAsync();
 
         var borcTipleri = await _ctx.BorcTipleri
-            .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.ManuelTetiklemeli)
+            .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.KullaniciManuel && b.Davranis != BorcTipiDavranisi.RezervasyonOzel)
             .OrderBy(b => b.Sira)
             .ToListAsync();
 
@@ -189,7 +189,7 @@ public class AdminTarifeController : Controller
         {
             var kategoriler = await _ctx.KiraciKategorileri.Where(k => k.Aktif).OrderBy(k => k.Sira).ToListAsync();
             var aktifBorcTipleri = await _ctx.BorcTipleri
-                .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.ManuelTetiklemeli)
+                .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.KullaniciManuel && b.Davranis != BorcTipiDavranisi.RezervasyonOzel)
                 .OrderBy(b => b.Sira).ToListAsync();
             foreach (var kat in kategoriler)
             {

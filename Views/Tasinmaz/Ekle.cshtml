@@ -188,8 +188,8 @@
                                 {
                                     var hucre = satir.Hucreler[j];
                                     var kolon = Model.FiyatMatrisi.Kolonlar[j];
-                                    var isDepozito = kolon.BorcTipiKod == "DEPOZITO";
                                     var isIlkAy = kolon.BorcTipiDavranisi == BorcTipiDavranisi.IlkAyTekSeferlik;
+                                    var isDepozito = isIlkAy;
                                     <tr data-depozito="@(isDepozito ? "true" : "false")">
                                         <!-- Borç Tipi: nokta + davranış rozeti + ad -->
                                         <td style="padding:6px 12px 6px 0;vertical-align:middle;">

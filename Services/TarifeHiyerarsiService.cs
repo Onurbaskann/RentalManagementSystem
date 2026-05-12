@@ -105,7 +105,8 @@ public class TarifeHiyerarsiService : ITarifeHiyerarsiService
             .Include(k => k.KiraciKategori)
             .Include(k => k.BorcTipi)
             .Where(k => k.TarifeId == tarife.Id
-                     && k.BorcTipi.Davranis != BorcTipiDavranisi.ManuelTetiklemeli);
+                     && k.BorcTipi.Davranis != BorcTipiDavranisi.KullaniciManuel
+                     && k.BorcTipi.Davranis != BorcTipiDavranisi.RezervasyonOzel);
         if (kategoriId.HasValue)
             kq = kq.Where(k => k.KiraciKategoriId == kategoriId.Value);
 

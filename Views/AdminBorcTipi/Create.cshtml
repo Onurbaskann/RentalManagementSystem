@@ -32,7 +32,8 @@
             <select asp-for="Davranis" class="form-control">
                 <option value="@((int)BorcTipiDavranisi.AylikSabit)">Aylık Sabit — Her ay tahakkuka eklenir</option>
                 <option value="@((int)BorcTipiDavranisi.IlkAyTekSeferlik)">İlk Ay Tek Seferlik — Sadece sözleşmenin ilk ayında eklenir (ör. depozito)</option>
-                <option value="@((int)BorcTipiDavranisi.ManuelTetiklemeli)">Manuel Tetiklemeli — Kullanıcı tarafından manuel eklenir</option>
+                <option value="@((int)BorcTipiDavranisi.KullaniciManuel)">Kullanıcı Manuel — Kullanıcı tarafından manuel eklenir</option>
+                <option value="@((int)BorcTipiDavranisi.RezervasyonOzel)">Rezervasyon Özel — Yalnızca rezervasyon akışı tarafından oluşturulur</option>
             </select>
             <div style="font-size:12px;color:var(--color-muted);margin-top:4px;">Borç kaleminin tahakkuklarda nasıl oluşturulacağını belirler.</div>
             <span asp-validation-for="Davranis" class="text-danger" style="font-size:12px;"></span>
