@@ -71,7 +71,7 @@ public class TahakkukService : ITahakkukService
             ToplamTutar      = sozlesme.KiraBedeli + kdvTutari,
             OdenenTutar      = 0,
             Durum            = TahakkukDurumu.Bekleniyor,
-            KaynakTipi       = TahakkukKaynakTipi.Otomatik,
+            KaynakTipi       = TahakkukKaynakTipi.Sozlesme,
             OlusturmaTarihi  = DateTime.Now
         };
 

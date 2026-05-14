@@ -18,6 +18,7 @@ public class RezervasyonService : IRezervasyonService
     {
         var query = _ctx.ToplantiSalonuRezervasyonlari
             .Include(r => r.Birim).ThenInclude(b => b.Tasinmaz)
+            .Include(r => r.Birim).ThenInclude(b => b.BirimTuru)
             .Include(r => r.Kiraci)
             .Include(r => r.KiraSozlesmesi)
             .Include(r => r.KiraTahakkuk)
@@ -39,6 +40,7 @@ public class RezervasyonService : IRezervasyonService
     {
         return await _ctx.ToplantiSalonuRezervasyonlari
             .Include(r => r.Birim).ThenInclude(b => b.Tasinmaz)
+            .Include(r => r.Birim).ThenInclude(b => b.BirimTuru)
             .Include(r => r.Kiraci)
             .Include(r => r.KiraSozlesmesi)
             .Include(r => r.KiraTahakkuk)
@@ -57,37 +59,71 @@ public class RezervasyonService : IRezervasyonService
             return sonuc;
         }
 
-        // Birime özel kural önce, yoksa genel kural
+        // 1) Birime özel kural (Aktif ve BirimId eşleşen)
         var kural = await _ctx.RezervasyonUcretKurallari
             .Where(k => k.Aktif && k.BirimId == birimId)
-            .FirstOrDefaultAsync()
-            ?? await _ctx.RezervasyonUcretKurallari
-            .Where(k => k.Aktif && k.BirimId == null)
             .FirstOrDefaultAsync();
 
-        if (kural == null)
+        int ucretsiz;
+        int periyot;
+        decimal ucret;
+        decimal kdv;
+
+        if (kural != null)
         {
-            sonuc.HataMessaji = "Bu birim için tanımlı ücret kuralı bulunamadı.";
-            return sonuc;
+            ucretsiz = kural.UcretsizSureDakika;
+            periyot = kural.UcretlendirmePeriyoduDakika;
+            ucret = kural.PeriyotUcreti;
+            kdv = kural.KdvOrani;
+            sonuc.KuralBulundu = true;
+        }
+        else
+        {
+            // 2) Birim Türü bazlı Yıllık Genel Tarife
+            var birim = await _ctx.Birimler
+                .Include(b => b.BirimTuru)
+                .FirstOrDefaultAsync(b => b.Id == birimId);
+
+            if (birim?.BirimTuruId is not int btId)
+            {
+                sonuc.HataMessaji = "Birim türü tanımlanmamış.";
+                return sonuc;
+            }
+
+            int cariYil = baslangic.Year;
+            var genel = await _ctx.RezervasyonGenelTarifeleri
+                .Include(g => g.Tarife)
+                .Where(g => g.BirimTuruId == btId && g.Tarife.Aktif && g.Tarife.Yil == cariYil)
+                .FirstOrDefaultAsync();
+
+            if (genel == null)
+            {
+                sonuc.HataMessaji = $"{cariYil} yılı için '{birim.BirimTuru?.Ad}' türünde genel rezervasyon tarifesi tanımlı değil.";
+                return sonuc;
+            }
+
+            ucretsiz = genel.UcretsizSureDakika;
+            periyot = genel.UcretlendirmePeriyoduDakika;
+            ucret = genel.PeriyotUcreti;
+            kdv = genel.KdvOrani;
+            sonuc.KuralBulundu = true;
         }
 
-        sonuc.KuralBulundu = true;
-
         var toplamDakika = (int)Math.Ceiling((bitis - baslangic).TotalMinutes);
-        var ucretliDakika = Math.Max(0, toplamDakika - kural.UcretsizSureDakika);
+        var ucretliDakika = Math.Max(0, toplamDakika - ucretsiz);
         var periyotSayisi = ucretliDakika == 0
             ? 0
-            : (int)Math.Ceiling((double)ucretliDakika / kural.UcretlendirmePeriyoduDakika);
+            : (int)Math.Ceiling((double)ucretliDakika / periyot);
 
-        sonuc.ToplamSureDakika    = toplamDakika;
-        sonuc.UcretsizSureDakika  = Math.Min(kural.UcretsizSureDakika, toplamDakika);
-        sonuc.UcretliSureDakika   = ucretliDakika;
+        sonuc.ToplamSureDakika     = toplamDakika;
+        sonuc.UcretsizSureDakika   = Math.Min(ucretsiz, toplamDakika);
+        sonuc.UcretliSureDakika    = ucretliDakika;
         sonuc.UcretliPeriyotSayisi = periyotSayisi;
-        sonuc.BirimUcret          = kural.PeriyotUcreti;
-        sonuc.UcretTutar          = periyotSayisi * kural.PeriyotUcreti;
-        sonuc.KdvOrani            = kural.KdvOrani;
-        sonuc.KdvTutari           = Math.Round(sonuc.UcretTutar * kural.KdvOrani / 100, 2);
-        sonuc.ToplamTutar         = sonuc.UcretTutar + sonuc.KdvTutari;
+        sonuc.BirimUcret           = ucret;
+        sonuc.UcretTutar           = periyotSayisi * ucret;
+        sonuc.KdvOrani             = kdv;
+        sonuc.KdvTutari            = Math.Round(sonuc.UcretTutar * kdv / 100, 2);
+        sonuc.ToplamTutar          = sonuc.UcretTutar + sonuc.KdvTutari;
 
         return sonuc;
     }
@@ -215,8 +251,16 @@ public class RezervasyonService : IRezervasyonService
         if (rezervasyon.ToplamTutar <= 0)
             return (false, "Ücretsiz rezervasyonlar için tahakkuk oluşturulamaz.", null);
 
-        var borcTipi = await _ctx.BorcTipleri
+        var birimTuru = rezervasyon.Birim.BirimTuru;
+        BorcTipi? borcTipi = null;
+
+        if (birimTuru?.BorcTipiId is int btId)
+            borcTipi = await _ctx.BorcTipleri.FirstOrDefaultAsync(b => b.Id == btId && b.Aktif);
+
+        // Fallback (geriye uyum — BirimTuru.BorcTipiId set edilmemiş eski kayıtlar)
+        borcTipi ??= await _ctx.BorcTipleri
             .FirstOrDefaultAsync(b => b.Davranis == BorcTipiDavranisi.RezervasyonOzel && b.Aktif);
+
         if (borcTipi == null)
             return (false, "Rezervasyon borç tipi bulunamadı. Lütfen yöneticinize başvurun.", null);
 
@@ -234,7 +278,7 @@ public class RezervasyonService : IRezervasyonService
             KdvOrani         = rezervasyon.KdvOrani ?? 0m,
             KdvTutari        = rezervasyon.KdvTutari ?? 0m,
             ToplamTutar      = rezervasyon.ToplamTutar,
-            KaynakTipi       = KaynakTipi.Sozlesme
+            KaynakTipi       = KalemKaynakTipi.RezervasyonKurali
         };
 
         var tahakkuk = new KiraTahakkuk

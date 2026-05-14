@@ -28,6 +28,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<RezervasyonUcretKural> RezervasyonUcretKurallari { get; set; }
     public DbSet<ToplantiSalonuRezervasyon> ToplantiSalonuRezervasyonlari { get; set; }
+    public DbSet<RezervasyonGenelTarife> RezervasyonGenelTarifeleri { get; set; }
 
     public DbSet<BorcTipi> BorcTipleri { get; set; }
     public DbSet<Tarife> Tarifeler { get; set; }
@@ -153,6 +154,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(b => b.Ad).HasMaxLength(100);
             entity.Property(b => b.Kod).HasMaxLength(20);
             entity.HasIndex(b => b.Kod).IsUnique();
+
+            entity.HasOne(b => b.BorcTipi)
+                  .WithMany()
+                  .HasForeignKey(b => b.BorcTipiId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<KiraciKategori>(entity =>
@@ -396,6 +402,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                   .HasForeignKey(r => r.KiraTahakkukId)
                   .OnDelete(DeleteBehavior.SetNull);
             entity.HasIndex(r => new { r.BirimId, r.BaslangicTarihi });
+        });
+
+        builder.Entity<RezervasyonGenelTarife>(e =>
+        {
+            e.HasIndex(r => new { r.TarifeId, r.BirimTuruId }).IsUnique();
+            e.Property(r => r.PeriyotUcreti).HasPrecision(18, 2);
+            e.Property(r => r.KdvOrani).HasPrecision(5, 2);
+            e.HasOne(r => r.Tarife).WithMany().HasForeignKey(r => r.TarifeId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.BirimTuru).WithMany().HasForeignKey(r => r.BirimTuruId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

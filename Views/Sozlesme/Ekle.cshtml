@@ -102,10 +102,10 @@
                                 <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: 150px;">
                                     <!-- Kaynak Tipi Rozeti -->
                                     <span class="badge" style="font-size: 10px; padding: 2px 6px;"
-                                          :class="k.kaynakTipi === 'SozlesmeRate' ? 'bg-primary' : 
-                                                  k.kaynakTipi === 'BirimRate' ? 'bg-success' : 
-                                                  k.kaynakTipi === 'TasinmazKiraciKategoriFiyat' ? 'bg-info text-dark' : 
-                                                  k.kaynakTipi === 'TarifeKalemi' ? 'bg-warning text-dark' : 'bg-secondary'"
+                                          :class="k.kaynakTipi === 'SozlesmeTarifesi' ? 'bg-primary' :
+                                                  k.kaynakTipi === 'BirimTarifesi' ? 'bg-success' :
+                                                  k.kaynakTipi === 'TasinmazTarifesi' ? 'bg-info text-dark' :
+                                                  k.kaynakTipi === 'GenelTarife' ? 'bg-warning text-dark' : 'bg-secondary'"
                                           x-text="getKaynakTipiLabel(k.kaynakTipi)"></span>
                                     
                                     <!-- Durum Rozeti -->
@@ -251,10 +251,11 @@
             },
             getKaynakTipiLabel(val) {
                 const map = {
-                    'SozlesmeRate': 'Sözleşme',
-                    'BirimRate': 'Birim',
-                    'TasinmazKiraciKategoriFiyat': 'Kiracı Kategorisi',
-                    'TarifeKalemi': 'Tarife'
+                    'SozlesmeTarifesi':  'Sözleşme Tarifesi',
+                    'BirimTarifesi':     'Birim Tarifesi',
+                    'TasinmazTarifesi':  'Taşınmaz Tarifesi',
+                    'GenelTarife':       'Genel Tarife',
+                    'TanimsizTarife':    'Tanımsız Tarife'
                 };
                 return map[val] || 'Fiyat Tanımı Yok';
             },

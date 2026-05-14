@@ -139,25 +139,34 @@
                     @foreach (var k in Model.Kalemler.OrderBy(k => k.BorcTipi.Sira))
                     {
                         string kaynakCls = k.KaynakTipi switch {
-                            KaynakTipi.Bulunamadi => "badge-bos",
-                            KaynakTipi.Sozlesme => "badge-surek",
-                            KaynakTipi.Birim    => "badge-kirali",
-                            KaynakTipi.TasinmazKiraciKategoriFiyat => "badge-bireysel",
-                            _                   => "badge-bos"
+                            KalemKaynakTipi.TanimsizTarife    => "badge-bos",
+                            KalemKaynakTipi.SozlesmeTarifesi  => "badge-surek",
+                            KalemKaynakTipi.BirimTarifesi     => "badge-kirali",
+                            KalemKaynakTipi.TasinmazTarifesi  => "badge-bireysel",
+                            KalemKaynakTipi.GenelTarife       => "badge-bos",
+                            KalemKaynakTipi.ManuelGiris       => "badge-surek",
+                            KalemKaynakTipi.RezervasyonKurali => "badge-bireysel",
+                            _                                 => "badge-bos"
                         };
                         string kaynakLabel = k.KaynakTipi switch {
-                            KaynakTipi.Bulunamadi => "Bulunamadı",
-                            KaynakTipi.Sozlesme => "Pazarlık",
-                            KaynakTipi.Birim    => "Birim",
-                            KaynakTipi.TasinmazKiraciKategoriFiyat => "Fiyat Matrisi",
-                            _                   => "Tarife"
+                            KalemKaynakTipi.TanimsizTarife    => "Tanımsız Tarife",
+                            KalemKaynakTipi.SozlesmeTarifesi  => "Sözleşme Tarifesi",
+                            KalemKaynakTipi.BirimTarifesi     => "Birim Tarifesi",
+                            KalemKaynakTipi.TasinmazTarifesi  => "Taşınmaz Tarifesi",
+                            KalemKaynakTipi.GenelTarife       => "Genel Tarife",
+                            KalemKaynakTipi.ManuelGiris       => "Manuel Giriş",
+                            KalemKaynakTipi.RezervasyonKurali => "Rezervasyon Kuralı",
+                            _                                 => "Bilinmiyor"
                         };
                         string kaynakTip = k.KaynakTipi switch {
-                            KaynakTipi.Bulunamadi => "Fiyat tanımı bulunamadığı için 0₺ olarak üretildi.",
-                            KaynakTipi.Sozlesme => "Sözleşmeye özel pazarlık fiyatı kullanıldı.",
-                            KaynakTipi.Birim    => "Birim düzeyinde özel fiyat kullanıldı.",
-                            KaynakTipi.TasinmazKiraciKategoriFiyat => "Taşınmaz ve kiracı kategorisine özel matris fiyatı kullanıldı.",
-                            _                   => "Genel tarife fiyatı uygulandı."
+                            KalemKaynakTipi.TanimsizTarife    => "Fiyat tanımı bulunamadığı için 0₺ olarak üretildi.",
+                            KalemKaynakTipi.SozlesmeTarifesi  => "Sözleşmeye özel tarife fiyatı kullanıldı.",
+                            KalemKaynakTipi.BirimTarifesi     => "Birim düzeyinde özel fiyat kullanıldı.",
+                            KalemKaynakTipi.TasinmazTarifesi  => "Taşınmaz ve kiracı kategorisine özel matris fiyatı kullanıldı.",
+                            KalemKaynakTipi.GenelTarife       => "Genel tarife fiyatı uygulandı.",
+                            KalemKaynakTipi.ManuelGiris       => "Kullanıcı tarafından manuel olarak girildi.",
+                            KalemKaynakTipi.RezervasyonKurali => "Rezervasyon kuralından aktarıldı.",
+                            _                                 => ""
                         };
                         <tr>
                             <td><span style="font-family:monospace;font-weight:700;font-size:12.5px;">@k.BorcTipi.Kod</span></td>

@@ -9,7 +9,7 @@
     </div>
 </div>
 
-<div class="card" style="max-width:480px;">
+<div class="card" style="max-width:480px;" x-data="{ tur: '@(Model.RezervasyonYapilabilirMi ? "rez" : "kira")' }">
     <form method="post" action="/Admin/BirimTuru/Duzenle/@Model.Id">
         @Html.AntiForgeryToken()
         <input asp-for="Id" type="hidden" />
@@ -35,22 +35,38 @@
 
         <div class="form-group">
             <label class="form-label">Kullanım Türü <span style="color:red">*</span></label>
-            @{ var editInitialTur = Model.RezervasyonYapilabilirMi ? "rez" : "kira"; }
-            <div x-data="{ tur: '@editInitialTur' }" style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <input type="hidden" name="KiralanabilirMi" :value="tur === 'kira' ? 'True' : 'False'" />
+                <input type="hidden" name="RezervasyonYapilabilirMi" :value="tur === 'rez' ? 'True' : 'False'" />
+
                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                    <input asp-for="KiralanabilirMi" type="checkbox"
-                           x-bind:checked="tur === 'kira'"
-                           @@click.prevent="tur = 'kira'" />
+                    <input type="radio" name="usage_selector" value="kira" 
+                           x-model="tur" class="w-4 h-4 text-primary-600 focus:ring-primary-500" />
                     <span style="font-size:14px;">Kiralanabilir <span style="color:var(--color-muted);font-size:12px;">(kira sözleşmesine bağlanabilir)</span></span>
                 </label>
                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                    <input asp-for="RezervasyonYapilabilirMi" type="checkbox"
-                           x-bind:checked="tur === 'rez'"
-                           @@click.prevent="tur = 'rez'" />
+                    <input type="radio" name="usage_selector" value="rez" 
+                           x-model="tur" class="w-4 h-4 text-primary-600 focus:ring-primary-500" />
                     <span style="font-size:14px;">Rezervasyon yapılabilir <span style="color:var(--color-muted);font-size:12px;">(sözleşmeye bağlı değil)</span></span>
                 </label>
                 <div style="font-size:12px;color:var(--color-muted);">Tam olarak bir seçenek işaretli olmalıdır.</div>
             </div>
+        </div>
+
+        <div class="form-group" x-show="tur === 'rez'" x-cloak>
+            <label class="form-label">Tahakkuk Borç Tipi <span style="color:red">*</span></label>
+            <select asp-for="BorcTipiId" class="form-control" :required="tur === 'rez'">
+                <option value="">-- Borç Tipi Seçin --</option>
+                @if (ViewBag.BorcTipiAdaylari != null)
+                {
+                    foreach (var bt in (List<KiraTakip.Models.BorcTipi>)ViewBag.BorcTipiAdaylari)
+                    {
+                        <option value="@bt.Id">@bt.Ad (@bt.Kod)</option>
+                    }
+                }
+            </select>
+            <div style="font-size:12px;color:var(--color-muted);margin-top:4px;">Rezervasyonlar tahakkuka aktarılırken bu borç tipi kullanılacaktır.</div>
+            <span asp-validation-for="BorcTipiId" class="text-danger" style="font-size:12px;"></span>
         </div>
 
         <div class="form-group">

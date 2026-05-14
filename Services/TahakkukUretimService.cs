@@ -35,7 +35,7 @@ public class TahakkukUretimService : ITahakkukUretimService
             var mevcutVar = await _ctx.KiraTahakkuklar
                 .AnyAsync(t => t.KiraSozlesmesiId == sozlesmeId
                     && t.DonemBaslangic == donemIlkGunu
-                    && t.KaynakTipi == TahakkukKaynakTipi.Otomatik);
+                    && t.KaynakTipi == TahakkukKaynakTipi.Sozlesme);
             if (mevcutVar) continue;
 
             var proRata = HesaplaProRataKatsayi(donemIlkGunu, sozlesme.BaslangicTarihi, sozlesme.BitisTarihi);
@@ -80,7 +80,7 @@ public class TahakkukUretimService : ITahakkukUretimService
                 ToplamTutar = kalemler.Sum(k => k.ToplamTutar),
                 OdenenTutar = 0,
                 Durum = TahakkukDurumu.Bekleniyor,
-                KaynakTipi = TahakkukKaynakTipi.Otomatik,
+                KaynakTipi = TahakkukKaynakTipi.Sozlesme,
                 OlusturmaTarihi = DateTime.Now,
                 Kalemler = kalemler
             };
@@ -99,7 +99,8 @@ public class TahakkukUretimService : ITahakkukUretimService
             .Where(t => t.KiraSozlesmesiId == sozlesmeId
                 && t.DonemBaslangic >= ilkGun
                 && t.Durum != TahakkukDurumu.TamOdendi
-                && t.KaynakTipi == TahakkukKaynakTipi.Otomatik)
+                && t.KaynakTipi == TahakkukKaynakTipi.Sozlesme
+                && !_ctx.KiraOdemeler.Any(o => o.KiraTahakkukId == t.Id))
             .ToListAsync();
 
         _ctx.KiraTahakkuklar.RemoveRange(silinecekler);
@@ -116,7 +117,7 @@ public class TahakkukUretimService : ITahakkukUretimService
             .Where(t => t.KiraSozlesmesiId == sozlesmeId
                 && t.DonemBaslangic >= ilkGun
                 && t.Durum != TahakkukDurumu.TamOdendi
-                && t.KaynakTipi == TahakkukKaynakTipi.Otomatik)
+                && t.KaynakTipi == TahakkukKaynakTipi.Sozlesme)
             .ToListAsync();
 
         foreach (var t in iptalEdilecekler)
@@ -128,14 +129,16 @@ public class TahakkukUretimService : ITahakkukUretimService
 
     private static decimal HesaplaProRataKatsayi(DateTime donemIlkGunu, DateTime sozlesmeBaslangic, DateTime sozlesmeBitis)
     {
-        var ayGunSayisi = DateTime.DaysInMonth(donemIlkGunu.Year, donemIlkGunu.Month);
         var ayBitis = donemIlkGunu.AddMonths(1).AddDays(-1);
 
         var etkinBaslangic = sozlesmeBaslangic > donemIlkGunu ? sozlesmeBaslangic : donemIlkGunu;
         var etkinBitis = sozlesmeBitis < ayBitis ? sozlesmeBitis : ayBitis;
 
+        if (etkinBaslangic == donemIlkGunu && etkinBitis == ayBitis)
+            return 1.0m;
+
         var gunSayisi = (etkinBitis - etkinBaslangic).Days + 1;
-        return (decimal)gunSayisi / ayGunSayisi;
+        return Math.Min(1.0m, (decimal)gunSayisi / 30m);
     }
 
     private static IEnumerable<DateTime> GetDonemler(DateTime baslangic, DateTime bitis)
@@ -227,7 +230,7 @@ public class TahakkukUretimService : ITahakkukUretimService
                     KdvOrani = 0m,
                     KdvTutari = 0m,
                     ToplamTutar = 0m,
-                    KaynakTipi = KaynakTipi.Bulunamadi,
+                    KaynakTipi = KalemKaynakTipi.TanimsizTarife,
                     RateBulundu = false,
                     Aciklama = $"{bt.Ad} (Fiyat Tanımsız)"
                 });

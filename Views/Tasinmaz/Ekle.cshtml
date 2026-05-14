@@ -222,7 +222,7 @@
                                                 <span style="padding:5px 8px;background:#f8f9fa;font-size:12px;color:#6c757d;border-right:1px solid #ced4da;display:flex;align-items:center;">₺</span>
                                                 <input type="number" step="0.01" min="0"
                                                        style="border:none;outline:none;padding:5px 8px;width:85px;font-size:13px;background:transparent;"
-                                                       name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].BirimDeger" value="@hucre.BirimDeger" />
+                                                       name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].BirimDeger" value="@hucre.BirimDeger.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                                             </div>
                                         </td>
                                         <!-- Yöntem — DEPOZITO için kilitli -->
@@ -248,7 +248,7 @@
                                             <div style="display:flex;align-items:stretch;border:1px solid #ced4da;border-radius:6px;overflow:hidden;">
                                                 <input type="number" step="0.01" min="0" max="100"
                                                        style="border:none;outline:none;padding:5px 8px;width:60px;font-size:13px;background:transparent;"
-                                                       name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].KdvOrani" value="@hucre.KdvOrani" />
+                                                       name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].KdvOrani" value="@hucre.KdvOrani.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                                                 <span style="padding:5px 8px;background:#f8f9fa;font-size:12px;color:#6c757d;border-left:1px solid #ced4da;display:flex;align-items:center;">%</span>
                                             </div>
                                         </td>
@@ -268,6 +268,14 @@
                 }
             </script>
         </div>
+
+        @if (Model.ParentRezervasyonTarife != null)
+        {
+            <div style="margin-top:16px;">
+                <div style="font-size:12px;color:var(--color-muted);margin-bottom:4px;">Aşağıda tanımlama yapmazsanız genel tarife uygulanır:</div>
+                <partial name="_ParentRezervasyonTarifeKart" model="Model.ParentRezervasyonTarife" />
+            </div>
+        }
 
         <!-- Rezervasyon Alanları -->
         <div class="card" style="margin-top:16px;">

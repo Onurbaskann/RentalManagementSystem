@@ -49,8 +49,8 @@
         <input type="search" name="q" value="@q.Q" class="form-control toolbar-search" placeholder="Ara: kiracı, açıklama…" />
         <input type="date" name="from" value="@(q.From?.ToString("yyyy-MM-dd"))" class="form-control toolbar-input" data-tip="Ödeme tarihi başlangıç" />
         <input type="date" name="to" value="@(q.To?.ToString("yyyy-MM-dd"))" class="form-control toolbar-input" data-tip="Ödeme tarihi bitiş" />
-        <input type="number" name="min" value="@q.Min" step="0.01" class="form-control toolbar-input" placeholder="Min ₺" />
-        <input type="number" name="max" value="@q.Max" step="0.01" class="form-control toolbar-input" placeholder="Max ₺" />
+        <input type="number" name="min" value="@q.Min?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control toolbar-input" placeholder="Min ₺" />
+        <input type="number" name="max" value="@q.Max?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control toolbar-input" placeholder="Max ₺" />
         @if (durum != "tum") { <input type="hidden" name="durum" value="@durum" /> }
         @if (tahakkukId.HasValue) { <input type="hidden" name="tahakkukId" value="@tahakkukId" /> }
         <button type="submit" class="btn btn-primary btn-sm">Filtrele</button>

@@ -17,7 +17,7 @@ public class KiraTahakkuk
     public decimal OdenenTutar { get; set; }
 
     public TahakkukDurumu Durum { get; set; } = TahakkukDurumu.Bekleniyor;
-    public TahakkukKaynakTipi KaynakTipi { get; set; } = TahakkukKaynakTipi.Otomatik;
+    public TahakkukKaynakTipi KaynakTipi { get; set; } = TahakkukKaynakTipi.Sozlesme;
     public string? IptalNotu { get; set; }
     public DateTime OlusturmaTarihi { get; set; } = DateTime.Now;
 

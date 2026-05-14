@@ -1,7 +1,7 @@
 @model KiraTakip.Models.ViewModels.DashboardViewModel
 @{
     ViewData["Title"] = "Anasayfa";
-    bool canEdit = User.IsInRole("Admin") || User.IsInRole("Yonetici");
+    bool canEdit = User.HasClaim("permission", "Sozlesme.Create");
 
     string TLFormat(decimal v) => v.ToString("N2") + " ₺";
 
@@ -274,7 +274,7 @@
                         double x2 = cx + r * Math.Cos(Rad(endDeg - 90));
                         double y2 = cy + r * Math.Sin(Rad(endDeg - 90));
                         int large = sweepDeg - gap > 180 ? 1 : 0;
-                        return $"<path d='M {x1:F2} {y1:F2} A {r} {r} 0 {large} 1 {x2:F2} {y2:F2}' fill='none' stroke='{color}' stroke-width='{strokeW}' stroke-linecap='round'/>";
+                        return FormattableString.Invariant($"<path d='M {x1:F2} {y1:F2} A {r} {r} 0 {large} 1 {x2:F2} {y2:F2}' fill='none' stroke='{color}' stroke-width='{strokeW}' stroke-linecap='round'/>");
                     }
 
                     double start = 0;

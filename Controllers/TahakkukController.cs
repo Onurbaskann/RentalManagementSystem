@@ -33,9 +33,26 @@ public class TahakkukController : Controller
         var userId = User.IsInRole("Goruntuleyici") ? _userManager.GetUserId(User) : null;
         var pagedResult = await _tahakkukService.GetPagedAsync(query, userId: userId);
 
-        ViewBag.Tasinmazlar = await _ctx.Tasinmazlar.OrderBy(t => t.Ad).ToListAsync();
-        ViewBag.Birimler = await _ctx.Birimler.OrderBy(b => b.TasinmazId).ThenBy(b => b.Ad).ToListAsync();
-        ViewBag.Kiracilar = await _ctx.Kiraciler.OrderBy(k => k.Ad).ToListAsync();
+        if (User.IsInRole("Goruntuleyici"))
+        {
+            var uid = _userManager.GetUserId(User)!;
+            var yetkiliIds = await _ctx.UserTasinmazYetkileri
+                .Where(u => u.UserId == uid).Select(u => u.TasinmazId).ToListAsync();
+            ViewBag.Tasinmazlar = await _ctx.Tasinmazlar
+                .Where(t => yetkiliIds.Contains(t.Id)).OrderBy(t => t.Ad).ToListAsync();
+            ViewBag.Birimler = await _ctx.Birimler
+                .Where(b => yetkiliIds.Contains(b.TasinmazId)).OrderBy(b => b.TasinmazId).ThenBy(b => b.Ad).ToListAsync();
+            var sozKiraciIds = await _ctx.Sozlesmeler
+                .Where(s => yetkiliIds.Contains(s.Birim.TasinmazId)).Select(s => s.KiraciId).Distinct().ToListAsync();
+            ViewBag.Kiracilar = await _ctx.Kiraciler
+                .Where(k => sozKiraciIds.Contains(k.Id)).OrderBy(k => k.Ad).ToListAsync();
+        }
+        else
+        {
+            ViewBag.Tasinmazlar = await _ctx.Tasinmazlar.OrderBy(t => t.Ad).ToListAsync();
+            ViewBag.Birimler = await _ctx.Birimler.OrderBy(b => b.TasinmazId).ThenBy(b => b.Ad).ToListAsync();
+            ViewBag.Kiracilar = await _ctx.Kiraciler.OrderBy(k => k.Ad).ToListAsync();
+        }
         ViewBag.MevcutYillar = await _ctx.KiraTahakkuklar
             .Select(t => t.DonemBaslangic.Year)
             .Distinct()

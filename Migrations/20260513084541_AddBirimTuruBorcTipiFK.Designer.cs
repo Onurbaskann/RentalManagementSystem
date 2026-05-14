@@ -4,6 +4,7 @@ using KiraTakip.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KiraTakip.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260513084541_AddBirimTuruBorcTipiFK")]
+    partial class AddBirimTuruBorcTipiFK
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -707,50 +710,6 @@ namespace KiraTakip.Migrations
                     b.HasIndex("KiraOdemeId");
 
                     b.ToTable("OdemeBankaEslesmeleri");
-                });
-
-            modelBuilder.Entity("KiraTakip.Models.RezervasyonGenelTarife", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Aciklama")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("BirimTuruId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("KdvOrani")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<DateTime>("OlusturmaTarihi")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("PeriyotUcreti")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("TarifeId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UcretlendirmePeriyoduDakika")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UcretsizSureDakika")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BirimTuruId");
-
-                    b.HasIndex("TarifeId", "BirimTuruId")
-                        .IsUnique();
-
-                    b.ToTable("RezervasyonGenelTarifeleri");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.RezervasyonUcretKural", b =>
@@ -1668,25 +1627,6 @@ namespace KiraTakip.Migrations
                     b.Navigation("EslestirenUser");
 
                     b.Navigation("KiraOdeme");
-                });
-
-            modelBuilder.Entity("KiraTakip.Models.RezervasyonGenelTarife", b =>
-                {
-                    b.HasOne("KiraTakip.Models.BirimTuru", "BirimTuru")
-                        .WithMany()
-                        .HasForeignKey("BirimTuruId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("KiraTakip.Models.Tarife", "Tarife")
-                        .WithMany()
-                        .HasForeignKey("TarifeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("BirimTuru");
-
-                    b.Navigation("Tarife");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.RezervasyonUcretKural", b =>

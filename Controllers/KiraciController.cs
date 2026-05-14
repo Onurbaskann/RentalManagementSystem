@@ -50,17 +50,27 @@ public class KiraciController : Controller
     [Authorize(Policy = PermissionCatalog.Kiraci.View)]
     public async Task<IActionResult> Detay(int id)
     {
+        string? scopedUserId = null;
         if (User.IsInRole("Goruntuleyici"))
         {
-            var userId = _userManager.GetUserId(User);
-            var kiraciler = await _kiraciService.GetAllAsync(userId);
+            scopedUserId = _userManager.GetUserId(User);
+            var kiraciler = await _kiraciService.GetAllAsync(scopedUserId);
             if (!kiraciler.Any(k => k.Id == id)) return Forbid();
         }
 
         var k = await _kiraciService.GetByIdAsync(id);
         if (k == null) return NotFound();
 
-        var sozlesmeler = await _sozlesmeService.GetByKiraciIdAsync(id);
+        List<KiraSozlesmesi> sozlesmeler;
+        if (scopedUserId != null)
+        {
+            var all = await _sozlesmeService.GetAllAsync(userId: scopedUserId);
+            sozlesmeler = all.Where(s => s.KiraciId == id).ToList();
+        }
+        else
+        {
+            sozlesmeler = await _sozlesmeService.GetByKiraciIdAsync(id);
+        }
 
         var vm = new KiraciDetayViewModel
         {
@@ -111,6 +121,12 @@ public class KiraciController : Controller
             if (string.IsNullOrWhiteSpace(vm.TuzelAd))
                 ModelState.AddModelError("TuzelAd", "Lütfen bir Firma / Kurum adı giriniz.");
         }
+
+        if (!vm.KiraciKategoriId.HasValue || vm.KiraciKategoriId <= 0)
+            ModelState.AddModelError("KiraciKategoriId", "Kiracı kategorisi seçilmelidir.");
+        
+        if (!vm.SektorId.HasValue || vm.SektorId <= 0)
+            ModelState.AddModelError("SektorId", "Sektör seçilmelidir.");
 
         if (await _kiraciService.KiraciNoExistsAsync(vm.KiraciNo))
             ModelState.AddModelError("KiraciNo", "Bu Kiracı No zaten kullanımda.");
@@ -189,6 +205,12 @@ public class KiraciController : Controller
             if (string.IsNullOrWhiteSpace(vm.TuzelAd))
                 ModelState.AddModelError("TuzelAd", "Lütfen bir Firma / Kurum adı giriniz.");
         }
+
+        if (!vm.KiraciKategoriId.HasValue || vm.KiraciKategoriId <= 0)
+            ModelState.AddModelError("KiraciKategoriId", "Kiracı kategorisi seçilmelidir.");
+        
+        if (!vm.SektorId.HasValue || vm.SektorId <= 0)
+            ModelState.AddModelError("SektorId", "Sektör seçilmelidir.");
 
         if (await _kiraciService.KiraciNoExistsAsync(vm.KiraciNo, excludeId: id))
             ModelState.AddModelError("KiraciNo", "Bu Kiracı No zaten kullanımda.");

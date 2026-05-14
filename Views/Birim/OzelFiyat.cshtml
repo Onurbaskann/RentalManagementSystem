@@ -32,10 +32,71 @@
 
 @if (Model.KiralanabilirMi)
 {
+    <style>
+        .fiyat-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+            align-items: start;
+        }
+        @@media (min-width: 860px) {
+            .fiyat-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        .fiyat-tablo { width: 100%; border-collapse: collapse; }
+        .fiyat-tablo thead th {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--color-muted);
+            text-transform: uppercase;
+            letter-spacing: .3px;
+            padding: 0 6px 7px 0;
+            white-space: nowrap;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .fiyat-tablo thead th.th-center { text-align: center; padding-right: 0; }
+        .fiyat-tablo tbody tr { border-top: 1px solid var(--color-border); }
+        .fiyat-tablo tbody tr:first-child { border-top: none; }
+        .fiyat-tablo td { padding: 5px 6px 5px 0; vertical-align: middle; }
+        .fiyat-tablo td.td-center { text-align: center; padding-right: 0; }
+        .fiyat-inp {
+            display: flex;
+            align-items: stretch;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .fiyat-inp span {
+            padding: 4px 6px;
+            background: #f8f9fa;
+            font-size: 11px;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+            border-right: 1px solid #ced4da;
+            flex-shrink: 0;
+        }
+        .fiyat-inp span.suffix { border-right: none; border-left: 1px solid #ced4da; }
+        .fiyat-inp input {
+            border: none;
+            outline: none;
+            padding: 4px 6px;
+            font-size: 12px;
+            background: transparent;
+            min-width: 0;
+            text-align: center;
+        }
+        .fiyat-inp input[type="number"]::-webkit-outer-spin-button,
+        .fiyat-inp input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .fiyat-inp input[type="number"] { -moz-appearance: textfield; }
+        .fiyat-inp-tutar { width: 110px; margin: 0 auto; }
+        .fiyat-inp-tutar input { flex: 1; }
+        .fiyat-badge { font-size: 9.5px; font-weight: 600; padding: 1px 5px; border-radius: 3px; }
+    </style>
+
     <!-- Senaryo A: Kiralanabilir birim — KiraciKategori × BorcTipi matrisi -->
     @if (Model.ParentTarife != null)
     {
-        <div style="margin-bottom:8px;">
+        <div style="margin-bottom:10px;">
             <div style="font-size:12px;color:var(--color-muted);margin-bottom:4px;">İşaretlenmemiş hücreler için geçerli üst tarife:</div>
             @await Html.PartialAsync("_ParentTarifeKart", Model.ParentTarife)
         </div>
@@ -54,109 +115,112 @@
         }
         else
         {
-            @for (int i = 0; i < Model.Satirlar.Count; i++)
-            {
-                var satir = Model.Satirlar[i];
-                <div class="card fiyat-kategori-blok" style="margin-bottom:16px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--color-border);">
-                        <div style="font-size:14px;font-weight:700;">@satir.KiraciKategoriAd</div>
-                        <button type="button" onclick="topluKdvAta(this, 20)"
-                                style="font-size:11px;color:var(--color-muted);background:none;border:1px solid var(--color-border);border-radius:5px;cursor:pointer;padding:3px 10px;">
-                            Tüm KDV'leri 20 yap
-                        </button>
-                    </div>
+            <div class="fiyat-grid" style="margin-bottom:14px;">
+                @for (int i = 0; i < Model.Satirlar.Count; i++)
+                {
+                    var satir = Model.Satirlar[i];
+                    <div class="card fiyat-kategori-blok" style="padding:14px 16px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--color-border);">
+                            <span style="font-size:13px;font-weight:700;color:var(--color-text);">@satir.KiraciKategoriAd</span>
+                            <button type="button" onclick="topluKdvAta(this, 20)"
+                                    style="font-size:10.5px;color:var(--color-muted);background:none;border:1px solid var(--color-border);border-radius:4px;cursor:pointer;padding:2px 8px;white-space:nowrap;line-height:1.4;">
+                                Tüm KDV'leri 20 yap
+                            </button>
+                        </div>
 
-                    <table style="width:100%;border-collapse:collapse;">
-                        <thead>
-                            <tr>
-                                <th style="text-align:left;font-size:11px;color:var(--color-muted);font-weight:500;padding:4px 12px 6px 0;">Borç Tipi</th>
-                                <th style="text-align:center;font-size:11px;color:var(--color-muted);font-weight:500;padding:4px 12px 6px;width:56px;">Aktif</th>
-                                <th style="text-align:left;font-size:11px;color:var(--color-muted);font-weight:500;padding:4px 12px 6px;width:145px;">Tutar (₺)</th>
-                                <th style="text-align:left;font-size:11px;color:var(--color-muted);font-weight:500;padding:4px 12px 6px;width:110px;">Yöntem</th>
-                                <th style="text-align:left;font-size:11px;color:var(--color-muted);font-weight:500;padding:4px 0 6px 12px;width:105px;">KDV %</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @for (int j = 0; j < satir.Hucreler.Count; j++)
-                            {
-                                var hucre = satir.Hucreler[j];
-                                var kolon = Model.Kolonlar[j];
-                                var isIlkAy = kolon.BorcTipiDavranisi == BorcTipiDavranisi.IlkAyTekSeferlik;
-                                var isDepozito = isIlkAy;
-                                <tr data-depozito="@(isDepozito ? "true" : "false")"
-                                    x-data="{ aktif: @hucre.OzelFiyatAktif.ToString().ToLower() }">
-                                    <td style="padding:6px 12px 6px 0;vertical-align:middle;">
-                                        <input type="hidden" name="Satirlar[@i].Hucreler[@j].KiraciKategoriId" value="@hucre.KiraciKategoriId" />
-                                        <input type="hidden" name="Satirlar[@i].Hucreler[@j].BorcTipiId" value="@hucre.BorcTipiId" />
-                                        <input type="hidden" name="Satirlar[@i].Hucreler[@j].RateId" value="@hucre.RateId" />
-                                        <div style="display:flex;align-items:center;gap:8px;">
-                                            <span :style="aktif ? 'background:#22c55e' : 'background:#d1d5db'"
-                                                  style="width:8px;height:8px;border-radius:50%;flex-shrink:0;"></span>
-                                            <div>
-                                                <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
-                                                    <span style="font-size:10px;color:var(--color-muted);">@kolon.BorcTipiKod</span>
-                                                    @if (isIlkAy)
-                                                    {
-                                                        <span style="font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;background:#fff3e0;color:#e65100;">İlk Ay</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span style="font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;background:#e3f2fd;color:#1565c0;">Aylık</span>
-                                                    }
-                                                </div>
-                                                <div style="font-size:12.5px;font-weight:500;">@kolon.BorcTipiAd</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td style="padding:6px 12px;vertical-align:middle;text-align:center;">
-                                        <input type="checkbox" name="Satirlar[@i].Hucreler[@j].OzelFiyatAktif" value="true"
-                                               @(hucre.OzelFiyatAktif ? "checked" : "")
-                                               x-model="aktif" />
-                                    </td>
-                                    <td style="padding:6px 12px;vertical-align:middle;">
-                                        <div style="display:flex;align-items:stretch;border:1px solid #ced4da;border-radius:6px;overflow:hidden;"
-                                             :style="!aktif ? 'opacity:.4' : ''">
-                                            <span style="padding:5px 8px;background:#f8f9fa;font-size:12px;color:#6c757d;border-right:1px solid #ced4da;display:flex;align-items:center;">₺</span>
-                                            <input type="number" step="0.01" min="0"
-                                                   name="Satirlar[@i].Hucreler[@j].BirimDeger" value="@hucre.BirimDeger"
-                                                   :disabled="!aktif"
-                                                   style="border:none;outline:none;padding:5px 8px;width:85px;font-size:13px;background:transparent;" />
-                                        </div>
-                                    </td>
-                                    <td style="padding:6px 12px;vertical-align:middle;">
-                                        @if (isDepozito)
-                                        {
-                                            <input type="hidden" name="Satirlar[@i].Hucreler[@j].HesaplamaYontemi" value="@((int)HesaplamaYontemi.Sabit)" />
-                                            <select class="form-control form-control-sm" disabled style="width:90px;opacity:0.45;cursor:not-allowed;">
-                                                <option>Sabit</option>
-                                            </select>
-                                        }
-                                        else
-                                        {
-                                            <select class="form-control form-control-sm" style="width:90px;"
-                                                    name="Satirlar[@i].Hucreler[@j].HesaplamaYontemi"
-                                                    :disabled="!aktif" :style="!aktif ? 'opacity:.4' : ''">
-                                                <option value="@((int)HesaplamaYontemi.Sabit)" selected="@(hucre.HesaplamaYontemi == HesaplamaYontemi.Sabit)">Sabit</option>
-                                                <option value="@((int)HesaplamaYontemi.M2)" selected="@(hucre.HesaplamaYontemi == HesaplamaYontemi.M2)">m²</option>
-                                            </select>
-                                        }
-                                    </td>
-                                    <td style="padding:6px 0 6px 12px;vertical-align:middle;">
-                                        <div style="display:flex;align-items:stretch;border:1px solid #ced4da;border-radius:6px;overflow:hidden;"
-                                             :style="!aktif ? 'opacity:.4' : ''">
-                                            <input type="number" step="0.01" min="0" max="100"
-                                                   name="Satirlar[@i].Hucreler[@j].KdvOrani" value="@hucre.KdvOrani"
-                                                   :disabled="!aktif"
-                                                   style="border:none;outline:none;padding:5px 8px;width:60px;font-size:13px;background:transparent;" />
-                                            <span style="padding:5px 8px;background:#f8f9fa;font-size:12px;color:#6c757d;border-left:1px solid #ced4da;display:flex;align-items:center;">%</span>
-                                        </div>
-                                    </td>
+                        <table class="fiyat-tablo">
+                            <thead>
+                                <tr>
+                                    <th>Borç Tipi</th>
+                                    <th class="th-center" style="width:38px;">Aktif</th>
+                                    <th class="th-center" style="width:148px;">Tutar (₺)</th>
+                                    <th style="width:82px;">Yöntem</th>
+                                    <th style="width:74px;">KDV %</th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
+                            </thead>
+                            <tbody>
+                                @for (int j = 0; j < satir.Hucreler.Count; j++)
+                                {
+                                    var hucre = satir.Hucreler[j];
+                                    var kolon = Model.Kolonlar[j];
+                                    var isIlkAy = kolon.BorcTipiDavranisi == BorcTipiDavranisi.IlkAyTekSeferlik;
+                                    var isDepozito = isIlkAy;
+                                    <tr data-depozito="@(isDepozito ? "true" : "false")"
+                                        x-data="{ aktif: @hucre.OzelFiyatAktif.ToString().ToLower() }">
+                                        <td>
+                                            <input type="hidden" name="Satirlar[@i].Hucreler[@j].KiraciKategoriId" value="@hucre.KiraciKategoriId" />
+                                            <input type="hidden" name="Satirlar[@i].Hucreler[@j].BorcTipiId" value="@hucre.BorcTipiId" />
+                                            <input type="hidden" name="Satirlar[@i].Hucreler[@j].RateId" value="@hucre.RateId" />
+                                            <div style="display:flex;align-items:center;gap:7px;">
+                                                <span :style="aktif ? 'background:#22c55e' : 'background:#d1d5db'"
+                                                      style="width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:1px;"></span>
+                                                <div>
+                                                    <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;">
+                                                        <span style="font-size:9.5px;color:var(--color-muted);font-weight:500;">@kolon.BorcTipiKod</span>
+                                                        @if (isIlkAy)
+                                                        {
+                                                            <span class="fiyat-badge" style="background:#fff3e0;color:#e65100;">İlk Ay</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="fiyat-badge" style="background:#e3f2fd;color:#1565c0;">Aylık</span>
+                                                        }
+                                                    </div>
+                                                    <div style="font-size:12px;font-weight:500;line-height:1.2;">@kolon.BorcTipiAd</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="td-center">
+                                            <input type="checkbox" name="Satirlar[@i].Hucreler[@j].OzelFiyatAktif" value="true"
+                                                   @(hucre.OzelFiyatAktif ? "checked" : "")
+                                                   x-model="aktif" />
+                                        </td>
+                                        <td class="td-center">
+                                            <div class="fiyat-inp fiyat-inp-tutar" :style="!aktif ? 'opacity:.4' : ''">
+                                                <span>₺</span>
+                                                <input type="number" step="0.01" min="0"
+                                                       name="Satirlar[@i].Hucreler[@j].BirimDeger"
+                                                       value="@hucre.BirimDeger.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
+                                                       :disabled="!aktif" />
+                                            </div>
+                                        </td>
+                                        <td>
+                                            @if (isDepozito)
+                                            {
+                                                <input type="hidden" name="Satirlar[@i].Hucreler[@j].HesaplamaYontemi" value="@((int)HesaplamaYontemi.Sabit)" />
+                                                <select class="form-control form-control-sm" disabled
+                                                        style="width:76px;opacity:0.45;cursor:not-allowed;font-size:12px;">
+                                                    <option>Sabit</option>
+                                                </select>
+                                            }
+                                            else
+                                            {
+                                                <select class="form-control form-control-sm"
+                                                        name="Satirlar[@i].Hucreler[@j].HesaplamaYontemi"
+                                                        :disabled="!aktif" :style="!aktif ? 'opacity:.4' : ''"
+                                                        style="width:76px;font-size:12px;">
+                                                    <option value="@((int)HesaplamaYontemi.Sabit)" selected="@(hucre.HesaplamaYontemi == HesaplamaYontemi.Sabit)">Sabit</option>
+                                                    <option value="@((int)HesaplamaYontemi.M2)" selected="@(hucre.HesaplamaYontemi == HesaplamaYontemi.M2)">m²</option>
+                                                </select>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="fiyat-inp" :style="!aktif ? 'opacity:.4' : ''">
+                                                <input type="number" step="0.01" min="0" max="100"
+                                                       name="Satirlar[@i].Hucreler[@j].KdvOrani"
+                                                       value="@hucre.KdvOrani.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
+                                                       :disabled="!aktif"
+                                                       style="width:58px;" />
+                                                <span class="suffix">%</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
 
             <div style="display:flex;gap:8px;margin-top:4px;">
                 <button type="submit" class="btn btn-primary">Kaydet</button>
@@ -177,16 +241,11 @@
 else if (Model.RezervasyonYapilabilirMi)
 {
     <!-- Senaryo B: Rezervasyon birimi — RezervasyonUcretKural formu -->
-    @if (Model.GlobalRezervasyonKural != null)
+    @if (Model.ParentRezervasyonTarife != null)
     {
-        <div class="card" style="margin-bottom:16px;background:#f8faff;border-color:#c7d8f8;">
-            <div style="font-size:12.5px;color:#4b6cb7;font-weight:600;margin-bottom:6px;">Genel Tarife</div>
-            <div style="font-size:13px;color:var(--color-muted);">
-                @Model.GlobalRezervasyonKural.PeriyotUcreti.ToString("N2") ₺ /
-                @Model.GlobalRezervasyonKural.UcretlendirmePeriyoduDakika dk ·
-                Ücretsiz: @Model.GlobalRezervasyonKural.UcretsizSureDakika dk ·
-                KDV: %@Model.GlobalRezervasyonKural.KdvOrani.ToString("N2")
-            </div>
+        <div style="margin-bottom:14px; max-width:520px;">
+            <div style="font-size:12px;color:var(--color-muted);margin-bottom:4px;">Tanımlanmamışsa geçerli olan tarife:</div>
+            <partial name="_ParentRezervasyonTarifeKart" model="Model.ParentRezervasyonTarife" />
         </div>
     }
 
@@ -196,10 +255,13 @@ else if (Model.RezervasyonYapilabilirMi)
             @Html.AntiForgeryToken()
             <input type="hidden" name="Id" value="0" />
             @{
-                int defPeriyot = Model.GlobalRezervasyonKural?.UcretlendirmePeriyoduDakika ?? 60;
-                int defUcretsiz = Model.GlobalRezervasyonKural?.UcretsizSureDakika ?? 0;
-                decimal defUcret = Model.GlobalRezervasyonKural?.PeriyotUcreti ?? 0;
-                decimal defKdv   = Model.GlobalRezervasyonKural?.KdvOrani ?? 20;
+                var parentSatir = Model.ParentRezervasyonTarife?.Satirlar
+                    .FirstOrDefault(s => s.BirimTuruAd == Model.BirimTuruAd);
+                
+                int defPeriyot = parentSatir?.UcretlendirmePeriyoduDakika ?? 60;
+                int defUcretsiz = parentSatir?.UcretsizSureDakika ?? 0;
+                decimal defUcret = parentSatir?.PeriyotUcreti ?? 0;
+                decimal defKdv   = parentSatir?.KdvOrani ?? 20;
             }
             <div class="card" style="max-width:520px;">
                 <div class="card-title" style="margin-bottom:16px;">Özel Kural Tanımla</div>
@@ -213,11 +275,11 @@ else if (Model.RezervasyonYapilabilirMi)
                 </div>
                 <div class="form-group">
                     <label class="form-label">Periyot Ücreti (₺)</label>
-                    <input type="number" name="PeriyotUcreti" value="@defUcret" class="form-control" min="0" step="0.01" style="width:180px;" />
+                    <input type="number" name="PeriyotUcreti" value="@defUcret.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" min="0" step="0.01" style="width:180px;" />
                 </div>
                 <div class="form-group">
                     <label class="form-label">KDV Oranı (%)</label>
-                    <input type="number" name="KdvOrani" value="@defKdv" class="form-control" min="0" max="100" step="0.01" style="width:120px;" />
+                    <input type="number" name="KdvOrani" value="@defKdv.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" min="0" max="100" step="0.01" style="width:120px;" />
                 </div>
                 <div class="form-group">
                     <label class="form-label">Açıklama</label>
@@ -248,11 +310,11 @@ else if (Model.RezervasyonYapilabilirMi)
                 </div>
                 <div class="form-group">
                     <label class="form-label">Periyot Ücreti (₺)</label>
-                    <input type="number" name="PeriyotUcreti" value="@Model.OzelRezervasyonKural.PeriyotUcreti" class="form-control" min="0" step="0.01" style="width:180px;" />
+                    <input type="number" name="PeriyotUcreti" value="@Model.OzelRezervasyonKural.PeriyotUcreti.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" min="0" step="0.01" style="width:180px;" />
                 </div>
                 <div class="form-group">
                     <label class="form-label">KDV Oranı (%)</label>
-                    <input type="number" name="KdvOrani" value="@Model.OzelRezervasyonKural.KdvOrani" class="form-control" min="0" max="100" step="0.01" style="width:120px;" />
+                    <input type="number" name="KdvOrani" value="@Model.OzelRezervasyonKural.KdvOrani.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" min="0" max="100" step="0.01" style="width:120px;" />
                 </div>
                 <div class="form-group">
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">

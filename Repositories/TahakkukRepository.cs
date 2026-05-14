@@ -83,7 +83,7 @@ public class TahakkukRepository : ITahakkukRepository
             TahakkukKaynakTipi? kt = q.Kaynak.ToLower() switch
             {
                 "manuel"      => TahakkukKaynakTipi.Manuel,
-                "otomatik"    => TahakkukKaynakTipi.Otomatik,
+                "sozlesme"    => TahakkukKaynakTipi.Sozlesme,
                 "rezervasyon" => TahakkukKaynakTipi.Rezervasyon,
                 _             => null
             };
@@ -140,7 +140,7 @@ public class TahakkukRepository : ITahakkukRepository
             .AnyAsync(t =>
                 t.KiraSozlesmesiId == sozlesmeId &&
                 t.DonemBaslangic   == donemIlkGunu &&
-                t.KaynakTipi       == TahakkukKaynakTipi.Otomatik);
+                t.KaynakTipi       == TahakkukKaynakTipi.Sozlesme);
 
     // ── GetGeciktirileceklerAsync ─────────────────────────────────────────────
 

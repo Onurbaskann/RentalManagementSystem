@@ -10,7 +10,7 @@ public class BorcTipi
     public string Ad { get; set; } = "";
 
     [Required, MaxLength(20)]
-    [RegularExpression(@"^[A-Z0-9_]{2,20}$", ErrorMessage = "Kod yalnızca büyük harf, rakam ve alt çizgi içerebilir (2-20 karakter).")]
+    [RegularExpression(@"^[a-zA-Z0-9_\u00C7\u011E\u0130\u00D6\u015E\u00DC\u00E7\u011F\u0131\u00F6\u015F\u00FC\s]{2,50}$", ErrorMessage = "Kod yalnızca harf, rakam, alt çizgi ve boşluk içerebilir.")]
     public string Kod { get; set; } = "";
 
     public bool Aktif { get; set; } = true;

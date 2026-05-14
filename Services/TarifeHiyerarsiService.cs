@@ -129,4 +129,39 @@ public class TarifeHiyerarsiService : ITarifeHiyerarsiService
             }).ToList()
         };
     }
+
+    public async Task<ParentRezervasyonTarifeKartViewModel?> GetRezervasyonParentForAsync(int? yil = null)
+    {
+        int hedefYil = yil ?? DateTime.Now.Year;
+        var tarife = await _ctx.Tarifeler
+            .FirstOrDefaultAsync(t => t.Aktif && t.Yil == hedefYil);
+
+        if (tarife == null)
+            return new ParentRezervasyonTarifeKartViewModel
+            {
+                KaynakAdi = $"Rezervasyon Tarifesi - {hedefYil}",
+                Satirlar  = []
+            };
+
+        var satirlar = await _ctx.RezervasyonGenelTarifeleri
+            .Include(r => r.BirimTuru)
+            .Where(r => r.TarifeId == tarife.Id && r.BirimTuru.Aktif)
+            .OrderBy(r => r.BirimTuru.Sira)
+            .Select(r => new ParentRezervasyonTarifeSatir
+            {
+                BirimTuruAd                 = r.BirimTuru.Ad,
+                UcretsizSureDakika          = r.UcretsizSureDakika,
+                UcretlendirmePeriyoduDakika = r.UcretlendirmePeriyoduDakika,
+                PeriyotUcreti               = r.PeriyotUcreti,
+                KdvOrani                    = r.KdvOrani
+            })
+            .ToListAsync();
+
+        return new ParentRezervasyonTarifeKartViewModel
+        {
+            KaynakAdi = $"Rezervasyon Tarifesi - {hedefYil}",
+            Aciklama  = tarife.Aciklama,
+            Satirlar  = satirlar
+        };
+    }
 }

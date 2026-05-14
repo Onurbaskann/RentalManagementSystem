@@ -9,6 +9,18 @@ public class TarifeMatrisViewModel
     public bool Aktif { get; set; }
     public List<TarifeMatrisBorcTipiKolon> Kolonlar { get; set; } = [];
     public List<TarifeMatrisSatir> Satirlar { get; set; } = [];
+    public List<TarifeMatrisRezervasyonSatir> RezervasyonSatirlari { get; set; } = [];
+}
+
+public class TarifeMatrisRezervasyonSatir
+{
+    public int RezervasyonGenelTarifeId { get; set; }
+    public int BirimTuruId { get; set; }
+    public string BirimTuruAd { get; set; } = "";
+    public int UcretsizSureDakika { get; set; }
+    public int UcretlendirmePeriyoduDakika { get; set; }
+    public decimal PeriyotUcreti { get; set; }
+    public decimal KdvOrani { get; set; }
 }
 
 public class TarifeMatrisBorcTipiKolon
@@ -43,6 +55,7 @@ public class TarifeMatrisPostViewModel
     public string? Aciklama { get; set; }
     public bool Aktif { get; set; }
     public List<TarifeMatrisHucre> Hucreler { get; set; } = [];
+    public List<TarifeMatrisRezervasyonSatir> RezervasyonHucreler { get; set; } = [];
 }
 
 // Eski (geriye uyumluluk için — YilEkle view'ı kullanıyor)

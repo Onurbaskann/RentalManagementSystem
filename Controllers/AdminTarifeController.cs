@@ -79,6 +79,30 @@ public class AdminTarifeController : Controller
             }).ToList()
         };
 
+        var rezervasyonBirimTurleri = await _ctx.BirimTurleri
+            .Where(t => t.Aktif && t.RezervasyonYapilabilirMi)
+            .OrderBy(t => t.Sira)
+            .ToListAsync();
+
+        var mevcutRezervasyonlar = await _ctx.RezervasyonGenelTarifeleri
+            .Where(r => r.TarifeId == tarife.Id)
+            .ToListAsync();
+
+        vm.RezervasyonSatirlari = rezervasyonBirimTurleri.Select(bt =>
+        {
+            var mevcut = mevcutRezervasyonlar.FirstOrDefault(r => r.BirimTuruId == bt.Id);
+            return new TarifeMatrisRezervasyonSatir
+            {
+                RezervasyonGenelTarifeId    = mevcut?.Id ?? 0,
+                BirimTuruId                 = bt.Id,
+                BirimTuruAd                 = bt.Ad,
+                UcretsizSureDakika          = mevcut?.UcretsizSureDakika ?? 0,
+                UcretlendirmePeriyoduDakika = mevcut?.UcretlendirmePeriyoduDakika ?? 60,
+                PeriyotUcreti               = mevcut?.PeriyotUcreti ?? 0,
+                KdvOrani                    = mevcut?.KdvOrani ?? 20
+            };
+        }).ToList();
+
         return View(vm);
     }
 
@@ -116,6 +140,33 @@ public class AdminTarifeController : Controller
                 mevcut.HesaplamaYontemi = hucre.HesaplamaYontemi;
                 mevcut.BirimDeger       = hucre.BirimDeger;
                 mevcut.KdvOrani         = hucre.KdvOrani;
+            }
+        }
+
+        foreach (var rez in vm.RezervasyonHucreler)
+        {
+            var mevcut = await _ctx.RezervasyonGenelTarifeleri
+                    .FirstOrDefaultAsync(r => r.TarifeId == tarife.Id && r.BirimTuruId == rez.BirimTuruId);
+
+            if (mevcut == null)
+            {
+                _ctx.RezervasyonGenelTarifeleri.Add(new RezervasyonGenelTarife
+                {
+                    TarifeId                    = tarife.Id,
+                    BirimTuruId                 = rez.BirimTuruId,
+                    UcretsizSureDakika          = rez.UcretsizSureDakika,
+                    UcretlendirmePeriyoduDakika = rez.UcretlendirmePeriyoduDakika,
+                    PeriyotUcreti               = rez.PeriyotUcreti,
+                    KdvOrani                    = rez.KdvOrani,
+                    OlusturmaTarihi             = DateTime.Now
+                });
+            }
+            else
+            {
+                mevcut.UcretsizSureDakika          = rez.UcretsizSureDakika;
+                mevcut.UcretlendirmePeriyoduDakika = rez.UcretlendirmePeriyoduDakika;
+                mevcut.PeriyotUcreti               = rez.PeriyotUcreti;
+                mevcut.KdvOrani                    = rez.KdvOrani;
             }
         }
 
@@ -183,6 +234,24 @@ public class AdminTarifeController : Controller
                         KdvOrani         = kalem.KdvOrani
                     });
                 }
+
+                var kaynakRezervasyonlar = await _ctx.RezervasyonGenelTarifeleri
+                    .Where(r => r.TarifeId == kaynak.Id)
+                    .ToListAsync();
+
+                foreach (var rez in kaynakRezervasyonlar)
+                {
+                    _ctx.RezervasyonGenelTarifeleri.Add(new RezervasyonGenelTarife
+                    {
+                        Tarife = yeniTarife, // Bind to the new tariff object
+                        BirimTuruId = rez.BirimTuruId,
+                        UcretsizSureDakika = rez.UcretsizSureDakika,
+                        UcretlendirmePeriyoduDakika = rez.UcretlendirmePeriyoduDakika,
+                        PeriyotUcreti = rez.PeriyotUcreti,
+                        KdvOrani = rez.KdvOrani,
+                        OlusturmaTarihi = DateTime.Now
+                    });
+                }
             }
         }
         else
@@ -204,6 +273,23 @@ public class AdminTarifeController : Controller
                         KdvOrani         = 0
                     });
                 }
+            }
+
+            var rezBirimTurleri = await _ctx.BirimTurleri
+                .Where(t => t.Aktif && t.RezervasyonYapilabilirMi)
+                .ToListAsync();
+            foreach (var bt in rezBirimTurleri)
+            {
+                _ctx.RezervasyonGenelTarifeleri.Add(new RezervasyonGenelTarife
+                {
+                    Tarife = yeniTarife,
+                    BirimTuruId = bt.Id,
+                    UcretsizSureDakika = 0,
+                    UcretlendirmePeriyoduDakika = 60,
+                    PeriyotUcreti = 0,
+                    KdvOrani = 0,
+                    OlusturmaTarihi = DateTime.Now
+                });
             }
         }
 

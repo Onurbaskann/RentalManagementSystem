@@ -86,7 +86,7 @@
                         <td style="font-size:13px;">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
                         <td>
                             <span class="badge @durumCls">@durumLabel</span>
-                            @if (t.Durum == TahakkukDurumu.IptalEdildi && !string.IsNullOrEmpty(t.IptalNotu))
+                            @if (!string.IsNullOrEmpty(t.IptalNotu))
                             {
                                 <div style="font-size:11px;color:var(--color-muted);margin-top:3px;" data-tip="@t.IptalNotu">↳ @(t.IptalNotu.Length > 30 ? t.IptalNotu[..30] + "…" : t.IptalNotu)</div>
                             }

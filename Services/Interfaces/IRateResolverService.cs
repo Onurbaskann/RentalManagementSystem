@@ -7,7 +7,7 @@ public class RateSnapshot
     public HesaplamaYontemi HesaplamaYontemi { get; set; }
     public decimal BirimDeger { get; set; }
     public decimal KdvOrani { get; set; }
-    public KaynakTipi KaynakTipi { get; set; }
+    public KalemKaynakTipi KaynakTipi { get; set; }
 }
 
 public interface IRateResolverService

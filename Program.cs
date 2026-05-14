@@ -107,21 +107,25 @@ using (var scope = app.Services.CreateScope())
     await seedService.SeedAsync();
 
     var domainSeed = scope.ServiceProvider.GetRequiredService<SeedDataService>();
-    await domainSeed.ClearDomainDataAsync(); // Geçici temizleme
+
+    if (app.Environment.IsDevelopment())
+    {
+        await domainSeed.ClearDomainDataAsync();
+    }
+
+    // Sistem tanımları — her ortamda idempotent çalışır
     await domainSeed.SeedBorcTipleriAsync();
-    await domainSeed.EnsureDepozitoBorcTipiAsync();
-    await domainSeed.EnsureManuelBorcTipiAsync();
-    await domainSeed.SeedTarifelerAsync();
     await domainSeed.SeedTasinmazTipleriAsync();
     await domainSeed.SeedBirimTurleriAsync();
     await domainSeed.SeedKiraciKategorileriAsync();
     await domainSeed.SeedSektorlerAsync();
-    await domainSeed.EnsureToplantiBorcTipiAsync();
-    await domainSeed.EnsureVarsayilanRezervasyonUcretKuralAsync();
-    await domainSeed.SeedTasinmazFiyatlarAsync();
+    await domainSeed.SeedTarifelerAsync(); // Tarife.Yil oluşur
+    await domainSeed.BackfillEskiGlobalRezervasyonKuralAsync();
+    await domainSeed.EnsureVarsayilanRezervasyonGenelTarifeAsync();
 
     if (app.Environment.IsDevelopment())
     {
+        await domainSeed.SeedTasinmazFiyatlarAsync();
         await domainSeed.SeedDomainDataAsync();
         await domainSeed.SeedTahakkuklarAsync();
     }

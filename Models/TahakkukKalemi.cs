@@ -19,5 +19,5 @@ public class TahakkukKalemi
     public decimal KdvTutari { get; set; }
     public decimal ToplamTutar { get; set; }
 
-    public KaynakTipi KaynakTipi { get; set; }
+    public KalemKaynakTipi KaynakTipi { get; set; }
 }

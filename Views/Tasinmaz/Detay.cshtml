@@ -2,8 +2,8 @@
 @using KiraTakip.Models
 @{
     ViewData["Title"] = Model.Tasinmaz.Ad;
-    bool canEdit = User.IsInRole("Admin") || User.IsInRole("Yonetici");
-    bool canManageRate = User.IsInRole("Admin") || User.HasClaim("permission", "Birim.ManageRate");
+    bool canEdit = User.HasClaim("permission", "Sozlesme.Create") || User.HasClaim("permission", "Rezervasyon.Create");
+    bool canManageRate = User.HasClaim("permission", "Birim.ManageRate");
     bool canManageCarpan = User.HasClaim("permission", "TasinmazCarpan.Manage");
 
     string DurumBadge(KiraDurumu d) => d switch {
@@ -120,7 +120,7 @@
     <!-- Tab 2: Birimler -->
     <div class="tab-content">
         @{
-            bool isOfisBazli = Model.Tasinmaz.KiralamaSekli == KiralamaSekli.BirimBazli;
+            bool isBirimBazli = Model.Tasinmaz.KiralamaSekli == KiralamaSekli.BirimBazli;
             int totalBirim = Model.Birimler.Count;
             int kirali = Model.Birimler.Count(b => b.Durum == KiraDurumu.Kirali || b.Durum == KiraDurumu.SuresiDolmakUzere);
             int bos = totalBirim - kirali;
@@ -142,7 +142,7 @@
             </div>
         </div>
 
-        @if (isOfisBazli)
+        @if (isBirimBazli)
         {
             var katGruplari = Model.Birimler
                 .GroupBy(b => b.Birim.KatNo)

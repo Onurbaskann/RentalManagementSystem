@@ -21,7 +21,7 @@ public class TahakkukKalemiPreview
 
     public decimal ToplamTutar { get; set; }
 
-    public KaynakTipi KaynakTipi { get; set; }
+    public KalemKaynakTipi KaynakTipi { get; set; }
 
     public bool RateBulundu { get; set; }
 

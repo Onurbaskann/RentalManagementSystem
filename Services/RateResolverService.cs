@@ -23,20 +23,9 @@ public class RateResolverService : IRateResolverService
                     HesaplamaYontemi = sozRate.HesaplamaYontemi,
                     BirimDeger = sozRate.BirimDeger,
                     KdvOrani = sozRate.KdvOrani,
-                    KaynakTipi = KaynakTipi.Sozlesme
+                    KaynakTipi = KalemKaynakTipi.SozlesmeTarifesi
                 };
         }
-
-        var birimRate = await _ctx.BirimRateler
-            .FirstOrDefaultAsync(r => r.BirimId == birimId && r.BorcTipiId == borcTipiId);
-        if (birimRate != null)
-            return new RateSnapshot
-            {
-                HesaplamaYontemi = birimRate.HesaplamaYontemi,
-                BirimDeger = birimRate.BirimDeger,
-                KdvOrani = birimRate.KdvOrani,
-                KaynakTipi = KaynakTipi.Birim
-            };
 
         int? tasinmazId = null;
         int? kategoriId = null;
@@ -57,9 +46,25 @@ public class RateResolverService : IRateResolverService
         {
             var birim = await _ctx.Birimler.FindAsync(birimId);
             tasinmazId = birim?.TasinmazId;
-            
+
             var kiraci = await _ctx.Kiraciler.FindAsync(kiraciId.Value);
             kategoriId = kiraci?.KiraciKategoriId;
+        }
+
+        if (kategoriId.HasValue)
+        {
+            var birimRate = await _ctx.BirimRateler
+                .FirstOrDefaultAsync(r => r.BirimId == birimId
+                    && r.KiraciKategoriId == kategoriId.Value
+                    && r.BorcTipiId == borcTipiId);
+            if (birimRate != null)
+                return new RateSnapshot
+                {
+                    HesaplamaYontemi = birimRate.HesaplamaYontemi,
+                    BirimDeger = birimRate.BirimDeger,
+                    KdvOrani = birimRate.KdvOrani,
+                    KaynakTipi = KalemKaynakTipi.BirimTarifesi
+                };
         }
 
         if (tasinmazId.HasValue && kategoriId.HasValue)
@@ -71,15 +76,13 @@ public class RateResolverService : IRateResolverService
                     && f.Aktif);
 
             if (fiyatMatrisi != null)
-            {
                 return new RateSnapshot
                 {
                     HesaplamaYontemi = fiyatMatrisi.HesaplamaYontemi,
                     BirimDeger = fiyatMatrisi.BirimDeger,
                     KdvOrani = fiyatMatrisi.KdvOrani,
-                    KaynakTipi = KaynakTipi.TasinmazKiraciKategoriFiyat
+                    KaynakTipi = KalemKaynakTipi.TasinmazTarifesi
                 };
-            }
         }
 
         if (!kategoriId.HasValue) return null;
@@ -104,7 +107,7 @@ public class RateResolverService : IRateResolverService
             HesaplamaYontemi = kalem.HesaplamaYontemi,
             BirimDeger = kalem.BirimDeger,
             KdvOrani = kalem.KdvOrani,
-            KaynakTipi = KaynakTipi.Tarife
+            KaynakTipi = KalemKaynakTipi.GenelTarife
         };
     }
 }

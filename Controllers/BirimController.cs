@@ -43,6 +43,7 @@ public class BirimController : Controller
             TasinmazAd               = birim.Tasinmaz.Ad,
             KiralanabilirMi          = birim.BirimTuru?.KiralanabilirMi ?? true,
             RezervasyonYapilabilirMi = birim.BirimTuru?.RezervasyonYapilabilirMi ?? false,
+            BirimTuruAd              = birim.BirimTuru?.Ad
         };
 
         if (vm.KiralanabilirMi)
@@ -97,6 +98,11 @@ public class BirimController : Controller
         {
             vm.OzelRezervasyonKural = await _ctx.RezervasyonUcretKurallari
                 .FirstOrDefaultAsync(r => r.BirimId == id);
+            
+            // Yeni matris yapısındaki parent tarife (Genel Tarife)
+            vm.ParentRezervasyonTarife = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(DateTime.Now.Year);
+
+            // Eski global kural (form varsayılanları için şimdilik kalsın)
             vm.GlobalRezervasyonKural = await _ctx.RezervasyonUcretKurallari
                 .FirstOrDefaultAsync(r => r.BirimId == null && r.Aktif);
         }

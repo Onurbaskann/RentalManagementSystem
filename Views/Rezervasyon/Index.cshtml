@@ -85,12 +85,10 @@
                             <div style="display:flex;gap:4px;flex-wrap:nowrap;">
                                 @if (canTransfer && r.Durum == RezervasyonDurumu.Planlandi && r.ToplamTutar > 0 && r.KiraTahakkukId == null)
                                 {
-                                    <form method="post" action="/Rezervasyon/TahakkukaAktar/@r.Id" style="display:inline;">
+                                    <form method="post" action="/Rezervasyon/TahakkukaAktar/@r.Id" style="display:inline;"
+                                          data-confirm="Bu rezervasyonu tahakkuka aktarmak istediğinize emin misiniz?">
                                         @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-sm btn-primary"
-                                            onclick="return confirm('Bu rezervasyonu tahakkuka aktarmak istediğinize emin misiniz?')">
-                                            Tahakkuka Aktar
-                                        </button>
+                                        <button type="submit" class="btn btn-sm btn-primary">Tahakkuka Aktar</button>
                                     </form>
                                 }
                                 @if (canCancel && r.Durum == RezervasyonDurumu.Planlandi)

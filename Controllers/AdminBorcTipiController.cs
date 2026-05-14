@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Extensions;
 
 namespace KiraTakip.Controllers;
 
@@ -35,7 +36,7 @@ public class AdminBorcTipiController : Controller
     {
         if (!ModelState.IsValid) return View(model);
 
-        model.Kod = model.Kod.Trim().ToUpper();
+        model.Kod = model.Kod.ToSafeCode();
         if (await _ctx.BorcTipleri.AnyAsync(b => b.Kod == model.Kod))
         {
             ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
@@ -71,7 +72,7 @@ public class AdminBorcTipiController : Controller
 
         if (!ModelState.IsValid) return View(model);
 
-        model.Kod = model.Kod.Trim().ToUpper();
+        model.Kod = model.Kod.ToSafeCode();
         if (await _ctx.BorcTipleri.AnyAsync(b => b.Kod == model.Kod && b.Id != id))
         {
             ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
@@ -97,10 +98,21 @@ public class AdminBorcTipiController : Controller
         var entity = await _ctx.BorcTipleri.FindAsync(id);
         if (entity == null) return NotFound();
 
-        if (entity.Sistem && entity.Aktif)
+        if (entity.Aktif)
         {
-            TempData["Error"] = $"'{entity.Ad}' bir sistem kaydıdır ve pasif yapılamaz.";
-            return RedirectToAction(nameof(Index));
+            if (entity.Sistem)
+            {
+                TempData["Error"] = $"'{entity.Ad}' bir sistem kaydıdır ve pasif yapılamaz.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var bagliAktifBirimTuru = await _ctx.BirimTurleri
+                .AnyAsync(b => b.BorcTipiId == id && b.Aktif);
+            if (bagliAktifBirimTuru)
+            {
+                TempData["Error"] = "Bu borç tipi aktif bir birim türüne bağlı. Önce ilgili birim türünü pasif yapın.";
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         entity.Aktif = !entity.Aktif;

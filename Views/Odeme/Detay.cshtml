@@ -107,7 +107,8 @@
                 <div style="display:flex;gap:10px;flex-wrap:wrap;">
                     @if (canApprove)
                     {
-                        <form method="post" action="/Odeme/Onayla/@Model.Id">
+                        <form method="post" action="/Odeme/Onayla/@Model.Id"
+                              data-confirm="Bu ödemeyi onaylamak istediğinize emin misiniz?">
                             @Html.AntiForgeryToken()
                             <button type="submit" class="btn btn-primary">Onayla</button>
                         </form>

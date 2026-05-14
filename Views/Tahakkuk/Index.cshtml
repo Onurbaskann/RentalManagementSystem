@@ -91,7 +91,7 @@
 
         <select name="kaynak" class="form-control toolbar-input" style="width:120px;">
             <option value="">— Kaynak —</option>
-            <option value="otomatik" selected="@(q.Kaynak == "otomatik" ? "selected" : null)">Otomatik</option>
+            <option value="sozlesme" selected="@(q.Kaynak == "sozlesme" ? "selected" : null)">Sözleşme</option>
             <option value="manuel" selected="@(q.Kaynak == "manuel" ? "selected" : null)">Manuel</option>
             <option value="rezervasyon" selected="@(q.Kaynak == "rezervasyon" ? "selected" : null)">Rezervasyon</option>
         </select>
@@ -108,8 +108,8 @@
         <input type="date" name="to" value="@(q.To?.ToString("yyyy-MM-dd"))" class="form-control toolbar-input" style="width:130px;" />
         
         <div style="display:flex;gap:4px;">
-            <input type="number" name="min" value="@q.Min" step="0.01" class="form-control toolbar-input" placeholder="Min ₺" style="width:90px;" />
-            <input type="number" name="max" value="@q.Max" step="0.01" class="form-control toolbar-input" placeholder="Max ₺" style="width:90px;" />
+            <input type="number" name="min" value="@q.Min?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control toolbar-input" placeholder="Min ₺" style="width:90px;" />
+            <input type="number" name="max" value="@q.Max?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control toolbar-input" placeholder="Max ₺" style="width:90px;" />
         </div>
 
         @if (durum != "tum") { <input type="hidden" name="durum" value="@durum" /> }
@@ -184,7 +184,7 @@
                     string tahakkukKaynakLabel = t.KaynakTipi switch {
                         TahakkukKaynakTipi.Manuel      => "Manuel",
                         TahakkukKaynakTipi.Rezervasyon => "Rezervasyon",
-                        _                              => "Otomatik"
+                        _                              => "Sözleşme"
                     };
                     <tr @@click="open[@t.Id] = !open[@t.Id]" style="cursor:pointer;">
                         <td style="font-weight:600;">
@@ -234,18 +234,24 @@
                                         @foreach (var k in t.Kalemler.OrderBy(k => k.BorcTipi.Sira))
                                         {
                                             string kaynakCls = k.KaynakTipi switch {
-                                                KaynakTipi.Bulunamadi => "badge-bos",
-                                                KaynakTipi.Sozlesme => "badge-surek",
-                                                KaynakTipi.Birim    => "badge-kirali",
-                                                KaynakTipi.TasinmazKiraciKategoriFiyat => "badge-bireysel",
-                                                _                   => "badge-bos"
+                                                KalemKaynakTipi.TanimsizTarife    => "badge-bos",
+                                                KalemKaynakTipi.SozlesmeTarifesi  => "badge-surek",
+                                                KalemKaynakTipi.BirimTarifesi     => "badge-kirali",
+                                                KalemKaynakTipi.TasinmazTarifesi  => "badge-bireysel",
+                                                KalemKaynakTipi.GenelTarife       => "badge-bos",
+                                                KalemKaynakTipi.ManuelGiris       => "badge-surek",
+                                                KalemKaynakTipi.RezervasyonKurali => "badge-bireysel",
+                                                _                                 => "badge-bos"
                                             };
                                             string kaynakLabel = k.KaynakTipi switch {
-                                                KaynakTipi.Bulunamadi => "Bulunamadı",
-                                                KaynakTipi.Sozlesme => "Pazarlık",
-                                                KaynakTipi.Birim    => "Birim",
-                                                KaynakTipi.TasinmazKiraciKategoriFiyat => "Fiyat Matrisi",
-                                                _                   => "Tarife"
+                                                KalemKaynakTipi.TanimsizTarife    => "Tanımsız Tarife",
+                                                KalemKaynakTipi.SozlesmeTarifesi  => "Sözleşme Tarifesi",
+                                                KalemKaynakTipi.BirimTarifesi     => "Birim Tarifesi",
+                                                KalemKaynakTipi.TasinmazTarifesi  => "Taşınmaz Tarifesi",
+                                                KalemKaynakTipi.GenelTarife       => "Genel Tarife",
+                                                KalemKaynakTipi.ManuelGiris       => "Manuel Giriş",
+                                                KalemKaynakTipi.RezervasyonKurali => "Rezervasyon Kuralı",
+                                                _                                 => "Bilinmiyor"
                                             };
                                             <tr style="border-top:1px solid var(--color-border);">
                                                 <td style="padding:5px 8px;font-family:monospace;font-weight:700;font-size:12px;">@k.BorcTipi.Kod</td>

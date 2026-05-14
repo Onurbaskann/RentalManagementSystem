@@ -5,6 +5,7 @@ using KiraTakip.Authorization;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Services;
 using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Controllers;
@@ -18,6 +19,7 @@ public class OdemeController : Controller
     private readonly IBankaHareketiService _bankaService;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IConfiguration _config;
+    private readonly UserTasinmazYetkiService _yetkiService;
 
     public OdemeController(
         IOdemeService odemeService,
@@ -25,7 +27,8 @@ public class OdemeController : Controller
         IDekontService dekontService,
         IBankaHareketiService bankaService,
         UserManager<ApplicationUser> userManager,
-        IConfiguration config)
+        IConfiguration config,
+        UserTasinmazYetkiService yetkiService)
     {
         _odemeService = odemeService;
         _tahakkukService = tahakkukService;
@@ -33,6 +36,7 @@ public class OdemeController : Controller
         _bankaService = bankaService;
         _userManager = userManager;
         _config = config;
+        _yetkiService = yetkiService;
     }
 
     [Authorize(Policy = PermissionCatalog.Odeme.View)]
@@ -223,11 +227,6 @@ public class OdemeController : Controller
         return RedirectToAction(nameof(Detay), new { id = odemeId });
     }
 
-    private async Task<List<int>> GetYetkiliTasinmazIdsAsync(string userId)
-    {
-        var userTasinmazIds = await _odemeService.GetAllAsync(userId: userId);
-        return userTasinmazIds
-            .Select(o => o.KiraTahakkuk?.KiraSozlesmesi?.Birim?.TasinmazId ?? 0)
-            .Where(id => id > 0).Distinct().ToList();
-    }
+    private Task<List<int>> GetYetkiliTasinmazIdsAsync(string userId)
+        => _yetkiService.GetYetkiliTasinmazIdsAsync(userId);
 }

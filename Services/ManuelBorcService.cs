@@ -91,7 +91,7 @@ public class ManuelBorcService : IManuelBorcService
             KdvOrani         = kdvOrani,
             KdvTutari        = kdvTutari,
             ToplamTutar      = toplamTutar,
-            KaynakTipi       = KaynakTipi.Sozlesme
+            KaynakTipi       = KalemKaynakTipi.ManuelGiris
         };
 
         var tahakkuk = new KiraTahakkuk
@@ -134,7 +134,9 @@ public class ManuelBorcService : IManuelBorcService
             return (false, "Ödemesi alınmış manuel borç iptal edilemez.");
 
         tahakkuk.Durum = TahakkukDurumu.IptalEdildi;
-        tahakkuk.IptalNotu = neden;
+        tahakkuk.IptalNotu = string.IsNullOrEmpty(tahakkuk.IptalNotu)
+            ? neden
+            : $"{tahakkuk.IptalNotu} | İptal: {neden}";
         await _ctx.SaveChangesAsync();
 
         return (true, null);

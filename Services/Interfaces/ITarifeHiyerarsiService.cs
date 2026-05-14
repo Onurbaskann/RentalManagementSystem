@@ -10,4 +10,6 @@ public interface ITarifeHiyerarsiService
         int? birimId    = null,
         int? kategoriId = null,
         int? yil        = null);
+
+    Task<ParentRezervasyonTarifeKartViewModel?> GetRezervasyonParentForAsync(int? yil = null);
 }

@@ -9,6 +9,7 @@ public class BirimOzelFiyatViewModel
 
     public bool KiralanabilirMi { get; set; }
     public bool RezervasyonYapilabilirMi { get; set; }
+    public string? BirimTuruAd { get; set; }
 
     // Senaryo A — kira: KiraciKategori × BorcTipi matrisi
     public List<BirimRateKategoriSatiri> Satirlar { get; set; } = [];
@@ -18,6 +19,7 @@ public class BirimOzelFiyatViewModel
     // Senaryo B — rezervasyon ücreti kuralı
     public RezervasyonUcretKural? OzelRezervasyonKural { get; set; }
     public RezervasyonUcretKural? GlobalRezervasyonKural { get; set; }
+    public ParentRezervasyonTarifeKartViewModel? ParentRezervasyonTarife { get; set; }
 }
 
 public class BirimRateKategoriSatiri

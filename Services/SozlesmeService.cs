@@ -52,6 +52,7 @@ public class SozlesmeService : ISozlesmeService
                 .ThenInclude(b => b.Sozlesmeler)
                     .ThenInclude(x => x.Kiraci)
             .Include(s => s.Kiraci)
+                .ThenInclude(k => k.KiraciKategori)
             .Include(s => s.IslemGecmisi)
             .FirstOrDefaultAsync(s => s.Id == id);
     }

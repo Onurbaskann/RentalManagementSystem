@@ -41,7 +41,7 @@
             <div class="two-col">
                 <div class="form-group">
                     <label asp-for="KiraciId" class="form-label">Kiracı <span style="color:#dc2626;">*</span></label>
-                    <select asp-for="KiraciId" class="form-control">
+                    <select asp-for="KiraciId" class="form-control" x-model="kiraciId" x-on:change="kiraciSecildi($event)">
                         <option value="">— Kiracı seçin —</option>
                         @foreach (var k in Model.Kiraciler)
                         {
@@ -55,10 +55,9 @@
                     <label asp-for="KiraSozlesmesiId" class="form-label">Sözleşme <span style="color:var(--color-muted);font-weight:400;">(opsiyonel)</span></label>
                     <select asp-for="KiraSozlesmesiId" class="form-control">
                         <option value="">— Sözleşme seçin —</option>
-                        @foreach (var s in Model.Sozlesmeler)
-                        {
-                            <option value="@s.Id">@s.Kiraci.GosterimAdi — @s.Birim.Tasinmaz.Ad / @s.Birim.Ad</option>
-                        }
+                        <template x-for="s in filtrelenmisSozlesmeler" :key="s.id">
+                            <option :value="s.id" x-text="s.label"></option>
+                        </template>
                     </select>
                 </div>
             </div>
@@ -147,11 +146,29 @@
 function rezervasyonForm() {
     return {
         birimId: @(Model.BirimId > 0 ? Model.BirimId.ToString() : "0"),
+        kiraciId: @(Model.KiraciId > 0 ? Model.KiraciId.ToString() : "0"),
         baslangic: '@Model.BaslangicTarihi.ToString("yyyy-MM-ddTHH:mm")',
         bitis: '@Model.BitisTarihi.ToString("yyyy-MM-ddTHH:mm")',
         hesapSonucu: null,
         hataMessaji: null,
+        sozlesmeler: [
+            @foreach (var s in Model.Sozlesmeler)
+            {
+                <text>{ id: @s.Id, kiraciId: @s.KiraciId, label: '@s.Birim.Tasinmaz.Ad / @s.Birim.Ad (@s.BaslangicTarihi.ToString("dd.MM.yyyy"))' },</text>
+            }
+        ],
         _timer: null,
+
+        get filtrelenmisSozlesmeler() {
+            if (!this.kiraciId) return [];
+            return this.sozlesmeler.filter(s => s.kiraciId == this.kiraciId);
+        },
+
+        kiraciSecildi(e) {
+            this.kiraciId = e.target.value;
+            // Kiracı değiştiğinde seçili sözleşmeyi sıfırla
+            document.querySelector('select[name="KiraSozlesmesiId"]').value = "";
+        },
 
         birimSecildi(e) {
             this.birimId = parseInt(e.target.value) || 0;

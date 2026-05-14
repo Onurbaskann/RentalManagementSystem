@@ -5,7 +5,7 @@
 @{
     ViewData["Title"] = "Taşınmazlar";
 
-    bool canEdit = User.IsInRole("Admin") || User.IsInRole("Yonetici");
+    bool canEdit = User.HasClaim("permission", "Tasinmaz.Create");
 }
 
 <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">

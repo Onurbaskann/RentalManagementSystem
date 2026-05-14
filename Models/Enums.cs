@@ -92,18 +92,20 @@ public enum HesaplamaYontemi
     M2    = 2
 }
 
-public enum KaynakTipi
+public enum KalemKaynakTipi
 {
-    Bulunamadi            = 0,
-    Sozlesme              = 1,
-    Birim                 = 2,
-    Tarife                = 3,
-    TasinmazKiraciKategoriFiyat = 4
+    TanimsizTarife              = 0,
+    SozlesmeTarifesi            = 1,
+    BirimTarifesi               = 2,
+    GenelTarife                 = 3,
+    TasinmazTarifesi            = 4,
+    ManuelGiris                 = 5,
+    RezervasyonKurali           = 6
 }
 
 public enum TahakkukKaynakTipi
 {
-    Otomatik    = 1,
+    Sozlesme    = 1,
     Manuel      = 2,
     Rezervasyon = 3
 }
