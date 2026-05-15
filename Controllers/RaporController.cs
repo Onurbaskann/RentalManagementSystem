@@ -1,3 +1,4 @@
+using KiraTakip.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -26,7 +27,7 @@ public class RaporController : Controller
         await _tahakkukService.GecikmeleriGuncelleAsync();
 
         int secilenYil = yil ?? DateTime.Today.Year;
-        var userId = User.IsInRole("Goruntuleyici") ? _userManager.GetUserId(User) : null;
+        var userId = User.IsInRole(RoleNames.Goruntuleyici) ? _userManager.GetUserId(User) : null;
         var tahakkuklar = await _tahakkukService.GetAllAsync(userId: userId);
 
         var trCulture = new CultureInfo("tr-TR");

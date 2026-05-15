@@ -2,10 +2,10 @@
 @using KiraTakip.Models
 @{
     ViewData["Title"] = $"Ödeme #{Model.Id}";
-    bool canApprove    = User.HasClaim("permission", "Odeme.Approve");
-    bool canReject     = User.HasClaim("permission", "Odeme.Reject");
-    bool canUpload     = User.HasClaim("permission", "Odeme.UploadDekont");
-    bool canMatch      = User.HasClaim("permission", "Odeme.MatchBankTransaction");
+    bool canApprove    = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.Approve);
+    bool canReject     = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.Reject);
+    bool canUpload     = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.UploadDekont);
+    bool canMatch      = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.MatchBankTransaction);
     bool bekliyor      = Model.Durum == OdemeDurumu.OnayBekliyor;
 
     string durumCls = Model.Durum switch {

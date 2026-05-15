@@ -6,7 +6,7 @@ public class AdminBypassHandler : IAuthorizationHandler
 {
     public Task HandleAsync(AuthorizationHandlerContext context)
     {
-        if (context.User.IsInRole("Admin"))
+        if (context.User.IsInRole(RoleNames.Admin))
         {
             foreach (var req in context.PendingRequirements.ToList())
                 context.Succeed(req);

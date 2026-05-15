@@ -5,7 +5,7 @@
 @{
     ViewData["Title"] = Model.Kiraci.GosterimAdi;
     var k = Model.Kiraci;
-    bool canEdit = User.HasClaim("permission", "Kiraci.Edit");
+    bool canEdit = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Kiraci.Edit);
     bool isTuzel = k.KiraciTuru == KiraciTuru.Tuzel;
 }
 

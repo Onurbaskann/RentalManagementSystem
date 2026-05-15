@@ -5,7 +5,7 @@
 @{
     ViewData["Title"] = "Taşınmazlar";
 
-    bool canEdit = User.HasClaim("permission", "Tasinmaz.Create");
+    bool canEdit = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Tasinmaz.Create);
 }
 
 <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">

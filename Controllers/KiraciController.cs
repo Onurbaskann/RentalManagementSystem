@@ -1,3 +1,4 @@
+using KiraTakip.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -37,7 +38,7 @@ public class KiraciController : Controller
     public async Task<IActionResult> Index()
     {
         var userId = _userManager.GetUserId(User);
-        var filterUserId = User.IsInRole("Goruntuleyici") ? userId : null;
+        var filterUserId = User.IsInRole(RoleNames.Goruntuleyici) ? userId : null;
         var kiraciler = await _kiraciService.GetAllAsync(filterUserId);
         var sozlesmeler = await _sozlesmeService.GetAllAsync(userId: filterUserId);
         ViewBag.AktifSozlesme = sozlesmeler
@@ -51,7 +52,7 @@ public class KiraciController : Controller
     public async Task<IActionResult> Detay(int id)
     {
         string? scopedUserId = null;
-        if (User.IsInRole("Goruntuleyici"))
+        if (User.IsInRole(RoleNames.Goruntuleyici))
         {
             scopedUserId = _userManager.GetUserId(User);
             var kiraciler = await _kiraciService.GetAllAsync(scopedUserId);

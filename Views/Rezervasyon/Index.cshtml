@@ -2,9 +2,9 @@
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Rezervasyonlar";
-    bool canCreate   = User.HasClaim("permission", "Rezervasyon.Create");
-    bool canCancel   = User.HasClaim("permission", "Rezervasyon.Cancel");
-    bool canTransfer = User.HasClaim("permission", "Rezervasyon.TransferToTahakkuk");
+    bool canCreate   = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Rezervasyon.Create);
+    bool canCancel   = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Rezervasyon.Cancel);
+    bool canTransfer = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Rezervasyon.TransferToTahakkuk);
 }
 
 <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">

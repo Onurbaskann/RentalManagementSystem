@@ -25,16 +25,16 @@ public class PermissionClaimsTransformer : UserClaimsPrincipalFactory<Applicatio
         var identity = await base.GenerateClaimsAsync(user);
 
         var roles = await UserManager.GetRolesAsync(user);
-        if (roles.Contains("Admin"))
+        if (roles.Contains(RoleNames.Admin))
         {
             foreach (var p in PermissionCatalog.All)
-                identity.AddClaim(new Claim("permission", p));
+                identity.AddClaim(new Claim(AppClaimTypes.Permission, p));
         }
         else
         {
             var permissions = await _permissionService.GetUserPermissionsAsync(user.Id);
             foreach (var p in permissions)
-                identity.AddClaim(new Claim("permission", p));
+                identity.AddClaim(new Claim(AppClaimTypes.Permission, p));
         }
 
         return identity;

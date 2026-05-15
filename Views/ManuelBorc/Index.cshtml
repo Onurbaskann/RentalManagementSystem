@@ -2,8 +2,8 @@
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Manuel Borçlar";
-    bool canCreate = User.HasClaim("permission", "ManuelBorc.Create");
-    bool canCancel = User.HasClaim("permission", "ManuelBorc.Cancel");
+    bool canCreate = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.ManuelBorc.Create);
+    bool canCancel = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.ManuelBorc.Cancel);
 }
 
 <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">

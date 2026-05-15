@@ -1,4 +1,5 @@
 using KiraTakip.Models;
+using KiraTakip.Authorization;
 using Microsoft.AspNetCore.Identity;
 
 namespace KiraTakip.Services;
@@ -16,16 +17,16 @@ public class IdentitySeedService
 
     public async Task SeedAsync()
     {
-        string[] roles = ["Admin", "Yonetici", "Goruntuleyici"];
+        string[] roles = [RoleNames.Admin, RoleNames.Yonetici, RoleNames.Goruntuleyici];
         foreach (var role in roles)
         {
             if (!await _roleManager.RoleExistsAsync(role))
                 await _roleManager.CreateAsync(new IdentityRole(role));
         }
 
-        await EnsureUser("admin@kiratakip.local", "Admin123!", "Admin", "Admin Kullanıcı");
-        await EnsureUser("yonetici@kiratakip.local", "Yonetici123!", "Yonetici", "Yönetici Kullanıcı");
-        await EnsureUser("viewer@kiratakip.local", "Viewer123!", "Goruntuleyici", "Görüntüleyici Kullanıcı");
+        await EnsureUser("admin@kiratakip.local", "Admin123!", RoleNames.Admin, "Admin Kullanıcı");
+        await EnsureUser("yonetici@kiratakip.local", "Yonetici123!", RoleNames.Yonetici, "Yönetici Kullanıcı");
+        await EnsureUser("viewer@kiratakip.local", "Viewer123!", RoleNames.Goruntuleyici, "Görüntüleyici Kullanıcı");
     }
 
     private async Task EnsureUser(string email, string password, string role, string adSoyad)

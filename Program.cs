@@ -1,6 +1,7 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Settings;
 using KiraTakip.Repositories;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services;
@@ -37,7 +38,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddAuthorization(options =>
 {
     foreach (var perm in PermissionCatalog.All)
-        options.AddPolicy(perm, policy => policy.RequireClaim("permission", perm));
+        options.AddPolicy(perm, policy => policy.RequireClaim(AppClaimTypes.Permission, perm));
 });
 
 builder.Services.AddControllersWithViews(options =>
@@ -78,6 +79,13 @@ builder.Services.AddScoped<IManuelBorcService, ManuelBorcService>();
 builder.Services.AddScoped<IRezervasyonService, RezervasyonService>();
 builder.Services.AddScoped<ITasinmazFiyatService, TasinmazFiyatService>();
 builder.Services.AddScoped<ITarifeHiyerarsiService, TarifeHiyerarsiService>();
+
+builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
+builder.Services.Configure<PaymentLinkSettings>(builder.Configuration.GetSection("PaymentLink"));
+builder.Services.AddScoped<IMailService, SmtpMailService>();
+builder.Services.AddScoped<IPaymentLinkService, PaymentLinkService>();
+builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 

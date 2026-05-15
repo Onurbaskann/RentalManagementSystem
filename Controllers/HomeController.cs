@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using KiraTakip.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -44,7 +45,7 @@ public class HomeController : Controller
     {
         var now = DateTime.Now;
         var userId = _userManager.GetUserId(User);
-        var filterUserId = User.IsInRole("Goruntuleyici") ? userId : null;
+        var filterUserId = User.IsInRole(RoleNames.Goruntuleyici) ? userId : null;
 
         var tasinmazlar = await _tasinmazService.GetAllAsync(filterUserId);
         var tumBirimler = tasinmazlar.SelectMany(t => t.Birimler).ToList();
@@ -102,7 +103,7 @@ public class HomeController : Controller
                 Yuzolcumu = b.Yuzolcumu
             }).ToList();
 
-        if (User.HasClaim("permission", "Odeme.View"))
+        if (User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.View))
         {
             vm.HasOdemeAccess = true;
             var tahakkuklar = await _tahakkukService.GetAllAsync(userId: filterUserId);

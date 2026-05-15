@@ -1,7 +1,7 @@
 @model KiraTakip.Models.ViewModels.DashboardViewModel
 @{
     ViewData["Title"] = "Anasayfa";
-    bool canEdit = User.HasClaim("permission", "Sozlesme.Create");
+    bool canEdit = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Sozlesme.Create);
 
     string TLFormat(decimal v) => v.ToString("N2") + " ₺";
 

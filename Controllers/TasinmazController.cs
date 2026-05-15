@@ -1,3 +1,4 @@
+using KiraTakip.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -40,7 +41,7 @@ public class TasinmazController : Controller
     public async Task<IActionResult> Index()
     {
         var userId = _userManager.GetUserId(User);
-        var filterUserId = User.IsInRole("Goruntuleyici") ? userId : null;
+        var filterUserId = User.IsInRole(RoleNames.Goruntuleyici) ? userId : null;
         var tasinmazlar = await _tasinmazService.GetAllAsync(filterUserId);
         return View(tasinmazlar);
     }
@@ -48,7 +49,7 @@ public class TasinmazController : Controller
     [Authorize(Policy = PermissionCatalog.Tasinmaz.View)]
     public async Task<IActionResult> Detay(int id)
     {
-        if (User.IsInRole("Goruntuleyici"))
+        if (User.IsInRole(RoleNames.Goruntuleyici))
         {
             var userId = _userManager.GetUserId(User);
             var tasinmazlar = await _tasinmazService.GetAllAsync(userId);

@@ -24,7 +24,7 @@
         _                           => "Bekleniyor"
     };
 
-    bool canCreate = User.HasClaim("permission", "Odeme.Create");
+    bool canCreate = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.Create);
     bool iptal = Model.Durum == TahakkukDurumu.IptalEdildi;
     bool tamOdendi = Model.Durum == TahakkukDurumu.TamOdendi;
 }

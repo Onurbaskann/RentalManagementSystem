@@ -3,9 +3,9 @@
 @inject KiraTakip.Services.Interfaces.IIstatistikService Istatistik
 @{
     ViewData["Title"] = Model.Tasinmaz.Ad;
-    bool canEdit = User.HasClaim("permission", "Sozlesme.Create") || User.HasClaim("permission", "Rezervasyon.Create");
-    bool canManageRate = User.HasClaim("permission", "Birim.ManageRate");
-    bool canManageCarpan = User.HasClaim("permission", "TasinmazCarpan.Manage");
+    bool canEdit = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Sozlesme.Create) || User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Rezervasyon.Create);
+    bool canManageRate = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Birim.ManageRate);
+    bool canManageCarpan = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.TasinmazCarpanPerm.Manage);
 
     string DurumBadge(KiraDurumu d) => d switch {
         KiraDurumu.Kirali => "<span class='badge badge-kirali'>Kiralı</span>",

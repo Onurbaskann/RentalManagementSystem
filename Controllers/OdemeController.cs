@@ -1,3 +1,4 @@
+using KiraTakip.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -42,7 +43,7 @@ public class OdemeController : Controller
     [Authorize(Policy = PermissionCatalog.Odeme.View)]
     public async Task<IActionResult> Index([FromQuery] TableQuery query, int? tahakkukId = null)
     {
-        var userId = User.IsInRole("Goruntuleyici") ? _userManager.GetUserId(User) : null;
+        var userId = User.IsInRole(RoleNames.Goruntuleyici) ? _userManager.GetUserId(User) : null;
         var paged = await _odemeService.GetPagedAsync(query, tahakkukId, userId);
 
         ViewBag.TahakkukId = tahakkukId;
@@ -57,7 +58,7 @@ public class OdemeController : Controller
         var odeme = await _odemeService.GetByIdAsync(id);
         if (odeme == null) return NotFound();
 
-        if (User.IsInRole("Goruntuleyici"))
+        if (User.IsInRole(RoleNames.Goruntuleyici))
         {
             var userId = _userManager.GetUserId(User)!;
             var yetkiliTasinmazIds = await GetYetkiliTasinmazIdsAsync(userId);
@@ -181,7 +182,7 @@ public class OdemeController : Controller
         var dekont = await _dekontService.GetByIdAsync(id);
         if (dekont == null) return NotFound();
 
-        if (User.IsInRole("Goruntuleyici"))
+        if (User.IsInRole(RoleNames.Goruntuleyici))
         {
             var userId = _userManager.GetUserId(User)!;
             var yetkiliIds = await GetYetkiliTasinmazIdsAsync(userId);
@@ -204,7 +205,7 @@ public class OdemeController : Controller
         var odeme = await _odemeService.GetByIdAsync(id);
         if (odeme == null) return NotFound();
 
-        if (User.IsInRole("Goruntuleyici"))
+        if (User.IsInRole(RoleNames.Goruntuleyici))
         {
             var userId = _userManager.GetUserId(User)!;
             var yetkiliIds = await GetYetkiliTasinmazIdsAsync(userId);

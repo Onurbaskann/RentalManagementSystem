@@ -1,10 +1,13 @@
+using KiraTakip.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Settings;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using KiraTakip.Models.Dtos;
@@ -23,6 +26,11 @@ public class SozlesmeController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _ctx;
     private readonly ITarifeHiyerarsiService _tarifeHiyerarsisi;
+    private readonly IMailService _mail;
+    private readonly IPaymentLinkService _paymentLink;
+    private readonly IRazorViewToStringRenderer _razorRenderer;
+    private readonly IOptions<PaymentLinkSettings> _paymentLinkOptions;
+    private readonly ILogger<SozlesmeController> _logger;
 
     public SozlesmeController(
         ISozlesmeService sozlesmeService,
@@ -33,7 +41,12 @@ public class SozlesmeController : Controller
         ITahakkukUretimService tahakkukUretim,
         UserManager<ApplicationUser> userManager,
         ApplicationDbContext ctx,
-        ITarifeHiyerarsiService tarifeHiyerarsisi)
+        ITarifeHiyerarsiService tarifeHiyerarsisi,
+        IMailService mail,
+        IPaymentLinkService paymentLink,
+        IRazorViewToStringRenderer razorRenderer,
+        IOptions<PaymentLinkSettings> paymentLinkOptions,
+        ILogger<SozlesmeController> logger)
     {
         _sozlesmeService = sozlesmeService;
         _tasinmazService = tasinmazService;
@@ -44,21 +57,29 @@ public class SozlesmeController : Controller
         _userManager = userManager;
         _ctx = ctx;
         _tarifeHiyerarsisi = tarifeHiyerarsisi;
+        _mail = mail;
+        _paymentLink = paymentLink;
+        _razorRenderer = razorRenderer;
+        _paymentLinkOptions = paymentLinkOptions;
+        _logger = logger;
     }
 
     [Authorize(Policy = PermissionCatalog.Sozlesme.View)]
     public async Task<IActionResult> Index(string? filtre)
     {
         var userId = _userManager.GetUserId(User);
-        var filterUserId = User.IsInRole("Goruntuleyici") ? userId : null;
+        var filterUserId = User.IsInRole(RoleNames.Goruntuleyici) ? userId : null;
         var sozlesmeler = await _sozlesmeService.GetAllAsync(filtre, filterUserId);
 
         var now = DateTime.Today;
+        var esik = now.AddDays(_paymentLinkOptions.Value.ReminderDaysBefore);
         var borcluSayisi = await _ctx.KiraTahakkuklar
-            .Where(t => t.DonemBaslangic <= now
+            .Where(t => t.VadeTarihi <= esik
                 && t.Durum != TahakkukDurumu.TamOdendi
-                && t.Durum != TahakkukDurumu.IptalEdildi)
-            .Select(t => t.KiraSozlesmesi.KiraciId)
+                && t.Durum != TahakkukDurumu.IptalEdildi
+                && t.KiraSozlesmesi != null
+                && t.KiraSozlesmesi.KiraciId != 0)
+            .Select(t => t.KiraSozlesmesi!.KiraciId)
             .Distinct()
             .CountAsync();
         ViewBag.BorcluSayisi = borcluSayisi;
@@ -73,7 +94,7 @@ public class SozlesmeController : Controller
         var s = await _sozlesmeService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
-        if (User.IsInRole("Goruntuleyici"))
+        if (User.IsInRole(RoleNames.Goruntuleyici))
         {
             var userId = _userManager.GetUserId(User);
             var tasinmazlar = await _tasinmazService.GetAllAsync(userId);
@@ -94,7 +115,7 @@ public class SozlesmeController : Controller
             GecmisSozlesmeler = gecmis.Where(x => x.Id != id).ToList()
         };
 
-        if (User.HasClaim("permission", "Odeme.View"))
+        if (User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.View))
         {
             vm.HasOdemeAccess = true;
             vm.Tahakkuklar = await _tahakkukService.GetAllAsync(sozlesmeId: id);
@@ -366,6 +387,87 @@ public class SozlesmeController : Controller
         }).ToList();
 
         return Json(result);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.Sozlesme.View)]
+    public async Task<IActionResult> BorclularaMailGonder()
+    {
+        if (string.IsNullOrWhiteSpace(_paymentLinkOptions.Value.Secret))
+        {
+            TempData["Error"] = "SMTP yapılandırılmamış. appsettings.json içinde Smtp:Host ve PaymentLink:Secret boş bırakılamaz.";
+            return RedirectToAction("Index");
+        }
+
+        var bugun = DateTime.Today;
+        var esik = bugun.AddDays(_paymentLinkOptions.Value.ReminderDaysBefore);
+
+        var borclular = await _ctx.KiraTahakkuklar
+            .Include(t => t.KiraSozlesmesi!).ThenInclude(s => s!.Kiraci)
+            .Include(t => t.KiraSozlesmesi!).ThenInclude(s => s!.Birim).ThenInclude(b => b.Tasinmaz)
+            .Include(t => t.Odemeler)
+            .Where(t => t.VadeTarihi <= esik
+                && t.Durum != TahakkukDurumu.TamOdendi
+                && t.Durum != TahakkukDurumu.IptalEdildi
+                && t.KiraSozlesmesi != null
+                && t.KiraSozlesmesi.KiraciId != 0)
+            .ToListAsync();
+
+        int gonderildi = 0, atlandi = 0, hata = 0;
+
+        foreach (var t in borclular)
+        {
+            var kiraci = t.KiraSozlesmesi?.Kiraci;
+            if (kiraci == null || string.IsNullOrWhiteSpace(kiraci.Email))
+            {
+                atlandi++;
+                continue;
+            }
+
+            var odenmis = t.Odemeler
+                .Where(o => o.Durum == OdemeDurumu.Onaylandi)
+                .Sum(o => o.Tutar);
+            var kalan = t.ToplamTutar - odenmis;
+
+            var model = new BorcHatirlatmaMailModel
+            {
+                KiraciAdi = kiraci.GosterimAdi,
+                TasinmazAdi = t.KiraSozlesmesi!.Birim.Tasinmaz.Ad,
+                BirimAdi = t.KiraSozlesmesi.Birim.Ad,
+                DonemBaslangic = t.DonemBaslangic,
+                VadeTarihi = t.VadeTarihi,
+                ToplamTutar = t.ToplamTutar,
+                KalanTutar = kalan,
+                OdemeLink = _paymentLink.BuildLink(t.Id)
+            };
+
+            try
+            {
+                var html = await _razorRenderer.RenderAsync("/Views/Shared/EmailTemplates/BorcHatirlatma.cshtml", model);
+                var subject = $"Ödeme Hatırlatması — {model.TasinmazAdi} / {model.BirimAdi}";
+                await _mail.SendAsync(kiraci.Email, kiraci.GosterimAdi, subject, html);
+                gonderildi++;
+            }
+            catch (Exception ex)
+            {
+                hata++;
+                _logger.LogError(ex, "Mail gönderilemedi: KiraciId={KiraciId} TahakkukId={TahakkukId}", kiraci.Id, t.Id);
+            }
+        }
+
+        var mesajParcalari = new List<string>();
+        if (gonderildi > 0) mesajParcalari.Add($"{gonderildi} mail gönderildi");
+        if (atlandi > 0) mesajParcalari.Add($"{atlandi} kiracı atlandı (email boş)");
+        if (hata > 0) mesajParcalari.Add($"{hata} gönderimde hata oluştu");
+        if (mesajParcalari.Count == 0) mesajParcalari.Add("Gönderilecek tahakkuk bulunamadı");
+
+        if (hata > 0)
+            TempData["Error"] = string.Join(", ", mesajParcalari) + ". Detaylar için uygulama loglarını inceleyin.";
+        else
+            TempData["Success"] = string.Join(", ", mesajParcalari) + ".";
+
+        return RedirectToAction("Index");
     }
 
     private static decimal HesaplaAylikBedelHelper(IEnumerable<SozlesmeRate> rates, decimal yuzolcumu) =>

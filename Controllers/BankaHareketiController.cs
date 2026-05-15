@@ -1,3 +1,4 @@
+using KiraTakip.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -78,7 +79,7 @@ public class BankaHareketiController : Controller
         var hareketi = await _bankaService.GetByIdAsync(id);
         if (hareketi == null) return NotFound();
 
-        var userId = User.IsInRole("Goruntuleyici") ? _userManager.GetUserId(User) : null;
+        var userId = User.IsInRole(RoleNames.Goruntuleyici) ? _userManager.GetUserId(User) : null;
         var adaylar = await _bankaService.GetOdemeAdaylariAsync(id, userId);
 
         return View(new BankaEslesmeSecViewModel { BankaHareketi = hareketi, OdemeAdaylari = adaylar });

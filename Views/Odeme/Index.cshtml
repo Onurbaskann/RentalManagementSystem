@@ -6,7 +6,7 @@
     int? tahakkukId = ViewBag.TahakkukId;
     string durum = ViewBag.Durum ?? "tum";
     var q = (TableQuery)ViewBag.Query;
-    bool canApprove = User.HasClaim("permission", "Odeme.Approve");
+    bool canApprove = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.Approve);
 
     var extra = q.ToQueryDict();
     if (tahakkukId.HasValue) extra["tahakkukId"] = tahakkukId.Value.ToString();

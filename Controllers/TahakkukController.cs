@@ -4,6 +4,7 @@ using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
+using KiraTakip.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -30,10 +31,10 @@ public class TahakkukController : Controller
     {
         await _tahakkukService.GecikmeleriGuncelleAsync();
 
-        var userId = User.IsInRole("Goruntuleyici") ? _userManager.GetUserId(User) : null;
+        var userId = User.IsInRole(RoleNames.Goruntuleyici) ? _userManager.GetUserId(User) : null;
         var pagedResult = await _tahakkukService.GetPagedAsync(query, userId: userId);
 
-        if (User.IsInRole("Goruntuleyici"))
+        if (User.IsInRole(RoleNames.Goruntuleyici))
         {
             var uid = _userManager.GetUserId(User)!;
             var yetkiliIds = await _ctx.UserTasinmazYetkileri
@@ -70,7 +71,7 @@ public class TahakkukController : Controller
         var tahakkuk = await _tahakkukService.GetByIdAsync(id);
         if (tahakkuk == null) return NotFound();
 
-        if (User.IsInRole("Goruntuleyici"))
+        if (User.IsInRole(RoleNames.Goruntuleyici))
         {
             var userId = _userManager.GetUserId(User);
             var yetkiliIds = await _ctx.UserTasinmazYetkileri

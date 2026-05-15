@@ -1,3 +1,4 @@
+using KiraTakip.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +11,7 @@ using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = RoleNames.Admin)]
 [Route("Admin/Kullanicilar")]
 public class AdminUserController : Controller
 {
@@ -34,7 +35,7 @@ public class AdminUserController : Controller
         _permissionService = permissionService;
     }
 
-    private static readonly string[] Roller = ["Admin", "Yonetici", "Goruntuleyici"];
+    private static readonly string[] Roller = [RoleNames.Admin, RoleNames.Yonetici, RoleNames.Goruntuleyici];
 
     [HttpGet("")]
     public async Task<IActionResult> Index()
@@ -116,7 +117,7 @@ public class AdminUserController : Controller
 
         await _userManager.AddToRoleAsync(user, model.Rol);
 
-        if (model.Rol == "Goruntuleyici" && model.SelectedTasinmazIds != null && model.SelectedTasinmazIds.Any())
+        if (model.Rol == RoleNames.Goruntuleyici && model.SelectedTasinmazIds != null && model.SelectedTasinmazIds.Any())
         {
             var currentUserId = _userManager.GetUserId(User);
             await _yetkiService.SetUserTasinmazYetkileriAsync(user.Id, model.SelectedTasinmazIds, currentUserId ?? "system");
@@ -198,7 +199,7 @@ public class AdminUserController : Controller
         }
 
         var existingRoles = await _userManager.GetRolesAsync(user);
-        if (existingRoles.Contains("Admin") && model.Rol != "Admin")
+        if (existingRoles.Contains(RoleNames.Admin) && model.Rol != RoleNames.Admin)
         {
             if (await AktifAdminSayisi() <= 1)
             {
@@ -214,18 +215,18 @@ public class AdminUserController : Controller
 
         var selectedPerms = model.SelectedPermissions ?? new List<string>();
 
-        if (model.Rol == "Admin")
+        if (model.Rol == RoleNames.Admin)
         {
             await _permissionService.SetUserPermissionsAsync(user.Id, Array.Empty<string>(), currentUserId ?? "system");
             await _yetkiService.SetUserTasinmazYetkileriAsync(user.Id, new List<int>(), currentUserId ?? "system");
         }
-        else if (model.Rol == "Yonetici")
+        else if (model.Rol == RoleNames.Yonetici)
         {
             var allowed = selectedPerms.Where(p => PermissionCatalog.AssignableToYonetici.Contains(p)).ToList();
             await _permissionService.SetUserPermissionsAsync(user.Id, allowed, currentUserId ?? "system");
             await _yetkiService.SetUserTasinmazYetkileriAsync(user.Id, new List<int>(), currentUserId ?? "system");
         }
-        else if (model.Rol == "Goruntuleyici")
+        else if (model.Rol == RoleNames.Goruntuleyici)
         {
             var allowed = selectedPerms.Where(p => PermissionCatalog.AssignableToGoruntuleyici.Contains(p)).ToList();
             await _permissionService.SetUserPermissionsAsync(user.Id, allowed, currentUserId ?? "system");
@@ -257,7 +258,7 @@ public class AdminUserController : Controller
         if (user.IsActive)
         {
             var roles = await _userManager.GetRolesAsync(user);
-            if (roles.Contains("Admin") && await AktifAdminSayisi() <= 1)
+            if (roles.Contains(RoleNames.Admin) && await AktifAdminSayisi() <= 1)
             {
                 TempData["Error"] = "Sistemde en az bir aktif Admin bulunmalıdır.";
                 return RedirectToAction(nameof(Index));
@@ -273,7 +274,7 @@ public class AdminUserController : Controller
 
     private async Task<int> AktifAdminSayisi()
     {
-        var admins = await _userManager.GetUsersInRoleAsync("Admin");
+        var admins = await _userManager.GetUsersInRoleAsync(RoleNames.Admin);
         return admins.Count(u => u.IsActive);
     }
 

@@ -3,7 +3,7 @@
 @using KiraTakip.Models.Common
 @{
     ViewData["Title"] = "Tahakkuklar";
-    bool canCreate = User.HasClaim("permission", "Odeme.Create");
+    bool canCreate = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.Create);
     string durum = ViewBag.Durum ?? "tum";
     var q = (TableQuery)ViewBag.Query;
     var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/Tahakkuk", Extra = q.ToQueryDict() };
