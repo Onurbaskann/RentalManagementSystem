@@ -11,6 +11,8 @@ public class SozlesmeKalemInputDto
     public BorcTipiDavranisi Davranis { get; set; }
     public decimal VarsayilanTutar { get; set; }
     public decimal Tutar { get; set; }
+    public decimal BirimDeger { get; set; }
+    public decimal VarsayilanBirimDeger { get; set; }
     public decimal KdvOrani { get; set; }
     public HesaplamaYontemi HesaplamaYontemi { get; set; }
     public bool KullaniciDegistirdiMi { get; set; }

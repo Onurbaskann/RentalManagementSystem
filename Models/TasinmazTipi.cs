@@ -8,4 +8,6 @@ public class TasinmazTipi
     public bool Aktif { get; set; } = true;
     public int Sira { get; set; }
     public DateTime OlusturmaTarihi { get; set; }
+
+    public ICollection<TasinmazTipiKiralamaSekli> KiralamaSekilleri { get; set; } = new List<TasinmazTipiKiralamaSekli>();
 }

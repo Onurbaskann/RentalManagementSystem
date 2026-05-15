@@ -1,6 +1,7 @@
 @model KiraTakip.Models.ViewModels.SozlesmeDetayViewModel
 @using KiraTakip.Models
 @using KiraTakip.Services.Interfaces
+@using KiraTakip.Authorization
 @using System.Globalization
 @inject IIstatistikService Istatistik
 @{
@@ -32,9 +33,9 @@
     bool canEdit = User.HasClaim("permission", "Sozlesme.Extend") || User.HasClaim("permission", "Sozlesme.Terminate");
     bool canRegenerate = User.HasClaim("permission", "Tahakkuk.Regenerate");
 
-    decimal kdvTutari = s.KdvUygulanacakMi ? s.KiraBedeli * s.KdvOrani / 100 : 0;
-    decimal kdvDahilToplam = s.KiraBedeli + kdvTutari;
-    decimal aylikBedel = Istatistik.AylikBedel(s);
+    decimal aylikBedel = Model.AylikBedel;
+    decimal kdvTutari = s.KdvUygulanacakMi ? aylikBedel * s.KdvOrani / 100 : 0;
+    decimal kdvDahilToplam = aylikBedel + kdvTutari;
     decimal aylikKdv = s.KdvUygulanacakMi ? aylikBedel * s.KdvOrani / 100 : 0;
 }
 
@@ -60,17 +61,56 @@
     showFesih: false,
     showYenidenUret: false,
     tufeEnabled: false,
+    birimYuzolcumu: @s.Birim.Yuzolcumu.ToString(System.Globalization.CultureInfo.InvariantCulture),
+    sozlesmeBirimId: @s.BirimId,
+    sozlesmeKiraciId: @s.KiraciId,
+    sozlesmeId: @s.Id,
+    tarifeYenidenUret: false,
+    yenidenUretKalemler: [],
+    yenidenUretKalemlerYuklendi: false,
+    tarifeUzat: false,
+    uzatKalemler: [],
+    uzatKalemlerYuklendi: false,
+    async fetchTarifeKalemler(hedef) {
+        const yuklendi = hedef === 'yenidenUret' ? 'yenidenUretKalemlerYuklendi' : 'uzatKalemlerYuklendi';
+        const kalemler = hedef === 'yenidenUret' ? 'yenidenUretKalemler' : 'uzatKalemler';
+        if (this[yuklendi]) return;
+        const res = await fetch(`/Sozlesme/GetVarsayilanKalemler?birimId=${this.sozlesmeBirimId}&kiraciId=${this.sozlesmeKiraciId}&baslangic=@DateTime.Today.ToString("yyyy-MM-dd")&sozlesmeId=${this.sozlesmeId}`);
+        const data = await res.json();
+        this[kalemler] = data.map(k => ({ ...k, originalBirimDeger: k.birimDeger, varsayilanHesaplamaYontemi: k.hesaplamaYontemi, _error: null }));
+        this[yuklendi] = true;
+    },
+    hesaplaPopupTutar(k) {
+        return k.hesaplamaYontemi == 2 ? k.birimDeger * this.birimYuzolcumu : k.birimDeger;
+    },
     kdvEnabled: @(s.KdvUygulanacakMi ? "true" : "false"),
     tufeOrani: 25,
     kdvOrani: @s.KdvOrani.ToString(CultureInfo.InvariantCulture),
-    currentBedel: @s.KiraBedeli.ToString(CultureInfo.InvariantCulture),
-    yeniKiraBedeli: @s.KiraBedeli.ToString(CultureInfo.InvariantCulture),
+    currentBedel: @aylikBedel.ToString(CultureInfo.InvariantCulture),
+    yeniKiraBedeli: @aylikBedel.ToString(CultureInfo.InvariantCulture),
     get tufeArtisTutari() { return this.tufeEnabled ? Math.round(this.currentBedel * this.tufeOrani / 100) : 0; },
     get tufeSonrasiBedel() { return this.currentBedel + this.tufeArtisTutari; },
     get kdvTutari() { return this.kdvEnabled ? Math.round(this.yeniKiraBedeli * this.kdvOrani / 100) : 0; },
     get kdvDahilToplam() { return this.yeniKiraBedeli + this.kdvTutari; },
     formatTl(v) { return new Intl.NumberFormat('tr-TR').format(v) + ' ₺'; },
-    applyTufe() { if (this.tufeEnabled) this.yeniKiraBedeli = this.tufeSonrasiBedel; }
+    async applyTufe() {
+        await this.fetchTarifeKalemler('uzat');
+        if (this.tufeEnabled) {
+            this.tarifeUzat = true;
+            const oran = this.tufeOrani / 100;
+            this.uzatKalemler.forEach(k => {
+                k.birimDeger = Math.round(k.originalBirimDeger * (1 + oran) * 100) / 100;
+                k.kullaniciDegistirdiMi = true;
+            });
+            this.yeniKiraBedeli = this.tufeSonrasiBedel;
+        } else {
+            this.uzatKalemler.forEach(k => {
+                k.birimDeger = k.originalBirimDeger;
+                k.kullaniciDegistirdiMi = false;
+            });
+            this.yeniKiraBedeli = this.currentBedel;
+        }
+    }
 }">
 
 <!-- Breadcrumb + Butonlar -->
@@ -141,9 +181,9 @@
         <div style="text-align:right;">
             <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Taşınmaz</div>
             <div style="font-family:'Fraunces',Georgia,serif;font-size:20px;font-weight:700;margin-bottom:4px;">@tasinmaz.Ad</div>
-            @if (birim.BirimTipi == BirimTipi.Ofis)
+            @if (birim.BirimTipi == BirimTipi.Birim)
             {
-                <div style="font-size:14px;color:var(--color-muted);margin-bottom:4px;">Ofis @birim.OfisNo@(birim.KatNo.HasValue ? $" • {birim.KatNo}. Kat" : "") • @birim.Yuzolcumu.ToString("N0") m²</div>
+                <div style="font-size:14px;color:var(--color-muted);margin-bottom:4px;">Birim @birim.BirimNo@(birim.KatNo.HasValue ? $" • {birim.KatNo}. Kat" : "") • @birim.Yuzolcumu.ToString("N0") m²</div>
                 <div style="font-size:13px;color:var(--color-muted);margin-bottom:10px;">@tasinmaz.Ilce, @tasinmaz.Il</div>
             }
             else
@@ -177,10 +217,10 @@
         }
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--color-border);">
             <div style="font-size:11.5px;color:var(--color-muted);margin-bottom:2px;">Yıllık</div>
-            <div style="font-size:16px;font-weight:700;">@TLFormat(Istatistik.YillikBedel(s))</div>
+            <div style="font-size:16px;font-weight:700;">@TLFormat(Model.YillikBedel)</div>
         </div>
         <div style="margin-top:6px;font-size:11.5px;color:var(--color-muted);">
-            @(s.Periyot == KiraPeriyodu.Aylik ? "Aylık periyot" : "Yıllık periyot")
+            Tam ay üzerinden
         </div>
     </div>
 
@@ -235,6 +275,7 @@
                 {
                     <span style="font-size:12px;color:var(--color-muted);margin-left:8px;">— @Model.GuncelKalemDonemi.Value.ToString("MMMM yyyy", trCulture)</span>
                 }
+                <div style="font-size:11.5px;color:var(--color-muted);margin-top:2px;">İlk/son ay kıst uygulanır</div>
             </div>
         </div>
         <div class="table-wrapper">
@@ -295,10 +336,6 @@
         {
             <button class="tab">Ödemeler (@Model.Tahakkuklar.Count)</button>
         }
-        @if (Model.HasRateAccess)
-        {
-            <button class="tab">Sözleşme Tarifesi @(Model.PazarlikFiyatlari.Any(r => r.OzelFiyatAktif) ? $"({Model.PazarlikFiyatlari.Count(r => r.OzelFiyatAktif)})" : "")</button>
-        }
     </div>
 
     <!-- Tab 1: Detaylar -->
@@ -314,18 +351,16 @@
                     }
                 }
                 @{
-                    var periyotStr = s.Periyot == KiraPeriyodu.Aylik ? "ay" : "yıl";
                     Row("Sözleşme No", $"#{s.Id}");
-                    Row("Periyot", s.Periyot == KiraPeriyodu.Aylik ? "Aylık" : "Yıllık");
-                    Row("Kira Bedeli (KDV Hariç)", $"{s.KiraBedeli.ToString("N0")} ₺ / {periyotStr}");
+                    Row("Kira Bedeli (KDV Hariç)", $"{aylikBedel.ToString("N0")} ₺ / ay");
                     Row("Depozito", s.Depozito.HasValue ? s.Depozito.Value.ToString("N0") + " ₺" : "—");
                     Row("Başlangıç", s.BaslangicTarihi.ToString("dd MMMM yyyy", trCulture));
                     Row("Bitiş", s.BitisTarihi.ToString("dd MMMM yyyy", trCulture));
                     if (s.KdvUygulanacakMi)
                     {
                         Row("KDV Oranı", "%" + s.KdvOrani.ToString("G"));
-                        Row("KDV Tutarı", $"{kdvTutari.ToString("N0")} ₺ / {periyotStr}");
-                        Row("KDV Dahil Toplam", $"{kdvDahilToplam.ToString("N0")} ₺ / {periyotStr}");
+                        Row("KDV Tutarı", $"{kdvTutari.ToString("N0")} ₺ / ay");
+                        Row("KDV Dahil Toplam", $"{kdvDahilToplam.ToString("N0")} ₺ / ay");
                     }
                     else
                     {
@@ -366,9 +401,9 @@
                         <div>
                             <div style="font-size:12px;color:var(--color-muted);">Tip</div>
                             <div style="font-size:15px;font-weight:600;">
-                                @if (birim.BirimTipi == BirimTipi.Ofis)
+                                @if (birim.BirimTipi == BirimTipi.Birim)
                                 {
-                                    <span>Ofis @birim.OfisNo</span>
+                                    <span>Birim @birim.BirimNo</span>
                                     if (birim.KatNo.HasValue) { <span style="font-size:13px;font-weight:400;color:var(--color-muted);"> • @birim.KatNo. Kat</span> }
                                 }
                                 else { <span>Komple</span> }
@@ -427,7 +462,7 @@
                                     <td style="font-weight:600;">@gs.Kiraci.GosterimAdi</td>
                                     <td>@gs.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
                                     <td>@gs.BitisTarihi.ToString("dd.MM.yyyy")</td>
-                                    <td>@Istatistik.AylikBedel(gs).ToString("N0") ₺</td>
+                                    <td>@((await Istatistik.AylikBedelAsync(gs)).ToString("N0")) ₺</td>
                                     <td>
                                         @if (gFesih) { <span class="badge badge-gecmis">Feshedildi</span> }
                                         else if (gAktif) { <span class="badge badge-kirali">Aktif</span> }
@@ -521,10 +556,6 @@
         {
             <div class="card" style="text-align:center;color:var(--color-muted);padding:32px;">
                 Bu sözleşme için henüz tahakkuk oluşturulmamış.
-                @if (User.HasClaim("permission", "Odeme.Create"))
-                {
-                    <div style="margin-top:12px;"><a href="/Tahakkuk/Olustur" class="btn btn-primary btn-sm">Tahakkuk Oluştur</a></div>
-                }
             </div>
         }
         else
@@ -670,92 +701,7 @@
         }
         </div>
     }
-    @if (Model.HasRateAccess)
-    {
-        <div class="tab-content">
-            <div style="margin-bottom:12px;font-size:13px;color:var(--color-muted);">
-                İşaretlenen borç tipleri için tarife ve birim fiyatı yerine bu sözleşmeye özel fiyatlar kullanılır.
-            </div>
-            @if (Model.ParentTarife != null)
-            {
-                <div style="margin-bottom:16px;">
-                    <div style="font-size:12px;color:var(--color-muted);margin-bottom:4px;">İşaretlenmemiş borç tipleri için geçerli üst tarife:</div>
-                    @await Html.PartialAsync("_ParentTarifeKart", Model.ParentTarife)
-                </div>
-            }
-            <div style="margin-bottom:16px;padding:10px 14px;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;font-size:13px;color:#7a5c00;">
-                ⚠ Bu değişiklikler yalnızca bundan sonra üretilecek tahakkuklara yansır. Daha önce oluşturulmuş tahakkukları etkilemez.
-            </div>
-            <form method="post" action="/Sozlesme/PazarlikFiyatGuncelle/@s.Id">
-                @Html.AntiForgeryToken()
-                <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th style="width:48px;">Aktif</th>
-                                    <th style="width:100px;">Kod</th>
-                                    <th>Borç Tipi</th>
-                                    <th style="width:160px;">Hesaplama Yöntemi</th>
-                                    <th style="width:160px;">Birim Değer (₺)</th>
-                                    <th style="width:130px;">KDV Oranı (%)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @for (int i = 0; i < Model.PazarlikFiyatlari.Count; i++)
-                                {
-                                    var k = Model.PazarlikFiyatlari[i];
-                                    <tr x-data="{ aktif: @k.OzelFiyatAktif.ToString().ToLower() }">
-                                        <td style="text-align:center;">
-                                            <input type="hidden" name="pazarlikFiyatlari[@i].BorcTipiId" value="@k.BorcTipiId" />
-                                            <input type="hidden" name="pazarlikFiyatlari[@i].RateId"     value="@k.RateId" />
-                                            <input type="checkbox" name="pazarlikFiyatlari[@i].OzelFiyatAktif" value="true"
-                                                   @(k.OzelFiyatAktif ? "checked" : "") x-model="aktif" />
-                                        </td>
-                                        <td><span style="font-family:monospace;font-weight:600;font-size:13px;">@k.BorcTipiKod</span></td>
-                                        <td style="font-weight:500;">@k.BorcTipiAd</td>
-                                        <td>
-                                            <select name="pazarlikFiyatlari[@i].HesaplamaYontemi" class="form-control form-control-sm"
-                                                    :disabled="!aktif" x-bind:style="!aktif ? 'opacity:.4' : ''">
-                                                @if (k.HesaplamaYontemi == KiraTakip.Models.HesaplamaYontemi.Sabit)
-                                                {
-                                                    <option value="1" selected>Sabit</option>
-                                                    <option value="2">m²</option>
-                                                }
-                                                else
-                                                {
-                                                    <option value="1">Sabit</option>
-                                                    <option value="2" selected>m²</option>
-                                                }
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <input type="number" name="pazarlikFiyatlari[@i].BirimDeger" value="@k.BirimDeger.ToString("F2", CultureInfo.InvariantCulture)"
-                                                   class="form-control form-control-sm" step="0.01" min="0"
-                                                   :disabled="!aktif" x-bind:style="!aktif ? 'opacity:.4' : ''" />
-                                        </td>
-                                        <td>
-                                            <input type="number" name="pazarlikFiyatlari[@i].KdvOrani" value="@k.KdvOrani.ToString(CultureInfo.InvariantCulture)"
-                                                   class="form-control form-control-sm" step="0.01" min="0" max="100"
-                                                   :disabled="!aktif" x-bind:style="!aktif ? 'opacity:.4' : ''" />
-                                        </td>
-                                    </tr>
-                                }
-                                @if (!Model.PazarlikFiyatlari.Any())
-                                {
-                                    <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--color-muted);">Aktif borç tipi bulunmuyor.</td></tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                @if (Model.PazarlikFiyatlari.Any())
-                {
-                    <button type="submit" class="btn btn-primary">Kaydet</button>
-                }
-            </form>
-        </div>
-    }
+
 </div><!-- /#sozlesme-tabs -->
 
 <!-- MODAL: Sözleşmeyi Uzat -->
@@ -770,7 +716,7 @@
 
         <div style="background:#f7f8fa;border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:13px;">
             Mevcut bitiş: <strong>@s.BitisTarihi.ToString("dd.MM.yyyy")</strong> •
-            Mevcut kira: <strong>@TLFormat(s.KiraBedeli)</strong>
+            Mevcut kira: <strong>@TLFormat(aylikBedel)</strong>
         </div>
 
         <form method="post" action="/Sozlesme/Uzat/@s.Id">
@@ -796,19 +742,12 @@
                 <div class="form-group" style="margin-bottom:10px;">
                     <label class="form-label">TÜFE Oranı (%)</label>
                     <input type="number" name="TufeOrani" step="0.01" min="0" class="form-control"
-                        x-model="tufeOrani" @@input="applyTufe()" placeholder="Örn: 25" />
+                        x-model="tufeOrani" @@change="applyTufe()" placeholder="Örn: 25" />
                 </div>
                 <div style="font-size:13px;display:flex;flex-direction:column;gap:4px;">
                     <div>Artış tutarı: <strong x-text="formatTl(tufeArtisTutari)"></strong></div>
                     <div>TÜFE sonrası kira: <strong x-text="formatTl(tufeSonrasiBedel)"></strong></div>
                 </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Yeni Kira Bedeli (KDV Hariç) *</label>
-                <input type="number" name="YeniKiraBedeli" step="0.01" min="0.01" class="form-control"
-                    x-model="yeniKiraBedeli" required />
-                <div class="form-hint">TÜFE etkinleştirilince otomatik hesaplanır, manuel olarak da düzenleyebilirsiniz.</div>
             </div>
 
             <!-- KDV bölümü -->
@@ -836,6 +775,56 @@
                 <label class="form-label">Açıklama</label>
                 <textarea name="Aciklama" class="form-control" rows="2" placeholder="Opsiyonel açıklama"></textarea>
             </div>
+
+            @if (User.HasClaim("permission", PermissionCatalog.Sozlesme.OverrideRate) || User.IsInRole("Admin"))
+            {
+                <div class="form-group" style="margin-top:12px;">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;">
+                        <input type="checkbox" x-model="tarifeUzat"
+                               @@change="if(tarifeUzat) fetchTarifeKalemler('uzat')"
+                               style="width:16px;height:16px;cursor:pointer;" />
+                        Tarifeyi de güncelle
+                    </label>
+                </div>
+                <div x-show="tarifeUzat" x-cloak style="border:1px solid var(--color-border);border-radius:8px;padding:14px;margin-bottom:14px;">
+                    <div style="font-size:12px;color:var(--color-muted);margin-bottom:10px;">Yalnızca değiştirdiğiniz kalemler SözleşmeTarife olarak yazılır.</div>
+                    <template x-for="(k, i) in uzatKalemler" :key="k.borcTipiId">
+                        <div style="display:grid;grid-template-columns:1fr 110px 1fr 80px;gap:8px;align-items:end;margin-bottom:8px;">
+                            <div style="font-size:13px;font-weight:500;align-self:center;" x-text="k.borcTipiAd"></div>
+                            <div>
+                                <label class="form-label" style="font-size:11px;margin-bottom:3px;">Yöntem</label>
+                                <select class="form-control form-control-sm" x-model.number="k.hesaplamaYontemi"
+                                        @@change="k.kullaniciDegistirdiMi = true">
+                                    <option value="1">Sabit</option>
+                                    <option value="2" :disabled="birimYuzolcumu === 0">m²</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-size:11px;margin-bottom:3px;">
+                                    <span x-show="k.hesaplamaYontemi != 2">Tutar (₺)</span>
+                                    <span x-show="k.hesaplamaYontemi == 2">₺ / m²</span>
+                                </label>
+                                <input type="number" step="0.01" min="0" class="form-control form-control-sm"
+                                       x-model.number="k.birimDeger"
+                                       @@input="k.kullaniciDegistirdiMi = true">
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-size:11px;margin-bottom:3px;">KDV (%)</label>
+                                <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm"
+                                       x-model.number="k.kdvOrani"
+                                       @@input="k.kullaniciDegistirdiMi = true"
+                                       :name="`SozlesmeKalemleri[${i}].KdvOrani`">
+                            </div>
+                            <input type="hidden" :name="`SozlesmeKalemleri[${i}].BorcTipiId`" :value="k.borcTipiId">
+                            <input type="hidden" :name="`SozlesmeKalemleri[${i}].BirimDeger`" :value="k.birimDeger">
+                            <input type="hidden" :name="`SozlesmeKalemleri[${i}].HesaplamaYontemi`" :value="k.hesaplamaYontemi">
+                            <input type="hidden" :name="`SozlesmeKalemleri[${i}].Tutar`" :value="hesaplaPopupTutar(k)">
+                            <input type="hidden" :name="`SozlesmeKalemleri[${i}].KullaniciDegistirdiMi`" :value="k.kullaniciDegistirdiMi">
+                        </div>
+                    </template>
+                    <input type="hidden" name="TarifeyiGuncelle" :value="tarifeUzat">
+                </div>
+            }
 
             <div style="display:flex;gap:10px;margin-top:4px;">
                 <button type="submit" class="btn btn-primary">Uzat</button>
@@ -911,6 +900,56 @@
                     value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
                 <div class="form-hint">Bu tarihten (dahil) itibaren ödenmemiş tahakkuklar etkilenir.</div>
             </div>
+
+            @if (User.HasClaim("permission", PermissionCatalog.Sozlesme.OverrideRate) || User.IsInRole("Admin"))
+            {
+                <div class="form-group" style="margin-top:12px;">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;">
+                        <input type="checkbox" x-model="tarifeYenidenUret"
+                               @@change="if(tarifeYenidenUret) fetchTarifeKalemler('yenidenUret')"
+                               style="width:16px;height:16px;cursor:pointer;" />
+                        Tarifeyi de güncelle
+                    </label>
+                </div>
+                <div x-show="tarifeYenidenUret" x-cloak style="border:1px solid var(--color-border);border-radius:8px;padding:14px;margin-bottom:14px;">
+                    <div style="font-size:12px;color:var(--color-muted);margin-bottom:10px;">Yalnızca değiştirdiğiniz kalemler SözleşmeTarife olarak yazılır.</div>
+                    <template x-for="(k, i) in yenidenUretKalemler" :key="k.borcTipiId">
+                        <div style="display:grid;grid-template-columns:1fr 110px 1fr 80px;gap:8px;align-items:end;margin-bottom:8px;">
+                            <div style="font-size:13px;font-weight:500;align-self:center;" x-text="k.borcTipiAd"></div>
+                            <div>
+                                <label class="form-label" style="font-size:11px;margin-bottom:3px;">Yöntem</label>
+                                <select class="form-control form-control-sm" x-model.number="k.hesaplamaYontemi"
+                                        @@change="k.kullaniciDegistirdiMi = true">
+                                    <option value="1">Sabit</option>
+                                    <option value="2" :disabled="birimYuzolcumu === 0">m²</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-size:11px;margin-bottom:3px;">
+                                    <span x-show="k.hesaplamaYontemi != 2">Tutar (₺)</span>
+                                    <span x-show="k.hesaplamaYontemi == 2">₺ / m²</span>
+                                </label>
+                                <input type="number" step="0.01" min="0" class="form-control form-control-sm"
+                                       x-model.number="k.birimDeger"
+                                       @@input="k.kullaniciDegistirdiMi = true">
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-size:11px;margin-bottom:3px;">KDV (%)</label>
+                                <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm"
+                                       x-model.number="k.kdvOrani"
+                                       @@input="k.kullaniciDegistirdiMi = true"
+                                       :name="`sozlesmeKalemleri[${i}].KdvOrani`">
+                            </div>
+                            <input type="hidden" :name="`sozlesmeKalemleri[${i}].BorcTipiId`" :value="k.borcTipiId">
+                            <input type="hidden" :name="`sozlesmeKalemleri[${i}].BirimDeger`" :value="k.birimDeger">
+                            <input type="hidden" :name="`sozlesmeKalemleri[${i}].HesaplamaYontemi`" :value="k.hesaplamaYontemi">
+                            <input type="hidden" :name="`sozlesmeKalemleri[${i}].Tutar`" :value="hesaplaPopupTutar(k)">
+                            <input type="hidden" :name="`sozlesmeKalemleri[${i}].KullaniciDegistirdiMi`" :value="k.kullaniciDegistirdiMi">
+                        </div>
+                    </template>
+                    <input type="hidden" name="tarifeyiGuncelle" :value="tarifeYenidenUret">
+                </div>
+            }
 
             <div style="display:flex;gap:10px;margin-top:4px;">
                 <button type="submit" class="btn btn-primary">Yeniden Üret</button>

@@ -35,6 +35,11 @@ public class AccountController : Controller
     {
         ViewBag.ReturnUrl = returnUrl;
 
+        if (string.IsNullOrWhiteSpace(model.Email))
+            ModelState.AddModelError("Email", "E-posta adresi zorunludur.");
+        if (string.IsNullOrWhiteSpace(model.Password))
+            ModelState.AddModelError("Password", "Şifre zorunludur.");
+
         if (!ModelState.IsValid)
             return View(model);
 

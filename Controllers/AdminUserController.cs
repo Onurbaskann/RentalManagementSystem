@@ -73,6 +73,15 @@ public class AdminUserController : Controller
     {
         ViewBag.Roller = Roller;
 
+        if (string.IsNullOrWhiteSpace(model.AdSoyad))
+            ModelState.AddModelError("AdSoyad", "Ad soyad zorunludur.");
+        if (string.IsNullOrWhiteSpace(model.Email))
+            ModelState.AddModelError("Email", "E-posta adresi zorunludur.");
+        if (string.IsNullOrWhiteSpace(model.Password))
+            ModelState.AddModelError("Password", "Şifre zorunludur.");
+        if (string.IsNullOrWhiteSpace(model.Rol))
+            ModelState.AddModelError("Rol", "Rol seçilmelidir.");
+
         if (!ModelState.IsValid)
         {
             await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
@@ -157,6 +166,9 @@ public class AdminUserController : Controller
 
         var currentUserId = _userManager.GetUserId(User);
         model.IsCurrentUser = user.Id == currentUserId;
+
+        if (string.IsNullOrWhiteSpace(model.Rol))
+            ModelState.AddModelError("Rol", "Rol seçilmelidir.");
 
         if (!ModelState.IsValid)
         {

@@ -15,24 +15,11 @@ public class SozlesmeDetayViewModel
     public List<KiraSozlesmesi> GecmisSozlesmeler { get; set; } = new();
     public List<KiraTahakkuk> Tahakkuklar { get; set; } = new();
     public bool HasOdemeAccess { get; set; }
-    public List<SozlesmeRateSatiri> PazarlikFiyatlari { get; set; } = new();
-    public bool HasRateAccess { get; set; }
     public ParentTarifeKartViewModel? ParentTarife { get; set; }
     public List<TahakkukKalemi> GuncelKalemler { get; set; } = new();
     public DateTime? GuncelKalemDonemi { get; set; }
 }
 
-public class SozlesmeRateSatiri
-{
-    public int RateId { get; set; }
-    public int BorcTipiId { get; set; }
-    public string BorcTipiAd { get; set; } = "";
-    public string BorcTipiKod { get; set; } = "";
-    public bool OzelFiyatAktif { get; set; }
-    public HesaplamaYontemi HesaplamaYontemi { get; set; }
-    public decimal BirimDeger { get; set; }
-    public decimal KdvOrani { get; set; }
-}
 
 public class SozlesmeEkleViewModel
 {
@@ -41,11 +28,7 @@ public class SozlesmeEkleViewModel
     public DateTime BaslangicTarihi { get; set; } = DateTime.Today;
     public DateTime BitisTarihi { get; set; } = DateTime.Today.AddYears(1);
 
-    public KiraPeriyodu Periyot { get; set; } = KiraPeriyodu.Yillik;
-
     public string? Notlar { get; set; }
-
-
 
     public List<Birim> MevcutBirimler { get; set; } = new();
     public List<Kiraci> Kiraciler { get; set; } = new();
@@ -57,12 +40,7 @@ public class SozlesmeUzatViewModel
 {
     public int SozlesmeId { get; set; }
 
-    [Required(ErrorMessage = "Yeni bitiş tarihi zorunludur.")]
     public DateTime YeniBitisTarihi { get; set; }
-
-    [Required(ErrorMessage = "Yeni kira bedeli zorunludur.")]
-    [Range(0.01, double.MaxValue, ErrorMessage = "Kira bedeli sıfırdan büyük olmalıdır.")]
-    public decimal YeniKiraBedeli { get; set; }
 
     public bool TufeUygulanacakMi { get; set; }
     public decimal? TufeOrani { get; set; }
@@ -71,16 +49,17 @@ public class SozlesmeUzatViewModel
     public decimal? KdvOrani { get; set; }
 
     public string? Aciklama { get; set; }
+
+    public bool TarifeyiGuncelle { get; set; }
+    public List<KiraTakip.Models.Dtos.SozlesmeKalemInputDto> SozlesmeKalemleri { get; set; } = new();
 }
 
 public class SozlesmeFesihViewModel
 {
     public int SozlesmeId { get; set; }
 
-    [Required(ErrorMessage = "Fesih tarihi zorunludur.")]
     public DateTime FesihTarihi { get; set; } = DateTime.Today;
 
-    [Required(ErrorMessage = "Fesih nedeni zorunludur.")]
     public string FesihNedeni { get; set; } = string.Empty;
 
     public string? Aciklama { get; set; }

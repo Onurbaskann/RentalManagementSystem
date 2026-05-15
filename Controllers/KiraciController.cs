@@ -102,34 +102,7 @@ public class KiraciController : Controller
     [Authorize(Policy = PermissionCatalog.Kiraci.Create)]
     public async Task<IActionResult> Ekle(KiraciFormViewModel vm)
     {
-        ModelState.Remove("Ad");
-        ModelState.Remove("GercekAd");
-        ModelState.Remove("TuzelAd");
-        ModelState.Remove("Soyad");
-
-        if (vm.KiraciTuru == KiraciTuru.Gercek)
-        {
-            vm.Ad = vm.GercekAd;
-            if (string.IsNullOrWhiteSpace(vm.GercekAd))
-                ModelState.AddModelError("GercekAd", "Lütfen bir Ad giriniz.");
-            if (string.IsNullOrWhiteSpace(vm.Soyad))
-                ModelState.AddModelError("Soyad", "Lütfen bir Soyad giriniz.");
-        }
-        else if (vm.KiraciTuru == KiraciTuru.Tuzel)
-        {
-            vm.Ad = vm.TuzelAd;
-            if (string.IsNullOrWhiteSpace(vm.TuzelAd))
-                ModelState.AddModelError("TuzelAd", "Lütfen bir Firma / Kurum adı giriniz.");
-        }
-
-        if (!vm.KiraciKategoriId.HasValue || vm.KiraciKategoriId <= 0)
-            ModelState.AddModelError("KiraciKategoriId", "Kiracı kategorisi seçilmelidir.");
-        
-        if (!vm.SektorId.HasValue || vm.SektorId <= 0)
-            ModelState.AddModelError("SektorId", "Sektör seçilmelidir.");
-
-        if (await _kiraciService.KiraciNoExistsAsync(vm.KiraciNo))
-            ModelState.AddModelError("KiraciNo", "Bu Kiracı No zaten kullanımda.");
+        await ValidateKiraciAsync(vm);
 
         if (!ModelState.IsValid)
         {
@@ -160,6 +133,7 @@ public class KiraciController : Controller
             GercekAd = k.KiraciTuru == KiraciTuru.Gercek ? k.Ad : null,
             TuzelAd = k.KiraciTuru == KiraciTuru.Tuzel ? k.Ad : null,
             Soyad = k.Soyad,
+            TcVatandasiDegil = !string.IsNullOrWhiteSpace(k.PasaportNo),
             TcKimlikNo = k.TcKimlikNo,
             PasaportNo = k.PasaportNo,
             Unvan = k.Unvan,
@@ -174,6 +148,7 @@ public class KiraciController : Controller
             Telefon = k.Telefon,
             Email = k.Email,
             Adres = k.Adres,
+            KvkkOnayi = k.KvkkOnayi,
             KiraciKategoriId = k.KiraciKategoriId,
             SektorId = k.SektorId
         };
@@ -186,34 +161,7 @@ public class KiraciController : Controller
     {
         if (id != vm.Id) return BadRequest();
 
-        ModelState.Remove("Ad");
-        ModelState.Remove("GercekAd");
-        ModelState.Remove("TuzelAd");
-        ModelState.Remove("Soyad");
-
-        if (vm.KiraciTuru == KiraciTuru.Gercek)
-        {
-            vm.Ad = vm.GercekAd;
-            if (string.IsNullOrWhiteSpace(vm.GercekAd))
-                ModelState.AddModelError("GercekAd", "Lütfen bir Ad giriniz.");
-            if (string.IsNullOrWhiteSpace(vm.Soyad))
-                ModelState.AddModelError("Soyad", "Lütfen bir Soyad giriniz.");
-        }
-        else if (vm.KiraciTuru == KiraciTuru.Tuzel)
-        {
-            vm.Ad = vm.TuzelAd;
-            if (string.IsNullOrWhiteSpace(vm.TuzelAd))
-                ModelState.AddModelError("TuzelAd", "Lütfen bir Firma / Kurum adı giriniz.");
-        }
-
-        if (!vm.KiraciKategoriId.HasValue || vm.KiraciKategoriId <= 0)
-            ModelState.AddModelError("KiraciKategoriId", "Kiracı kategorisi seçilmelidir.");
-        
-        if (!vm.SektorId.HasValue || vm.SektorId <= 0)
-            ModelState.AddModelError("SektorId", "Sektör seçilmelidir.");
-
-        if (await _kiraciService.KiraciNoExistsAsync(vm.KiraciNo, excludeId: id))
-            ModelState.AddModelError("KiraciNo", "Bu Kiracı No zaten kullanımda.");
+        await ValidateKiraciAsync(vm, excludeId: id);
 
         if (!ModelState.IsValid)
         {
@@ -228,6 +176,86 @@ public class KiraciController : Controller
         return RedirectToAction("Detay", new { id });
     }
 
+    private async Task ValidateKiraciAsync(KiraciFormViewModel vm, int? excludeId = null)
+    {
+        ModelState.Remove("Ad");
+        ModelState.Remove("GercekAd");
+        ModelState.Remove("TuzelAd");
+        ModelState.Remove("Soyad");
+
+        if (string.IsNullOrWhiteSpace(vm.KiraciNo))
+        {
+            ModelState.AddModelError("KiraciNo", "Kiracı No zorunludur.");
+        }
+        else if (await _kiraciService.KiraciNoExistsAsync(vm.KiraciNo, excludeId))
+        {
+            ModelState.AddModelError("KiraciNo", "Bu Kiracı No zaten kullanımda.");
+        }
+
+        if (vm.KiraciTuru == null)
+            ModelState.AddModelError("KiraciTuru", "Kiracı türü seçilmelidir.");
+
+        if (!vm.KiraciKategoriId.HasValue || vm.KiraciKategoriId <= 0)
+            ModelState.AddModelError("KiraciKategoriId", "Kiracı kategorisi seçilmelidir.");
+
+        if (!vm.SektorId.HasValue || vm.SektorId <= 0)
+            ModelState.AddModelError("SektorId", "Sektör seçilmelidir.");
+
+        if (vm.KiraciTuru == KiraciTuru.Gercek)
+        {
+            vm.Ad = vm.GercekAd;
+
+            if (string.IsNullOrWhiteSpace(vm.GercekAd))
+                ModelState.AddModelError("GercekAd", "Ad zorunludur.");
+            if (string.IsNullOrWhiteSpace(vm.Soyad))
+                ModelState.AddModelError("Soyad", "Soyad zorunludur.");
+            if (!vm.DogumTarihi.HasValue)
+                ModelState.AddModelError("DogumTarihi", "Doğum Tarihi zorunludur.");
+            if (string.IsNullOrWhiteSpace(vm.AnneAdi))
+                ModelState.AddModelError("AnneAdi", "Anne Adı zorunludur.");
+            if (string.IsNullOrWhiteSpace(vm.BabaAdi))
+                ModelState.AddModelError("BabaAdi", "Baba Adı zorunludur.");
+
+            if (vm.TcVatandasiDegil)
+            {
+                if (string.IsNullOrWhiteSpace(vm.PasaportNo))
+                    ModelState.AddModelError("PasaportNo", "Pasaport No zorunludur.");
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(vm.TcKimlikNo))
+                    ModelState.AddModelError("TcKimlikNo", "TC Kimlik No zorunludur.");
+                else if (vm.TcKimlikNo.Length != 11 || !vm.TcKimlikNo.All(char.IsDigit))
+                    ModelState.AddModelError("TcKimlikNo", "TC Kimlik No 11 haneli rakamdan oluşmalıdır.");
+            }
+        }
+        else if (vm.KiraciTuru == KiraciTuru.Tuzel)
+        {
+            vm.Ad = vm.TuzelAd;
+
+            if (string.IsNullOrWhiteSpace(vm.TuzelAd))
+                ModelState.AddModelError("TuzelAd", "Firma / Kurum Adı zorunludur.");
+
+            if (string.IsNullOrWhiteSpace(vm.VergiNo))
+                ModelState.AddModelError("VergiNo", "Vergi No zorunludur.");
+            else if (vm.VergiNo.Length != 10 || !vm.VergiNo.All(char.IsDigit))
+                ModelState.AddModelError("VergiNo", "Vergi No 10 haneli rakamdan oluşmalıdır.");
+
+            if (string.IsNullOrWhiteSpace(vm.VergiDairesi))
+                ModelState.AddModelError("VergiDairesi", "Vergi Dairesi zorunludur.");
+        }
+
+        if (string.IsNullOrWhiteSpace(vm.Telefon))
+            ModelState.AddModelError("Telefon", "Telefon zorunludur.");
+        if (string.IsNullOrWhiteSpace(vm.Email))
+            ModelState.AddModelError("Email", "E-posta zorunludur.");
+        if (string.IsNullOrWhiteSpace(vm.Adres))
+            ModelState.AddModelError("Adres", "Adres zorunludur.");
+
+        if (!vm.KvkkOnayi)
+            ModelState.AddModelError("KvkkOnayi", "KVKK aydınlatma metni onayı zorunludur.");
+    }
+
     private static Kiraci BuildKiraciFromVm(KiraciFormViewModel vm)
     {
         var tur = vm.KiraciTuru ?? KiraciTuru.Gercek;
@@ -239,6 +267,7 @@ public class KiraciController : Controller
             Telefon = vm.Telefon,
             Email = vm.Email,
             Adres = vm.Adres,
+            KvkkOnayi = vm.KvkkOnayi,
             KiraciKategoriId = vm.KiraciKategoriId,
             SektorId = vm.SektorId
         };
@@ -246,8 +275,8 @@ public class KiraciController : Controller
         if (tur == KiraciTuru.Gercek)
         {
             k.Soyad = vm.Soyad;
-            k.TcKimlikNo = vm.TcKimlikNo;
-            k.PasaportNo = vm.PasaportNo;
+            k.TcKimlikNo = vm.TcVatandasiDegil ? null : vm.TcKimlikNo;
+            k.PasaportNo = vm.TcVatandasiDegil ? vm.PasaportNo : null;
             k.Unvan = vm.Unvan;
             k.AnneAdi = vm.AnneAdi;
             k.BabaAdi = vm.BabaAdi;

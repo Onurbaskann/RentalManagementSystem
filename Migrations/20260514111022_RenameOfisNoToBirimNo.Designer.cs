@@ -4,6 +4,7 @@ using KiraTakip.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KiraTakip.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260514111022_RenameOfisNoToBirimNo")]
+    partial class RenameOfisNoToBirimNo
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -468,11 +471,18 @@ namespace KiraTakip.Migrations
                     b.Property<bool>("KdvUygulanacakMi")
                         .HasColumnType("bit");
 
+                    b.Property<decimal>("KiraBedeli")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("KiraciId")
                         .HasColumnType("int");
 
                     b.Property<string>("Notlar")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Periyot")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -585,9 +595,6 @@ namespace KiraTakip.Migrations
 
                     b.Property<int>("KiraciTuru")
                         .HasColumnType("int");
-
-                    b.Property<bool>("KvkkOnayi")
-                        .HasColumnType("bit");
 
                     b.Property<string>("MersisNo")
                         .HasColumnType("nvarchar(max)");
@@ -1198,28 +1205,6 @@ namespace KiraTakip.Migrations
                     b.ToTable("TasinmazTipleri");
                 });
 
-            modelBuilder.Entity("KiraTakip.Models.TasinmazTipiKiralamaSekli", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("KiralamaSekli")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TasinmazTipiId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TasinmazTipiId", "KiralamaSekli")
-                        .IsUnique();
-
-                    b.ToTable("TasinmazTipiKiralamaSekilleri");
-                });
-
             modelBuilder.Entity("KiraTakip.Models.ToplantiSalonuRezervasyon", b =>
                 {
                     b.Property<int>("Id")
@@ -1735,7 +1720,7 @@ namespace KiraTakip.Migrations
                         .IsRequired();
 
                     b.HasOne("KiraTakip.Models.KiraSozlesmesi", "Sozlesme")
-                        .WithMany("SozlesmeRateler")
+                        .WithMany()
                         .HasForeignKey("SozlesmeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1826,17 +1811,6 @@ namespace KiraTakip.Migrations
                     b.Navigation("KiraciKategori");
 
                     b.Navigation("Tasinmaz");
-                });
-
-            modelBuilder.Entity("KiraTakip.Models.TasinmazTipiKiralamaSekli", b =>
-                {
-                    b.HasOne("KiraTakip.Models.TasinmazTipi", "TasinmazTipi")
-                        .WithMany("KiralamaSekilleri")
-                        .HasForeignKey("TasinmazTipiId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("TasinmazTipi");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.ToplantiSalonuRezervasyon", b =>
@@ -1952,8 +1926,6 @@ namespace KiraTakip.Migrations
             modelBuilder.Entity("KiraTakip.Models.KiraSozlesmesi", b =>
                 {
                     b.Navigation("IslemGecmisi");
-
-                    b.Navigation("SozlesmeRateler");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.KiraTahakkuk", b =>
@@ -1971,11 +1943,6 @@ namespace KiraTakip.Migrations
             modelBuilder.Entity("KiraTakip.Models.Tasinmaz", b =>
                 {
                     b.Navigation("Birimler");
-                });
-
-            modelBuilder.Entity("KiraTakip.Models.TasinmazTipi", b =>
-                {
-                    b.Navigation("KiralamaSekilleri");
                 });
 #pragma warning restore 612, 618
         }

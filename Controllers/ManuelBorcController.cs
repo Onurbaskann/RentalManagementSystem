@@ -52,6 +52,13 @@ public class ManuelBorcController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Ekle(ManuelBorcCreateViewModel vm)
     {
+        if (vm.SozlesmeId <= 0)
+            ModelState.AddModelError("SozlesmeId", "Sözleşme seçilmelidir.");
+        if (vm.BorcTipiId <= 0)
+            ModelState.AddModelError("BorcTipiId", "Borç tipi seçilmelidir.");
+        if (string.IsNullOrWhiteSpace(vm.Aciklama))
+            ModelState.AddModelError("Aciklama", "Açıklama zorunludur.");
+
         if (!ModelState.IsValid)
         {
             await PopulateDropdownsAsync(vm);

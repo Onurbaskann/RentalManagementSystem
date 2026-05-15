@@ -35,6 +35,7 @@
                     <th style="width:60px;">Sıra</th>
                     <th style="width:120px;">Kod</th>
                     <th>Ad</th>
+                    <th style="width:220px;">Kiralama Şekilleri</th>
                     <th style="width:100px;">Durum</th>
                     <th style="width:160px;"></th>
                 </tr>
@@ -46,6 +47,22 @@
                         <td style="text-align:center;color:var(--color-muted);font-size:13px;">@tt.Sira</td>
                         <td><span style="font-family:monospace;font-weight:600;font-size:13px;">@tt.Kod</span></td>
                         <td style="font-weight:500;">@tt.Ad</td>
+                        <td>
+                            @if (!tt.KiralamaSekilleri.Any())
+                            {
+                                <span style="color:var(--color-muted);font-size:12px;">—</span>
+                            }
+                            else
+                            {
+                                <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                                    @foreach (var ks in tt.KiralamaSekilleri.OrderBy(k => (int)k.KiralamaSekli))
+                                    {
+                                        var label = ks.KiralamaSekli == KiraTakip.Models.KiralamaSekli.TekParca ? "Tek Parça" : "Birim Bazlı";
+                                        <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:#e3f2fd;color:#1565c0;">@label</span>
+                                    }
+                                </div>
+                            }
+                        </td>
                         <td>
                             @if (tt.Aktif)
                             { <span class="badge badge-kirali">Aktif</span> }
@@ -67,7 +84,7 @@
                 }
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--color-muted);">Henüz taşınmaz tipi tanımlanmamış.</td></tr>
+                    <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--color-muted);">Henüz taşınmaz tipi tanımlanmamış.</td></tr>
                 }
             </tbody>
         </table>

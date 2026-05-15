@@ -84,47 +84,4 @@ public class TahakkukController : Controller
         return View(tahakkuk);
     }
 
-    [HttpGet]
-    [Authorize(Policy = PermissionCatalog.Odeme.Create)]
-    public async Task<IActionResult> Olustur()
-    {
-        var viewModel = new TahakkukOlusturViewModel();
-        await PopulateSozlesmelerAsync(viewModel);
-        return View(viewModel);
-    }
-
-    [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Odeme.Create)]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Olustur(TahakkukOlusturViewModel viewModel)
-    {
-        if (!ModelState.IsValid)
-        {
-            await PopulateSozlesmelerAsync(viewModel);
-            return View(viewModel);
-        }
-
-        var period = new DateTime(viewModel.DonemYil, viewModel.DonemAy, 1);
-        var (isSuccess, errorMessage) = await _tahakkukService.OlusturAsync(viewModel.KiraSozlesmesiId, period);
-
-        if (!isSuccess)
-        {
-            ModelState.AddModelError(string.Empty, errorMessage!);
-            await PopulateSozlesmelerAsync(viewModel);
-            return View(viewModel);
-        }
-
-        TempData["Success"] = $"{period:MMMM yyyy} dönemi için tahakkuk oluşturuldu.";
-        return RedirectToAction(nameof(Index));
-    }
-
-    private async Task PopulateSozlesmelerAsync(TahakkukOlusturViewModel viewModel)
-    {
-        viewModel.AktifSozlesmeler = await _ctx.Sozlesmeler
-            .Include(s => s.Birim).ThenInclude(b => b.Tasinmaz)
-            .Include(s => s.Kiraci)
-            .Where(s => s.Durum == SozlesmeDurumu.Aktif)
-            .OrderBy(s => s.Kiraci.Ad)
-            .ToListAsync();
-    }
 }

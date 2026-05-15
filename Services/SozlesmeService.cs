@@ -54,17 +54,19 @@ public class SozlesmeService : ISozlesmeService
             .Include(s => s.Kiraci)
                 .ThenInclude(k => k.KiraciKategori)
             .Include(s => s.IslemGecmisi)
+            .Include(s => s.SozlesmeRateler)
+                .ThenInclude(r => r.BorcTipi)
             .FirstOrDefaultAsync(s => s.Id == id);
     }
 
-    public async Task<KiraSozlesmesi> CreateAsync(KiraSozlesmesi s)
+    public async Task<KiraSozlesmesi> CreateAsync(KiraSozlesmesi s, decimal? aylikBedel = null)
     {
         s.IslemGecmisi.Add(new SozlesmeIslemGecmisi
         {
             IslemTipi = SozlesmeIslemTipi.Olusturma,
             IslemTarihi = DateTime.Now,
             Aciklama = "Sözleşme oluşturuldu.",
-            YeniKiraBedeli = s.KiraBedeli
+            YeniKiraBedeli = aylikBedel
         });
 
         _ctx.Sozlesmeler.Add(s);
@@ -72,7 +74,7 @@ public class SozlesmeService : ISozlesmeService
         return s;
     }
 
-    public async Task UzatAsync(int id, DateTime yeniBitis, decimal yeniKiraBedeli,
+    public async Task UzatAsync(int id, DateTime yeniBitis, decimal eskiBedel, decimal yeniBedel,
         bool kdvUygulanacakMi, decimal kdvOrani, decimal? tufeOrani, string? aciklama)
     {
         var s = await _ctx.Sozlesmeler
@@ -81,15 +83,13 @@ public class SozlesmeService : ISozlesmeService
             ?? throw new InvalidOperationException($"Sözleşme {id} bulunamadı.");
 
         var eskiBitis = s.BitisTarihi;
-        var eskiBedel = s.KiraBedeli;
 
         s.BitisTarihi = yeniBitis;
-        s.KiraBedeli = yeniKiraBedeli;
         s.KdvUygulanacakMi = kdvUygulanacakMi;
         if (kdvUygulanacakMi) s.KdvOrani = kdvOrani;
 
-        decimal? kdvTutari = kdvUygulanacakMi ? yeniKiraBedeli * kdvOrani / 100 : null;
-        decimal? kdvDahil = kdvUygulanacakMi ? yeniKiraBedeli + kdvTutari : null;
+        decimal? kdvTutari = kdvUygulanacakMi ? yeniBedel * kdvOrani / 100 : null;
+        decimal? kdvDahil = kdvUygulanacakMi ? yeniBedel + kdvTutari : null;
 
         s.IslemGecmisi.Add(new SozlesmeIslemGecmisi
         {
@@ -100,7 +100,7 @@ public class SozlesmeService : ISozlesmeService
             EskiBitisTarihi = eskiBitis,
             YeniBitisTarihi = yeniBitis,
             EskiKiraBedeli = eskiBedel,
-            YeniKiraBedeli = yeniKiraBedeli,
+            YeniKiraBedeli = yeniBedel,
             TufeOrani = tufeOrani,
             KdvUygulandiMi = kdvUygulanacakMi,
             KdvOrani = kdvUygulanacakMi ? kdvOrani : null,

@@ -147,7 +147,9 @@
         <div class="card-title">Sözleşme Özeti</div>
         @{
             var aktifler = Model.Sozlesmeler.Where(Istatistik.Aktif).ToList();
-            var toplamAylik = aktifler.Sum(Istatistik.AylikBedel);
+            decimal toplamAylik = 0m;
+            foreach (var aks in aktifler)
+                toplamAylik += await Istatistik.AylikBedelAsync(aks);
         }
         <div class="card-value" style="font-size:22px;margin-top:8px;">@aktifler.Count</div>
         <div class="card-sub">aktif sözleşme</div>
@@ -201,7 +203,7 @@
                                 @s.BitisTarihi.ToString("dd.MM.yyyy")
                                 @if (surek) { <span class="day-badge day-badge-amber" style="margin-left:6px;font-size:11px;">@kalanGun g</span> }
                             </td>
-                            <td style="font-weight:600;">@Istatistik.AylikBedel(s).ToString("N0") ₺</td>
+                            <td style="font-weight:600;">@((await Istatistik.AylikBedelAsync(s)).ToString("N0")) ₺</td>
                             <td>@(s.Depozito.HasValue ? s.Depozito.Value.ToString("N0") + " ₺" : "—")</td>
                             <td>
                                 @if (feshedildi) { <span class="badge badge-gecmis">Feshedildi</span> }

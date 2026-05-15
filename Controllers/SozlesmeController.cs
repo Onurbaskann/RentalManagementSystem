@@ -86,8 +86,8 @@ public class SozlesmeController : Controller
         {
             Sozlesme = s,
             KalanGun = _istatistik.KalanGun(s),
-            AylikBedel = _istatistik.AylikBedel(s),
-            YillikBedel = _istatistik.YillikBedel(s),
+            AylikBedel = await _istatistik.AylikBedelAsync(s),
+            YillikBedel = await _istatistik.YillikBedelAsync(s),
             Aktif = _istatistik.Aktif(s),
             SureYuzdesi = _istatistik.SureYuzdesi(s),
             Durum = _istatistik.GetBirimDurumu(s.Birim),
@@ -111,36 +111,12 @@ public class SozlesmeController : Controller
             .OrderBy(k => k.BorcTipi.Sira).ToList() ?? new();
         vm.GuncelKalemDonemi = guncelTahakkuk?.DonemBaslangic;
 
-        if (User.HasClaim("permission", PermissionCatalog.Sozlesme.OverrideRate) || User.IsInRole("Admin"))
-        {
-            vm.HasRateAccess = true;
-            var aktifBorcTipleri = await _ctx.BorcTipleri
-                .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.KullaniciManuel && b.Davranis != BorcTipiDavranisi.RezervasyonOzel).OrderBy(b => b.Sira).ToListAsync();
-            var mevcutRateler = await _ctx.SozlesmeRateler
-                .Where(r => r.SozlesmeId == id).ToListAsync();
-            vm.PazarlikFiyatlari = aktifBorcTipleri.Select(bt =>
-            {
-                var rate = mevcutRateler.FirstOrDefault(r => r.BorcTipiId == bt.Id);
-                return new SozlesmeRateSatiri
-                {
-                    RateId           = rate?.Id ?? 0,
-                    BorcTipiId       = bt.Id,
-                    BorcTipiAd       = bt.Ad,
-                    BorcTipiKod      = bt.Kod,
-                    OzelFiyatAktif   = rate != null,
-                    HesaplamaYontemi = rate?.HesaplamaYontemi ?? HesaplamaYontemi.Sabit,
-                    BirimDeger       = rate?.BirimDeger ?? 0,
-                    KdvOrani         = rate?.KdvOrani ?? 0
-                };
-            }).ToList();
-
-            vm.ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(
-                TarifeHiyerarsiKatmani.Sozlesme,
-                tasinmazId: s.Birim.TasinmazId,
-                birimId:    s.BirimId,
-                kategoriId: s.Kiraci.KiraciKategoriId,
-                yil:        s.BaslangicTarihi.Year);
-        }
+        vm.ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(
+            TarifeHiyerarsiKatmani.Sozlesme,
+            tasinmazId: s.Birim.TasinmazId,
+            birimId:    s.BirimId,
+            kategoriId: s.Kiraci.KiraciKategoriId,
+            yil:        s.BaslangicTarihi.Year);
 
         return View(vm);
     }
@@ -151,6 +127,8 @@ public class SozlesmeController : Controller
     {
         var bosBirimler = await _tasinmazService.GetBosBirimlerAsync();
         var kiraciler = await _kiraciService.GetAllAsync();
+        ViewBag.BirimYuzolcumular = System.Text.Json.JsonSerializer.Serialize(
+            bosBirimler.ToDictionary(b => b.Id, b => (double)b.Yuzolcumu));
         var vm = new SozlesmeEkleViewModel
         {
             BirimId = birimId,
@@ -175,7 +153,6 @@ public class SozlesmeController : Controller
 
         if (!ModelState.IsValid) return View(vm);
 
-        // Kalemler servisten Sira sırasıyla gelir; ilk AylikSabit = ana kira bedeli
         var kiraKalemi = vm.SozlesmeKalemleri
             .FirstOrDefault(k => k.Davranis == BorcTipiDavranisi.AylikSabit);
         var depozitoKalemi = vm.SozlesmeKalemleri
@@ -183,7 +160,9 @@ public class SozlesmeController : Controller
 
         var kdvUygulanacakMi = kiraKalemi != null && kiraKalemi.KdvOrani > 0;
         var kdvOrani = kdvUygulanacakMi ? kiraKalemi!.KdvOrani : 0;
-        var kiraBedeli = kiraKalemi?.Tutar ?? 0;
+        var kiraBedeli = vm.SozlesmeKalemleri
+            .Where(k => k.Davranis == BorcTipiDavranisi.AylikSabit)
+            .Sum(k => k.Tutar);
         var depozito = depozitoKalemi?.Tutar ?? 0;
 
         var s = new KiraSozlesmesi
@@ -192,8 +171,6 @@ public class SozlesmeController : Controller
             KiraciId = vm.KiraciId,
             BaslangicTarihi = vm.BaslangicTarihi,
             BitisTarihi = vm.BitisTarihi,
-            KiraBedeli = kiraBedeli,
-            Periyot = vm.Periyot,
             Depozito = depozito,
             Notlar = vm.Notlar,
             Durum = SozlesmeDurumu.Aktif,
@@ -201,7 +178,7 @@ public class SozlesmeController : Controller
             KdvOrani = kdvOrani
         };
 
-        await _sozlesmeService.CreateAsync(s);
+        await _sozlesmeService.CreateAsync(s, kiraBedeli);
 
         // Override kalemlerini kaydet
         if (vm.SozlesmeKalemleri != null && vm.SozlesmeKalemleri.Any())
@@ -210,11 +187,11 @@ public class SozlesmeController : Controller
             {
                 var rate = new SozlesmeRate
                 {
-                    SozlesmeId = s.Id,
-                    BorcTipiId = k.BorcTipiId,
-                    BirimDeger = k.Tutar,
-                    HesaplamaYontemi = HesaplamaYontemi.Sabit, // Basitlik için Sabit
-                    KdvOrani = k.KdvOrani
+                    SozlesmeId       = s.Id,
+                    BorcTipiId       = k.BorcTipiId,
+                    BirimDeger       = k.BirimDeger,
+                    HesaplamaYontemi = k.HesaplamaYontemi,
+                    KdvOrani         = k.KdvOrani
                 };
                 _ctx.SozlesmeRateler.Add(rate);
             }
@@ -242,9 +219,6 @@ public class SozlesmeController : Controller
         if (vm.YeniBitisTarihi <= s.BitisTarihi)
             ModelState.AddModelError("YeniBitisTarihi", "Yeni bitiş tarihi mevcut bitiş tarihinden büyük olmalıdır.");
 
-        if (vm.YeniKiraBedeli <= 0)
-            ModelState.AddModelError("YeniKiraBedeli", "Yeni kira bedeli sıfırdan büyük olmalıdır.");
-
         if (vm.TufeUygulanacakMi && vm.TufeOrani.HasValue && vm.TufeOrani.Value < 0)
             ModelState.AddModelError("TufeOrani", "TÜFE oranı negatif olamaz.");
 
@@ -255,7 +229,32 @@ public class SozlesmeController : Controller
             return RedirectToAction("Detay", new { id });
         }
 
-        await _sozlesmeService.UzatAsync(id, vm.YeniBitisTarihi, vm.YeniKiraBedeli,
+        var eskiBedel = await _istatistik.AylikBedelAsync(s);
+
+        if (vm.TarifeyiGuncelle && vm.SozlesmeKalemleri != null && vm.SozlesmeKalemleri.Any())
+        {
+            var eskiRateler = await _ctx.SozlesmeRateler.Where(r => r.SozlesmeId == id).ToListAsync();
+            _ctx.SozlesmeRateler.RemoveRange(eskiRateler);
+            foreach (var k in vm.SozlesmeKalemleri.Where(x => x.KullaniciDegistirdiMi))
+            {
+                _ctx.SozlesmeRateler.Add(new SozlesmeRate
+                {
+                    SozlesmeId       = id,
+                    BorcTipiId       = k.BorcTipiId,
+                    BirimDeger       = k.BirimDeger,
+                    HesaplamaYontemi = k.HesaplamaYontemi,
+                    KdvOrani         = k.KdvOrani
+                });
+            }
+            await _ctx.SaveChangesAsync();
+        }
+
+        var yeniRateler = await _ctx.SozlesmeRateler
+            .Include(r => r.BorcTipi)
+            .Where(r => r.SozlesmeId == id).ToListAsync();
+        var yeniBedel = HesaplaAylikBedelHelper(yeniRateler, s.Birim.Yuzolcumu);
+
+        await _sozlesmeService.UzatAsync(id, vm.YeniBitisTarihi, eskiBedel, yeniBedel,
             vm.KdvUygulanacakMi, vm.KdvOrani ?? 20, vm.TufeOrani, vm.Aciklama);
         await _tahakkukUretim.UretSozlesmeIcinAsync(id);
 
@@ -293,50 +292,32 @@ public class SozlesmeController : Controller
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Sozlesme.OverrideRate)]
-    public async Task<IActionResult> PazarlikFiyatGuncelle(int id, List<SozlesmeRateSatiri> pazarlikFiyatlari)
-    {
-        var mevcutRateler = await _ctx.SozlesmeRateler
-            .Where(r => r.SozlesmeId == id).ToListAsync();
-
-        foreach (var satir in pazarlikFiyatlari)
-        {
-            var mevcut = mevcutRateler.FirstOrDefault(r => r.BorcTipiId == satir.BorcTipiId);
-            if (satir.OzelFiyatAktif)
-            {
-                if (mevcut == null)
-                    _ctx.SozlesmeRateler.Add(new SozlesmeRate
-                    {
-                        SozlesmeId       = id,
-                        BorcTipiId       = satir.BorcTipiId,
-                        HesaplamaYontemi = satir.HesaplamaYontemi,
-                        BirimDeger       = satir.BirimDeger,
-                        KdvOrani         = satir.KdvOrani
-                    });
-                else
-                {
-                    mevcut.HesaplamaYontemi = satir.HesaplamaYontemi;
-                    mevcut.BirimDeger       = satir.BirimDeger;
-                    mevcut.KdvOrani         = satir.KdvOrani;
-                }
-            }
-            else if (mevcut != null)
-                _ctx.SozlesmeRateler.Remove(mevcut);
-        }
-
-        await _ctx.SaveChangesAsync();
-        TempData["Success"] = "Pazarlık fiyatları güncellendi.";
-        return RedirectToAction("Detay", new { id });
-    }
-
-    [HttpPost]
     [Authorize(Policy = PermissionCatalog.Tahakkuk.Regenerate)]
-    public async Task<IActionResult> YenidenUret(int id, DateTime baslangicTarihi)
+    public async Task<IActionResult> YenidenUret(int id, DateTime baslangicTarihi,
+        bool tarifeyiGuncelle = false, List<SozlesmeKalemInputDto>? sozlesmeKalemleri = null)
     {
         var s = await _ctx.Sozlesmeler
             .Include(x => x.IslemGecmisi)
             .FirstOrDefaultAsync(x => x.Id == id);
         if (s == null) return NotFound();
+
+        if (tarifeyiGuncelle && sozlesmeKalemleri != null && sozlesmeKalemleri.Any())
+        {
+            var eskiRateler = await _ctx.SozlesmeRateler.Where(r => r.SozlesmeId == id).ToListAsync();
+            _ctx.SozlesmeRateler.RemoveRange(eskiRateler);
+            foreach (var k in sozlesmeKalemleri.Where(x => x.KullaniciDegistirdiMi))
+            {
+                _ctx.SozlesmeRateler.Add(new SozlesmeRate
+                {
+                    SozlesmeId       = id,
+                    BorcTipiId       = k.BorcTipiId,
+                    BirimDeger       = k.BirimDeger,
+                    HesaplamaYontemi = k.HesaplamaYontemi,
+                    KdvOrani         = k.KdvOrani
+                });
+            }
+            await _ctx.SaveChangesAsync();
+        }
 
         await _tahakkukUretim.YenidenUretAsync(id, baslangicTarihi);
 
@@ -346,6 +327,7 @@ public class SozlesmeController : Controller
             IslemTipi = SozlesmeIslemTipi.TahakkukYenidenUretim,
             IslemTarihi = DateTime.Now,
             Aciklama = $"{baslangicTarihi:MMMM yyyy} tarihinden itibaren ödenmemiş tahakkuklar yeniden üretildi."
+                       + (tarifeyiGuncelle ? " (Tarife güncellendi.)" : "")
         });
 
         await _ctx.SaveChangesAsync();
@@ -362,25 +344,31 @@ public class SozlesmeController : Controller
     }
 
     [HttpGet]
-    [Authorize(Policy = PermissionCatalog.Sozlesme.Create)]
-    public async Task<IActionResult> GetVarsayilanKalemler(int birimId, int kiraciId, DateTime baslangic)
+    [Authorize]
+    public async Task<IActionResult> GetVarsayilanKalemler(int birimId, int kiraciId, DateTime baslangic, int? sozlesmeId = null)
     {
-        var previews = await _tahakkukUretim.ComposeKalemlerAsync(birimId, kiraciId, baslangic);
+        var previews = await _tahakkukUretim.ComposeKalemlerAsync(birimId, kiraciId, baslangic, sozlesmeId);
         var result = previews.Select(p => new SozlesmeKalemInputDto
         {
-            BorcTipiId = p.BorcTipiId,
-            BorcTipiAd = p.BorcTipiAd,
-            BorcTipiKod = p.BorcTipiKod,
-            Davranis = p.Davranis,
-            VarsayilanTutar = p.Tutar,
-            Tutar = p.Tutar,
-            KdvOrani = p.KdvOrani,
-            HesaplamaYontemi = p.HesaplamaYontemi,
-            KaynakTipi = p.KaynakTipi.ToString(),
-            RateBulundu = p.RateBulundu,
+            BorcTipiId           = p.BorcTipiId,
+            BorcTipiAd           = p.BorcTipiAd,
+            BorcTipiKod          = p.BorcTipiKod,
+            Davranis             = p.Davranis,
+            VarsayilanTutar      = p.Tutar,
+            Tutar                = p.Tutar,
+            BirimDeger           = p.BirimDeger,
+            VarsayilanBirimDeger = p.BirimDeger,
+            KdvOrani             = p.KdvOrani,
+            HesaplamaYontemi     = p.HesaplamaYontemi,
+            KaynakTipi           = p.KaynakTipi.ToString(),
+            RateBulundu          = p.RateBulundu,
             KullaniciDegistirdiMi = false
         }).ToList();
 
         return Json(result);
     }
+
+    private static decimal HesaplaAylikBedelHelper(IEnumerable<SozlesmeRate> rates, decimal yuzolcumu) =>
+        rates.Where(r => r.BorcTipi?.Davranis == BorcTipiDavranisi.AylikSabit)
+             .Sum(r => r.HesaplamaYontemi == HesaplamaYontemi.M2 ? r.BirimDeger * yuzolcumu : r.BirimDeger);
 }

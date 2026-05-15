@@ -53,6 +53,7 @@ builder.Services.AddControllersWithViews(options =>
     options.ModelBindingMessageProvider.SetValueIsInvalidAccessor((x) => $"'{x}' değeri geçersizdir.");
     options.ModelBindingMessageProvider.SetValueMustBeANumberAccessor((x) => $"'{x}' alanı sayı olmalıdır.");
     options.ModelBindingMessageProvider.SetValueMustNotBeNullAccessor((x) => $"'{x}' alanı boş bırakılamaz.");
+    options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
 });
 builder.Services.AddScoped<IdentitySeedService>();
 builder.Services.AddScoped<UserTasinmazYetkiService>();
@@ -110,9 +111,9 @@ using (var scope = app.Services.CreateScope())
 
     if (app.Environment.IsDevelopment())
     {
-        await domainSeed.ClearDomainDataAsync();
+        // [ANTIGRAVITY-TRIGGER]: Veri tabanını sıfırlayıp yeni seed verileriyle temiz bir başlangıç yapmak için aşağıdaki satırı aktif edin.
+        // await domainSeed.ClearDomainDataAsync();
     }
-
     // Sistem tanımları — her ortamda idempotent çalışır
     await domainSeed.SeedBorcTipleriAsync();
     await domainSeed.SeedTasinmazTipleriAsync();
@@ -120,7 +121,6 @@ using (var scope = app.Services.CreateScope())
     await domainSeed.SeedKiraciKategorileriAsync();
     await domainSeed.SeedSektorlerAsync();
     await domainSeed.SeedTarifelerAsync(); // Tarife.Yil oluşur
-    await domainSeed.BackfillEskiGlobalRezervasyonKuralAsync();
     await domainSeed.EnsureVarsayilanRezervasyonGenelTarifeAsync();
 
     if (app.Environment.IsDevelopment())

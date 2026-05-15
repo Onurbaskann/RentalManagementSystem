@@ -36,50 +36,6 @@ public class TahakkukService : ITahakkukService
     public async Task<KiraTahakkuk?> GetByIdAsync(int id) =>
         await _repo.GetByIdAsync(id);
 
-    // ── Tahakkuk Oluşturma ────────────────────────────────────────────────────
-
-    public async Task<(bool Basarili, string? Hata)> OlusturAsync(int sozlesmeId, DateTime donemBaslangic)
-    {
-        var donemIlkGunu = new DateTime(donemBaslangic.Year, donemBaslangic.Month, 1);
-
-        // Sözleşme bilgisi — repository üzerinden çekiyoruz
-        var sozlesme = await _repo.GetSozlesmeAsync(sozlesmeId);
-        if (sozlesme == null)
-            return (false, "Sözleşme bulunamadı.");
-
-        if (sozlesme.Durum == SozlesmeDurumu.Feshedildi)
-            return (false, "Feshedilmiş sözleşme için tahakkuk oluşturulamaz.");
-
-        var mevcutVar = await _repo.ExistsForDonemAsync(sozlesmeId, donemIlkGunu);
-        if (mevcutVar)
-            return (false, $"{donemIlkGunu:MMMM yyyy} dönemi için tahakkuk zaten mevcut.");
-
-        // İş kuralı: KDV hesaplama
-        var kdvTutari = sozlesme.KdvUygulanacakMi
-            ? Math.Round(sozlesme.KiraBedeli * sozlesme.KdvOrani / 100, 2)
-            : 0m;
-
-        var tahakkuk = new KiraTahakkuk
-        {
-            KiraSozlesmesiId = sozlesmeId,
-            DonemBaslangic   = donemIlkGunu,
-            DonemBitis       = new DateTime(donemIlkGunu.Year, donemIlkGunu.Month,
-                                    DateTime.DaysInMonth(donemIlkGunu.Year, donemIlkGunu.Month)),
-            VadeTarihi       = donemIlkGunu,
-            BeklenenTutar    = sozlesme.KiraBedeli,
-            KdvTutari        = kdvTutari,
-            ToplamTutar      = sozlesme.KiraBedeli + kdvTutari,
-            OdenenTutar      = 0,
-            Durum            = TahakkukDurumu.Bekleniyor,
-            KaynakTipi       = TahakkukKaynakTipi.Sozlesme,
-            OlusturmaTarihi  = DateTime.Now
-        };
-
-        await _repo.AddAsync(tahakkuk);
-        await _repo.SaveChangesAsync();
-        return (true, null);
-    }
-
     // ── Gecikme Güncelleme ────────────────────────────────────────────────────
 
     public async Task GecikmeleriGuncelleAsync()

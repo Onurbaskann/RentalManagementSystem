@@ -2,7 +2,19 @@
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Kiracı Düzenle";
-    string initTur = (Model.KiraciTuru?.ToString()) ?? "Gercek";
+    string initTur = Model.KiraciTuru.HasValue ? ((int)Model.KiraciTuru.Value).ToString() : "1";
+
+    string[] errorKeys = new[] {
+        "KiraciNo","KiraciTuru","KiraciKategoriId","SektorId",
+        "GercekAd","Soyad","DogumTarihi","AnneAdi","BabaAdi","TcKimlikNo","PasaportNo",
+        "TuzelAd","VergiNo","VergiDairesi",
+        "Telefon","Email","Adres","KvkkOnayi"
+    };
+    var errorsDict = errorKeys.ToDictionary(
+        k => char.ToLowerInvariant(k[0]) + k.Substring(1),
+        k => ViewData.ModelState[k]?.Errors.FirstOrDefault()?.ErrorMessage ?? ""
+    );
+    var errorsJson = System.Text.Json.JsonSerializer.Serialize(errorsDict);
 }
 
 <div class="page-header">
@@ -12,14 +24,12 @@
 </div>
 
 <div style="max-width:600px;">
-    <form asp-action="Duzenle" asp-route-id="@Model.Id" method="post" x-data="kiraciForm('@initTur')">
+    <form asp-action="Duzenle" asp-route-id="@Model.Id" method="post"
+          x-data="kiraciFormData('@initTur', @Model.TcVatandasiDegil.ToString().ToLower(), @Model.KvkkOnayi.ToString().ToLower())"
+          @@submit.prevent="handleSubmit($event)"
+          x-cloak>
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Id" />
-
-        @if (!ViewData.ModelState.IsValid)
-        {
-            <div asp-validation-summary="All" style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 14px;border-radius:8px;margin-bottom:18px;font-size:13px;"></div>
-        }
 
         <!-- Temel Bilgiler -->
         <div class="card" style="margin-bottom:16px;">
@@ -28,118 +38,130 @@
                 <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Kiracı No *</label>
                     <input asp-for="KiraciNo" class="form-control" style="font-family:'JetBrains Mono',monospace;" />
-                    <span asp-validation-for="KiraciNo" class="form-error"></span>
+                    <span x-show="errors.kiraciNo" x-text="errors.kiraciNo" class="form-error"></span>
                 </div>
                 <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Kiracı Türü *</label>
-                    <select asp-for="KiraciTuru" class="form-control"
-                        x-model="kiraciTuru"
-                        @@change="kiraciTuruDegisti()">
+                    <select asp-for="KiraciTuru" class="form-control" x-model="kiraciTuru">
                         <option value="">— Seçin —</option>
                         <option value="1">Gerçek Kişi</option>
                         <option value="2">Tüzel Kişi</option>
                     </select>
-                    <span asp-validation-for="KiraciTuru" class="form-error"></span>
+                    <span x-show="errors.kiraciTuru" x-text="errors.kiraciTuru" class="form-error"></span>
                 </div>
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
                 <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Kiracı Kategorisi *</label>
-                    <select asp-for="KiraciKategoriId" class="form-control" required>
+                    <select asp-for="KiraciKategoriId" class="form-control">
                         <option value="">— Seçiniz —</option>
                         @foreach (var item in (IEnumerable<KiraTakip.Models.KiraciKategori>)ViewBag.Kategoriler)
                         {
                             <option value="@item.Id" selected="@(Model.KiraciKategoriId == item.Id ? "selected" : null)">@item.Ad</option>
                         }
                     </select>
-                    <span asp-validation-for="KiraciKategoriId" class="form-error"></span>
+                    <span x-show="errors.kiraciKategoriId" x-text="errors.kiraciKategoriId" class="form-error"></span>
                 </div>
                 <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Sektör *</label>
-                    <select asp-for="SektorId" class="form-control" required>
+                    <select asp-for="SektorId" class="form-control">
                         <option value="">— Seçiniz —</option>
                         @foreach (var item in (IEnumerable<KiraTakip.Models.Sektor>)ViewBag.Sektorler)
                         {
                             <option value="@item.Id" selected="@(Model.SektorId == item.Id ? "selected" : null)">@item.Ad</option>
                         }
                     </select>
-                    <span asp-validation-for="SektorId" class="form-error"></span>
+                    <span x-show="errors.sektorId" x-text="errors.sektorId" class="form-error"></span>
                 </div>
             </div>
         </div>
 
         <!-- Gerçek kişi alanları -->
-        <div class="card" style="margin-bottom:16px;" x-show="kiraciTuru === '1'" x-cloak>
-            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Gerçek Kişi Bilgileri</div>
+        <div class="card" style="margin-bottom:16px;" x-show="kiraciTuru === '1'">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);gap:14px;">
+                <div style="font-size:15px;font-weight:700;">Gerçek Kişi Bilgileri</div>
+                <label style="display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--color-muted);cursor:pointer;user-select:none;">
+                    <input type="checkbox" asp-for="TcVatandasiDegil" x-model="tcVatandasiDegil" style="margin:0;" />
+                    <span>TC Vatandaşı değil</span>
+                </label>
+            </div>
+
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
                 <div class="form-group">
                     <label class="form-label">Ad *</label>
-                    <input name="GercekAd" id="input_gercek_ad_edit" class="form-control" value="@Model.GercekAd" />
-                    <span class="form-error">@Html.ValidationMessage("GercekAd")</span>
+                    <input name="GercekAd" class="form-control" value="@Model.GercekAd" />
+                    <span x-show="errors.gercekAd" x-text="errors.gercekAd" class="form-error"></span>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Soyad *</label>
-                    <input name="Soyad" id="Soyad" class="form-control" value="@Model.Soyad" />
-                    <span class="form-error">@Html.ValidationMessage("Soyad")</span>
+                    <input name="Soyad" class="form-control" value="@Model.Soyad" />
+                    <span x-show="errors.soyad" x-text="errors.soyad" class="form-error"></span>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Ünvan</label>
                     <input asp-for="Unvan" class="form-control" />
                 </div>
-                <div class="form-group">
-                    <label class="form-label">TC Kimlik No</label>
-                    <input asp-for="TcKimlikNo" class="form-control" maxlength="11" />
+                <div class="form-group" x-show="!tcVatandasiDegil">
+                    <label class="form-label">TC Kimlik No *</label>
+                    <input asp-for="TcKimlikNo" class="form-control" maxlength="11" inputmode="numeric" pattern="\d{11}" />
+                    <span x-show="errors.tcKimlikNo" x-text="errors.tcKimlikNo" class="form-error"></span>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Pasaport No</label>
+                <div class="form-group" x-show="tcVatandasiDegil">
+                    <label class="form-label">Pasaport No *</label>
                     <input asp-for="PasaportNo" class="form-control" />
+                    <span x-show="errors.pasaportNo" x-text="errors.pasaportNo" class="form-error"></span>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Doğum Tarihi</label>
+                    <label class="form-label">Doğum Tarihi *</label>
                     <input asp-for="DogumTarihi" type="date" class="form-control" />
+                    <span x-show="errors.dogumTarihi" x-text="errors.dogumTarihi" class="form-error"></span>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Doğum Yeri</label>
                     <input asp-for="DogumYeri" class="form-control" />
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Anne Adı</label>
+                    <label class="form-label">Anne Adı *</label>
                     <input asp-for="AnneAdi" class="form-control" />
+                    <span x-show="errors.anneAdi" x-text="errors.anneAdi" class="form-error"></span>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Baba Adı</label>
+                    <label class="form-label">Baba Adı *</label>
                     <input asp-for="BabaAdi" class="form-control" />
+                    <span x-show="errors.babaAdi" x-text="errors.babaAdi" class="form-error"></span>
                 </div>
             </div>
         </div>
 
         <!-- Tüzel kişi alanları -->
-        <div class="card" style="margin-bottom:16px;" x-show="kiraciTuru === '2'" x-cloak>
+        <div class="card" style="margin-bottom:16px;" x-show="kiraciTuru === '2'">
             <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Tüzel Kişi Bilgileri</div>
-            
+
             <div class="form-group" style="margin-bottom:14px;">
                 <label class="form-label">Firma / Kurum Adı *</label>
-                <input name="TuzelAd" id="input_tuzel_ad_edit" class="form-control" value="@Model.TuzelAd" />
-                <span class="form-error">@Html.ValidationMessage("TuzelAd")</span>
+                <input name="TuzelAd" class="form-control" value="@Model.TuzelAd" />
+                <span x-show="errors.tuzelAd" x-text="errors.tuzelAd" class="form-error"></span>
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
                 <div class="form-group">
-                    <label class="form-label">Vergi No</label>
-                    <input asp-for="VergiNo" class="form-control" maxlength="10" />
+                    <label class="form-label">Vergi No *</label>
+                    <input asp-for="VergiNo" class="form-control" maxlength="10" inputmode="numeric" pattern="\d{10}" />
+                    <span x-show="errors.vergiNo" x-text="errors.vergiNo" class="form-error"></span>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Vergi Dairesi</label>
+                    <label class="form-label">Vergi Dairesi *</label>
                     <input asp-for="VergiDairesi" class="form-control" />
+                    <span x-show="errors.vergiDairesi" x-text="errors.vergiDairesi" class="form-error"></span>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Ticaret Sicil No</label>
-                    <input asp-for="TicaretSicilNo" class="form-control" />
+                    <input asp-for="TicaretSicilNo" class="form-control" placeholder="Opsiyonel" />
                 </div>
                 <div class="form-group">
                     <label class="form-label">Mersis No</label>
-                    <input asp-for="MersisNo" class="form-control" />
+                    <input asp-for="MersisNo" class="form-control" placeholder="Opsiyonel" />
                 </div>
             </div>
         </div>
@@ -151,21 +173,31 @@
                 <div class="form-group">
                     <label class="form-label">Telefon *</label>
                     <input asp-for="Telefon" class="form-control" />
-                    <span asp-validation-for="Telefon" class="form-error"></span>
+                    <span x-show="errors.telefon" x-text="errors.telefon" class="form-error"></span>
                 </div>
                 <div class="form-group">
                     <label class="form-label">E-posta *</label>
                     <input asp-for="Email" type="email" class="form-control" />
-                    <span asp-validation-for="Email" class="form-error"></span>
+                    <span x-show="errors.email" x-text="errors.email" class="form-error"></span>
                 </div>
             </div>
             <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">Adres</label>
+                <label class="form-label">Adres *</label>
                 <textarea asp-for="Adres" class="form-control" rows="2"></textarea>
+                <span x-show="errors.adres" x-text="errors.adres" class="form-error"></span>
             </div>
         </div>
 
-
+        <!-- KVKK Onayı -->
+        <div class="card" style="margin-bottom:16px;">
+            <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;user-select:none;">
+                <input type="checkbox" asp-for="KvkkOnayi" x-model="kvkkOnayi" style="margin-top:3px;" />
+                <span style="font-size:13px;line-height:1.5;color:var(--color-text);">
+                    Kişisel verilerin işlenmesine ilişkin aydınlatma metnini okudum, kiracı bilgilerinin sözleşme süreci boyunca işlenmesini onaylıyorum. <span style="color:#dc2626;">*</span>
+                </span>
+            </label>
+            <span x-show="errors.kvkkOnayi" x-text="errors.kvkkOnayi" class="form-error" style="display:block;margin-top:6px;"></span>
+        </div>
 
         <div style="display:flex;gap:12px;">
             <button type="submit" class="btn btn-primary">
@@ -179,10 +211,59 @@
 
 @section Scripts {
 <script>
-function kiraciForm(initTur) {
+function kiraciFormData(initTur, initTcVatandasiDegil, initKvkkOnayi) {
     return {
-        kiraciTuru: initTur || 'Gercek',
-        kiraciTuruDegisti() {}
+        kiraciTuru: initTur || '',
+        tcVatandasiDegil: !!initTcVatandasiDegil,
+        kvkkOnayi: !!initKvkkOnayi,
+        errors: @Html.Raw(errorsJson),
+        validate() {
+            var form = this.$el;
+            var get = (name) => {
+                var el = form.querySelector('[name="' + name + '"]');
+                return el ? (el.value || '').trim() : '';
+            };
+            var e = {};
+
+            if (!get('KiraciNo')) e.kiraciNo = 'Kiracı No zorunludur.';
+            if (!this.kiraciTuru) e.kiraciTuru = 'Kiracı türü seçilmelidir.';
+            if (!get('KiraciKategoriId')) e.kiraciKategoriId = 'Kiracı kategorisi seçilmelidir.';
+            if (!get('SektorId')) e.sektorId = 'Sektör seçilmelidir.';
+
+            if (this.kiraciTuru === '1') {
+                if (!get('GercekAd')) e.gercekAd = 'Ad zorunludur.';
+                if (!get('Soyad')) e.soyad = 'Soyad zorunludur.';
+                if (!get('DogumTarihi')) e.dogumTarihi = 'Doğum Tarihi zorunludur.';
+                if (!get('AnneAdi')) e.anneAdi = 'Anne Adı zorunludur.';
+                if (!get('BabaAdi')) e.babaAdi = 'Baba Adı zorunludur.';
+
+                if (this.tcVatandasiDegil) {
+                    if (!get('PasaportNo')) e.pasaportNo = 'Pasaport No zorunludur.';
+                } else {
+                    var tc = get('TcKimlikNo');
+                    if (!tc) e.tcKimlikNo = 'TC Kimlik No zorunludur.';
+                    else if (!/^\d{11}$/.test(tc)) e.tcKimlikNo = 'TC Kimlik No 11 haneli rakamdan oluşmalıdır.';
+                }
+            } else if (this.kiraciTuru === '2') {
+                if (!get('TuzelAd')) e.tuzelAd = 'Firma / Kurum Adı zorunludur.';
+                var vno = get('VergiNo');
+                if (!vno) e.vergiNo = 'Vergi No zorunludur.';
+                else if (!/^\d{10}$/.test(vno)) e.vergiNo = 'Vergi No 10 haneli rakamdan oluşmalıdır.';
+                if (!get('VergiDairesi')) e.vergiDairesi = 'Vergi Dairesi zorunludur.';
+            }
+
+            if (!get('Telefon')) e.telefon = 'Telefon zorunludur.';
+            if (!get('Email')) e.email = 'E-posta zorunludur.';
+            if (!get('Adres')) e.adres = 'Adres zorunludur.';
+
+            if (!this.kvkkOnayi) e.kvkkOnayi = 'KVKK aydınlatma metni onayı zorunludur.';
+
+            this.errors = e;
+            return Object.keys(e).length === 0;
+        },
+        handleSubmit(ev) {
+            if (this.validate()) ev.target.submit();
+        }
     };
 }
 </script>

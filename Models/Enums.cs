@@ -37,16 +37,11 @@ public enum KiraDurumu
     SuresiDolmakUzere = 3
 }
 
-public enum KiraPeriyodu
-{
-    Aylik = 1,
-    Yillik = 2
-}
 
 public enum BirimTipi
 {
     Komple = 1,
-    Ofis = 2
+    Birim = 2
 }
 
 public enum TahakkukDurumu

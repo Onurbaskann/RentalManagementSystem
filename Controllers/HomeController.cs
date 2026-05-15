@@ -51,14 +51,19 @@ public class HomeController : Controller
         var sozlesmeler = await _sozlesmeService.GetAllAsync(userId: filterUserId);
         var bosBirimler = await _tasinmazService.GetBosBirimlerAsync(filterUserId);
 
+        var aktifSozlesmeler = sozlesmeler.Where(_istatistik.Aktif).ToList();
+        decimal aylikToplamGelir = 0m;
+        foreach (var s in aktifSozlesmeler)
+            aylikToplamGelir += await _istatistik.AylikBedelAsync(s);
+
         var vm = new DashboardViewModel
         {
             ToplamTasinmaz = tasinmazlar.Count,
             TipiDagilim = tasinmazlar.GroupBy(t => t.TasinmazTipi?.Ad ?? "Diğer").ToDictionary(g => g.Key, g => g.Count()),
             ToplamBirim = tumBirimler.Count,
-            AktifSozlesme = sozlesmeler.Count(_istatistik.Aktif),
-            AylikToplamGelir = sozlesmeler.Where(_istatistik.Aktif).Sum(_istatistik.AylikBedel),
-            YillikProj = sozlesmeler.Where(_istatistik.Aktif).Sum(_istatistik.YillikBedel),
+            AktifSozlesme = aktifSozlesmeler.Count,
+            AylikToplamGelir = aylikToplamGelir,
+            YillikProj = aylikToplamGelir * 12,
         };
 
         foreach (var birim in tumBirimler)

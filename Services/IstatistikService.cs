@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
@@ -6,6 +8,16 @@ namespace KiraTakip.Services;
 
 public class IstatistikService : IIstatistikService
 {
+    private readonly ApplicationDbContext _ctx;
+    private readonly IRateResolverService _rateResolver;
+
+    public IstatistikService(ApplicationDbContext ctx, IRateResolverService rateResolver)
+    {
+        _ctx = ctx;
+        _rateResolver = rateResolver;
+    }
+
+
     public KiraDurumu GetBirimDurumu(Birim birim)
     {
         var aktif = birim.Sozlesmeler
@@ -38,11 +50,27 @@ public class IstatistikService : IIstatistikService
         s.BaslangicTarihi <= DateTime.Now &&
         s.BitisTarihi >= DateTime.Now;
 
-    public decimal AylikBedel(KiraSozlesmesi s) =>
-        s.Periyot == KiraPeriyodu.Yillik ? s.KiraBedeli / 12 : s.KiraBedeli;
+    public async Task<decimal> AylikBedelAsync(KiraSozlesmesi s)
+    {
+        var yuzolcumu = s.Birim?.Yuzolcumu ?? 0m;
+        var borcTipleri = await _ctx.BorcTipleri
+            .Where(b => b.Aktif && b.Davranis == BorcTipiDavranisi.AylikSabit)
+            .ToListAsync();
 
-    public decimal YillikBedel(KiraSozlesmesi s) =>
-        s.Periyot == KiraPeriyodu.Aylik ? s.KiraBedeli * 12 : s.KiraBedeli;
+        decimal toplam = 0m;
+        var donem = DateTime.Today;
+        foreach (var bt in borcTipleri)
+        {
+            var snap = await _rateResolver.ResolveAsync(s.Id, s.KiraciId, s.BirimId, bt.Id, donem);
+            if (snap == null) continue;
+            toplam += snap.HesaplamaYontemi == HesaplamaYontemi.M2
+                ? snap.BirimDeger * yuzolcumu
+                : snap.BirimDeger;
+        }
+        return toplam;
+    }
+
+    public async Task<decimal> YillikBedelAsync(KiraSozlesmesi s) => await AylikBedelAsync(s) * 12;
 
     public int KalanGun(KiraSozlesmesi s) => (int)(s.BitisTarihi - DateTime.Now).TotalDays;
 

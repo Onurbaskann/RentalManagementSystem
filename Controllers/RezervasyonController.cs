@@ -51,6 +51,17 @@ public class RezervasyonController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Ekle(RezervasyonCreateViewModel vm)
     {
+        if (vm.BirimId <= 0)
+            ModelState.AddModelError("BirimId", "Birim seçilmelidir.");
+        if (vm.KiraciId <= 0)
+            ModelState.AddModelError("KiraciId", "Kiracı seçilmelidir.");
+        if (vm.BaslangicTarihi == default)
+            ModelState.AddModelError("BaslangicTarihi", "Başlangıç tarihi zorunludur.");
+        if (vm.BitisTarihi == default)
+            ModelState.AddModelError("BitisTarihi", "Bitiş tarihi zorunludur.");
+        if (vm.BitisTarihi <= vm.BaslangicTarihi)
+            ModelState.AddModelError("BitisTarihi", "Bitiş tarihi başlangıçtan sonra olmalıdır.");
+
         if (!ModelState.IsValid)
         {
             await PopulateDropdownsAsync(vm);

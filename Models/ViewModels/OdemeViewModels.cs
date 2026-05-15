@@ -4,29 +4,13 @@ using Microsoft.AspNetCore.Http;
 
 namespace KiraTakip.Models.ViewModels;
 
-public class TahakkukOlusturViewModel
-{
-    [Required(ErrorMessage = "Sözleşme seçiniz.")]
-    public int KiraSozlesmesiId { get; set; }
-
-    [Range(2000, 2100, ErrorMessage = "Geçerli yıl giriniz.")]
-    public int DonemYil { get; set; } = DateTime.Today.Year;
-
-    [Range(1, 12, ErrorMessage = "Geçerli ay giriniz.")]
-    public int DonemAy { get; set; } = DateTime.Today.Month;
-
-    public List<KiraSozlesmesi> AktifSozlesmeler { get; set; } = new();
-}
-
 public class OdemeEkleViewModel
 {
     public int KiraTahakkukId { get; set; }
     public int? KiraSozlesmesiId { get; set; }
 
-    [Required(ErrorMessage = "Ödeme tarihi zorunludur.")]
     public DateTime OdemeTarihi { get; set; } = DateTime.Today;
 
-    [Required(ErrorMessage = "Tutar zorunludur.")]
     [Range(0.01, double.MaxValue, ErrorMessage = "Tutar sıfırdan büyük olmalıdır.")]
     public decimal Tutar { get; set; }
 
@@ -39,25 +23,18 @@ public class OdemeEkleViewModel
 public class OdemeRedViewModel
 {
     public int OdemeId { get; set; }
-
-    [Required(ErrorMessage = "Red nedeni zorunludur.")]
     public string Neden { get; set; } = string.Empty;
 }
 
 public class DekontYukleViewModel
 {
     public int OdemeId { get; set; }
-
-    [Required(ErrorMessage = "Dosya seçiniz.")]
     public IFormFile? Dosya { get; set; }
 }
 
 public class BankaImportViewModel
 {
-    [Required(ErrorMessage = "Banka seçiniz.")]
     public string BankaKodu { get; set; } = "AKBANK";
-
-    [Required(ErrorMessage = "CSV dosyası seçiniz.")]
     public IFormFile? Dosya { get; set; }
 }
 

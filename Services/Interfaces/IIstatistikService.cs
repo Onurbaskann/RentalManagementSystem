@@ -8,8 +8,8 @@ public interface IIstatistikService
     KiraDurumu GetBirimDurumu(Birim birim);
     KiraSozlesmesi? GetAktifSozlesme(Birim birim);
     bool Aktif(KiraSozlesmesi s);
-    decimal AylikBedel(KiraSozlesmesi s);
-    decimal YillikBedel(KiraSozlesmesi s);
+    Task<decimal> AylikBedelAsync(KiraSozlesmesi s);
+    Task<decimal> YillikBedelAsync(KiraSozlesmesi s);
     int KalanGun(KiraSozlesmesi s);
     double SureYuzdesi(KiraSozlesmesi s);
     decimal TufeArtisliBedel(decimal mevcutBedel, decimal tufeOrani);

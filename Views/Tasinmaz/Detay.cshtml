@@ -1,5 +1,6 @@
 @model KiraTakip.Models.ViewModels.TasinmazDetayViewModel
 @using KiraTakip.Models
+@inject KiraTakip.Services.Interfaces.IIstatistikService Istatistik
 @{
     ViewData["Title"] = Model.Tasinmaz.Ad;
     bool canEdit = User.HasClaim("permission", "Sozlesme.Create") || User.HasClaim("permission", "Rezervasyon.Create");
@@ -77,12 +78,47 @@
                     <div style="font-size:16px;font-weight:700;margin-top:4px;">@Model.Tasinmaz.AcikYuzolcumu.ToString("N0") m² <span style="font-size:13px;font-weight:400;color:var(--color-muted);">açık</span></div>
                 }
             </div>
-            @if (Model.Tasinmaz.KatSayisi.HasValue)
+            @if (Model.Tasinmaz.KiralamaSekli == KiralamaSekli.BirimBazli)
             {
+                var kiraliSayisi = Model.Birimler.Count(b => b.Durum == KiraDurumu.Kirali || b.Durum == KiraDurumu.SuresiDolmakUzere);
+                var toplamSayisi = Model.Birimler.Count;
+                var bosSayisi = toplamSayisi - kiraliSayisi;
                 <div class="card">
-                    <div class="card-title">Kat Sayısı <span style="font-size:11px;font-weight:400;color:var(--color-muted);">(bilgi)</span></div>
-                    <div class="card-value">@Model.Tasinmaz.KatSayisi</div>
-                    <div style="font-size:13px;color:var(--color-muted);">kat</div>
+                    <div class="card-title">Doluluk Durumu</div>
+                    <div style="font-size:22px;font-weight:700;margin-top:4px;">@kiraliSayisi<span style="font-size:15px;font-weight:400;color:var(--color-muted);">/@toplamSayisi</span></div>
+                    <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">birim kiralı</div>
+                    <div style="display:flex;gap:12px;margin-top:10px;font-size:12px;">
+                        <span style="color:#065f46;font-weight:600;">● @kiraliSayisi kiralı</span>
+                        <span style="color:#6b7c93;font-weight:600;">● @bosSayisi boş</span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                var komple = Model.Birimler.FirstOrDefault();
+                var aktif = komple?.AktifSozlesme;
+                var durum = komple?.Durum ?? KiraDurumu.Bos;
+                <div class="card">
+                    <div class="card-title">Kira Durumu</div>
+                    @if (aktif != null)
+                    {
+                        <div style="margin-top:6px;">
+                            <span style="display:inline-block;background:#ecfdf5;color:#065f46;font-size:12px;font-weight:700;padding:2px 10px;border-radius:10px;">
+                                @(durum == KiraDurumu.SuresiDolmakUzere ? "Süresi Dolmak Üzere" : "Kiralı")
+                            </span>
+                        </div>
+                        <div style="font-size:14px;font-weight:600;margin-top:8px;">@(aktif.Kiraci?.GosterimAdi ?? "—")</div>
+                        <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">
+                            Bitiş: @aktif.BitisTarihi.ToString("dd.MM.yyyy")
+                        </div>
+                    }
+                    else
+                    {
+                        <div style="margin-top:6px;">
+                            <span style="display:inline-block;background:#f1f5f9;color:#475569;font-size:12px;font-weight:700;padding:2px 10px;border-radius:10px;">Müsait</span>
+                        </div>
+                        <div style="font-size:12px;color:var(--color-muted);margin-top:8px;">Aktif sözleşme yok</div>
+                    }
                 </div>
             }
         </div>
@@ -242,15 +278,15 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach (var b in grup.OrderBy(x => x.Birim.OfisNo))
+                                            @foreach (var b in grup.OrderBy(x => x.Birim.BirimNo))
                                             {
                                                 var durumData = b.AktifSozlesme != null ? "kirali" : "bos";
-                                                var searchData = ((b.Birim.OfisNo ?? "") + " " + (b.Birim.Ad ?? "")).ToLowerInvariant();
+                                                var searchData = ((b.Birim.BirimNo ?? "") + " " + (b.Birim.Ad ?? "")).ToLowerInvariant();
                                                 <tr data-durum="@durumData"
                                                     data-search="@searchData"
                                                     x-show="(filter === 'tum' || $el.getAttribute('data-durum') === filter) && (search === '' || $el.getAttribute('data-search').includes(search.toLowerCase()))">
                                                     <td>
-                                                        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--color-primary);background:var(--color-primary-light);padding:3px 8px;border-radius:6px;">@b.Birim.OfisNo</span>
+                                                        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--color-primary);background:var(--color-primary-light);padding:3px 8px;border-radius:6px;">@b.Birim.BirimNo</span>
                                                     </td>
                                                     <td style="font-weight:600;font-size:13.5px;">@b.Birim.Ad</td>
                                                     <td>
@@ -289,8 +325,8 @@
                                                         else if (b.AktifSozlesme != null)
                                                         {
                                                             <div>
-                                                                <span style="font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:14px;">@b.AktifSozlesme.KiraBedeli.ToString("N0") ₺</span>
-                                                                <span style="font-size:11px;color:var(--color-muted);margin-left:1px;">/@(b.AktifSozlesme.Periyot == KiraPeriyodu.Aylik ? "ay" : "yıl")</span>
+                                                                <span style="font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:14px;">@b.AylikBedel.ToString("N0") ₺</span>
+                                                                <span style="font-size:11px;color:var(--color-muted);margin-left:1px;">/ay</span>
                                                             </div>
                                                         }
                                                         else { <span style="color:#c8cfd8;">—</span> }
@@ -396,8 +432,8 @@
                                         else if (b.AktifSozlesme != null)
                                         {
                                             <div>
-                                                <span style="font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:14px;">@b.AktifSozlesme.KiraBedeli.ToString("N0") ₺</span>
-                                                <span style="font-size:11px;color:var(--color-muted);margin-left:1px;">/@(b.AktifSozlesme.Periyot == KiraPeriyodu.Aylik ? "ay" : "yıl")</span>
+                                                <span style="font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:14px;">@b.AylikBedel.ToString("N0") ₺</span>
+                                                <span style="font-size:11px;color:var(--color-muted);margin-left:1px;">/ay</span>
                                             </div>
                                         }
                                         else { <span style="color:#c8cfd8;">—</span> }
@@ -457,7 +493,7 @@
                             <th>Kiracı</th>
                             <th>Başlangıç</th>
                             <th>Bitiş</th>
-                            <th>Bedel</th>
+                            <th>Bedel <span style="font-size:10.5px;font-weight:400;color:var(--color-muted);">(tam ay)</span></th>
                             <th>Durum</th>
                             <th></th>
                         </tr>
@@ -474,7 +510,7 @@
                                 </td>
                                 <td>@s.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
                                 <td>@s.BitisTarihi.ToString("dd.MM.yyyy")</td>
-                                <td style="font-weight:600;">@s.KiraBedeli.ToString("N0") ₺/@(s.Periyot == KiraPeriyodu.Aylik ? "ay" : "yıl")</td>
+                                <td style="font-weight:600;">@((Model.SozlesmeAylikBedelleri.TryGetValue(s.Id, out var sBedel) ? sBedel : 0m).ToString("N0")) ₺/ay</td>
                                 <td>
                                     @if (surek) { <span class="badge badge-surek">Dolmak Üzere</span> }
                                     else if (aktif) { <span class="badge badge-kirali">Aktif</span> }
@@ -617,9 +653,9 @@
                     <div class="card" style="margin-bottom:10px;padding:0;overflow:hidden;">
                         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fafbfc;border-bottom:1px solid var(--color-border);">
                             <div style="display:flex;align-items:center;gap:10px;">
-                                @if (!string.IsNullOrEmpty(birimOzet.Birim.OfisNo))
+                                @if (!string.IsNullOrEmpty(birimOzet.Birim.BirimNo))
                                 {
-                                    <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--color-primary);background:var(--color-primary-light);padding:2px 8px;border-radius:6px;">@birimOzet.Birim.OfisNo</span>
+                                    <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--color-primary);background:var(--color-primary-light);padding:2px 8px;border-radius:6px;">@birimOzet.Birim.BirimNo</span>
                                 }
                                 <span style="font-size:13.5px;font-weight:700;">@(birimOzet.Birim.Ad ?? "—")</span>
                                 <span class="badge badge-kirali" style="font-size:10.5px;">@birimOzet.Rateler.Count özel fiyat</span>
@@ -696,7 +732,7 @@
                             var ozelKural = Model.BirimRezervasyonKurallari.FirstOrDefault(k => k.BirimId == b.Birim.Id);
                             var aktifKural = ozelKural ?? Model.GlobalRezervasyonKural;
                             <tr>
-                                <td style="font-weight:600;">@(b.Birim.Ad ?? b.Birim.OfisNo)</td>
+                                <td style="font-weight:600;">@(b.Birim.Ad ?? b.Birim.BirimNo)</td>
                                 <td>
                                     @if (ozelKural != null)
                                     {

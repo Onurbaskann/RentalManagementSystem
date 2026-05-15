@@ -11,10 +11,6 @@ public class KiraSozlesmesi
     public DateTime BaslangicTarihi { get; set; }
     public DateTime BitisTarihi { get; set; }
 
-    // KDV hariç ana kira bedeli
-    public decimal KiraBedeli { get; set; }
-    public KiraPeriyodu Periyot { get; set; }
-
     public decimal? Depozito { get; set; }
     public string? Notlar { get; set; }
 
@@ -30,4 +26,6 @@ public class KiraSozlesmesi
 
     // İşlem geçmişi
     public List<SozlesmeIslemGecmisi> IslemGecmisi { get; set; } = new();
+
+    public List<SozlesmeRate> SozlesmeRateler { get; set; } = new();
 }

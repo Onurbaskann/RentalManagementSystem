@@ -34,6 +34,8 @@ public class Kiraci
     public string Email { get; set; } = string.Empty;
     public string? Adres { get; set; }
 
+    public bool KvkkOnayi { get; set; }
+
     public int? KiraciKategoriId { get; set; }
     public KiraciKategori? KiraciKategori { get; set; }
 

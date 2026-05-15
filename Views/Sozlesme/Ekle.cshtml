@@ -20,8 +20,8 @@
                     <option value="">— Boş birim seçin —</option>
                     @foreach (var b in Model.MevcutBirimler)
                     {
-                        string birimLabel = b.BirimTipi == KiraTakip.Models.BirimTipi.Ofis
-                            ? $"{b.Tasinmaz.Ad} — Ofis {b.OfisNo}{(b.KatNo.HasValue ? $" • {b.KatNo}. Kat" : "")} • {b.Yuzolcumu.ToString("N0")} m²"
+                        string birimLabel = b.BirimTipi == KiraTakip.Models.BirimTipi.Birim
+                            ? $"{b.Tasinmaz.Ad} — Birim {b.BirimNo}{(b.KatNo.HasValue ? $" • {b.KatNo}. Kat" : "")} • {b.Yuzolcumu.ToString("N0")} m²"
                             : $"{b.Tasinmaz.Ad} — Komple • {b.Yuzolcumu.ToString("N0")} m² • {b.Tasinmaz.Ilce}";
                         <option value="@b.Id">@birimLabel</option>
                     }
@@ -65,20 +65,6 @@
                 </div>
             </div>
 
-            <div class="form-group">
-                <label class="form-label">Kira Periyodu</label>
-                <div class="radio-group">
-                    <label class="radio-option">
-                        <input type="radio" asp-for="Periyot" value="1" x-model.number="periyot" />
-                        <span>Aylık</span>
-                    </label>
-                    <label class="radio-option">
-                        <input type="radio" asp-for="Periyot" value="2" x-model.number="periyot" />
-                        <span>Yıllık</span>
-                    </label>
-                </div>
-            </div>
-
         </div>
 
 
@@ -115,13 +101,24 @@
                                 </div>
                             </div>
 
-                            <div style="display: grid; grid-template-columns: 1fr 80px; gap: 12px; align-items: end; margin-bottom: 12px;">
+                            <div style="display: grid; grid-template-columns: 110px 1fr 80px; gap: 8px; align-items: end; margin-bottom: 8px;">
                                 <div>
-                                    <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">Tutar (₺)</label>
+                                    <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">Yöntem</label>
+                                    <select class="form-control form-control-sm"
+                                            x-model.number="k.hesaplamaYontemi"
+                                            @@change="k.kullaniciDegistirdiMi = true; validateKalem(k)">
+                                        <option value="1">Sabit</option>
+                                        <option value="2" :disabled="getBirimYuzolcumu() === 0">m²</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">
+                                        <span x-show="k.hesaplamaYontemi != 2">Tutar (₺)</span>
+                                        <span x-show="k.hesaplamaYontemi == 2">₺ / m²</span>
+                                    </label>
                                     <input type="number" step="0.01" min="0" class="form-control form-control-sm"
-                                           x-model.number="k.tutar"
-                                           @@input="k.kullaniciDegistirdiMi = (k.tutar !== k.varsayilanTutar); validateKalem(k)"
-                                           :name="`SozlesmeKalemleri[${index}].Tutar`" required>
+                                           x-model.number="k.birimDeger"
+                                           @@input="k.kullaniciDegistirdiMi = true; validateKalem(k)">
                                 </div>
                                 <div>
                                     <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">KDV (%)</label>
@@ -130,6 +127,10 @@
                                            @@input="k.kullaniciDegistirdiMi = true"
                                            :name="`SozlesmeKalemleri[${index}].KdvOrani`">
                                 </div>
+                            </div>
+                            <div x-show="k.hesaplamaYontemi == 2" style="font-size:11px;color:var(--color-muted);margin-bottom:10px;">
+                                <span x-show="getBirimYuzolcumu() > 0">× <span x-text="getBirimYuzolcumu()"></span> m² = <strong x-text="hesaplaTutar(k).toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ₺'"></strong></span>
+                                <span x-show="getBirimYuzolcumu() === 0" style="color:#dc2626;">Birim m² tanımlı değil.</span>
                             </div>
                         </div>
 
@@ -149,6 +150,9 @@
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].BorcTipiAd`" :value="k.borcTipiAd">
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].BorcTipiKod`" :value="k.borcTipiKod">
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].Davranis`" :value="k.davranis">
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].BirimDeger`" :value="k.birimDeger">
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].HesaplamaYontemi`" :value="k.hesaplamaYontemi">
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].Tutar`" :value="hesaplaTutar(k)">
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].VarsayilanTutar`" :value="k.varsayilanTutar">
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].KullaniciDegistirdiMi`" :value="k.kullaniciDegistirdiMi">
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].RateBulundu`" :value="k.rateBulundu">
@@ -187,22 +191,22 @@
             kiraciId: @(Model.KiraciId != 0 ? Model.KiraciId.ToString() : "null"),
             baslangicTarihi: '@Model.BaslangicTarihi.ToString("yyyy-MM-dd")',
             bitisTarihi: '@Model.BitisTarihi.ToString("yyyy-MM-dd")',
-            periyot: @((int)Model.Periyot),
             kalemler: [],
             loading: false,
             error: null,
             birimler: {
                 @foreach (var b in Model.MevcutBirimler)
                 {
-                    string birimAd = b.BirimTipi == KiraTakip.Models.BirimTipi.Ofis
-                        ? $"{b.Tasinmaz.Ad} — Ofis {b.OfisNo}"
+                    string birimAd = b.BirimTipi == KiraTakip.Models.BirimTipi.Birim
+                        ? $"{b.Tasinmaz.Ad} — Birim {b.BirimNo}"
                         : $"{b.Tasinmaz.Ad} — Komple";
-                    string meta = b.BirimTipi == KiraTakip.Models.BirimTipi.Ofis && b.KatNo.HasValue
+                    string meta = b.BirimTipi == KiraTakip.Models.BirimTipi.Birim && b.KatNo.HasValue
                         ? $"{b.KatNo}. Kat • {b.Yuzolcumu.ToString("N0")} m²"
                         : $"{b.Yuzolcumu.ToString("N0")} m²";
                     @Html.Raw($"{b.Id}: {{ad: '{birimAd.Replace("'", "\\'")}', m2: '{meta.Replace("'", "\\'")}', ilce: '{b.Tasinmaz.Ilce.Replace("'", "\\'")}', il: '{b.Tasinmaz.Il.Replace("'", "\\'")}'}},")
                 }
             },
+            birimYuzolcumular: @Html.Raw(ViewBag.BirimYuzolcumular ?? "{}"),
             init() {
                 this.$watch('birimId', () => this.fetchKalemler());
                 this.$watch('kiraciId', () => this.fetchKalemler());
@@ -227,7 +231,11 @@
                     if (!response.ok) throw new Error('Kalemler alınırken hata oluştu.');
                     const data = await response.json();
                     console.log('API cevabı:', data);
-                    this.kalemler = data.map(k => ({ ...k, _error: null }));
+                    this.kalemler = data.map(k => ({
+                        ...k,
+                        varsayilanHesaplamaYontemi: k.hesaplamaYontemi,
+                        _error: null
+                    }));
                     
 
 
@@ -239,15 +247,23 @@
                     this.loading = false;
                 }
             },
+            getBirimYuzolcumu() {
+                return this.birimYuzolcumular[this.birimId] ?? 0;
+            },
+            hesaplaTutar(k) {
+                return k.hesaplamaYontemi == 2 ? k.birimDeger * this.getBirimYuzolcumu() : k.birimDeger;
+            },
             resetKalem(k) {
+                k.birimDeger = k.varsayilanBirimDeger;
+                k.hesaplamaYontemi = k.varsayilanHesaplamaYontemi;
                 k.tutar = k.varsayilanTutar;
-                // k.kdvOrani = k.varsayilanKdvOrani; // If we wanted to reset KDV
                 k.kullaniciDegistirdiMi = false;
                 k._error = null;
             },
             validateKalem(k) {
                 k._error = null;
-                if (k.tutar < 0) k._error = 'Tutar negatif olamaz.';
+                if (k.birimDeger < 0) k._error = 'Tutar negatif olamaz.';
+                if (k.hesaplamaYontemi == 2 && this.getBirimYuzolcumu() === 0) k._error = 'Birim için m² tanımlı değil.';
             },
             getKaynakTipiLabel(val) {
                 const map = {

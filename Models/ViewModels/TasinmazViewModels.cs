@@ -11,6 +11,7 @@ public class TasinmazDetayViewModel
     public RezervasyonUcretKural? GlobalRezervasyonKural { get; set; }
     public List<RezervasyonUcretKural> BirimRezervasyonKurallari { get; set; } = new();
     public List<BirimOzelFiyatOzeti> BirimOzelFiyatlari { get; set; } = new();
+    public Dictionary<int, decimal> SozlesmeAylikBedelleri { get; set; } = new();
 }
 
 public class BirimOzelFiyatOzeti
@@ -24,12 +25,12 @@ public class BirimDetayViewModel
     public Birim Birim { get; set; } = null!;
     public KiraDurumu Durum { get; set; }
     public KiraSozlesmesi? AktifSozlesme { get; set; }
+    public decimal AylikBedel { get; set; }
     public RezervasyonUcretKural? RezKural { get; set; }
 }
 
 public class TasinmazEkleViewModel
 {
-    [Required(ErrorMessage = "Taşınmaz adı zorunludur.")]
     public string Ad { get; set; } = string.Empty;
 
     public ParentTarifeKartViewModel? ParentTarife { get; set; }
@@ -38,12 +39,8 @@ public class TasinmazEkleViewModel
     public int? TasinmazTipiId { get; set; }
     public KiralamaSekli KiralamaSekli { get; set; } = KiralamaSekli.TekParca;
 
-    [Required(ErrorMessage = "İl zorunludur.")]
     public string Il { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "İlçe zorunludur.")]
     public string Ilce { get; set; } = string.Empty;
-
     public string Mahalle { get; set; } = string.Empty;
     public string AcikAdres { get; set; } = string.Empty;
 
@@ -53,15 +50,16 @@ public class TasinmazEkleViewModel
     public int? KatSayisi { get; set; }
     public string? Aciklama { get; set; }
 
-    public List<OfisBirimInputViewModel> Ofisler { get; set; } = new();
+    public List<BirimInputViewModel> Birimler { get; set; } = new();
     public List<RezervasyonAlaniInputViewModel> RezervasyonAlanlari { get; set; } = new();
 
     public TasinmazFiyatMatrisiViewModel FiyatMatrisi { get; set; } = new();
 }
 
-public class OfisBirimInputViewModel
+public class BirimInputViewModel
 {
-    public string OfisNo { get; set; } = string.Empty;
+    [Display(Name = "Birim No")]
+    public string BirimNo { get; set; } = string.Empty;
     public int? KatNo { get; set; }
     public string? Ad { get; set; }
     public decimal Yuzolcumu { get; set; }
@@ -75,7 +73,7 @@ public class RezervasyonAlaniInputViewModel
     public decimal Yuzolcumu { get; set; }
     public int? BirimTuruId { get; set; }
     public string? Aciklama { get; set; }
-    
+
     public int UcretsizSureDakika { get; set; }
     public decimal SaatlikUcret { get; set; }
     public decimal KdvOrani { get; set; } = 20;

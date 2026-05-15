@@ -45,27 +45,31 @@ public class TasinmazService : ITasinmazService
             .Include(t => t.Birimler)
                 .ThenInclude(b => b.Sozlesmeler)
                     .ThenInclude(s => s.IslemGecmisi)
+            .Include(t => t.Birimler)
+                .ThenInclude(b => b.Sozlesmeler)
+                    .ThenInclude(s => s.SozlesmeRateler)
+                        .ThenInclude(r => r.BorcTipi)
             .FirstOrDefaultAsync(t => t.Id == id);
     }
 
-    public async Task<Tasinmaz> CreateAsync(Tasinmaz t, List<OfisBirimInputViewModel>? ofisler = null, List<RezervasyonAlaniInputViewModel>? rezervasyonAlanlari = null)
+    public async Task<Tasinmaz> CreateAsync(Tasinmaz t, List<BirimInputViewModel>? birimler = null, List<RezervasyonAlaniInputViewModel>? rezervasyonAlanlari = null)
     {
         t.KayitTarihi = DateTime.Now;
 
-        if (t.KiralamaSekli == KiralamaSekli.BirimBazli && ofisler != null && ofisler.Count > 0)
+        if (t.KiralamaSekli == KiralamaSekli.BirimBazli && birimler != null && birimler.Count > 0)
         {
-            foreach (var o in ofisler)
+            foreach (var b in birimler)
             {
-                var ad = string.IsNullOrWhiteSpace(o.Ad) ? $"Birim {o.OfisNo}" : o.Ad;
+                var ad = string.IsNullOrWhiteSpace(b.Ad) ? $"Birim {b.BirimNo}" : b.Ad;
                 t.Birimler.Add(new Birim
                 {
-                    BirimTipi = BirimTipi.Ofis,
-                    OfisNo = o.OfisNo,
-                    KatNo = o.KatNo,
+                    BirimTipi = BirimTipi.Birim,
+                    BirimNo = b.BirimNo,
+                    KatNo = b.KatNo,
                     Ad = ad,
-                    Yuzolcumu = o.Yuzolcumu,
-                    Aciklama = o.Aciklama,
-                    BirimTuruId = o.BirimTuruId
+                    Yuzolcumu = b.Yuzolcumu,
+                    Aciklama = b.Aciklama,
+                    BirimTuruId = b.BirimTuruId
                 });
             }
         }
@@ -85,7 +89,7 @@ public class TasinmazService : ITasinmazService
             {
                 var birim = new Birim
                 {
-                    BirimTipi = BirimTipi.Ofis,
+                    BirimTipi = BirimTipi.Birim,
                     Ad = string.IsNullOrWhiteSpace(r.Ad) ? "Rezervasyon Alanı" : r.Ad,
                     Yuzolcumu = r.Yuzolcumu,
                     Aciklama = r.Aciklama,

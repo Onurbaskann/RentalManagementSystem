@@ -18,7 +18,10 @@ public class AdminTasinmazTipiController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var list = await _ctx.TasinmazTipleri.OrderBy(t => t.Sira).ThenBy(t => t.Ad).ToListAsync();
+        var list = await _ctx.TasinmazTipleri
+            .Include(t => t.KiralamaSekilleri)
+            .OrderBy(t => t.Sira).ThenBy(t => t.Ad)
+            .ToListAsync();
         return View(list);
     }
 
@@ -26,23 +29,41 @@ public class AdminTasinmazTipiController : Controller
     public IActionResult Create()
     {
         var nextSira = (_ctx.TasinmazTipleri.Max(t => (int?)t.Sira) ?? 0) + 1;
+        ViewBag.SeciliKiralamaSekilleri = new int[] { (int)KiralamaSekli.TekParca };
         return View(new TasinmazTipi { Sira = nextSira, OlusturmaTarihi = DateTime.UtcNow });
     }
 
     [HttpPost("Ekle")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(TasinmazTipi model)
+    public async Task<IActionResult> Create(TasinmazTipi model, int[] kiralamaSekilleri)
     {
-        if (!ModelState.IsValid) return View(model);
+        if (string.IsNullOrWhiteSpace(model.Ad))
+            ModelState.AddModelError(nameof(model.Ad), "Ad zorunludur.");
+        if (string.IsNullOrWhiteSpace(model.Kod))
+            ModelState.AddModelError(nameof(model.Kod), "Kod zorunludur.");
+        if (kiralamaSekilleri == null || kiralamaSekilleri.Length == 0)
+            ModelState.AddModelError("kiralamaSekilleri", "En az bir kiralama şekli seçilmelidir.");
+
+        if (!ModelState.IsValid)
+        {
+            ViewBag.SeciliKiralamaSekilleri = kiralamaSekilleri ?? Array.Empty<int>();
+            return View(model);
+        }
 
         model.Kod = model.Kod.Trim().ToUpper();
         if (await _ctx.TasinmazTipleri.AnyAsync(t => t.Kod == model.Kod))
         {
             ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
+            ViewBag.SeciliKiralamaSekilleri = kiralamaSekilleri;
             return View(model);
         }
 
         model.OlusturmaTarihi = DateTime.UtcNow;
+        foreach (var sId in kiralamaSekilleri.Distinct())
+        {
+            model.KiralamaSekilleri.Add(new TasinmazTipiKiralamaSekli { KiralamaSekli = (KiralamaSekli)sId });
+        }
+
         _ctx.TasinmazTipleri.Add(model);
         await _ctx.SaveChangesAsync();
         TempData["Success"] = $"'{model.Ad}' taşınmaz tipi eklendi.";
@@ -52,26 +73,58 @@ public class AdminTasinmazTipiController : Controller
     [HttpGet("Duzenle/{id:int}")]
     public async Task<IActionResult> Edit(int id)
     {
-        var entity = await _ctx.TasinmazTipleri.FindAsync(id);
+        var entity = await _ctx.TasinmazTipleri
+            .Include(t => t.KiralamaSekilleri)
+            .FirstOrDefaultAsync(t => t.Id == id);
         if (entity == null) return NotFound();
+
+        ViewBag.SeciliKiralamaSekilleri = entity.KiralamaSekilleri.Select(k => (int)k.KiralamaSekli).ToArray();
         return View(entity);
     }
 
     [HttpPost("Duzenle/{id:int}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, TasinmazTipi model)
+    public async Task<IActionResult> Edit(int id, TasinmazTipi model, int[] kiralamaSekilleri)
     {
         if (id != model.Id) return BadRequest();
-        if (!ModelState.IsValid) return View(model);
+
+        if (string.IsNullOrWhiteSpace(model.Ad))
+            ModelState.AddModelError(nameof(model.Ad), "Ad zorunludur.");
+        if (string.IsNullOrWhiteSpace(model.Kod))
+            ModelState.AddModelError(nameof(model.Kod), "Kod zorunludur.");
+        if (kiralamaSekilleri == null || kiralamaSekilleri.Length == 0)
+            ModelState.AddModelError("kiralamaSekilleri", "En az bir kiralama şekli seçilmelidir.");
+
+        if (!ModelState.IsValid)
+        {
+            ViewBag.SeciliKiralamaSekilleri = kiralamaSekilleri ?? Array.Empty<int>();
+            return View(model);
+        }
 
         model.Kod = model.Kod.Trim().ToUpper();
         if (await _ctx.TasinmazTipleri.AnyAsync(t => t.Kod == model.Kod && t.Id != id))
         {
             ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
+            ViewBag.SeciliKiralamaSekilleri = kiralamaSekilleri;
             return View(model);
         }
 
         _ctx.TasinmazTipleri.Update(model);
+
+        var mevcut = await _ctx.TasinmazTipiKiralamaSekilleri
+            .Where(t => t.TasinmazTipiId == id)
+            .ToListAsync();
+        _ctx.TasinmazTipiKiralamaSekilleri.RemoveRange(mevcut);
+
+        foreach (var sId in kiralamaSekilleri.Distinct())
+        {
+            _ctx.TasinmazTipiKiralamaSekilleri.Add(new TasinmazTipiKiralamaSekli
+            {
+                TasinmazTipiId = id,
+                KiralamaSekli = (KiralamaSekli)sId
+            });
+        }
+
         await _ctx.SaveChangesAsync();
         TempData["Success"] = $"'{model.Ad}' güncellendi.";
         return RedirectToAction(nameof(Index));
