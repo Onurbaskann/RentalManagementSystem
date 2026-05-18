@@ -9,32 +9,32 @@
     var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/Tahakkuk", Extra = q.ToQueryDict() };
 }
 
-<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+<div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Tahakkuklar</div>
-        <div class="page-subtitle">@Model.Total dönem kaydı</div>
+        <div class="page-subtitle">@Model.Total dönem kaydı listeleniyor</div>
     </div>
 </div>
 
 @if (TempData["Success"] != null)
 {
-    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">✓ @TempData["Success"]</div>
+    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 px-4 rounded-lg mb-4 text-[13.5px]">✓ @TempData["Success"]</div>
 }
 @if (TempData["Error"] != null)
 {
-    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">✕ @TempData["Error"]</div>
+    <div class="bg-red-50 border border-red-200 text-red-800 p-3 px-4 rounded-lg mb-4 text-[13.5px]">✕ @TempData["Error"]</div>
 }
 
 <!-- Filtreler -->
-<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+<div class="flex gap-1.5 mb-5 flex-wrap">
     @{
         var filters = new[] { ("tum","Tümü"), ("bekliyor","Bekliyor"), ("kismi","Kısmi"), ("tamodendi","Tam Ödendi"), ("gecikti","Gecikti") };
     }
     @foreach (var (key, label) in filters)
     {
-        string cls = durum == key ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm";
+        bool isActive = durum == key;
         var url = key == "tum" ? "/Tahakkuk" : $"/Tahakkuk?durum={key}";
-        <a href="@url" class="@cls">@label</a>
+        <a href="@url" class="btn btn-sm @(isActive ? "btn-primary" : "btn-secondary text-slate-600 bg-white border-slate-200")">@label</a>
     }
 </div>
 
@@ -44,8 +44,8 @@
             .Select(b => new { id = b.Id, ad = b.Ad, tasinmazId = b.TasinmazId })
     ));
 </script>
-<div class="card" style="padding:0;overflow:hidden;">
-    <form method="get" class="table-toolbar" action="/Tahakkuk" style="gap:10px;padding:12px;"
+<div class="card p-0 overflow-hidden">
+    <form method="get" class="flex flex-wrap items-center gap-3 p-3 bg-slate-50/50 border-b border-slate-200" action="/Tahakkuk"
           x-data="{
               tasinmazId: '@(q.TasinmazId?.ToString() ?? "")',
               birimId: '@(q.BirimId?.ToString() ?? "")',
@@ -55,10 +55,10 @@
                   return window._tahakkukBirimler.filter(function(b) { return b.tasinmazId === tid; });
               }
           }">
-        <input type="search" name="q" value="@q.Q" class="form-control toolbar-search" placeholder="Ara: kiracı, taşınmaz…" style="flex:1;min-width:150px;" />
+        <input type="search" name="q" value="@q.Q" class="form-control w-full max-w-xs" placeholder="Ara: kiracı, taşınmaz…" />
 
         <select name="tasinmazId" x-model="tasinmazId" @@change="birimId = ''"
-                class="form-control toolbar-input" style="width:160px;">
+                class="form-control w-44 text-xs font-medium">
             <option value="">— Tüm Taşınmazlar —</option>
             @foreach (var t in (List<Tasinmaz>)ViewBag.Tasinmazlar)
             {
@@ -67,14 +67,14 @@
         </select>
 
         <select name="birimId" x-model="birimId" x-show="filtrelenmisBirimler.length > 0"
-                class="form-control toolbar-input" style="width:160px;">
+                class="form-control w-44 text-xs font-medium" x-cloak>
             <option value="">— Tüm Birimler —</option>
             <template x-for="b in filtrelenmisBirimler" :key="b.id">
                 <option :value="b.id" x-text="b.ad" :selected="b.id.toString() === birimId"></option>
             </template>
         </select>
 
-        <select name="kiraciId" class="form-control toolbar-input" style="width:160px;">
+        <select name="kiraciId" class="form-control w-44 text-xs font-medium">
             <option value="">— Tüm Kiracılar —</option>
             @foreach (var k in (List<Kiraci>)ViewBag.Kiracilar)
             {
@@ -82,14 +82,14 @@
             }
         </select>
 
-        <select name="kaynak" class="form-control toolbar-input" style="width:120px;">
+        <select name="kaynak" class="form-control w-32 text-xs font-medium">
             <option value="">— Kaynak —</option>
             <option value="sozlesme" selected="@(q.Kaynak == "sozlesme" ? "selected" : null)">Sözleşme</option>
             <option value="manuel" selected="@(q.Kaynak == "manuel" ? "selected" : null)">Manuel</option>
             <option value="rezervasyon" selected="@(q.Kaynak == "rezervasyon" ? "selected" : null)">Rezervasyon</option>
         </select>
 
-        <select name="yil" class="form-control toolbar-input" style="width:100px;">
+        <select name="yil" class="form-control w-24 text-xs font-medium">
             <option value="">— Yıl —</option>
             @foreach (var y in (List<int>)ViewBag.MevcutYillar)
             {
@@ -97,12 +97,15 @@
             }
         </select>
 
-        <input type="date" name="from" value="@(q.From?.ToString("yyyy-MM-dd"))" class="form-control toolbar-input" style="width:130px;" />
-        <input type="date" name="to" value="@(q.To?.ToString("yyyy-MM-dd"))" class="form-control toolbar-input" style="width:130px;" />
+        <div class="flex items-center gap-1.5">
+            <input type="date" name="from" value="@(q.From?.ToString("yyyy-MM-dd"))" class="form-control w-36 text-xs" title="Başlangıç" />
+            <span class="text-muted">–</span>
+            <input type="date" name="to" value="@(q.To?.ToString("yyyy-MM-dd"))" class="form-control w-36 text-xs" title="Bitiş" />
+        </div>
         
-        <div style="display:flex;gap:4px;">
-            <input type="number" name="min" value="@q.Min?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control toolbar-input" placeholder="Min ₺" style="width:90px;" />
-            <input type="number" name="max" value="@q.Max?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control toolbar-input" placeholder="Max ₺" style="width:90px;" />
+        <div class="flex items-center gap-1.5">
+            <input type="number" name="min" value="@q.Min?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-20 text-xs" placeholder="Min ₺" />
+            <input type="number" name="max" value="@q.Max?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-20 text-xs" placeholder="Max ₺" />
         </div>
 
         @if (durum != "tum") { <input type="hidden" name="durum" value="@durum" /> }
@@ -116,32 +119,32 @@
                 + (q.From.HasValue || q.To.HasValue ? 1 : 0)
                 + (q.Min.HasValue || q.Max.HasValue ? 1 : 0);
         }
-        <button type="submit" class="btn btn-primary btn-sm">
+        <button type="submit" class="btn btn-primary btn-sm px-4 flex items-center gap-2">
             Filtrele
             @if (aktifFiltreSayisi > 0)
             {
-                <span style="display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;background:rgba(255,255,255,0.3);border-radius:50%;font-size:11px;font-weight:700;margin-left:4px;">@aktifFiltreSayisi</span>
+                <span class="flex items-center justify-center min-w-[18px] h-[18px] bg-white/20 rounded-full text-[10px] font-bold">@aktifFiltreSayisi</span>
             }
         </button>
         @if (aktifFiltreSayisi > 0)
         {
-            <a href="/Tahakkuk@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm">Temizle</a>
+            <a href="/Tahakkuk@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
         }
     </form>
     <div class="table-wrapper">
-        <table>
+        <table class="w-full">
             <thead>
                 <tr>
-                    <th>Dönem</th>
+                    <th class="w-36">Dönem</th>
                     <th>Kiracı</th>
                     <th>Taşınmaz</th>
-                    <th>Vade</th>
-                    <th>Beklenen</th>
-                    <th>Ödenen</th>
-                    <th>Kalan</th>
-                    <th>Durum</th>
-                    <th>Kaynak</th>
-                    <th></th>
+                    <th class="w-28 text-center">Vade</th>
+                    <th class="w-32 text-right">Beklenen</th>
+                    <th class="w-32 text-right">Ödenen</th>
+                    <th class="w-32 text-right">Kalan</th>
+                    <th class="w-32">Durum</th>
+                    <th class="w-28">Kaynak</th>
+                    <th class="w-20"></th>
                 </tr>
             </thead>
             <tbody x-data="{ open: {} }">
@@ -162,13 +165,6 @@
                         TahakkukDurumu.IptalEdildi  => "İptal Edildi",
                         _                           => "Bekleniyor"
                     };
-                    string durumTip = t.Durum switch {
-                        TahakkukDurumu.TamOdendi    => "Toplam tutar tamamı tahsil edildi.",
-                        TahakkukDurumu.KismenOdendi => $"Kısmi ödeme alındı; kalan {kalan:N2} ₺.",
-                        TahakkukDurumu.Gecikti      => "Vade geçti, ödeme henüz alınmadı.",
-                        TahakkukDurumu.IptalEdildi  => "Sözleşme feshi nedeniyle iptal edildi.",
-                        _                           => "Vade gelmedi; ödeme bekleniyor."
-                    };
                     string tahakkukKaynakCls = t.KaynakTipi switch {
                         TahakkukKaynakTipi.Manuel      => "badge-surek",
                         TahakkukKaynakTipi.Rezervasyon => "badge-bireysel",
@@ -179,104 +175,103 @@
                         TahakkukKaynakTipi.Rezervasyon => "Rezervasyon",
                         _                              => "Sözleşme"
                     };
-                    <tr @@click="open[@t.Id] = !open[@t.Id]" style="cursor:pointer;">
-                        <td style="font-weight:600;">
-                            <svg x-show="open[@t.Id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;vertical-align:middle;"><polyline points="18 15 12 9 6 15"/></svg>
-                            <svg x-show="!open[@t.Id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;vertical-align:middle;"><polyline points="6 9 12 15 18 9"/></svg>
-                            @t.DonemBaslangic.ToString("MMMM yyyy")
+                    <tr @@click="open[@t.Id] = !open[@t.Id]" class="cursor-pointer transition-colors hover:bg-slate-50">
+                        <td class="font-bold text-slate-800">
+                            <div class="flex items-center gap-2">
+                                <span class="text-slate-300 transition-transform duration-200" :class="open[@t.Id] ? 'rotate-180' : ''">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
+                                </span>
+                                @t.DonemBaslangic.ToString("MMMM yyyy")
+                            </div>
                         </td>
-                        <td>@(t.KiraSozlesmesi?.Kiraci?.GosterimAdi ?? "Rezervasyon Ücreti")</td>
+                        <td class="font-medium text-slate-700">@(t.KiraSozlesmesi?.Kiraci?.GosterimAdi ?? "Toplantı Salonu Rez.")</td>
                         <td>
-                            <div style="font-weight:500;">@(t.KiraSozlesmesi?.Birim?.Tasinmaz?.Ad ?? "Toplantı Salonu")</div>
-                            <div style="font-size:12px;color:var(--color-muted);">@(t.KiraSozlesmesi?.Birim?.Ad ?? "Rezervasyon")</div>
+                            <div class="font-medium text-slate-700 text-xs">@(t.KiraSozlesmesi?.Birim?.Tasinmaz?.Ad ?? "Toplantı Salonu")</div>
+                            <div class="text-[10px] text-muted">@(t.KiraSozlesmesi?.Birim?.Ad ?? "Ortak Alan")</div>
                         </td>
-                        <td style="font-size:13px;">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
-                        <td style="font-weight:600;">@t.ToplamTutar.ToString("N2") ₺</td>
-                        <td style="color:#065f46;font-weight:600;">@t.OdenenTutar.ToString("N2") ₺</td>
-                        <td style="@(kalan > 0 ? "color:#991b1b;" : "")font-weight:600;">@kalan.ToString("N2") ₺</td>
-                        <td><span class="badge @durumCls" data-tip="@durumTip">@durumLabel</span></td>
-                        <td><span class="badge @tahakkukKaynakCls">@tahakkukKaynakLabel</span></td>
-                        <td @@click.stop="">
-                            <a href="/Tahakkuk/Detay/@t.Id" class="btn btn-sm btn-secondary">Detay</a>
-                            <a href="/Odeme?tahakkukId=@t.Id" class="btn btn-sm btn-secondary" style="margin-left:4px;">Ödemeler</a>
-                            @if (canCreate && t.Durum != TahakkukDurumu.TamOdendi && t.Durum != TahakkukDurumu.IptalEdildi)
-                            {
-                                <a href="/Odeme/Ekle?tahakkukId=@t.Id" class="btn btn-sm btn-primary" style="margin-left:4px;">Ödeme Ekle</a>
-                            }
-                        </td>
-                    </tr>
-                    <tr x-show="open[@t.Id]" x-cloak style="background:#f7f8fb;">
-                        <td colspan="10" style="padding:10px 20px 14px;">
-                            @if (t.Kalemler.Any())
-                            {
-                                <div style="font-size:11.5px;font-weight:700;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Kalem Dökümü</div>
-                                <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                                    <thead>
-                                        <tr style="color:var(--color-muted);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">
-                                            <th style="padding:4px 8px;text-align:left;font-weight:600;">Kod</th>
-                                            <th style="padding:4px 8px;text-align:left;font-weight:600;">Açıklama</th>
-                                            <th style="padding:4px 8px;text-align:right;font-weight:600;">Birim Değer</th>
-                                            <th style="padding:4px 8px;text-align:right;font-weight:600;">Çarpan</th>
-                                            <th style="padding:4px 8px;text-align:right;font-weight:600;">Tutar</th>
-                                            <th style="padding:4px 8px;text-align:right;font-weight:600;">KDV</th>
-                                            <th style="padding:4px 8px;text-align:right;font-weight:600;">Toplam</th>
-                                            <th style="padding:4px 8px;text-align:center;font-weight:600;">Kaynak</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var k in t.Kalemler.OrderBy(k => k.BorcTipi.Sira))
-                                        {
-                                            string kaynakCls = k.KaynakTipi switch {
-                                                KalemKaynakTipi.TanimsizTarife    => "badge-bos",
-                                                KalemKaynakTipi.SozlesmeTarifesi  => "badge-surek",
-                                                KalemKaynakTipi.BirimTarifesi     => "badge-kirali",
-                                                KalemKaynakTipi.TasinmazTarifesi  => "badge-bireysel",
-                                                KalemKaynakTipi.GenelTarife       => "badge-bos",
-                                                KalemKaynakTipi.ManuelGiris       => "badge-surek",
-                                                KalemKaynakTipi.RezervasyonKurali => "badge-bireysel",
-                                                _                                 => "badge-bos"
-                                            };
-                                            string kaynakLabel = k.KaynakTipi switch {
-                                                KalemKaynakTipi.TanimsizTarife    => "Tanımsız Tarife",
-                                                KalemKaynakTipi.SozlesmeTarifesi  => "Sözleşme Tarifesi",
-                                                KalemKaynakTipi.BirimTarifesi     => "Birim Tarifesi",
-                                                KalemKaynakTipi.TasinmazTarifesi  => "Taşınmaz Tarifesi",
-                                                KalemKaynakTipi.GenelTarife       => "Genel Tarife",
-                                                KalemKaynakTipi.ManuelGiris       => "Manuel Giriş",
-                                                KalemKaynakTipi.RezervasyonKurali => "Rezervasyon Kuralı",
-                                                _                                 => "Bilinmiyor"
-                                            };
-                                            <tr style="border-top:1px solid var(--color-border);">
-                                                <td style="padding:5px 8px;font-family:monospace;font-weight:700;font-size:12px;">@k.BorcTipi.Kod</td>
-                                                <td style="padding:5px 8px;">@k.Aciklama</td>
-                                                <td style="padding:5px 8px;text-align:right;">@k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
-                                                <td style="padding:5px 8px;text-align:right;color:var(--color-muted);">@k.Carpan.ToString("F2")</td>
-                                                <td style="padding:5px 8px;text-align:right;font-weight:600;">@k.Tutar.ToString("N2") ₺</td>
-                                                <td style="padding:5px 8px;text-align:right;color:var(--color-muted);">@k.KdvTutari.ToString("N2") ₺</td>
-                                                <td style="padding:5px 8px;text-align:right;font-weight:700;">@k.ToplamTutar.ToString("N2") ₺</td>
-                                                <td style="padding:5px 8px;text-align:center;"><span class="badge @kaynakCls" style="font-size:11px;">@kaynakLabel</span></td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                    <tfoot>
-                                        <tr style="border-top:2px solid var(--color-border);background:#eef0f4;">
-                                            <td colspan="6" style="padding:5px 8px;font-weight:700;font-size:12px;">Toplam</td>
-                                            <td style="padding:5px 8px;text-align:right;font-weight:700;">@t.ToplamTutar.ToString("N2") ₺</td>
-                                            <td></td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            }
-                            else
-                            {
-                                <span style="font-size:13px;color:var(--color-muted);">Kalem bilgisi yok (eski tahakkuk).</span>
-                            }
+                        <td class="text-center text-xs text-slate-600">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="text-right font-bold text-slate-600">@t.ToplamTutar.ToString("N2") ₺</td>
+                        <td class="text-right font-bold text-emerald-700">@t.OdenenTutar.ToString("N2") ₺</td>
+                        <td class="text-right font-bold @(kalan > 0 ? "text-red-700" : "text-emerald-700")">@kalan.ToString("N2") ₺</td>
+                        <td><span class="badge @durumCls text-[10px] font-bold">@durumLabel.ToUpper()</span></td>
+                        <td><span class="badge @tahakkukKaynakCls text-[10px] font-bold">@tahakkukKaynakLabel.ToUpper()</span></td>
+                        <td @@click.stop="" class="text-right">
+                            <div class="flex gap-1 justify-end">
+                                <a href="/Tahakkuk/Detay/@t.Id" class="btn btn-sm btn-secondary p-1" title="Detay"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a>
+                                @if (canCreate && t.Durum != TahakkukDurumu.TamOdendi && t.Durum != TahakkukDurumu.IptalEdildi)
+                                {
+                                    <a href="/Odeme/Ekle?tahakkukId=@t.Id" class="btn btn-sm btn-primary py-1 px-2 text-[10px] font-bold">ÖDEME</a>
+                                }
+                            </div>
                         </td>
                     </tr>
+                            <tr x-show="open[@t.Id]" x-cloak class="bg-slate-50/80 border-b border-slate-200">
+                                <td colspan="10" class="p-4 px-12">
+                                    @if (t.Kalemler.Any())
+                                    {
+                                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Tarihçe ve Kalem Detayları</div>
+                                        <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                                            <table class="w-full text-xs">
+                                                <thead class="bg-slate-50 border-b border-slate-200">
+                                                    <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
+                                                        <th class="p-2 px-3 text-left">Kod</th>
+                                                        <th class="p-2 px-3 text-left">Açıklama</th>
+                                                        <th class="p-2 px-3 text-right">Birim</th>
+                                                        <th class="p-2 px-3 text-right">Miktar</th>
+                                                        <th class="p-2 px-3 text-right">Tutar</th>
+                                                        <th class="p-2 px-3 text-right text-muted">KDV</th>
+                                                        <th class="p-2 px-3 text-right">Toplam</th>
+                                                        <th class="p-2 px-3 text-center">Kaynak</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var k in t.Kalemler.OrderBy(k => k.BorcTipi.Sira))
+                                                    {
+                                                        string kaynakCls = k.KaynakTipi switch {
+                                                            KalemKaynakTipi.TanimsizTarife    => "badge-bos",
+                                                            KalemKaynakTipi.SozlesmeTarifesi  => "badge-surek",
+                                                            KalemKaynakTipi.BirimTarifesi     => "badge-kirali",
+                                                            KalemKaynakTipi.TasinmazTarifesi  => "badge-bireysel",
+                                                            KalemKaynakTipi.GenelTarife       => "badge-bos",
+                                                            KalemKaynakTipi.ManuelGiris       => "badge-surek",
+                                                            KalemKaynakTipi.RezervasyonKurali => "badge-bireysel",
+                                                            _                                 => "badge-bos"
+                                                        };
+                                                        string kaynakLabel = k.KaynakTipi switch {
+                                                            KalemKaynakTipi.TanimsizTarife    => "Tarife Yok",
+                                                            KalemKaynakTipi.SozlesmeTarifesi  => "Sözleşme",
+                                                            KalemKaynakTipi.BirimTarifesi     => "Birim",
+                                                            KalemKaynakTipi.TasinmazTarifesi  => "Taşınmaz",
+                                                            KalemKaynakTipi.GenelTarife       => "Genel",
+                                                            KalemKaynakTipi.ManuelGiris       => "Manuel",
+                                                            KalemKaynakTipi.RezervasyonKurali => "Rezervasyon",
+                                                            _                                 => "Bilinmiyor"
+                                                        };
+                                                        <tr class="border-t border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
+                                                            <td class="p-2 px-3 font-mono font-bold text-slate-500">@k.BorcTipi.Kod</td>
+                                                            <td class="p-2 px-3 text-slate-600">@k.Aciklama</td>
+                                                            <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺</td>
+                                                            <td class="p-2 px-3 text-right text-slate-400 font-medium">@k.Carpan.ToString("F2") @(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m²" : "Adet")</td>
+                                                            <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Tutar.ToString("N2") ₺</td>
+                                                            <td class="p-2 px-3 text-right text-slate-400/60">@k.KdvTutari.ToString("N2") ₺</td>
+                                                            <td class="p-2 px-3 text-right font-bold text-slate-700">@k.ToplamTutar.ToString("N2") ₺</td>
+                                                            <td class="p-2 px-3 text-center"><span class="badge @kaynakCls text-[9px] font-bold">@kaynakLabel.ToUpper()</span></td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-xs text-muted italic">Kalem bilgisi bulunmuyor.</div>
+                                    }
+                                </td>
+                            </tr>
                 }
                 @if (Model.Total == 0)
                 {
-                    <tr><td colspan="10" style="text-align:center;color:var(--color-muted);padding:32px;">Filtreye uygun tahakkuk bulunamadı.</td></tr>
+                    <tr><td colspan="10" class="text-center py-16 text-muted italic">Filtreye uygun tahakkuk kaydı bulunamadı.</td></tr>
                 }
             </tbody>
         </table>

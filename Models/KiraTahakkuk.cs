@@ -20,6 +20,7 @@ public class KiraTahakkuk
     public TahakkukKaynakTipi KaynakTipi { get; set; } = TahakkukKaynakTipi.Sozlesme;
     public string? IptalNotu { get; set; }
     public DateTime OlusturmaTarihi { get; set; } = DateTime.Now;
+    public DateTime? SonHatirlatmaTarihi { get; set; }
 
     public List<KiraOdeme> Odemeler { get; set; } = new();
     public ICollection<TahakkukKalemi> Kalemler { get; set; } = new List<TahakkukKalemi>();

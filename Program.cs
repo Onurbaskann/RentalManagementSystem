@@ -84,6 +84,7 @@ builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"
 builder.Services.Configure<PaymentLinkSettings>(builder.Configuration.GetSection("PaymentLink"));
 builder.Services.AddScoped<IMailService, SmtpMailService>();
 builder.Services.AddScoped<IPaymentLinkService, PaymentLinkService>();
+builder.Services.AddScoped<IBorcHatirlatmaService, BorcHatirlatmaService>();
 builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
 builder.Services.AddHttpContextAccessor();
 

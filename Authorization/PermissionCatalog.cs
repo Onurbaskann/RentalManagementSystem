@@ -126,6 +126,12 @@ public static class PermissionCatalog
         public const string AssignPermission = "Kullanici.AssignPermission";
     }
 
+    public static class Bildirim
+    {
+        public const string BorcHatirlatma = "Bildirim.BorcHatirlatma";
+        public static IEnumerable<string> All() => new[] { BorcHatirlatma };
+    }
+
     // Yonetici rolüne Admin tarafından atanabilecek tüm permission'lar
     public static readonly IReadOnlyList<string> AssignableToYonetici =
     [
@@ -138,6 +144,7 @@ public static class PermissionCatalog
         ManuelBorc.View, ManuelBorc.Create, ManuelBorc.Cancel,
         Rezervasyon.View, Rezervasyon.Create, Rezervasyon.Edit, Rezervasyon.Cancel, Rezervasyon.TransferToTahakkuk,
         TasinmazCarpanPerm.View, TasinmazCarpanPerm.Manage,
+        Bildirim.BorcHatirlatma,
     ];
 
     // Goruntuleyici rolüne atanabilecek permission'lar (sadece View)
@@ -176,5 +183,6 @@ public static class PermissionCatalog
         Rezervasyon.View, Rezervasyon.Create, Rezervasyon.Edit, Rezervasyon.Cancel, Rezervasyon.TransferToTahakkuk,
         TasinmazCarpanPerm.View, TasinmazCarpanPerm.Manage,
         RezervasyonUcretKuralPerm.Manage,
+        Bildirim.BorcHatirlatma,
     ];
 }

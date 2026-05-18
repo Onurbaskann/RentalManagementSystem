@@ -41,16 +41,16 @@
 
 @if (TempData["Success"] != null)
 {
-    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">✓ @TempData["Success"]</div>
+    <div class="alert-success mb-4">✓ @TempData["Success"]</div>
 }
 @if (TempData["Error"] != null)
 {
-    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">✕ @TempData["Error"]</div>
+    <div class="alert-danger mb-4">✕ @TempData["Error"]</div>
 }
 
 @if (feshedildi)
 {
-    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">
+    <div class="alert-danger mb-4 text-[13.5px]">
         Bu sözleşme <strong>@s.FesihTarihi?.ToString("dd.MM.yyyy")</strong> tarihinde feshedildi.
         @if (!string.IsNullOrEmpty(s.FesihNedeni)) { <span> Neden: @s.FesihNedeni</span> }
     </div>
@@ -114,9 +114,9 @@
 }">
 
 <!-- Breadcrumb + Butonlar -->
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-    <a href="/Sozlesme" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;">← Sözleşmeler</a>
-    <div style="display:flex;gap:10px;">
+<div class="flex items-center justify-between mb-5">
+    <a href="/Sozlesme" class="text-[12.5px] text-muted no-underline">← Sözleşmeler</a>
+    <div class="flex gap-2.5">
         @if (canRegenerate && !feshedildi)
         {
             <button class="btn btn-secondary" type="button" @@click="showYenidenUret = true">
@@ -139,18 +139,18 @@
 </div>
 
 <!-- Ana Kart -->
-<div class="card" style="margin-bottom:16px;">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+<div class="card mb-4">
+    <div class="grid grid-cols-2 gap-6 items-start">
         <!-- Sol: Kiracı -->
         <div>
-            <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Kiracı</div>
-            <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
-                <div style="width:48px;height:48px;border-radius:50%;background:var(--color-primary);color:white;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;flex-shrink:0;">
+            <div class="text-[11.5px] font-semibold text-muted uppercase tracking-wider mb-2.5">Kiracı</div>
+            <div class="flex items-center gap-3.5 mb-3.5">
+                <div class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center text-[17px] font-bold flex-shrink-0">
                     @(kiraci.GosterimAdi.Split(' ').Where(p => p.Length > 0).Take(2).Select(p => p[0].ToString().ToUpper()).Aggregate("", (a, b) => a + b))
                 </div>
                 <div>
-                    <div style="font-family:'Fraunces',Georgia,serif;font-size:22px;font-weight:700;line-height:1.1;">@kiraci.GosterimAdi</div>
-                    <div style="margin-top:5px;display:flex;gap:6px;align-items:center;">
+                    <div class="font-serif text-[22px] font-bold leading-tight">@kiraci.GosterimAdi</div>
+                    <div class="mt-1 flex gap-1.5 items-center">
                         @if (kiraci.KiraciTuru == KiraciTuru.Tuzel)
                         { <span class="badge badge-kurumsal">Tüzel Kişi</span> }
                         else
@@ -162,36 +162,36 @@
                     </div>
                 </div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:6px;">
-                <div style="display:flex;align-items:center;gap:8px;font-size:13px;">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--color-muted);flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.1 19.79 19.79 0 0 1 1.61 4.59 2 2 0 0 1 3.58 2.41h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.52 17z"/></svg>
+            <div class="flex flex-col gap-1.5">
+                <div class="flex items-center gap-2 text-[13px]">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-muted flex-shrink-0"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.1 19.79 19.79 0 0 1 1.61 4.59 2 2 0 0 1 3.58 2.41h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.52 17z"/></svg>
                     @kiraci.Telefon
                 </div>
-                <div style="display:flex;align-items:center;gap:8px;font-size:13px;">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--color-muted);flex-shrink:0;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                <div class="flex items-center gap-2 text-[13px]">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-muted flex-shrink-0"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                     @kiraci.Email
                 </div>
             </div>
-            <div style="margin-top:12px;">
+            <div class="mt-3">
                 <a href="/Kiraci/Detay/@kiraci.Id" class="btn btn-sm btn-secondary">Kiracı Profili</a>
             </div>
         </div>
 
         <!-- Sağ: Taşınmaz + Sözleşme Durumu -->
-        <div style="text-align:right;">
-            <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Taşınmaz</div>
-            <div style="font-family:'Fraunces',Georgia,serif;font-size:20px;font-weight:700;margin-bottom:4px;">@tasinmaz.Ad</div>
+        <div class="text-right">
+            <div class="text-[11.5px] font-semibold text-muted uppercase tracking-wider mb-2.5">Taşınmaz</div>
+            <div class="font-serif text-xl font-bold mb-1">@tasinmaz.Ad</div>
             @if (birim.BirimTipi == BirimTipi.Birim)
             {
-                <div style="font-size:14px;color:var(--color-muted);margin-bottom:4px;">Birim @birim.BirimNo@(birim.KatNo.HasValue ? $" • {birim.KatNo}. Kat" : "") • @birim.Yuzolcumu.ToString("N0") m²</div>
-                <div style="font-size:13px;color:var(--color-muted);margin-bottom:10px;">@tasinmaz.Ilce, @tasinmaz.Il</div>
+                <div class="text-sm text-muted mb-1">Birim @birim.BirimNo@(birim.KatNo.HasValue ? $" • {birim.KatNo}. Kat" : "") • @birim.Yuzolcumu.ToString("N0") m²</div>
+                <div class="text-[13px] text-muted mb-2.5">@tasinmaz.Ilce, @tasinmaz.Il</div>
             }
             else
             {
-                <div style="font-size:14px;color:var(--color-muted);margin-bottom:10px;">@birim.Ad • @tasinmaz.Ilce, @tasinmaz.Il</div>
+                <div class="text-sm text-muted mb-2.5">@birim.Ad • @tasinmaz.Ilce, @tasinmaz.Il</div>
             }
-            <div style="margin-bottom:12px;">
-                <span class="badge @sozlesmeDurumBadgeCls" style="font-size:12.5px;padding:5px 14px;">@sozlesmeDurumLabel</span>
+            <div class="mb-3">
+                <span class="badge @sozlesmeDurumBadgeCls text-[12.5px] px-3.5 py-1.5">@sozlesmeDurumLabel</span>
             </div>
             <a href="/Tasinmaz/Detay/@tasinmaz.Id" class="btn btn-sm btn-secondary">Taşınmaz Detayı</a>
         </div>
@@ -199,27 +199,27 @@
 </div>
 
 <!-- 3 Kolonlu Özet -->
-<div class="three-col" style="margin-bottom:16px;">
+<div class="grid grid-cols-3 gap-4 mb-4">
     <!-- Kira Bedeli -->
     <div class="card">
         <div class="card-title">Kira Bedeli</div>
-        <div style="margin-top:10px;">
-            <div style="font-size:12px;color:var(--color-muted);margin-bottom:2px;">Aylık (KDV Hariç)</div>
-            <div style="font-family:'Fraunces',Georgia,serif;font-size:26px;font-weight:700;color:var(--color-primary);">@TLFormat(aylikBedel)</div>
+        <div class="mt-2.5">
+            <div class="text-xs text-muted mb-0.5">Aylık (KDV Hariç)</div>
+            <div class="font-serif text-[26px] font-bold text-primary">@TLFormat(aylikBedel)</div>
         </div>
         @if (s.KdvUygulanacakMi)
         {
-            <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--color-border);">
-                <div style="font-size:11.5px;color:var(--color-muted);margin-bottom:2px;">KDV (%@s.KdvOrani.ToString("G"))</div>
-                <div style="font-size:14px;font-weight:600;">+ @TLFormat(aylikKdv)</div>
-                <div style="font-size:12px;color:var(--color-muted);margin-top:4px;">KDV Dahil: <strong>@TLFormat(aylikBedel + aylikKdv)</strong></div>
+            <div class="mt-2 pt-2 border-t border-[var(--color-border)]">
+                <div class="text-[11.5px] text-muted mb-0.5">KDV (%@s.KdvOrani.ToString("G"))</div>
+                <div class="text-sm font-semibold">+ @TLFormat(aylikKdv)</div>
+                <div class="text-xs text-muted mt-1">KDV Dahil: <strong>@TLFormat(aylikBedel + aylikKdv)</strong></div>
             </div>
         }
-        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--color-border);">
-            <div style="font-size:11.5px;color:var(--color-muted);margin-bottom:2px;">Yıllık</div>
-            <div style="font-size:16px;font-weight:700;">@TLFormat(Model.YillikBedel)</div>
+        <div class="mt-2 pt-2 border-t border-[var(--color-border)]">
+            <div class="text-[11.5px] text-muted mb-0.5">Yıllık</div>
+            <div class="text-base font-bold">@TLFormat(Model.YillikBedel)</div>
         </div>
-        <div style="margin-top:6px;font-size:11.5px;color:var(--color-muted);">
+        <div class="mt-1.5 text-[11.5px] text-muted">
             Tam ay üzerinden
         </div>
     </div>
@@ -227,13 +227,13 @@
     <!-- Sözleşme Süresi -->
     <div class="card">
         <div class="card-title">Sözleşme Süresi</div>
-        <div style="margin-top:10px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;">
+        <div class="mt-2.5 flex items-center gap-2 text-[13px] font-medium">
             <span>@s.BaslangicTarihi.ToString("dd.MM.yyyy")</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--color-muted);flex-shrink:0;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-muted flex-shrink-0"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             <span>@s.BitisTarihi.ToString("dd.MM.yyyy")</span>
         </div>
-        <div style="margin-top:14px;">
-            <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--color-muted);margin-bottom:5px;">
+        <div class="mt-3.5">
+            <div class="flex justify-between text-[11.5px] text-muted mb-1">
                 <span>Geçen süre</span>
                 <span>%@Model.SureYuzdesi.ToString("F0")</span>
             </div>
@@ -241,23 +241,24 @@
                 <div class="progress-fill @(Model.SureYuzdesi > 85 ? "progress-fill-amber" : "")" style="width:@Model.SureYuzdesi.ToString("F0")%;"></div>
             </div>
         </div>
-        <div style="margin-top:10px;font-size:12px;color:var(--color-muted);">
+        <div class="mt-2.5 text-xs text-muted">
             Toplam @((int)(s.BitisTarihi - s.BaslangicTarihi).TotalDays) gün
         </div>
     </div>
 
     <!-- Kalan Gün -->
-    <div class="card" style="text-align:center;">
-        <div class="card-title" style="text-align:center;">Kalan Gün</div>
-        <div style="margin-top:14px;">
-            <div style="font-family:'Fraunces',Georgia,serif;font-size:52px;font-weight:700;line-height:1;
-                color:@(feshedildi ? "#dc2626" : Model.KalanGun <= 10 ? "#dc2626" : Model.KalanGun <= 30 ? "#b45309" : "var(--color-primary)");">
+    <div class="card text-center">
+        <div class="card-title text-center">Kalan Gün</div>
+        <div class="mt-3.5">
+            <div class="font-serif text-[52px] font-bold leading-none"
+                 style="color:@(feshedildi ? "#dc2626" : Model.KalanGun <= 10 ? "#dc2626" : Model.KalanGun <= 30 ? "#b45309" : "var(--color-primary)");">
                 @(feshedildi ? "—" : Math.Max(0, Model.KalanGun).ToString())
             </div>
-            <div style="font-size:13px;color:var(--color-muted);margin-top:4px;">@(feshedildi ? "" : "gün kaldı")</div>
+            <div class="text-[13px] text-muted mt-1">@(feshedildi ? "" : "gün kaldı")</div>
         </div>
-        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--color-border);">
-            <span style="font-size:13px;font-weight:600;color:@(feshedildi || Model.KalanGun <= 0 ? "#dc2626" : Model.KalanGun <= 30 ? "#b45309" : "#065f46");">
+        <div class="mt-3.5 pt-3 border-t border-[var(--color-border)]">
+            <span class="text-[13px] font-semibold" 
+                  style="color:@(feshedildi || Model.KalanGun <= 0 ? "#dc2626" : Model.KalanGun <= 30 ? "#b45309" : "#065f46");">
                 @gunMesaj
             </span>
         </div>
@@ -267,15 +268,15 @@
 <!-- Aylık Tahakkuk Kalemleri -->
 @if (Model.GuncelKalemler.Any())
 {
-    <div class="card" style="margin-bottom:16px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <div class="card mb-4">
+        <div class="flex justify-between items-center mb-3.5">
             <div>
-                <span style="font-size:12px;font-weight:600;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;">Aylık Tahakkuk Kalemleri</span>
+                <span class="text-xs font-semibold text-muted uppercase tracking-wider">Aylık Tahakkuk Kalemleri</span>
                 @if (Model.GuncelKalemDonemi.HasValue)
                 {
-                    <span style="font-size:12px;color:var(--color-muted);margin-left:8px;">— @Model.GuncelKalemDonemi.Value.ToString("MMMM yyyy", trCulture)</span>
+                    <span class="text-xs text-muted ml-2">— @Model.GuncelKalemDonemi.Value.ToString("MMMM yyyy", trCulture)</span>
                 }
-                <div style="font-size:11.5px;color:var(--color-muted);margin-top:2px;">İlk/son ay kıst uygulanır</div>
+                <div class="text-[11.5px] text-muted mt-0.5">İlk/son ay kıst uygulanır</div>
             </div>
         </div>
         <div class="table-wrapper">
@@ -284,11 +285,11 @@
                     <tr>
                         <th>Kalem</th>
                         <th>Yöntem</th>
-                        <th style="text-align:right;">Birim Değer</th>
-                        <th style="text-align:right;">Çarpan</th>
-                        <th style="text-align:right;">Net Tutar</th>
-                        <th style="text-align:right;">KDV</th>
-                        <th style="text-align:right;">Toplam</th>
+                        <th class="text-right">Birim Değer</th>
+                        <th class="text-right">Çarpan</th>
+                        <th class="text-right">Net Tutar</th>
+                        <th class="text-right">KDV</th>
+                        <th class="text-right">Toplam</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -296,28 +297,28 @@
                     {
                         <tr>
                             <td>
-                                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;background:#f1f5f9;padding:2px 7px;border-radius:4px;color:#475569;">@k.BorcTipi.Kod</span>
-                                <span style="font-weight:500;margin-left:6px;font-size:13.5px;">@k.BorcTipi.Ad</span>
+                                <span class="font-mono text-[11px] bg-[#f1f5f9] px-[7px] py-[2px] rounded-sm text-[#475569]">@k.BorcTipi.Kod</span>
+                                <span class="font-medium ml-1.5 text-[13.5px]">@k.BorcTipi.Ad</span>
                             </td>
-                            <td style="font-size:12.5px;color:var(--color-muted);">@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m²" : "Sabit")</td>
-                            <td style="text-align:right;font-size:13px;">@k.BirimDeger.ToString("N2") ₺</td>
-                            <td style="text-align:right;font-size:13px;color:var(--color-muted);">
+                            <td class="text-[12.5px] text-muted">@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m²" : "Sabit")</td>
+                            <td class="text-right text-[13px]">@k.BirimDeger.ToString("N2") ₺</td>
+                            <td class="text-right text-[13px] text-muted">
                                 @if (k.Carpan == 1m) { <span>—</span> }
                                 else { <span>× @k.Carpan.ToString("F2")</span> }
                             </td>
-                            <td style="text-align:right;font-weight:600;">@k.Tutar.ToString("N2") ₺</td>
-                            <td style="text-align:right;font-size:13px;color:var(--color-muted);">
+                            <td class="text-right font-semibold">@k.Tutar.ToString("N2") ₺</td>
+                            <td class="text-right text-[13px] text-muted">
                                 @if (k.KdvOrani > 0) { <span>%@k.KdvOrani.ToString("G") → @k.KdvTutari.ToString("N2") ₺</span> }
                                 else { <span>—</span> }
                             </td>
-                            <td style="text-align:right;font-weight:700;color:var(--color-primary);">@k.ToplamTutar.ToString("N2") ₺</td>
+                            <td class="text-right font-bold text-primary">@k.ToplamTutar.ToString("N2") ₺</td>
                         </tr>
                     }
-                    <tr style="background:#fafbfc;border-top:2px solid var(--color-border);">
-                        <td colspan="4" style="font-weight:600;text-align:right;font-size:13px;padding-right:16px;color:var(--color-muted);">Toplam</td>
-                        <td style="text-align:right;font-weight:700;">@Model.GuncelKalemler.Sum(k => k.Tutar).ToString("N2") ₺</td>
-                        <td style="text-align:right;font-weight:600;font-size:13px;">@Model.GuncelKalemler.Sum(k => k.KdvTutari).ToString("N2") ₺</td>
-                        <td style="text-align:right;font-weight:700;color:var(--color-primary);font-size:15px;">@Model.GuncelKalemler.Sum(k => k.ToplamTutar).ToString("N2") ₺</td>
+                    <tr class="bg-[#fafbfc] border-t-2 border-[var(--color-border)]">
+                        <td colspan="4" class="font-semibold text-right text-[13px] pr-4 text-muted">Toplam</td>
+                        <td class="text-right font-bold">@Model.GuncelKalemler.Sum(k => k.Tutar).ToString("N2") ₺</td>
+                        <td class="text-right font-semibold text-[13px]">@Model.GuncelKalemler.Sum(k => k.KdvTutari).ToString("N2") ₺</td>
+                        <td class="text-right font-bold text-primary text-[15px]">@Model.GuncelKalemler.Sum(k => k.ToplamTutar).ToString("N2") ₺</td>
                     </tr>
                 </tbody>
             </table>
@@ -341,12 +342,12 @@
     <!-- Tab 1: Detaylar -->
     <div class="tab-content">
         <div class="card">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
+            <div class="grid grid-cols-2 gap-0">
                 @{
                     void Row(string label, string value) {
-                        <div style="padding:12px 16px;border-bottom:1px solid var(--color-border);">
-                            <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">@label</div>
-                            <div style="font-size:14px;font-weight:500;">@value</div>
+                        <div class="px-4 py-3 border-b border-[var(--color-border)]">
+                            <div class="detail-label">@label</div>
+                            <div class="text-sm font-medium">@value</div>
                         </div>
                     }
                 }
@@ -375,9 +376,9 @@
             </div>
             @if (!string.IsNullOrEmpty(s.Notlar))
             {
-                <div style="padding:14px 16px;background:#fafbfc;border-radius:0 0 12px 12px;">
-                    <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Notlar</div>
-                    <div style="font-size:14px;line-height:1.6;">@s.Notlar</div>
+                <div class="px-4 py-3.5 bg-[#fafbfc] rounded-b-xl">
+                    <div class="detail-label mb-1.5">Notlar</div>
+                    <div class="text-sm leading-relaxed">@s.Notlar</div>
                 </div>
             }
         </div>
@@ -386,25 +387,25 @@
     <!-- Tab 2: Birim Bilgisi -->
     <div class="tab-content">
         <div class="card">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:12px;">Birim</div>
-                    <div style="display:flex;flex-direction:column;gap:10px;">
+                    <div class="detail-label mb-3">Birim</div>
+                    <div class="flex flex-col gap-2.5">
                         <div>
-                            <div style="font-size:12px;color:var(--color-muted);">Ad</div>
-                            <div style="font-size:15px;font-weight:600;">@birim.Ad</div>
+                            <div class="text-xs text-muted">Ad</div>
+                            <div class="text-[15px] font-semibold">@birim.Ad</div>
                         </div>
                         <div>
-                            <div style="font-size:12px;color:var(--color-muted);">Yüzölçüm</div>
-                            <div style="font-size:15px;font-weight:600;">@birim.Yuzolcumu.ToString("N0") m²</div>
+                            <div class="text-xs text-muted">Yüzölçüm</div>
+                            <div class="text-[15px] font-semibold">@birim.Yuzolcumu.ToString("N0") m²</div>
                         </div>
                         <div>
-                            <div style="font-size:12px;color:var(--color-muted);">Tip</div>
-                            <div style="font-size:15px;font-weight:600;">
+                            <div class="text-xs text-muted">Tip</div>
+                            <div class="text-[15px] font-semibold">
                                 @if (birim.BirimTipi == BirimTipi.Birim)
                                 {
                                     <span>Birim @birim.BirimNo</span>
-                                    if (birim.KatNo.HasValue) { <span style="font-size:13px;font-weight:400;color:var(--color-muted);"> • @birim.KatNo. Kat</span> }
+                                    if (birim.KatNo.HasValue) { <span class="text-[13px] font-normal text-muted"> • @birim.KatNo. Kat</span> }
                                 }
                                 else { <span>Komple</span> }
                             </div>
@@ -412,19 +413,19 @@
                     </div>
                 </div>
                 <div>
-                    <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:12px;">Taşınmaz</div>
-                    <div style="display:flex;flex-direction:column;gap:10px;">
+                    <div class="detail-label mb-3">Taşınmaz</div>
+                    <div class="flex flex-col gap-2.5">
                         <div>
-                            <div style="font-size:12px;color:var(--color-muted);">Ad</div>
-                            <div style="font-size:15px;font-weight:600;">@tasinmaz.Ad</div>
+                            <div class="text-xs text-muted">Ad</div>
+                            <div class="text-[15px] font-semibold">@tasinmaz.Ad</div>
                         </div>
                         <div>
-                            <div style="font-size:12px;color:var(--color-muted);">Konum</div>
-                            <div style="font-size:15px;font-weight:600;">@tasinmaz.Mahalle, @tasinmaz.Ilce / @tasinmaz.Il</div>
+                            <div class="text-xs text-muted">Konum</div>
+                            <div class="text-[15px] font-semibold">@tasinmaz.Mahalle, @tasinmaz.Ilce / @tasinmaz.Il</div>
                         </div>
                         <div>
-                            <div style="font-size:12px;color:var(--color-muted);">Adres</div>
-                            <div style="font-size:14px;">@tasinmaz.AcikAdres</div>
+                            <div class="text-xs text-muted">Adres</div>
+                            <div class="text-sm">@tasinmaz.AcikAdres</div>
                         </div>
                     </div>
                 </div>
@@ -436,11 +437,11 @@
     <div class="tab-content">
         @if (!Model.GecmisSozlesmeler.Any())
         {
-            <div class="card" style="text-align:center;color:var(--color-muted);padding:32px;">Bu birime ait başka sözleşme yok.</div>
+            <div class="card text-center text-muted p-8">Bu birime ait başka sözleşme yok.</div>
         }
         else
         {
-            <div class="card" style="padding:0;overflow:hidden;">
+            <div class="card p-0 overflow-hidden">
                 <div class="table-wrapper">
                     <table>
                         <thead>
@@ -459,7 +460,7 @@
                                 bool gAktif = Istatistik.Aktif(gs);
                                 bool gFesih = gs.Durum == SozlesmeDurumu.Feshedildi;
                                 <tr>
-                                    <td style="font-weight:600;">@gs.Kiraci.GosterimAdi</td>
+                                    <td class="font-semibold">@gs.Kiraci.GosterimAdi</td>
                                     <td>@gs.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
                                     <td>@gs.BitisTarihi.ToString("dd.MM.yyyy")</td>
                                     <td>@((await Istatistik.AylikBedelAsync(gs)).ToString("N0")) ₺</td>
@@ -482,11 +483,11 @@
     <div class="tab-content">
         @if (!s.IslemGecmisi.Any())
         {
-            <div class="card" style="text-align:center;color:var(--color-muted);padding:32px;">İşlem geçmişi yok.</div>
+            <div class="card text-center text-muted p-8">İşlem geçmişi yok.</div>
         }
         else
         {
-            <div class="card" style="padding:0;overflow:hidden;">
+            <div class="card p-0 overflow-hidden">
                 <div class="table-wrapper">
                     <table>
                         <thead>
@@ -518,10 +519,10 @@
                                     _ => "badge-bos"
                                 };
                                 <tr>
-                                    <td style="font-size:13px;white-space:nowrap;">@islem.IslemTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+                                    <td class="text-[13px] whitespace-nowrap">@islem.IslemTarihi.ToString("dd.MM.yyyy HH:mm")</td>
                                     <td><span class="badge @islemBadgeCls">@islemLabel</span></td>
-                                    <td style="font-size:13px;color:var(--color-muted);">@islem.Aciklama</td>
-                                    <td style="font-size:13px;">
+                                    <td class="text-[13px] text-muted">@islem.Aciklama</td>
+                                    <td class="text-[13px]">
                                         @if (islem.EskiKiraBedeli.HasValue && islem.YeniKiraBedeli.HasValue)
                                         {
                                             <span>@islem.EskiKiraBedeli.Value.ToString("N0") ₺ → @islem.YeniKiraBedeli.Value.ToString("N0") ₺</span>
@@ -530,14 +531,14 @@
                                         {
                                             <span>@islem.YeniKiraBedeli.Value.ToString("N0") ₺</span>
                                         }
-                                        else { <span style="color:var(--color-muted);">—</span> }
+                                        else { <span class="text-muted">—</span> }
                                     </td>
-                                    <td style="font-size:13px;">
+                                    <td class="text-[13px]">
                                         @if (islem.EskiBitisTarihi.HasValue && islem.YeniBitisTarihi.HasValue)
                                         {
                                             <span>@islem.EskiBitisTarihi.Value.ToString("dd.MM.yyyy") → @islem.YeniBitisTarihi.Value.ToString("dd.MM.yyyy")</span>
                                         }
-                                        else { <span style="color:var(--color-muted);">—</span> }
+                                        else { <span class="text-muted">—</span> }
                                     </td>
                                 </tr>
                             }
@@ -554,7 +555,7 @@
         <div class="tab-content">
         @if (!Model.Tahakkuklar.Any())
         {
-            <div class="card" style="text-align:center;color:var(--color-muted);padding:32px;">
+            <div class="card text-center text-muted p-8">
                 Bu sözleşme için henüz tahakkuk oluşturulmamış.
             </div>
         }
@@ -564,26 +565,26 @@
             decimal toplamOdenen   = Model.Tahakkuklar.Sum(t => t.OdenenTutar);
             decimal toplamKalan    = toplamBeklenen - toplamOdenen;
             int gecikmisSayisi     = Model.Tahakkuklar.Count(t => t.Durum == KiraTakip.Models.TahakkukDurumu.Gecikti);
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
-                <div class="card" style="text-align:center;">
-                    <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;margin-bottom:6px;">Toplam Beklenen</div>
-                    <div style="font-size:20px;font-weight:700;">@toplamBeklenen.ToString("N0") ₺</div>
-                    <div style="font-size:11.5px;color:var(--color-muted);">@Model.Tahakkuklar.Count tahakkuk</div>
+            <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="card text-center">
+                    <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Toplam Beklenen</div>
+                    <div class="text-xl font-bold">@toplamBeklenen.ToString("N0") ₺</div>
+                    <div class="text-[11.5px] text-muted">@Model.Tahakkuklar.Count tahakkuk</div>
                 </div>
-                <div class="card" style="text-align:center;">
-                    <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;margin-bottom:6px;">Tahsil Edilen</div>
-                    <div style="font-size:20px;font-weight:700;color:#065f46;">@toplamOdenen.ToString("N0") ₺</div>
+                <div class="card text-center">
+                    <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Tahsil Edilen</div>
+                    <div class="text-xl font-bold text-[#065f46]">@toplamOdenen.ToString("N0") ₺</div>
                     @{ double pct = toplamBeklenen > 0 ? (double)(toplamOdenen / toplamBeklenen * 100) : 0; }
-                    <div style="font-size:11.5px;color:var(--color-muted);">%@pct.ToString("F0")</div>
+                    <div class="text-[11.5px] text-muted">%@pct.ToString("F0")</div>
                 </div>
-                <div class="card" style="text-align:center;@(toplamKalan > 0 ? "border-left:3px solid #ef4444;" : "")">
-                    <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;margin-bottom:6px;">Kalan / Gecikmiş</div>
-                    <div style="font-size:20px;font-weight:700;color:@(toplamKalan > 0 ? "#ef4444" : "#065f46");">@toplamKalan.ToString("N0") ₺</div>
-                    <div style="font-size:11.5px;color:var(--color-muted);">@(gecikmisSayisi > 0 ? $"{gecikmisSayisi} gecikmiş" : "Gecikme yok")</div>
+                <div class="card text-center @(toplamKalan > 0 ? "border-l-3 border-l-[#ef4444]" : "")">
+                    <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Kalan / Gecikmiş</div>
+                    <div class="text-xl font-bold @(toplamKalan > 0 ? "text-[#ef4444]" : "text-[#065f46]")">@toplamKalan.ToString("N0") ₺</div>
+                    <div class="text-[11.5px] text-muted">@(gecikmisSayisi > 0 ? $"{gecikmisSayisi} gecikmiş" : "Gecikme yok")</div>
                 </div>
             </div>
 
-            <div class="card" style="padding:0;overflow:hidden;">
+            <div class="card p-0 overflow-hidden">
                 <div class="table-wrapper">
                     <table>
                         <thead>
@@ -611,36 +612,36 @@
                                     KiraTakip.Models.TahakkukDurumu.Gecikti      => "Gecikti",
                                     _                                              => "Bekleniyor"
                                 };
-                                <tr @@click="open[@t.Id] = !open[@t.Id]" style="cursor:pointer;">
-                                    <td style="font-weight:600;">
-                                        <svg x-show="open[@t.Id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;vertical-align:middle;"><polyline points="18 15 12 9 6 15"/></svg>
-                                        <svg x-show="!open[@t.Id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;vertical-align:middle;"><polyline points="6 9 12 15 18 9"/></svg>
+                                <tr @@click="open[@t.Id] = !open[@t.Id]" class="cursor-pointer">
+                                    <td class="font-semibold">
+                                        <svg x-show="open[@t.Id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="mr-1 inline-block align-middle"><polyline points="18 15 12 9 6 15"/></svg>
+                                        <svg x-show="!open[@t.Id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="mr-1 inline-block align-middle"><polyline points="6 9 12 15 18 9"/></svg>
                                         @t.DonemBaslangic.ToString("MMMM yyyy")
                                     </td>
-                                    <td style="font-size:13px;">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
-                                    <td style="font-weight:600;">@t.ToplamTutar.ToString("N0") ₺</td>
-                                    <td style="color:#065f46;">@t.OdenenTutar.ToString("N0") ₺</td>
+                                    <td class="text-[13px]">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
+                                    <td class="font-semibold">@t.ToplamTutar.ToString("N0") ₺</td>
+                                    <td class="text-[#065f46]">@t.OdenenTutar.ToString("N0") ₺</td>
                                     <td><span class="badge @tDurumCls">@tDurumLabel</span></td>
                                     <td @@click.stop="">
                                         <a href="/Odeme?tahakkukId=@t.Id" class="btn btn-sm btn-secondary">Ödemeler</a>
                                     </td>
                                 </tr>
-                                <tr x-show="open[@t.Id]" x-cloak style="background:#f7f8fb;">
-                                    <td colspan="6" style="padding:10px 20px 14px;">
+                                <tr x-show="open[@t.Id]" x-cloak class="bg-[#f7f8fb]">
+                                    <td colspan="6" class="p-5 pb-3.5 px-5">
                                         @if (t.Kalemler.Any())
                                         {
-                                            <div style="font-size:11.5px;font-weight:700;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Kalem Dökümü</div>
-                                            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                                            <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-2">Kalem Dökümü</div>
+                                            <table class="w-full border-collapse text-[13px]">
                                                 <thead>
-                                                    <tr style="color:var(--color-muted);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">
-                                                        <th style="padding:4px 8px;text-align:left;font-weight:600;">Kod</th>
-                                                        <th style="padding:4px 8px;text-align:left;font-weight:600;">Açıklama</th>
-                                                        <th style="padding:4px 8px;text-align:right;font-weight:600;">Birim Değer</th>
-                                                        <th style="padding:4px 8px;text-align:right;font-weight:600;">Çarpan</th>
-                                                        <th style="padding:4px 8px;text-align:right;font-weight:600;">Tutar</th>
-                                                        <th style="padding:4px 8px;text-align:right;font-weight:600;">KDV</th>
-                                                        <th style="padding:4px 8px;text-align:right;font-weight:600;">Toplam</th>
-                                                        <th style="padding:4px 8px;text-align:center;font-weight:600;">Kaynak</th>
+                                                    <tr class="text-muted text-[11.5px] font-semibold uppercase tracking-wider">
+                                                        <th class="px-2 py-1 text-left font-semibold">Kod</th>
+                                                        <th class="px-2 py-1 text-left font-semibold">Açıklama</th>
+                                                        <th class="px-2 py-1 text-right font-semibold">Birim Değer</th>
+                                                        <th class="px-2 py-1 text-right font-semibold">Çarpan</th>
+                                                        <th class="px-2 py-1 text-right font-semibold">Tutar</th>
+                                                        <th class="px-2 py-1 text-right font-semibold">KDV</th>
+                                                        <th class="px-2 py-1 text-right font-semibold">Toplam</th>
+                                                        <th class="px-2 py-1 text-center font-semibold">Kaynak</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -666,22 +667,22 @@
                                                             KalemKaynakTipi.RezervasyonKurali => "Rezervasyon Kuralı",
                                                             _                                 => "Bilinmiyor"
                                                         };
-                                                        <tr style="border-top:1px solid var(--color-border);">
-                                                            <td style="padding:5px 8px;font-family:monospace;font-weight:700;font-size:12px;">@k.BorcTipi.Kod</td>
-                                                            <td style="padding:5px 8px;">@k.Aciklama</td>
-                                                            <td style="padding:5px 8px;text-align:right;">@k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
-                                                            <td style="padding:5px 8px;text-align:right;color:var(--color-muted);">@k.Carpan.ToString("F2")</td>
-                                                            <td style="padding:5px 8px;text-align:right;font-weight:600;">@k.Tutar.ToString("N2") ₺</td>
-                                                            <td style="padding:5px 8px;text-align:right;color:var(--color-muted);">@k.KdvTutari.ToString("N2") ₺</td>
-                                                            <td style="padding:5px 8px;text-align:right;font-weight:700;">@k.ToplamTutar.ToString("N2") ₺</td>
-                                                            <td style="padding:5px 8px;text-align:center;"><span class="badge @kaynakCls" style="font-size:11px;">@kaynakLabel</span></td>
+                                                        <tr class="border-t border-[var(--color-border)]">
+                                                            <td class="px-2 py-1.5 font-mono font-bold text-xs">@k.BorcTipi.Kod</td>
+                                                            <td class="px-2 py-1.5">@k.Aciklama</td>
+                                                            <td class="px-2 py-1.5 text-right">@k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
+                                                            <td class="px-2 py-1.5 text-right text-muted">@k.Carpan.ToString("F2")</td>
+                                                            <td class="px-2 py-1.5 text-right font-semibold">@k.Tutar.ToString("N2") ₺</td>
+                                                            <td class="px-2 py-1.5 text-right text-muted">@k.KdvTutari.ToString("N2") ₺</td>
+                                                            <td class="px-2 py-1.5 text-right font-bold">@k.ToplamTutar.ToString("N2") ₺</td>
+                                                            <td class="px-2 py-1.5 text-center"><span class="badge @kaynakCls text-[11px]">@kaynakLabel</span></td>
                                                         </tr>
                                                     }
                                                 </tbody>
                                                 <tfoot>
-                                                    <tr style="border-top:2px solid var(--color-border);background:#eef0f4;">
-                                                        <td colspan="6" style="padding:5px 8px;font-weight:700;font-size:12px;">Toplam</td>
-                                                        <td style="padding:5px 8px;text-align:right;font-weight:700;">@t.ToplamTutar.ToString("N2") ₺</td>
+                                                    <tr class="border-t-2 border-[var(--color-border)] bg-[#eef0f4]">
+                                                        <td colspan="6" class="px-2 py-1.5 font-bold text-xs">Toplam</td>
+                                                        <td class="px-2 py-1.5 text-right font-bold">@t.ToplamTutar.ToString("N2") ₺</td>
                                                         <td></td>
                                                     </tr>
                                                 </tfoot>
@@ -689,7 +690,7 @@
                                         }
                                         else
                                         {
-                                            <span style="font-size:13px;color:var(--color-muted);">Kalem bilgisi yok (eski tahakkuk).</span>
+                                            <span class="text-sm text-muted">Kalem bilgisi yok (eski tahakkuk).</span>
                                         }
                                     </td>
                                 </tr>
@@ -706,15 +707,15 @@
 
 <!-- MODAL: Sözleşmeyi Uzat -->
 <div x-show="showUzat" x-cloak
-    style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;"
+    class="fixed inset-0 bg-black/45 z-[1000] flex items-center justify-center p-5"
     @@click.self="showUzat = false">
-    <div style="background:white;border-radius:16px;width:100%;max-width:520px;padding:28px;max-height:90vh;overflow-y:auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <div style="font-size:18px;font-weight:700;">Sözleşmeyi Uzat</div>
-            <button @@click="showUzat = false" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--color-muted);">✕</button>
+    <div class="bg-white rounded-2xl w-full max-w-[520px] p-7 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-5">
+            <div class="text-lg font-bold">Sözleşmeyi Uzat</div>
+            <button @@click="showUzat = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
         </div>
 
-        <div style="background:#f7f8fa;border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:13px;">
+        <div class="bg-[#f7f8fa] rounded-lg px-3.5 py-2.5 mb-4.5 text-[13px]">
             Mevcut bitiş: <strong>@s.BitisTarihi.ToString("dd.MM.yyyy")</strong> •
             Mevcut kira: <strong>@TLFormat(aylikBedel)</strong>
         </div>
@@ -731,20 +732,20 @@
 
             <!-- TÜFE bölümü -->
             <div class="form-group">
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;">
+                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium">
                     <input type="checkbox" name="TufeUygulanacakMi" value="true"
                         x-model="tufeEnabled" @@change="applyTufe()"
-                        style="width:16px;height:16px;cursor:pointer;" />
+                        class="w-4 h-4 cursor-pointer" />
                     TÜFE Artışı Uygula
                 </label>
             </div>
-            <div x-show="tufeEnabled" x-cloak style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px;margin-bottom:14px;">
-                <div class="form-group" style="margin-bottom:10px;">
+            <div x-show="tufeEnabled" x-cloak class="bg-[#fffbeb] border border-[#fde68a] rounded-lg p-3.5 mb-3.5">
+                <div class="form-group mb-2.5">
                     <label class="form-label">TÜFE Oranı (%)</label>
                     <input type="number" name="TufeOrani" step="0.01" min="0" class="form-control"
                         x-model="tufeOrani" @@change="applyTufe()" placeholder="Örn: 25" />
                 </div>
-                <div style="font-size:13px;display:flex;flex-direction:column;gap:4px;">
+                <div class="text-[13px] flex flex-col gap-1">
                     <div>Artış tutarı: <strong x-text="formatTl(tufeArtisTutari)"></strong></div>
                     <div>TÜFE sonrası kira: <strong x-text="formatTl(tufeSonrasiBedel)"></strong></div>
                 </div>
@@ -752,20 +753,20 @@
 
             <!-- KDV bölümü -->
             <div class="form-group">
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;">
+                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium">
                     <input type="checkbox" name="KdvUygulanacakMi" value="true"
                         x-model="kdvEnabled"
-                        style="width:16px;height:16px;cursor:pointer;" />
+                        class="w-4 h-4 cursor-pointer" />
                     KDV Uygula
                 </label>
             </div>
-            <div x-show="kdvEnabled" x-cloak style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px;margin-bottom:14px;">
-                <div class="form-group" style="margin-bottom:10px;">
+            <div x-show="kdvEnabled" x-cloak class="bg-[#f0f9ff] border border-[#bae6fd] rounded-lg p-3.5 mb-3.5">
+                <div class="form-group mb-2.5">
                     <label class="form-label">KDV Oranı (%)</label>
                     <input type="number" name="KdvOrani" step="0.01" min="0" max="100" class="form-control"
                         x-model="kdvOrani" value="20" />
                 </div>
-                <div style="font-size:13px;display:flex;flex-direction:column;gap:4px;">
+                <div class="text-[13px] flex flex-col gap-1">
                     <div>KDV Tutarı: <strong x-text="formatTl(kdvTutari)"></strong></div>
                     <div>KDV Dahil Toplam: <strong x-text="formatTl(kdvDahilToplam)"></strong></div>
                 </div>
@@ -778,21 +779,21 @@
 
             @if (User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Sozlesme.OverrideRate) || User.IsInRole(RoleNames.Admin))
             {
-                <div class="form-group" style="margin-top:12px;">
-                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;">
+                <div class="form-group mt-3">
+                    <label class="flex items-center gap-2 cursor-pointer text-sm font-medium">
                         <input type="checkbox" x-model="tarifeUzat"
                                @@change="if(tarifeUzat) fetchTarifeKalemler('uzat')"
-                               style="width:16px;height:16px;cursor:pointer;" />
+                               class="w-4 h-4 cursor-pointer" />
                         Tarifeyi de güncelle
                     </label>
                 </div>
-                <div x-show="tarifeUzat" x-cloak style="border:1px solid var(--color-border);border-radius:8px;padding:14px;margin-bottom:14px;">
-                    <div style="font-size:12px;color:var(--color-muted);margin-bottom:10px;">Yalnızca değiştirdiğiniz kalemler SözleşmeTarife olarak yazılır.</div>
+                <div x-show="tarifeUzat" x-cloak class="border border-[var(--color-border)] rounded-lg p-3.5 mb-3.5">
+                    <div class="text-xs text-muted mb-2.5">Yalnızca değiştirdiğiniz kalemler SözleşmeTarife olarak yazılır.</div>
                     <template x-for="(k, i) in uzatKalemler" :key="k.borcTipiId">
-                        <div style="display:grid;grid-template-columns:1fr 110px 1fr 80px;gap:8px;align-items:end;margin-bottom:8px;">
-                            <div style="font-size:13px;font-weight:500;align-self:center;" x-text="k.borcTipiAd"></div>
+                        <div class="grid grid-cols-[1fr_110px_1fr_80px] gap-2 items-end mb-2">
+                            <div class="text-[13px] font-medium self-center" x-text="k.borcTipiAd"></div>
                             <div>
-                                <label class="form-label" style="font-size:11px;margin-bottom:3px;">Yöntem</label>
+                                <label class="form-label text-[11px] mb-[3px]">Yöntem</label>
                                 <select class="form-control form-control-sm" x-model.number="k.hesaplamaYontemi"
                                         @@change="k.kullaniciDegistirdiMi = true">
                                     <option value="1">Sabit</option>
@@ -800,7 +801,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="form-label" style="font-size:11px;margin-bottom:3px;">
+                                <label class="form-label text-[11px] mb-[3px]">
                                     <span x-show="k.hesaplamaYontemi != 2">Tutar (₺)</span>
                                     <span x-show="k.hesaplamaYontemi == 2">₺ / m²</span>
                                 </label>
@@ -809,7 +810,7 @@
                                        @@input="k.kullaniciDegistirdiMi = true">
                             </div>
                             <div>
-                                <label class="form-label" style="font-size:11px;margin-bottom:3px;">KDV (%)</label>
+                                <label class="form-label text-[11px] mb-[3px]">KDV (%)</label>
                                 <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm"
                                        x-model.number="k.kdvOrani"
                                        @@input="k.kullaniciDegistirdiMi = true"
@@ -826,7 +827,7 @@
                 </div>
             }
 
-            <div style="display:flex;gap:10px;margin-top:4px;">
+            <div class="flex gap-2.5 mt-1">
                 <button type="submit" class="btn btn-primary">Uzat</button>
                 <button type="button" class="btn btn-secondary" @@click="showUzat = false">İptal</button>
             </div>
@@ -836,15 +837,15 @@
 
 <!-- MODAL: Sözleşmeyi Feshet -->
 <div x-show="showFesih" x-cloak
-    style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;"
+    class="fixed inset-0 bg-black/45 z-[1000] flex items-center justify-center p-5"
     @@click.self="showFesih = false">
-    <div style="background:white;border-radius:16px;width:100%;max-width:460px;padding:28px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <div style="font-size:18px;font-weight:700;color:#dc2626;">Sözleşmeyi Feshet</div>
-            <button @@click="showFesih = false" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--color-muted);">✕</button>
+    <div class="bg-white rounded-2xl w-full max-w-[460px] p-7">
+        <div class="flex justify-between items-center mb-5">
+            <div class="text-lg font-bold text-[#dc2626]">Sözleşmeyi Feshet</div>
+            <button @@click="showFesih = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
         </div>
 
-        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:13px;color:#991b1b;">
+        <div class="alert-danger mb-4.5 text-[13px]">
             Bu işlem geri alınamaz. Feshedilen sözleşme aktif gelir hesaplarına dahil edilmez ve birim yeniden kiralanabilir hale gelir.
         </div>
 
@@ -869,7 +870,7 @@
                 <textarea name="Aciklama" class="form-control" rows="2" placeholder="Opsiyonel ek not"></textarea>
             </div>
 
-            <div style="display:flex;gap:10px;margin-top:4px;">
+            <div class="flex gap-2.5 mt-1">
                 <button type="submit" class="btn btn-danger">Feshet</button>
                 <button type="button" class="btn btn-secondary" @@click="showFesih = false">İptal</button>
             </div>
@@ -879,15 +880,15 @@
 
 <!-- MODAL: Tahakkuk Yeniden Üret -->
 <div x-show="showYenidenUret" x-cloak
-    style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;"
+    class="fixed inset-0 bg-black/45 z-[1000] flex items-center justify-center p-5"
     @@click.self="showYenidenUret = false">
-    <div style="background:white;border-radius:16px;width:100%;max-width:480px;padding:28px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <div style="font-size:18px;font-weight:700;">Tahakkuk Yeniden Üret</div>
-            <button @@click="showYenidenUret = false" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--color-muted);">✕</button>
+    <div class="bg-white rounded-2xl w-full max-w-[480px] p-7">
+        <div class="flex justify-between items-center mb-5">
+            <div class="text-lg font-bold">Tahakkuk Yeniden Üret</div>
+            <button @@click="showYenidenUret = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
         </div>
 
-        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:13px;color:#92400e;">
+        <div class="bg-[#fffbeb] border border-[#fde68a] rounded-lg px-3.5 py-2.5 mb-4.5 text-[13px] text-[#92400e]">
             Seçilen tarihten itibaren <strong>ödeme alınmamış</strong> tahakkuklar silinip yeniden üretilir. Ödeme kaydı olan tahakkuklara dokunulmaz.
         </div>
 
@@ -903,21 +904,21 @@
 
             @if (User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Sozlesme.OverrideRate) || User.IsInRole(RoleNames.Admin))
             {
-                <div class="form-group" style="margin-top:12px;">
-                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;">
+                <div class="form-group mt-3">
+                    <label class="flex items-center gap-2 cursor-pointer text-sm font-medium">
                         <input type="checkbox" x-model="tarifeYenidenUret"
                                @@change="if(tarifeYenidenUret) fetchTarifeKalemler('yenidenUret')"
-                               style="width:16px;height:16px;cursor:pointer;" />
+                               class="w-4 h-4 cursor-pointer" />
                         Tarifeyi de güncelle
                     </label>
                 </div>
-                <div x-show="tarifeYenidenUret" x-cloak style="border:1px solid var(--color-border);border-radius:8px;padding:14px;margin-bottom:14px;">
-                    <div style="font-size:12px;color:var(--color-muted);margin-bottom:10px;">Yalnızca değiştirdiğiniz kalemler SözleşmeTarife olarak yazılır.</div>
+                <div x-show="tarifeYenidenUret" x-cloak class="border border-[var(--color-border)] rounded-lg p-3.5 mb-3.5">
+                    <div class="text-xs text-muted mb-2.5">Yalnızca değiştirdiğiniz kalemler SözleşmeTarife olarak yazılır.</div>
                     <template x-for="(k, i) in yenidenUretKalemler" :key="k.borcTipiId">
-                        <div style="display:grid;grid-template-columns:1fr 110px 1fr 80px;gap:8px;align-items:end;margin-bottom:8px;">
-                            <div style="font-size:13px;font-weight:500;align-self:center;" x-text="k.borcTipiAd"></div>
+                        <div class="grid grid-cols-[1fr_110px_1fr_80px] gap-2 items-end mb-2">
+                            <div class="text-[13px] font-medium self-center" x-text="k.borcTipiAd"></div>
                             <div>
-                                <label class="form-label" style="font-size:11px;margin-bottom:3px;">Yöntem</label>
+                                <label class="form-label text-[11px] mb-[3px]">Yöntem</label>
                                 <select class="form-control form-control-sm" x-model.number="k.hesaplamaYontemi"
                                         @@change="k.kullaniciDegistirdiMi = true">
                                     <option value="1">Sabit</option>
@@ -925,7 +926,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="form-label" style="font-size:11px;margin-bottom:3px;">
+                                <label class="form-label text-[11px] mb-[3px]">
                                     <span x-show="k.hesaplamaYontemi != 2">Tutar (₺)</span>
                                     <span x-show="k.hesaplamaYontemi == 2">₺ / m²</span>
                                 </label>
@@ -934,7 +935,7 @@
                                        @@input="k.kullaniciDegistirdiMi = true">
                             </div>
                             <div>
-                                <label class="form-label" style="font-size:11px;margin-bottom:3px;">KDV (%)</label>
+                                <label class="form-label text-[11px] mb-[3px]">KDV (%)</label>
                                 <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm"
                                        x-model.number="k.kdvOrani"
                                        @@input="k.kullaniciDegistirdiMi = true"
@@ -951,7 +952,7 @@
                 </div>
             }
 
-            <div style="display:flex;gap:10px;margin-top:4px;">
+            <div class="flex gap-2.5 mt-1">
                 <button type="submit" class="btn btn-primary">Yeniden Üret</button>
                 <button type="button" class="btn btn-secondary" @@click="showYenidenUret = false">İptal</button>
             </div>
@@ -963,5 +964,4 @@
 
 @section Scripts {
     <script>initTabs('sozlesme-tabs');</script>
-    <style>[x-cloak]{display:none!important;}</style>
 }

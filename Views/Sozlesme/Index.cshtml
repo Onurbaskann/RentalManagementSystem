@@ -10,28 +10,32 @@
 
 @if (TempData["Success"] != null)
 {
-    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">✓ @TempData["Success"]</div>
+    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
+        ✓ @TempData["Success"]
+    </div>
 }
 @if (TempData["Error"] != null)
 {
-    <div style="background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">⚠ @TempData["Error"]</div>
+    <div class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
+        ⚠ @TempData["Error"]
+    </div>
 }
 
-<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+<div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Sözleşmeler</div>
         <div class="page-subtitle">@Model.Count kayıt listeleniyor</div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;">
+    <div class="flex items-center gap-2">
         @{
             int borcluSayisi = ViewBag.BorcluSayisi ?? 0;
         }
-        @if (borcluSayisi > 0)
+        @if (borcluSayisi > 0 && User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Bildirim.BorcHatirlatma))
         {
             <form asp-controller="Sozlesme" asp-action="BorclularaMailGonder" method="post"
-                  data-confirm="@borcluSayisi tahakkuka hatırlatma maili gönderilsin mi?">
+                  data-confirm="@borcluSayisi kiracıya borç hatırlatma maili gönderilsin mi?">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-secondary">
+                <button type="submit" class="btn btn-secondary flex items-center gap-2">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                     Borçlulara Mail (@borcluSayisi)
                 </button>
@@ -39,7 +43,7 @@
         }
         @if (canEdit)
         {
-            <a href="/Sozlesme/Ekle" class="btn btn-primary">
+            <a href="/Sozlesme/Ekle" class="btn btn-primary flex items-center gap-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Yeni Sözleşme
             </a>
@@ -48,7 +52,7 @@
 </div>
 
 <!-- Filtreler -->
-<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+<div class="flex gap-1.5 flex-wrap mb-5">
     @{
         var filters = new[] {
             ("tum",         "Tümü"),
@@ -60,95 +64,104 @@
     }
     @foreach (var (key, label) in filters)
     {
-        string cls = filtre == key ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm";
-        <a href="/Sozlesme?filtre=@key" class="@cls">@label</a>
+        bool isActive = filtre == key;
+        <a href="/Sozlesme?filtre=@key" 
+           class="btn btn-sm @(isActive ? "btn-primary" : "btn-secondary text-slate-600 bg-white border-slate-200")">@label</a>
     }
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;" x-data="clientTable({ pageSize: 25 })" x-init="init()">
-    <div class="table-toolbar">
-        <input type="search" class="form-control toolbar-search" placeholder="Ara: kiracı, taşınmaz, birim…" x-model.debounce.250ms="q" />
-        <span class="pagination-info" style="margin-left:auto;"><span x-text="total"></span> kayıt</span>
+<div class="card p-0 overflow-hidden" x-data="clientTable({ pageSize: 25 })" x-init="init()">
+    <div class="flex items-center gap-4 p-3 bg-slate-50/50 border-b border-slate-200">
+        <input type="search" class="form-control w-full max-w-sm" placeholder="Ara: kiracı, taşınmaz, birim…" x-model.debounce.250ms="q" />
+        <span class="ml-auto text-xs text-muted">
+            <span x-text="total" class="font-bold"></span> kayıt
+        </span>
     </div>
     <div class="table-wrapper">
-        <table>
+        <table class="w-full">
             <thead>
                 <tr>
-                    <th>#</th>
+                    <th class="w-16">#</th>
                     <th>Kiracı</th>
                     <th>Taşınmaz / Birim</th>
-                    <th>Başlangıç</th>
-                    <th>Bitiş</th>
-                    <th>Aylık Bedel</th>
-                    <th>Kalan</th>
-                    <th>Durum</th>
-                    <th></th>
+                    <th class="w-28 text-center">Başlangıç</th>
+                    <th class="w-28 text-center">Bitiş</th>
+                    <th class="w-32 text-right">Aylık Bedel</th>
+                    <th class="w-24 text-center">Kalan</th>
+                    <th class="w-24">Durum</th>
+                    <th class="w-24"></th>
                 </tr>
             </thead>
-            <tbody x-ref="tbody">
+            <tbody>
                 @foreach (var s in Model)
                 {
                     bool aktif = Istatistik.Aktif(s);
                     int kalanGun = Istatistik.KalanGun(s);
                     bool surek = aktif && kalanGun <= 30;
                     bool feshedildi = s.Durum == SozlesmeDurumu.Feshedildi;
-                    string dayBadge = kalanGun <= 10 ? "day-badge-red" : kalanGun <= 30 ? "day-badge-amber" : "day-badge-green";
+                    string dayBadgeClass = kalanGun <= 10 ? "bg-red-50 text-red-700 border-red-200" : kalanGun <= 30 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200";
                     var search = $"{s.Id} {s.Kiraci.GosterimAdi} {s.Birim.Tasinmaz.Ad} {s.Birim.Ad}".ToLower();
 
                     <tr data-row data-search="@search">
-                        <td style="color:var(--color-muted);font-size:12.5px;">@s.Id</td>
+                        <td class="text-xs text-muted font-mono">@s.Id</td>
                         <td>
-                            <div style="display:flex;align-items:center;gap:4px;">
-                                <a href="/Kiraci/Detay/@s.KiraciId" style="font-weight:600;color:var(--color-primary);text-decoration:none;">@s.Kiraci.GosterimAdi</a>
-                                @if (s.Kiraci.KiraciTuru == KiraciTuru.Tuzel) { <span class="badge badge-kurumsal" style="font-size:10.5px;">T</span> }
+                            <div class="flex items-center gap-1.5">
+                                <a href="/Kiraci/Detay/@s.KiraciId" class="font-semibold text-primary hover:underline">@s.Kiraci.GosterimAdi</a>
+                                @if (s.Kiraci.KiraciTuru == KiraciTuru.Tuzel) { <span class="badge badge-kurumsal text-[10px] px-1 py-0">T</span> }
                             </div>
                             @if (s.Kiraci.KiraciKategori != null)
                             {
-                                <div style="font-size:11.5px;color:var(--color-muted);margin-top:1px;font-weight:500;">@s.Kiraci.KiraciKategori.Ad</div>
+                                <div class="text-[11px] text-muted font-medium mt-0.5">@s.Kiraci.KiraciKategori.Ad</div>
                             }
                         </td>
                         <td>
-                            <a href="/Tasinmaz/Detay/@s.Birim.TasinmazId" style="font-weight:500;color:var(--color-text);text-decoration:none;">@s.Birim.Tasinmaz.Ad</a>
-                            <div style="font-size:12px;color:var(--color-muted);">@s.Birim.Ad</div>
+                            <a href="/Tasinmaz/Detay/@s.Birim.TasinmazId" class="font-medium text-slate-700 hover:text-primary transition-colors">@s.Birim.Tasinmaz.Ad</a>
+                            <div class="text-[11px] text-muted">@s.Birim.Ad</div>
                         </td>
-                        <td style="font-size:13px;">@s.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
-                        <td style="font-size:13px;">@s.BitisTarihi.ToString("dd.MM.yyyy")</td>
-                        <td style="font-weight:600;">@((await Istatistik.AylikBedelAsync(s)).ToString("N2")) ₺</td>
-                        <td>
+                        <td class="text-center text-xs text-slate-600">@s.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="text-center text-xs text-slate-600 font-medium">@s.BitisTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="text-right font-bold text-slate-700">@((await Istatistik.AylikBedelAsync(s)).ToString("N2")) ₺</td>
+                        <td class="text-center">
                             @if (feshedildi)
-                            { <span style="color:var(--color-muted);font-size:12.5px;">Feshedildi</span> }
+                            { <span class="text-muted text-[11px] italic">Feshedildi</span> }
                             else if (aktif)
-                            { <span class="day-badge @dayBadge">@kalanGun gün</span> }
+                            { <span class="px-2 py-0.5 rounded text-[10px] font-bold border @dayBadgeClass">@kalanGun GÜN</span> }
                             else
-                            { <span style="color:var(--color-muted);font-size:12.5px;">Sona erdi</span> }
+                            { <span class="text-muted text-[11px] italic">Sona erdi</span> }
                         </td>
                         <td>
                             @if (feshedildi) { <span class="badge badge-gecmis">Feshedildi</span> }
-                            else if (surek) { <span class="badge badge-surek">Dolmak Üzere</span> }
+                            else if (surek) { <span class="badge badge-surek">Doluyor</span> }
                             else if (aktif) { <span class="badge badge-kirali">Aktif</span> }
                             else { <span class="badge badge-gecmis">Sona Erdi</span> }
                         </td>
-                        <td><a href="/Sozlesme/Detay/@s.Id" class="btn btn-sm btn-secondary">Detay</a></td>
+                        <td class="text-right">
+                            <a href="/Sozlesme/Detay/@s.Id" class="btn btn-sm btn-secondary">Detay</a>
+                        </td>
                     </tr>
                 }
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="9" style="text-align:center;color:var(--color-muted);padding:32px;">Bu filtreye uygun sözleşme bulunamadı.</td></tr>
+                    <tr><td colspan="9" class="text-center py-12 text-muted italic">Bu filtreye uygun sözleşme bulunamadı.</td></tr>
                 }
             </tbody>
         </table>
     </div>
-    <div class="pagination-wrap" x-show="totalPages > 1">
-        <div class="pagination-info"><span x-text="from"></span>–<span x-text="to"></span> / <strong x-text="total"></strong></div>
-        <nav class="pagination" aria-label="Sayfalar">
-            <button type="button" class="page-btn" :class="{ 'page-btn-disabled': page === 1 }" :disabled="page === 1" @@click="prev()">‹</button>
+    <div class="flex items-center justify-between p-3 bg-slate-50/50 border-t border-slate-200" x-show="totalPages > 1">
+        <div class="text-xs text-muted font-medium">
+            <span x-text="from"></span>–<span x-text="to"></span> / <strong x-text="total"></strong> kayıt
+        </div>
+        <nav class="flex gap-1" aria-label="Sayfalar">
+            <button type="button" class="w-8 h-8 flex items-center justify-center rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" :disabled="page === 1" @@click="prev()">‹</button>
             <template x-for="p in pageList" :key="p">
-                <button type="button" class="page-btn" :class="{ 'page-btn-active': p === page }" @@click="goto(p)" x-text="p"></button>
+                <button type="button" class="w-8 h-8 flex items-center justify-center rounded border font-medium text-xs transition-colors" 
+                        :class="p === page ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'" 
+                        @@click="goto(p)" x-text="p"></button>
             </template>
-            <button type="button" class="page-btn" :class="{ 'page-btn-disabled': page === totalPages }" :disabled="page === totalPages" @@click="next()">›</button>
+            <button type="button" class="w-8 h-8 flex items-center justify-center rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" :disabled="page === totalPages" @@click="next()">›</button>
         </nav>
     </div>
-    <div class="pagination-wrap" x-show="total === 0 && q.length > 0" x-cloak>
-        <div class="pagination-info" style="margin:auto;">Aramaya uyan kayıt yok.</div>
+    <div class="p-8 text-center" x-show="total === 0 && q.length > 0" x-cloak>
+        <div class="text-slate-400 font-medium">Aramaya uyan kayıt bulunamadı.</div>
     </div>
 </div>

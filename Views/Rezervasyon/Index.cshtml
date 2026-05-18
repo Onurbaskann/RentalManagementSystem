@@ -7,14 +7,14 @@
     bool canTransfer = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Rezervasyon.TransferToTahakkuk);
 }
 
-<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+<div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Rezervasyon Yönetimi</div>
         <div class="page-subtitle">@Model.Count kayıt</div>
     </div>
     @if (canCreate)
     {
-        <a href="/Rezervasyon/Ekle" class="btn btn-primary">
+        <a href="/Rezervasyon/Ekle" class="btn btn-primary flex items-center gap-2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Rezervasyon Ekle
         </a>
@@ -23,38 +23,40 @@
 
 @if (TempData["Success"] != null)
 {
-    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">✓ @TempData["Success"]</div>
+    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
+        ✓ @TempData["Success"]
+    </div>
 }
 @if (TempData["Error"] != null)
 {
-    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">✕ @TempData["Error"]</div>
+    <div class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
+        ✕ @TempData["Error"]
+    </div>
 }
 
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card p-0 overflow-hidden">
     <div class="table-wrapper">
-        <table>
+        <table class="w-full">
             <thead>
                 <tr>
                     <th>Taşınmaz / Birim</th>
                     <th>Kiracı</th>
-                    <th>Başlangıç</th>
-                    <th>Bitiş</th>
-                    <th style="text-align:center;">Toplam (Dk)</th>
-                    <th style="text-align:center;">Ücretsiz (Dk)</th>
-                    <th style="text-align:center;">Ücretli (Dk)</th>
-                    <th style="text-align:right;">Toplam Tutar</th>
-                    <th>Durum</th>
-                    <th></th>
+                    <th class="w-36">Zaman Dilimi</th>
+                    <th class="w-24 text-center">Toplam</th>
+                    <th class="w-24 text-center text-muted">Ücretsiz</th>
+                    <th class="w-24 text-center">Ücretli</th>
+                    <th class="w-32 text-right">Tutar</th>
+                    <th class="w-32">Durum</th>
+                    <th class="w-40 text-right"></th>
                 </tr>
             </thead>
-            <tbody>
-                @foreach (var r in Model)
+                     @foreach (var r in Model)
                 {
                     string durumCls = r.Durum switch {
                         RezervasyonDurumu.Tamamlandi         => "badge-kirali",
                         RezervasyonDurumu.TahakkukaAktarildi => "badge-surek",
-                        RezervasyonDurumu.IptalEdildi        => "badge-bos",
-                        _                                    => "badge-gecmis"
+                        RezervasyonDurumu.IptalEdildi        => "badge-gecmis",
+                        _                                    => "badge-bos"
                     };
                     string durumLabel = r.Durum switch {
                         RezervasyonDurumu.Planlandi          => "Planlandı",
@@ -66,34 +68,39 @@
 
                     <tr>
                         <td>
-                            <div style="font-weight:600;">@r.Birim.Ad</div>
-                            <div style="font-size:12px;color:var(--color-muted);">@r.Birim.Tasinmaz.Ad</div>
+                            <div class="font-semibold text-slate-800">@r.Birim.Ad</div>
+                            <div class="text-[11px] text-muted">@r.Birim.Tasinmaz.Ad</div>
                         </td>
-                        <td style="font-weight:500;">@r.Kiraci.GosterimAdi</td>
-                        <td style="font-size:13px;">@r.BaslangicTarihi.ToString("dd.MM.yyyy HH:mm")</td>
-                        <td style="font-size:13px;">@r.BitisTarihi.ToString("dd.MM.yyyy HH:mm")</td>
-                        <td style="text-align:center;font-size:13px;">@r.ToplamSureDakika dk</td>
-                        <td style="text-align:center;font-size:13px;color:var(--color-muted);">@r.UcretsizSureDakika dk</td>
-                        <td style="text-align:center;font-size:13px;">@r.UcretliSureDakika dk</td>
-                        <td style="text-align:right;font-weight:@(r.ToplamTutar > 0 ? "700" : "400");color:@(r.ToplamTutar > 0 ? "inherit" : "var(--color-muted)");">
-                            @(r.ToplamTutar > 0 ? $"{r.ToplamTutar:N2} ₺" : "Ücretsiz")
+                        <td class="font-medium text-slate-700">@r.Kiraci.GosterimAdi</td>
+                        <td>
+                            <div class="text-[12px] font-medium">@r.BaslangicTarihi.ToString("dd.MM HH:mm")</div>
+                            <div class="text-[11px] text-muted">@r.BitisTarihi.ToString("dd.MM HH:mm")</div>
+                        </td>
+                        <td class="text-center text-xs">@r.ToplamSureDakika dk</td>
+                        <td class="text-center text-xs text-muted/60">@r.UcretsizSureDakika dk</td>
+                        <td class="text-center text-xs font-semibold">@r.UcretliSureDakika dk</td>
+                        <td class="text-right text-sm">
+                            @if (r.ToplamTutar > 0)
+                            { <span class="font-bold text-slate-800">@r.ToplamTutar.ToString("N2") ₺</span> }
+                            else
+                            { <span class="text-muted text-xs italic">Ücretsiz</span> }
                         </td>
                         <td>
-                            <span class="badge @durumCls">@durumLabel</span>
+                            <span class="badge @durumCls text-[10px] font-bold">@durumLabel.ToUpper()</span>
                         </td>
-                        <td>
-                            <div style="display:flex;gap:4px;flex-wrap:nowrap;">
+                        <td class="text-right">
+                            <div class="flex gap-1.5 justify-end items-center">
                                 @if (canTransfer && r.Durum == RezervasyonDurumu.Planlandi && r.ToplamTutar > 0 && r.KiraTahakkukId == null)
                                 {
-                                    <form method="post" action="/Rezervasyon/TahakkukaAktar/@r.Id" style="display:inline;"
+                                    <form method="post" action="/Rezervasyon/TahakkukaAktar/@r.Id" class="inline"
                                           data-confirm="Bu rezervasyonu tahakkuka aktarmak istediğinize emin misiniz?">
                                         @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-sm btn-primary">Tahakkuka Aktar</button>
+                                        <button type="submit" class="btn btn-sm btn-primary py-1 px-2.5 text-[11px]">Aktar</button>
                                     </form>
                                 }
                                 @if (canCancel && r.Durum == RezervasyonDurumu.Planlandi)
                                 {
-                                    <button type="button" class="btn btn-sm btn-danger"
+                                    <button type="button" class="btn btn-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white py-1 px-2.5 text-[11px]"
                                         data-confirm="Bu rezervasyonu iptal etmek istediğinize emin misiniz?"
                                         data-confirm-title="Rezervasyon İptali"
                                         data-confirm-action="/Rezervasyon/Iptal/@r.Id"
@@ -109,16 +116,20 @@
                 }
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="10" style="text-align:center;color:var(--color-muted);padding:40px;">
-                        <div style="font-size:32px;margin-bottom:8px;">📅</div>
-                        <div style="font-weight:600;margin-bottom:4px;">Rezervasyon bulunamadı</div>
-                        @if (canCreate)
-                        {
-                            <div style="font-size:13px;">
-                                <a href="/Rezervasyon/Ekle" style="color:var(--color-primary);font-weight:600;">Rezervasyon Ekle</a> butonuyla ilk kaydı oluşturun.
+                    <tr>
+                        <td colspan="10" class="py-16 text-center">
+                            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 text-slate-300 mb-4">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                             </div>
-                        }
-                    </td></tr>
+                            <div class="text-slate-500 font-bold">Rezervasyon bulunamadı</div>
+                            @if (canCreate)
+                            {
+                                <div class="text-xs text-muted mt-1">
+                                    <a href="/Rezervasyon/Ekle" class="text-primary font-semibold hover:underline">Rezervasyon Ekle</a> butonuyla ilk kaydı oluşturun.
+                                </div>
+                            }
+                        </td>
+                    </tr>
                 }
             </tbody>
         </table>

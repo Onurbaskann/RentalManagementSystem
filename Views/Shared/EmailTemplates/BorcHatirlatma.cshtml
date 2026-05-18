@@ -1,4 +1,4 @@
-@model KiraTakip.Models.ViewModels.BorcHatirlatmaMailModel
+@model KiraTakip.Models.ViewModels.KiraciBorcHatirlatmaMailModel
 @{
     Layout = null;
 }
@@ -14,61 +14,52 @@
   <tr>
     <td align="center">
       <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,0.08);">
-
-        <!-- Header -->
         <tr>
           <td style="background:#2563eb;padding:24px 32px;">
             <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.3px;">KiraTakip</span>
           </td>
         </tr>
-
-        <!-- Body -->
         <tr>
           <td style="padding:32px;">
-            <p style="margin:0 0 16px;font-size:15px;color:#334155;">Sayın <strong>@Model.KiraciAdi</strong>,</p>
+            <p style="margin:0 0 16px;font-size:15px;color:#334155;">Sayın <strong>@Model.Ad @Model.Soyad</strong>,</p>
             <p style="margin:0 0 24px;font-size:14px;color:#64748b;line-height:1.6;">
-              Aşağıdaki tahakkuka ait ödemenizin vadesi yaklaşmaktadır. Ödemenizi zamanında yapmak için lütfen detayları inceleyin.
+              Aşağıdaki tahakkuklara ait ödemelerinizin vadesi yaklaşmaktadır veya geçmiştir. Ödemenizi zamanında yapmak için lütfen detayları inceleyin.
             </p>
 
-            <!-- Tahakkuk Bilgisi Kartı -->
-            <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                   style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:24px;">
-              <tr>
-                <td style="padding:20px 24px;">
-                  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin-bottom:24px;">
+              <thead>
+                <tr>
+                  <th style="padding:10px;border-bottom:2px solid #e2e8f0;text-align:left;font-size:13px;color:#64748b;">Taşınmaz / Birim</th>
+                  <th style="padding:10px;border-bottom:2px solid #e2e8f0;text-align:left;font-size:13px;color:#64748b;">Dönem</th>
+                  <th style="padding:10px;border-bottom:2px solid #e2e8f0;text-align:left;font-size:13px;color:#64748b;">Vade</th>
+                  <th style="padding:10px;border-bottom:2px solid #e2e8f0;text-align:right;font-size:13px;color:#64748b;">Kalan Tutar</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach(var b in Model.Borclar)
+                {
                     <tr>
-                      <td style="padding:6px 0;font-size:12.5px;color:#94a3b8;width:140px;">Taşınmaz / Birim</td>
-                      <td style="padding:6px 0;font-size:14px;font-weight:600;color:#1e293b;">@Model.TasinmazAdi / @Model.BirimAdi</td>
+                      <td style="padding:10px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#1e293b;font-weight:600;">@b.TasinmazAdi / @b.BirimAdi</td>
+                      <td style="padding:10px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#334155;">@b.DonemBaslangic.ToString("MM/yyyy")</td>
+                      <td style="padding:10px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#dc2626;">@b.VadeTarihi.ToString("dd.MM.yyyy")</td>
+                      <td style="padding:10px;border-bottom:1px solid #e2e8f0;text-align:right;font-size:14px;font-weight:700;color:#2563eb;">
+                          @b.KalanTutar.ToString("N2") ₺
+                          @if(b.OdenenTutar > 0) {
+                              <br/><span style="font-size:11px;color:#64748b;font-weight:normal;">(Ödenen: @b.OdenenTutar.ToString("N2") ₺)</span>
+                          }
+                      </td>
                     </tr>
-                    <tr>
-                      <td style="padding:6px 0;font-size:12.5px;color:#94a3b8;">Dönem Başlangıcı</td>
-                      <td style="padding:6px 0;font-size:14px;color:#334155;">@Model.DonemBaslangic.ToString("dd.MM.yyyy")</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:6px 0;font-size:12.5px;color:#94a3b8;">Son Ödeme Tarihi</td>
-                      <td style="padding:6px 0;font-size:14px;font-weight:600;color:#dc2626;">@Model.VadeTarihi.ToString("dd.MM.yyyy")</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:6px 0;font-size:12.5px;color:#94a3b8;">Toplam Tutar</td>
-                      <td style="padding:6px 0;font-size:14px;color:#334155;">@Model.ToplamTutar.ToString("N2") ₺</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:6px 0;font-size:12.5px;color:#94a3b8;">Kalan Tutar</td>
-                      <td style="padding:6px 0;font-size:20px;font-weight:700;color:#2563eb;">@Model.KalanTutar.ToString("N2") ₺</td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
+                }
+              </tbody>
             </table>
 
-            <!-- CTA Butonu -->
             <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 24px;">
               <tr>
                 <td align="center" style="border-radius:8px;background:#2563eb;">
                   <a href="@Model.OdemeLink"
                      target="_blank"
                      style="display:inline-block;padding:14px 36px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;border-radius:8px;letter-spacing:0.2px;">
-                    Ödeme Yap →
+                    Portal'a Git ve Ödeme Yap →
                   </a>
                 </td>
               </tr>
@@ -82,8 +73,6 @@
             </p>
           </td>
         </tr>
-
-        <!-- Footer -->
         <tr>
           <td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 32px;">
             <p style="margin:0;font-size:11.5px;color:#94a3b8;text-align:center;">
@@ -92,7 +81,6 @@
             </p>
           </td>
         </tr>
-
       </table>
     </td>
   </tr>

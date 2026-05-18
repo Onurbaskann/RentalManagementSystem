@@ -5,15 +5,15 @@
 }
 
 <div class="page-header">
-    <a href="/Tasinmaz" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">← Taşınmazlar</a>
+    <a href="/Tasinmaz" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">← Taşınmazlar</a>
     <div class="page-title">Yeni Taşınmaz Ekle</div>
 </div>
 
 @if (!ViewData.ModelState.IsValid)
 {
-    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:20px;">
-        <div style="font-weight:700;margin-bottom:8px;font-size:14px;">Lütfen aşağıdaki hataları düzeltiniz:</div>
-        <ul style="margin:0;padding-left:20px;font-size:13px;list-style-type:disc;">
+    <div class="bg-red-50 border border-red-200 text-red-800 p-3 px-4 rounded-lg mb-5">
+        <div class="font-bold mb-2 text-sm">Lütfen aşağıdaki hataları düzeltiniz:</div>
+        <ul class="m-0 pl-5 text-[13px] list-disc">
             @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
             {
                 <li>@error.ErrorMessage</li>
@@ -22,11 +22,11 @@
     </div>
 }
 
-<div style="max-width:760px;" x-data="tasinmazFormData()" x-cloak>
+<div class="max-w-[760px]" x-data="tasinmazFormData()" x-cloak>
 
     <form asp-action="Ekle" method="post" @@submit.prevent="handleSubmit($event)">
         <div class="card">
-            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Temel Bilgiler</div>
+            <div class="text-[15px] font-bold mb-4.5 pb-3.5 border-b border-[var(--color-border)]">Temel Bilgiler</div>
 
             <div class="form-group">
                 <label class="form-label">Taşınmaz Adı *</label>
@@ -49,22 +49,22 @@
             <div class="form-group">
                 <label class="form-label">Kiralama Şekli *</label>
                 <div class="radio-group">
-                    <label class="radio-option" :style="izinli(1) ? '' : 'opacity:0.4;cursor:not-allowed;'">
+                    <label class="radio-option" :class="!izinli(1) ? 'opacity-40 cursor-not-allowed' : ''">
                         <input type="radio" asp-for="KiralamaSekli" value="1" x-model="sekli" :disabled="!izinli(1)" />
                         <span>Tek Parça</span>
                     </label>
-                    <label class="radio-option" :style="izinli(2) ? '' : 'opacity:0.4;cursor:not-allowed;'">
+                    <label class="radio-option" :class="!izinli(2) ? 'opacity-40 cursor-not-allowed' : ''">
                         <input type="radio" asp-for="KiralamaSekli" value="2" x-model="sekli" :disabled="!izinli(2)" />
                         <span>Birim Bazlı</span>
                     </label>
                 </div>
                 <div class="form-hint" x-show="!tasinmazTipiId">Önce taşınmaz tipi seçiniz.</div>
-                <div class="form-hint" x-show="tasinmazTipiId && izinliSet().length === 0" style="color:#991b1b;">Bu taşınmaz tipi için kiralama şekli tanımlanmamış. Lütfen yöneticiye bildiriniz.</div>
+                <div class="form-hint text-red-800" x-show="tasinmazTipiId && izinliSet().length === 0">Bu taşınmaz tipi için kiralama şekli tanımlanmamış. Lütfen yöneticiye bildiriniz.</div>
                 <div class="form-hint" x-show="sekli == '2' && izinli(2)">Taşınmaz içindeki birimler ayrı ayrı kiralanabilir. Birimleri aşağıda tanımlayın.</div>
                 <span asp-validation-for="KiralamaSekli" class="form-error"></span>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px;">
+            <div class="grid grid-cols-2 gap-3.5 mb-3">
                 <div class="form-group">
                     <label class="form-label">Kapalı Alan (m²)</label>
                     <input asp-for="KapaliYuzolcumu" type="number" min="0" step="0.01" class="form-control" placeholder="0" />
@@ -85,9 +85,9 @@
 
         <!-- Birim Bazlı bölümü -->
         <template x-if="sekli == '2'">
-        <div class="card" style="margin-top:16px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">
-                <div style="font-size:15px;font-weight:700;">Birimler</div>
+        <div class="card mt-4">
+            <div class="flex items-center justify-between mb-4.5 pb-3.5 border-b border-[var(--color-border)]">
+                <div class="text-[15px] font-bold">Birimler</div>
                 <button type="button" class="btn btn-secondary btn-sm" @@click="addBirim()">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     Birim Ekle
@@ -95,27 +95,27 @@
             </div>
 
             <template x-for="(birim, i) in birimler" :key="i">
-                <div style="background:#fafbfc;border:1px solid var(--color-border);border-radius:8px;padding:14px 16px;margin-bottom:12px;position:relative;">
+                <div class="bg-[#fafbfc] border border-[var(--color-border)] rounded-lg p-3.5 px-4 mb-3 relative">
                     <!-- Sil butonu -->
-                    <button type="button" class="btn btn-sm" style="color:#dc2626;border-color:#fecaca;background:#fef2f2;position:absolute;top:10px;right:10px;"
+                    <button type="button" class="btn btn-sm text-red-600 border-red-200 bg-red-50 hover:bg-red-100 transition-colors absolute top-2.5 right-2.5"
                             @@click="removeBirim(i)">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
                     </button>
 
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;margin-right:40px;">
+                    <div class="grid grid-cols-3 gap-3 mb-3 mr-10">
                         <div>
-                            <div class="form-label" style="margin-bottom:4px;">Birim No *</div>
+                            <div class="form-label mb-1">Birim No *</div>
                             <input class="form-control" :name="'Birimler['+i+'].BirimNo'" x-model="birim.birimNo"
                                    placeholder="101" @@blur="autoAd(birim)" />
                             <span x-show="birimErrors[i]?.birimNo" x-text="birimErrors[i]?.birimNo" class="form-error"></span>
                         </div>
                         <div>
-                            <div class="form-label" style="margin-bottom:4px;">Kat No *</div>
-                            <input class="form-control" type="number" min="0" :name="'Birimler['+i+'].KatNo'" x-model="birim.katNo" placeholder="1" />
+                            <div class="form-label mb-1">Kat No *</div>
+                            <input class="form-control" type="number" :name="'Birimler['+i+'].KatNo'" x-model="birim.katNo" placeholder="1" />
                             <span x-show="birimErrors[i]?.katNo" x-text="birimErrors[i]?.katNo" class="form-error"></span>
                         </div>
                         <div>
-                            <div class="form-label" style="margin-bottom:4px;">Birim Türü *</div>
+                            <div class="form-label mb-1">Birim Türü *</div>
                             <select class="form-control" :name="'Birimler['+i+'].BirimTuruId'" x-model="birim.birimTuruId">
                                 <option value="">— Seçiniz —</option>
                                 @foreach (var bt in (IEnumerable<KiraTakip.Models.BirimTuru>)ViewBag.BirimTurleri)
@@ -127,19 +127,19 @@
                         </div>
                     </div>
 
-                    <div style="display:grid;grid-template-columns:1fr 100px 2fr;gap:12px;">
+                    <div class="grid grid-cols-[1fr_100px_2fr] gap-3">
                         <div>
-                            <div class="form-label" style="margin-bottom:4px;">Ad *</div>
+                            <div class="form-label mb-1">Ad *</div>
                             <input class="form-control" :name="'Birimler['+i+'].Ad'" x-model="birim.ad" placeholder="Boşsa otomatik doldurulur" />
                             <span x-show="birimErrors[i]?.ad" x-text="birimErrors[i]?.ad" class="form-error"></span>
                         </div>
                         <div>
-                            <div class="form-label" style="margin-bottom:4px;">m² *</div>
+                            <div class="form-label mb-1">m² *</div>
                             <input class="form-control" type="number" min="1" step="0.01" :name="'Birimler['+i+'].Yuzolcumu'" x-model="birim.yuzolcumu" placeholder="0" />
                             <span x-show="birimErrors[i]?.yuzolcumu" x-text="birimErrors[i]?.yuzolcumu" class="form-error"></span>
                         </div>
                         <div>
-                            <div class="form-label" style="margin-bottom:4px;">Açıklama</div>
+                            <div class="form-label mb-1">Açıklama</div>
                             <input class="form-control" :name="'Birimler['+i+'].Aciklama'" x-model="birim.aciklama" placeholder="Opsiyonel" />
                         </div>
                     </div>
@@ -147,15 +147,15 @@
             </template>
 
             <template x-if="birimler.length === 0">
-                <div style="text-align:center;padding:24px 0;color:var(--color-muted);font-size:13.5px;">
+                <div class="text-center py-6 text-muted text-[13.5px]">
                     Henüz birim eklenmedi. Yukarıdaki "Birim Ekle" butonu ile birim tanımlayınız.
                 </div>
             </template>
 
-            <span asp-validation-for="Birimler" class="form-error" style="display:block;margin-top:4px;"></span>
+            <span asp-validation-for="Birimler" class="form-error block mt-1"></span>
 
             <template x-if="birimler.length > 0">
-                <div style="font-size:12.5px;color:var(--color-muted);margin-top:4px;">
+                <div class="text-[12.5px] text-muted mt-1">
                     Birim No aynı bina içinde benzersiz olmalıdır. Ad boş bırakılırsa "Birim {BirimNo}" olarak oluşturulur.
                 </div>
             </template>
@@ -164,38 +164,38 @@
 
         @if (Model.ParentTarife != null)
         {
-            <div style="margin-top:16px;">
-                <div style="font-size:12px;color:var(--color-muted);margin-bottom:4px;">Aşağıda tanımlama yapmazsanız genel tarife uygulanır:</div>
+            <div class="mt-4">
+                <div class="text-xs text-muted mb-1">Aşağıda tanımlama yapmazsanız genel tarife uygulanır:</div>
                 @await Html.PartialAsync("_ParentTarifeKart", Model.ParentTarife)
             </div>
         }
 
         <!-- Fiyat Parametreleri Kartı -->
-        <div class="card" style="margin-top:16px;">
-            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Fiyat Parametreleri (Genel Tarife)</div>
-            <div style="font-size:12.5px;color:var(--color-muted);margin-bottom:16px;">Sözleşme eklerken bu matristeki fiyatlar otomatik olarak getirilir.</div>
+        <div class="card mt-4">
+            <div class="text-[15px] font-bold mb-4.5 pb-3.5 border-b border-[var(--color-border)]">Fiyat Parametreleri (Genel Tarife)</div>
+            <div class="text-[12.5px] text-muted mb-4">Sözleşme eklerken bu matristeki fiyatlar otomatik olarak getirilir.</div>
 
             <div>
                 @for (int i = 0; i < Model.FiyatMatrisi.Satirlar.Count; i++)
                 {
                     var satir = Model.FiyatMatrisi.Satirlar[i];
-                    <div class="fiyat-kategori-blok" style="margin-bottom:20px;">
+                    <div class="fiyat-kategori-blok mb-5">
                         <!-- Kategori başlığı + toplu KDV butonu -->
-                        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;margin-bottom:8px;border-bottom:1px solid var(--color-border);">
-                            <div style="font-size:13px;font-weight:600;color:var(--color-text);">@satir.KiraciKategoriAd</div>
+                        <div class="flex justify-between items-center py-1.5 mb-2 border-b border-[var(--color-border)]">
+                            <div class="text-[13px] font-bold text-[var(--color-text)]">@satir.KiraciKategoriAd</div>
                             <button type="button" onclick="topluKdvAta(this, 20)"
-                                    style="font-size:11px;color:var(--color-muted);background:none;border:1px solid var(--color-border);border-radius:5px;cursor:pointer;padding:3px 10px;line-height:1.4;">
+                                    class="text-[11px] text-muted bg-transparent border border-[var(--color-border)] rounded-md cursor-pointer p-1 px-2.5 leading-tight hover:bg-primary-light transition-colors">
                                 Tüm KDV'leri 20 yap
                             </button>
                         </div>
                         <input type="hidden" name="FiyatMatrisi.Satirlar[@i].KiraciKategoriId" value="@satir.Hucreler[0].KiraciKategoriId" />
-                        <table style="width:100%;border-collapse:collapse;">
+                        <table class="w-full border-collapse">
                             <thead>
                                 <tr>
-                                    <th style="text-align:left;font-size:11px;color:var(--color-muted);font-weight:500;padding:4px 12px 6px 0;">Borç Tipi</th>
-                                    <th style="text-align:left;font-size:11px;color:var(--color-muted);font-weight:500;padding:4px 12px 6px;width:145px;">Tutar</th>
-                                    <th style="text-align:left;font-size:11px;color:var(--color-muted);font-weight:500;padding:4px 12px 6px;width:110px;">Yöntem</th>
-                                    <th style="text-align:left;font-size:11px;color:var(--color-muted);font-weight:500;padding:4px 0 6px 12px;width:105px;">KDV %</th>
+                                    <th class="text-left text-[11px] text-muted font-medium p-1 pr-3 pb-1.5">Borç Tipi</th>
+                                    <th class="text-left text-[11px] text-muted font-medium p-1 px-3 pb-1.5 w-[145px]">Tutar</th>
+                                    <th class="text-left text-[11px] text-muted font-medium p-1 px-3 pb-1.5 w-[110px]">Yöntem</th>
+                                    <th class="text-left text-[11px] text-muted font-medium p-1 pl-3 pb-1.5 w-[105px]">KDV %</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -207,51 +207,50 @@
                                     var isDepozito = isIlkAy;
                                     <tr data-depozito="@(isDepozito ? "true" : "false")">
                                         <!-- Borç Tipi: nokta + davranış rozeti + ad -->
-                                        <td style="padding:6px 12px 6px 0;vertical-align:middle;">
+                                        <td class="p-1.5 pr-3 align-middle">
                                             <input type="hidden" name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].KiraciKategoriId" value="@hucre.KiraciKategoriId" />
                                             <input type="hidden" name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].BorcTipiId" value="@hucre.BorcTipiId" />
-                                            <div style="display:flex;align-items:center;gap:8px;">
+                                            <div class="flex items-center gap-2">
                                                 <!-- RateVarMi göstergesi -->
                                                 <span title="@(hucre.RateVarMi ? "Kayıtlı fiyat" : "Varsayılan — henüz kaydedilmedi")"
-                                                      style="width:8px;height:8px;border-radius:50%;flex-shrink:0;
-                                                             background:@(hucre.RateVarMi ? "#22c55e" : "#d1d5db");"></span>
+                                                      class="w-2 h-2 rounded-full flex-shrink-0 @(hucre.RateVarMi ? "bg-green-500" : "bg-gray-300")"></span>
                                                 <div>
-                                                    <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
-                                                        <span style="font-size:10px;color:var(--color-muted);">@kolon.BorcTipiKod</span>
+                                                    <div class="flex items-center gap-1.5 mb-0.5">
+                                                        <span class="text-[10px] text-muted uppercase">@kolon.BorcTipiKod</span>
                                                         @if (isIlkAy)
                                                         {
-                                                            <span style="font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;background:#fff3e0;color:#e65100;">İlk Ay</span>
+                                                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-800">İlk Ay</span>
                                                         }
                                                         else
                                                         {
-                                                            <span style="font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;background:#e3f2fd;color:#1565c0;">Aylık</span>
+                                                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">Aylık</span>
                                                         }
                                                     </div>
-                                                    <div style="font-size:12.5px;font-weight:500;">@kolon.BorcTipiAd</div>
+                                                    <div class="text-[12.5px] font-semibold">@kolon.BorcTipiAd</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <!-- Tutar — ₺ prefix -->
-                                        <td style="padding:6px 12px;vertical-align:middle;">
-                                            <div style="display:flex;align-items:stretch;border:1px solid #ced4da;border-radius:6px;overflow:hidden;">
-                                                <span style="padding:5px 8px;background:#f8f9fa;font-size:12px;color:#6c757d;border-right:1px solid #ced4da;display:flex;align-items:center;">₺</span>
+                                        <td class="p-1.5 px-3 align-middle">
+                                            <div class="flex items-stretch border border-[#ced4da] rounded-md overflow-hidden bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+                                                <span class="px-2 bg-[#f8f9fa] text-xs text-[#6c757d] border-r border-[#ced4da] flex items-center">₺</span>
                                                 <input type="number" step="0.01" min="0"
-                                                       style="border:none;outline:none;padding:5px 8px;width:85px;font-size:13px;background:transparent;"
+                                                       class="border-none outline-none p-1.5 px-2 w-[85px] text-[13px] bg-transparent"
                                                        name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].BirimDeger" value="@hucre.BirimDeger.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                                             </div>
                                         </td>
                                         <!-- Yöntem — DEPOZITO için kilitli -->
-                                        <td style="padding:6px 12px;vertical-align:middle;">
+                                        <td class="p-1.5 px-3 align-middle">
                                             @if (isDepozito)
                                             {
                                                 <input type="hidden" name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].HesaplamaYontemi" value="@((int)HesaplamaYontemi.Sabit)" />
-                                                <select class="form-control form-control-sm" disabled style="width:90px;opacity:0.45;cursor:not-allowed;">
+                                                <select class="form-control form-control-sm w-[90px] opacity-50 cursor-not-allowed" disabled>
                                                     <option>Sabit</option>
                                                 </select>
                                             }
                                             else
                                             {
-                                                <select class="form-control form-control-sm" style="width:90px;"
+                                                <select class="form-control form-control-sm w-[90px]"
                                                         name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].HesaplamaYontemi">
                                                     <option value="@((int)HesaplamaYontemi.Sabit)" selected="@(hucre.HesaplamaYontemi == HesaplamaYontemi.Sabit)">Sabit</option>
                                                     <option value="@((int)HesaplamaYontemi.M2)" selected="@(hucre.HesaplamaYontemi == HesaplamaYontemi.M2)">m²</option>
@@ -259,12 +258,12 @@
                                             }
                                         </td>
                                         <!-- KDV — % suffix -->
-                                        <td style="padding:6px 0 6px 12px;vertical-align:middle;">
-                                            <div style="display:flex;align-items:stretch;border:1px solid #ced4da;border-radius:6px;overflow:hidden;">
+                                        <td class="p-1.5 pl-3 align-middle">
+                                            <div class="flex items-stretch border border-[#ced4da] rounded-md overflow-hidden bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all">
                                                 <input type="number" step="0.01" min="0" max="100"
-                                                       style="border:none;outline:none;padding:5px 8px;width:60px;font-size:13px;background:transparent;"
+                                                       class="border-none outline-none p-1.5 px-2 w-[60px] text-[13px] bg-transparent text-right"
                                                        name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].KdvOrani" value="@hucre.KdvOrani.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
-                                                <span style="padding:5px 8px;background:#f8f9fa;font-size:12px;color:#6c757d;border-left:1px solid #ced4da;display:flex;align-items:center;">%</span>
+                                                <span class="px-2 bg-[#f8f9fa] text-xs text-[#6c757d] border-l border-[#ced4da] flex items-center">%</span>
                                             </div>
                                         </td>
                                     </tr>
@@ -273,7 +272,6 @@
                         </table>
                     </div>
                 }
-            </div>
             <script>
                 function topluKdvAta(btn, value) {
                     const blok = btn.closest('.fiyat-kategori-blok');
@@ -282,22 +280,23 @@
                     });
                 }
             </script>
+            </div>
         </div>
 
         @if (Model.ParentRezervasyonTarife != null)
         {
-            <div style="margin-top:16px;">
-                <div style="font-size:12px;color:var(--color-muted);margin-bottom:4px;">Aşağıda tanımlama yapmazsanız genel tarife uygulanır:</div>
+            <div class="mt-4">
+                <div class="text-xs text-muted mb-1">Aşağıda tanımlama yapmazsanız genel tarife uygulanır:</div>
                 <partial name="_ParentRezervasyonTarifeKart" model="Model.ParentRezervasyonTarife" />
             </div>
         }
 
         <!-- Rezervasyon Alanları -->
-        <div class="card" style="margin-top:16px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">
+        <div class="card mt-4">
+            <div class="flex items-center justify-between mb-4.5 pb-3.5 border-b border-[var(--color-border)]">
                 <div>
-                    <div style="font-size:15px;font-weight:700;">Rezervasyon Alanları</div>
-                    <div style="font-size:12.5px;color:var(--color-muted);margin-top:3px;">Toplantı salonu, etkinlik alanı gibi rezerve edilebilen ortak alanlar</div>
+                    <div class="text-[15px] font-bold">Rezervasyon Alanları</div>
+                    <div class="text-[12.5px] text-muted mt-0.5">Toplantı salonu, etkinlik alanı gibi rezerve edilebilen ortak alanlar</div>
                 </div>
                 <button type="button" class="btn btn-secondary btn-sm" @@click="addRezAlani()">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -306,26 +305,26 @@
             </div>
 
             <template x-for="(alan, i) in rezAlanlari" :key="i">
-                <div style="background:#fafbfc;border:1px solid var(--color-border);border-radius:8px;padding:14px 16px;margin-bottom:12px;position:relative;">
+                <div class="bg-[#fafbfc] border border-[var(--color-border)] rounded-lg p-3.5 px-4 mb-3 relative">
                     <!-- Sil butonu sağ üst -->
-                    <button type="button" class="btn btn-sm" style="color:#dc2626;border-color:#fecaca;background:#fef2f2;position:absolute;top:10px;right:10px;"
+                    <button type="button" class="btn btn-sm text-red-600 border-red-200 bg-red-50 hover:bg-red-100 transition-colors absolute top-2.5 right-2.5"
                             @@click="removeRezAlani(i)">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
                     </button>
                     <!-- Üst satır: Temel bilgiler -->
-                    <div style="display:grid;grid-template-columns:1fr 100px 1fr;gap:12px;margin-bottom:12px;">
+                    <div class="grid grid-cols-[1fr_100px_1fr] gap-3 mb-3 mr-10">
                         <div>
-                            <div class="form-label" style="margin-bottom:4px;">Alan Adı *</div>
+                            <div class="form-label mb-1">Alan Adı *</div>
                             <input class="form-control" :name="'RezervasyonAlanlari['+i+'].Ad'" x-model="alan.ad" placeholder="Toplantı Salonu A" />
                             <span x-show="rezErrors[i]?.ad" x-text="rezErrors[i]?.ad" class="form-error"></span>
                         </div>
                         <div>
-                            <div class="form-label" style="margin-bottom:4px;">m² *</div>
+                            <div class="form-label mb-1">m² *</div>
                             <input class="form-control" type="number" min="0" :name="'RezervasyonAlanlari['+i+'].Yuzolcumu'" x-model="alan.yuzolcumu" placeholder="0" />
                             <span x-show="rezErrors[i]?.yuzolcumu" x-text="rezErrors[i]?.yuzolcumu" class="form-error"></span>
                         </div>
                         <div>
-                            <div class="form-label" style="margin-bottom:4px;">Alan Türü *</div>
+                            <div class="form-label mb-1">Alan Türü *</div>
                             <select class="form-control" :name="'RezervasyonAlanlari['+i+'].BirimTuruId'" x-model="alan.birimTuruId">
                                 <option value="">— Seçiniz —</option>
                                 @foreach (var bt in (IEnumerable<KiraTakip.Models.BirimTuru>)ViewBag.RezervasyonBirimTurleri)
@@ -337,21 +336,21 @@
                         </div>
                     </div>
                     <!-- Alt satır: Ücretlendirme -->
-                    <div style="display:grid;grid-template-columns:120px 120px 80px 1fr;gap:12px;">
+                    <div class="grid grid-cols-[120px_120px_80px_1fr] gap-3">
                         <div>
-                            <div class="form-label" style="margin-bottom:4px;">Ücretsiz Süre (Dk)</div>
+                            <div class="form-label mb-1">Ücretsiz Süre (Dk)</div>
                             <input class="form-control" type="number" min="0" :name="'RezervasyonAlanlari['+i+'].UcretsizSureDakika'" x-model="alan.ucretsizSureDakika" placeholder="60" />
                         </div>
                         <div>
-                            <div class="form-label" style="margin-bottom:4px;">Saatlik Ücret (₺)</div>
+                            <div class="form-label mb-1">Saatlik Ücret (₺)</div>
                             <input class="form-control" type="number" min="0" step="0.01" :name="'RezervasyonAlanlari['+i+'].SaatlikUcret'" x-model="alan.saatlikUcret" placeholder="500" />
                         </div>
                         <div>
-                            <div class="form-label" style="margin-bottom:4px;">KDV %</div>
+                            <div class="form-label mb-1">KDV %</div>
                             <input class="form-control" type="number" min="0" :name="'RezervasyonAlanlari['+i+'].KdvOrani'" x-model="alan.kdvOrani" placeholder="20" />
                         </div>
                         <div>
-                            <div class="form-label" style="margin-bottom:4px;">Açıklama</div>
+                            <div class="form-label mb-1">Açıklama</div>
                             <input class="form-control" :name="'RezervasyonAlanlari['+i+'].Aciklama'" x-model="alan.aciklama" placeholder="Opsiyonel" />
                         </div>
                     </div>
@@ -359,17 +358,17 @@
             </template>
 
             <template x-if="rezAlanlari.length === 0">
-                <div style="text-align:center;padding:24px 0;color:var(--color-muted);font-size:13.5px;">
+                <div class="text-center py-6 text-muted text-[13.5px]">
                     Henüz rezervasyon alanı eklenmedi. "Alan Ekle" ile tanımlayabilirsiniz.
                 </div>
             </template>
         </div>
 
         <!-- Adres Kartı -->
-        <div class="card" style="margin-top:16px;">
-            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Adres Bilgileri</div>
+        <div class="card mt-4">
+            <div class="text-[15px] font-bold mb-4.5 pb-3.5 border-b border-[var(--color-border)]">Adres Bilgileri</div>
             
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div class="grid grid-cols-2 gap-3.5 mb-3.5">
                 <div class="form-group">
                     <label class="form-label">İl *</label>
                     <input asp-for="Il" class="form-control" placeholder="Örn: İstanbul" />
@@ -395,7 +394,7 @@
             </div>
         </div>
 
-        <div style="display:flex;gap:12px;margin-top:20px;">
+        <div class="flex gap-3 mt-5">
             <button type="submit" class="btn btn-primary">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Kaydet

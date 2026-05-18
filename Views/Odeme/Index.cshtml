@@ -13,11 +13,14 @@
     var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/Odeme", Extra = extra };
 }
 
-<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+<div class="page-header flex items-center justify-between">
     <div>
         @if (tahakkukId.HasValue)
         {
-            <a href="/Tahakkuk" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">← Tahakkuklar</a>
+            <a href="/Tahakkuk" class="text-[12.5px] text-muted hover:text-primary transition-colors inline-flex items-center gap-1 mb-2 no-underline">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Tahakkuklar
+            </a>
         }
         <div class="page-title">Ödemeler</div>
         <div class="page-subtitle">@Model.Total kayıt</div>
@@ -26,51 +29,58 @@
 
 @if (TempData["Success"] != null)
 {
-    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">✓ @TempData["Success"]</div>
+    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
+        ✓ @TempData["Success"]
+    </div>
 }
 
 @if (!tahakkukId.HasValue)
 {
-    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+    <div class="flex gap-1.5 flex-wrap mb-5">
         @{
             var oFilters = new[] { ("tum","Tümü"), ("onaybekliyor","Onay Bekliyor"), ("onaylandi","Onaylandı"), ("reddedildi","Reddedildi") };
         }
         @foreach (var (key, label) in oFilters)
         {
-            string cls = durum == key ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm";
+            bool isActive = durum == key;
             var url = key == "tum" ? "/Odeme" : $"/Odeme?durum={key}";
-            <a href="@url" class="@cls">@label</a>
+            <a href="@url" class="btn btn-sm @(isActive ? "btn-primary" : "btn-secondary text-slate-600 bg-white border-slate-200")">@label</a>
         }
     </div>
 }
 
-<div class="card" style="padding:0;overflow:hidden;">
-    <form method="get" class="table-toolbar" action="/Odeme">
-        <input type="search" name="q" value="@q.Q" class="form-control toolbar-search" placeholder="Ara: kiracı, açıklama…" />
-        <input type="date" name="from" value="@(q.From?.ToString("yyyy-MM-dd"))" class="form-control toolbar-input" data-tip="Ödeme tarihi başlangıç" />
-        <input type="date" name="to" value="@(q.To?.ToString("yyyy-MM-dd"))" class="form-control toolbar-input" data-tip="Ödeme tarihi bitiş" />
-        <input type="number" name="min" value="@q.Min?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control toolbar-input" placeholder="Min ₺" />
-        <input type="number" name="max" value="@q.Max?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control toolbar-input" placeholder="Max ₺" />
+<div class="card p-0 overflow-hidden">
+    <form method="get" class="flex flex-wrap items-center gap-3 p-3 bg-slate-50/50 border-b border-slate-200" action="/Odeme">
+        <input type="search" name="q" value="@q.Q" class="form-control w-full max-w-xs" placeholder="Ara: kiracı, açıklama…" />
+        <div class="flex items-center gap-2">
+            <input type="date" name="from" value="@(q.From?.ToString("yyyy-MM-dd"))" class="form-control w-36 text-xs" title="Başlangıç" />
+            <span class="text-muted">–</span>
+            <input type="date" name="to" value="@(q.To?.ToString("yyyy-MM-dd"))" class="form-control w-36 text-xs" title="Bitiş" />
+        </div>
+        <div class="flex items-center gap-2">
+            <input type="number" name="min" value="@q.Min?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-24 text-xs" placeholder="Min ₺" />
+            <input type="number" name="max" value="@q.Max?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-24 text-xs" placeholder="Max ₺" />
+        </div>
         @if (durum != "tum") { <input type="hidden" name="durum" value="@durum" /> }
         @if (tahakkukId.HasValue) { <input type="hidden" name="tahakkukId" value="@tahakkukId" /> }
-        <button type="submit" class="btn btn-primary btn-sm">Filtrele</button>
+        <button type="submit" class="btn btn-primary btn-sm px-4">Filtrele</button>
         @if (!string.IsNullOrEmpty(q.Q) || q.From.HasValue || q.To.HasValue || q.Min.HasValue || q.Max.HasValue)
         {
-            <a href="/Odeme@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm">Temizle</a>
+            <a href="/Odeme@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
         }
     </form>
     <div class="table-wrapper">
-        <table>
+        <table class="w-full">
             <thead>
                 <tr>
-                    <th>Tarih</th>
+                    <th class="w-28">Tarih</th>
                     <th>Kiracı</th>
-                    <th>Dönem</th>
-                    <th>Tutar</th>
-                    <th>Kanal</th>
-                    <th>Giren</th>
-                    <th>Durum</th>
-                    <th></th>
+                    <th class="w-32">Dönem</th>
+                    <th class="w-32 text-right">Tutar</th>
+                    <th class="w-24 text-center">Kanal</th>
+                    <th class="w-32">Giren</th>
+                    <th class="w-36">Durum</th>
+                    <th class="w-20"></th>
                 </tr>
             </thead>
             <tbody>
@@ -86,11 +96,6 @@
                         OdemeDurumu.Reddedildi   => "Reddedildi",
                         _                        => "Onay Bekliyor"
                     };
-                    string durumTip = o.Durum switch {
-                        OdemeDurumu.Onaylandi    => "Ödeme onaylandı; tahakkuk kapandı.",
-                        OdemeDurumu.Reddedildi   => "Ödeme reddedildi; tahakkuk açık kalır.",
-                        _                        => "Onay yetkisi olan kullanıcı bekleniyor."
-                    };
                     string kanalLabel = o.OdemeKanali switch {
                         OdemeKanali.Havale => "Havale",
                         OdemeKanali.EFT    => "EFT",
@@ -98,19 +103,19 @@
                         _                  => "Diğer"
                     };
                     <tr>
-                        <td style="font-size:13px;">@o.OdemeTarihi.ToString("dd.MM.yyyy")</td>
-                        <td style="font-weight:500;">@o.KiraSozlesmesi.Kiraci.GosterimAdi</td>
-                        <td style="font-size:13px;color:var(--color-muted);">@o.KiraTahakkuk.DonemBaslangic.ToString("MMM yyyy")</td>
-                        <td style="font-weight:700;">@o.Tutar.ToString("N0") ₺</td>
-                        <td style="font-size:12.5px;">@kanalLabel</td>
-                        <td style="font-size:12.5px;color:var(--color-muted);">@(o.GirenUser?.AdSoyad ?? o.GirenUser?.Email ?? "—")</td>
-                        <td><span class="badge @durumCls" data-tip="@durumTip">@durumLabel</span></td>
-                        <td><a href="/Odeme/Detay/@o.Id" class="btn btn-sm btn-secondary">Detay</a></td>
+                        <td class="text-xs text-slate-600">@o.OdemeTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="font-semibold text-slate-800">@o.KiraSozlesmesi.Kiraci.GosterimAdi</td>
+                        <td class="text-xs text-muted">@o.KiraTahakkuk.DonemBaslangic.ToString("MMMM yyyy")</td>
+                        <td class="text-right font-bold text-slate-700">@o.Tutar.ToString("N2") ₺</td>
+                        <td class="text-center text-[12px] font-medium text-slate-500">@kanalLabel</td>
+                        <td class="text-[11px] text-muted truncate max-w-[120px]">@(o.GirenUser?.AdSoyad ?? o.GirenUser?.Email ?? "—")</td>
+                        <td><span class="badge @durumCls text-[10px] font-bold">@durumLabel.ToUpper()</span></td>
+                        <td class="text-right"><a href="/Odeme/Detay/@o.Id" class="btn btn-sm btn-secondary">Detay</a></td>
                     </tr>
                 }
                 @if (Model.Total == 0)
                 {
-                    <tr><td colspan="8" style="text-align:center;color:var(--color-muted);padding:32px;">Filtreye uygun ödeme kaydı yok.</td></tr>
+                    <tr><td colspan="8" class="text-center py-12 text-muted italic">Filtreye uygun ödeme kaydı bulunamadı.</td></tr>
                 }
             </tbody>
         </table>

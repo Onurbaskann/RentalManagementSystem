@@ -1,64 +1,48 @@
 @model KiraTakip.Models.ViewModels.ParentRezervasyonTarifeKartViewModel
 
-<style>
-    .parent-rezervasyon-tarife-kart > summary::-webkit-details-marker { display: none; }
-    .parent-rezervasyon-tarife-kart > summary::marker { display: none; }
-    .parent-rezervasyon-tarife-kart[open] > summary { border-radius: 6px 6px 0 0 !important; }
-</style>
-
-<details class="parent-rezervasyon-tarife-kart" style="margin-bottom:12px;">
-    <summary style="
-        cursor:pointer;
-        display:flex;
-        align-items:center;
-        gap:8px;
-        padding:6px 10px;
-        background:#fdf4ff;
-        border:1px solid #f5d0fe;
-        border-radius:6px;
-        user-select:none;
-    ">
-        <span style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#a21caf;background:#fae8ff;border:1px solid #f5d0fe;border-radius:3px;padding:1px 6px;">
+<details class="parent-rezervasyon-tarife-kart mb-3 group">
+    <summary class="list-none cursor-pointer flex items-center gap-2.5 p-2 px-3 bg-fuchsia-50/50 border border-fuchsia-100 rounded-lg select-none group-open:rounded-b-none transition-all hover:bg-fuchsia-100/50">
+        <span class="text-[9px] font-bold tracking-widest uppercase bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200 rounded px-1.5 py-0.5">
             @Model.KaynakAdi
         </span>
         @if (!Model.Satirlar.Any())
         {
-            <span style="font-size:11.5px;color:var(--color-muted);font-style:italic;">— rezervasyon tarifesi tanımlanmamış</span>
+            <span class="text-[11px] text-fuchsia-400 italic">rezervasyon tarifesi tanımlanmamış</span>
         }
         else
         {
-            <span style="font-size:11px;color:var(--color-muted);">@Model.Satirlar.Count alan türü</span>
+            <span class="text-[11px] text-fuchsia-700/70 font-medium">@Model.Satirlar.Count alan türü tanımlı</span>
         }
         @if (Model.Aciklama != null)
         {
-            <span style="font-size:11px;color:var(--color-muted);">— @Model.Aciklama</span>
+            <span class="text-[11px] text-fuchsia-400/60 truncate max-w-[200px]" title="@Model.Aciklama">— @Model.Aciklama</span>
         }
-        <span style="margin-left:auto;font-size:10px;color:#d8b4fe;">▼</span>
+        <span class="ml-auto text-[10px] text-fuchsia-300 group-open:rotate-180 transition-transform">▼</span>
     </summary>
 
-    <div style="border:1px solid #f5d0fe;border-top:none;border-radius:0 0 6px 6px;background:#fffbff;padding:10px 12px;">
+    <div class="border border-fuchsia-100 border-t-0 rounded-b-lg bg-white p-3">
         @if (!Model.Satirlar.Any())
         {
-            <p style="margin:0;font-size:12px;color:var(--color-muted);font-style:italic;">
-                Bu yıl için rezervasyon tarifesi tanımlanmamış.
+            <p class="text-[11px] text-fuchsia-400 italic text-center py-2">
+                Bu yıl için rezervasyon tarifesi bulunamadı.
             </p>
         }
         else
         {
-            <div style="display:grid;grid-template-columns:1fr auto auto auto auto;column-gap:16px;row-gap:6px;font-size:12.5px;">
-                <div style="font-size:10.5px;font-weight:700;color:#a21caf;text-transform:uppercase;border-bottom:1px dashed #f5d0fe;padding-bottom:2px;">Alan Türü</div>
-                <div style="font-size:10.5px;font-weight:700;color:#a21caf;text-transform:uppercase;border-bottom:1px dashed #f5d0fe;padding-bottom:2px;">Ücretsiz</div>
-                <div style="font-size:10.5px;font-weight:700;color:#a21caf;text-transform:uppercase;border-bottom:1px dashed #f5d0fe;padding-bottom:2px;">Periyot</div>
-                <div style="font-size:10.5px;font-weight:700;color:#a21caf;text-transform:uppercase;border-bottom:1px dashed #f5d0fe;padding-bottom:2px;text-align:right;">Ücret</div>
-                <div style="font-size:10.5px;font-weight:700;color:#a21caf;text-transform:uppercase;border-bottom:1px dashed #f5d0fe;padding-bottom:2px;text-align:right;">KDV</div>
+            <div class="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 gap-y-1 text-xs">
+                <div class="text-[9px] font-bold text-fuchsia-400 uppercase tracking-widest pb-1 border-b border-fuchsia-50 mb-1">Alan Türü</div>
+                <div class="text-[9px] font-bold text-fuchsia-400 uppercase tracking-widest pb-1 border-b border-fuchsia-50 mb-1">Ücretsiz</div>
+                <div class="text-[9px] font-bold text-fuchsia-400 uppercase tracking-widest pb-1 border-b border-fuchsia-50 mb-1">Periyot</div>
+                <div class="text-[9px] font-bold text-fuchsia-400 uppercase tracking-widest pb-1 border-b border-fuchsia-50 mb-1 text-right">Ücret</div>
+                <div class="text-[9px] font-bold text-fuchsia-400 uppercase tracking-widest pb-1 border-b border-fuchsia-50 mb-1 text-right">KDV</div>
 
                 @foreach (var satir in Model.Satirlar)
                 {
-                    <span style="font-weight:600;color:var(--color-text);">@satir.BirimTuruAd</span>
-                    <span style="color:var(--color-muted);">@satir.UcretsizSureDakika dk</span>
-                    <span style="color:var(--color-muted);">@satir.UcretlendirmePeriyoduDakika dk</span>
-                    <span style="text-align:right;font-weight:500;">@satir.PeriyotUcreti.ToString("N2") ₺</span>
-                    <span style="text-align:right;color:var(--color-muted);">%@satir.KdvOrani.ToString("N0")</span>
+                    <span class="font-bold text-slate-700">@satir.BirimTuruAd</span>
+                    <span class="text-slate-400">@satir.UcretsizSureDakika dk</span>
+                    <span class="text-slate-400">@satir.UcretlendirmePeriyoduDakika dk</span>
+                    <span class="text-right font-bold text-fuchsia-700 font-mono">@satir.PeriyotUcreti.ToString("N2") ₺</span>
+                    <span class="text-right text-fuchsia-400 text-[10px] font-bold">%@satir.KdvOrani.ToString("N0")</span>
                 }
             </div>
         }

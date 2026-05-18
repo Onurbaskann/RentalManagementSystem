@@ -18,11 +18,11 @@
 }
 
 <div class="page-header">
-    <a href="/Kiraci" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-block;margin-bottom:8px;">← Kiracılar</a>
+    <a href="/Kiraci" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Kiracılar</a>
     <div class="page-title">Yeni Kiracı Ekle</div>
 </div>
 
-<div style="max-width:600px;">
+<div class="max-w-[600px]">
     <form asp-action="Ekle" method="post"
           x-data="kiraciFormData('@initTur', @Model.TcVatandasiDegil.ToString().ToLower(), @Model.KvkkOnayi.ToString().ToLower())"
           @@submit.prevent="handleSubmit($event)"
@@ -30,16 +30,19 @@
         @Html.AntiForgeryToken()
 
         <!-- Temel Bilgiler -->
-        <div class="card" style="margin-bottom:16px;">
-            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Temel Bilgiler</div>
+        <div class="card mb-5">
+            <div class="text-[15px] font-bold mb-5 pb-3 border-b border-slate-100 flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                Temel Bilgiler
+            </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-                <div class="form-group" style="margin-bottom:0;">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-3.5 gap-y-4 mb-4">
+                <div class="form-group mb-0">
                     <label class="form-label">Kiracı No *</label>
-                    <input asp-for="KiraciNo" class="form-control" style="font-family:'JetBrains Mono',monospace;" />
+                    <input asp-for="KiraciNo" class="form-control font-mono" />
                     <span x-show="errors.kiraciNo" x-text="errors.kiraciNo" class="form-error"></span>
                 </div>
-                <div class="form-group" style="margin-bottom:0;">
+                <div class="form-group mb-0">
                     <label class="form-label">Kiracı Türü *</label>
                     <select asp-for="KiraciTuru" class="form-control" x-model="kiraciTuru">
                         <option value="">— Seçin —</option>
@@ -50,8 +53,8 @@
                 </div>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-                <div class="form-group" style="margin-bottom:0;">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-3.5 gap-y-4">
+                <div class="form-group mb-0">
                     <label class="form-label">Kiracı Kategorisi *</label>
                     <select asp-for="KiraciKategoriId" class="form-control">
                         <option value="">— Seçiniz —</option>
@@ -62,7 +65,7 @@
                     </select>
                     <span x-show="errors.kiraciKategoriId" x-text="errors.kiraciKategoriId" class="form-error"></span>
                 </div>
-                <div class="form-group" style="margin-bottom:0;">
+                <div class="form-group mb-0">
                     <label class="form-label">Sektör *</label>
                     <select asp-for="SektorId" class="form-control">
                         <option value="">— Seçiniz —</option>
@@ -77,16 +80,19 @@
         </div>
 
         <!-- Gerçek kişi alanları -->
-        <div class="card" style="margin-bottom:16px;" x-show="kiraciTuru === '1'">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);gap:14px;">
-                <div style="font-size:15px;font-weight:700;">Gerçek Kişi Bilgileri</div>
-                <label style="display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--color-muted);cursor:pointer;user-select:none;">
-                    <input type="checkbox" asp-for="TcVatandasiDegil" x-model="tcVatandasiDegil" style="margin:0;" />
-                    <span>TC Vatandaşı değil</span>
+        <div class="card mb-5" x-show="kiraciTuru === '1'">
+            <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-100 gap-4">
+                <div class="text-[15px] font-bold flex items-center gap-2">
+                    <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                    Gerçek Kişi Bilgileri
+                </div>
+                <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-400 cursor-pointer select-none uppercase tracking-tight">
+                    <input type="checkbox" asp-for="TcVatandasiDegil" x-model="tcVatandasiDegil" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                    <span>TC Vatandaşı Değil</span>
                 </label>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-3.5 gap-y-4">
                 <div class="form-group">
                     <label class="form-label">Ad *</label>
                     <input name="GercekAd" class="form-control" placeholder="Örn: Ahmet" value="@Model.GercekAd" />
@@ -134,16 +140,19 @@
         </div>
 
         <!-- Tüzel kişi alanları -->
-        <div class="card" style="margin-bottom:16px;" x-show="kiraciTuru === '2'">
-            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">Tüzel Kişi Bilgileri</div>
+        <div class="card mb-5" x-show="kiraciTuru === '2'">
+            <div class="text-[15px] font-bold mb-5 pb-3 border-b border-slate-100 flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                Tüzel Kişi Bilgileri
+            </div>
 
-            <div class="form-group" style="margin-bottom:14px;">
+            <div class="form-group mb-3.5">
                 <label class="form-label">Firma / Kurum Adı *</label>
                 <input name="TuzelAd" class="form-control" placeholder="Örn: Yıldız Yazılım A.Ş." value="@Model.TuzelAd" />
                 <span x-show="errors.tuzelAd" x-text="errors.tuzelAd" class="form-error"></span>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-3.5 gap-y-4">
                 <div class="form-group">
                     <label class="form-label">Vergi No *</label>
                     <input asp-for="VergiNo" class="form-control" maxlength="10" inputmode="numeric" pattern="\d{10}" placeholder="10 haneli" />
@@ -166,9 +175,12 @@
         </div>
 
         <!-- İletişim -->
-        <div class="card" style="margin-bottom:16px;">
-            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--color-border);">İletişim Bilgileri</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="card mb-5">
+            <div class="text-[15px] font-bold mb-5 pb-3 border-b border-slate-100 flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                İletişim Bilgileri
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-3.5 gap-y-4">
                 <div class="form-group">
                     <label class="form-label">Telefon *</label>
                     <input asp-for="Telefon" class="form-control" placeholder="0532 111 2233" />
@@ -180,7 +192,7 @@
                     <span x-show="errors.email" x-text="errors.email" class="form-error"></span>
                 </div>
             </div>
-            <div class="form-group" style="margin-bottom:0;">
+            <div class="form-group mb-0">
                 <label class="form-label">Adres *</label>
                 <textarea asp-for="Adres" class="form-control" rows="2" placeholder="İl / ilçe / mahalle / cadde / no"></textarea>
                 <span x-show="errors.adres" x-text="errors.adres" class="form-error"></span>
@@ -188,22 +200,22 @@
         </div>
 
         <!-- KVKK Onayı -->
-        <div class="card" style="margin-bottom:16px;">
-            <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;user-select:none;">
-                <input type="checkbox" asp-for="KvkkOnayi" x-model="kvkkOnayi" style="margin-top:3px;" />
-                <span style="font-size:13px;line-height:1.5;color:var(--color-text);">
-                    Kişisel verilerin işlenmesine ilişkin aydınlatma metnini okudum, kiracı bilgilerinin sözleşme süreci boyunca işlenmesini onaylıyorum. <span style="color:#dc2626;">*</span>
+        <div class="card mb-6 bg-slate-50 border-slate-200">
+            <label class="flex gap-3 items-start cursor-pointer select-none">
+                <input type="checkbox" asp-for="KvkkOnayi" x-model="kvkkOnayi" class="mt-1 w-4.5 h-4.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                <span class="text-[13px] leading-relaxed text-slate-600 font-medium">
+                    Kişisel verilerin işlenmesine ilişkin aydınlatma metnini okudum, kiracı bilgilerinin sözleşme süreci boyunca işlenmesini onaylıyorum. <span class="text-red-500 font-bold">*</span>
                 </span>
             </label>
-            <span x-show="errors.kvkkOnayi" x-text="errors.kvkkOnayi" class="form-error" style="display:block;margin-top:6px;"></span>
+            <span x-show="errors.kvkkOnayi" x-text="errors.kvkkOnayi" class="form-error block mt-2 text-xs"></span>
         </div>
 
-        <div style="display:flex;gap:12px;">
-            <button type="submit" class="btn btn-primary">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        <div class="flex gap-3 mt-6">
+            <button type="submit" class="btn btn-primary px-6">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="mr-1.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Kaydet
             </button>
-            <a href="/Kiraci" class="btn btn-secondary">İptal</a>
+            <a href="/Kiraci" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>
 </div>
@@ -269,5 +281,4 @@ function kiraciFormData(initTur, initTcVatandasiDegil, initKvkkOnayi) {
     };
 }
 </script>
-<style>[x-cloak]{display:none!important;}</style>
 }

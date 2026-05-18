@@ -2,6 +2,6 @@ namespace KiraTakip.Services.Interfaces;
 
 public interface IPaymentLinkService
 {
-    string BuildLink(int tahakkukId);
-    bool TryValidate(int tahakkukId, string token, out string? reason);
+    string BuildLink(int kiraciId);
+    bool TryValidate(string token, out int kiraciId, out string? reason);
 }

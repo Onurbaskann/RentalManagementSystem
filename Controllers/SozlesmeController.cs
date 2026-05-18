@@ -79,8 +79,7 @@ public class SozlesmeController : Controller
                 && t.Durum != TahakkukDurumu.IptalEdildi
                 && t.KiraSozlesmesi != null
                 && t.KiraSozlesmesi.KiraciId != 0)
-            .Select(t => t.KiraSozlesmesi!.KiraciId)
-            .Distinct()
+            .GroupBy(t => t.KiraSozlesmesi!.KiraciId)
             .CountAsync();
         ViewBag.BorcluSayisi = borcluSayisi;
 
@@ -118,6 +117,7 @@ public class SozlesmeController : Controller
         if (User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.View))
         {
             vm.HasOdemeAccess = true;
+            await _tahakkukService.GecikmeleriGuncelleAsync();
             vm.Tahakkuklar = await _tahakkukService.GetAllAsync(sozlesmeId: id);
         }
 
@@ -392,80 +392,31 @@ public class SozlesmeController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.Sozlesme.View)]
-    public async Task<IActionResult> BorclularaMailGonder()
+    public async Task<IActionResult> BorclularaMailGonder([FromServices] IBorcHatirlatmaService borcHatirlatmaService)
     {
-        if (string.IsNullOrWhiteSpace(_paymentLinkOptions.Value.Secret))
+        try
         {
-            TempData["Error"] = "SMTP yapılandırılmamış. appsettings.json içinde Smtp:Host ve PaymentLink:Secret boş bırakılamaz.";
-            return RedirectToAction("Index");
+            var sonuc = await borcHatirlatmaService.GonderAsync();
+            var mesajParcalari = new List<string>();
+            if (sonuc.BasariliGonderim > 0) mesajParcalari.Add($"{sonuc.BasariliGonderim} kiracıya e-posta gönderildi");
+            if (sonuc.CooldownAtlanan > 0) mesajParcalari.Add($"{sonuc.CooldownAtlanan} kiracı (bekleme süresinde olduğu için) atlandı");
+            if (sonuc.BasarisizGonderim > 0) mesajParcalari.Add($"{sonuc.BasarisizGonderim} gönderimde hata oluştu");
+            if (mesajParcalari.Count == 0) mesajParcalari.Add("Gönderilecek tahakkuk bulunamadı");
+
+            if (sonuc.BasarisizGonderim > 0)
+                TempData["Error"] = string.Join(", ", mesajParcalari) + ". Detaylar için logları inceleyin.";
+            else
+                TempData["Success"] = string.Join(", ", mesajParcalari) + ".";
         }
-
-        var bugun = DateTime.Today;
-        var esik = bugun.AddDays(_paymentLinkOptions.Value.ReminderDaysBefore);
-
-        var borclular = await _ctx.KiraTahakkuklar
-            .Include(t => t.KiraSozlesmesi!).ThenInclude(s => s!.Kiraci)
-            .Include(t => t.KiraSozlesmesi!).ThenInclude(s => s!.Birim).ThenInclude(b => b.Tasinmaz)
-            .Include(t => t.Odemeler)
-            .Where(t => t.VadeTarihi <= esik
-                && t.Durum != TahakkukDurumu.TamOdendi
-                && t.Durum != TahakkukDurumu.IptalEdildi
-                && t.KiraSozlesmesi != null
-                && t.KiraSozlesmesi.KiraciId != 0)
-            .ToListAsync();
-
-        int gonderildi = 0, atlandi = 0, hata = 0;
-
-        foreach (var t in borclular)
+        catch (InvalidOperationException ex)
         {
-            var kiraci = t.KiraSozlesmesi?.Kiraci;
-            if (kiraci == null || string.IsNullOrWhiteSpace(kiraci.Email))
-            {
-                atlandi++;
-                continue;
-            }
-
-            var odenmis = t.Odemeler
-                .Where(o => o.Durum == OdemeDurumu.Onaylandi)
-                .Sum(o => o.Tutar);
-            var kalan = t.ToplamTutar - odenmis;
-
-            var model = new BorcHatirlatmaMailModel
-            {
-                KiraciAdi = kiraci.GosterimAdi,
-                TasinmazAdi = t.KiraSozlesmesi!.Birim.Tasinmaz.Ad,
-                BirimAdi = t.KiraSozlesmesi.Birim.Ad,
-                DonemBaslangic = t.DonemBaslangic,
-                VadeTarihi = t.VadeTarihi,
-                ToplamTutar = t.ToplamTutar,
-                KalanTutar = kalan,
-                OdemeLink = _paymentLink.BuildLink(t.Id)
-            };
-
-            try
-            {
-                var html = await _razorRenderer.RenderAsync("/Views/Shared/EmailTemplates/BorcHatirlatma.cshtml", model);
-                var subject = $"Ödeme Hatırlatması — {model.TasinmazAdi} / {model.BirimAdi}";
-                await _mail.SendAsync(kiraci.Email, kiraci.GosterimAdi, subject, html);
-                gonderildi++;
-            }
-            catch (Exception ex)
-            {
-                hata++;
-                _logger.LogError(ex, "Mail gönderilemedi: KiraciId={KiraciId} TahakkukId={TahakkukId}", kiraci.Id, t.Id);
-            }
+            TempData["Error"] = ex.Message;
         }
-
-        var mesajParcalari = new List<string>();
-        if (gonderildi > 0) mesajParcalari.Add($"{gonderildi} mail gönderildi");
-        if (atlandi > 0) mesajParcalari.Add($"{atlandi} kiracı atlandı (email boş)");
-        if (hata > 0) mesajParcalari.Add($"{hata} gönderimde hata oluştu");
-        if (mesajParcalari.Count == 0) mesajParcalari.Add("Gönderilecek tahakkuk bulunamadı");
-
-        if (hata > 0)
-            TempData["Error"] = string.Join(", ", mesajParcalari) + ". Detaylar için uygulama loglarını inceleyin.";
-        else
-            TempData["Success"] = string.Join(", ", mesajParcalari) + ".";
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Toplu hatırlatma işlemi sırasında beklenmeyen hata.");
+            TempData["Error"] = "Beklenmeyen bir hata oluştu. Detaylar için logları inceleyin.";
+        }
 
         return RedirectToAction("Index");
     }

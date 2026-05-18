@@ -6,12 +6,12 @@
 
 @if (TempData["Success"] != null)
 {
-    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">
+    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 px-4 rounded-lg mb-4 text-[13.5px] font-medium">
         ✓ @TempData["Success"]
     </div>
 }
 
-<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+<div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">@Model.Yil Tarifeleri</div>
         <div class="page-subtitle">Kiracı kategorisi × borç tipi bazında yıllık birim fiyatlar</div>
@@ -25,32 +25,32 @@
     <input type="hidden" name="Yil" value="@Model.Yil" />
     <input type="hidden" name="Aktif" value="@Model.Aktif.ToString().ToLower()" />
 
-    <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
-        <div style="padding:16px;border-bottom:1px solid var(--color-border);">
+    <div class="card p-0 overflow-hidden mb-4">
+        <div class="p-4 border-b border-[var(--color-border)]">
             <label class="form-label">Açıklama</label>
-            <input name="Aciklama" value="@Model.Aciklama" class="form-control" style="max-width:400px;" placeholder="Opsiyonel not…" />
+            <input name="Aciklama" value="@Model.Aciklama" class="form-control max-w-[400px]" placeholder="Opsiyonel not…" />
         </div>
 
         @if (!Model.Satirlar.Any() || !Model.Kolonlar.Any())
         {
-            <div style="padding:24px;text-align:center;color:var(--color-muted);">
+            <div class="p-6 text-center text-muted">
                 Aktif kiracı kategorisi veya borç tipi bulunmuyor.
             </div>
         }
         else
         {
-            <div class="table-wrapper" style="overflow-x:auto;">
-                <table style="min-width:700px;border-collapse:collapse;width:100%;">
+            <div class="table-wrapper overflow-x-auto">
+                <table class="min-w-[700px] border-collapse w-full">
                     <thead>
                         <tr>
-                            <th style="padding:10px 16px;text-align:left;background:var(--color-surface-muted, #f8fafc);border-bottom:1px solid var(--color-border);min-width:160px;">
+                            <th class="p-4 text-left bg-slate-50 border-b border-[var(--color-border)] min-w-[160px] text-xs font-bold text-muted uppercase tracking-wider">
                                 Kiracı Kategorisi
                             </th>
                             @foreach (var kolon in Model.Kolonlar)
                             {
-                                <th style="padding:10px 12px;text-align:center;background:var(--color-surface-muted, #f8fafc);border-bottom:1px solid var(--color-border);min-width:200px;">
-                                    <div style="font-size:11px;color:var(--color-muted);font-weight:500;">@kolon.BorcTipiKod</div>
-                                    <div style="font-size:13px;font-weight:600;">@kolon.BorcTipiAd</div>
+                                <th class="p-[10px_12px] text-center bg-slate-50 border-b border-[var(--color-border)] min-w-[200px]">
+                                    <div class="text-[10px] color-muted font-bold uppercase tracking-wider mb-0.5">@kolon.BorcTipiKod</div>
+                                    <div class="text-[13px] font-bold text-slate-700">@kolon.BorcTipiAd</div>
                                 </th>
                             }
                         </tr>
@@ -59,19 +59,19 @@
                         @foreach (var satir in Model.Satirlar)
                         {
                             <tr>
-                                <td style="padding:12px 16px;font-weight:600;font-size:13.5px;border-bottom:1px solid var(--color-border);vertical-align:middle;">
+                                <td class="p-4 font-semibold text-[13.5px] border-b border-[var(--color-border)] align-middle">
                                     @satir.KiraciKategoriAd
                                 </td>
                                 @foreach (var hucre in satir.Hucreler)
                                 {
-                                    <td style="padding:10px 12px;border-bottom:1px solid var(--color-border);vertical-align:top;">
+                                    <td class="p-[10px_12px] border-b border-[var(--color-border)] align-top bg-white/50">
                                         <input type="hidden" name="Hucreler[@idx].KalemId"          value="@hucre.KalemId" />
                                         <input type="hidden" name="Hucreler[@idx].KiraciKategoriId" value="@hucre.KiraciKategoriId" />
                                         <input type="hidden" name="Hucreler[@idx].BorcTipiId"       value="@hucre.BorcTipiId" />
 
-                                        <div style="margin-bottom:6px;">
-                                            <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:2px;">Yöntem</label>
-                                            <select name="Hucreler[@idx].HesaplamaYontemi" class="form-control form-control-sm">
+                                        <div class="mb-2">
+                                            <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">Yöntem</label>
+                                            <select name="Hucreler[@idx].HesaplamaYontemi" class="form-control form-control-sm text-xs">
                                                 @if (hucre.HesaplamaYontemi == KiraTakip.Models.HesaplamaYontemi.Sabit)
                                                 {
                                                     <option value="1" selected>Sabit</option>
@@ -84,17 +84,17 @@
                                                 }
                                             </select>
                                         </div>
-                                        <div style="margin-bottom:6px;">
-                                            <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:2px;">Birim Değer (₺)</label>
+                                        <div class="mb-2">
+                                            <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">Birim Değer (₺)</label>
                                             <input type="number" name="Hucreler[@idx].BirimDeger" 
                                                    value="@hucre.BirimDeger.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
-                                                   class="form-control form-control-sm" step="0.01" min="0" />
+                                                   class="form-control form-control-sm text-xs font-mono" step="0.01" min="0" />
                                         </div>
                                         <div>
-                                            <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:2px;">KDV (%)</label>
+                                            <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">KDV (%)</label>
                                             <input type="number" name="Hucreler[@idx].KdvOrani" 
                                                    value="@hucre.KdvOrani.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
-                                                   class="form-control form-control-sm" step="0.01" min="0" max="100" />
+                                                   class="form-control form-control-sm text-xs font-mono" step="0.01" min="0" max="100" />
                                         </div>
                                     </td>
                                     idx++;
@@ -109,29 +109,29 @@
     </div>
 
     <!-- Rezervasyon Genel Tarifeleri Bölümü -->
-    <div class="card" style="padding:0;overflow:hidden;margin-top:24px;">
-        <div style="padding:16px;background:var(--color-surface-muted, #f8fafc);border-bottom:1px solid var(--color-border);display:flex;align-items:center;gap:10px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--color-primary);"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16"/><path d="M12 11h.01"/><path d="M12 7h.01"/><path d="M12 15h.01"/><path d="M8 11h.01"/><path d="M8 7h.01"/><path d="M8 15h.01"/><path d="M16 11h.01"/><path d="M16 7h.01"/><path d="M16 15h.01"/></svg>
-            <div style="font-size:15px;font-weight:700;">Rezervasyon Genel Tarifeleri</div>
+    <div class="card p-0 overflow-hidden mt-6">
+        <div class="p-4 bg-slate-50 border-b border-[var(--color-border)] flex items-center gap-2.5">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-primary shrink-0"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16"/><path d="M12 11h.01"/><path d="M12 7h.01"/><path d="M12 15h.01"/><path d="M8 11h.01"/><path d="M8 7h.01"/><path d="M8 15h.01"/><path d="M16 11h.01"/><path d="M16 7h.01"/><path d="M16 15h.01"/></svg>
+            <div class="text-[15px] font-bold text-slate-700">Rezervasyon Genel Tarifeleri</div>
         </div>
 
         @if (!Model.RezervasyonSatirlari.Any())
         {
-            <div style="padding:24px;text-align:center;color:var(--color-muted);">
+            <div class="p-6 text-center text-muted">
                 Aktif rezervasyon yapılabilir birim türü bulunmuyor.
             </div>
         }
         else
         {
-            <div class="table-wrapper" style="overflow-x:auto;">
-                <table style="min-width:700px;border-collapse:collapse;width:100%;">
+            <div class="table-wrapper overflow-x-auto">
+                <table class="min-w-[700px] border-collapse w-full">
                     <thead>
                         <tr>
-                            <th style="padding:12px 16px;text-align:left;background:var(--color-surface-muted, #f8fafc);border-bottom:1px solid var(--color-border);font-size:12px;color:var(--color-muted);font-weight:600;">Alan Türü</th>
-                            <th style="padding:12px 16px;text-align:left;background:var(--color-surface-muted, #f8fafc);border-bottom:1px solid var(--color-border);font-size:12px;color:var(--color-muted);font-weight:600;width:120px;">Ücretsiz Süre (dk)</th>
-                            <th style="padding:12px 16px;text-align:left;background:var(--color-surface-muted, #f8fafc);border-bottom:1px solid var(--color-border);font-size:12px;color:var(--color-muted);font-weight:600;width:120px;">Periyot (dk)</th>
-                            <th style="padding:12px 16px;text-align:left;background:var(--color-surface-muted, #f8fafc);border-bottom:1px solid var(--color-border);font-size:12px;color:var(--color-muted);font-weight:600;width:150px;">Periyot Ücreti (₺)</th>
-                            <th style="padding:12px 16px;text-align:left;background:var(--color-surface-muted, #f8fafc);border-bottom:1px solid var(--color-border);font-size:12px;color:var(--color-muted);font-weight:600;width:100px;">KDV (%)</th>
+                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted uppercase tracking-wider">Alan Türü</th>
+                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted uppercase tracking-wider w-[120px]">Ücretsiz Süre (dk)</th>
+                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted uppercase tracking-wider w-[120px]">Periyot (dk)</th>
+                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted uppercase tracking-wider w-[150px]">Periyot Ücreti (₺)</th>
+                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted uppercase tracking-wider w-[100px]">KDV (%)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -139,22 +139,22 @@
                         {
                             var rez = Model.RezervasyonSatirlari[i];
                             <tr>
-                                <td style="padding:12px 16px;border-bottom:1px solid var(--color-border);font-weight:600;font-size:13.5px;">
+                                <td class="p-[12px_16px] border-b border-[var(--color-border)] font-semibold text-[13.5px] text-slate-700">
                                     <input type="hidden" name="RezervasyonHucreler[@i].RezervasyonGenelTarifeId" value="@rez.RezervasyonGenelTarifeId" />
                                     <input type="hidden" name="RezervasyonHucreler[@i].BirimTuruId" value="@rez.BirimTuruId" />
                                     @rez.BirimTuruAd
                                 </td>
-                                <td style="padding:10px 16px;border-bottom:1px solid var(--color-border);">
-                                    <input type="number" name="RezervasyonHucreler[@i].UcretsizSureDakika" value="@rez.UcretsizSureDakika" class="form-control form-control-sm" min="0" />
+                                <td class="p-[10px_16px] border-b border-[var(--color-border)]">
+                                    <input type="number" name="RezervasyonHucreler[@i].UcretsizSureDakika" value="@rez.UcretsizSureDakika" class="form-control form-control-sm text-center" min="0" />
                                 </td>
-                                <td style="padding:10px 16px;border-bottom:1px solid var(--color-border);">
-                                    <input type="number" name="RezervasyonHucreler[@i].UcretlendirmePeriyoduDakika" value="@rez.UcretlendirmePeriyoduDakika" class="form-control form-control-sm" min="1" />
+                                <td class="p-[10px_16px] border-b border-[var(--color-border)]">
+                                    <input type="number" name="RezervasyonHucreler[@i].UcretlendirmePeriyoduDakika" value="@rez.UcretlendirmePeriyoduDakika" class="form-control form-control-sm text-center" min="1" />
                                 </td>
-                                <td style="padding:10px 16px;border-bottom:1px solid var(--color-border);">
-                                    <input type="number" name="RezervasyonHucreler[@i].PeriyotUcreti" value="@rez.PeriyotUcreti.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm" step="0.01" min="0" />
+                                <td class="p-[10px_16px] border-b border-[var(--color-border)]">
+                                    <input type="number" name="RezervasyonHucreler[@i].PeriyotUcreti" value="@rez.PeriyotUcreti.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm font-mono text-center" step="0.01" min="0" />
                                 </td>
-                                <td style="padding:10px 16px;border-bottom:1px solid var(--color-border);">
-                                    <input type="number" name="RezervasyonHucreler[@i].KdvOrani" value="@rez.KdvOrani.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm" step="0.01" min="0" max="100" />
+                                <td class="p-[10px_16px] border-b border-[var(--color-border)]">
+                                    <input type="number" name="RezervasyonHucreler[@i].KdvOrani" value="@rez.KdvOrani.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm font-mono text-center" step="0.01" min="0" max="100" />
                                 </td>
                             </tr>
                         }
@@ -164,8 +164,8 @@
         }
     </div>
 
-    <div style="margin-top:24px;display:flex;gap:12px;">
-        <button type="submit" class="btn btn-primary btn-lg" style="min-width:140px;">Kaydet</button>
-        <a href="/Admin/Tarife" class="btn btn-secondary btn-lg">İptal</a>
+    <div class="mt-6 flex gap-3">
+        <button type="submit" class="btn btn-primary btn-lg min-w-[140px]">Kaydet</button>
+        <a href="/Admin/Tarife" class="btn btn-secondary btn-lg min-w-[100px]">İptal</a>
     </div>
 </form>

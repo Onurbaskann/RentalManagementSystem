@@ -30,16 +30,16 @@
 }
 
 <aside class="sidebar" :class="{ 'is-open': $store.ui.sidebarOpen }">
-    <div class="sidebar-header">
-        <div class="sidebar-logo">
+    <div class="sidebar-header flex items-center gap-3">
+        <div class="sidebar-logo flex-shrink-0">
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="28" height="28" rx="8" style="fill:var(--color-primary)"/>
+                <rect width="28" height="28" rx="8" class="fill-indigo-600"/>
                 <path d="M7 20V11L14 7L21 11V20H17V15H11V20H7Z" fill="white"/>
             </svg>
         </div>
-        <div>
-            <div class="sidebar-title">Kira Takip</div>
-            <div class="sidebar-subtitle">Yönetim Paneli</div>
+        <div class="overflow-hidden">
+            <div class="sidebar-title leading-tight">Kira Takip</div>
+            <div class="sidebar-subtitle leading-tight">Yönetim Paneli</div>
         </div>
     </div>
 
@@ -146,18 +146,17 @@
     </nav>
 
     <div class="sidebar-footer">
-        <div class="sidebar-user">
-            <div class="sidebar-avatar">@userInitials</div>
-            <div style="flex:1;min-width:0;">
-                <div class="sidebar-user-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@userAdSoyad</div>
-                <div class="sidebar-user-role">@userRole</div>
+        <div class="sidebar-user flex items-center gap-3">
+            <div class="sidebar-avatar flex-shrink-0">@userInitials</div>
+            <div class="flex-1 min-w-0">
+                <div class="sidebar-user-name truncate">@userAdSoyad</div>
+                <div class="sidebar-user-role truncate text-[10px] uppercase font-bold opacity-60 tracking-wider">@userRole</div>
             </div>
-            <form asp-controller="Account" asp-action="Logout" method="post" style="flex-shrink:0;">
+            <form asp-controller="Account" asp-action="Logout" method="post" class="flex-shrink-0">
                 @Html.AntiForgeryToken()
                 <button type="submit" title="Çıkış Yap"
-                    style="background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;color:var(--color-muted);display:flex;align-items:center;"
-                    onmouseover="this.style.background='var(--color-bg)'" onmouseout="this.style.background='none'">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all flex items-center justify-center">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                         <polyline points="16 17 21 12 16 7"/>
                         <line x1="21" y1="12" x2="9" y2="12"/>

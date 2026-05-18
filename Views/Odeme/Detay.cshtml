@@ -31,70 +31,86 @@
     };
 }
 
-<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+<div class="page-header flex items-center justify-between">
     <div>
-        <a href="/Odeme" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">← Ödemeler</a>
+        <a href="/Odeme" class="text-[12.5px] text-slate-400 font-bold uppercase tracking-tight no-underline inline-flex items-center gap-1 mb-2 hover:text-indigo-600 transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Ödemeler
+        </a>
         <div class="page-title">Ödeme #@Model.Id</div>
         <div class="page-subtitle">@(Model.KiraTahakkuk.KiraSozlesmesi?.Kiraci.GosterimAdi ?? "Rezervasyon Ödemesi") — @Model.KiraTahakkuk.DonemBaslangic.ToString("MMMM yyyy")</div>
     </div>
-    <span class="badge @durumCls" style="font-size:13px;padding:6px 14px;" data-tip="@durumTip">@durumLabel</span>
+    @{
+        string bgCls = Model.Durum switch {
+            OdemeDurumu.Onaylandi  => "bg-emerald-50 text-emerald-700 border-emerald-100",
+            OdemeDurumu.Reddedildi => "bg-red-50 text-red-700 border-red-100",
+            _                      => "bg-amber-50 text-amber-700 border-amber-100"
+        };
+    }
+    <span class="px-4 py-1.5 rounded-full border @bgCls text-xs font-bold shadow-sm" data-tip="@durumTip">@durumLabel</span>
 </div>
 
 @if (TempData["Success"] != null)
 {
-    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">✓ @TempData["Success"]</div>
+    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 px-4 rounded-lg mb-4 text-[13.5px]">✓ @TempData["Success"]</div>
 }
 @if (TempData["Error"] != null)
 {
-    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">✕ @TempData["Error"]</div>
+    <div class="bg-red-50 border border-red-200 text-red-800 p-3 px-4 rounded-lg mb-4 text-[13.5px]">✕ @TempData["Error"]</div>
 }
 
-<div class="two-col" style="gap:20px;align-items:start;">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
     <!-- Sol: Ödeme bilgileri -->
-    <div style="display:flex;flex-direction:column;gap:16px;">
-        <div class="card">
-            <div class="section-title" style="margin-bottom:16px;">Ödeme Bilgileri</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <div class="flex flex-col gap-4">
+        <div class="card p-6">
+            <div class="text-base font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                Ödeme Bilgileri
+            </div>
+            <div class="grid grid-cols-2 gap-x-4 gap-y-6">
                 <div>
-                    <div style="font-size:12px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px;">Tutar</div>
-                    <div style="font-size:22px;font-weight:700;font-family:'Fraunces',serif;">@Model.Tutar.ToString("N0") ₺</div>
+                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Tutar</div>
+                    <div class="text-2xl font-bold text-slate-900">@Model.Tutar.ToString("N2") <span class="text-base font-medium text-slate-400 ml-1">₺</span></div>
                 </div>
                 <div>
-                    <div style="font-size:12px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px;">Ödeme Tarihi</div>
-                    <div style="font-size:16px;font-weight:600;">@Model.OdemeTarihi.ToString("dd.MM.yyyy")</div>
+                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Ödeme Tarihi</div>
+                    <div class="text-base font-bold text-slate-700">@Model.OdemeTarihi.ToString("dd.MM.yyyy")</div>
                 </div>
                 <div>
-                    <div style="font-size:12px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px;">Kanal</div>
-                    <div style="font-size:14px;">@kanalLabel</div>
+                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Kanal</div>
+                    <div class="text-[14px] font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded-md border border-slate-100 inline-block">@kanalLabel</div>
                 </div>
                 <div>
-                    <div style="font-size:12px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px;">Giriş Tarihi</div>
-                    <div style="font-size:14px;">@Model.GirisTarihi.ToString("dd.MM.yyyy HH:mm")</div>
+                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Giriş Tarihi</div>
+                    <div class="text-[14px] font-medium text-slate-500">@Model.GirisTarihi.ToString("dd.MM.yyyy HH:mm")</div>
                 </div>
                 <div>
-                    <div style="font-size:12px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px;">Giren</div>
-                    <div style="font-size:14px;">@(Model.GirenUser?.AdSoyad ?? Model.GirenUser?.Email ?? "—")</div>
+                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Giriş Yapan</div>
+                    <div class="text-[14px] font-medium text-slate-600">@(Model.GirenUser?.AdSoyad ?? Model.GirenUser?.Email ?? "—")</div>
                 </div>
                 @if (Model.Durum == OdemeDurumu.Onaylandi)
                 {
                     <div>
-                        <div style="font-size:12px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px;">Onaylayan</div>
-                        <div style="font-size:14px;">@(Model.OnaylayanUser?.AdSoyad ?? "—")</div>
+                        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Onaylayan</div>
+                        <div class="text-[14px] font-bold text-emerald-600">@(Model.OnaylayanUser?.AdSoyad ?? "—")</div>
                     </div>
                 }
             </div>
             @if (!string.IsNullOrEmpty(Model.Aciklama))
             {
-                <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--color-border);">
-                    <div style="font-size:12px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px;">Açıklama</div>
-                    <div style="font-size:13.5px;">@Model.Aciklama</div>
+                <div class="mt-6 pt-5 border-t border-slate-100">
+                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-2">Açıklama</div>
+                    <div class="text-[13.5px] text-slate-600 leading-relaxed bg-slate-50/50 p-3 rounded-lg border border-slate-100 italic">"@Model.Aciklama"</div>
                 </div>
             }
             @if (Model.Durum == OdemeDurumu.Reddedildi && !string.IsNullOrEmpty(Model.RedNedeni))
             {
-                <div style="margin-top:14px;padding:10px 14px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;">
-                    <div style="font-size:12px;color:#991b1b;font-weight:700;margin-bottom:4px;">RED NEDENİ</div>
-                    <div style="font-size:13.5px;color:#991b1b;">@Model.RedNedeni</div>
+                <div class="mt-5 p-4 bg-red-50 rounded-xl border border-red-100">
+                    <div class="text-[10px] text-red-400 font-bold mb-2 uppercase tracking-widest flex items-center gap-1.5">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        Red Nedeni
+                    </div>
+                    <div class="text-[13.5px] text-red-800 font-medium">@Model.RedNedeni</div>
                 </div>
             }
         </div>
@@ -102,33 +118,36 @@
         <!-- Onay / Red -->
         @if (bekliyor && (canApprove || canReject))
         {
-            <div class="card" x-data="{ showRedForm: false }">
-                <div class="section-title" style="margin-bottom:14px;">İşlem</div>
-                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <div class="card p-6" x-data="{ showRedForm: false }">
+                <div class="text-base font-bold text-slate-800 mb-5 flex items-center gap-2">
+                    <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                    Ödeme İşlemi
+                </div>
+                <div class="flex gap-3 flex-wrap">
                     @if (canApprove)
                     {
                         <form method="post" action="/Odeme/Onayla/@Model.Id"
                               data-confirm="Bu ödemeyi onaylamak istediğinize emin misiniz?">
                             @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-primary">Onayla</button>
+                            <button type="submit" class="btn btn-primary px-8">✓ Onayla</button>
                         </form>
                     }
                     @if (canReject)
                     {
-                        <button type="button" class="btn btn-danger" @@click="showRedForm=!showRedForm">Reddet</button>
+                        <button type="button" class="btn bg-red-50 text-red-600 border-red-100 hover:bg-red-600 hover:text-white px-8 transition-all" @@click="showRedForm=!showRedForm">✕ Reddet</button>
                     }
                 </div>
                 @if (canReject)
                 {
-                    <div x-show="showRedForm" x-cloak style="margin-top:14px;">
+                    <div x-show="showRedForm" x-cloak x-transition class="mt-5 pt-5 border-t border-slate-100">
                         <form method="post" action="/Odeme/Reddet">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="OdemeId" value="@Model.Id" />
-                            <div class="form-group">
-                                <label class="form-label">Red Nedeni</label>
-                                <textarea name="Neden" class="form-control" rows="2" required></textarea>
+                            <div class="form-group mb-4">
+                                <label class="form-label">Red Nedeni *</label>
+                                <textarea name="Neden" class="form-control" rows="3" required placeholder="Neden reddedildiğini açıklayın..."></textarea>
                             </div>
-                            <button type="submit" class="btn btn-danger">Reddi Onayla</button>
+                            <button type="submit" class="btn btn-danger w-full">Reddi Onayla</button>
                         </form>
                     </div>
                 }
@@ -137,30 +156,42 @@
     </div>
 
     <!-- Sağ: Dekontlar -->
-    <div style="display:flex;flex-direction:column;gap:16px;">
-        <div class="card">
-            <div class="section-header">
-                <div class="section-title">Dekontlar (@Model.Dekontlar.Count)</div>
+    <div class="flex flex-col gap-4">
+        <div class="card p-5">
+            <div class="flex items-center justify-between mb-5">
+                <div class="text-[15px] font-bold text-slate-800 flex items-center gap-2">
+                    <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                    Dekontlar (@Model.Dekontlar.Count)
+                </div>
             </div>
 
             @if (Model.Dekontlar.Any())
             {
-                <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+                <div class="flex flex-col gap-2.5 mb-6">
                     @foreach (var d in Model.Dekontlar)
                     {
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--color-bg);border-radius:8px;gap:10px;">
-                            <div style="min-width:0;">
-                                <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@d.OrijinalDosyaAdi</div>
-                                <div style="font-size:11.5px;color:var(--color-muted);">@((d.DosyaBoyutu / 1024.0).ToString("N0")) KB · @d.YuklemeTarihi.ToString("dd.MM.yyyy")</div>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl group transition-all hover:bg-white hover:border-indigo-200 hover:shadow-sm">
+                            <div class="min-w-0 flex items-center gap-3">
+                                <div class="w-9 h-9 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-colors">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="text-[13px] font-bold text-slate-700 truncate" title="@d.OrijinalDosyaAdi">@d.OrijinalDosyaAdi</div>
+                                    <div class="text-[11px] text-slate-400 font-medium">@((d.DosyaBoyutu / 1024.0).ToString("N0")) KB · @d.YuklemeTarihi.ToString("dd.MM.yyyy")</div>
+                                </div>
                             </div>
-                            <div style="display:flex;gap:6px;flex-shrink:0;">
-                                <a href="/Odeme/DekontIndir/@d.Id" class="btn btn-sm btn-secondary" target="_blank">İndir</a>
+                            <div class="flex gap-1.5 ml-2">
+                                <a href="/Odeme/DekontIndir/@d.Id" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="İndir" target="_blank">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                </a>
                                 @if (canUpload)
                                 {
                                     <form method="post" action="/Odeme/DekontSil/@d.Id" data-confirm="Dekont kalıcı olarak silinsin mi?">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="odemeId" value="@Model.Id" />
-                                        <button type="submit" class="btn btn-sm btn-danger">Sil</button>
+                                        <button type="submit" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Sil">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                                        </button>
                                     </form>
                                 }
                             </div>
@@ -170,60 +201,74 @@
             }
             else
             {
-                <div style="font-size:13px;color:var(--color-muted);margin-bottom:14px;">Henüz dekont yüklenmemiş.</div>
+                <div class="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 text-xs font-medium mb-6">
+                    Henüz dekont yüklenmemiş.
+                </div>
             }
 
             @if (canUpload)
             {
-                <form method="post" action="/Odeme/DekontYukle" enctype="multipart/form-data">
+                <form method="post" action="/Odeme/DekontYukle" enctype="multipart/form-data" class="pt-5 border-t border-slate-100">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="OdemeId" value="@Model.Id" />
-                    <div class="form-group" style="margin-bottom:10px;">
-                        <input type="file" name="Dosya" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required />
-                        <div class="form-hint">Maks. 5 MB · PDF, JPG, PNG</div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Dekont Yükle</label>
+                        <input type="file" name="Dosya" class="form-control text-xs file:mr-4 file:py-1.5 file:px-4 file:rounded-md file:border-0 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" accept=".pdf,.jpg,.jpeg,.png" required />
+                        <div class="text-[10px] text-slate-400 mt-2 flex items-center gap-1">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            PDF, JPG veya PNG (Maks. 5 MB)
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-secondary btn-sm">Dekont Yükle</button>
+                    <button type="submit" class="btn btn-secondary w-full text-xs font-bold py-2">Dekontu Sisteme Kaydet</button>
                 </form>
             }
         </div>
 
         <!-- Banka eşleşmeleri -->
-        <div class="card">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                <div class="section-title" style="margin:0;">Banka Eşleşmeleri (@Model.BankaEslesmeleri.Count)</div>
+        <div class="card p-5">
+            <div class="flex items-center justify-between mb-5">
+                <div class="text-[15px] font-bold text-slate-800 flex items-center gap-2">
+                    <span class="w-1.5 h-4 bg-emerald-500 rounded-full"></span>
+                    Banka Eşleşmeleri (@Model.BankaEslesmeleri.Count)
+                </div>
                 @if (canMatch)
                 {
-                    <a href="/Odeme/HareketSec/@Model.Id" class="btn btn-secondary btn-sm">+ Hareket Eşleştir</a>
+                    <a href="/Odeme/HareketSec/@Model.Id" class="text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:underline transition-all">+ Yeni Eşleşme</a>
                 }
             </div>
             @if (Model.BankaEslesmeleri.Any())
             {
-                @foreach (var e in Model.BankaEslesmeleri)
-                {
-                    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--color-bg);border-radius:8px;font-size:13px;margin-bottom:8px;gap:10px;">
-                        <div style="min-width:0;">
-                            <div style="font-weight:600;">@e.BankaHareketi.Tutar.ToString("N0") ₺ — @e.BankaHareketi.HareketTarihi.ToString("dd.MM.yyyy")</div>
-                            <div style="color:var(--color-muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@e.BankaHareketi.Aciklama</div>
-                            <div style="font-size:11.5px;color:var(--color-muted);margin-top:2px;">@(e.EslesmeTipi == EslesmeTipi.Manuel ? "Manuel eşleşme" : "Otomatik")</div>
+                <div class="flex flex-col gap-2.5">
+                    @foreach (var e in Model.BankaEslesmeleri)
+                    {
+                        <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl group hover:border-emerald-200 transition-all">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <div class="text-[13px] font-bold text-slate-700">@e.BankaHareketi.Tutar.ToString("N2") ₺</div>
+                                <div class="text-[11px] font-bold text-slate-400">@e.BankaHareketi.HareketTarihi.ToString("dd.MM.yyyy")</div>
+                            </div>
+                            <div class="text-slate-500 text-[11.5px] leading-relaxed truncate mb-2" title="@e.BankaHareketi.Aciklama">@e.BankaHareketi.Aciklama</div>
+                            <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-200/60">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">@(e.EslesmeTipi == EslesmeTipi.Manuel ? "Manuel Eşleşme" : "Otomatik")</span>
+                                @if (canMatch)
+                                {
+                                    <form method="post" action="/Odeme/BankaEslesmeKaldir" data-confirm="Banka eşleşmesi kaldırılsın mı?" class="shrink-0">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="eslesmeId" value="@e.Id" />
+                                        <input type="hidden" name="odemeId" value="@Model.Id" />
+                                        <button type="submit" class="text-[10px] font-bold text-red-400 hover:text-red-600 uppercase tracking-widest transition-colors">Eşleşmeyi Kaldır</button>
+                                    </form>
+                                }
+                            </div>
                         </div>
-                        @if (canMatch)
-                        {
-                            <form method="post" action="/Odeme/BankaEslesmeKaldir" data-confirm="Banka eşleşmesi kaldırılsın mı?" style="flex-shrink:0;">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="eslesmeId" value="@e.Id" />
-                                <input type="hidden" name="odemeId" value="@Model.Id" />
-                                <button type="submit" class="btn btn-sm btn-danger" data-tip="Banka eşleşmesini kaldır (ödeme silinmez)">Çöz</button>
-                            </form>
-                        }
-                    </div>
-                }
+                    }
+                </div>
             }
             else
             {
-                <div style="font-size:13px;color:var(--color-muted);">Banka hareketi eşleşmesi yok.</div>
+                <div class="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 text-xs font-medium">
+                    Banka hareketi eşleşmesi bulunamadı.
+                </div>
             }
         </div>
     </div>
 </div>
-
-<style>[x-cloak]{display:none!important;}</style>

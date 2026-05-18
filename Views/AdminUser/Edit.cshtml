@@ -6,7 +6,7 @@
 
 <div class="page-header">
     <div>
-        <a href="/Admin/Kullanicilar" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">
+        <a href="/Admin/Kullanicilar" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
             ← Kullanıcı Yönetimi
         </a>
         <div class="page-title">Kullanıcı Düzenle</div>
@@ -16,19 +16,19 @@
 
 @if (Model.IsCurrentUser)
 {
-    <div style="background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">
+    <div class="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-lg mb-4 text-[13.5px]">
         Kendi hesabınızı düzenliyorsunuz. Rol değişikliği ve durum değişikliği uygulanmaz.
     </div>
 }
 
-<div style="max-width:620px;">
+<div class="max-w-[620px]">
     <div class="card">
         <form method="post" action="/Admin/Kullanicilar/Duzenle/@Model.Id" x-data="{ seciliRol: '@Model.Rol' }">
             @Html.AntiForgeryToken()
 
             @if (!ViewData.ModelState.IsValid)
             {
-                <div asp-validation-summary="All" style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 14px;border-radius:8px;margin-bottom:18px;font-size:13px;"></div>
+                <div asp-validation-summary="All" class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4.5 text-sm"></div>
             }
 
             <input type="hidden" asp-for="Id" />
@@ -36,7 +36,7 @@
 
             <div class="form-group">
                 <label class="form-label">E-posta</label>
-                <div class="form-control" style="background:#f7f8fa;color:var(--color-muted);cursor:default;">@Model.Email</div>
+                <div class="form-control bg-slate-50 text-muted cursor-default">@Model.Email</div>
                 <input type="hidden" asp-for="Email" />
             </div>
 
@@ -50,7 +50,7 @@
                 <label class="form-label">Rol</label>
                 @if (Model.IsCurrentUser)
                 {
-                    <div class="form-control" style="background:#f7f8fa;color:var(--color-muted);cursor:default;">
+                    <div class="form-control bg-slate-50 text-muted cursor-default">
                         @(Model.Rol == "Goruntuleyici" ? "Görüntüleyici" : Model.Rol)
                     </div>
                     <input type="hidden" asp-for="Rol" />
@@ -69,25 +69,28 @@
             </div>
 
             <!-- Admin: tüm yetkiler otomatik -->
-            <div x-show="seciliRol === 'Admin'" x-cloak style="background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;padding:12px 16px;border-radius:8px;margin-top:4px;font-size:13.5px;">
+            <div x-show="seciliRol === 'Admin'" x-cloak class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mt-1 text-[13.5px]">
                 Admin rolü tüm yetkilere otomatik olarak sahiptir. Ayrıca izin ataması yapılmaz.
             </div>
 
             <!-- Yonetici: atanabilir permission'lar grup bazlı -->
-            <div x-show="seciliRol === 'Yonetici'" x-cloak style="margin-top:16px;">
-                <label class="form-label" style="margin-bottom:12px;">İzinler</label>
-                <div style="display:flex;flex-direction:column;gap:14px;">
+            <div x-show="seciliRol === 'Yonetici'" x-cloak class="mt-4.5">
+                <label class="form-label mb-3">İzinler</label>
+                <div class="flex flex-col gap-4">
                     @foreach (var grup in Model.YoneticiPermissions)
                     {
-                        <div style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:8px;padding:12px 14px;">
-                            <div style="font-size:11.5px;font-weight:700;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">@grup.GrupAdi</div>
-                            <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                        <div class="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full"></span>
+                                @grup.GrupAdi
+                            </div>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2.5">
                                 @foreach (var p in grup.Permissions)
                                 {
-                                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;white-space:nowrap;">
+                                    <label class="flex items-center gap-2 text-[13px] font-medium text-slate-600 cursor-pointer hover:text-indigo-600 transition-colors">
                                         <input type="checkbox" name="SelectedPermissions" value="@p.Value"
                                                @(p.Selected ? "checked" : "")
-                                               style="width:15px;height:15px;accent-color:var(--color-primary);" />
+                                               class="w-4.5 h-4.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                                         @p.Etiket
                                     </label>
                                 }
@@ -98,18 +101,21 @@
             </div>
 
             <!-- Goruntuleyici: sadece View izinleri + taşınmaz ataması -->
-            <div x-show="seciliRol === 'Goruntuleyici'" x-cloak style="margin-top:16px;display:flex;flex-direction:column;gap:14px;">
+            <div x-show="seciliRol === 'Goruntuleyici'" x-cloak class="mt-6 flex flex-col gap-4">
 
                 <!-- View permission'ları -->
-                <div style="background:var(--color-bg);padding:14px;border-radius:8px;border:1px solid var(--color-border);">
-                    <label class="form-label" style="margin-bottom:10px;">Görüntüleme İzinleri</label>
-                    <div style="display:flex;flex-direction:column;gap:8px;">
+                <div class="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full"></span>
+                        Görüntüleme İzinleri
+                    </label>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2.5">
                         @foreach (var p in Model.GoruntuleyiciPermissions)
                         {
-                            <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer;">
+                            <label class="flex items-center gap-2 text-[13px] font-medium text-slate-600 cursor-pointer hover:text-indigo-600 transition-colors">
                                 <input type="checkbox" name="SelectedPermissions" value="@p.Value"
                                        @(p.Selected ? "checked" : "")
-                                       style="width:15px;height:15px;accent-color:var(--color-primary);" />
+                                       class="w-4.5 h-4.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                                 @p.Etiket
                             </label>
                         }
@@ -117,38 +123,41 @@
                 </div>
 
                 <!-- Taşınmaz yetki ataması -->
-                <div style="background:var(--color-bg);padding:14px;border-radius:8px;border:1px solid var(--color-border);">
-                    <label class="form-label" style="margin-bottom:10px;">Taşınmaz Görüntüleme Yetkileri</label>
-                    <div style="display:flex;flex-direction:column;gap:8px;">
+                <div class="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full"></span>
+                        Taşınmaz Görüntüleme Yetkileri
+                    </label>
+                    <div class="flex flex-col gap-2.5">
                         @if(Model.Tasinmazlar != null && Model.Tasinmazlar.Any())
                         {
                             @for (int i = 0; i < Model.Tasinmazlar.Count; i++)
                             {
-                                <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer;">
-                                    <input type="checkbox" name="SelectedTasinmazIds" value="@Model.Tasinmazlar[i].TasinmazId" @(Model.Tasinmazlar[i].Selected ? "checked" : "") style="width:16px;height:16px;accent-color:var(--color-primary);" />
-                                    <div>
-                                        <span style="font-weight:600;color:var(--color-text);">@Model.Tasinmazlar[i].Ad</span>
-                                        <span style="font-size:12px;color:var(--color-muted);margin-left:4px;">(@Model.Tasinmazlar[i].Konum)</span>
+                                <label class="flex items-center gap-2.5 text-[13.5px] cursor-pointer group">
+                                    <input type="checkbox" name="SelectedTasinmazIds" value="@Model.Tasinmazlar[i].TasinmazId" @(Model.Tasinmazlar[i].Selected ? "checked" : "") class="w-4.5 h-4.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                    <div class="flex flex-col">
+                                        <span class="font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">@Model.Tasinmazlar[i].Ad</span>
+                                        <span class="text-[11px] text-slate-400">@Model.Tasinmazlar[i].Konum</span>
                                     </div>
                                 </label>
                             }
                         }
                         else
                         {
-                            <div style="font-size:12px;color:var(--color-muted);">Sistemde tanımlı taşınmaz bulunmuyor.</div>
+                            <div class="text-xs text-slate-400 italic">Sistemde tanımlı taşınmaz bulunmuyor.</div>
                         }
                     </div>
-                    <div class="form-hint" style="margin-top:8px;">Kullanıcı yalnızca seçilen taşınmazları ve bunlara bağlı bilgileri görebilir.</div>
+                    <div class="text-[11px] text-slate-400 mt-4 pt-3 border-t border-slate-200/60 italic flex items-center gap-1.5">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        Kullanıcı yalnızca seçilen taşınmazları ve bunlara bağlı bilgileri görebilir.
+                    </div>
                 </div>
             </div>
 
-            <div style="display:flex;gap:10px;margin-top:24px;">
-                <button type="submit" class="btn btn-primary">Kaydet</button>
-                <a href="/Admin/Kullanicilar" class="btn btn-secondary">İptal</a>
+            <div class="flex gap-2.5 mt-6">
+                <button type="submit" class="btn btn-primary px-6">Kaydet</button>
+                <a href="/Admin/Kullanicilar" class="btn btn-secondary px-6">İptal</a>
             </div>
         </form>
     </div>
 </div>
-<style>
-    [x-cloak] { display: none !important; }
-</style>

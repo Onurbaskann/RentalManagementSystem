@@ -7,40 +7,39 @@
     bool canEdit = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Kiraci.Create) || User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Kiraci.Edit);
 }
 
-<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+<div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Kiracılar</div>
         <div class="page-subtitle">@Model.Count kayıtlı kiracı</div>
     </div>
     @if (canEdit)
     {
-        <a href="/Kiraci/Ekle" class="btn btn-primary">
+        <a href="/Kiraci/Ekle" class="btn btn-primary flex items-center gap-2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Yeni Kiracı
         </a>
     }
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;" x-data="clientTable({ pageSize: 25 })" x-init="init()">
-    <div class="table-toolbar">
-        <input type="search" class="form-control toolbar-search" placeholder="Ara: ad, no, telefon, e-posta…" x-model.debounce.250ms="q" />
-        <span class="pagination-info" style="margin-left:auto;">
-            <span x-text="total"></span> kayıt
+<div class="card p-0 overflow-hidden" x-data="clientTable({ pageSize: 25 })" x-init="init()">
+    <div class="flex items-center gap-4 p-3 bg-slate-50/50 border-b border-slate-200">
+        <input type="search" class="form-control w-full max-w-sm" placeholder="Ara: ad, no, telefon, e-posta…" x-model.debounce.250ms="q" />
+        <span class="ml-auto text-xs text-muted">
+            <span x-text="total" class="font-bold"></span> kayıt
         </span>
     </div>
     <div class="table-wrapper">
-        <table>
+        <table class="w-full">
             <thead>
                 <tr>
-                    <th>Kiracı No</th>
-                    <th>Ad / Firma</th>
-                    <th>Tür</th>
-                    <th>Kategori</th>
-                    <th>Telefon</th>
-                    <th>E-posta</th>
-                    <th>Aktif Sözleşme</th>
-                    <th>Kayıt Tarihi</th>
-                    <th></th>
+                    <th class="w-24">No</th>
+                    <th>Kiracı Bilgisi</th>
+                    <th class="w-20">Tür</th>
+                    <th class="w-32">Kategori</th>
+                    <th class="w-32">İletişim</th>
+                    <th class="w-32">Sözleşme</th>
+                    <th class="w-28 text-right">Kayıt Tarihi</th>
+                    <th class="w-36"></th>
                 </tr>
             </thead>
             <tbody x-ref="tbody">
@@ -49,16 +48,16 @@
                     var aktifSozlesmeCount = ((Dictionary<int,int>)ViewBag.AktifSozlesme).GetValueOrDefault(k.Id, 0);
                     var search = $"{k.KiraciNo} {k.GosterimAdi} {k.VergiNo} {k.TcKimlikNo} {k.Telefon} {k.Email}".ToLower();
                     <tr data-row data-search="@search">
-                        <td style="font-size:12.5px;color:var(--color-muted);font-family:'JetBrains Mono',monospace;">@k.KiraciNo</td>
+                        <td class="font-mono text-xs text-muted">@k.KiraciNo</td>
                         <td>
-                            <div style="font-weight:600;">@k.GosterimAdi</div>
+                            <div class="font-semibold text-slate-800">@k.GosterimAdi</div>
                             @if (k.KiraciTuru == KiraciTuru.Tuzel && !string.IsNullOrEmpty(k.VergiNo))
                             {
-                                <div style="font-size:11.5px;color:var(--color-muted);">VKN: @k.VergiNo</div>
+                                <div class="text-[11.5px] text-muted">VKN: @k.VergiNo</div>
                             }
                             else if (k.KiraciTuru == KiraciTuru.Gercek && !string.IsNullOrEmpty(k.TcKimlikNo))
                             {
-                                <div style="font-size:11.5px;color:var(--color-muted);">TC: @k.TcKimlikNo</div>
+                                <div class="text-[11.5px] text-muted">TC: @k.TcKimlikNo</div>
                             }
                         </td>
                         <td>
@@ -70,27 +69,29 @@
                         <td>
                             @if (k.KiraciKategori != null)
                             {
-                                <span class="badge" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;font-size:11px;">@k.KiraciKategori.Ad</span>
+                                <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[11px] font-medium border border-slate-200">@k.KiraciKategori.Ad</span>
                             }
                             else
                             {
-                                <span style="color:#c8cfd8;font-size:12px;">—</span>
+                                <span class="text-slate-300 text-xs">—</span>
                             }
                         </td>
-                        <td style="font-size:13px;">@k.Telefon</td>
-                        <td style="font-size:13px;">@k.Email</td>
+                        <td>
+                            <div class="text-[13px] text-slate-700">@k.Telefon</div>
+                            <div class="text-[11px] text-muted truncate max-w-[120px]">@k.Email</div>
+                        </td>
                         <td>
                             @if (aktifSozlesmeCount > 0)
                             {
-                                <span class="badge badge-kirali">@aktifSozlesmeCount sözleşme</span>
+                                <span class="badge badge-kirali">@aktifSozlesmeCount Sözleşme</span>
                             }
                             else
                             {
                                 <span class="badge badge-bos">Yok</span>
                             }
                         </td>
-                        <td style="font-size:13px;color:var(--color-muted);">@k.KayitTarihi.ToString("dd.MM.yyyy")</td>
-                        <td style="display:flex;gap:6px;justify-content:flex-end;">
+                        <td class="text-right text-xs text-muted whitespace-nowrap">@k.KayitTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="flex gap-1.5 justify-end">
                             <a href="/Kiraci/Detay/@k.Id" class="btn btn-sm btn-secondary">Detay</a>
                             @if (canEdit)
                             {
@@ -102,19 +103,21 @@
             </tbody>
         </table>
     </div>
-    <div class="pagination-wrap" x-show="totalPages > 1">
-        <div class="pagination-info">
-            <span x-text="from"></span>–<span x-text="to"></span> / <strong x-text="total"></strong>
+    <div class="flex items-center justify-between p-3 bg-slate-50/50 border-t border-slate-200" x-show="totalPages > 1">
+        <div class="text-xs text-muted font-medium">
+            <span x-text="from"></span>–<span x-text="to"></span> / <strong x-text="total"></strong> kayıt
         </div>
-        <nav class="pagination" aria-label="Sayfalar">
-            <button type="button" class="page-btn" :class="{ 'page-btn-disabled': page === 1 }" :disabled="page === 1" @@click="prev()">‹</button>
+        <nav class="flex gap-1" aria-label="Sayfalar">
+            <button type="button" class="w-8 h-8 flex items-center justify-center rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" :disabled="page === 1" @@click="prev()">‹</button>
             <template x-for="p in pageList" :key="p">
-                <button type="button" class="page-btn" :class="{ 'page-btn-active': p === page }" @@click="goto(p)" x-text="p"></button>
+                <button type="button" class="w-8 h-8 flex items-center justify-center rounded border font-medium text-xs transition-colors" 
+                        :class="p === page ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'" 
+                        @@click="goto(p)" x-text="p"></button>
             </template>
-            <button type="button" class="page-btn" :class="{ 'page-btn-disabled': page === totalPages }" :disabled="page === totalPages" @@click="next()">›</button>
+            <button type="button" class="w-8 h-8 flex items-center justify-center rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" :disabled="page === totalPages }" @@click="next()">›</button>
         </nav>
     </div>
-    <div class="pagination-wrap" x-show="total === 0" x-cloak>
-        <div class="pagination-info" style="margin:auto;">Aramaya uyan kayıt yok.</div>
+    <div class="p-8 text-center" x-show="total === 0" x-cloak>
+        <div class="text-slate-400 font-medium">Aramaya uyan kayıt bulunamadı.</div>
     </div>
 </div>

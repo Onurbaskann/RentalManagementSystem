@@ -6,22 +6,27 @@
 }
 
 
-<div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
-        <h2 class="page-title" style="margin:0;">@Model.TasinmazAd - Fiyat Parametreleri</h2>
-        <div style="font-size:13px; color:var(--color-muted);">Bu sayfa salt-okunurdur. Düzenleme için Taşınmaz düzenleme ekranını kullanın.</div>
+<div class="card p-0 overflow-hidden">
+    <div class="flex items-center justify-between p-4 bg-slate-50 border-b border-slate-200">
+        <div>
+            <div class="text-lg font-bold text-slate-800">@Model.TasinmazAd — Fiyat Parametreleri</div>
+            <div class="text-xs text-muted font-medium mt-0.5">Salt-okunur parametre matrisi</div>
+        </div>
+        <div class="text-[11px] text-slate-400 bg-white border border-slate-200 px-3 py-1.5 rounded-lg font-medium italic">
+            Düzenleme için taşınmaz düzenleme ekranını kullanın.
+        </div>
     </div>
 
-    <div class="table-wrapper" style="overflow-x:auto;">
-        <table class="table table-bordered" style="min-width: 800px;">
+    <div class="table-wrapper">
+        <table class="w-full">
             <thead>
                 <tr>
-                    <th style="width:180px;">Kiracı Kategorisi</th>
+                    <th class="w-48 bg-slate-50/50">Kiracı Kategorisi</th>
                     @foreach (var col in Model.Kolonlar)
                     {
-                        <th style="text-align:center;">
-                            <div style="font-size:11px; color:var(--color-muted);">@col.BorcTipiKod</div>
-                            <div style="font-size:13px;">@col.BorcTipiAd</div>
+                        <th class="text-center bg-slate-50/50 border-l border-slate-100">
+                            <div class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">@col.BorcTipiKod</div>
+                            <div class="text-[13px] text-slate-700">@col.BorcTipiAd</div>
                         </th>
                     }
                 </tr>
@@ -29,32 +34,32 @@
             <tbody>
                 @foreach (var satir in Model.Satirlar)
                 {
-                    <tr>
-                        <td style="font-weight:600; vertical-align:middle;">@satir.KiraciKategoriAd</td>
+                    <tr class="hover:bg-slate-50/30 transition-colors">
+                        <td class="font-bold text-slate-800 bg-slate-50/20">@satir.KiraciKategoriAd</td>
                         @foreach (var hucre in satir.Hucreler)
                         {
-                            <td style="padding:12px; text-align:center; background: @(hucre.RateVarMi ? "transparent" : "#f9fafb");">
+                            <td class="p-4 text-center border-l border-slate-50 @(hucre.RateVarMi ? "bg-white" : "bg-slate-50/40")">
                                 @if (hucre.RateVarMi)
                                 {
-                                    <div style="font-family:'Fraunces',Georgia,serif; font-weight:700; font-size:15px;">
-                                        @hucre.BirimDeger.ToString("N2") ₺
-                                        <small style="font-family:sans-serif; font-size:11px; font-weight:400; color:var(--color-muted);">
-                                            @(hucre.HesaplamaYontemi == KiraTakip.Models.HesaplamaYontemi.Sabit ? "/sabit" : "/m²")
-                                        </small>
+                                    <div class="text-base font-bold text-slate-800 flex items-baseline justify-center gap-1">
+                                        @hucre.BirimDeger.ToString("N2") <span class="text-xs font-normal">₺</span>
+                                        <span class="text-[10px] font-medium text-slate-400 uppercase ml-0.5">
+                                            @(hucre.HesaplamaYontemi == KiraTakip.Models.HesaplamaYontemi.Sabit ? "Sbt" : "m²")
+                                        </span>
                                     </div>
-                                    <div style="font-size:11px; color:var(--color-muted); margin-top:4px;">
-                                        KDV: %@hucre.KdvOrani.ToString("N0")
+                                    <div class="text-[10px] font-bold text-indigo-500 uppercase tracking-tighter mt-1">
+                                        KDV %@hucre.KdvOrani.ToString("N0")
                                     </div>
                                     @if (!string.IsNullOrEmpty(hucre.Aciklama))
                                     {
-                                        <div style="font-size:10px; font-style:italic; color:var(--color-muted); margin-top:4px;">
+                                        <div class="text-[10px] text-muted italic mt-1 truncate max-w-[120px] mx-auto" title="@hucre.Aciklama">
                                             @hucre.Aciklama
                                         </div>
                                     }
                                 }
                                 else
                                 {
-                                    <div style="color:#c8cfd8; font-size:12px;">Tanımsız</div>
+                                    <div class="text-[10px] text-slate-300 font-bold uppercase tracking-widest">BOŞ</div>
                                 }
                             </td>
                         }
@@ -66,18 +71,18 @@
 
     @if (Model.TotalRows > pageSize)
     {
-        <div class="d-flex justify-content-between align-items-center mt-3">
-            <div style="font-size:13px; color:var(--color-muted);">
+        <div class="flex items-center justify-between p-4 bg-slate-50 border-t border-slate-200">
+            <div class="text-xs text-muted font-medium">
                 Sayfa @currentPage / @Math.Ceiling((double)Model.TotalRows / pageSize)
             </div>
-            <div class="btn-group">
+            <div class="flex gap-1.5">
                 @if (currentPage > 1)
                 {
-                    <a class="btn btn-sm btn-secondary" asp-action="Index" asp-route-tasinmazId="@Model.TasinmazId" asp-route-page="@(currentPage - 1)" asp-route-pageSize="@pageSize">← Önceki</a>
+                    <a class="btn btn-sm btn-secondary text-xs px-4" asp-action="Index" asp-route-tasinmazId="@Model.TasinmazId" asp-route-page="@(currentPage - 1)" asp-route-pageSize="@pageSize">← Önceki</a>
                 }
                 @if (currentPage * pageSize < Model.TotalRows)
                 {
-                    <a class="btn btn-sm btn-secondary" asp-action="Index" asp-route-tasinmazId="@Model.TasinmazId" asp-route-page="@(currentPage + 1)" asp-route-pageSize="@pageSize">Sonraki →</a>
+                    <a class="btn btn-sm btn-secondary text-xs px-4" asp-action="Index" asp-route-tasinmazId="@Model.TasinmazId" asp-route-page="@(currentPage + 1)" asp-route-pageSize="@pageSize">Sonraki →</a>
                 }
             </div>
         </div>

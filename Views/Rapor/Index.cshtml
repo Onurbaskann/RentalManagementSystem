@@ -5,17 +5,17 @@
     var yillar = ViewBag.MevcutYillar as List<int> ?? new List<int> { Model.Yil };
 }
 
-<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+<div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Tahsilat Raporu</div>
-        <div class="page-subtitle">@Model.Yil yılı — aylık tahakkuk özeti</div>
+        <div class="page-subtitle">@Model.Yil yılı aylık tahakkuk özeti</div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;">
-        <form method="get" style="display:flex;gap:8px;align-items:center;">
-            <select name="yil" class="form-control" style="width:auto;" onchange="this.form.submit()">
+    <div>
+        <form method="get" class="flex items-center">
+            <select name="yil" class="form-control w-32 font-bold" onchange="this.form.submit()">
                 @foreach (var y in yillar)
                 {
-                    <option value="@y" selected="@(y == Model.Yil ? "selected" : null)">@y</option>
+                    <option value="@y" selected="@(y == Model.Yil ? "selected" : null)">@y Yılı</option>
                 }
             </select>
         </form>
@@ -23,39 +23,45 @@
 </div>
 
 <!-- Özet Kartlar -->
-<div class="stats-grid" style="margin-bottom:24px;">
-    <div class="card">
-        <div class="card-title">Yıllık Beklenen</div>
-        <div class="card-value" style="font-size:22px;">@TLFormat(Model.ToplamBeklenen)</div>
-        <div class="card-sub">@Model.Satirlar.Sum(s => s.TahakkukSayisi) tahakkuk</div>
+<!-- Özet Kartlar -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="card bg-white border border-slate-200">
+        <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Yıllık Beklenen</div>
+        <div class="text-2xl font-bold text-slate-800">@TLFormat(Model.ToplamBeklenen)</div>
+        <div class="text-[11px] text-muted font-medium mt-1">@Model.Satirlar.Sum(s => s.TahakkukSayisi) tahakkuk kaydı</div>
     </div>
-    <div class="card">
-        <div class="card-title">Yıllık Tahsil Edilen</div>
-        <div class="card-value" style="font-size:22px;color:#065f46;">@TLFormat(Model.ToplamTahsil)</div>
-        <div class="card-sub">%@Model.GenelTahsilOrani.ToString("F0") tahsilat oranı</div>
+    <div class="card bg-emerald-50/50 border border-emerald-100">
+        <div class="text-[11px] font-bold text-emerald-600/60 uppercase tracking-wider mb-1">Yıllık Tahsil Edilen</div>
+        <div class="text-2xl font-bold text-emerald-700">@TLFormat(Model.ToplamTahsil)</div>
+        <div class="text-[11px] text-emerald-600/80 font-bold mt-1 flex items-center gap-1">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            %@Model.GenelTahsilOrani.ToString("F0") tahsilat başarısı
+        </div>
     </div>
-    <div class="card">
-        <div class="card-title">Tahsil Edilemeyen</div>
-        <div class="card-value" style="font-size:22px;color:@(Model.ToplamBeklenen - Model.ToplamTahsil > 0 ? "#ef4444" : "#065f46");">@TLFormat(Model.ToplamBeklenen - Model.ToplamTahsil)</div>
-        <div class="card-sub">@Model.ToplamGecikmiş gecikmiş tahakkuk · @TLFormat(Model.ToplamGecikmisTutar) gecikmiş tutar</div>
+    <div class="card bg-red-50/50 border border-red-100">
+        <div class="text-[11px] font-bold text-red-600/60 uppercase tracking-wider mb-1">Tahsil Edilemeyen</div>
+        <div class="text-2xl font-bold text-red-700">@TLFormat(Model.ToplamBeklenen - Model.ToplamTahsil)</div>
+        <div class="text-[10px] text-red-600/80 font-bold mt-1">
+            @Model.ToplamGecikmiş gecikmiş · @TLFormat(Model.ToplamGecikmisTutar) toplam gecikme
+        </div>
     </div>
 </div>
 
 <!-- Aylık Tablo -->
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card p-0 overflow-hidden">
     <div class="table-wrapper">
-        <table>
+        <table class="w-full">
             <thead>
                 <tr>
-                    <th>Ay</th>
-                    <th>Tahakkuk</th>
-                    <th>Beklenen</th>
-                    <th>Tahsil Edilen</th>
-                    <th>Kalan</th>
-                    <th style="width:140px;">Tahsilat Oranı</th>
-                    <th title="Vade tarihi geçmiş ve henüz tamamı tahsil edilmemiş tahakkukların adedi ve kalan toplam tutarı.">
+                    <th class="w-32">Ay</th>
+                    <th class="w-24 text-center">Tahakkuk</th>
+                    <th class="w-40 text-right">Beklenen</th>
+                    <th class="w-40 text-right">Tahsil Edilen</th>
+                    <th class="w-40 text-right">Kalan</th>
+                    <th class="w-48">Tahsilat Oranı</th>
+                    <th class="w-48 text-center" title="Vade tarihi geçmiş ve henüz tamamı tahsil edilmemiş tahakkukların adedi ve kalan toplam tutarı.">
                         Gecikmiş Tahakkuk
-                        <span style="display:inline-block;width:14px;height:14px;line-height:14px;text-align:center;border-radius:50%;background:#e5e7eb;color:#6b7280;font-size:10px;font-weight:700;margin-left:4px;cursor:help;">i</span>
+                        <span class="inline-flex items-center justify-center w-3.5 h-3.5 leading-[14px] text-center rounded-full bg-slate-200 text-slate-500 text-[9px] font-bold ml-1 cursor-help">i</span>
                     </th>
                 </tr>
             </thead>
@@ -64,89 +70,92 @@
                 {
                     bool buAy = satir.Ay == DateTime.Today.Month && Model.Yil == DateTime.Today.Year;
                     decimal kalan = satir.Beklenen - satir.TahsilEdilen;
-                    <tr style="@(buAy ? "background:#fffbeb;" : "")">
-                        <td style="font-weight:@(buAy ? "700" : "500");">
+                    <tr class="@(buAy ? "bg-amber-50/40" : "")">
+                        <td class="@(buAy ? "font-bold text-slate-800" : "font-medium text-slate-700")">
                             @satir.AyAdi
-                            @if (buAy) { <span class="badge badge-surek" style="font-size:10px;margin-left:4px;">Bu Ay</span> }
+                            @if (buAy) { <span class="badge badge-surek ml-1 text-[10px] font-bold">BU AY</span> }
                         </td>
-                        <td style="text-align:center;color:var(--color-muted);">
+                        <td class="text-center text-xs text-muted font-medium">
                             @(satir.TahakkukSayisi > 0 ? satir.TahakkukSayisi.ToString() : "—")
                         </td>
-                        <td style="font-weight:600;">
+                        <td class="text-right font-bold text-slate-600">
                             @(satir.Beklenen > 0 ? TLFormat(satir.Beklenen) : "—")
                         </td>
-                        <td style="color:#065f46;font-weight:600;">
-                            @(satir.TahsilEdilen > 0 ? TLFormat(satir.TahsilEdilen) : (satir.Beklenen > 0 ? "0 ₺" : "—"))
+                        <td class="text-right font-bold text-emerald-700">
+                            @(satir.TahsilEdilen > 0 ? TLFormat(satir.TahsilEdilen) : (satir.Beklenen > 0 ? "0,00 ₺" : "—"))
                         </td>
-                        <td style="color:@(kalan > 0 ? "#ef4444" : "#065f46");font-weight:600;">
+                        <td class="text-right font-bold @(kalan > 0 ? "text-red-700" : "text-emerald-700")">
                             @(satir.Beklenen > 0 ? TLFormat(kalan) : "—")
                         </td>
                         <td>
                             @if (satir.Beklenen > 0)
                             {
-                                string barColor = satir.TahsilOrani >= 100 ? "#10b981" : satir.TahsilOrani >= 50 ? "#f59e0b" : "#ef4444";
-                                <div style="display:flex;align-items:center;gap:8px;">
-                                    <div class="progress-bar" style="flex:1;margin-bottom:0;">
-                                        <div class="progress-fill" style="width:@Math.Min(satir.TahsilOrani,100).ToString("F0")%;background:@barColor;"></div>
+                                string barColorCls = satir.TahsilOrani >= 100 ? "bg-emerald-500" : satir.TahsilOrani >= 50 ? "bg-amber-500" : "bg-red-500";
+                                string textColorCls = satir.TahsilOrani >= 100 ? "text-emerald-600" : satir.TahsilOrani >= 50 ? "text-amber-600" : "text-red-600";
+                                <div class="flex items-center gap-2">
+                                    <div class="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                                        <div class="h-full transition-all duration-700 @barColorCls" style="width:@Math.Min(satir.TahsilOrani,100).ToString("F0")%;"></div>
                                     </div>
-                                    <span style="font-size:12px;font-weight:600;color:@barColor;width:32px;">%@satir.TahsilOrani.ToString("F0")</span>
+                                    <span class="text-[11px] font-bold w-10 @textColorCls text-right">%@satir.TahsilOrani.ToString("F0")</span>
                                 </div>
                             }
                             else
                             {
-                                <span style="color:var(--color-muted);font-size:13px;">—</span>
+                                <span class="text-muted text-xs">—</span>
                             }
                         </td>
-                        <td>
+                        <td class="text-center">
                             @if (satir.GecikmisTahakkukAdet > 0)
                             {
                                 var ayBas = new DateTime(Model.Yil, satir.Ay, 1).ToString("yyyy-MM-dd");
                                 var aySon = new DateTime(Model.Yil, satir.Ay, DateTime.DaysInMonth(Model.Yil, satir.Ay)).ToString("yyyy-MM-dd");
                                 var drillUrl = $"/Tahakkuk?durum=gecikti&from={ayBas}&to={aySon}";
-                                <a href="@drillUrl" style="text-decoration:none;display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;" title="@satir.AyAdi ayının gecikmiş tahakkuklarını görüntüle">
-                                    <span class="badge badge-gecmis">@satir.GecikmisTahakkukAdet</span>
-                                    <span style="font-size:11px;color:#ef4444;font-weight:600;">@TLFormat(satir.GecikmisTutar)</span>
+                                <a href="@drillUrl" class="no-underline inline-flex flex-col items-center group" title="@satir.AyAdi ayının gecikmiş tahakkuklarını görüntüle">
+                                    <span class="badge badge-gecmis text-[10px] font-bold group-hover:scale-110 transition-transform">@satir.GecikmisTahakkukAdet ADET</span>
+                                    <span class="text-[10px] text-red-700 font-bold mt-0.5">@TLFormat(satir.GecikmisTutar)</span>
                                 </a>
                             }
                             else if (satir.TahakkukSayisi > 0)
                             {
-                                <span style="color:#10b981;font-size:13px;">✓</span>
+                                <span class="text-emerald-500 text-sm font-bold">✓</span>
                             }
                             else
                             {
-                                <span style="color:var(--color-muted);font-size:13px;">—</span>
+                                <span class="text-muted text-xs">—</span>
                             }
                         </td>
                     </tr>
                 }
             </tbody>
             <tfoot>
-                <tr style="border-top:2px solid var(--color-border);background:#fafbfc;">
-                    <td style="font-weight:700;">Toplam</td>
-                    <td style="text-align:center;font-weight:600;">@Model.Satirlar.Sum(s => s.TahakkukSayisi)</td>
-                    <td style="font-weight:700;">@TLFormat(Model.ToplamBeklenen)</td>
-                    <td style="font-weight:700;color:#065f46;">@TLFormat(Model.ToplamTahsil)</td>
-                    <td style="font-weight:700;color:@(Model.ToplamBeklenen - Model.ToplamTahsil > 0 ? "#ef4444" : "#065f46");">@TLFormat(Model.ToplamBeklenen - Model.ToplamTahsil)</td>
+                <tr class="bg-slate-50 border-t-2 border-slate-200">
+                    <td class="font-bold text-slate-800">YILLIK TOPLAM</td>
+                    <td class="text-center font-bold text-slate-800">@Model.Satirlar.Sum(s => s.TahakkukSayisi)</td>
+                    <td class="text-right font-bold text-slate-800">@TLFormat(Model.ToplamBeklenen)</td>
+                    <td class="text-right font-bold text-emerald-700">@TLFormat(Model.ToplamTahsil)</td>
+                    <td class="text-right font-bold text-red-700">@TLFormat(Model.ToplamBeklenen - Model.ToplamTahsil)</td>
                     <td>
-                        @{
-                            string totalColor = Model.GenelTahsilOrani >= 100 ? "#10b981" : Model.GenelTahsilOrani >= 50 ? "#f59e0b" : "#ef4444";
-                        }
-                        <span style="font-weight:700;color:@totalColor;">%@Model.GenelTahsilOrani.ToString("F0")</span>
+                        <div class="flex items-center gap-2">
+                            <div class="h-2 flex-1 bg-white rounded-full border border-slate-200 overflow-hidden">
+                                <div class="h-full bg-emerald-500" style="width:@Math.Min(Model.GenelTahsilOrani,100).ToString("F0")%;"></div>
+                            </div>
+                            <span class="text-xs font-bold text-emerald-600">%@Model.GenelTahsilOrani.ToString("F0")</span>
+                        </div>
                     </td>
-                    <td>
+                    <td class="text-center">
                         @if (Model.ToplamGecikmiş > 0)
                         {
                             var yilBas = new DateTime(Model.Yil, 1, 1).ToString("yyyy-MM-dd");
                             var yilSon = new DateTime(Model.Yil, 12, 31).ToString("yyyy-MM-dd");
                             var drillUrlTotal = $"/Tahakkuk?durum=gecikti&from={yilBas}&to={yilSon}";
-                            <a href="@drillUrlTotal" style="text-decoration:none;display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;" title="@Model.Yil yılının gecikmiş tahakkuklarını görüntüle">
-                                <span class="badge badge-gecmis">@Model.ToplamGecikmiş</span>
-                                <span style="font-size:11px;color:#ef4444;font-weight:700;">@TLFormat(Model.ToplamGecikmisTutar)</span>
+                            <a href="@drillUrlTotal" class="no-underline inline-flex flex-col items-center group" title="@Model.Yil yılının gecikmiş tahakkuklarını görüntüle">
+                                <span class="badge badge-gecmis text-[10px] font-bold group-hover:scale-110 transition-transform">@Model.ToplamGecikmiş TOPLAM</span>
+                                <span class="text-[10px] text-red-700 font-bold mt-0.5">@TLFormat(Model.ToplamGecikmisTutar)</span>
                             </a>
                         }
                         else
                         {
-                            <span style="color:#10b981;font-size:13px;">✓</span>
+                            <span class="text-emerald-500 font-bold">✓</span>
                         }
                     </td>
                 </tr>

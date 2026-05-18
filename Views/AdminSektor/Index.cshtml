@@ -5,58 +5,58 @@
 
 @if (TempData["Success"] != null)
 {
-    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">
+    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
         ✓ @TempData["Success"]
     </div>
 }
 @if (TempData["Error"] != null)
 {
-    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">
+    <div class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
         ✕ @TempData["Error"]
     </div>
 }
 
-<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+<div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Sektörler</div>
         <div class="page-subtitle">@Model.Count kayıt — kiracı sektör bilgisi</div>
     </div>
-    <a href="/Admin/Sektor/Ekle" class="btn btn-primary">
+    <a href="/Admin/Sektor/Ekle" class="btn btn-primary flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Yeni Sektör
     </a>
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;">
+<div class="card p-0 overflow-hidden">
     <div class="table-wrapper">
-        <table>
+        <table class="w-full">
             <thead>
                 <tr>
-                    <th style="width:60px;">Sıra</th>
-                    <th style="width:120px;">Kod</th>
+                    <th class="w-16 text-center">Sıra</th>
+                    <th class="w-32">Kod</th>
                     <th>Ad</th>
-                    <th style="width:100px;">Durum</th>
-                    <th style="width:160px;"></th>
+                    <th class="w-24">Durum</th>
+                    <th class="w-40"></th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var s in Model)
                 {
                     <tr>
-                        <td style="text-align:center;color:var(--color-muted);font-size:13px;">@s.Sira</td>
-                        <td><span style="font-family:monospace;font-weight:600;font-size:13px;">@s.Kod</span></td>
-                        <td style="font-weight:500;">@s.Ad</td>
+                        <td class="text-center text-muted text-xs">@s.Sira</td>
+                        <td><span class="font-mono font-semibold text-[13px]">@s.Kod</span></td>
+                        <td class="font-medium text-slate-700">@s.Ad</td>
                         <td>
                             @if (s.Aktif)
                             { <span class="badge badge-kirali">Aktif</span> }
                             else
                             { <span class="badge badge-gecmis">Pasif</span> }
                         </td>
-                        <td style="display:flex;gap:6px;justify-content:flex-end;">
+                        <td class="flex gap-1.5 justify-end">
                             <a href="/Admin/Sektor/Duzenle/@s.Id" class="btn btn-sm btn-secondary">Düzenle</a>
                             <form method="post" action="/Admin/Sektor/DurumDegistir/@s.Id"
                                   data-confirm="@(s.Aktif ? $"'{s.Ad}' pasif yapılsın mı?" : $"'{s.Ad}' aktif yapılsın mı?")"
-                                  style="display:inline;">
+                                  class="inline">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-sm @(s.Aktif ? "btn-danger" : "btn-amber")">
                                     @(s.Aktif ? "Pasif Yap" : "Aktif Yap")
@@ -67,7 +67,7 @@
                 }
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--color-muted);">Henüz sektör tanımlanmamış.</td></tr>
+                    <tr><td colspan="5" class="text-center py-8 text-muted">Henüz sektör tanımlanmamış.</td></tr>
                 }
             </tbody>
         </table>

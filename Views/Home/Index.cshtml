@@ -15,7 +15,7 @@
 
 <div class="page-header">
     <div class="page-title">Genel Bakış</div>
-    <div class="page-subtitle">Tüm taşınmazlarınızın özet durumu</div>
+    <div class="page-subtitle text-muted">Tüm taşınmazlarınızın özet durumu</div>
 </div>
 
 <!-- İstatistik Kartları -->
@@ -23,7 +23,7 @@
     <div class="card">
         <div class="card-title">Toplam Taşınmaz</div>
         <div class="card-value">@Model.ToplamTasinmaz</div>
-        <div class="card-sub">
+        <div class="card-sub text-muted">
             @string.Join(", ", Model.TipiDagilim.Select(kv => $"{kv.Value} {kv.Key}"))
         </div>
     </div>
@@ -31,18 +31,16 @@
     <div class="card">
         <div class="card-title">Toplam Birim</div>
         <div class="card-value">@Model.ToplamBirim</div>
-        <div class="card-sub" style="margin-top:10px;">
-            <div style="display:flex;gap:6px;font-size:11px;margin-bottom:6px;">
+        <div class="card-sub mt-2.5">
+            <div class="flex gap-1.5 text-[11px] mb-1.5">
                 <span class="badge badge-kirali">@Model.KiraliBirim Kiralı</span>
                 <span class="badge badge-bos">@Model.BosBirim Boş</span>
                 <span class="badge badge-surek">@Model.SuresiDolmakUzereBirim Dolmak Üzere</span>
             </div>
-            <div class="progress-bar">
-                <div style="display:flex;height:6px;border-radius:999px;overflow:hidden;">
-                    <div style="width:@kiraliPct.ToString("F0")%;background:#10b981;"></div>
-                    <div style="width:@surekPct.ToString("F0")%;background:#f59e0b;"></div>
-                    <div style="width:@bosPct.ToString("F0")%;background:#cbd5e1;"></div>
-                </div>
+            <div class="progress-bar h-1.5 rounded-full overflow-hidden flex">
+                <div class="bg-[#10b981]" style="width:@kiraliPct.ToString("F0")%"></div>
+                <div class="bg-[#f59e0b]" style="width:@surekPct.ToString("F0")%"></div>
+                <div class="bg-[#cbd5e1]" style="width:@bosPct.ToString("F0")%"></div>
             </div>
         </div>
     </div>
@@ -50,19 +48,19 @@
     <div class="card">
         <div class="card-title">Aktif Sözleşme</div>
         <div class="card-value">@Model.AktifSozlesme</div>
-        <div class="card-sub">Bu ay yenilenmesi gereken: <strong>@Model.BuAyYenilenecek</strong></div>
+        <div class="card-sub text-muted">Bu ay yenilenmesi gereken: <strong class="text-[var(--color-primary)]">@Model.BuAyYenilenecek</strong></div>
     </div>
 
     <div class="card">
         <div class="card-title">Aylık Kira Geliri</div>
-        <div class="card-value" style="font-size:22px;">@TLFormat(Model.AylikToplamGelir)</div>
-        <div class="card-sub">Tüm aktif sözleşmeler</div>
+        <div class="card-value text-[22px]">@TLFormat(Model.AylikToplamGelir)</div>
+        <div class="card-sub text-muted">Tüm aktif sözleşmeler</div>
     </div>
 
     <div class="card">
         <div class="card-title">Yıllık Projeksiyon</div>
-        <div class="card-value" style="font-size:22px;">@TLFormat(Model.YillikProj)</div>
-        <div class="card-sub">Mevcut sözleşme bazlı</div>
+        <div class="card-value text-[22px]">@TLFormat(Model.YillikProj)</div>
+        <div class="card-sub text-muted">Mevcut sözleşme bazlı</div>
     </div>
 </div>
 
@@ -72,73 +70,73 @@
     decimal kalanTahsilat = Model.BuAyBeklenenTahsilat - Model.BuAyTahsilEdilen;
     double tahsilPct = Model.BuAyBeklenenTahsilat > 0 ? (double)(Model.BuAyTahsilEdilen / Model.BuAyBeklenenTahsilat * 100) : 0;
 
-    <div style="margin-bottom:24px;">
-        <div style="font-size:13px;font-weight:700;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">Ödeme Durumu</div>
+    <div class="mb-6">
+        <div class="text-xs font-bold text-muted uppercase tracking-wider mb-3">Ödeme Durumu</div>
         <div class="stats-grid">
             <!-- Bu Ay Tahsilat -->
             <div class="card">
                 <div class="card-title">Bu Ay Beklenen Tahsilat</div>
-                <div class="card-value" style="font-size:22px;">@TLFormat(Model.BuAyBeklenenTahsilat)</div>
-                <div class="card-sub" style="margin-top:8px;">
-                    <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:4px;">
+                <div class="card-value text-[22px]">@TLFormat(Model.BuAyBeklenenTahsilat)</div>
+                <div class="card-sub mt-2">
+                    <div class="flex justify-between text-[11.5px] mb-1">
                         <span>Tahsil Edilen</span>
-                        <span style="font-weight:600;color:#10b981;">@TLFormat(Model.BuAyTahsilEdilen)</span>
+                        <span class="font-semibold text-[#10b981]">@TLFormat(Model.BuAyTahsilEdilen)</span>
                     </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width:@Math.Min(tahsilPct,100).ToString("F0")%;background:#10b981;"></div>
+                    <div class="progress-bar h-1.5 rounded-full overflow-hidden bg-[#f1f5f9]">
+                        <div class="progress-fill h-full bg-[#10b981]" style="width:@Math.Min(tahsilPct,100).ToString("F0")%"></div>
                     </div>
                     @if (kalanTahsilat > 0)
                     {
-                        <div style="font-size:11px;color:var(--color-muted);margin-top:4px;">Kalan: @TLFormat(kalanTahsilat)</div>
+                        <div class="text-[11px] text-muted mt-1">Kalan: @TLFormat(kalanTahsilat)</div>
                     }
                 </div>
             </div>
 
             <!-- Gecikmiş -->
-            <div class="card" style="@(Model.GecikmisTahakkukAdet > 0 ? "border-left:3px solid #ef4444;" : "")">
+            <div class="card @(Model.GecikmisTahakkukAdet > 0 ? "border-l-4 border-red-500" : "")">
                 <div class="card-title">Gecikmiş Tahakkuk</div>
-                <div class="card-value" style="@(Model.GecikmisTahakkukAdet > 0 ? "color:#ef4444;" : "")">@Model.GecikmisTahakkukAdet</div>
+                <div class="card-value @(Model.GecikmisTahakkukAdet > 0 ? "text-red-500" : "")">@Model.GecikmisTahakkukAdet</div>
                 <div class="card-sub">
                     @if (Model.GecikmisTahakkukAdet > 0)
                     {
-                        <span style="color:#ef4444;font-weight:600;">@TLFormat(Model.GecikmisTutarToplam)</span><span style="color:var(--color-muted);"> bekliyor</span>
-                        <div style="margin-top:6px;"><a href="/Tahakkuk?durum=gecikti" style="font-size:12px;color:#ef4444;text-decoration:none;">Görüntüle →</a></div>
+                        <span class="text-red-500 font-semibold">@TLFormat(Model.GecikmisTutarToplam)</span><span class="text-muted"> bekliyor</span>
+                        <div class="mt-1.5"><a href="/Tahakkuk?durum=gecikti" class="text-xs text-red-500 no-underline hover:underline">Görüntüle →</a></div>
                     }
                     else
                     {
-                        <span style="color:#10b981;">Gecikmiş ödeme yok</span>
+                        <span class="text-[#10b981]">Gecikmiş ödeme yok</span>
                     }
                 </div>
             </div>
 
             <!-- Onay Bekleyen -->
-            <div class="card" style="@(Model.OnayBekleyenOdemeAdet > 0 ? "border-left:3px solid #f59e0b;" : "")">
+            <div class="card @(Model.OnayBekleyenOdemeAdet > 0 ? "border-l-4 border-amber-500" : "")">
                 <div class="card-title">Onay Bekleyen Ödeme</div>
-                <div class="card-value" style="@(Model.OnayBekleyenOdemeAdet > 0 ? "color:#f59e0b;" : "")">@Model.OnayBekleyenOdemeAdet</div>
+                <div class="card-value @(Model.OnayBekleyenOdemeAdet > 0 ? "text-amber-500" : "")">@Model.OnayBekleyenOdemeAdet</div>
                 <div class="card-sub">
                     @if (Model.OnayBekleyenOdemeAdet > 0)
                     {
-                        <a href="/Odeme?durum=onaybekliyor" style="font-size:12px;color:#f59e0b;text-decoration:none;">İncele →</a>
+                        <a href="/Odeme?durum=onaybekliyor" class="text-xs text-amber-500 no-underline hover:underline">İncele →</a>
                     }
                     else
                     {
-                        <span style="color:var(--color-muted);">Bekleyen yok</span>
+                        <span class="text-muted">Bekleyen yok</span>
                     }
                 </div>
             </div>
 
             <!-- Eşleşmemiş Banka Hareketi -->
-            <div class="card" style="@(Model.EslesmemisHareketAdet > 0 ? "border-left:3px solid #6366f1;" : "")">
+            <div class="card @(Model.EslesmemisHareketAdet > 0 ? "border-l-4 border-indigo-500" : "")">
                 <div class="card-title">Eşleşmemiş Banka Hareketi</div>
-                <div class="card-value" style="@(Model.EslesmemisHareketAdet > 0 ? "color:#6366f1;" : "")">@Model.EslesmemisHareketAdet</div>
+                <div class="card-value @(Model.EslesmemisHareketAdet > 0 ? "text-indigo-500" : "")">@Model.EslesmemisHareketAdet</div>
                 <div class="card-sub">
                     @if (Model.EslesmemisHareketAdet > 0)
                     {
-                        <a href="/BankaHareketi?durum=eslestirilmedi" style="font-size:12px;color:#6366f1;text-decoration:none;">Eşleştir →</a>
+                        <a href="/BankaHareketi?durum=eslestirilmedi" class="text-xs text-indigo-500 no-underline hover:underline">Eşleştir →</a>
                     }
                     else
                     {
-                        <span style="color:var(--color-muted);">Tümü eşleştirildi</span>
+                        <span class="text-muted">Tümü eşleştirildi</span>
                     }
                 </div>
             </div>
@@ -149,36 +147,36 @@
 <!-- Rezervasyon ve Manuel Borç Metrikleri -->
 @if (Model.HasOdemeAccess && (Model.BuAyManuelBorcToplami > 0 || Model.BuAyRezervasyonGeliri > 0 || Model.TahakkukaAktarilmamisRezervasyonAdet > 0))
 {
-    <div style="margin-bottom:24px;">
-        <div style="font-size:13px;font-weight:700;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">Rezervasyon & Manuel Borç</div>
+    <div class="mb-6">
+        <div class="text-xs font-bold text-muted uppercase tracking-wider mb-3">Rezervasyon & Manuel Borç</div>
         <div class="stats-grid">
             <div class="card">
                 <div class="card-title">Bu Ay Manuel Borç</div>
-                <div class="card-value" style="font-size:22px;">@TLFormat(Model.BuAyManuelBorcToplami)</div>
+                <div class="card-value text-[22px]">@TLFormat(Model.BuAyManuelBorcToplami)</div>
                 <div class="card-sub">
-                    <a href="/ManuelBorc" style="font-size:12px;color:var(--color-muted);text-decoration:none;">Tüm manuel borçlar →</a>
+                    <a href="/ManuelBorc" class="text-xs text-muted no-underline hover:underline">Tüm manuel borçlar →</a>
                 </div>
             </div>
 
             <div class="card">
                 <div class="card-title">Bu Ay Rezervasyon Geliri</div>
-                <div class="card-value" style="font-size:22px;">@TLFormat(Model.BuAyRezervasyonGeliri)</div>
+                <div class="card-value text-[22px]">@TLFormat(Model.BuAyRezervasyonGeliri)</div>
                 <div class="card-sub">
-                    <a href="/Rezervasyon" style="font-size:12px;color:var(--color-muted);text-decoration:none;">Tüm rezervasyonlar →</a>
+                    <a href="/Rezervasyon" class="text-xs text-muted no-underline hover:underline">Tüm rezervasyonlar →</a>
                 </div>
             </div>
 
-            <div class="card" style="@(Model.TahakkukaAktarilmamisRezervasyonAdet > 0 ? "border-left:3px solid #f59e0b;" : "")">
+            <div class="card @(Model.TahakkukaAktarilmamisRezervasyonAdet > 0 ? "border-l-4 border-amber-500" : "")">
                 <div class="card-title">Aktarılmamış Ücretli Rezervasyon</div>
-                <div class="card-value" style="@(Model.TahakkukaAktarilmamisRezervasyonAdet > 0 ? "color:#b45309;" : "")">@Model.TahakkukaAktarilmamisRezervasyonAdet</div>
+                <div class="card-value @(Model.TahakkukaAktarilmamisRezervasyonAdet > 0 ? "text-[#b45309]" : "")">@Model.TahakkukaAktarilmamisRezervasyonAdet</div>
                 <div class="card-sub">
                     @if (Model.TahakkukaAktarilmamisRezervasyonAdet > 0)
                     {
-                        <a href="/Rezervasyon" style="font-size:12px;color:#b45309;text-decoration:none;">Tahakkuka aktar →</a>
+                        <a href="/Rezervasyon" class="text-xs text-[#b45309] no-underline hover:underline">Tahakkuka aktar →</a>
                     }
                     else
                     {
-                        <span style="color:var(--color-muted);">Bekleyen yok</span>
+                        <span class="text-muted">Bekleyen yok</span>
                     }
                 </div>
             </div>
@@ -187,27 +185,27 @@
 }
 
 <!-- İki Kolon: Süresi Dolmak Üzere + Boş Birimler -->
-<div class="two-col" style="margin-bottom:24px;">
+<div class="two-col mb-6">
     <!-- Sol: Süresi Dolmak Üzere -->
-    <div class="card" style="padding:0;overflow:hidden;">
-        <div style="padding:18px 20px 14px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;">
+    <div class="card p-0 overflow-hidden">
+        <div class="p-[18px_20px_14px] border-b border-[var(--color-border)] flex items-center justify-between">
             <div class="section-title">⏰ Süresi Dolmak Üzere</div>
             <a href="/Sozlesme?filtre=surek" class="btn btn-sm btn-secondary">Tümü</a>
         </div>
         @if (!Model.SuresiDolmakUzere.Any())
         {
-            <div style="padding:32px 20px;text-align:center;color:var(--color-muted);font-size:13.5px;">Yakında dolacak sözleşme yok.</div>
+            <div class="p-[32px_20px] text-center text-muted text-[13.5px]">Yakında dolacak sözleşme yok.</div>
         }
         else
         {
             <div>
                 @foreach (var s in Model.SuresiDolmakUzere)
                 {
-                    <a href="/Sozlesme/Detay/@s.SozlesmeId" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #f1f3f5;text-decoration:none;color:inherit;transition:background 0.1s;" onmouseover="this.style.background='#fafbfc'" onmouseout="this.style.background=''">
+                    <a href="/Sozlesme/Detay/@s.SozlesmeId" class="flex items-center justify-between p-[14px_20px] border-b border-[#f1f3f5] last:border-b-0 no-underline text-inherit transition-colors hover:bg-[#fafbfc]">
                         <div>
-                            <div style="font-size:13.5px;font-weight:600;">@s.KiraciAdi</div>
-                            <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">@s.TasinmazAdi — @s.BirimAdi</div>
-                            <div style="font-size:11.5px;color:var(--color-muted);">Bitiş: @s.BitisTarihi.ToString("dd.MM.yyyy")</div>
+                            <div class="text-[13.5px] font-semibold">@s.KiraciAdi</div>
+                            <div class="text-xs text-muted mt-0.5">@s.TasinmazAdi — @s.BirimAdi</div>
+                            <div class="text-[11.5px] text-muted">Bitiş: @s.BitisTarihi.ToString("dd.MM.yyyy")</div>
                         </div>
                         <span class="day-badge @DayBadgeCls(s.KalanGun)">@s.KalanGun gün</span>
                     </a>
@@ -217,25 +215,25 @@
     </div>
 
     <!-- Sağ: Boş Birimler -->
-    <div class="card" style="padding:0;overflow:hidden;">
-        <div style="padding:18px 20px 14px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;">
+    <div class="card p-0 overflow-hidden">
+        <div class="p-[18px_20px_14px] border-b border-[var(--color-border)] flex items-center justify-between">
             <div class="section-title">🏢 Boş Birimler</div>
             @if (canEdit) { <a href="/Sozlesme/Ekle" class="btn btn-sm btn-primary">Kiraya Ver</a> }
         </div>
         @if (!Model.BosBirimler.Any())
         {
-            <div style="padding:32px 20px;text-align:center;color:var(--color-muted);font-size:13.5px;">Tüm birimler kiralı!</div>
+            <div class="p-[32px_20px] text-center text-muted text-[13.5px]">Tüm birimler kiralı!</div>
         }
         else
         {
             <div>
                 @foreach (var b in Model.BosBirimler)
                 {
-                    <a href="/Sozlesme/Ekle?birimId=@b.BirimId" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #f1f3f5;text-decoration:none;color:inherit;transition:background 0.1s;" onmouseover="this.style.background='#fafbfc'" onmouseout="this.style.background=''">
+                    <a href="/Sozlesme/Ekle?birimId=@b.BirimId" class="flex items-center justify-between p-[14px_20px] border-b border-[#f1f3f5] last:border-b-0 no-underline text-inherit transition-colors hover:bg-[#fafbfc]">
                         <div>
-                            <div style="font-size:13.5px;font-weight:600;">@b.TasinmazAdi</div>
-                            <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">@b.BirimAdi • @b.Ilce</div>
-                            <div style="font-size:11.5px;color:var(--color-muted);">@b.Yuzolcumu m²</div>
+                            <div class="text-[13.5px] font-semibold">@b.TasinmazAdi</div>
+                            <div class="text-xs text-muted mt-0.5">@b.BirimAdi • @b.Ilce</div>
+                            <div class="text-[11.5px] text-muted">@b.Yuzolcumu m²</div>
                         </div>
                         <span class="badge badge-bos">Boş</span>
                     </a>
@@ -247,13 +245,13 @@
 
 <!-- Doluluk Grafiği -->
 <div class="card">
-    <div class="section-header" style="margin-bottom:20px;">
+    <div class="section-header mb-5">
         <div class="section-title">Doluluk Dağılımı</div>
-        <span style="font-size:12.5px;color:var(--color-muted);">Birim bazında</span>
+        <span class="text-[12.5px] text-muted">Birim bazında</span>
     </div>
-    <div style="display:flex;align-items:center;gap:48px;">
+    <div class="flex flex-col md:flex-row items-center gap-12">
         <!-- Donut Chart -->
-        <div style="flex-shrink:0;position:relative;width:160px;height:160px;">
+        <div class="flex-shrink-0 relative w-40 h-40">
             <svg width="160" height="160" viewBox="0 0 160 160">
                 @{
                     double total = Model.KiraliBirim + Model.SuresiDolmakUzereBirim + Model.BosBirim;
@@ -285,55 +283,61 @@
                 @Html.Raw(arcKirali)
                 @Html.Raw(arcSurek)
                 @Html.Raw(arcBos)
-                <text x="80" y="74" text-anchor="middle" dominant-baseline="middle" font-size="24" font-weight="700" fill="#1a2332" font-family="Fraunces,serif">@Model.ToplamBirim</text>
-                <text x="80" y="95" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#6b7c93" font-family="Plus Jakarta Sans,sans-serif">Birim</text>
+                <text x="80" y="74" text-anchor="middle" dominant-baseline="middle" class="text-2xl font-bold fill-[#1a2332] font-serif">@Model.ToplamBirim</text>
+                <text x="80" y="95" text-anchor="middle" dominant-baseline="middle" class="text-[11px] fill-[#6b7c93]">Birim</text>
             </svg>
         </div>
 
         <!-- Legend -->
-        <div style="display:flex;flex-direction:column;gap:14px;">
-            <div style="display:flex;align-items:center;gap:12px;">
-                <div style="width:12px;height:12px;border-radius:50%;background:#10b981;flex-shrink:0;"></div>
+        <div class="flex flex-col gap-3.5">
+            <div class="flex items-center gap-3">
+                <div class="w-3 h-3 rounded-full bg-[#10b981] flex-shrink-0"></div>
                 <div>
-                    <div style="font-size:13.5px;font-weight:600;">Kiralı</div>
-                    <div style="font-size:12px;color:var(--color-muted);">@Model.KiraliBirim birim • %@kiraliPct.ToString("F0")</div>
+                    <div class="text-[13.5px] font-semibold">Kiralı</div>
+                    <div class="text-xs text-muted">@Model.KiraliBirim birim • %@kiraliPct.ToString("F0")</div>
                 </div>
             </div>
-            <div style="display:flex;align-items:center;gap:12px;">
-                <div style="width:12px;height:12px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></div>
+            <div class="flex items-center gap-3">
+                <div class="w-3 h-3 rounded-full bg-[#f59e0b] flex-shrink-0"></div>
                 <div>
-                    <div style="font-size:13.5px;font-weight:600;">Süresi Dolmak Üzere</div>
-                    <div style="font-size:12px;color:var(--color-muted);">@Model.SuresiDolmakUzereBirim birim • %@surekPct.ToString("F0")</div>
+                    <div class="text-[13.5px] font-semibold">Süresi Dolmak Üzere</div>
+                    <div class="text-xs text-muted">@Model.SuresiDolmakUzereBirim birim • %@surekPct.ToString("F0")</div>
                 </div>
             </div>
-            <div style="display:flex;align-items:center;gap:12px;">
-                <div style="width:12px;height:12px;border-radius:50%;background:#cbd5e1;flex-shrink:0;"></div>
+            <div class="flex items-center gap-3">
+                <div class="w-3 h-3 rounded-full bg-[#cbd5e1] flex-shrink-0"></div>
                 <div>
-                    <div style="font-size:13.5px;font-weight:600;">Boş</div>
-                    <div style="font-size:12px;color:var(--color-muted);">@Model.BosBirim birim • %@bosPct.ToString("F0")</div>
+                    <div class="text-[13.5px] font-semibold">Boş</div>
+                    <div class="text-xs text-muted">@Model.BosBirim birim • %@bosPct.ToString("F0")</div>
                 </div>
             </div>
         </div>
 
         <!-- Bar grafik -->
-        <div style="flex:1;max-width:400px;">
-            <div style="margin-bottom:12px;">
-                <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:500;margin-bottom:4px;">
+        <div class="flex-1 max-w-[400px] w-full">
+            <div class="mb-3">
+                <div class="flex justify-between text-[12.5px] font-medium mb-1">
                     <span>Kiralı</span><span>@Model.KiraliBirim/@Model.ToplamBirim</span>
                 </div>
-                <div class="progress-bar"><div class="progress-fill" style="width:@kiraliPct.ToString("F0")%;background:#10b981;"></div></div>
+                <div class="progress-bar h-1.5 rounded-full overflow-hidden bg-[#f1f5f9]">
+                    <div class="progress-fill h-full bg-[#10b981]" style="width:@kiraliPct.ToString("F0")%"></div>
+                </div>
             </div>
-            <div style="margin-bottom:12px;">
-                <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:500;margin-bottom:4px;">
+            <div class="mb-3">
+                <div class="flex justify-between text-[12.5px] font-medium mb-1">
                     <span>Süresi Dolmak Üzere</span><span>@Model.SuresiDolmakUzereBirim/@Model.ToplamBirim</span>
                 </div>
-                <div class="progress-bar"><div class="progress-fill" style="width:@surekPct.ToString("F0")%;background:#f59e0b;"></div></div>
+                <div class="progress-bar h-1.5 rounded-full overflow-hidden bg-[#f1f5f9]">
+                    <div class="progress-fill h-full bg-[#10b981]" style="width:@surekPct.ToString("F0")%"></div>
+                </div>
             </div>
             <div>
-                <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:500;margin-bottom:4px;">
+                <div class="flex justify-between text-[12.5px] font-medium mb-1">
                     <span>Boş</span><span>@Model.BosBirim/@Model.ToplamBirim</span>
                 </div>
-                <div class="progress-bar"><div class="progress-fill" style="width:@bosPct.ToString("F0")%;background:#cbd5e1;"></div></div>
+                <div class="progress-bar h-1.5 rounded-full overflow-hidden bg-[#f1f5f9]">
+                    <div class="progress-fill h-full bg-[#cbd5e1]" style="width:@bosPct.ToString("F0")%"></div>
+                </div>
             </div>
         </div>
     </div>

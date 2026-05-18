@@ -9,38 +9,38 @@
     </div>
 </div>
 
-<div class="card" style="max-width:480px;">
+<div class="card max-w-[480px]">
     <form method="post" action="/Admin/KiraciKategori/Ekle">
         @Html.AntiForgeryToken()
 
         <div class="form-group">
-            <label class="form-label">Ad <span style="color:red">*</span></label>
+            <label class="form-label">Ad <span class="text-red-500">*</span></label>
             <input asp-for="Ad" class="form-control" placeholder="Akademisyen" required />
-            <span asp-validation-for="Ad" class="text-danger" style="font-size:12px;"></span>
+            <span asp-validation-for="Ad" class="text-red-500 text-xs mt-1"></span>
         </div>
 
         <div class="form-group">
-            <label class="form-label">Kod <span style="color:red">*</span></label>
-            <input asp-for="Kod" class="form-control" placeholder="AKADEMISYEN" style="font-family:monospace;text-transform:uppercase;" required maxlength="20" />
-            <div style="font-size:12px;color:var(--color-muted);margin-top:4px;">Kısa tanımlayıcı (büyük harf, boşluksuz). Ör: AKADEMISYEN, FIRMA, KAMU</div>
-            <span asp-validation-for="Kod" class="text-danger" style="font-size:12px;"></span>
+            <label class="form-label">Kod <span class="text-red-500">*</span></label>
+            <input asp-for="Kod" class="form-control font-mono uppercase" placeholder="AKADEMISYEN" required maxlength="20" />
+            <div class="text-xs text-muted mt-1">Kısa tanımlayıcı (büyük harf, boşluksuz). Ör: AKADEMISYEN, FIRMA, KAMU</div>
+            <span asp-validation-for="Kod" class="text-red-500 text-xs mt-1"></span>
         </div>
 
         <div class="form-group">
             <label class="form-label">Sıra</label>
-            <input asp-for="Sira" type="number" class="form-control" min="1" style="width:100px;" />
+            <input asp-for="Sira" type="number" class="form-control w-24" min="1" />
         </div>
 
         <div class="form-group">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                <input asp-for="Aktif" type="checkbox" />
-                <span class="form-label" style="margin:0;">Aktif</span>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input asp-for="Aktif" type="checkbox" class="w-4 h-4 accent-primary cursor-pointer" />
+                <span class="form-label mb-0">Aktif</span>
             </label>
         </div>
 
-        <div style="display:flex;gap:8px;margin-top:8px;">
-            <button type="submit" class="btn btn-primary">Kaydet</button>
-            <a href="/Admin/KiraciKategori" class="btn btn-secondary">İptal</a>
+        <div class="flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary px-6">Kaydet</button>
+            <a href="/Admin/KiraciKategori" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>
 </div>

@@ -4,19 +4,18 @@
      x-show="$store.confirm.open"
      x-cloak
      x-transition.opacity
-     class="modal-overlay"
-     @@keydown.escape.window="$store.confirm.answer(false)"
-     style="position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;">
-    <div class="modal-card"
+     class="fixed inset-0 bg-slate-900/60 backdrop-blur-[2px] z-[9999] flex items-center justify-center p-4"
+     @@keydown.escape.window="$store.confirm.answer(false)">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
          @@click.outside="$store.confirm.answer(false)"
-         style="background:#fff;border-radius:12px;max-width:420px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,0.18);overflow:hidden;">
-        <div style="padding:20px 22px 8px;">
-            <div style="font-family:'Fraunces',Georgia,serif;font-size:18px;font-weight:700;color:var(--color-text);" x-text="$store.confirm.title"></div>
-            <div style="font-size:13.5px;color:var(--color-text);margin-top:8px;line-height:1.5;" x-text="$store.confirm.message"></div>
+         x-transition.scale.origin.center>
+        <div class="p-6 pb-2">
+            <div class="text-lg font-bold text-slate-800" x-text="$store.confirm.title"></div>
+            <div class="text-[13.5px] text-slate-500 mt-2 leading-relaxed font-medium" x-text="$store.confirm.message"></div>
         </div>
-        <div style="padding:14px 22px 20px;display:flex;gap:8px;justify-content:flex-end;">
-            <button type="button" class="btn btn-secondary btn-sm" @@click="$store.confirm.answer(false)">İptal</button>
-            <button type="button" class="btn btn-danger btn-sm" @@click="$store.confirm.answer(true)" x-ref="confirmBtn">Onayla</button>
+        <div class="p-5 flex items-center justify-end gap-2 bg-slate-50/50">
+            <button type="button" class="btn btn-secondary px-5 py-2 text-xs" @@click="$store.confirm.answer(false)">İptal</button>
+            <button type="button" class="btn bg-red-600 hover:bg-red-700 text-white border-0 px-5 py-2 text-xs font-bold shadow-lg shadow-red-200" @@click="$store.confirm.answer(true)" x-ref="confirmBtn">Onayla</button>
         </div>
     </div>
 </div>

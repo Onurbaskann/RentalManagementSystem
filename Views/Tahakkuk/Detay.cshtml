@@ -31,17 +31,17 @@
 
 @if (TempData["Success"] != null)
 {
-    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">✓ @TempData["Success"]</div>
+    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 px-4 rounded-lg mb-4 text-[13.5px]">✓ @TempData["Success"]</div>
 }
 @if (TempData["Error"] != null)
 {
-    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;">✕ @TempData["Error"]</div>
+    <div class="bg-red-50 border border-red-200 text-red-800 p-3 px-4 rounded-lg mb-4 text-[13.5px]">✕ @TempData["Error"]</div>
 }
 
 <!-- Breadcrumb -->
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-    <a href="/Tahakkuk" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;">← Tahakkuklar</a>
-    <div style="display:flex;gap:8px;">
+<div class="flex items-center justify-between mb-5">
+    <a href="/Tahakkuk" class="text-[12.5px] text-muted no-underline hover:text-primary transition-colors">← Tahakkuklar</a>
+    <div class="flex gap-2">
         @if (s != null)
         {
             <a href="/Sozlesme/Detay/@s.Id" class="btn btn-sm btn-secondary">Sözleşme Detayı</a>
@@ -54,68 +54,68 @@
 </div>
 
 <!-- Özet kart -->
-<div class="card" style="margin-bottom:16px;">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:20px;">
+<div class="card mb-4">
+    <div class="flex items-start justify-between flex-wrap gap-5">
         <div>
-            <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Dönem</div>
-            <div style="font-family:'Fraunces',Georgia,serif;font-size:28px;font-weight:700;line-height:1.1;">@Model.DonemBaslangic.ToString("MMMM yyyy")</div>
-            <div style="font-size:13px;color:var(--color-muted);margin-top:4px;">
+            <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-1.5">Dönem</div>
+            <div class="font-serif text-[28px] font-bold leading-tight">@Model.DonemBaslangic.ToString("MMMM yyyy")</div>
+            <div class="text-[13px] text-muted mt-1">
                 @Model.DonemBaslangic.ToString("dd.MM.yyyy") — @Model.DonemBitis.ToString("dd.MM.yyyy")
                 &nbsp;•&nbsp; Vade: @Model.VadeTarihi.ToString("dd.MM.yyyy")
             </div>
-            <div style="margin-top:8px;"><span class="badge @durumCls" style="font-size:12.5px;padding:5px 14px;">@durumLabel</span></div>
+            <div class="mt-2"><span class="badge @durumCls text-[12.5px] px-3.5 py-1.5">@durumLabel</span></div>
         </div>
-        <div style="display:flex;gap:24px;flex-wrap:wrap;">
-            <div style="text-align:center;">
-                <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;margin-bottom:4px;">Beklenen</div>
-                <div style="font-size:20px;font-weight:700;">@Model.ToplamTutar.ToString("N2") ₺</div>
+        <div class="flex gap-6 flex-wrap">
+            <div class="text-center">
+                <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Beklenen</div>
+                <div class="text-xl font-bold">@Model.ToplamTutar.ToString("N2") ₺</div>
             </div>
-            <div style="text-align:center;">
-                <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;margin-bottom:4px;">Ödenen</div>
-                <div style="font-size:20px;font-weight:700;color:#065f46;">@Model.OdenenTutar.ToString("N2") ₺</div>
+            <div class="text-center">
+                <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Ödenen</div>
+                <div class="text-xl font-bold text-emerald-800">@Model.OdenenTutar.ToString("N2") ₺</div>
             </div>
-            <div style="text-align:center;">
-                <div style="font-size:11.5px;font-weight:600;color:var(--color-muted);text-transform:uppercase;margin-bottom:4px;">Kalan</div>
-                <div style="font-size:20px;font-weight:700;color:@(kalan > 0 ? "#ef4444" : "#065f46");">@kalan.ToString("N2") ₺</div>
+            <div class="text-center">
+                <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Kalan</div>
+                <div class="text-xl font-bold @(kalan > 0 ? "text-red-500" : "text-emerald-800")">@kalan.ToString("N2") ₺</div>
             </div>
         </div>
     </div>
 
-    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--color-border);display:flex;gap:32px;flex-wrap:wrap;font-size:13px;">
+    <div class="mt-4 pt-3.5 border-t border-[var(--color-border)] flex gap-8 flex-wrap text-[13px]">
         <div>
-            <span style="color:var(--color-muted);">Kiracı: </span>
+            <span class="text-muted">Kiracı: </span>
             @if (kiraci != null) {
-                <a href="/Kiraci/Detay/@kiraci.Id" style="font-weight:600;text-decoration:none;">@kiraci.GosterimAdi</a>
+                <a href="/Kiraci/Detay/@kiraci.Id" class="font-semibold no-underline hover:underline">@kiraci.GosterimAdi</a>
             } else {
-                <span style="font-weight:600;">Rezervasyon Sahibi</span>
+                <span class="font-semibold">Rezervasyon Sahibi</span>
             }
         </div>
         <div>
-            <span style="color:var(--color-muted);">Taşınmaz: </span>
+            <span class="text-muted">Taşınmaz: </span>
             @if (tasinmaz != null) {
-                <a href="/Tasinmaz/Detay/@tasinmaz.Id" style="font-weight:600;text-decoration:none;">@tasinmaz.Ad</a>
+                <a href="/Tasinmaz/Detay/@tasinmaz.Id" class="font-semibold no-underline hover:underline">@tasinmaz.Ad</a>
             } else {
-                <span style="font-weight:600;">Toplantı Salonu</span>
+                <span class="font-semibold">Toplantı Salonu</span>
             }
         </div>
         <div>
-            <span style="color:var(--color-muted);">Birim: </span>
-            <span style="font-weight:600;">@(birim?.Ad ?? "Rezervasyon")</span>
+            <span class="text-muted">Birim: </span>
+            <span class="font-semibold">@(birim?.Ad ?? "Rezervasyon")</span>
         </div>
         @if (s != null) {
             <div>
-                <span style="color:var(--color-muted);">Sözleşme: </span>
-                <a href="/Sozlesme/Detay/@s.Id" style="font-weight:600;text-decoration:none;">#@s.Id</a>
+                <span class="text-muted">Sözleşme: </span>
+                <a href="/Sozlesme/Detay/@s.Id" class="font-semibold no-underline hover:underline">#@s.Id</a>
             </div>
         }
     </div>
 </div>
 
 <!-- Kalem Dökümü -->
-<div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
-    <div style="padding:14px 20px;border-bottom:1px solid var(--color-border);">
-        <div style="font-size:14px;font-weight:700;">Kalem Dökümü</div>
-        <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">Tahakkuk oluşturulma tarihi: @Model.OlusturmaTarihi.ToString("dd.MM.yyyy HH:mm")</div>
+<div class="card p-0 overflow-hidden mb-4">
+    <div class="p-[14px_20px] border-b border-[var(--color-border)]">
+        <div class="text-sm font-bold">Kalem Dökümü</div>
+        <div class="text-xs text-muted mt-0.5">Tahakkuk oluşturulma tarihi: @Model.OlusturmaTarihi.ToString("dd.MM.yyyy HH:mm")</div>
     </div>
     @if (Model.Kalemler.Any())
     {
@@ -123,16 +123,16 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width:80px;">Kod</th>
+                        <th class="w-20">Kod</th>
                         <th>Açıklama</th>
-                        <th style="width:140px;">Hesaplama</th>
-                        <th style="width:150px;text-align:right;">Birim Değer</th>
-                        <th style="width:90px;text-align:right;">Çarpan</th>
-                        <th style="width:120px;text-align:right;">Tutar</th>
-                        <th style="width:100px;text-align:right;">KDV (%)</th>
-                        <th style="width:120px;text-align:right;">KDV Tutarı</th>
-                        <th style="width:130px;text-align:right;">Toplam</th>
-                        <th style="width:90px;text-align:center;">Kaynak</th>
+                        <th class="w-[140px]">Hesaplama</th>
+                        <th class="w-[150px] text-right">Birim Değer</th>
+                        <th class="w-[90px] text-right">Çarpan</th>
+                        <th class="w-[120px] text-right">Tutar</th>
+                        <th class="w-[100px] text-right">KDV (%)</th>
+                        <th class="w-[120px] text-right">KDV Tutarı</th>
+                        <th class="w-[130px] text-right">Toplam</th>
+                        <th class="w-[90px] text-center">Kaynak</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -169,30 +169,30 @@
                             _                                 => ""
                         };
                         <tr>
-                            <td><span style="font-family:monospace;font-weight:700;font-size:12.5px;">@k.BorcTipi.Kod</span></td>
-                            <td style="font-weight:500;">@k.Aciklama</td>
-                            <td style="font-size:13px;color:var(--color-muted);">
+                            <td><span class="font-mono font-bold text-[12.5px]">@k.BorcTipi.Kod</span></td>
+                            <td class="font-medium">@k.Aciklama</td>
+                            <td class="text-[13px] text-muted">
                                 @(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m² Bazlı" : "Sabit")
                             </td>
-                            <td style="text-align:right;font-size:13px;">
+                            <td class="text-right text-[13px]">
                                 @k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")
                             </td>
-                            <td style="text-align:right;font-size:13px;color:var(--color-muted);">@k.Carpan.ToString("F2")</td>
-                            <td style="text-align:right;font-weight:600;">@k.Tutar.ToString("N2") ₺</td>
-                            <td style="text-align:right;font-size:13px;color:var(--color-muted);">%@k.KdvOrani.ToString("G")</td>
-                            <td style="text-align:right;font-size:13px;color:var(--color-muted);">@k.KdvTutari.ToString("N2") ₺</td>
-                            <td style="text-align:right;font-weight:700;">@k.ToplamTutar.ToString("N2") ₺</td>
-                            <td style="text-align:center;"><span class="badge @kaynakCls" style="font-size:11px;" data-tip="@kaynakTip">@kaynakLabel</span></td>
+                            <td class="text-right text-[13px] text-muted">@k.Carpan.ToString("F2")</td>
+                            <td class="text-right font-semibold">@k.Tutar.ToString("N2") ₺</td>
+                            <td class="text-right text-[13px] text-muted">%@k.KdvOrani.ToString("G")</td>
+                            <td class="text-right text-[13px] text-muted">@k.KdvTutari.ToString("N2") ₺</td>
+                            <td class="text-right font-bold">@k.ToplamTutar.ToString("N2") ₺</td>
+                            <td class="text-center"><span class="badge @kaynakCls text-[11px]" data-tip="@kaynakTip">@kaynakLabel</span></td>
                         </tr>
                     }
                 </tbody>
                 <tfoot>
-                    <tr style="background:#f0f2f5;font-weight:700;border-top:2px solid var(--color-border);">
-                        <td colspan="5" style="padding:10px 14px;font-size:13px;">Toplam</td>
-                        <td style="padding:10px 14px;text-align:right;">@Model.BeklenenTutar.ToString("N2") ₺</td>
+                    <tr class="bg-[#f8fafc] font-bold border-t-2 border-[var(--color-border)]">
+                        <td colspan="5" class="p-[10px_14px] text-[13px]">Toplam</td>
+                        <td class="p-[10px_14px] text-right">@Model.BeklenenTutar.ToString("N2") ₺</td>
                         <td></td>
-                        <td style="padding:10px 14px;text-align:right;">@Model.KdvTutari.ToString("N2") ₺</td>
-                        <td style="padding:10px 14px;text-align:right;font-size:14px;">@Model.ToplamTutar.ToString("N2") ₺</td>
+                        <td class="p-[10px_14px] text-right">@Model.KdvTutari.ToString("N2") ₺</td>
+                        <td class="p-[10px_14px] text-right text-sm">@Model.ToplamTutar.ToString("N2") ₺</td>
                         <td></td>
                     </tr>
                 </tfoot>
@@ -201,14 +201,14 @@
     }
     else
     {
-        <div style="padding:32px;text-align:center;color:var(--color-muted);">Kalem bilgisi yok (eski tahakkuk).</div>
+        <div class="p-8 text-center text-muted">Kalem bilgisi yok (eski tahakkuk).</div>
     }
 </div>
 
 <!-- Ödeme Geçmişi -->
-<div class="card" style="padding:0;overflow:hidden;">
-    <div style="padding:14px 20px;border-bottom:1px solid var(--color-border);">
-        <div style="font-size:14px;font-weight:700;">Ödeme Geçmişi</div>
+<div class="card p-0 overflow-hidden">
+    <div class="p-[14px_20px] border-b border-[var(--color-border)]">
+        <div class="text-sm font-bold">Ödeme Geçmişi</div>
     </div>
     @if (Model.Odemeler.Any())
     {
@@ -217,7 +217,7 @@
                 <thead>
                     <tr>
                         <th>Ödeme Tarihi</th>
-                        <th style="text-align:right;">Tutar</th>
+                        <th class="text-right">Tutar</th>
                         <th>Kanal</th>
                         <th>Durum</th>
                         <th>Giriş Tarihi</th>
@@ -245,12 +245,12 @@
                             _                  => "Diğer"
                         };
                         <tr>
-                            <td style="font-weight:600;">@o.OdemeTarihi.ToString("dd.MM.yyyy")</td>
-                            <td style="text-align:right;font-weight:700;@(o.Durum == OdemeDurumu.Onaylandi ? "color:#065f46;" : "")">@o.Tutar.ToString("N2") ₺</td>
-                            <td style="font-size:13px;">@kanalLabel</td>
+                            <td class="font-semibold">@o.OdemeTarihi.ToString("dd.MM.yyyy")</td>
+                            <td class="text-right font-bold @(o.Durum == OdemeDurumu.Onaylandi ? "text-emerald-800" : "")">@o.Tutar.ToString("N2") ₺</td>
+                            <td class="text-[13px]">@kanalLabel</td>
                             <td><span class="badge @odCls">@odLabel</span></td>
-                            <td style="font-size:12px;color:var(--color-muted);">@o.GirisTarihi.ToString("dd.MM.yyyy HH:mm")</td>
-                            <td style="font-size:13px;color:var(--color-muted);">@o.Aciklama</td>
+                            <td class="text-[12px] text-muted">@o.GirisTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+                            <td class="text-[13px] text-muted">@o.Aciklama</td>
                             <td><a href="/Odeme/Detay/@o.Id" class="btn btn-sm btn-secondary">Detay</a></td>
                         </tr>
                     }
@@ -260,11 +260,11 @@
     }
     else
     {
-        <div style="padding:32px;text-align:center;color:var(--color-muted);">
-            Bu dönem için henüz ödeme kaydı yok.
+        <div class="p-8 text-center text-muted">
+            <div class="mb-3">Bu dönem için henüz ödeme kaydı yok.</div>
             @if (canCreate && !iptal && !tamOdendi)
             {
-                <div style="margin-top:12px;"><a href="/Odeme/Ekle?tahakkukId=@Model.Id" class="btn btn-primary btn-sm">Ödeme Ekle</a></div>
+                <a href="/Odeme/Ekle?tahakkukId=@Model.Id" class="btn btn-primary btn-sm">Ödeme Ekle</a>
             }
         </div>
     }

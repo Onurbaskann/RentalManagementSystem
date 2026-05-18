@@ -15,24 +15,25 @@ public class PaymentLinkService : IPaymentLinkService
         _settings = options.Value;
     }
 
-    public string BuildLink(int tahakkukId)
+    public string BuildLink(int kiraciId)
     {
         var expiresUnix = DateTimeOffset.UtcNow.AddHours(_settings.TokenTtlHours).ToUnixTimeSeconds();
-        var token = BuildToken(tahakkukId, expiresUnix);
-        return $"{_settings.BaseUrl.TrimEnd('/')}/Odeme/Portal/{tahakkukId}?t={Uri.EscapeDataString(token)}";
+        var token = BuildToken(kiraciId, expiresUnix);
+        return $"{_settings.BaseUrl.TrimEnd('/')}/Odeme/Portal?t={Uri.EscapeDataString(token)}";
     }
 
-    public bool TryValidate(int tahakkukId, string token, out string? reason)
+    public bool TryValidate(string token, out int kiraciId, out string? reason)
     {
+        kiraciId = 0;
         reason = null;
         var parts = token.Split('.');
-        if (parts.Length != 2)
+        if (parts.Length != 3)
         {
             reason = "Geçersiz token formatı.";
             return false;
         }
 
-        if (!long.TryParse(parts[0], out var expiresUnix))
+        if (!long.TryParse(parts[0], out var expiresUnix) || !int.TryParse(parts[1], out kiraciId))
         {
             reason = "Geçersiz token formatı.";
             return false;
@@ -44,11 +45,11 @@ public class PaymentLinkService : IPaymentLinkService
             return false;
         }
 
-        var expected = BuildToken(tahakkukId, expiresUnix);
+        var expected = BuildToken(kiraciId, expiresUnix);
         var expectedParts = expected.Split('.');
         if (!CryptographicOperations.FixedTimeEquals(
-                Encoding.UTF8.GetBytes(parts[1]),
-                Encoding.UTF8.GetBytes(expectedParts[1])))
+                Encoding.UTF8.GetBytes(parts[2]),
+                Encoding.UTF8.GetBytes(expectedParts[2])))
         {
             reason = "Geçersiz veya değiştirilmiş token.";
             return false;
@@ -57,15 +58,15 @@ public class PaymentLinkService : IPaymentLinkService
         return true;
     }
 
-    private string BuildToken(int tahakkukId, long expiresUnix)
+    private string BuildToken(int kiraciId, long expiresUnix)
     {
-        var plaintext = $"{tahakkukId}|{expiresUnix}";
+        var plaintext = $"{kiraciId}|{expiresUnix}|payment-portal";
         var keyBytes = Encoding.UTF8.GetBytes(_settings.Secret.PadRight(32, '0'));
         var hmac = HMACSHA256.HashData(keyBytes, Encoding.UTF8.GetBytes(plaintext));
         var hmacBase64Url = Convert.ToBase64String(hmac)
             .TrimEnd('=')
             .Replace('+', '-')
             .Replace('/', '_');
-        return $"{expiresUnix}.{hmacBase64Url}";
+        return $"{expiresUnix}.{kiraciId}.{hmacBase64Url}";
     }
 }

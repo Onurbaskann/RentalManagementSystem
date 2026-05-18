@@ -106,6 +106,7 @@ public class HomeController : Controller
         if (User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.View))
         {
             vm.HasOdemeAccess = true;
+            await _tahakkukService.GecikmeleriGuncelleAsync();
             var tahakkuklar = await _tahakkukService.GetAllAsync(userId: filterUserId);
             var buAyTahakkuklar = tahakkuklar.Where(t => t.DonemBaslangic.Year == now.Year && t.DonemBaslangic.Month == now.Month).ToList();
 

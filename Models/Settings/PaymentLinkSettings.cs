@@ -6,4 +6,5 @@ public class PaymentLinkSettings
     public string Secret { get; set; } = "";
     public int TokenTtlHours { get; set; } = 168;
     public int ReminderDaysBefore { get; set; } = 5;
+    public int ReminderCooldownDays { get; set; } = 7;
 }

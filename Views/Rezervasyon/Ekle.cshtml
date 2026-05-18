@@ -4,7 +4,7 @@
     ViewData["Title"] = "Rezervasyon Ekle";
 }
 
-<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+<div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Rezervasyon Ekle</div>
         <div class="page-subtitle">Seçilen birim için tarih ve saat belirleyin</div>
@@ -12,17 +12,17 @@
     <a href="/Rezervasyon" class="btn btn-secondary">← Geri</a>
 </div>
 
-<div style="max-width:680px;" x-data="rezervasyonForm()">
+<div class="max-w-[680px]" x-data="rezervasyonForm()">
     <form asp-action="Ekle" method="post">
         @Html.AntiForgeryToken()
 
-        <div asp-validation-summary="ModelOnly" class="form-error" style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:20px;"></div>
+        <div asp-validation-summary="ModelOnly" class="form-error bg-red-50 border border-red-200 rounded-lg p-3 mb-5"></div>
 
-        <div class="card">
-            <div class="section-title" style="margin-bottom:20px;">Birim ve Kiracı</div>
+        <div class="card mb-4">
+            <div class="text-lg font-bold mb-5">Birim ve Kiracı</div>
 
-            <div class="form-group">
-                <label asp-for="BirimId" class="form-label">Taşınmaz Birimi <span style="color:#dc2626;">*</span></label>
+            <div class="form-group mb-5">
+                <label asp-for="BirimId" class="form-label">Taşınmaz Birimi <span class="text-red-500">*</span></label>
                 <select asp-for="BirimId" class="form-control" x-on:change="birimSecildi($event)">
                     <option value="">— Birim seçin —</option>
                     @foreach (var b in Model.RezervasyonBirimleri)
@@ -38,9 +38,9 @@
                 <span asp-validation-for="BirimId" class="form-error"></span>
             </div>
 
-            <div class="two-col">
-                <div class="form-group">
-                    <label asp-for="KiraciId" class="form-label">Kiracı <span style="color:#dc2626;">*</span></label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-group mb-0">
+                    <label asp-for="KiraciId" class="form-label">Kiracı <span class="text-red-500">*</span></label>
                     <select asp-for="KiraciId" class="form-control" x-model="kiraciId" x-on:change="kiraciSecildi($event)">
                         <option value="">— Kiracı seçin —</option>
                         @foreach (var k in Model.Kiraciler)
@@ -51,8 +51,8 @@
                     <span asp-validation-for="KiraciId" class="form-error"></span>
                 </div>
 
-                <div class="form-group">
-                    <label asp-for="KiraSozlesmesiId" class="form-label">Sözleşme <span style="color:var(--color-muted);font-weight:400;">(opsiyonel)</span></label>
+                <div class="form-group mb-0">
+                    <label asp-for="KiraSozlesmesiId" class="form-label">Sözleşme <span class="text-muted font-normal">(opsiyonel)</span></label>
                     <select asp-for="KiraSozlesmesiId" class="form-control">
                         <option value="">— Sözleşme seçin —</option>
                         <template x-for="s in filtrelenmisSozlesmeler" :key="s.id">
@@ -63,19 +63,19 @@
             </div>
         </div>
 
-        <div class="card" style="margin-top:16px;">
-            <div class="section-title" style="margin-bottom:20px;">Tarih ve Saat</div>
+        <div class="card mb-4">
+            <div class="text-lg font-bold mb-5">Tarih ve Saat</div>
 
-            <div class="two-col">
-                <div class="form-group">
-                    <label asp-for="BaslangicTarihi" class="form-label">Başlangıç <span style="color:#dc2626;">*</span></label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="form-group mb-0">
+                    <label asp-for="BaslangicTarihi" class="form-label">Başlangıç <span class="text-red-500">*</span></label>
                     <input asp-for="BaslangicTarihi" type="datetime-local" class="form-control"
                            value="@Model.BaslangicTarihi.ToString("yyyy-MM-ddTHH:mm")"
                            x-model="baslangic" x-on:change="hesapla()" />
                     <span asp-validation-for="BaslangicTarihi" class="form-error"></span>
                 </div>
-                <div class="form-group">
-                    <label asp-for="BitisTarihi" class="form-label">Bitiş <span style="color:#dc2626;">*</span></label>
+                <div class="form-group mb-0">
+                    <label asp-for="BitisTarihi" class="form-label">Bitiş <span class="text-red-500">*</span></label>
                     <input asp-for="BitisTarihi" type="datetime-local" class="form-control"
                            value="@Model.BitisTarihi.ToString("yyyy-MM-ddTHH:mm")"
                            x-model="bitis" x-on:change="hesapla()" />
@@ -85,58 +85,58 @@
 
             <!-- Ücret Önizlemesi -->
             <template x-if="hesapSonucu">
-                <div style="background:#f7f8fa;border:1px solid var(--color-border);border-radius:8px;padding:14px 16px;margin-top:4px;">
-                    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-muted);margin-bottom:10px;">Ücret Önizlemesi</div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:10px;">
+                <div class="bg-slate-50 border border-[var(--color-border)] rounded-lg p-3.5 mt-1">
+                    <div class="text-[11px] font-bold uppercase tracking-wider text-muted mb-2.5">Ücret Önizlemesi</div>
+                    <div class="grid grid-cols-3 gap-3 mb-2.5">
                         <div>
-                            <div style="font-size:11px;color:var(--color-muted);">Toplam Süre</div>
-                            <div style="font-weight:600;" x-text="hesapSonucu.toplamSureDakika + ' dk'"></div>
+                            <div class="text-[10px] text-muted">Toplam Süre</div>
+                            <div class="font-semibold" x-text="hesapSonucu.toplamSureDakika + ' dk'"></div>
                         </div>
                         <div>
-                            <div style="font-size:11px;color:var(--color-muted);">Ücretsiz Süre</div>
-                            <div style="font-weight:600;color:#059669;" x-text="hesapSonucu.ucretsizSureDakika + ' dk'"></div>
+                            <div class="text-[10px] text-muted">Ücretsiz Süre</div>
+                            <div class="font-semibold text-emerald-600" x-text="hesapSonucu.ucretsizSureDakika + ' dk'"></div>
                         </div>
                         <div>
-                            <div style="font-size:11px;color:var(--color-muted);">Ücretli Süre</div>
-                            <div style="font-weight:600;" x-text="hesapSonucu.ucretliSureDakika + ' dk'"></div>
+                            <div class="text-[10px] text-muted">Ücretli Süre</div>
+                            <div class="font-semibold" x-text="hesapSonucu.ucretliSureDakika + ' dk'"></div>
                         </div>
                     </div>
                     <template x-if="hesapSonucu.ucretTutar > 0">
                         <div>
-                            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-                                <span style="color:var(--color-muted);">Ücret (<span x-text="hesapSonucu.ucretliPeriyotSayisi"></span> periyot × <span x-text="hesapSonucu.birimUcret.toLocaleString('tr-TR', {minimumFractionDigits:2})"></span> ₺)</span>
+                            <div class="flex justify-between text-[13px] mb-1">
+                                <span class="text-muted">Ücret (<span x-text="hesapSonucu.ucretliPeriyotSayisi"></span> periyot × <span x-text="hesapSonucu.birimUcret.toLocaleString('tr-TR', {minimumFractionDigits:2})"></span> ₺)</span>
                                 <span x-text="hesapSonucu.ucretTutar.toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ₺'"></span>
                             </div>
-                            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
-                                <span style="color:var(--color-muted);">KDV (%<span x-text="hesapSonucu.kdvOrani"></span>)</span>
+                            <div class="flex justify-between text-[13px] mb-1.5">
+                                <span class="text-muted">KDV (%<span x-text="hesapSonucu.kdvOrani"></span>)</span>
                                 <span x-text="hesapSonucu.kdvTutari.toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ₺'"></span>
                             </div>
-                            <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;border-top:1px solid var(--color-border);padding-top:8px;">
+                            <div class="flex justify-between text-[15px] font-bold border-t border-[var(--color-border)] pt-2 mt-1">
                                 <span>Toplam</span>
-                                <span style="color:var(--color-primary);" x-text="hesapSonucu.toplamTutar.toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ₺'"></span>
+                                <span class="text-primary" x-text="hesapSonucu.toplamTutar.toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ₺'"></span>
                             </div>
                         </div>
                     </template>
                     <template x-if="hesapSonucu.ucretTutar === 0">
-                        <div style="font-size:14px;font-weight:600;color:#059669;text-align:center;padding:4px 0;">✓ Ücretsiz kullanım — süre sınırı aşılmıyor</div>
+                        <div class="text-sm font-semibold text-emerald-600 text-center py-1">✓ Ücretsiz kullanım — süre sınırı aşılmıyor</div>
                     </template>
                 </div>
             </template>
             <template x-if="hataMessaji">
-                <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:13px;color:#92400e;margin-top:4px;" x-text="hataMessaji"></div>
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-sm text-amber-800 mt-1" x-text="hataMessaji"></div>
             </template>
         </div>
 
-        <div class="card" style="margin-top:16px;">
-            <div class="form-group" style="margin-bottom:0;">
-                <label asp-for="Aciklama" class="form-label">Açıklama <span style="color:var(--color-muted);font-weight:400;">(opsiyonel)</span></label>
+        <div class="card mb-4">
+            <div class="form-group mb-0">
+                <label asp-for="Aciklama" class="form-label">Açıklama <span class="text-muted font-normal">(opsiyonel)</span></label>
                 <textarea asp-for="Aciklama" class="form-control" rows="2" placeholder="Rezervasyon konusu, katılımcılar vb."></textarea>
             </div>
         </div>
 
-        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
-            <a href="/Rezervasyon" class="btn btn-secondary">İptal</a>
-            <button type="submit" class="btn btn-primary">Rezervasyon Oluştur</button>
+        <div class="flex justify-end gap-3 mt-6">
+            <a href="/Rezervasyon" class="btn btn-secondary px-6">İptal</a>
+            <button type="submit" class="btn btn-primary px-6">Rezervasyon Oluştur</button>
         </div>
     </form>
 </div>

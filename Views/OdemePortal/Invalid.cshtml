@@ -4,24 +4,24 @@
     ViewData["Title"] = "Geçersiz Link";
 }
 
-<div class="portal-card">
-    <div class="portal-header" style="background:#dc2626;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="15" y1="9" x2="9" y2="15"/>
-            <line x1="9" y1="9" x2="15" y2="15"/>
-        </svg>
-        <span>Geçersiz Ödeme Linki</span>
-    </div>
-    <div class="portal-body" style="text-align:center;padding:40px 28px;">
-        <div style="font-size:48px;margin-bottom:16px;">⏳</div>
-        <div style="font-size:16px;font-weight:600;margin-bottom:8px;color:#1e293b;">@(Model ?? "Bu ödeme linki geçerli değil.")</div>
-        <div style="font-size:13.5px;color:#64748b;line-height:1.6;">
-            Link süresi dolmuş veya hatalı bir bağlantı kullandınız.<br />
-            Yeni bir ödeme linki için lütfen yönetiminizle iletişime geçin.
+<div class="bg-white rounded-2xl shadow-xl border border-slate-200/60 overflow-hidden">
+    <div class="px-8 py-10 text-center">
+        <div class="mx-auto w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-5">
+            <svg class="text-red-500" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
         </div>
+        <h1 class="text-xl font-bold text-slate-800 mb-2">Bağlantı doğrulanamadı</h1>
+        <p class="text-sm text-slate-600 leading-relaxed mb-1">
+            @(Model ?? "Bu ödeme linki geçerli değil.")
+        </p>
+        <p class="text-sm text-slate-500 leading-relaxed">
+            Link süresi dolmuş veya değiştirilmiş olabilir.
+        </p>
     </div>
-    <div class="portal-footer">
-        Yardım için yöneticinize başvurun.
+    <div class="px-8 py-4 bg-slate-50 border-t border-slate-100 text-center">
+        <span class="text-xs text-slate-500">Yeni bir ödeme linki için lütfen yönetiminizle iletişime geçin.</span>
     </div>
 </div>

@@ -6,64 +6,48 @@
     var gruplar = Model.Satirlar.GroupBy(s => s.KategoriAd).ToList();
 }
 
-<style>
-    .parent-tarife-kart > summary::-webkit-details-marker { display: none; }
-    .parent-tarife-kart > summary::marker { display: none; }
-    .parent-tarife-kart[open] > summary { border-radius: 6px 6px 0 0 !important; }
-</style>
-
-<details class="parent-tarife-kart" style="margin-bottom:12px;">
-    <summary style="
-        cursor:pointer;
-        display:flex;
-        align-items:center;
-        gap:8px;
-        padding:6px 10px;
-        background:#eef3fd;
-        border:1px solid #c7d8f8;
-        border-radius:6px;
-        user-select:none;
-    ">
-        <span style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#4b6cb7;background:#dbeafe;border:1px solid #bfdbfe;border-radius:3px;padding:1px 6px;">
+<details class="parent-tarife-kart mb-3 group">
+    <summary class="list-none cursor-pointer flex items-center gap-2.5 p-2 px-3 bg-slate-50 border border-slate-200 rounded-lg select-none group-open:rounded-b-none transition-all hover:bg-slate-100/50">
+        <span class="text-[9px] font-bold tracking-widest uppercase bg-indigo-50 text-indigo-600 border border-indigo-100 rounded px-1.5 py-0.5">
             @Model.KaynakAdi
         </span>
         @if (!Model.Satirlar.Any())
         {
-            <span style="font-size:11.5px;color:var(--color-muted);font-style:italic;">— tarife tanımlanmamış</span>
+            <span class="text-[11px] text-muted italic">tarife tanımlanmamış</span>
         }
         else
         {
-            <span style="font-size:11px;color:var(--color-muted);">@gruplar.Count kategori · @Model.Satirlar.Count kalem</span>
+            <span class="text-[11px] text-slate-500 font-medium">@gruplar.Count kategori · @Model.Satirlar.Count kalem</span>
         }
         @if (Model.Aciklama != null)
         {
-            <span style="font-size:11px;color:var(--color-muted);">— @Model.Aciklama</span>
+            <span class="text-[11px] text-muted truncate max-w-[200px]" title="@Model.Aciklama">— @Model.Aciklama</span>
         }
-        <span style="margin-left:auto;font-size:10px;color:#9aabcf;">▼</span>
+        <span class="ml-auto text-[10px] text-slate-300 group-open:rotate-180 transition-transform">▼</span>
     </summary>
 
-    <div style="border:1px solid #c7d8f8;border-top:none;border-radius:0 0 6px 6px;background:#f8faff;padding:10px 12px;">
+    <div class="border border-slate-200 border-t-0 rounded-b-lg bg-white p-3">
         @if (!Model.Satirlar.Any())
         {
-            <p style="margin:0;font-size:12px;color:var(--color-muted);font-style:italic;">
-                Bu yıl için tarife tanımlanmamış. Kalemler 0₺ olarak hesaplanacak.
+            <p class="text-[11px] text-muted italic text-center py-2">
+                Bu kaynak için tarife tanımlanmamış.
             </p>
         }
         else
         {
             @foreach (var (grup, idx) in gruplar.Select((g, i) => (g, i)))
             {
-                <div style="@(idx > 0 ? "margin-top:10px;" : "")">
-                    <div style="font-size:10.5px;font-weight:700;color:#4b6cb7;letter-spacing:.4px;text-transform:uppercase;padding-bottom:3px;border-bottom:1px dashed #c7d8f8;margin-bottom:4px;">
+                <div class="@(idx > 0 ? "mt-4" : "")">
+                    <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest pb-1 border-b border-slate-100 mb-2">
                         @grup.Key
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr auto auto auto;column-gap:12px;row-gap:3px;font-size:12px;padding:0 2px;">
+                    <div class="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 gap-y-1 text-xs">
                         @foreach (var satir in grup)
                         {
-                            <span style="color:var(--color-text);">@satir.BorcTipiAd</span>
-                            <span style="color:var(--color-muted);white-space:nowrap;">@(satir.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m²" : "Sabit")</span>
-                            <span style="text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;">@satir.BirimDeger.ToString("N2") ₺</span>
-                            <span style="text-align:right;color:var(--color-muted);white-space:nowrap;">%@satir.KdvOrani.ToString("N0")</span>
+                            <span class="text-slate-700 font-medium">@satir.BorcTipiAd</span>
+                            <span class="text-slate-400">@(satir.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m²" : "Adet")</span>
+                            <span class="text-right font-bold text-slate-600 font-mono">@satir.BirimDeger.ToString("N2") ₺</span>
+                            <span class="text-right text-slate-400 text-[10px] font-bold">%@satir.KdvOrani.ToString("N0") KDV</span>
                         }
                     </div>
                 </div>

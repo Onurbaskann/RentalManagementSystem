@@ -284,8 +284,10 @@ public class SeedDataService
             vergiNo: "9876543210", ticaretSicilNo: "İZM-456", telefon: "0232 555 6677", email: "info@biyotek.com", adres: "Teknokent");
         var veriBilisim = Kiraci("KRC-005", KiraciTuru.Tuzel, katMap["AKAD_OLMAYAN"], sekMap["YAZILIM"], "Veri Bilişim A.Ş.", null,
             vergiNo: "5556667770", ticaretSicilNo: "İZM-789", telefon: "0232 666 7788", email: "iletisim@veribilisim.com", adres: "Teknokent");
+        var onurBaskan = Kiraci("KRC-006", KiraciTuru.Gercek, katMap["AKAD_OLMAYAN"], sekMap["YAZILIM"], "Onur", "Başkan",
+            tcNo: "11122233344", telefon: "0500 123 4567", email: "onur.baskan@unipa.com.tr", adres: "Unipa Bilişim, İzmir");
 
-        _ctx.Kiraciler.AddRange(ahmet, ayse, yzCozum, biyoLab, veriBilisim);
+        _ctx.Kiraciler.AddRange(ahmet, ayse, yzCozum, biyoLab, veriBilisim, onurBaskan);
 
         // --- Taşınmaz (Teknokent A Blok) ---
         var ofisTuruId = birimTuruMap["OFIS"];
@@ -355,6 +357,7 @@ public class SeedDataService
         var birim301 =teknokent.Birimler.First(b => b.BirimNo == "301");
         var birim302 =teknokent.Birimler.First(b => b.BirimNo == "302");
         var birim401 =teknokent.Birimler.First(b => b.BirimNo == "401");
+        var birim402 =teknokent.Birimler.First(b => b.BirimNo == "402");
 
         // 4.3 Birim Tarifesi Örneği (Hiyerarşide Matrisin Üstündedir)
         // Ofis 201 için Akademisyen kategorisinde özel birim fiyatı tanımlayalım
@@ -403,6 +406,9 @@ public class SeedDataService
             // Süresi dolan/dolmak üzere olanlar
             MakeSozlesme(birim102, ayse, startYearMinus1.AddMonths(2), now.AddDays(15), 16000, false),
             MakeSozlesme(birim302, yzCozum, startYearMinus1.AddMonths(0), now.AddDays(-5), 40000, true),
+
+            // Test Kiracısı (Onur Başkan)
+            MakeSozlesme(birim402, onurBaskan, now.AddMonths(-3), now.AddMonths(9), 35000, true)
         };
 
         foreach (var s in sozlesmeler)
@@ -529,6 +535,20 @@ public class SeedDataService
                     Durum = TahakkukDurumu.IptalEdildi, KaynakTipi = TahakkukKaynakTipi.Manuel, OlusturmaTarihi = DateTime.Now, IptalNotu = "Hatalı giriş nedeniyle iptal edildi.",
                     Kalemler = new List<TahakkukKalemi> { new TahakkukKalemi { BorcTipiId = manuelBorcTipi.Id, Aciklama = "Yanlış Borç Kaydı", BirimDeger = 500m, Tutar = 500m, KdvOrani = 20m, ToplamTutar = 600m, KaynakTipi = KalemKaynakTipi.ManuelGiris } }
                 });
+
+                // Onur Başkan - Manuel Borç (Test için)
+                var onurSozlesme = sozlesmeler.FirstOrDefault(s => s.Kiraci.Email == "onur.baskan@unipa.com.tr");
+                if (onurSozlesme != null)
+                {
+                    _ctx.KiraTahakkuklar.Add(new KiraTahakkuk
+                    {
+                        KiraSozlesmesiId = onurSozlesme.Id,
+                        DonemBaslangic = DateTime.Today.AddDays(-2), DonemBitis = DateTime.Today, VadeTarihi = DateTime.Today.AddDays(10),
+                        BeklenenTutar = 1000m, KdvTutari = 200m, ToplamTutar = 1200m, OdenenTutar = 0m,
+                        Durum = TahakkukDurumu.Bekleniyor, KaynakTipi = TahakkukKaynakTipi.Manuel, OlusturmaTarihi = DateTime.Now,
+                        Kalemler = new List<TahakkukKalemi> { new TahakkukKalemi { BorcTipiId = manuelBorcTipi.Id, Aciklama = "Test Manuel Borç (Mail Kontrol)", BirimDeger = 1000m, Carpan = 1m, Tutar = 1000m, KdvOrani = 20m, KdvTutari = 200m, ToplamTutar = 1200m, KaynakTipi = KalemKaynakTipi.ManuelGiris } }
+                    });
+                }
             }
 
             await _ctx.SaveChangesAsync();
@@ -717,6 +737,47 @@ public class SeedDataService
             Durum = RezervasyonDurumu.Planlandi,
             OlusturmaTarihi = DateTime.Now
         });
+
+        // Onur Başkan - Rezervasyon ve Tahakkuk
+        var onurKiraci = await _ctx.Kiraciler.FirstOrDefaultAsync(k => k.Email == "onur.baskan@unipa.com.tr");
+        if (onurKiraci != null)
+        {
+            var onurSozlesme = await _ctx.Sozlesmeler.FirstOrDefaultAsync(s => s.KiraciId == onurKiraci.Id);
+            var resOnur = new ToplantiSalonuRezervasyon
+            {
+                BirimId = salon.Id,
+                KiraciId = onurKiraci.Id,
+                KiraSozlesmesiId = onurSozlesme?.Id,
+                BaslangicTarihi = DateTime.Today.AddDays(-5).AddHours(9),
+                BitisTarihi = DateTime.Today.AddDays(-5).AddHours(11),
+                ToplamSureDakika = 120,
+                UcretsizSureDakika = 0,
+                UcretliSureDakika = 120,
+                BirimUcret = 500,
+                UcretTutar = 1000,
+                KdvOrani = 20,
+                KdvTutari = 200,
+                ToplamTutar = 1200,
+                Durum = RezervasyonDurumu.TahakkukaAktarildi,
+                OlusturmaTarihi = DateTime.Now.AddDays(-7)
+            };
+            _ctx.ToplantiSalonuRezervasyonlari.Add(resOnur);
+            await _ctx.SaveChangesAsync();
+
+            if (btRezervasyon != null)
+            {
+                _ctx.KiraTahakkuklar.Add(new KiraTahakkuk
+                {
+                    KiraSozlesmesiId = onurSozlesme?.Id,
+                    DonemBaslangic = resOnur.BaslangicTarihi.Date,
+                    DonemBitis = resOnur.BitisTarihi.Date,
+                    VadeTarihi = resOnur.BitisTarihi.Date,
+                    BeklenenTutar = 1000, KdvTutari = 200, ToplamTutar = 1200, OdenenTutar = 0,
+                    Durum = TahakkukDurumu.Bekleniyor, KaynakTipi = TahakkukKaynakTipi.Rezervasyon, OlusturmaTarihi = DateTime.Now.AddDays(-5),
+                    Kalemler = new List<TahakkukKalemi> { new TahakkukKalemi { BorcTipiId = btRezervasyon.Id, Aciklama = $"Toplantı salonu (Test): {salon.Ad}", BirimDeger = 1000, Tutar = 1000, KdvOrani = 20, KdvTutari = 200, ToplamTutar = 1200, KaynakTipi = KalemKaynakTipi.RezervasyonKurali } }
+                });
+            }
+        }
 
         await _ctx.SaveChangesAsync();
     }
