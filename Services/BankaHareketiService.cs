@@ -4,6 +4,7 @@ using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Services.Banka;
 using KiraTakip.Services.Interfaces;
+using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Services;
 

@@ -1,11 +1,10 @@
 using KiraTakip.Authorization;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using KiraTakip.Authorization;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
 
 namespace KiraTakip.Controllers;

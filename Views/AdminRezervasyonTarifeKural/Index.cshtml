@@ -1,0 +1,86 @@
+@model List<RezervasyonTarife>
+@{
+    ViewData["Title"] = "Rezervasyon Ücret Kuralları";
+}
+
+@if (TempData["Success"] != null)
+{
+    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">✓ @TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">✕ @TempData["Error"]</div>
+}
+
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+        <div class="page-title">Rezervasyon Ücret Kuralları</div>
+        <div class="page-subtitle">@Model.Count kayıt · Birime özel kural genel kuralı geçersiz kılar</div>
+    </div>
+    <a href="/Admin/RezervasyonTarifeKural/Ekle" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Yeni Kural
+    </a>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Kapsam</th>
+                    <th style="width:130px;text-align:center;">Ücretsiz Süre</th>
+                    <th style="width:130px;text-align:center;">Periyot</th>
+                    <th style="width:120px;text-align:right;">Periyot Ücreti</th>
+                    <th style="width:80px;text-align:center;">KDV</th>
+                    <th style="width:80px;">Durum</th>
+                    <th style="width:150px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var k in Model)
+                {
+                    <tr>
+                        <td>
+                            @if (k.BirimId == null)
+                            {
+                                <span style="font-weight:600;">Genel Kural</span>
+                                <div style="font-size:12px;color:var(--color-muted);">Tüm toplantı salonları</div>
+                            }
+                            else
+                            {
+                                <span style="font-weight:600;">@k.Birim?.Ad</span>
+                                <div style="font-size:12px;color:var(--color-muted);">@k.Birim?.Tasinmaz?.Ad</div>
+                            }
+                            @if (!string.IsNullOrEmpty(k.Aciklama))
+                            {
+                                <div style="font-size:11px;color:var(--color-muted);margin-top:2px;">@k.Aciklama</div>
+                            }
+                        </td>
+                        <td style="text-align:center;">@k.UcretsizSureDakika dk</td>
+                        <td style="text-align:center;">@k.UcretlendirmePeriyoduDakika dk/periyot</td>
+                        <td style="text-align:right;font-weight:600;">@k.PeriyotUcreti.ToString("N2") ₺</td>
+                        <td style="text-align:center;">%@k.KdvOrani.ToString("F0")</td>
+                        <td>
+                            @if (k.Aktif) { <span class="badge badge-kirali">Aktif</span> }
+                            else { <span class="badge badge-gecmis">Pasif</span> }
+                        </td>
+                        <td style="display:flex;gap:6px;justify-content:flex-end;">
+                            <a href="/Admin/RezervasyonTarifeKural/Duzenle/@k.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                            <form method="post" action="/Admin/RezervasyonTarifeKural/DurumDegistir/@k.Id" style="display:inline;">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm @(k.Aktif ? "btn-danger" : "btn-amber")">
+                                    @(k.Aktif ? "Pasif Yap" : "Aktif Yap")
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--color-muted);">Henüz ücret kuralı tanımlanmamış.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

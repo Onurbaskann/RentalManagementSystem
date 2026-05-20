@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using KiraTakip.Models;
+using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Models.ViewModels;
 

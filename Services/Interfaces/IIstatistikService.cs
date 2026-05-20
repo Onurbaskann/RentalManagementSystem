@@ -1,4 +1,5 @@
 using KiraTakip.Models;
+using KiraTakip.Models.Entities;
 using KiraTakip.Models.ViewModels;
 
 namespace KiraTakip.Services.Interfaces;

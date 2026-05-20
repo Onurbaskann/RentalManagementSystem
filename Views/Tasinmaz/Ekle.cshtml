@@ -38,7 +38,7 @@
                 <label class="form-label">Taşınmaz Tipi *</label>
                 <select asp-for="TasinmazTipiId" class="form-control" x-model="tasinmazTipiId" @@change="onTasinmazTipiChange()">
                     <option value="">— Seçiniz —</option>
-                    @foreach (var tt in (IEnumerable<KiraTakip.Models.Kategori>)ViewBag.TasinmazTipleri)
+                    @foreach (var tt in (IEnumerable<Kategori>)ViewBag.TasinmazTipleri)
                     {
                         <option value="@tt.Id">@tt.Ad</option>
                     }
@@ -118,7 +118,7 @@
                             <div class="form-label mb-1">Birim Türü *</div>
                             <select class="form-control" :name="'Birimler['+i+'].BirimTuruId'" x-model="birim.birimTuruId">
                                 <option value="">— Seçiniz —</option>
-                                @foreach (var bt in (IEnumerable<KiraTakip.Models.BirimTuru>)ViewBag.BirimTurleri)
+                                @foreach (var bt in (IEnumerable<BirimTuru>)ViewBag.BirimTurleri)
                                 {
                                     <option value="@bt.Id">@bt.Ad</option>
                                 }
@@ -327,7 +327,7 @@
                             <div class="form-label mb-1">Alan Türü *</div>
                             <select class="form-control" :name="'RezervasyonAlanlari['+i+'].BirimTuruId'" x-model="alan.birimTuruId">
                                 <option value="">— Seçiniz —</option>
-                                @foreach (var bt in (IEnumerable<KiraTakip.Models.BirimTuru>)ViewBag.RezervasyonBirimTurleri)
+                                @foreach (var bt in (IEnumerable<BirimTuru>)ViewBag.RezervasyonBirimTurleri)
                                 {
                                     <option value="@bt.Id">@bt.Ad</option>
                                 }

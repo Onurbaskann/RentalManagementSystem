@@ -19,7 +19,7 @@ public class TarifeMatrisViewModel
 
 public class TarifeMatrisRezervasyonSatir
 {
-    public int RezervasyonUcretId { get; set; }
+    public int RezervasyonTarifeId { get; set; }
     public int BirimTuruId { get; set; }
     public string BirimTuruAd { get; set; } = "";
     public int UcretsizSureDakika { get; set; }

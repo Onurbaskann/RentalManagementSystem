@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using KiraTakip.Data;
-using KiraTakip.Models;
 using KiraTakip.Services.Interfaces;
+using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Services;
 

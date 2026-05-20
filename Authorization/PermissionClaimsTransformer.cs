@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using KiraTakip.Models;
+using KiraTakip.Models.Entities;
 using KiraTakip.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using KiraTakip.Models;
+using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Services.Banka;
 

@@ -27,10 +27,10 @@
             else
             { <span class="badge badge-bireysel p-1 px-3 text-[12px]">Gerçek Kişi</span> }
             
-            @if (k.Kategori != null)
+            @if (k.KiraciKategori != null)
             {
                 <div class="w-1 h-1 rounded-full bg-slate-300"></div>
-                <span class="badge bg-slate-50 text-slate-600 border border-slate-200 p-1 px-3 text-[12px] font-semibold">@k.Kategori.Ad</span>
+                <span class="badge bg-slate-50 text-slate-600 border border-slate-200 p-1 px-3 text-[12px] font-semibold">@k.KiraciKategori.Ad</span>
             }
         </div>
     </div>
@@ -125,18 +125,18 @@
                     </div>
                 }
             }
-            @if (k.Kategori != null)
+            @if (k.KiraciKategori != null)
             {
                 <div>
                     <div class="text-[11.5px] text-muted mb-0.5">Kategori</div>
-                    <div class="text-[13px] font-medium">@k.Kategori.Ad</div>
+                    <div class="text-[13px] font-medium">@k.KiraciKategori.Ad</div>
                 </div>
             }
-            @if (k.SektorKategori != null)
+            @if (k.Sektor != null)
             {
                 <div>
                     <div class="text-[11.5px] text-muted mb-0.5">Sektör</div>
-                    <div class="text-[13px] font-medium">@k.SektorKategori.Ad</div>
+                    <div class="text-[13px] font-medium">@k.Sektor.Ad</div>
                 </div>
             }
         </div>

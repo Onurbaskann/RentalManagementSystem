@@ -1,11 +1,11 @@
-using System.Diagnostics;
 using KiraTakip.Authorization;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 
 namespace KiraTakip.Controllers;
 
@@ -60,7 +60,7 @@ public class HomeController : Controller
         var vm = new DashboardViewModel
         {
             ToplamTasinmaz = tasinmazlar.Count,
-            TipiDagilim = tasinmazlar.GroupBy(t => t.Kategori?.Ad ?? "Diğer").ToDictionary(g => g.Key, g => g.Count()),
+            TipiDagilim = tasinmazlar.GroupBy(t => t.TasinmazTipi?.Ad ?? "Diğer").ToDictionary(g => g.Key, g => g.Count()),
             ToplamBirim = tumBirimler.Count,
             AktifSozlesme = aktifSozlesmeler.Count,
             AylikToplamGelir = aylikToplamGelir,

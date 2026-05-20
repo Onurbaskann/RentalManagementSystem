@@ -1,10 +1,7 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
-using KiraTakip.Models;
 using KiraTakip.Models.Common;
-using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
-using KiraTakip.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

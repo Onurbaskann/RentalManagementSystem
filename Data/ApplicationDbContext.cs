@@ -1,14 +1,43 @@
+using System.Linq.Expressions;
+using System.Security.Claims;
+using KiraTakip.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using KiraTakip.Models;
 
 namespace KiraTakip.Data;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IHttpContextAccessor httpContextAccessor)
         : base(options)
     {
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        var userId = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+        var now = DateTime.UtcNow;
+
+        foreach (var entry in ChangeTracker.Entries<IAuditable>())
+        {
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    entry.Entity.CreatedAt = now;
+                    entry.Entity.CreatedBy = userId;
+                    break;
+                case EntityState.Modified:
+                    entry.Entity.UpdatedAt = now;
+                    entry.Entity.UpdatedBy = userId;
+                    break;
+            }
+        }
+
+        return await base.SaveChangesAsync(cancellationToken);
     }
 
     public DbSet<Tasinmaz> Tasinmazlar { get; set; }
@@ -22,15 +51,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<BirimTuru> BirimTurleri { get; set; }
     public DbSet<Kategori> Kategoriler { get; set; }
 
-    public DbSet<TasinmazKiraciKategoriFiyat> TasinmazKiraciKategoriFiyatlari { get; set; }
+    public DbSet<TasinmazTarife> TasinmazTarifeler { get; set; }
 
-    public DbSet<RezervasyonUcret> RezervasyonUcretler { get; set; }
-    public DbSet<ToplantiSalonuRezervasyon> ToplantiSalonuRezervasyonlari { get; set; }
+    public DbSet<RezervasyonTarife> RezervasyonTarifeler { get; set; }
+    public DbSet<Rezervasyon> Rezervasyonlari { get; set; }
 
     public DbSet<BorcTipi> BorcTipleri { get; set; }
-    public DbSet<TarifeKalemi> TarifeKalemleri { get; set; }
-    public DbSet<BirimRate> BirimRateler { get; set; }
-    public DbSet<SozlesmeRate> SozlesmeRateler { get; set; }
+    public DbSet<GenelTarife> GenelTarifeler { get; set; }
+    public DbSet<BirimTarife> BirimTarifeler { get; set; }
+    public DbSet<SozlesmeTarife> SozlesmeTarifeler { get; set; }
 
     public DbSet<KiraTahakkuk> KiraTahakkuklar { get; set; }
     public DbSet<TahakkukKalemi> TahakkukKalemleri { get; set; }
@@ -62,9 +91,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(t => t.AcikYuzolcumu).HasPrecision(18, 2);
             entity.Property(t => t.KapaliYuzolcumu).HasPrecision(18, 2);
             entity.Property(t => t.KiralamaSekli).HasComment(EC<KiralamaSekli>());
-            entity.HasOne(t => t.Kategori)
+            entity.HasOne(t => t.TasinmazTipi)
                   .WithMany()
-                  .HasForeignKey(t => t.TasinmazTipiId)
                   .OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -76,11 +104,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(b => b.BirimTipi).HasComment(EC<BirimTipi>());
             entity.HasOne(b => b.Tasinmaz)
                   .WithMany(t => t.Birimler)
-                  .HasForeignKey(b => b.TasinmazId)
                   .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(b => b.BirimTuru)
                   .WithMany()
-                  .HasForeignKey(b => b.BirimTuruId)
                   .OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -95,13 +121,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(k => k.TcKimlikNo).HasMaxLength(11);
             entity.Property(k => k.VergiNo).HasMaxLength(20);
             entity.Property(k => k.KiraciTuru).HasComment(EC<KiraciTuru>());
-            entity.HasOne(k => k.Kategori)
+            entity.HasOne(k => k.KiraciKategori)
                   .WithMany()
-                  .HasForeignKey(k => k.KiraciKategoriId)
                   .OnDelete(DeleteBehavior.SetNull);
-            entity.HasOne(k => k.SektorKategori)
+            entity.HasOne(k => k.Sektor)
                   .WithMany()
-                  .HasForeignKey(k => k.SektorId)
                   .OnDelete(DeleteBehavior.ClientSetNull);
         });
 
@@ -110,11 +134,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(s => s.Durum).HasComment(EC<SozlesmeDurumu>());
             entity.HasOne(s => s.Birim)
                   .WithMany(b => b.Sozlesmeler)
-                  .HasForeignKey(s => s.BirimId)
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(s => s.Kiraci)
                   .WithMany()
-                  .HasForeignKey(s => s.KiraciId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -146,7 +168,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<UserPermission>(entity =>
         {
             entity.HasIndex(p => new { p.UserId, p.Permission }).IsUnique();
-            entity.Property(p => p.Permission).HasMaxLength(100);
+            entity.Property(p => p.UserId).IsRequired();
+            entity.Property(p => p.Permission).IsRequired().HasMaxLength(100);
         });
 
         builder.Entity<Kategori>(entity =>
@@ -159,17 +182,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<BirimTuru>(entity =>
         {
-            entity.Property(b => b.Ad).HasMaxLength(100);
-            entity.Property(b => b.Kod).HasMaxLength(20);
+            entity.Property(b => b.Ad).IsRequired().HasMaxLength(100);
+            entity.Property(b => b.Kod).IsRequired().HasMaxLength(20);
             entity.HasIndex(b => b.Kod).IsUnique();
 
             entity.HasOne(b => b.BorcTipi)
                   .WithMany()
-                  .HasForeignKey(b => b.BorcTipiId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        builder.Entity<TasinmazKiraciKategoriFiyat>(entity =>
+        builder.Entity<TasinmazTarife>(entity =>
         {
             entity.Property(f => f.BirimDeger).HasPrecision(18, 2);
             entity.Property(f => f.KdvOrani).HasPrecision(5, 2);
@@ -177,73 +199,63 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(f => new { f.TasinmazId, f.KiraciKategoriId, f.BorcTipiId }).IsUnique();
             entity.HasOne(f => f.Tasinmaz)
                   .WithMany()
-                  .HasForeignKey(f => f.TasinmazId)
                   .OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(f => f.Kategori)
+            entity.HasOne(f => f.KiraciKategori)
                   .WithMany()
-                  .HasForeignKey(f => f.KiraciKategoriId)
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(f => f.BorcTipi)
                   .WithMany()
-                  .HasForeignKey(f => f.BorcTipiId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<BorcTipi>(entity =>
         {
-            entity.Property(b => b.Ad).HasMaxLength(100);
-            entity.Property(b => b.Kod).HasMaxLength(20);
+            entity.Property(b => b.Ad).IsRequired().HasMaxLength(100);
+            entity.Property(b => b.Kod).IsRequired().HasMaxLength(20);
             entity.HasIndex(b => b.Kod).IsUnique();
             entity.Property(b => b.Davranis).HasComment(EC<BorcTipiDavranisi>());
         });
 
-        builder.Entity<TarifeKalemi>(entity =>
+        builder.Entity<GenelTarife>(entity =>
         {
             entity.Property(k => k.BirimDeger).HasPrecision(18, 4);
             entity.Property(k => k.KdvOrani).HasPrecision(5, 2);
             entity.Property(k => k.HesaplamaYontemi).HasComment(EC<HesaplamaYontemi>());
             entity.HasIndex(k => new { k.Yil, k.KiraciKategoriId, k.BorcTipiId }).IsUnique();
-            entity.HasOne(k => k.Kategori)
+            entity.HasOne(k => k.KiraciKategori)
                   .WithMany()
-                  .HasForeignKey(k => k.KiraciKategoriId)
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(k => k.BorcTipi)
                   .WithMany()
-                  .HasForeignKey(k => k.BorcTipiId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        builder.Entity<SozlesmeRate>(entity =>
+        builder.Entity<SozlesmeTarife>(entity =>
         {
             entity.Property(r => r.BirimDeger).HasPrecision(18, 4);
             entity.Property(r => r.KdvOrani).HasPrecision(5, 2);
             entity.HasIndex(r => new { r.KiraSozlesmesiId, r.BorcTipiId }).IsUnique();
             entity.HasOne(r => r.KiraSozlesmesi)
-                  .WithMany(s => s.SozlesmeRateler)
-                  .HasForeignKey(r => r.KiraSozlesmesiId)
+                  .WithMany(s => s.SozlesmeTarifeler)
                   .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(r => r.BorcTipi)
                   .WithMany()
-                  .HasForeignKey(r => r.BorcTipiId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        builder.Entity<BirimRate>(entity =>
+        builder.Entity<BirimTarife>(entity =>
         {
             entity.Property(r => r.BirimDeger).HasPrecision(18, 4);
             entity.Property(r => r.KdvOrani).HasPrecision(5, 2);
             entity.HasIndex(r => new { r.BirimId, r.KiraciKategoriId, r.BorcTipiId }).IsUnique();
             entity.HasOne(r => r.Birim)
                   .WithMany()
-                  .HasForeignKey(r => r.BirimId)
                   .OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(r => r.Kategori)
+            entity.HasOne(r => r.KiraciKategori)
                   .WithMany()
-                  .HasForeignKey(r => r.KiraciKategoriId)
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(r => r.BorcTipi)
                   .WithMany()
-                  .HasForeignKey(r => r.BorcTipiId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -258,7 +270,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(t => t.IptalNotu).HasMaxLength(500);
             entity.HasOne(t => t.KiraSozlesmesi)
                   .WithMany()
-                  .HasForeignKey(t => t.KiraSozlesmesiId)
                   .OnDelete(DeleteBehavior.Restrict);
             // Unique index kaldırıldı: Manuel tahakkuklar aynı sözleşme + dönemde birden fazla olabilir.
             // Otomatik tahakkukların tekliği servis katmanında kod ile korunur.
@@ -278,11 +289,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(k => k.ToplamTutar).HasPrecision(18, 2);
             entity.HasOne(k => k.Tahakkuk)
                   .WithMany(t => t.Kalemler)
-                  .HasForeignKey(k => k.TahakkukId)
                   .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(k => k.BorcTipi)
                   .WithMany()
-                  .HasForeignKey(k => k.BorcTipiId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -296,19 +305,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(o => o.Durum).HasComment(EC<OdemeDurumu>());
             entity.HasOne(o => o.KiraTahakkuk)
                   .WithMany(t => t.Odemeler)
-                  .HasForeignKey(o => o.KiraTahakkukId)
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(o => o.KiraSozlesmesi)
                   .WithMany()
-                  .HasForeignKey(o => o.KiraSozlesmesiId)
                   .OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(o => o.GirenUser)
                   .WithMany()
-                  .HasForeignKey(o => o.GirenUserId)
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(o => o.OnaylayanUser)
                   .WithMany()
-                  .HasForeignKey(o => o.OnaylayanUserId)
                   .OnDelete(DeleteBehavior.NoAction);
         });
 
@@ -320,11 +325,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(d => d.DosyaTipi).HasMaxLength(100);
             entity.HasOne(d => d.KiraOdeme)
                   .WithMany(o => o.Dekontlar)
-                  .HasForeignKey(d => d.KiraOdemeId)
                   .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(d => d.YukleyenUser)
                   .WithMany()
-                  .HasForeignKey(d => d.YukleyenUserId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -339,7 +342,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(b => b.BankaKodu).HasMaxLength(20);
             entity.HasOne(b => b.ImportEdenUser)
                   .WithMany()
-                  .HasForeignKey(b => b.ImportEdenUserId)
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(b => b.ImportBatchId);
         });
@@ -349,40 +351,35 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.EslesmeTipi).HasComment(EC<EslesmeTipi>());
             entity.HasOne(e => e.KiraOdeme)
                   .WithMany(o => o.BankaEslesmeleri)
-                  .HasForeignKey(e => e.KiraOdemeId)
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(e => e.BankaHareketi)
                   .WithMany(b => b.OdemeEslesmeleri)
-                  .HasForeignKey(e => e.BankaHareketiId)
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(e => e.EslestirenUser)
                   .WithMany()
-                  .HasForeignKey(e => e.EslestirenUserId)
                   .OnDelete(DeleteBehavior.NoAction);
         });
 
-        builder.Entity<RezervasyonUcret>(entity =>
+        builder.Entity<RezervasyonTarife>(entity =>
         {
             entity.Property(r => r.PeriyotUcreti).HasPrecision(18, 2);
             entity.Property(r => r.KdvOrani).HasPrecision(5, 2);
             entity.Property(r => r.Aciklama).HasMaxLength(300);
             entity.HasOne(r => r.Birim)
                   .WithMany()
-                  .HasForeignKey(r => r.BirimId)
                   .OnDelete(DeleteBehavior.SetNull);
             entity.HasOne(r => r.BirimTuru)
                   .WithMany()
-                  .HasForeignKey(r => r.BirimTuruId)
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(r => new { r.BirimTuruId, r.Yil })
                   .IsUnique()
                   .HasFilter("[BirimId] IS NULL");
             entity.ToTable(t => t.HasCheckConstraint(
-                "CK_RezervasyonUcret_BirimOrYilTuru",
+                "CK_RezervasyonTarife_BirimOrYilTuru",
                 "[BirimId] IS NOT NULL OR ([BirimTuruId] IS NOT NULL AND [Yil] IS NOT NULL)"));
         });
 
-        builder.Entity<ToplantiSalonuRezervasyon>(entity =>
+        builder.Entity<Rezervasyon>(entity =>
         {
             entity.Property(r => r.BirimUcret).HasPrecision(18, 2);
             entity.Property(r => r.Durum).HasComment(EC<RezervasyonDurumu>());
@@ -394,22 +391,30 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(r => r.OlusturanUserId).HasMaxLength(450);
             entity.HasOne(r => r.Birim)
                   .WithMany()
-                  .HasForeignKey(r => r.BirimId)
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(r => r.Kiraci)
                   .WithMany()
-                  .HasForeignKey(r => r.KiraciId)
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(r => r.KiraSozlesmesi)
                   .WithMany()
-                  .HasForeignKey(r => r.KiraSozlesmesiId)
                   .OnDelete(DeleteBehavior.SetNull);
             entity.HasOne(r => r.KiraTahakkuk)
                   .WithMany()
-                  .HasForeignKey(r => r.KiraTahakkukId)
                   .OnDelete(DeleteBehavior.SetNull);
             entity.HasIndex(r => new { r.BirimId, r.BaslangicTarihi });
         });
+
+        foreach (var entityType in builder.Model.GetEntityTypes())
+        {
+            if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))
+            {
+                var param = Expression.Parameter(entityType.ClrType, "e");
+                var body = Expression.Equal(
+                    Expression.Property(param, nameof(BaseEntity.IsDeleted)),
+                    Expression.Constant(false));
+                entityType.SetQueryFilter(Expression.Lambda(body, param));
+            }
+        }
 
     }
 

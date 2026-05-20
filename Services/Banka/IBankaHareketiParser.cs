@@ -1,4 +1,4 @@
-using KiraTakip.Models;
+using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Services.Banka;
 

@@ -1,4 +1,4 @@
-@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.KiraTahakkuk>
+@model KiraTakip.Models.Common.PagedResult<KiraTahakkuk>
 @using KiraTakip.Models
 @using KiraTakip.Models.Common
 @{
@@ -40,7 +40,7 @@
 
 <script>
     window._tahakkukBirimler = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        ((List<KiraTakip.Models.Birim>)ViewBag.Birimler)
+        ((List<Birim>)ViewBag.Birimler)
             .Select(b => new { id = b.Id, ad = b.Ad, tasinmazId = b.TasinmazId })
     ));
 </script>

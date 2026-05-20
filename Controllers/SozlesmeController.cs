@@ -1,16 +1,15 @@
 using KiraTakip.Authorization;
+using KiraTakip.Data;
+using KiraTakip.Models;
+using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Settings;
+using KiraTakip.Models.ViewModels;
+using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using KiraTakip.Authorization;
-using KiraTakip.Data;
-using KiraTakip.Models;
-using KiraTakip.Models.Settings;
-using KiraTakip.Models.ViewModels;
-using KiraTakip.Services.Interfaces;
-using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Controllers;
 
@@ -112,7 +111,7 @@ public class SozlesmeController : Controller
             SureYuzdesi = _istatistik.SureYuzdesi(s),
             Durum = _istatistik.GetBirimDurumu(s.Birim),
             GecmisSozlesmeler = gecmis.Where(x => x.Id != id).ToList(),
-            KdvOraniEtkin = s.SozlesmeRateler
+            KdvOraniEtkin = s.SozlesmeTarifeler
                 .FirstOrDefault(r => r.BorcTipi.Davranis == BorcTipiDavranisi.AylikSabit)?.KdvOrani ?? 20m
         };
 
@@ -206,7 +205,7 @@ public class SozlesmeController : Controller
         {
             foreach (var k in vm.SozlesmeKalemleri.Where(x => x.KullaniciDegistirdiMi))
             {
-                var rate = new SozlesmeRate
+                var rate = new SozlesmeTarife
                 {
                     KiraSozlesmesiId = s.Id,
                     BorcTipiId       = k.BorcTipiId,
@@ -214,7 +213,7 @@ public class SozlesmeController : Controller
                     HesaplamaYontemi = k.HesaplamaYontemi,
                     KdvOrani         = k.KdvOrani
                 };
-                _ctx.SozlesmeRateler.Add(rate);
+                _ctx.SozlesmeTarifeler.Add(rate);
             }
             await _ctx.SaveChangesAsync();
         }
@@ -254,11 +253,11 @@ public class SozlesmeController : Controller
 
         if (vm.TarifeyiGuncelle && vm.SozlesmeKalemleri != null && vm.SozlesmeKalemleri.Any())
         {
-            var eskiRateler = await _ctx.SozlesmeRateler.Where(r => r.KiraSozlesmesiId == id).ToListAsync();
-            _ctx.SozlesmeRateler.RemoveRange(eskiRateler);
+            var eskiRateler = await _ctx.SozlesmeTarifeler.Where(r => r.KiraSozlesmesiId == id).ToListAsync();
+            _ctx.SozlesmeTarifeler.RemoveRange(eskiRateler);
             foreach (var k in vm.SozlesmeKalemleri.Where(x => x.KullaniciDegistirdiMi))
             {
-                _ctx.SozlesmeRateler.Add(new SozlesmeRate
+                _ctx.SozlesmeTarifeler.Add(new SozlesmeTarife
                 {
                     KiraSozlesmesiId = id,
                     BorcTipiId       = k.BorcTipiId,
@@ -270,7 +269,7 @@ public class SozlesmeController : Controller
             await _ctx.SaveChangesAsync();
         }
 
-        var yeniRateler = await _ctx.SozlesmeRateler
+        var yeniRateler = await _ctx.SozlesmeTarifeler
             .Include(r => r.BorcTipi)
             .Where(r => r.KiraSozlesmesiId == id).ToListAsync();
         var yeniBedel = HesaplaAylikBedelHelper(yeniRateler, s.Birim.Yuzolcumu);
@@ -324,11 +323,11 @@ public class SozlesmeController : Controller
 
         if (tarifeyiGuncelle && sozlesmeKalemleri != null && sozlesmeKalemleri.Any())
         {
-            var eskiRateler = await _ctx.SozlesmeRateler.Where(r => r.KiraSozlesmesiId == id).ToListAsync();
-            _ctx.SozlesmeRateler.RemoveRange(eskiRateler);
+            var eskiRateler = await _ctx.SozlesmeTarifeler.Where(r => r.KiraSozlesmesiId == id).ToListAsync();
+            _ctx.SozlesmeTarifeler.RemoveRange(eskiRateler);
             foreach (var k in sozlesmeKalemleri.Where(x => x.KullaniciDegistirdiMi))
             {
-                _ctx.SozlesmeRateler.Add(new SozlesmeRate
+                _ctx.SozlesmeTarifeler.Add(new SozlesmeTarife
                 {
                     KiraSozlesmesiId = id,
                     BorcTipiId       = k.BorcTipiId,
@@ -421,7 +420,7 @@ public class SozlesmeController : Controller
         return RedirectToAction("Index");
     }
 
-    private static decimal HesaplaAylikBedelHelper(IEnumerable<SozlesmeRate> rates, decimal yuzolcumu) =>
+    private static decimal HesaplaAylikBedelHelper(IEnumerable<SozlesmeTarife> rates, decimal yuzolcumu) =>
         rates.Where(r => r.BorcTipi?.Davranis == BorcTipiDavranisi.AylikSabit)
              .Sum(r => r.HesaplamaYontemi == HesaplamaYontemi.M2 ? r.BirimDeger * yuzolcumu : r.BirimDeger);
 }

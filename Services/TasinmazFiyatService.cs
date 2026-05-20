@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Services
 {
@@ -38,7 +39,7 @@ namespace KiraTakip.Services
                 .ToListAsync();
 
             // Mevcut fiyat kayıtları
-            var mevcutFiyatlar = await _ctx.TasinmazKiraciKategoriFiyatlari
+            var mevcutFiyatlar = await _ctx.TasinmazTarifeler
                 .Where(f => f.TasinmazId == tasinmazId)
                 .ToListAsync();
 
@@ -73,7 +74,7 @@ namespace KiraTakip.Services
                     {
                         satir.Hucreler.Add(new TasinmazFiyatHucreViewModel
                         {
-                            TasinmazKiraciKategoriFiyatId = fiyat.Id,
+                            TasinmazTarifeId = fiyat.Id,
                             TasinmazId = tasinmazId,
                             KiraciKategoriId = kk.Id,
                             BorcTipiId = bt.Id,
@@ -89,7 +90,7 @@ namespace KiraTakip.Services
                     {
                         satir.Hucreler.Add(new TasinmazFiyatHucreViewModel
                         {
-                            TasinmazKiraciKategoriFiyatId = null,
+                            TasinmazTarifeId = null,
                             TasinmazId = tasinmazId,
                             KiraciKategoriId = kk.Id,
                             BorcTipiId = bt.Id,
@@ -123,11 +124,11 @@ namespace KiraTakip.Services
             {
                 foreach (var hucre in satir.Hucreler)
                 {
-                    if (hucre.TasinmazKiraciKategoriFiyatId.HasValue)
+                    if (hucre.TasinmazTarifeId.HasValue)
                     {
                         // Update existing record
-                        var entity = await _ctx.TasinmazKiraciKategoriFiyatlari
-                            .FirstOrDefaultAsync(f => f.Id == hucre.TasinmazKiraciKategoriFiyatId.Value);
+                        var entity = await _ctx.TasinmazTarifeler
+                            .FirstOrDefaultAsync(f => f.Id == hucre.TasinmazTarifeId.Value);
                         if (entity != null)
                         {
                             entity.BirimDeger = hucre.BirimDeger;
@@ -140,7 +141,7 @@ namespace KiraTakip.Services
                     else
                     {
                         // Insert new record only if user entered a value (or wants to create empty record)
-                        var newEntity = new TasinmazKiraciKategoriFiyat
+                        var newEntity = new TasinmazTarife
                         {
                             TasinmazId = tasinmazId,
                             KiraciKategoriId = hucre.KiraciKategoriId,
@@ -151,7 +152,7 @@ namespace KiraTakip.Services
                             Aktif = hucre.Aktif,
                             Aciklama = hucre.Aciklama
                         };
-                        await _ctx.TasinmazKiraciKategoriFiyatlari.AddAsync(newEntity);
+                        await _ctx.TasinmazTarifeler.AddAsync(newEntity);
                     }
                 }
             }

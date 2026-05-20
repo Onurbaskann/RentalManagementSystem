@@ -31,7 +31,7 @@ using System.ComponentModel.DataAnnotations;
 
     public class TasinmazFiyatHucreViewModel
     {
-        public int? TasinmazKiraciKategoriFiyatId { get; set; }
+        public int? TasinmazTarifeId { get; set; }
         public int TasinmazId { get; set; }
         public int KiraciKategoriId { get; set; }
         public int BorcTipiId { get; set; }

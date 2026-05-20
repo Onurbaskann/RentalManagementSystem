@@ -61,11 +61,11 @@ public class BirimController : Controller
                 .OrderBy(k => k.Sira)
                 .ToListAsync();
 
-            var mevcutRateler = await _ctx.BirimRateler
+            var mevcutRateler = await _ctx.BirimTarifeler
                 .Where(r => r.BirimId == id)
                 .ToListAsync();
 
-            vm.Kolonlar = aktifBorcTipleri.Select(bt => new BirimRateKolonu
+            vm.Kolonlar = aktifBorcTipleri.Select(bt => new BirimTarifeKolonu
             {
                 BorcTipiId       = bt.Id,
                 BorcTipiAd       = bt.Ad,
@@ -73,7 +73,7 @@ public class BirimController : Controller
                 BorcTipiDavranisi = bt.Davranis
             }).ToList();
 
-            vm.Satirlar = kategoriler.Select(kat => new BirimRateKategoriSatiri
+            vm.Satirlar = kategoriler.Select(kat => new BirimTarifeKategoriSatiri
             {
                 KiraciKategoriId  = kat.Id,
                 KiraciKategoriAd  = kat.Ad,
@@ -81,7 +81,7 @@ public class BirimController : Controller
                 {
                     var rate = mevcutRateler.FirstOrDefault(r =>
                         r.KiraciKategoriId == kat.Id && r.BorcTipiId == bt.Id);
-                    return new BirimRateHucre
+                    return new BirimTarifeHucre
                     {
                         RateId           = rate?.Id ?? 0,
                         KiraciKategoriId  = kat.Id,
@@ -96,7 +96,7 @@ public class BirimController : Controller
         }
         else if (vm.RezervasyonYapilabilirMi)
         {
-            vm.OzelRezervasyonKural = await _ctx.RezervasyonUcretler
+            vm.OzelRezervasyonKural = await _ctx.RezervasyonTarifeler
                 .FirstOrDefaultAsync(r => r.BirimId == id);
 
             vm.ParentRezervasyonTarife = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(DateTime.Now.Year);
@@ -110,7 +110,7 @@ public class BirimController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> OzelFiyat(int id, BirimOzelFiyatViewModel vm)
     {
-        var mevcutRateler = await _ctx.BirimRateler
+        var mevcutRateler = await _ctx.BirimTarifeler
             .Where(r => r.BirimId == id)
             .ToListAsync();
 
@@ -126,7 +126,7 @@ public class BirimController : Controller
                 {
                     if (mevcut == null)
                     {
-                        _ctx.BirimRateler.Add(new BirimRate
+                        _ctx.BirimTarifeler.Add(new BirimTarife
                         {
                             BirimId           = id,
                             KiraciKategoriId   = hucre.KiraciKategoriId,
@@ -145,7 +145,7 @@ public class BirimController : Controller
                 }
                 else if (mevcut != null)
                 {
-                    _ctx.BirimRateler.Remove(mevcut);
+                    _ctx.BirimTarifeler.Remove(mevcut);
                 }
             }
         }
@@ -158,7 +158,7 @@ public class BirimController : Controller
     [Authorize(Policy = PermissionCatalog.Birim.ManageRate)]
     [HttpPost("{id:int}/RezKuralKaydet")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> RezKuralKaydet(int id, RezervasyonUcretKuralViewModel vm)
+    public async Task<IActionResult> RezKuralKaydet(int id, RezervasyonTarifeKuralViewModel vm)
     {
         if (!ModelState.IsValid)
         {
@@ -178,11 +178,11 @@ public class BirimController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RezKuralSifirla(int id)
     {
-        var kural = await _ctx.RezervasyonUcretler
+        var kural = await _ctx.RezervasyonTarifeler
             .FirstOrDefaultAsync(r => r.BirimId == id);
         if (kural != null)
         {
-            _ctx.RezervasyonUcretler.Remove(kural);
+            _ctx.RezervasyonTarifeler.Remove(kural);
             await _ctx.SaveChangesAsync();
         }
         TempData["Success"] = "Özel kural kaldırıldı. Genel tarife uygulanacak.";

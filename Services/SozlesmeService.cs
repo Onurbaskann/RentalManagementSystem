@@ -18,7 +18,7 @@ public class SozlesmeService : ISozlesmeService
             .Include(s => s.Birim)
                 .ThenInclude(b => b.Tasinmaz)
             .Include(s => s.Kiraci)
-                .ThenInclude(k => k.Kategori)
+                .ThenInclude(k => k.KiraciKategori)
             .Include(s => s.IslemGecmisi)
             .AsQueryable();
 
@@ -52,9 +52,9 @@ public class SozlesmeService : ISozlesmeService
                 .ThenInclude(b => b.Sozlesmeler)
                     .ThenInclude(x => x.Kiraci)
             .Include(s => s.Kiraci)
-                .ThenInclude(k => k.Kategori)
+                .ThenInclude(k => k.KiraciKategori)
             .Include(s => s.IslemGecmisi)
-            .Include(s => s.SozlesmeRateler)
+            .Include(s => s.SozlesmeTarifeler)
                 .ThenInclude(r => r.BorcTipi)
             .FirstOrDefaultAsync(s => s.Id == id);
     }

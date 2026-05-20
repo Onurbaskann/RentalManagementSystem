@@ -1,4 +1,4 @@
-@model List<KiraTakip.Models.KiraSozlesmesi>
+@model List<KiraSozlesmesi>
 @using KiraTakip.Models
 @using KiraTakip.Services.Interfaces
 @inject IIstatistikService Istatistik
@@ -109,9 +109,9 @@
                                 <a href="/Kiraci/Detay/@s.KiraciId" class="font-semibold text-primary hover:underline">@s.Kiraci.GosterimAdi</a>
                                 @if (s.Kiraci.KiraciTuru == KiraciTuru.Tuzel) { <span class="badge badge-kurumsal text-[10px] px-1 py-0">T</span> }
                             </div>
-                            @if (s.Kiraci.Kategori != null)
+                            @if (s.Kiraci.KiraciKategori != null)
                             {
-                                <div class="text-[11px] text-muted font-medium mt-0.5">@s.Kiraci.Kategori.Ad</div>
+                                <div class="text-[11px] text-muted font-medium mt-0.5">@s.Kiraci.KiraciKategori.Ad</div>
                             }
                         </td>
                         <td>

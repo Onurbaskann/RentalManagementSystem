@@ -1,6 +1,6 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
-using KiraTakip.Models;
+using KiraTakip.Models.Entities;
 using KiraTakip.Models.Settings;
 using KiraTakip.Repositories;
 using KiraTakip.Repositories.Interfaces;
@@ -121,7 +121,7 @@ using (var scope = app.Services.CreateScope())
     if (app.Environment.IsDevelopment())
     {
         // [ANTIGRAVITY-TRIGGER]: Veri tabanını sıfırlayıp yeni seed verileriyle temiz bir başlangıç yapmak için aşağıdaki satırı aktif edin.
-        // await domainSeed.ClearDomainDataAsync();
+        await domainSeed.ClearDomainDataAsync();
     }
     // Sistem tanımları — her ortamda idempotent çalışır
     await domainSeed.SeedEnumDegerleriAsync();

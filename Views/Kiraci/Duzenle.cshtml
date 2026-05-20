@@ -59,7 +59,7 @@
                     <label class="form-label">Kiracı Kategorisi *</label>
                     <select asp-for="KiraciKategoriId" class="form-control">
                         <option value="">— Seçiniz —</option>
-                        @foreach (var item in (IEnumerable<KiraTakip.Models.Kategori>)ViewBag.Kategoriler)
+                        @foreach (var item in (IEnumerable<Kategori>)ViewBag.Kategoriler)
                         {
                             <option value="@item.Id" selected="@(Model.KiraciKategoriId == item.Id ? "selected" : null)">@item.Ad</option>
                         }
@@ -70,7 +70,7 @@
                     <label class="form-label">Sektör *</label>
                     <select asp-for="SektorId" class="form-control">
                         <option value="">— Seçiniz —</option>
-                        @foreach (var item in (IEnumerable<KiraTakip.Models.Kategori>)ViewBag.Sektorler)
+                        @foreach (var item in (IEnumerable<Kategori>)ViewBag.Sektorler)
                         {
                             <option value="@item.Id" selected="@(Model.SektorId == item.Id ? "selected" : null)">@item.Ad</option>
                         }

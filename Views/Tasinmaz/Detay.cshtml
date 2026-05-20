@@ -62,7 +62,7 @@
         <div class="three-col">
             <div class="card">
                 <div class="card-title">Taşınmaz Tipi</div>
-                <div class="text-[18px] font-bold mb-1.5">@(Model.Tasinmaz.Kategori?.Ad ?? "—")</div>
+                <div class="text-[18px] font-bold mb-1.5">@(Model.Tasinmaz.TasinmazTipi?.Ad ?? "—")</div>
                 <div class="text-[13px] text-muted">
                     @(Model.Tasinmaz.KiralamaSekli == KiralamaSekli.BirimBazli ? "Birim bazlı kiralama" : "Tek parça kiralama")
                 </div>
@@ -551,10 +551,10 @@
                         @foreach (var r in Model.Rezervasyonlar)
                         {
                             var rezDurumBadge = r.Durum switch {
-                                KiraTakip.Models.RezervasyonDurumu.Planlandi         => "<span class='badge bg-blue-100 text-blue-800'>Planlandı</span>",
-                                KiraTakip.Models.RezervasyonDurumu.Tamamlandi        => "<span class='badge badge-kirali'>Tamamlandı</span>",
-                                KiraTakip.Models.RezervasyonDurumu.IptalEdildi       => "<span class='badge badge-gecmis'>İptal</span>",
-                                KiraTakip.Models.RezervasyonDurumu.TahakkukaAktarildi => "<span class='badge badge-surek'>Aktarıldı</span>",
+                                RezervasyonDurumu.Planlandi         => "<span class='badge bg-blue-100 text-blue-800'>Planlandı</span>",
+                                RezervasyonDurumu.Tamamlandi        => "<span class='badge badge-kirali'>Tamamlandı</span>",
+                                RezervasyonDurumu.IptalEdildi       => "<span class='badge badge-gecmis'>İptal</span>",
+                                RezervasyonDurumu.TahakkukaAktarildi => "<span class='badge badge-surek'>Aktarıldı</span>",
                                 _ => "<span class='badge'>—</span>"
                             };
                             <tr>
@@ -680,7 +680,7 @@
                                     @foreach (var r in birimOzet.Rateler)
                                     {
                                         <tr>
-                                            <td class="font-semibold">@r.Kategori.Ad</td>
+                                            <td class="font-semibold">@r.KiraciKategori.Ad</td>
                                             <td>@r.BorcTipi.Ad</td>
                                             <td class="text-xs text-muted">@(r.HesaplamaYontemi == HesaplamaYontemi.Sabit ? "Sabit" : "m² bazlı")</td>
                                             <td class="font-serif font-bold">@r.BirimDeger.ToString("N2") ₺</td>

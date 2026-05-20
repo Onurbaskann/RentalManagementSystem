@@ -14,9 +14,9 @@ public class RezervasyonService : IRezervasyonService
 
     // ── Listeme ──────────────────────────────────────────────────────────────
 
-    public async Task<List<ToplantiSalonuRezervasyon>> GetAllAsync(string? userId = null)
+    public async Task<List<Rezervasyon>> GetAllAsync(string? userId = null)
     {
-        var query = _ctx.ToplantiSalonuRezervasyonlari
+        var query = _ctx.Rezervasyonlari
             .Include(r => r.Birim).ThenInclude(b => b.Tasinmaz)
             .Include(r => r.Birim).ThenInclude(b => b.BirimTuru)
             .Include(r => r.Kiraci)
@@ -36,9 +36,9 @@ public class RezervasyonService : IRezervasyonService
         return await query.OrderByDescending(r => r.OlusturmaTarihi).ToListAsync();
     }
 
-    public async Task<ToplantiSalonuRezervasyon?> GetByIdAsync(int id)
+    public async Task<Rezervasyon?> GetByIdAsync(int id)
     {
-        return await _ctx.ToplantiSalonuRezervasyonlari
+        return await _ctx.Rezervasyonlari
             .Include(r => r.Birim).ThenInclude(b => b.Tasinmaz)
             .Include(r => r.Birim).ThenInclude(b => b.BirimTuru)
             .Include(r => r.Kiraci)
@@ -60,7 +60,7 @@ public class RezervasyonService : IRezervasyonService
         }
 
         // 1) Birime özel kural (Aktif ve BirimId eşleşen)
-        var kural = await _ctx.RezervasyonUcretler
+        var kural = await _ctx.RezervasyonTarifeler
             .Where(k => k.Aktif && k.BirimId == birimId)
             .FirstOrDefaultAsync();
 
@@ -91,7 +91,7 @@ public class RezervasyonService : IRezervasyonService
             }
 
             int cariYil = baslangic.Year;
-            var genel = await _ctx.RezervasyonUcretler
+            var genel = await _ctx.RezervasyonTarifeler
                 .Where(g => g.BirimId == null && g.BirimTuruId == btId && g.Aktif && g.Yil == cariYil)
                 .FirstOrDefaultAsync();
 
@@ -136,7 +136,7 @@ public class RezervasyonService : IRezervasyonService
             return (false, "Bitiş tarihi başlangıç tarihinden büyük olmalıdır.", 0);
 
         // 8.5.4 — Çakışma kontrolü: iptal edilmiş rezervasyonlar hariç
-        var cakismaVar = await _ctx.ToplantiSalonuRezervasyonlari
+        var cakismaVar = await _ctx.Rezervasyonlari
             .AnyAsync(r =>
                 r.BirimId == model.BirimId &&
                 r.Durum != RezervasyonDurumu.IptalEdildi &&
@@ -167,7 +167,7 @@ public class RezervasyonService : IRezervasyonService
             // Ücret kuralı yoksa rezervasyon 0 ₺ olarak yine de oluşturulabilir
         }
 
-        var rezervasyon = new ToplantiSalonuRezervasyon
+        var rezervasyon = new Rezervasyon
         {
             BirimId           = model.BirimId,
             KiraciId          = model.KiraciId,
@@ -188,7 +188,7 @@ public class RezervasyonService : IRezervasyonService
             OlusturmaTarihi   = DateTime.Now
         };
 
-        _ctx.ToplantiSalonuRezervasyonlari.Add(rezervasyon);
+        _ctx.Rezervasyonlari.Add(rezervasyon);
         await _ctx.SaveChangesAsync();
 
         return (true, null, rezervasyon.Id);
@@ -198,7 +198,7 @@ public class RezervasyonService : IRezervasyonService
 
     public async Task<(bool Basarili, string? Hata)> CancelAsync(int id, string userId, string neden)
     {
-        var rezervasyon = await _ctx.ToplantiSalonuRezervasyonlari
+        var rezervasyon = await _ctx.Rezervasyonlari
             .Include(r => r.KiraTahakkuk)
                 .ThenInclude(t => t!.Odemeler)
             .FirstOrDefaultAsync(r => r.Id == id);
@@ -308,36 +308,36 @@ public class RezervasyonService : IRezervasyonService
 
     // ── Ücret Kuralı CRUD ─────────────────────────────────────────────────────
 
-    public async Task<List<RezervasyonUcret>> GetUcretKurallariAsync()
+    public async Task<List<RezervasyonTarife>> GetUcretKurallariAsync()
     {
-        return await _ctx.RezervasyonUcretler
+        return await _ctx.RezervasyonTarifeler
             .Include(k => k.Birim).ThenInclude(b => b!.Tasinmaz)
             .Where(k => k.BirimId != null)
             .OrderBy(k => k.Id)
             .ToListAsync();
     }
 
-    public async Task<RezervasyonUcret?> GetUcretKuralByIdAsync(int id)
+    public async Task<RezervasyonTarife?> GetUcretKuralByIdAsync(int id)
     {
-        return await _ctx.RezervasyonUcretler
+        return await _ctx.RezervasyonTarifeler
             .Include(k => k.Birim)
             .FirstOrDefaultAsync(k => k.Id == id);
     }
 
-    public async Task<(bool Basarili, string? Hata, int Id)> SaveUcretKuralAsync(RezervasyonUcretKuralViewModel model)
+    public async Task<(bool Basarili, string? Hata, int Id)> SaveUcretKuralAsync(RezervasyonTarifeKuralViewModel model)
     {
         if (model.UcretlendirmePeriyoduDakika <= 0)
             return (false, "Periyot süresi sıfırdan büyük olmalıdır.", 0);
 
-        RezervasyonUcret kural;
+        RezervasyonTarife kural;
         if (model.Id == 0)
         {
-            kural = new RezervasyonUcret { OlusturmaTarihi = DateTime.Now };
-            _ctx.RezervasyonUcretler.Add(kural);
+            kural = new RezervasyonTarife { OlusturmaTarihi = DateTime.Now };
+            _ctx.RezervasyonTarifeler.Add(kural);
         }
         else
         {
-            kural = await _ctx.RezervasyonUcretler.FindAsync(model.Id)
+            kural = await _ctx.RezervasyonTarifeler.FindAsync(model.Id)
                     ?? throw new InvalidOperationException("Kural bulunamadı.");
         }
 
@@ -355,7 +355,7 @@ public class RezervasyonService : IRezervasyonService
 
     public async Task<(bool Basarili, string? Hata)> ToggleUcretKuralAktifAsync(int id)
     {
-        var kural = await _ctx.RezervasyonUcretler.FindAsync(id);
+        var kural = await _ctx.RezervasyonTarifeler.FindAsync(id);
         if (kural == null)
             return (false, "Kural bulunamadı.");
 

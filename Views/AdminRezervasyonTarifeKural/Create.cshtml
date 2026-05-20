@@ -1,0 +1,76 @@
+@model KiraTakip.Models.ViewModels.RezervasyonTarifeKuralViewModel
+@{
+    ViewData["Title"] = "Yeni Ücret Kuralı";
+}
+
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+        <div class="page-title">Yeni Rezervasyon Ücret Kuralı</div>
+        <div class="page-subtitle">Birim seçmezseniz tüm toplantı salonları için genel kural oluşturulur</div>
+    </div>
+    <a href="/Admin/RezervasyonTarifeKural" class="btn btn-secondary">← Geri</a>
+</div>
+
+<div class="card" style="max-width:560px;">
+    <form asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="ModelOnly" class="form-error" style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:20px;"></div>
+
+        <div class="form-group">
+            <label asp-for="BirimId" class="form-label">Birim <span style="color:var(--color-muted);font-weight:400;">(Boş bırakırsanız genel kural)</span></label>
+            <select asp-for="BirimId" class="form-control">
+                <option value="">— Genel kural (tüm salonlar) —</option>
+                @foreach (var b in Model.RezervasyonBirimleri)
+                {
+                    <option value="@b.Id">@b.Tasinmaz.Ad — @b.Ad</option>
+                }
+            </select>
+        </div>
+
+        <div class="two-col">
+            <div class="form-group">
+                <label asp-for="UcretsizSureDakika" class="form-label">Ücretsiz Süre (dk) <span style="color:#dc2626;">*</span></label>
+                <input asp-for="UcretsizSureDakika" type="number" min="0" class="form-control" />
+                <span asp-validation-for="UcretsizSureDakika" class="form-error"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="UcretlendirmePeriyoduDakika" class="form-label">Periyot Süresi (dk) <span style="color:#dc2626;">*</span></label>
+                <input asp-for="UcretlendirmePeriyoduDakika" type="number" min="1" class="form-control" />
+                <span asp-validation-for="UcretlendirmePeriyoduDakika" class="form-error"></span>
+            </div>
+        </div>
+
+        <div class="two-col">
+            <div class="form-group">
+                <label asp-for="PeriyotUcreti" class="form-label">Periyot Ücreti (₺) <span style="color:#dc2626;">*</span></label>
+                <input asp-for="PeriyotUcreti" type="number" step="0.01" min="0" class="form-control" />
+                <span asp-validation-for="PeriyotUcreti" class="form-error"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="KdvOrani" class="form-label">KDV Oranı (%)</label>
+                <input asp-for="KdvOrani" type="number" step="1" min="0" max="100" class="form-control" />
+                <span asp-validation-for="KdvOrani" class="form-error"></span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Aciklama" class="form-label">Açıklama</label>
+            <input asp-for="Aciklama" type="text" class="form-control" placeholder="Opsiyonel not…" />
+        </div>
+
+        <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input asp-for="Aktif" type="checkbox" />
+                <span class="form-label" style="margin:0;">Aktif</span>
+            </label>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:8px;">
+            <button type="submit" class="btn btn-primary">Kaydet</button>
+            <a href="/Admin/RezervasyonTarifeKural" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

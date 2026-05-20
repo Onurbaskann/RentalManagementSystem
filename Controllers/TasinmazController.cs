@@ -1,13 +1,12 @@
 using KiraTakip.Authorization;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
@@ -79,7 +78,7 @@ public class TasinmazController : Controller
 
         if (rezBirimIds.Count > 0)
         {
-            var ozelKurallar = await _ctx.RezervasyonUcretler
+            var ozelKurallar = await _ctx.RezervasyonTarifeler
                 .Where(r => r.BirimId != null && rezBirimIds.Contains(r.BirimId.Value))
                 .ToListAsync();
 
@@ -92,11 +91,11 @@ public class TasinmazController : Controller
         var birimOzelFiyatlari = new List<BirimOzelFiyatOzeti>();
         if (tumBirimIds.Count > 0)
         {
-            var birimRateler = await _ctx.BirimRateler
-                .Include(r => r.Kategori)
+            var birimRateler = await _ctx.BirimTarifeler
+                .Include(r => r.KiraciKategori)
                 .Include(r => r.BorcTipi)
                 .Where(r => tumBirimIds.Contains(r.BirimId))
-                .OrderBy(r => r.Kategori.Sira)
+                .OrderBy(r => r.KiraciKategori.Sira)
                 .ThenBy(r => r.BorcTipi.Sira)
                 .ToListAsync();
 
@@ -111,7 +110,7 @@ public class TasinmazController : Controller
                 .ToList();
         }
 
-        var rezervasyonlar = await _ctx.ToplantiSalonuRezervasyonlari
+        var rezervasyonlar = await _ctx.Rezervasyonlari
             .Include(r => r.Birim)
             .Include(r => r.Kiraci)
             .Where(r => tumBirimIds.Contains(r.BirimId))
@@ -119,10 +118,10 @@ public class TasinmazController : Controller
             .ToListAsync();
 
         var birimRezKurallari = rezBirimIds.Count > 0
-            ? await _ctx.RezervasyonUcretler
+            ? await _ctx.RezervasyonTarifeler
                 .Where(r => r.BirimId != null && rezBirimIds.Contains(r.BirimId.Value))
                 .ToListAsync()
-            : new List<RezervasyonUcret>();
+            : new List<RezervasyonTarife>();
 
         var sozlesmeBedelleri = new Dictionary<int, decimal>();
         foreach (var s in t.Birimler.SelectMany(b => b.Sozlesmeler))

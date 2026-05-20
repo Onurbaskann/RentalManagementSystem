@@ -15,7 +15,7 @@ public class RateResolverService : IRateResolverService
     {
         if (sozlesmeId.HasValue)
         {
-            var sozRate = await _ctx.SozlesmeRateler
+            var sozRate = await _ctx.SozlesmeTarifeler
                 .FirstOrDefaultAsync(r => r.KiraSozlesmesiId == sozlesmeId.Value && r.BorcTipiId == borcTipiId);
             if (sozRate != null)
                 return new RateSnapshot
@@ -53,7 +53,7 @@ public class RateResolverService : IRateResolverService
 
         if (kategoriId.HasValue)
         {
-            var birimRate = await _ctx.BirimRateler
+            var birimRate = await _ctx.BirimTarifeler
                 .FirstOrDefaultAsync(r => r.BirimId == birimId
                     && r.KiraciKategoriId == kategoriId.Value
                     && r.BorcTipiId == borcTipiId);
@@ -69,7 +69,7 @@ public class RateResolverService : IRateResolverService
 
         if (tasinmazId.HasValue && kategoriId.HasValue)
         {
-            var fiyatMatrisi = await _ctx.TasinmazKiraciKategoriFiyatlari
+            var fiyatMatrisi = await _ctx.TasinmazTarifeler
                 .FirstOrDefaultAsync(f => f.TasinmazId == tasinmazId.Value
                     && f.KiraciKategoriId == kategoriId.Value
                     && f.BorcTipiId == borcTipiId
@@ -88,7 +88,7 @@ public class RateResolverService : IRateResolverService
         if (!kategoriId.HasValue) return null;
 
         // Exact year first, then fall back to most recent active year
-        var kalem = await _ctx.TarifeKalemleri
+        var kalem = await _ctx.GenelTarifeler
             .Where(k => k.Aktif && k.KiraciKategoriId == kategoriId.Value && k.BorcTipiId == borcTipiId)
             .OrderByDescending(k => k.Yil == donem.Year ? 1 : 0)
             .ThenByDescending(k => k.Yil)

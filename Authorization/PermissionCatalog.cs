@@ -113,9 +113,9 @@ public static class PermissionCatalog
         public const string Manage = "TasinmazCarpan.Manage";
     }
 
-    public static class RezervasyonUcretKuralPerm
+    public static class RezervasyonTarifeKuralPerm
     {
-        public const string Manage = "RezervasyonUcretKural.Manage";
+        public const string Manage = "RezervasyonTarifeKural.Manage";
     }
 
     public static class Kullanici
@@ -182,7 +182,7 @@ public static class PermissionCatalog
         ManuelBorc.View, ManuelBorc.Create, ManuelBorc.Cancel,
         Rezervasyon.View, Rezervasyon.Create, Rezervasyon.Edit, Rezervasyon.Cancel, Rezervasyon.TransferToTahakkuk,
         TasinmazCarpanPerm.View, TasinmazCarpanPerm.Manage,
-        RezervasyonUcretKuralPerm.Manage,
+        RezervasyonTarifeKuralPerm.Manage,
         Bildirim.BorcHatirlatma,
     ];
 }

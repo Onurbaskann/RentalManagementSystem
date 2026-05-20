@@ -34,6 +34,11 @@ public class AdminBorcTipiController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(BorcTipi model)
     {
+        if (!model.Kod.IsValidBorcTipiKod())
+        {
+            ModelState.AddModelError(nameof(model.Kod), "Kod yalnızca harf, rakam, alt çizgi ve boşluk içerebilir ve 2-50 karakter uzunluğunda olmalıdır.");
+        }
+
         if (!ModelState.IsValid) return View(model);
 
         model.Kod = model.Kod.ToSafeCode();
@@ -69,6 +74,11 @@ public class AdminBorcTipiController : Controller
         // Sistem tiplerinde Kod değiştirilemez — form değeri yok sayılır
         if (entity.Sistem)
             model.Kod = entity.Kod;
+
+        if (!model.Kod.IsValidBorcTipiKod())
+        {
+            ModelState.AddModelError(nameof(model.Kod), "Kod yalnızca harf, rakam, alt çizgi ve boşluk içerebilir ve 2-50 karakter uzunluğunda olmalıdır.");
+        }
 
         if (!ModelState.IsValid) return View(model);
 

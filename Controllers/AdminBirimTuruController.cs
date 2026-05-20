@@ -132,7 +132,7 @@ public class AdminBirimTuruController : Controller
                                t.Durum != TahakkukDurumu.IptalEdildi &&
                                _ctx.Birimler.Any(b => b.BirimTuruId == id && 
                                                       (_ctx.Sozlesmeler.Any(s => s.BirimId == b.Id && s.Id == t.KiraSozlesmesiId) ||
-                                                       _ctx.ToplantiSalonuRezervasyonlari.Any(r => r.BirimId == b.Id && r.KiraTahakkukId == t.Id))));
+                                                       _ctx.Rezervasyonlari.Any(r => r.BirimId == b.Id && r.KiraTahakkukId == t.Id))));
             
             if (aktifTahakkukVar)
             {
@@ -141,7 +141,7 @@ public class AdminBirimTuruController : Controller
             }
 
             // 2. Aktif rezervasyon kontrolü
-            var aktifRezervasyonVar = await _ctx.ToplantiSalonuRezervasyonlari
+            var aktifRezervasyonVar = await _ctx.Rezervasyonlari
                 .AnyAsync(r => r.Durum == RezervasyonDurumu.Planlandi && 
                                _ctx.Birimler.Any(b => b.BirimTuruId == id && b.Id == r.BirimId));
 

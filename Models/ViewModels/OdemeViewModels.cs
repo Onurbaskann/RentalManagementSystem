@@ -1,6 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using KiraTakip.Models;
-using Microsoft.AspNetCore.Http;
 
 namespace KiraTakip.Models.ViewModels;
 

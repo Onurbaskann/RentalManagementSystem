@@ -3,6 +3,7 @@ using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
+using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Services;
 
@@ -15,7 +16,7 @@ public class TasinmazService : ITasinmazService
     public async Task<List<Tasinmaz>> GetAllAsync(string? userId = null)
     {
         var query = _ctx.Tasinmazlar
-            .Include(t => t.Kategori)
+            .Include(t => t.TasinmazTipi)
             .Include(t => t.Birimler)
                 .ThenInclude(b => b.Sozlesmeler)
                     .ThenInclude(s => s.Kiraci)
@@ -36,7 +37,7 @@ public class TasinmazService : ITasinmazService
     public async Task<Tasinmaz?> GetByIdAsync(int id)
     {
         return await _ctx.Tasinmazlar
-            .Include(t => t.Kategori)
+            .Include(t => t.TasinmazTipi)
             .Include(t => t.Birimler)
                 .ThenInclude(b => b.BirimTuru)
             .Include(t => t.Birimler)
@@ -47,7 +48,7 @@ public class TasinmazService : ITasinmazService
                     .ThenInclude(s => s.IslemGecmisi)
             .Include(t => t.Birimler)
                 .ThenInclude(b => b.Sozlesmeler)
-                    .ThenInclude(s => s.SozlesmeRateler)
+                    .ThenInclude(s => s.SozlesmeTarifeler)
                         .ThenInclude(r => r.BorcTipi)
             .FirstOrDefaultAsync(t => t.Id == id);
     }
@@ -98,7 +99,7 @@ public class TasinmazService : ITasinmazService
                 t.Birimler.Add(birim);
 
                 // Ücret kuralını ekle
-                _ctx.RezervasyonUcretler.Add(new RezervasyonUcret
+                _ctx.RezervasyonTarifeler.Add(new RezervasyonTarife
                 {
                     Birim = birim,
                     UcretsizSureDakika = r.UcretsizSureDakika,

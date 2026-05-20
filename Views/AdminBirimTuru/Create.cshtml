@@ -1,4 +1,4 @@
-@model KiraTakip.Models.BirimTuru
+@model BirimTuru
 @{
     ViewData["Title"] = "Yeni Birim Türü";
 }
@@ -57,7 +57,7 @@
                 <option value="">-- Borç Tipi Seçin --</option>
                 @if (ViewBag.BorcTipiAdaylari != null)
                 {
-                    foreach (var bt in (List<KiraTakip.Models.BorcTipi>)ViewBag.BorcTipiAdaylari)
+                    foreach (var bt in (List<BorcTipi>)ViewBag.BorcTipiAdaylari)
                     {
                         <option value="@bt.Id">@bt.Ad (@bt.Kod)</option>
                     }

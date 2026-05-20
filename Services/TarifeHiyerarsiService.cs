@@ -21,18 +21,18 @@ public class TarifeHiyerarsiService : ITarifeHiyerarsiService
     {
         int hedefYil = yil ?? DateTime.Now.Year;
 
-        // Sozlesme katmanı: önce BirimRate'e bak
+        // Sozlesme katmanı: önce BirimTarife'e bak
         if (katman == TarifeHiyerarsiKatmani.Sozlesme && birimId.HasValue)
         {
-            IQueryable<BirimRate> bq = _ctx.BirimRateler
-                .Include(r => r.Kategori)
+            IQueryable<BirimTarife> bq = _ctx.BirimTarifeler
+                .Include(r => r.KiraciKategori)
                 .Include(r => r.BorcTipi)
                 .Where(r => r.BirimId == birimId.Value);
             if (kategoriId.HasValue)
                 bq = bq.Where(r => r.KiraciKategoriId == kategoriId.Value);
 
             var rateler = await bq
-                .OrderBy(r => r.Kategori.Sira)
+                .OrderBy(r => r.KiraciKategori.Sira)
                 .ThenBy(r => r.BorcTipi.Sira)
                 .ToListAsync();
 
@@ -42,7 +42,7 @@ public class TarifeHiyerarsiService : ITarifeHiyerarsiService
                     KaynakAdi = "Birim Tarifesi",
                     Satirlar  = rateler.Select(r => new ParentTarifeSatir
                     {
-                        KategoriAd       = r.Kategori.Ad,
+                        KategoriAd       = r.KiraciKategori.Ad,
                         BorcTipiAd       = r.BorcTipi.Ad,
                         HesaplamaYontemi = r.HesaplamaYontemi,
                         BirimDeger       = r.BirimDeger,
@@ -57,19 +57,19 @@ public class TarifeHiyerarsiService : ITarifeHiyerarsiService
             }
         }
 
-        // Birim veya Sozlesme katmanı: TasinmazKiraciKategoriFiyat'a bak
+        // Birim veya Sozlesme katmanı: TasinmazTarife'a bak
         if (katman is TarifeHiyerarsiKatmani.Birim or TarifeHiyerarsiKatmani.Sozlesme
             && tasinmazId.HasValue)
         {
-            IQueryable<TasinmazKiraciKategoriFiyat> tq = _ctx.TasinmazKiraciKategoriFiyatlari
-                .Include(f => f.Kategori)
+            IQueryable<TasinmazTarife> tq = _ctx.TasinmazTarifeler
+                .Include(f => f.KiraciKategori)
                 .Include(f => f.BorcTipi)
                 .Where(f => f.TasinmazId == tasinmazId.Value && f.Aktif);
             if (kategoriId.HasValue)
                 tq = tq.Where(f => f.KiraciKategoriId == kategoriId.Value);
 
             var fiyatlar = await tq
-                .OrderBy(f => f.Kategori.Sira)
+                .OrderBy(f => f.KiraciKategori.Sira)
                 .ThenBy(f => f.BorcTipi.Sira)
                 .ToListAsync();
 
@@ -79,7 +79,7 @@ public class TarifeHiyerarsiService : ITarifeHiyerarsiService
                     KaynakAdi = "Taşınmaz Tarifesi",
                     Satirlar  = fiyatlar.Select(f => new ParentTarifeSatir
                     {
-                        KategoriAd       = f.Kategori.Ad,
+                        KategoriAd       = f.KiraciKategori.Ad,
                         BorcTipiAd       = f.BorcTipi.Ad,
                         HesaplamaYontemi = f.HesaplamaYontemi,
                         BirimDeger       = f.BirimDeger,
@@ -89,8 +89,8 @@ public class TarifeHiyerarsiService : ITarifeHiyerarsiService
         }
 
         // Her katman için sonuç: Genel Tarife
-        IQueryable<TarifeKalemi> kq = _ctx.TarifeKalemleri
-            .Include(k => k.Kategori)
+        IQueryable<GenelTarife> kq = _ctx.GenelTarifeler
+            .Include(k => k.KiraciKategori)
             .Include(k => k.BorcTipi)
             .Where(k => k.Yil == hedefYil && k.Aktif
                      && k.BorcTipi.Davranis != BorcTipiDavranisi.KullaniciManuel
@@ -99,7 +99,7 @@ public class TarifeHiyerarsiService : ITarifeHiyerarsiService
             kq = kq.Where(k => k.KiraciKategoriId == kategoriId.Value);
 
         var kalemler = await kq
-            .OrderBy(k => k.Kategori.Sira)
+            .OrderBy(k => k.KiraciKategori.Sira)
             .ThenBy(k => k.BorcTipi.Sira)
             .ToListAsync();
 
@@ -116,7 +116,7 @@ public class TarifeHiyerarsiService : ITarifeHiyerarsiService
             KaynakAdi = $"Genel Tarife - {hedefYil}",
             Satirlar  = kalemler.Select(k => new ParentTarifeSatir
             {
-                KategoriAd       = k.Kategori.Ad,
+                KategoriAd       = k.KiraciKategori.Ad,
                 BorcTipiAd       = k.BorcTipi.Ad,
                 HesaplamaYontemi = k.HesaplamaYontemi,
                 BirimDeger       = k.BirimDeger,
@@ -129,7 +129,7 @@ public class TarifeHiyerarsiService : ITarifeHiyerarsiService
     {
         int hedefYil = yil ?? DateTime.Now.Year;
 
-        var satirlar = await _ctx.RezervasyonUcretler
+        var satirlar = await _ctx.RezervasyonTarifeler
             .Include(r => r.BirimTuru)
             .Where(r => r.BirimId == null && r.BirimTuruId != null && r.Yil == hedefYil && r.Aktif && r.BirimTuru!.Aktif)
             .OrderBy(r => r.BirimTuru!.Sira)
