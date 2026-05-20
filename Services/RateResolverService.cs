@@ -16,7 +16,7 @@ public class RateResolverService : IRateResolverService
         if (sozlesmeId.HasValue)
         {
             var sozRate = await _ctx.SozlesmeRateler
-                .FirstOrDefaultAsync(r => r.SozlesmeId == sozlesmeId.Value && r.BorcTipiId == borcTipiId);
+                .FirstOrDefaultAsync(r => r.KiraSozlesmesiId == sozlesmeId.Value && r.BorcTipiId == borcTipiId);
             if (sozRate != null)
                 return new RateSnapshot
                 {
@@ -87,19 +87,12 @@ public class RateResolverService : IRateResolverService
 
         if (!kategoriId.HasValue) return null;
 
-        var tarife = await _ctx.Tarifeler
-                         .Where(t => t.Aktif && t.Yil == donem.Year)
-                         .FirstOrDefaultAsync()
-                     ?? await _ctx.Tarifeler
-                         .Where(t => t.Aktif)
-                         .OrderByDescending(t => t.Yil)
-                         .FirstOrDefaultAsync();
-        if (tarife == null) return null;
-
+        // Exact year first, then fall back to most recent active year
         var kalem = await _ctx.TarifeKalemleri
-            .FirstOrDefaultAsync(k => k.TarifeId == tarife.Id
-                && k.KiraciKategoriId == kategoriId.Value
-                && k.BorcTipiId == borcTipiId);
+            .Where(k => k.Aktif && k.KiraciKategoriId == kategoriId.Value && k.BorcTipiId == borcTipiId)
+            .OrderByDescending(k => k.Yil == donem.Year ? 1 : 0)
+            .ThenByDescending(k => k.Yil)
+            .FirstOrDefaultAsync();
         if (kalem == null) return null;
 
         return new RateSnapshot

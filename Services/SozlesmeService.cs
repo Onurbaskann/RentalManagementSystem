@@ -18,7 +18,7 @@ public class SozlesmeService : ISozlesmeService
             .Include(s => s.Birim)
                 .ThenInclude(b => b.Tasinmaz)
             .Include(s => s.Kiraci)
-                .ThenInclude(k => k.KiraciKategori)
+                .ThenInclude(k => k.Kategori)
             .Include(s => s.IslemGecmisi)
             .AsQueryable();
 
@@ -52,7 +52,7 @@ public class SozlesmeService : ISozlesmeService
                 .ThenInclude(b => b.Sozlesmeler)
                     .ThenInclude(x => x.Kiraci)
             .Include(s => s.Kiraci)
-                .ThenInclude(k => k.KiraciKategori)
+                .ThenInclude(k => k.Kategori)
             .Include(s => s.IslemGecmisi)
             .Include(s => s.SozlesmeRateler)
                 .ThenInclude(r => r.BorcTipi)
@@ -86,7 +86,6 @@ public class SozlesmeService : ISozlesmeService
 
         s.BitisTarihi = yeniBitis;
         s.KdvUygulanacakMi = kdvUygulanacakMi;
-        if (kdvUygulanacakMi) s.KdvOrani = kdvOrani;
 
         decimal? kdvTutari = kdvUygulanacakMi ? yeniBedel * kdvOrani / 100 : null;
         decimal? kdvDahil = kdvUygulanacakMi ? yeniBedel + kdvTutari : null;
@@ -152,5 +151,28 @@ public class SozlesmeService : ISozlesmeService
             .Where(s => s.BirimId == birimId)
             .OrderByDescending(s => s.BaslangicTarihi)
             .ToListAsync();
+    }
+
+    public async Task<Dictionary<int, decimal?>> GetDepozitoTutarlariAsync(IEnumerable<int> sozlesmeIds)
+    {
+        var ids = sozlesmeIds.ToList();
+        if (ids.Count == 0) return new Dictionary<int, decimal?>();
+
+        var kalemler = await _ctx.TahakkukKalemleri
+            .Where(k => k.Tahakkuk.KiraSozlesmesiId.HasValue
+                && ids.Contains(k.Tahakkuk.KiraSozlesmesiId.Value)
+                && k.BorcTipi.Kod == "DEPOZITO"
+                && k.Tahakkuk.Durum != TahakkukDurumu.IptalEdildi)
+            .Select(k => new
+            {
+                SozlesmeId = k.Tahakkuk.KiraSozlesmesiId!.Value,
+                Donem = k.Tahakkuk.DonemBaslangic,
+                Tutar = k.ToplamTutar
+            })
+            .ToListAsync();
+
+        return kalemler
+            .GroupBy(x => x.SozlesmeId)
+            .ToDictionary(g => g.Key, g => (decimal?)g.OrderBy(x => x.Donem).First().Tutar);
     }
 }

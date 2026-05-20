@@ -18,6 +18,36 @@ public class SeedDataService
         _rateResolver = rateResolver;
     }
 
+    public async Task SeedEnumDegerleriAsync()
+    {
+        var enumTypes = typeof(KiraciTuru).Assembly.GetTypes()
+            .Where(t => t.IsEnum && t.Namespace == "KiraTakip.Models")
+            .ToList();
+
+        var existing = await _ctx.EnumDegerleri
+            .Select(e => new { e.EnumAdi, e.Deger })
+            .ToListAsync();
+        var existingSet = existing.Select(e => (e.EnumAdi, e.Deger)).ToHashSet();
+
+        foreach (var enumType in enumTypes)
+        {
+            foreach (var value in Enum.GetValues(enumType))
+            {
+                int intVal = (int)value;
+                string enumAdi = enumType.Name;
+                if (existingSet.Contains((enumAdi, intVal))) continue;
+
+                _ctx.EnumDegerleri.Add(new EnumDegeri
+                {
+                    EnumAdi  = enumAdi,
+                    Deger    = intVal,
+                    Ad       = Enum.GetName(enumType, value)!
+                });
+            }
+        }
+        await _ctx.SaveChangesAsync();
+    }
+
     public async Task SeedBorcTipleriAsync()
     {
         var existingCodes = await _ctx.BorcTipleri.Select(b => b.Kod).ToListAsync();
@@ -47,31 +77,27 @@ public class SeedDataService
     public async Task EnsureVarsayilanRezervasyonGenelTarifeAsync()
     {
         var cariYil = DateTime.Now.Year;
-        // Hardcode Değerler - Değişken üzerinden yönetim
         var varsayilanUcret = 500m;
         var varsayilanUcretsizSure = 120;
         var varsayilanPeriyot = 60;
         var varsayilanKdv = 20m;
-
-        var tarife = await _ctx.Tarifeler
-            .FirstOrDefaultAsync(t => t.Yil == cariYil);
-        if (tarife == null) return;
 
         var rezBirimTurleri = await _ctx.BirimTurleri
             .Where(t => t.Aktif && t.RezervasyonYapilabilirMi)
             .ToListAsync();
         if (!rezBirimTurleri.Any()) return;
 
-        var mevcut = await _ctx.RezervasyonGenelTarifeleri
-            .Where(r => r.TarifeId == tarife.Id)
+        var mevcut = await _ctx.RezervasyonUcretler
+            .Where(r => r.BirimId == null && r.Yil == cariYil)
             .Select(r => r.BirimTuruId)
             .ToListAsync();
 
         foreach (var bt in rezBirimTurleri.Where(b => !mevcut.Contains(b.Id)))
         {
-            _ctx.RezervasyonGenelTarifeleri.Add(new RezervasyonGenelTarife
+            _ctx.RezervasyonUcretler.Add(new RezervasyonUcret
             {
-                TarifeId                    = tarife.Id,
+                Yil                         = cariYil,
+                Aktif                       = true,
                 BirimTuruId                 = bt.Id,
                 UcretsizSureDakika          = varsayilanUcretsizSure,
                 UcretlendirmePeriyoduDakika = varsayilanPeriyot,
@@ -86,53 +112,16 @@ public class SeedDataService
 
     public async Task SeedTasinmazTipleriAsync()
     {
-        var existingCodes = await _ctx.TasinmazTipleri.Select(t => t.Kod).ToListAsync();
-        var toAdd = new List<TasinmazTipi>();
+        var existingCodes = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Tasinmaz).Select(k => k.Kod).ToListAsync();
+        var toAdd = new List<Kategori>();
 
-        if (!existingCodes.Contains("BINA")) toAdd.Add(new TasinmazTipi { Ad = "Bina", Kod = "BINA", Aktif = true, Sira = 1, OlusturmaTarihi = DateTime.UtcNow });
-        if (!existingCodes.Contains("OTOMAT")) toAdd.Add(new TasinmazTipi { Ad = "Otomat", Kod = "OTOMAT", Aktif = true, Sira = 2, OlusturmaTarihi = DateTime.UtcNow });
-        if (!existingCodes.Contains("BANKAMATIK")) toAdd.Add(new TasinmazTipi { Ad = "Bankamatik", Kod = "BANKAMATIK", Aktif = true, Sira = 3, OlusturmaTarihi = DateTime.UtcNow });
-
-        if (toAdd.Any())
-        {
-            _ctx.TasinmazTipleri.AddRange(toAdd);
-            await _ctx.SaveChangesAsync();
-        }
-
-        await SeedTasinmazTipiKiralamaSekilleriAsync();
-    }
-
-    private async Task SeedTasinmazTipiKiralamaSekilleriAsync()
-    {
-        var defaults = new Dictionary<string, KiralamaSekli[]>
-        {
-            ["BINA"] = new[] { KiralamaSekli.TekParca, KiralamaSekli.BirimBazli },
-            ["OTOMAT"] = new[] { KiralamaSekli.TekParca },
-            ["BANKAMATIK"] = new[] { KiralamaSekli.TekParca }
-        };
-
-        var tipler = await _ctx.TasinmazTipleri
-            .Where(t => defaults.Keys.Contains(t.Kod))
-            .Select(t => new { t.Id, t.Kod })
-            .ToListAsync();
-
-        var existing = await _ctx.TasinmazTipiKiralamaSekilleri
-            .Select(x => new { x.TasinmazTipiId, x.KiralamaSekli })
-            .ToListAsync();
-
-        var toAdd = new List<TasinmazTipiKiralamaSekli>();
-        foreach (var tip in tipler)
-        {
-            foreach (var sekli in defaults[tip.Kod])
-            {
-                if (!existing.Any(e => e.TasinmazTipiId == tip.Id && e.KiralamaSekli == sekli))
-                    toAdd.Add(new TasinmazTipiKiralamaSekli { TasinmazTipiId = tip.Id, KiralamaSekli = sekli });
-            }
-        }
+        if (!existingCodes.Contains("BINA")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Tasinmaz, Ad = "Bina", Kod = "BINA", Aktif = true, Sira = 1, OlusturmaTarihi = DateTime.UtcNow, TekParcaDestekli = true, BirimBazliDestekli = true });
+        if (!existingCodes.Contains("OTOMAT")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Tasinmaz, Ad = "Otomat", Kod = "OTOMAT", Aktif = true, Sira = 2, OlusturmaTarihi = DateTime.UtcNow, TekParcaDestekli = true, BirimBazliDestekli = false });
+        if (!existingCodes.Contains("BANKAMATIK")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Tasinmaz, Ad = "Bankamatik", Kod = "BANKAMATIK", Aktif = true, Sira = 3, OlusturmaTarihi = DateTime.UtcNow, TekParcaDestekli = true, BirimBazliDestekli = false });
 
         if (toAdd.Any())
         {
-            _ctx.TasinmazTipiKiralamaSekilleri.AddRange(toAdd);
+            _ctx.Kategoriler.AddRange(toAdd);
             await _ctx.SaveChangesAsync();
         }
     }
@@ -179,35 +168,35 @@ public class SeedDataService
 
     public async Task SeedKiraciKategorileriAsync()
     {
-        var existingCodes = await _ctx.KiraciKategorileri.Select(k => k.Kod).ToListAsync();
-        var toAdd = new List<KiraciKategori>();
+        var existingCodes = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Kiraci).Select(k => k.Kod).ToListAsync();
+        var toAdd = new List<Kategori>();
 
-        if (!existingCodes.Contains("AKADEMISYEN")) toAdd.Add(new KiraciKategori { Ad = "Akademisyen", Kod = "AKADEMISYEN", Aktif = true, Sira = 1, OlusturmaTarihi = DateTime.UtcNow });
-        if (!existingCodes.Contains("AKAD_OLMAYAN")) toAdd.Add(new KiraciKategori { Ad = "Akademisyen Olmayan", Kod = "AKAD_OLMAYAN", Aktif = true, Sira = 2, OlusturmaTarihi = DateTime.UtcNow });
+        if (!existingCodes.Contains("AKADEMISYEN")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Kiraci, Ad = "Akademisyen", Kod = "AKADEMISYEN", Aktif = true, Sira = 1, OlusturmaTarihi = DateTime.UtcNow });
+        if (!existingCodes.Contains("AKAD_OLMAYAN")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Kiraci, Ad = "Akademisyen Olmayan", Kod = "AKAD_OLMAYAN", Aktif = true, Sira = 2, OlusturmaTarihi = DateTime.UtcNow });
 
         if (toAdd.Any())
         {
-            _ctx.KiraciKategorileri.AddRange(toAdd);
+            _ctx.Kategoriler.AddRange(toAdd);
             await _ctx.SaveChangesAsync();
         }
     }
 
     public async Task SeedSektorlerAsync()
     {
-        var existingCodes = await _ctx.Sektorler.Select(s => s.Kod).ToListAsync();
-        var toAdd = new List<Sektor>();
+        var existingCodes = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Sektor).Select(k => k.Kod).ToListAsync();
+        var toAdd = new List<Kategori>();
 
-        if (!existingCodes.Contains("YAZILIM")) toAdd.Add(new Sektor { Ad = "Yazılım", Kod = "YAZILIM", Aktif = true, Sira = 1, OlusturmaTarihi = DateTime.UtcNow });
-        if (!existingCodes.Contains("LOJISTIK")) toAdd.Add(new Sektor { Ad = "Lojistik", Kod = "LOJISTIK", Aktif = true, Sira = 2, OlusturmaTarihi = DateTime.UtcNow });
-        if (!existingCodes.Contains("GIDA")) toAdd.Add(new Sektor { Ad = "Gıda", Kod = "GIDA", Aktif = true, Sira = 3, OlusturmaTarihi = DateTime.UtcNow });
-        if (!existingCodes.Contains("TARIM")) toAdd.Add(new Sektor { Ad = "Tarım", Kod = "TARIM", Aktif = true, Sira = 4, OlusturmaTarihi = DateTime.UtcNow });
-        if (!existingCodes.Contains("FINANS")) toAdd.Add(new Sektor { Ad = "Finans", Kod = "FINANS", Aktif = true, Sira = 5, OlusturmaTarihi = DateTime.UtcNow });
-        if (!existingCodes.Contains("EGITIM")) toAdd.Add(new Sektor { Ad = "Eğitim", Kod = "EGITIM", Aktif = true, Sira = 6, OlusturmaTarihi = DateTime.UtcNow });
-        if (!existingCodes.Contains("KAMU")) toAdd.Add(new Sektor { Ad = "Kamu", Kod = "KAMU", Aktif = true, Sira = 7, OlusturmaTarihi = DateTime.UtcNow });
+        if (!existingCodes.Contains("YAZILIM")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Sektor, Ad = "Yazılım", Kod = "YAZILIM", Aktif = true, Sira = 1, OlusturmaTarihi = DateTime.UtcNow });
+        if (!existingCodes.Contains("LOJISTIK")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Sektor, Ad = "Lojistik", Kod = "LOJISTIK", Aktif = true, Sira = 2, OlusturmaTarihi = DateTime.UtcNow });
+        if (!existingCodes.Contains("GIDA")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Sektor, Ad = "Gıda", Kod = "GIDA", Aktif = true, Sira = 3, OlusturmaTarihi = DateTime.UtcNow });
+        if (!existingCodes.Contains("TARIM")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Sektor, Ad = "Tarım", Kod = "TARIM", Aktif = true, Sira = 4, OlusturmaTarihi = DateTime.UtcNow });
+        if (!existingCodes.Contains("FINANS")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Sektor, Ad = "Finans", Kod = "FINANS", Aktif = true, Sira = 5, OlusturmaTarihi = DateTime.UtcNow });
+        if (!existingCodes.Contains("EGITIM")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Sektor, Ad = "Eğitim", Kod = "EGITIM", Aktif = true, Sira = 6, OlusturmaTarihi = DateTime.UtcNow });
+        if (!existingCodes.Contains("KAMU")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Sektor, Ad = "Kamu", Kod = "KAMU", Aktif = true, Sira = 7, OlusturmaTarihi = DateTime.UtcNow });
 
         if (toAdd.Any())
         {
-            _ctx.Sektorler.AddRange(toAdd);
+            _ctx.Kategoriler.AddRange(toAdd);
             await _ctx.SaveChangesAsync();
         }
     }
@@ -215,10 +204,10 @@ public class SeedDataService
     public async Task SeedTarifelerAsync()
     {
         var cariYil = DateTime.Now.Year;
-        if (await _ctx.Tarifeler.AnyAsync(t => t.Yil == cariYil)) return;
+        if (await _ctx.TarifeKalemleri.AnyAsync(k => k.Yil == cariYil)) return;
 
-        var kategoriler = await _ctx.KiraciKategorileri
-            .Where(k => k.Aktif)
+        var kategoriler = await _ctx.Kategoriler
+            .Where(k => k.Tipi == KategoriTipi.Kiraci && k.Aktif)
             .OrderBy(k => k.Sira)
             .ToListAsync();
 
@@ -229,27 +218,21 @@ public class SeedDataService
 
         if (!kategoriler.Any() || !borcTipleri.Any()) return;
 
-        var tarife = new Tarife
-        {
-            Yil             = cariYil,
-            Aciklama        = $"{cariYil} Yılı Genel Tarifesi",
-            Aktif           = true,
-            OlusturmaTarihi = DateTime.Now
-        };
-
         foreach (var kat in kategoriler)
         {
             foreach (var bt in borcTipleri)
             {
-                tarife.Kalemler.Add(new TarifeKalemi
+                _ctx.TarifeKalemleri.Add(new TarifeKalemi
                 {
+                    Yil              = cariYil,
+                    Aktif            = true,
                     KiraciKategoriId = kat.Id,
                     BorcTipiId       = bt.Id,
                     HesaplamaYontemi = (bt.Kod == "KIRA" || bt.Kod == "ORTAK") ? HesaplamaYontemi.M2 : HesaplamaYontemi.Sabit,
                     BirimDeger       = bt.Kod switch
                     {
                         "KIRA"     => kat.Kod == "AKADEMISYEN" ? 300m : 400m,
-                        "ORTAK"    => kat.Kod == "AKADEMISYEN" ? 100m : 150m, // m2 fiyatı olarak güncellendi
+                        "ORTAK"    => kat.Kod == "AKADEMISYEN" ? 100m : 150m,
                         "PORTAL"   => kat.Kod == "AKADEMISYEN" ? 300m : 500m,
                         "DEPOZITO" => kat.Kod == "AKADEMISYEN" ? 8000m : 15000m,
                         _          => 0m
@@ -259,7 +242,6 @@ public class SeedDataService
             }
         }
 
-        _ctx.Tarifeler.Add(tarife);
         await _ctx.SaveChangesAsync();
     }
 
@@ -268,10 +250,10 @@ public class SeedDataService
         if (await _ctx.Tasinmazlar.AnyAsync()) return;
 
         var now = DateTime.Now;
-        var tipiMap = await _ctx.TasinmazTipleri.ToDictionaryAsync(t => t.Kod, t => t.Id);
+        var tipiMap = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Tasinmaz).ToDictionaryAsync(k => k.Kod, k => k.Id);
         var birimTuruMap = await _ctx.BirimTurleri.ToDictionaryAsync(t => t.Kod, t => t.Id);
-        var katMap = await _ctx.KiraciKategorileri.ToDictionaryAsync(k => k.Kod, k => k.Id);
-        var sekMap = await _ctx.Sektorler.ToDictionaryAsync(s => s.Kod, s => s.Id);
+        var katMap = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Kiraci).ToDictionaryAsync(k => k.Kod, k => k.Id);
+        var sekMap = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Sektor).ToDictionaryAsync(k => k.Kod, k => k.Id);
 
         // --- Kiracılar ---
         var ahmet = Kiraci("KRC-001", KiraciTuru.Gercek, katMap["AKADEMISYEN"], sekMap["EGITIM"], "Ahmet", "Yılmaz",
@@ -332,9 +314,9 @@ public class SeedDataService
         var salonPeriyot = 60;
         var salonKdv = 20m;
 
-        _ctx.RezervasyonUcretKurallari.Add(new RezervasyonUcretKural
+        _ctx.RezervasyonUcretler.Add(new RezervasyonUcret
         {
-            BirimId = toplantiZ01.Id, // Doğrudan nesne referansı üzerinden Id
+            BirimId = toplantiZ01.Id,
             UcretsizSureDakika = salonUcretsizSure,
             UcretlendirmePeriyoduDakika = salonPeriyot,
             PeriyotUcreti = salonUcret,
@@ -396,19 +378,19 @@ public class SeedDataService
         var sozlesmeler = new List<KiraSozlesmesi>
         {
             // Ofis 101: Matris/Birim üzerinden bedel alacak, aşağıda Sözleşme Tarifesi ile ezilecek
-            MakeSozlesme(birim101, yzCozum, startYearMinus1, startYearMinus1.AddYears(2), 50000, true),
+            MakeSozlesme(birim101, yzCozum, startYearMinus1, startYearMinus1.AddYears(2), true),
 
             // Diğerleri tamamen hiyerarşiyi (Birim -> Matris -> Genel) takip edecek
-            MakeSozlesme(birim201, ahmet, startYearMinus1.AddMonths(3), startYearMinus1.AddMonths(24), 25000, false),
-            MakeSozlesme(birim301, biyoLab, startYearMinus1.AddMonths(6), startYearMinus1.AddMonths(18), 60000, true),
-            MakeSozlesme(birim401, veriBilisim, startYearMinus1.AddMonths(1), startYearMinus1.AddMonths(13), 44000, true),
+            MakeSozlesme(birim201, ahmet, startYearMinus1.AddMonths(3), startYearMinus1.AddMonths(24), false),
+            MakeSozlesme(birim301, biyoLab, startYearMinus1.AddMonths(6), startYearMinus1.AddMonths(18), true),
+            MakeSozlesme(birim401, veriBilisim, startYearMinus1.AddMonths(1), startYearMinus1.AddMonths(13), true),
 
             // Süresi dolan/dolmak üzere olanlar
-            MakeSozlesme(birim102, ayse, startYearMinus1.AddMonths(2), now.AddDays(15), 16000, false),
-            MakeSozlesme(birim302, yzCozum, startYearMinus1.AddMonths(0), now.AddDays(-5), 40000, true),
+            MakeSozlesme(birim102, ayse, startYearMinus1.AddMonths(2), now.AddDays(15), false),
+            MakeSozlesme(birim302, yzCozum, startYearMinus1.AddMonths(0), now.AddDays(-5), true),
 
             // Test Kiracısı (Onur Başkan)
-            MakeSozlesme(birim402, onurBaskan, now.AddMonths(-3), now.AddMonths(9), 35000, true)
+            MakeSozlesme(birim402, onurBaskan, now.AddMonths(-3), now.AddMonths(9), true)
         };
 
         foreach (var s in sozlesmeler)
@@ -426,7 +408,7 @@ public class SeedDataService
         _ctx.SozlesmeRateler.AddRange(
             new SozlesmeRate
             {
-                SozlesmeId = targetSozlesme.Id,
+                KiraSozlesmesiId = targetSozlesme.Id,
                 BorcTipiId = btKiraId,
                 BirimDeger = 360, // 25200 / 70m2 = 360
                 HesaplamaYontemi = HesaplamaYontemi.M2,
@@ -434,7 +416,7 @@ public class SeedDataService
             },
             new SozlesmeRate
             {
-                SozlesmeId = targetSozlesme.Id,
+                KiraSozlesmesiId = targetSozlesme.Id,
                 BorcTipiId = btDepozitoId,
                 BirimDeger = 40000,
                 HesaplamaYontemi = HesaplamaYontemi.Sabit,
@@ -444,11 +426,11 @@ public class SeedDataService
 
         // Diğer sözleşmeler için Sabit kira rate'i ekle
         _ctx.SozlesmeRateler.AddRange(
-            new SozlesmeRate { SozlesmeId = sozlesmeler[1].Id, BorcTipiId = btKiraId, BirimDeger = bedel201, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 0 },
-            new SozlesmeRate { SozlesmeId = sozlesmeler[2].Id, BorcTipiId = btKiraId, BirimDeger = bedel301, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 20 },
-            new SozlesmeRate { SozlesmeId = sozlesmeler[3].Id, BorcTipiId = btKiraId, BirimDeger = bedel401, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 20 },
-            new SozlesmeRate { SozlesmeId = sozlesmeler[4].Id, BorcTipiId = btKiraId, BirimDeger = bedel102, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 0 },
-            new SozlesmeRate { SozlesmeId = sozlesmeler[5].Id, BorcTipiId = btKiraId, BirimDeger = bedel302, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 20 }
+            new SozlesmeRate { KiraSozlesmesiId = sozlesmeler[1].Id, BorcTipiId = btKiraId, BirimDeger = bedel201, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 0 },
+            new SozlesmeRate { KiraSozlesmesiId = sozlesmeler[2].Id, BorcTipiId = btKiraId, BirimDeger = bedel301, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 20 },
+            new SozlesmeRate { KiraSozlesmesiId = sozlesmeler[3].Id, BorcTipiId = btKiraId, BirimDeger = bedel401, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 20 },
+            new SozlesmeRate { KiraSozlesmesiId = sozlesmeler[4].Id, BorcTipiId = btKiraId, BirimDeger = bedel102, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 0 },
+            new SozlesmeRate { KiraSozlesmesiId = sozlesmeler[5].Id, BorcTipiId = btKiraId, BirimDeger = bedel302, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 20 }
         );
         await _ctx.SaveChangesAsync();
 
@@ -472,8 +454,8 @@ public class SeedDataService
 
         if (await _ctx.TasinmazKiraciKategoriFiyatlari.AnyAsync(f => f.TasinmazId == teknokent.Id)) return;
 
-        var katAkademisyen = await _ctx.KiraciKategorileri.FirstAsync(k => k.Kod == "AKADEMISYEN");
-        var katAkadOlmayan = await _ctx.KiraciKategorileri.FirstAsync(k => k.Kod == "AKAD_OLMAYAN");
+        var katAkademisyen = await _ctx.Kategoriler.FirstAsync(k => k.Tipi == KategoriTipi.Kiraci && k.Kod == "AKADEMISYEN");
+        var katAkadOlmayan = await _ctx.Kategoriler.FirstAsync(k => k.Tipi == KategoriTipi.Kiraci && k.Kod == "AKAD_OLMAYAN");
 
         var btKira = await _ctx.BorcTipleri.FirstAsync(b => b.Kod == "KIRA");
         var btOrtak = await _ctx.BorcTipleri.FirstAsync(b => b.Kod == "ORTAK");
@@ -820,12 +802,12 @@ public class SeedDataService
 
     private static KiraSozlesmesi MakeSozlesme(Birim birim, Kiraci kiraci,
         DateTime baslangic, DateTime bitis,
-        decimal? depozito, bool kdv, decimal kdvOrani = 20, string? notlar = null) => new()
+        bool kdv, decimal kdvOrani = 20, string? notlar = null) => new()
     {
         Birim = birim, BirimId = birim.Id, Kiraci = kiraci, KiraciId = kiraci.Id,
         BaslangicTarihi = baslangic, BitisTarihi = bitis,
-        Depozito = depozito, Notlar = notlar, Durum = SozlesmeDurumu.Aktif,
-        KdvUygulanacakMi = kdv, KdvOrani = kdv ? kdvOrani : 0
+        Notlar = notlar, Durum = SozlesmeDurumu.Aktif,
+        KdvUygulanacakMi = kdv
     };
 
     public async Task ClearDomainDataAsync()
@@ -837,8 +819,7 @@ public class SeedDataService
         _ctx.BankaHareketleri.RemoveRange(_ctx.BankaHareketleri);
         
         _ctx.ToplantiSalonuRezervasyonlari.RemoveRange(_ctx.ToplantiSalonuRezervasyonlari);
-        _ctx.RezervasyonUcretKurallari.RemoveRange(_ctx.RezervasyonUcretKurallari);
-        _ctx.RezervasyonGenelTarifeleri.RemoveRange(_ctx.RezervasyonGenelTarifeleri);
+        _ctx.RezervasyonUcretler.RemoveRange(_ctx.RezervasyonUcretler);
         
         _ctx.TahakkukKalemleri.RemoveRange(_ctx.TahakkukKalemleri);
         _ctx.KiraTahakkuklar.RemoveRange(_ctx.KiraTahakkuklar);
@@ -854,16 +835,11 @@ public class SeedDataService
         _ctx.TasinmazKiraciKategoriFiyatlari.RemoveRange(_ctx.TasinmazKiraciKategoriFiyatlari);
         _ctx.Tasinmazlar.RemoveRange(_ctx.Tasinmazlar);
 
-        // Tarifeler ve Kalemleri (Cascade delete genellikle açıktır ama garanti olsun)
         _ctx.TarifeKalemleri.RemoveRange(_ctx.TarifeKalemleri);
-        _ctx.Tarifeler.RemoveRange(_ctx.Tarifeler);
 
         // Sistem Tanımları (Baştan seed edileceği için temizlenebilir)
-        _ctx.Sektorler.RemoveRange(_ctx.Sektorler);
-        _ctx.KiraciKategorileri.RemoveRange(_ctx.KiraciKategorileri);
+        _ctx.Kategoriler.RemoveRange(_ctx.Kategoriler);
         _ctx.BirimTurleri.RemoveRange(_ctx.BirimTurleri);
-        _ctx.TasinmazTipleri.RemoveRange(_ctx.TasinmazTipleri);
-        _ctx.TasinmazTipiKiralamaSekilleri.RemoveRange(_ctx.TasinmazTipiKiralamaSekilleri);
         _ctx.BorcTipleri.RemoveRange(_ctx.BorcTipleri);
 
         await _ctx.SaveChangesAsync();

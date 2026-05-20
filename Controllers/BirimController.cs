@@ -56,8 +56,8 @@ public class BirimController : Controller
                 .OrderBy(b => b.Sira)
                 .ToListAsync();
 
-            var kategoriler = await _ctx.KiraciKategorileri
-                .Where(k => k.Aktif)
+            var kategoriler = await _ctx.Kategoriler
+                .Where(k => k.Tipi == KategoriTipi.Kiraci && k.Aktif)
                 .OrderBy(k => k.Sira)
                 .ToListAsync();
 
@@ -96,15 +96,10 @@ public class BirimController : Controller
         }
         else if (vm.RezervasyonYapilabilirMi)
         {
-            vm.OzelRezervasyonKural = await _ctx.RezervasyonUcretKurallari
+            vm.OzelRezervasyonKural = await _ctx.RezervasyonUcretler
                 .FirstOrDefaultAsync(r => r.BirimId == id);
-            
-            // Yeni matris yapısındaki parent tarife (Genel Tarife)
-            vm.ParentRezervasyonTarife = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(DateTime.Now.Year);
 
-            // Eski global kural (form varsayılanları için şimdilik kalsın)
-            vm.GlobalRezervasyonKural = await _ctx.RezervasyonUcretKurallari
-                .FirstOrDefaultAsync(r => r.BirimId == null && r.Aktif);
+            vm.ParentRezervasyonTarife = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(DateTime.Now.Year);
         }
 
         return View(vm);
@@ -183,11 +178,11 @@ public class BirimController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RezKuralSifirla(int id)
     {
-        var kural = await _ctx.RezervasyonUcretKurallari
+        var kural = await _ctx.RezervasyonUcretler
             .FirstOrDefaultAsync(r => r.BirimId == id);
         if (kural != null)
         {
-            _ctx.RezervasyonUcretKurallari.Remove(kural);
+            _ctx.RezervasyonUcretler.Remove(kural);
             await _ctx.SaveChangesAsync();
         }
         TempData["Success"] = "Özel kural kaldırıldı. Genel tarife uygulanacak.";

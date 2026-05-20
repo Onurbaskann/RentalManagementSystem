@@ -15,56 +15,50 @@ public class AdminTasinmazTipiController : Controller
 
     public AdminTasinmazTipiController(ApplicationDbContext ctx) => _ctx = ctx;
 
+    private IQueryable<Kategori> Query() =>
+        _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Tasinmaz);
+
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var list = await _ctx.TasinmazTipleri
-            .Include(t => t.KiralamaSekilleri)
-            .OrderBy(t => t.Sira).ThenBy(t => t.Ad)
-            .ToListAsync();
+        var list = await Query().OrderBy(t => t.Sira).ThenBy(t => t.Ad).ToListAsync();
         return View(list);
     }
 
     [HttpGet("Ekle")]
     public IActionResult Create()
     {
-        var nextSira = (_ctx.TasinmazTipleri.Max(t => (int?)t.Sira) ?? 0) + 1;
-        ViewBag.SeciliKiralamaSekilleri = new int[] { (int)KiralamaSekli.TekParca };
-        return View(new TasinmazTipi { Sira = nextSira, OlusturmaTarihi = DateTime.UtcNow });
+        var nextSira = (Query().Max(t => (int?)t.Sira) ?? 0) + 1;
+        return View(new Kategori { Tipi = KategoriTipi.Tasinmaz, Sira = nextSira, OlusturmaTarihi = DateTime.UtcNow, TekParcaDestekli = true });
     }
 
     [HttpPost("Ekle")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(TasinmazTipi model, int[] kiralamaSekilleri)
+    public async Task<IActionResult> Create(Kategori model, bool tekParca, bool birimBazli)
     {
         if (string.IsNullOrWhiteSpace(model.Ad))
             ModelState.AddModelError(nameof(model.Ad), "Ad zorunludur.");
         if (string.IsNullOrWhiteSpace(model.Kod))
             ModelState.AddModelError(nameof(model.Kod), "Kod zorunludur.");
-        if (kiralamaSekilleri == null || kiralamaSekilleri.Length == 0)
-            ModelState.AddModelError("kiralamaSekilleri", "En az bir kiralama şekli seçilmelidir.");
+        if (!tekParca && !birimBazli)
+            ModelState.AddModelError("kiralamaSekli", "En az bir kiralama şekli seçilmelidir.");
 
         if (!ModelState.IsValid)
-        {
-            ViewBag.SeciliKiralamaSekilleri = kiralamaSekilleri ?? Array.Empty<int>();
             return View(model);
-        }
 
         model.Kod = model.Kod.Trim().ToUpper();
-        if (await _ctx.TasinmazTipleri.AnyAsync(t => t.Kod == model.Kod))
+        if (await Query().AnyAsync(t => t.Kod == model.Kod))
         {
             ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
-            ViewBag.SeciliKiralamaSekilleri = kiralamaSekilleri;
             return View(model);
         }
 
+        model.Tipi = KategoriTipi.Tasinmaz;
         model.OlusturmaTarihi = DateTime.UtcNow;
-        foreach (var sId in kiralamaSekilleri.Distinct())
-        {
-            model.KiralamaSekilleri.Add(new TasinmazTipiKiralamaSekli { KiralamaSekli = (KiralamaSekli)sId });
-        }
+        model.TekParcaDestekli = tekParca;
+        model.BirimBazliDestekli = birimBazli;
 
-        _ctx.TasinmazTipleri.Add(model);
+        _ctx.Kategoriler.Add(model);
         await _ctx.SaveChangesAsync();
         TempData["Success"] = $"'{model.Ad}' taşınmaz tipi eklendi.";
         return RedirectToAction(nameof(Index));
@@ -73,18 +67,14 @@ public class AdminTasinmazTipiController : Controller
     [HttpGet("Duzenle/{id:int}")]
     public async Task<IActionResult> Edit(int id)
     {
-        var entity = await _ctx.TasinmazTipleri
-            .Include(t => t.KiralamaSekilleri)
-            .FirstOrDefaultAsync(t => t.Id == id);
+        var entity = await Query().FirstOrDefaultAsync(t => t.Id == id);
         if (entity == null) return NotFound();
-
-        ViewBag.SeciliKiralamaSekilleri = entity.KiralamaSekilleri.Select(k => (int)k.KiralamaSekli).ToArray();
         return View(entity);
     }
 
     [HttpPost("Duzenle/{id:int}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, TasinmazTipi model, int[] kiralamaSekilleri)
+    public async Task<IActionResult> Edit(int id, Kategori model, bool tekParca, bool birimBazli)
     {
         if (id != model.Id) return BadRequest();
 
@@ -92,39 +82,23 @@ public class AdminTasinmazTipiController : Controller
             ModelState.AddModelError(nameof(model.Ad), "Ad zorunludur.");
         if (string.IsNullOrWhiteSpace(model.Kod))
             ModelState.AddModelError(nameof(model.Kod), "Kod zorunludur.");
-        if (kiralamaSekilleri == null || kiralamaSekilleri.Length == 0)
-            ModelState.AddModelError("kiralamaSekilleri", "En az bir kiralama şekli seçilmelidir.");
+        if (!tekParca && !birimBazli)
+            ModelState.AddModelError("kiralamaSekli", "En az bir kiralama şekli seçilmelidir.");
 
         if (!ModelState.IsValid)
-        {
-            ViewBag.SeciliKiralamaSekilleri = kiralamaSekilleri ?? Array.Empty<int>();
             return View(model);
-        }
 
         model.Kod = model.Kod.Trim().ToUpper();
-        if (await _ctx.TasinmazTipleri.AnyAsync(t => t.Kod == model.Kod && t.Id != id))
+        if (await Query().AnyAsync(t => t.Kod == model.Kod && t.Id != id))
         {
             ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
-            ViewBag.SeciliKiralamaSekilleri = kiralamaSekilleri;
             return View(model);
         }
 
-        _ctx.TasinmazTipleri.Update(model);
-
-        var mevcut = await _ctx.TasinmazTipiKiralamaSekilleri
-            .Where(t => t.TasinmazTipiId == id)
-            .ToListAsync();
-        _ctx.TasinmazTipiKiralamaSekilleri.RemoveRange(mevcut);
-
-        foreach (var sId in kiralamaSekilleri.Distinct())
-        {
-            _ctx.TasinmazTipiKiralamaSekilleri.Add(new TasinmazTipiKiralamaSekli
-            {
-                TasinmazTipiId = id,
-                KiralamaSekli = (KiralamaSekli)sId
-            });
-        }
-
+        model.Tipi = KategoriTipi.Tasinmaz;
+        model.TekParcaDestekli = tekParca;
+        model.BirimBazliDestekli = birimBazli;
+        _ctx.Kategoriler.Update(model);
         await _ctx.SaveChangesAsync();
         TempData["Success"] = $"'{model.Ad}' güncellendi.";
         return RedirectToAction(nameof(Index));
@@ -134,7 +108,7 @@ public class AdminTasinmazTipiController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DurumDegistir(int id)
     {
-        var entity = await _ctx.TasinmazTipleri.FindAsync(id);
+        var entity = await Query().FirstOrDefaultAsync(t => t.Id == id);
         if (entity == null) return NotFound();
         entity.Aktif = !entity.Aktif;
         await _ctx.SaveChangesAsync();

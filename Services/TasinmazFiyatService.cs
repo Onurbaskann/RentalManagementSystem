@@ -27,7 +27,8 @@ namespace KiraTakip.Services
             }
 
             // Aktif Kiracı Kategorileri (tümünü alıyoruz, pagination sonrası dilimleyeceğiz)
-            var kiraciKategorileri = await _ctx.KiraciKategorileri
+            var kiraciKategorileri = await _ctx.Kategoriler
+                .Where(k => k.Tipi == KategoriTipi.Kiraci)
                 .OrderBy(k => k.Ad)
                 .ToListAsync();
 

@@ -38,7 +38,7 @@
                 <label class="form-label">Taşınmaz Tipi *</label>
                 <select asp-for="TasinmazTipiId" class="form-control" x-model="tasinmazTipiId" @@change="onTasinmazTipiChange()">
                     <option value="">— Seçiniz —</option>
-                    @foreach (var tt in (IEnumerable<KiraTakip.Models.TasinmazTipi>)ViewBag.TasinmazTipleri)
+                    @foreach (var tt in (IEnumerable<KiraTakip.Models.Kategori>)ViewBag.TasinmazTipleri)
                     {
                         <option value="@tt.Id">@tt.Ad</option>
                     }

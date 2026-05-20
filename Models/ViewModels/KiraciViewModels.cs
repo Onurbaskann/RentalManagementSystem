@@ -7,6 +7,7 @@ public class KiraciDetayViewModel
 {
     public Kiraci Kiraci { get; set; } = null!;
     public List<KiraSozlesmesi> Sozlesmeler { get; set; } = new();
+    public Dictionary<int, decimal?> DepozitoTutarlari { get; set; } = new();
 }
 
 public class KiraciFormViewModel

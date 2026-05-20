@@ -120,3 +120,10 @@ public enum BorcTipiDavranisi
     KullaniciManuel = 3,
     RezervasyonOzel = 4
 }
+
+public enum OdemeKaynakTipi
+{
+    Manuel       = 1,
+    BankaEslesme = 2,
+    SanalPos     = 3
+}

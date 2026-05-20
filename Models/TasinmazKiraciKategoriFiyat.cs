@@ -8,7 +8,7 @@ public class TasinmazKiraciKategoriFiyat
     public Tasinmaz Tasinmaz { get; set; } = null!;
 
     public int KiraciKategoriId { get; set; }
-    public KiraciKategori KiraciKategori { get; set; } = null!;
+    public Kategori Kategori { get; set; } = null!;
 
     public int BorcTipiId { get; set; }
     public BorcTipi BorcTipi { get; set; } = null!;

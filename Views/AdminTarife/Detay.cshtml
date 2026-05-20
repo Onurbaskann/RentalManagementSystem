@@ -21,16 +21,10 @@
 
 <form method="post" action="/Admin/Tarife/Yil/@Model.Yil/KalemGuncelle">
     @Html.AntiForgeryToken()
-    <input type="hidden" name="TarifeId" value="@Model.TarifeId" />
     <input type="hidden" name="Yil" value="@Model.Yil" />
     <input type="hidden" name="Aktif" value="@Model.Aktif.ToString().ToLower()" />
 
     <div class="card p-0 overflow-hidden mb-4">
-        <div class="p-4 border-b border-[var(--color-border)]">
-            <label class="form-label">Açıklama</label>
-            <input name="Aciklama" value="@Model.Aciklama" class="form-control max-w-[400px]" placeholder="Opsiyonel not…" />
-        </div>
-
         @if (!Model.Satirlar.Any() || !Model.Kolonlar.Any())
         {
             <div class="p-6 text-center text-muted">
@@ -140,7 +134,7 @@
                             var rez = Model.RezervasyonSatirlari[i];
                             <tr>
                                 <td class="p-[12px_16px] border-b border-[var(--color-border)] font-semibold text-[13.5px] text-slate-700">
-                                    <input type="hidden" name="RezervasyonHucreler[@i].RezervasyonGenelTarifeId" value="@rez.RezervasyonGenelTarifeId" />
+                                    <input type="hidden" name="RezervasyonHucreler[@i].RezervasyonUcretId" value="@rez.RezervasyonUcretId" />
                                     <input type="hidden" name="RezervasyonHucreler[@i].BirimTuruId" value="@rez.BirimTuruId" />
                                     @rez.BirimTuruAd
                                 </td>

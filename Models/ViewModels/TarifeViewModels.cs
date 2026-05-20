@@ -1,11 +1,16 @@
 namespace KiraTakip.Models.ViewModels;
 
+public class TarifeYilOzetiViewModel
+{
+    public int Yil { get; set; }
+    public bool Aktif { get; set; }
+    public int KalemSayisi { get; set; }
+}
+
 // GET ViewModel — matris yapısı
 public class TarifeMatrisViewModel
 {
-    public int TarifeId { get; set; }
     public int Yil { get; set; }
-    public string? Aciklama { get; set; }
     public bool Aktif { get; set; }
     public List<TarifeMatrisBorcTipiKolon> Kolonlar { get; set; } = [];
     public List<TarifeMatrisSatir> Satirlar { get; set; } = [];
@@ -14,7 +19,7 @@ public class TarifeMatrisViewModel
 
 public class TarifeMatrisRezervasyonSatir
 {
-    public int RezervasyonGenelTarifeId { get; set; }
+    public int RezervasyonUcretId { get; set; }
     public int BirimTuruId { get; set; }
     public string BirimTuruAd { get; set; } = "";
     public int UcretsizSureDakika { get; set; }
@@ -50,20 +55,15 @@ public class TarifeMatrisHucre
 // POST ViewModel — düz liste
 public class TarifeMatrisPostViewModel
 {
-    public int TarifeId { get; set; }
     public int Yil { get; set; }
-    public string? Aciklama { get; set; }
     public bool Aktif { get; set; }
     public List<TarifeMatrisHucre> Hucreler { get; set; } = [];
     public List<TarifeMatrisRezervasyonSatir> RezervasyonHucreler { get; set; } = [];
 }
 
-// Eski (geriye uyumluluk için — YilEkle view'ı kullanıyor)
 public class TarifeDetayViewModel
 {
-    public int TarifeId { get; set; }
     public int Yil { get; set; }
-    public string? Aciklama { get; set; }
     public bool Aktif { get; set; }
     public List<TarifeKalemSatiri> Kalemler { get; set; } = [];
 }
@@ -82,6 +82,5 @@ public class TarifeKalemSatiri
 public class TarifeYilEkleViewModel
 {
     public int Yil { get; set; } = DateTime.Now.Year;
-    public string? Aciklama { get; set; }
-    public int? KopyalaYilId { get; set; }
+    public int? KopyalaYil { get; set; }
 }

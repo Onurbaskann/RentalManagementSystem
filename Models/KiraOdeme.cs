@@ -13,6 +13,8 @@ public class KiraOdeme
     public DateTime OdemeTarihi { get; set; }
     public decimal Tutar { get; set; }
     public OdemeKanali OdemeKanali { get; set; }
+    public OdemeKaynakTipi OdemeKaynakTipi { get; set; } = OdemeKaynakTipi.Manuel;
+    public string? PosReferansNo { get; set; }
     public string? Aciklama { get; set; }
 
     public OdemeDurumu Durum { get; set; } = OdemeDurumu.OnayBekliyor;

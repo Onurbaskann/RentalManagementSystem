@@ -101,13 +101,14 @@ public class OdemeController : Controller
         var userId = _userManager.GetUserId(User)!;
         var odeme = new KiraOdeme
         {
-            KiraTahakkukId = vm.KiraTahakkukId,
+            KiraTahakkukId   = vm.KiraTahakkukId,
             KiraSozlesmesiId = vm.KiraSozlesmesiId,
-            OdemeTarihi = vm.OdemeTarihi,
-            Tutar = vm.Tutar,
-            OdemeKanali = vm.OdemeKanali,
-            Aciklama = vm.Aciklama,
-            GirenUserId = userId
+            OdemeTarihi      = vm.OdemeTarihi,
+            Tutar            = vm.Tutar,
+            OdemeKanali      = vm.OdemeKanali,
+            OdemeKaynakTipi  = OdemeKaynakTipi.Manuel,
+            Aciklama         = vm.Aciklama,
+            GirenUserId      = userId
         };
 
         await _odemeService.EkleAsync(odeme);

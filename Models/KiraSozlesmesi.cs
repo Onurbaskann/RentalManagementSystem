@@ -11,7 +11,6 @@ public class KiraSozlesmesi
     public DateTime BaslangicTarihi { get; set; }
     public DateTime BitisTarihi { get; set; }
 
-    public decimal? Depozito { get; set; }
     public string? Notlar { get; set; }
 
     public SozlesmeDurumu Durum { get; set; } = SozlesmeDurumu.Aktif;
@@ -22,7 +21,6 @@ public class KiraSozlesmesi
 
     // KDV bilgileri
     public bool KdvUygulanacakMi { get; set; }
-    public decimal KdvOrani { get; set; } = 20;
 
     // İşlem geçmişi
     public List<SozlesmeIslemGecmisi> IslemGecmisi { get; set; } = new();

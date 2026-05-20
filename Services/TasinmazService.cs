@@ -15,7 +15,7 @@ public class TasinmazService : ITasinmazService
     public async Task<List<Tasinmaz>> GetAllAsync(string? userId = null)
     {
         var query = _ctx.Tasinmazlar
-            .Include(t => t.TasinmazTipi)
+            .Include(t => t.Kategori)
             .Include(t => t.Birimler)
                 .ThenInclude(b => b.Sozlesmeler)
                     .ThenInclude(s => s.Kiraci)
@@ -36,7 +36,7 @@ public class TasinmazService : ITasinmazService
     public async Task<Tasinmaz?> GetByIdAsync(int id)
     {
         return await _ctx.Tasinmazlar
-            .Include(t => t.TasinmazTipi)
+            .Include(t => t.Kategori)
             .Include(t => t.Birimler)
                 .ThenInclude(b => b.BirimTuru)
             .Include(t => t.Birimler)
@@ -98,11 +98,11 @@ public class TasinmazService : ITasinmazService
                 t.Birimler.Add(birim);
 
                 // Ücret kuralını ekle
-                _ctx.RezervasyonUcretKurallari.Add(new RezervasyonUcretKural
+                _ctx.RezervasyonUcretler.Add(new RezervasyonUcret
                 {
                     Birim = birim,
                     UcretsizSureDakika = r.UcretsizSureDakika,
-                    UcretlendirmePeriyoduDakika = 60, // Varsayılan 60 dk (1 saat)
+                    UcretlendirmePeriyoduDakika = 60,
                     PeriyotUcreti = r.SaatlikUcret,
                     KdvOrani = r.KdvOrani,
                     Aktif = true,

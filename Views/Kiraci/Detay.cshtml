@@ -27,10 +27,10 @@
             else
             { <span class="badge badge-bireysel p-1 px-3 text-[12px]">Gerçek Kişi</span> }
             
-            @if (k.KiraciKategori != null)
+            @if (k.Kategori != null)
             {
                 <div class="w-1 h-1 rounded-full bg-slate-300"></div>
-                <span class="badge bg-slate-50 text-slate-600 border border-slate-200 p-1 px-3 text-[12px] font-semibold">@k.KiraciKategori.Ad</span>
+                <span class="badge bg-slate-50 text-slate-600 border border-slate-200 p-1 px-3 text-[12px] font-semibold">@k.Kategori.Ad</span>
             }
         </div>
     </div>
@@ -125,18 +125,18 @@
                     </div>
                 }
             }
-            @if (k.KiraciKategori != null)
+            @if (k.Kategori != null)
             {
                 <div>
                     <div class="text-[11.5px] text-muted mb-0.5">Kategori</div>
-                    <div class="text-[13px] font-medium">@k.KiraciKategori.Ad</div>
+                    <div class="text-[13px] font-medium">@k.Kategori.Ad</div>
                 </div>
             }
-            @if (k.Sektor != null)
+            @if (k.SektorKategori != null)
             {
                 <div>
                     <div class="text-[11.5px] text-muted mb-0.5">Sektör</div>
-                    <div class="text-[13px] font-medium">@k.Sektor.Ad</div>
+                    <div class="text-[13px] font-medium">@k.SektorKategori.Ad</div>
                 </div>
             }
         </div>
@@ -204,7 +204,7 @@
                                 @if (surek) { <span class="day-badge day-badge-amber ml-1.5 text-[11px]">@kalanGun g</span> }
                             </td>
                             <td class="font-bold">@((await Istatistik.AylikBedelAsync(s)).ToString("N0")) ₺</td>
-                            <td>@(s.Depozito.HasValue ? s.Depozito.Value.ToString("N0") + " ₺" : "—")</td>
+                            <td>@(Model.DepozitoTutarlari.TryGetValue(s.Id, out var dep) && dep.HasValue ? dep.Value.ToString("N0") + " ₺" : "—")</td>
                             <td>
                                 @if (feshedildi) { <span class="badge badge-gecmis">Feshedildi</span> }
                                 else if (surek) { <span class="badge badge-surek">Dolmak Üzere</span> }

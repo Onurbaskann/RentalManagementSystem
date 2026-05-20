@@ -1,4 +1,4 @@
-@model List<KiraTakip.Models.TasinmazTipi>
+@model List<KiraTakip.Models.Kategori>
 @{
     ViewData["Title"] = "Taşınmaz Tipleri";
 }
@@ -48,18 +48,15 @@
                         <td><span class="font-mono font-semibold text-[13px]">@tt.Kod</span></td>
                         <td class="font-medium text-slate-700">@tt.Ad</td>
                         <td>
-                            @if (!tt.KiralamaSekilleri.Any())
+                            @if (!tt.TekParcaDestekli && !tt.BirimBazliDestekli)
                             {
                                 <span class="text-muted text-xs">—</span>
                             }
                             else
                             {
                                 <div class="flex gap-1.5 flex-wrap">
-                                    @foreach (var ks in tt.KiralamaSekilleri.OrderBy(k => (int)k.KiralamaSekli))
-                                    {
-                                        var label = ks.KiralamaSekli == KiraTakip.Models.KiralamaSekli.TekParca ? "Tek Parça" : "Birim Bazlı";
-                                        <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">@label</span>
-                                    }
+                                    @if (tt.TekParcaDestekli) { <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">Tek Parça</span> }
+                                    @if (tt.BirimBazliDestekli) { <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">Birim Bazlı</span> }
                                 </div>
                             }
                         </td>

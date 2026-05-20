@@ -17,8 +17,7 @@ public class BirimOzelFiyatViewModel
     public ParentTarifeKartViewModel? ParentTarife { get; set; }
 
     // Senaryo B — rezervasyon ücreti kuralı
-    public RezervasyonUcretKural? OzelRezervasyonKural { get; set; }
-    public RezervasyonUcretKural? GlobalRezervasyonKural { get; set; }
+    public RezervasyonUcret? OzelRezervasyonKural { get; set; }
     public ParentRezervasyonTarifeKartViewModel? ParentRezervasyonTarife { get; set; }
 }
 

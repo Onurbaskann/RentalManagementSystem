@@ -73,18 +73,21 @@ public class KiraciController : Controller
             sozlesmeler = await _sozlesmeService.GetByKiraciIdAsync(id);
         }
 
+        var depozitoTutarlari = await _sozlesmeService.GetDepozitoTutarlariAsync(sozlesmeler.Select(s => s.Id));
+
         var vm = new KiraciDetayViewModel
         {
             Kiraci = k,
-            Sozlesmeler = sozlesmeler
+            Sozlesmeler = sozlesmeler,
+            DepozitoTutarlari = depozitoTutarlari
         };
         return View(vm);
     }
 
     private async Task PopulateKiraciViewBagAsync()
     {
-        ViewBag.Kategoriler = await _ctx.KiraciKategorileri.Where(k => k.Aktif).OrderBy(k => k.Sira).ToListAsync();
-        ViewBag.Sektorler = await _ctx.Sektorler.Where(s => s.Aktif).OrderBy(s => s.Sira).ToListAsync();
+        ViewBag.Kategoriler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Kiraci && k.Aktif).OrderBy(k => k.Sira).ToListAsync();
+        ViewBag.Sektorler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Sektor && k.Aktif).OrderBy(k => k.Sira).ToListAsync();
     }
 
     [HttpGet]

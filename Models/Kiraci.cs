@@ -37,10 +37,10 @@ public class Kiraci
     public bool KvkkOnayi { get; set; }
 
     public int? KiraciKategoriId { get; set; }
-    public KiraciKategori? KiraciKategori { get; set; }
+    public Kategori? Kategori { get; set; }
 
     public int? SektorId { get; set; }
-    public Sektor? Sektor { get; set; }
+    public Kategori? SektorKategori { get; set; }
 
     public DateTime KayitTarihi { get; set; }
 

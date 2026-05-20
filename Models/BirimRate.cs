@@ -11,6 +11,6 @@ public class BirimRate
     public decimal KdvOrani { get; set; }
 
     public Birim Birim { get; set; } = null!;
-    public KiraciKategori KiraciKategori { get; set; } = null!;
+    public Kategori Kategori { get; set; } = null!;
     public BorcTipi BorcTipi { get; set; } = null!;
 }

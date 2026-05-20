@@ -5,7 +5,7 @@ public class Tasinmaz
     public int Id { get; set; }
     public string Ad { get; set; } = string.Empty;
     public int? TasinmazTipiId { get; set; }
-    public TasinmazTipi? TasinmazTipi { get; set; }
+    public Kategori? Kategori { get; set; }
     public KiralamaSekli KiralamaSekli { get; set; }
 
     public string Il { get; set; } = string.Empty;

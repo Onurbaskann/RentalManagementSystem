@@ -8,8 +8,7 @@ public class TasinmazDetayViewModel
     public List<BirimDetayViewModel> Birimler { get; set; } = new();
     public TasinmazFiyatMatrisiViewModel FiyatMatrisi { get; set; } = new();
     public List<ToplantiSalonuRezervasyon> Rezervasyonlar { get; set; } = new();
-    public RezervasyonUcretKural? GlobalRezervasyonKural { get; set; }
-    public List<RezervasyonUcretKural> BirimRezervasyonKurallari { get; set; } = new();
+    public List<RezervasyonUcret> BirimRezervasyonKurallari { get; set; } = new();
     public List<BirimOzelFiyatOzeti> BirimOzelFiyatlari { get; set; } = new();
     public Dictionary<int, decimal> SozlesmeAylikBedelleri { get; set; } = new();
 }
@@ -26,7 +25,7 @@ public class BirimDetayViewModel
     public KiraDurumu Durum { get; set; }
     public KiraSozlesmesi? AktifSozlesme { get; set; }
     public decimal AylikBedel { get; set; }
-    public RezervasyonUcretKural? RezKural { get; set; }
+    public RezervasyonUcret? RezKural { get; set; }
 }
 
 public class TasinmazEkleViewModel

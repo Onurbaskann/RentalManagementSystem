@@ -19,25 +19,32 @@ public class AdminTarifeController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var tarifeler = await _ctx.Tarifeler
-            .Include(t => t.Kalemler)
-            .OrderByDescending(t => t.Yil)
+        var ozet = await _ctx.TarifeKalemleri
+            .GroupBy(k => k.Yil)
+            .Select(g => new TarifeYilOzetiViewModel
+            {
+                Yil         = g.Key,
+                Aktif       = g.Any(k => k.Aktif),
+                KalemSayisi = g.Count()
+            })
+            .OrderByDescending(o => o.Yil)
             .ToListAsync();
-        return View(tarifeler);
+
+        return View(ozet);
     }
 
     [Authorize(Policy = PermissionCatalog.Tarife.View)]
     [HttpGet("Yil/{yil:int}")]
     public async Task<IActionResult> Detay(int yil)
     {
-        var tarife = await _ctx.Tarifeler
-            .Include(t => t.Kalemler)
-            .FirstOrDefaultAsync(t => t.Yil == yil);
+        var kalemler = await _ctx.TarifeKalemleri
+            .Where(k => k.Yil == yil)
+            .ToListAsync();
 
-        if (tarife == null) return NotFound();
+        if (kalemler.Count == 0) return NotFound();
 
-        var kategoriler = await _ctx.KiraciKategorileri
-            .Where(k => k.Aktif)
+        var kategoriler = await _ctx.Kategoriler
+            .Where(k => k.Tipi == KategoriTipi.Kiraci && k.Aktif)
             .OrderBy(k => k.Sira)
             .ToListAsync();
 
@@ -48,10 +55,8 @@ public class AdminTarifeController : Controller
 
         var vm = new TarifeMatrisViewModel
         {
-            TarifeId = tarife.Id,
-            Yil      = tarife.Yil,
-            Aciklama = tarife.Aciklama,
-            Aktif    = tarife.Aktif,
+            Yil   = yil,
+            Aktif = kalemler.Any(k => k.Aktif),
             Kolonlar = borcTipleri.Select(bt => new TarifeMatrisBorcTipiKolon
             {
                 BorcTipiId  = bt.Id,
@@ -60,11 +65,11 @@ public class AdminTarifeController : Controller
             }).ToList(),
             Satirlar = kategoriler.Select(kat => new TarifeMatrisSatir
             {
-                KiraciKategoriId  = kat.Id,
-                KiraciKategoriAd  = kat.Ad,
+                KiraciKategoriId = kat.Id,
+                KiraciKategoriAd = kat.Ad,
                 Hucreler = borcTipleri.Select(bt =>
                 {
-                    var mevcut = tarife.Kalemler.FirstOrDefault(k =>
+                    var mevcut = kalemler.FirstOrDefault(k =>
                         k.KiraciKategoriId == kat.Id && k.BorcTipiId == bt.Id);
                     return new TarifeMatrisHucre
                     {
@@ -84,8 +89,8 @@ public class AdminTarifeController : Controller
             .OrderBy(t => t.Sira)
             .ToListAsync();
 
-        var mevcutRezervasyonlar = await _ctx.RezervasyonGenelTarifeleri
-            .Where(r => r.TarifeId == tarife.Id)
+        var mevcutRezervasyonlar = await _ctx.RezervasyonUcretler
+            .Where(r => r.BirimId == null && r.Yil == yil)
             .ToListAsync();
 
         vm.RezervasyonSatirlari = rezervasyonBirimTurleri.Select(bt =>
@@ -93,7 +98,7 @@ public class AdminTarifeController : Controller
             var mevcut = mevcutRezervasyonlar.FirstOrDefault(r => r.BirimTuruId == bt.Id);
             return new TarifeMatrisRezervasyonSatir
             {
-                RezervasyonGenelTarifeId    = mevcut?.Id ?? 0,
+                RezervasyonUcretId          = mevcut?.Id ?? 0,
                 BirimTuruId                 = bt.Id,
                 BirimTuruAd                 = bt.Ad,
                 UcretsizSureDakika          = mevcut?.UcretsizSureDakika ?? 0,
@@ -111,23 +116,20 @@ public class AdminTarifeController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> KalemGuncelle(int yil, TarifeMatrisPostViewModel vm)
     {
-        var tarife = await _ctx.Tarifeler
-            .Include(t => t.Kalemler)
-            .FirstOrDefaultAsync(t => t.Yil == yil);
-
-        if (tarife == null) return NotFound();
-
-        tarife.Aciklama = vm.Aciklama;
+        var mevcutKalemler = await _ctx.TarifeKalemleri
+            .Where(k => k.Yil == yil)
+            .ToListAsync();
 
         foreach (var hucre in vm.Hucreler)
         {
-            var mevcut = tarife.Kalemler.FirstOrDefault(k =>
+            var mevcut = mevcutKalemler.FirstOrDefault(k =>
                 k.KiraciKategoriId == hucre.KiraciKategoriId && k.BorcTipiId == hucre.BorcTipiId);
             if (mevcut == null)
             {
-                tarife.Kalemler.Add(new TarifeKalemi
+                _ctx.TarifeKalemleri.Add(new TarifeKalemi
                 {
-                    TarifeId         = tarife.Id,
+                    Yil              = yil,
+                    Aktif            = true,
                     KiraciKategoriId = hucre.KiraciKategoriId,
                     BorcTipiId       = hucre.BorcTipiId,
                     HesaplamaYontemi = hucre.HesaplamaYontemi,
@@ -145,14 +147,15 @@ public class AdminTarifeController : Controller
 
         foreach (var rez in vm.RezervasyonHucreler)
         {
-            var mevcut = await _ctx.RezervasyonGenelTarifeleri
-                    .FirstOrDefaultAsync(r => r.TarifeId == tarife.Id && r.BirimTuruId == rez.BirimTuruId);
+            var mevcut = await _ctx.RezervasyonUcretler
+                .FirstOrDefaultAsync(r => r.BirimId == null && r.Yil == yil && r.BirimTuruId == rez.BirimTuruId);
 
             if (mevcut == null)
             {
-                _ctx.RezervasyonGenelTarifeleri.Add(new RezervasyonGenelTarife
+                _ctx.RezervasyonUcretler.Add(new RezervasyonUcret
                 {
-                    TarifeId                    = tarife.Id,
+                    Yil                         = yil,
+                    Aktif                       = true,
                     BirimTuruId                 = rez.BirimTuruId,
                     UcretsizSureDakika          = rez.UcretsizSureDakika,
                     UcretlendirmePeriyoduDakika = rez.UcretlendirmePeriyoduDakika,
@@ -179,9 +182,10 @@ public class AdminTarifeController : Controller
     [HttpGet("YilEkle")]
     public async Task<IActionResult> YilEkle()
     {
-        var mevcutYillar = await _ctx.Tarifeler
-            .OrderByDescending(t => t.Yil)
-            .Select(t => new { t.Id, t.Yil })
+        var mevcutYillar = await _ctx.TarifeKalemleri
+            .Select(k => k.Yil)
+            .Distinct()
+            .OrderByDescending(y => y)
             .ToListAsync();
 
         ViewBag.MevcutYillar = mevcutYillar;
@@ -193,79 +197,75 @@ public class AdminTarifeController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> YilEkle(TarifeYilEkleViewModel vm)
     {
-        if (await _ctx.Tarifeler.AnyAsync(t => t.Yil == vm.Yil))
+        if (await _ctx.TarifeKalemleri.AnyAsync(k => k.Yil == vm.Yil))
         {
             ModelState.AddModelError(nameof(vm.Yil), "Bu yıl için zaten tarife mevcut.");
         }
 
         if (!ModelState.IsValid)
         {
-            ViewBag.MevcutYillar = await _ctx.Tarifeler
-                .OrderByDescending(t => t.Yil)
-                .Select(t => new { t.Id, t.Yil })
+            ViewBag.MevcutYillar = await _ctx.TarifeKalemleri
+                .Select(k => k.Yil)
+                .Distinct()
+                .OrderByDescending(y => y)
                 .ToListAsync();
             return View(vm);
         }
 
-        var yeniTarife = new Tarife
+        if (vm.KopyalaYil.HasValue)
         {
-            Yil             = vm.Yil,
-            Aciklama        = vm.Aciklama,
-            Aktif           = true,
-            OlusturmaTarihi = DateTime.Now
-        };
+            var kaynakKalemler = await _ctx.TarifeKalemleri
+                .Where(k => k.Yil == vm.KopyalaYil.Value)
+                .ToListAsync();
 
-        if (vm.KopyalaYilId.HasValue)
-        {
-            var kaynak = await _ctx.Tarifeler
-                .Include(t => t.Kalemler)
-                .FirstOrDefaultAsync(t => t.Id == vm.KopyalaYilId.Value);
-
-            if (kaynak != null)
+            foreach (var kalem in kaynakKalemler)
             {
-                foreach (var kalem in kaynak.Kalemler)
+                _ctx.TarifeKalemleri.Add(new TarifeKalemi
                 {
-                    yeniTarife.Kalemler.Add(new TarifeKalemi
-                    {
-                        KiraciKategoriId = kalem.KiraciKategoriId,
-                        BorcTipiId       = kalem.BorcTipiId,
-                        HesaplamaYontemi = kalem.HesaplamaYontemi,
-                        BirimDeger       = kalem.BirimDeger,
-                        KdvOrani         = kalem.KdvOrani
-                    });
-                }
+                    Yil              = vm.Yil,
+                    Aktif            = true,
+                    KiraciKategoriId = kalem.KiraciKategoriId,
+                    BorcTipiId       = kalem.BorcTipiId,
+                    HesaplamaYontemi = kalem.HesaplamaYontemi,
+                    BirimDeger       = kalem.BirimDeger,
+                    KdvOrani         = kalem.KdvOrani
+                });
+            }
 
-                var kaynakRezervasyonlar = await _ctx.RezervasyonGenelTarifeleri
-                    .Where(r => r.TarifeId == kaynak.Id)
-                    .ToListAsync();
+            var kaynakRezervasyonlar = await _ctx.RezervasyonUcretler
+                .Where(r => r.BirimId == null && r.Yil == vm.KopyalaYil.Value)
+                .ToListAsync();
 
-                foreach (var rez in kaynakRezervasyonlar)
+            foreach (var rez in kaynakRezervasyonlar)
+            {
+                _ctx.RezervasyonUcretler.Add(new RezervasyonUcret
                 {
-                    _ctx.RezervasyonGenelTarifeleri.Add(new RezervasyonGenelTarife
-                    {
-                        Tarife = yeniTarife, // Bind to the new tariff object
-                        BirimTuruId = rez.BirimTuruId,
-                        UcretsizSureDakika = rez.UcretsizSureDakika,
-                        UcretlendirmePeriyoduDakika = rez.UcretlendirmePeriyoduDakika,
-                        PeriyotUcreti = rez.PeriyotUcreti,
-                        KdvOrani = rez.KdvOrani,
-                        OlusturmaTarihi = DateTime.Now
-                    });
-                }
+                    Yil                         = vm.Yil,
+                    Aktif                       = true,
+                    BirimTuruId                 = rez.BirimTuruId,
+                    UcretsizSureDakika          = rez.UcretsizSureDakika,
+                    UcretlendirmePeriyoduDakika = rez.UcretlendirmePeriyoduDakika,
+                    PeriyotUcreti               = rez.PeriyotUcreti,
+                    KdvOrani                    = rez.KdvOrani,
+                    OlusturmaTarihi             = DateTime.Now
+                });
             }
         }
         else
         {
-            var kategoriler = await _ctx.KiraciKategorileri.Where(k => k.Aktif).OrderBy(k => k.Sira).ToListAsync();
+            var kategoriler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Kiraci && k.Aktif).OrderBy(k => k.Sira).ToListAsync();
             var aktifBorcTipleri = await _ctx.BorcTipleri
                 .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.KullaniciManuel && b.Davranis != BorcTipiDavranisi.RezervasyonOzel)
                 .OrderBy(b => b.Sira).ToListAsync();
+
             foreach (var kat in kategoriler)
             {
                 foreach (var bt in aktifBorcTipleri)
                 {
-                    yeniTarife.Kalemler.Add(new TarifeKalemi
+                    _ctx.TarifeKalemleri.Add(new TarifeKalemi
                     {
+                        Yil              = vm.Yil,
+                        Aktif            = true,
                         KiraciKategoriId = kat.Id,
                         BorcTipiId       = bt.Id,
                         HesaplamaYontemi = HesaplamaYontemi.Sabit,
@@ -278,38 +278,47 @@ public class AdminTarifeController : Controller
             var rezBirimTurleri = await _ctx.BirimTurleri
                 .Where(t => t.Aktif && t.RezervasyonYapilabilirMi)
                 .ToListAsync();
+
             foreach (var bt in rezBirimTurleri)
             {
-                _ctx.RezervasyonGenelTarifeleri.Add(new RezervasyonGenelTarife
+                _ctx.RezervasyonUcretler.Add(new RezervasyonUcret
                 {
-                    Tarife = yeniTarife,
-                    BirimTuruId = bt.Id,
-                    UcretsizSureDakika = 0,
+                    Yil                         = vm.Yil,
+                    Aktif                       = true,
+                    BirimTuruId                 = bt.Id,
+                    UcretsizSureDakika          = 0,
                     UcretlendirmePeriyoduDakika = 60,
-                    PeriyotUcreti = 0,
-                    KdvOrani = 0,
-                    OlusturmaTarihi = DateTime.Now
+                    PeriyotUcreti               = 0,
+                    KdvOrani                    = 0,
+                    OlusturmaTarihi             = DateTime.Now
                 });
             }
         }
 
-        _ctx.Tarifeler.Add(yeniTarife);
         await _ctx.SaveChangesAsync();
-
         TempData["Success"] = $"{vm.Yil} yılı tarifeleri oluşturuldu.";
         return RedirectToAction(nameof(Detay), new { yil = vm.Yil });
     }
 
     [Authorize(Policy = PermissionCatalog.Tarife.Manage)]
-    [HttpPost("DurumDegistir/{id:int}")]
+    [HttpPost("DurumDegistir/{yil:int}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DurumDegistir(int id)
+    public async Task<IActionResult> DurumDegistir(int yil)
     {
-        var entity = await _ctx.Tarifeler.FindAsync(id);
-        if (entity == null) return NotFound();
-        entity.Aktif = !entity.Aktif;
-        await _ctx.SaveChangesAsync();
-        TempData["Success"] = $"{entity.Yil} yılı tarifeleri {(entity.Aktif ? "aktif" : "pasif")} yapıldı.";
+        var kalem = await _ctx.TarifeKalemleri.FirstOrDefaultAsync(k => k.Yil == yil);
+        if (kalem == null) return NotFound();
+
+        var yeniDeger = !kalem.Aktif;
+
+        await _ctx.TarifeKalemleri
+            .Where(k => k.Yil == yil)
+            .ExecuteUpdateAsync(s => s.SetProperty(k => k.Aktif, yeniDeger));
+
+        await _ctx.RezervasyonUcretler
+            .Where(r => r.BirimId == null && r.Yil == yil)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Aktif, yeniDeger));
+
+        TempData["Success"] = $"{yil} yılı tarifeleri {(yeniDeger ? "aktif" : "pasif")} yapıldı.";
         return RedirectToAction(nameof(Index));
     }
 }

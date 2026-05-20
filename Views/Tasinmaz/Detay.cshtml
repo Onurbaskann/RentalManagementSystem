@@ -62,7 +62,7 @@
         <div class="three-col">
             <div class="card">
                 <div class="card-title">Taşınmaz Tipi</div>
-                <div class="text-[18px] font-bold mb-1.5">@(Model.Tasinmaz.TasinmazTipi?.Ad ?? "—")</div>
+                <div class="text-[18px] font-bold mb-1.5">@(Model.Tasinmaz.Kategori?.Ad ?? "—")</div>
                 <div class="text-[13px] text-muted">
                     @(Model.Tasinmaz.KiralamaSekli == KiralamaSekli.BirimBazli ? "Birim bazlı kiralama" : "Tek parça kiralama")
                 </div>
@@ -680,7 +680,7 @@
                                     @foreach (var r in birimOzet.Rateler)
                                     {
                                         <tr>
-                                            <td class="font-semibold">@r.KiraciKategori.Ad</td>
+                                            <td class="font-semibold">@r.Kategori.Ad</td>
                                             <td>@r.BorcTipi.Ad</td>
                                             <td class="text-xs text-muted">@(r.HesaplamaYontemi == HesaplamaYontemi.Sabit ? "Sabit" : "m² bazlı")</td>
                                             <td class="font-serif font-bold">@r.BirimDeger.ToString("N2") ₺</td>
@@ -730,7 +730,7 @@
                         @foreach (var b in rezBirimler)
                         {
                             var ozelKural = Model.BirimRezervasyonKurallari.FirstOrDefault(k => k.BirimId == b.Birim.Id);
-                            var aktifKural = ozelKural ?? Model.GlobalRezervasyonKural;
+                            var aktifKural = ozelKural;
                             <tr>
                                 <td class="font-semibold">@(b.Birim.Ad ?? b.Birim.BirimNo)</td>
                                 <td>
@@ -740,7 +740,7 @@
                                     }
                                     else
                                     {
-                                        <span class="text-xs text-muted">Global</span>
+                                        <span class="text-xs text-muted">Tanımsız</span>
                                     }
                                 </td>
                                 @if (aktifKural != null)

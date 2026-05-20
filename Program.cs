@@ -124,6 +124,7 @@ using (var scope = app.Services.CreateScope())
         // await domainSeed.ClearDomainDataAsync();
     }
     // Sistem tanımları — her ortamda idempotent çalışır
+    await domainSeed.SeedEnumDegerleriAsync();
     await domainSeed.SeedBorcTipleriAsync();
     await domainSeed.SeedTasinmazTipleriAsync();
     await domainSeed.SeedBirimTurleriAsync();

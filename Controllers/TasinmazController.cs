@@ -79,14 +79,12 @@ public class TasinmazController : Controller
 
         if (rezBirimIds.Count > 0)
         {
-            var ozelKurallar = await _ctx.RezervasyonUcretKurallari
+            var ozelKurallar = await _ctx.RezervasyonUcretler
                 .Where(r => r.BirimId != null && rezBirimIds.Contains(r.BirimId.Value))
                 .ToListAsync();
-            var globalKural = await _ctx.RezervasyonUcretKurallari
-                .FirstOrDefaultAsync(r => r.BirimId == null && r.Aktif);
 
             foreach (var b in birimler.Where(b => b.Birim.BirimTuru?.RezervasyonYapilabilirMi == true))
-                b.RezKural = ozelKurallar.FirstOrDefault(r => r.BirimId == b.Birim.Id) ?? globalKural;
+                b.RezKural = ozelKurallar.FirstOrDefault(r => r.BirimId == b.Birim.Id);
         }
 
         var tumBirimIds = birimler.Select(b => b.Birim.Id).ToList();
@@ -95,10 +93,10 @@ public class TasinmazController : Controller
         if (tumBirimIds.Count > 0)
         {
             var birimRateler = await _ctx.BirimRateler
-                .Include(r => r.KiraciKategori)
+                .Include(r => r.Kategori)
                 .Include(r => r.BorcTipi)
                 .Where(r => tumBirimIds.Contains(r.BirimId))
-                .OrderBy(r => r.KiraciKategori.Sira)
+                .OrderBy(r => r.Kategori.Sira)
                 .ThenBy(r => r.BorcTipi.Sira)
                 .ToListAsync();
 
@@ -120,14 +118,11 @@ public class TasinmazController : Controller
             .OrderByDescending(r => r.BaslangicTarihi)
             .ToListAsync();
 
-        var globalRezKural = await _ctx.RezervasyonUcretKurallari
-            .FirstOrDefaultAsync(r => r.BirimId == null && r.Aktif);
-
         var birimRezKurallari = rezBirimIds.Count > 0
-            ? await _ctx.RezervasyonUcretKurallari
+            ? await _ctx.RezervasyonUcretler
                 .Where(r => r.BirimId != null && rezBirimIds.Contains(r.BirimId.Value))
                 .ToListAsync()
-            : new List<RezervasyonUcretKural>();
+            : new List<RezervasyonUcret>();
 
         var sozlesmeBedelleri = new Dictionary<int, decimal>();
         foreach (var s in t.Birimler.SelectMany(b => b.Sozlesmeler))
@@ -142,7 +137,6 @@ public class TasinmazController : Controller
             Birimler = birimler,
             FiyatMatrisi = await _tasinmazFiyatService.GetMatrisiAsync(id, pageSize: 100),
             Rezervasyonlar = rezervasyonlar,
-            GlobalRezervasyonKural = globalRezKural,
             BirimRezervasyonKurallari = birimRezKurallari,
             BirimOzelFiyatlari = birimOzelFiyatlari,
             SozlesmeAylikBedelleri = sozlesmeBedelleri
@@ -155,11 +149,16 @@ public class TasinmazController : Controller
         var birimTurleri = await _ctx.BirimTurleri.Where(b => b.Aktif).OrderBy(b => b.Sira).ToListAsync();
         ViewBag.BirimTurleri = birimTurleri.Where(b => b.KiralanabilirMi).ToList();
         ViewBag.RezervasyonBirimTurleri = birimTurleri.Where(b => b.RezervasyonYapilabilirMi).ToList();
-        ViewBag.TasinmazTipleri = await _ctx.TasinmazTipleri.Where(t => t.Aktif).OrderBy(t => t.Sira).ToListAsync();
-
-        ViewBag.TasinmazTipiKiralamaSekilleri = await _ctx.TasinmazTipiKiralamaSekilleri
-            .GroupBy(t => t.TasinmazTipiId)
-            .ToDictionaryAsync(g => g.Key, g => g.Select(x => (int)x.KiralamaSekli).OrderBy(x => x).ToArray());
+        var tipler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Tasinmaz && k.Aktif).OrderBy(t => t.Sira).ToListAsync();
+        ViewBag.TasinmazTipleri = tipler;
+        ViewBag.TasinmazTipiKiralamaSekilleri = tipler.ToDictionary(
+            t => t.Id,
+            t => {
+                var list = new List<int>();
+                if (t.TekParcaDestekli) list.Add((int)KiralamaSekli.TekParca);
+                if (t.BirimBazliDestekli) list.Add((int)KiralamaSekli.BirimBazli);
+                return list.ToArray();
+            });
     }
 
     [HttpGet]
@@ -195,13 +194,13 @@ public class TasinmazController : Controller
 
         if (vm.TasinmazTipiId != null && vm.TasinmazTipiId > 0)
         {
-            var izinli = await _ctx.TasinmazTipiKiralamaSekilleri
-                .Where(t => t.TasinmazTipiId == vm.TasinmazTipiId.Value)
-                .Select(t => t.KiralamaSekli)
-                .ToListAsync();
-
-            if (izinli.Count > 0 && !izinli.Contains(vm.KiralamaSekli))
-                ModelState.AddModelError("KiralamaSekli", "Seçilen taşınmaz tipi bu kiralama şekline izin vermiyor.");
+            var tip = await _ctx.Kategoriler.FirstOrDefaultAsync(k => k.Id == vm.TasinmazTipiId.Value && k.Tipi == KategoriTipi.Tasinmaz);
+            if (tip != null)
+            {
+                var secimIzinli = vm.KiralamaSekli == KiralamaSekli.TekParca ? tip.TekParcaDestekli : tip.BirimBazliDestekli;
+                if (!secimIzinli)
+                    ModelState.AddModelError("KiralamaSekli", "Seçilen taşınmaz tipi bu kiralama şekline izin vermiyor.");
+            }
         }
 
         if (vm.KiralamaSekli == KiralamaSekli.BirimBazli)

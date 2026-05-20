@@ -11,4 +11,5 @@ public interface ISozlesmeService
     Task FeshetAsync(int id, DateTime fesihTarihi, string fesihNedeni, string? aciklama);
     Task<List<KiraSozlesmesi>> GetByKiraciIdAsync(int kiraciId);
     Task<List<KiraSozlesmesi>> GetByBirimIdAsync(int birimId);
+    Task<Dictionary<int, decimal?>> GetDepozitoTutarlariAsync(IEnumerable<int> sozlesmeIds);
 }

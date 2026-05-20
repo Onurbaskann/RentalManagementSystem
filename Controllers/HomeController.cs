@@ -60,7 +60,7 @@ public class HomeController : Controller
         var vm = new DashboardViewModel
         {
             ToplamTasinmaz = tasinmazlar.Count,
-            TipiDagilim = tasinmazlar.GroupBy(t => t.TasinmazTipi?.Ad ?? "Diğer").ToDictionary(g => g.Key, g => g.Count()),
+            TipiDagilim = tasinmazlar.GroupBy(t => t.Kategori?.Ad ?? "Diğer").ToDictionary(g => g.Key, g => g.Count()),
             ToplamBirim = tumBirimler.Count,
             AktifSozlesme = aktifSozlesmeler.Count,
             AylikToplamGelir = aylikToplamGelir,

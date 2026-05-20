@@ -18,6 +18,8 @@ public class SozlesmeDetayViewModel
     public ParentTarifeKartViewModel? ParentTarife { get; set; }
     public List<TahakkukKalemi> GuncelKalemler { get; set; } = new();
     public DateTime? GuncelKalemDonemi { get; set; }
+    public decimal? DepozitoTutari { get; set; }
+    public decimal KdvOraniEtkin { get; set; }
 }
 
 

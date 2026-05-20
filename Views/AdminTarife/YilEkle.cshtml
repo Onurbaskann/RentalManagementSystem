@@ -1,7 +1,7 @@
 @model KiraTakip.Models.ViewModels.TarifeYilEkleViewModel
 @{
     ViewData["Title"] = "Yeni Tarife Yılı";
-    var mevcutYillar = ViewBag.MevcutYillar as IEnumerable<dynamic> ?? [];
+    var mevcutYillar = ViewBag.MevcutYillar as IEnumerable<int> ?? [];
 }
 
 <div class="page-header">
@@ -21,17 +21,12 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label">Açıklama</label>
-            <input asp-for="Aciklama" class="form-control" placeholder="Opsiyonel not…" />
-        </div>
-
-        <div class="form-group">
             <label class="form-label">Önceki yıldan kopyala</label>
-            <select asp-for="KopyalaYilId" class="form-control" style="max-width:200px;">
+            <select asp-for="KopyalaYil" class="form-control" style="max-width:200px;">
                 <option value="">— Kopyalama (boş başlat) —</option>
                 @foreach (var y in mevcutYillar)
                 {
-                    <option value="@y.Id">@y.Yil</option>
+                    <option value="@y">@y</option>
                 }
             </select>
             <div style="font-size:12px;color:var(--color-muted);margin-top:4px;">Seçilirse o yılın fiyatları kopyalanır.</div>
