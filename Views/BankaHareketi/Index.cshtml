@@ -1,6 +1,7 @@
-@model KiraTakip.Models.Common.PagedResult<BankaHareketi>
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.BankaHareketiListItemDto>
 @using KiraTakip.Models
 @using KiraTakip.Models.Common
+@using KiraTakip.Models.Dtos
 @{
     ViewData["Title"] = "Banka Hareketleri";
     string durum = ViewBag.Durum ?? "tum";

@@ -1,4 +1,4 @@
-@model Kategori
+@model KiraTakip.Models.ViewModels.KategoriFormViewModel
 @{
     ViewData["Title"] = "Sektör Düzenle";
 }
@@ -13,7 +13,6 @@
     <form method="post" action="/Admin/Sektor/Duzenle/@Model.Id">
         @Html.AntiForgeryToken()
         <input asp-for="Id" type="hidden" />
-        <input asp-for="OlusturmaTarihi" type="hidden" />
 
         <div class="form-group">
             <label class="form-label">Ad <span class="text-red-500">*</span></label>

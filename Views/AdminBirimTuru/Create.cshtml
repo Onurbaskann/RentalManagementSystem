@@ -1,4 +1,4 @@
-@model BirimTuru
+@model KiraTakip.Models.ViewModels.BirimTuruFormViewModel
 @{
     ViewData["Title"] = "Yeni Birim Türü";
 }
@@ -55,12 +55,9 @@
             <label class="form-label">Tahakkuk Borç Tipi <span class="text-red-500">*</span></label>
             <select asp-for="BorcTipiId" class="form-control" :required="tur === 'rez'">
                 <option value="">-- Borç Tipi Seçin --</option>
-                @if (ViewBag.BorcTipiAdaylari != null)
+                @foreach (var bt in Model.BorcTipiAdaylari)
                 {
-                    foreach (var bt in (List<BorcTipi>)ViewBag.BorcTipiAdaylari)
-                    {
-                        <option value="@bt.Id">@bt.Ad (@bt.Kod)</option>
-                    }
+                    <option value="@bt.Id">@bt.Ad (@bt.Kod)</option>
                 }
             </select>
             <div class="text-xs text-muted mt-1">Rezervasyonlar tahakkuka aktarılırken bu borç tipi kullanılacaktır.</div>

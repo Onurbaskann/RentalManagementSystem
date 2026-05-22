@@ -1,4 +1,4 @@
-@model List<Rezervasyon>
+@model List<KiraTakip.Models.Dtos.RezervasyonListItemDto>
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Rezervasyonlar";
@@ -68,10 +68,10 @@
 
                     <tr>
                         <td>
-                            <div class="font-semibold text-slate-800">@r.Birim.Ad</div>
-                            <div class="text-[11px] text-muted">@r.Birim.Tasinmaz.Ad</div>
+                            <div class="font-semibold text-slate-800">@r.BirimAd</div>
+                            <div class="text-[11px] text-muted">@r.TasinmazAd</div>
                         </td>
-                        <td class="font-medium text-slate-700">@r.Kiraci.GosterimAdi</td>
+                        <td class="font-medium text-slate-700">@r.KiraciGosterimAdi</td>
                         <td>
                             <div class="text-[12px] font-medium">@r.BaslangicTarihi.ToString("dd.MM HH:mm")</div>
                             <div class="text-[11px] text-muted">@r.BitisTarihi.ToString("dd.MM HH:mm")</div>

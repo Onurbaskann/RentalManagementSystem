@@ -1,43 +1,57 @@
-using Microsoft.EntityFrameworkCore;
 using KiraTakip.Data;
+using KiraTakip.Models.Dtos;
+using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
-using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Services;
 
 public class BirimService : IBirimService
 {
-    private readonly ApplicationDbContext _ctx;
+    private readonly IBirimRepository _repo;
+    private readonly IUnitOfWork _uow;
+    private readonly IIstatistikService _istatistikService;
 
-    public BirimService(ApplicationDbContext ctx) => _ctx = ctx;
-
-    public async Task<List<Birim>> GetByTasinmazIdAsync(int tasinmazId)
+    public BirimService(IBirimRepository repo, IUnitOfWork uow, IIstatistikService istatistikService)
     {
-        return await _ctx.Birimler
-            .Include(b => b.Sozlesmeler)
-                .ThenInclude(s => s.Kiraci)
-            .Where(b => b.TasinmazId == tasinmazId)
-            .ToListAsync();
+        _repo = repo;
+        _uow = uow;
+        _istatistikService = istatistikService;
     }
 
-    public async Task<Birim?> GetByIdAsync(int id)
+    public async Task<List<BirimListItemDto>> GetByTasinmazIdAsync(int tasinmazId)
     {
-        return await _ctx.Birimler
-            .Include(b => b.Tasinmaz)
-            .Include(b => b.Sozlesmeler)
-                .ThenInclude(s => s.Kiraci)
-            .FirstOrDefaultAsync(b => b.Id == id);
+        return await _repo.GetByTasinmazIdAsync(tasinmazId);
+    }
+
+    public async Task<BirimDetayDto?> GetByIdAsync(int id)
+    {
+        var dto = await _repo.GetDetayAsync(id);
+        if (dto == null) return null;
+
+        if (dto.AktifSozlesmeId.HasValue)
+        {
+            var dummySozlesme = new KiraSozlesmesi
+            {
+                Id = dto.AktifSozlesmeId.Value,
+                KiraciId = dto.AktifSozlesmeKiraciId ?? 0,
+                BirimId = dto.Id,
+                Birim = new Birim { Id = dto.Id, Yuzolcumu = dto.Yuzolcumu }
+            };
+            dto.AylikBedel = await _istatistikService.AylikBedelAsync(dummySozlesme);
+        }
+
+        return dto;
     }
 
     public async Task CreateAsync(Birim b)
     {
-        _ctx.Birimler.Add(b);
-        await _ctx.SaveChangesAsync();
+        await _repo.AddAsync(b);
+        await _uow.SaveChangesAsync();
     }
 
     public async Task UpdateAsync(Birim b)
     {
-        _ctx.Birimler.Update(b);
-        await _ctx.SaveChangesAsync();
+        await _repo.UpdateAsync(b);
+        await _uow.SaveChangesAsync();
     }
 }

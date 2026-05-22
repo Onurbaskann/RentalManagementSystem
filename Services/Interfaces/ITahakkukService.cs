@@ -1,13 +1,16 @@
-using KiraTakip.Models;
 using KiraTakip.Models.Common;
+using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Services.Interfaces;
 
 public interface ITahakkukService
 {
-    Task<List<KiraTahakkuk>> GetAllAsync(int? sozlesmeId = null, string? userId = null);
-    Task<PagedResult<KiraTahakkuk>> GetPagedAsync(TableQuery q, int? sozlesmeId = null, string? userId = null);
-    Task<KiraTahakkuk?> GetByIdAsync(int id);
+    // Listeleme — DTO döner
+    Task<List<TahakkukListItemDto>> GetListAsync(int? sozlesmeId = null, string? userId = null);
+    Task<PagedResult<TahakkukListItemDto>> GetPagedAsync(TableQuery q, int? sozlesmeId = null, string? userId = null);
+    Task<TahakkukDetayDto?> GetDetayAsync(int id);
+
+    // Business operations
     Task GecikmeleriGuncelleAsync();
     Task OdenenTutarGuncelleAsync(int tahakkukId);
 }

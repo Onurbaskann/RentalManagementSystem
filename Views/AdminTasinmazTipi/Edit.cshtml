@@ -1,4 +1,4 @@
-@model Kategori
+@model KiraTakip.Models.ViewModels.KategoriFormViewModel
 @{
     ViewData["Title"] = "Taşınmaz Tipi Düzenle";
 }
@@ -21,7 +21,6 @@
     <form method="post" action="/Admin/TasinmazTipi/Duzenle/@Model.Id">
         @Html.AntiForgeryToken()
         <input asp-for="Id" type="hidden" />
-        <input asp-for="OlusturmaTarihi" type="hidden" />
 
         <div class="form-group">
             <label class="form-label">Ad <span class="text-red-500">*</span></label>
@@ -40,11 +39,11 @@
             <label class="form-label">İzinli Kiralama Şekilleri <span class="text-red-500">*</span></label>
             <div class="flex flex-col gap-2 p-3 border border-[var(--color-border)] rounded-lg bg-slate-50/50">
                 <label class="flex items-center gap-2 cursor-pointer text-[13.5px]">
-                    <input type="checkbox" name="tekParca" value="true" @(Model.TekParcaDestekli ? "checked" : "") class="w-4 h-4 accent-primary cursor-pointer" />
+                    <input asp-for="TekParcaDestekli" type="checkbox" class="w-4 h-4 accent-primary cursor-pointer" />
                     <span>Tek Parça</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer text-[13.5px]">
-                    <input type="checkbox" name="birimBazli" value="true" @(Model.BirimBazliDestekli ? "checked" : "") class="w-4 h-4 accent-primary cursor-pointer" />
+                    <input asp-for="BirimBazliDestekli" type="checkbox" class="w-4 h-4 accent-primary cursor-pointer" />
                     <span>Birim Bazlı</span>
                 </label>
             </div>

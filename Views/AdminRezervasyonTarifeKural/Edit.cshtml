@@ -23,7 +23,7 @@
                 @foreach (var b in Model.RezervasyonBirimleri)
                 {
                     <option value="@b.Id" selected="@(Model.BirimId == b.Id ? "selected" : null)">
-                        @b.Tasinmaz.Ad — @b.Ad
+                        @b.TasinmazAd — @b.Ad
                     </option>
                 }
             </select>

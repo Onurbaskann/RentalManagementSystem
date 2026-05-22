@@ -1,23 +1,22 @@
-using Microsoft.EntityFrameworkCore;
-using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
-using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Services;
 
+// NOT: Bu servis cross-aggregate hesaplama yapar. Tek bir entity aggregate'ine ait değildir.
+// Kullanılan repolar: ITahakkukRepository (BorcTipleri lookup)
 public class IstatistikService : IIstatistikService
 {
-    private readonly ApplicationDbContext _ctx;
+    private readonly ITahakkukRepository _tahakkukRepo;
     private readonly IRateResolverService _rateResolver;
 
-    public IstatistikService(ApplicationDbContext ctx, IRateResolverService rateResolver)
+    public IstatistikService(ITahakkukRepository tahakkukRepo, IRateResolverService rateResolver)
     {
-        _ctx = ctx;
+        _tahakkukRepo = tahakkukRepo;
         _rateResolver = rateResolver;
     }
-
 
     public KiraDurumu GetBirimDurumu(Birim birim)
     {
@@ -54,9 +53,8 @@ public class IstatistikService : IIstatistikService
     public async Task<decimal> AylikBedelAsync(KiraSozlesmesi s)
     {
         var yuzolcumu = s.Birim?.Yuzolcumu ?? 0m;
-        var borcTipleri = await _ctx.BorcTipleri
-            .Where(b => b.Aktif && b.Davranis == BorcTipiDavranisi.AylikSabit)
-            .ToListAsync();
+        var tumBorcTipleri = await _tahakkukRepo.GetAktifUretimBorcTipleriAsync();
+        var borcTipleri = tumBorcTipleri.Where(b => b.Davranis == BorcTipiDavranisi.AylikSabit).ToList();
 
         decimal toplam = 0m;
         var donem = DateTime.Today;

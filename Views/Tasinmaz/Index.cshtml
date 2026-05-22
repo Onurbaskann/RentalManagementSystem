@@ -1,7 +1,5 @@
-@model List<Tasinmaz>
+@model List<KiraTakip.Models.Dtos.TasinmazListItemDto>
 @using KiraTakip.Models
-@using KiraTakip.Services.Interfaces
-@inject IIstatistikService Istatistik
 @{
     ViewData["Title"] = "Taşınmazlar";
 
@@ -25,10 +23,9 @@
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
     @foreach (var t in Model)
     {
-        var tumBirimDurumlari = t.Birimler.Select(b => Istatistik.GetBirimDurumu(b)).ToList();
-        var kiraliSayi = tumBirimDurumlari.Count(d => d == KiraDurumu.Kirali);
-        var surekSayi = tumBirimDurumlari.Count(d => d == KiraDurumu.SuresiDolmakUzere);
-        var bosSayi = tumBirimDurumlari.Count(d => d == KiraDurumu.Bos);
+        var kiraliSayi = t.KiraliBirimSayisi;
+        var surekSayi = t.SuresiDolmakUzereBirimSayisi;
+        var bosSayi = t.BosBirimSayisi;
 
         <a href="/Tasinmaz/Detay/@t.Id" class="group">
             <div class="card cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
@@ -37,7 +34,7 @@
                         <div class="text-[15px] font-bold text-slate-800 group-hover:text-primary transition-colors">@t.Ad</div>
                         <div class="text-xs text-muted mt-0.5">@t.Ilce, @t.Il</div>
                     </div>
-                    <span class="badge badge-bos text-[10px] font-bold">@(t.TasinmazTipi?.Ad ?? "—")</span>
+                    <span class="badge badge-bos text-[10px] font-bold">@(string.IsNullOrEmpty(t.TasinmazTipiAd) ? "—" : t.TasinmazTipiAd)</span>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2.5 mb-4">
@@ -59,7 +56,7 @@
                     {
                         <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
                             <div class="text-[10px] text-muted font-bold uppercase tracking-wider mb-0.5">Ofis Sayısı</div>
-                            <div class="text-sm font-bold text-slate-700">@t.Birimler.Count Ofis</div>
+                            <div class="text-sm font-bold text-slate-700">@t.BirimSayisi Ofis</div>
                         </div>
                     }
                 </div>
@@ -71,7 +68,7 @@
                         @if (bosSayi > 0) { <span class="badge badge-bos text-[10px] font-bold px-1.5 py-0.5">@bosSayi Boş</span> }
                     </div>
                     <span class="text-[11px] font-semibold text-slate-400 group-hover:text-primary transition-colors flex items-center gap-1">
-                        @t.Birimler.Count Birim
+                        @t.BirimSayisi Birim
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="transition-transform group-hover:translate-x-0.5"><path d="M9 18l6-6-6-6"/></svg>
                     </span>
                 </div>

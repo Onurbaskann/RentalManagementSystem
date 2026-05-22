@@ -3,13 +3,9 @@
 @using KiraTakip.Services.Interfaces
 @using KiraTakip.Authorization
 @using System.Globalization
-@inject IIstatistikService Istatistik
 @{
     ViewData["Title"] = $"Sözleşme #{Model.Sozlesme.Id}";
     var s = Model.Sozlesme;
-    var kiraci = s.Kiraci;
-    var birim = s.Birim;
-    var tasinmaz = birim.Tasinmaz;
     var trCulture = new CultureInfo("tr-TR");
 
     bool feshedildi = s.Durum == SozlesmeDurumu.Feshedildi;
@@ -61,7 +57,7 @@
     showFesih: false,
     showYenidenUret: false,
     tufeEnabled: false,
-    birimYuzolcumu: @s.Birim.Yuzolcumu.ToString(System.Globalization.CultureInfo.InvariantCulture),
+    birimYuzolcumu: @s.BirimYuzolcumu.ToString(System.Globalization.CultureInfo.InvariantCulture),
     sozlesmeBirimId: @s.BirimId,
     sozlesmeKiraciId: @s.KiraciId,
     sozlesmeId: @s.Id,
@@ -146,18 +142,18 @@
             <div class="text-[11.5px] font-semibold text-muted uppercase tracking-wider mb-2.5">Kiracı</div>
             <div class="flex items-center gap-3.5 mb-3.5">
                 <div class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center text-[17px] font-bold flex-shrink-0">
-                    @(kiraci.GosterimAdi.Split(' ').Where(p => p.Length > 0).Take(2).Select(p => p[0].ToString().ToUpper()).Aggregate("", (a, b) => a + b))
+                    @(s.KiraciGosterimAdi.Split(' ').Where(p => p.Length > 0).Take(2).Select(p => p[0].ToString().ToUpper()).Aggregate("", (a, b) => a + b))
                 </div>
                 <div>
-                    <div class="font-serif text-[22px] font-bold leading-tight">@kiraci.GosterimAdi</div>
+                    <div class="font-serif text-[22px] font-bold leading-tight">@s.KiraciGosterimAdi</div>
                     <div class="mt-1 flex gap-1.5 items-center">
-                        @if (kiraci.KiraciTuru == KiraciTuru.Tuzel)
+                        @if (s.KiraciTuru == KiraciTuru.Tuzel)
                         { <span class="badge badge-kurumsal">Tüzel Kişi</span> }
                         else
                         { <span class="badge badge-bireysel">Gerçek Kişi</span> }
-                        @if (kiraci.KiraciKategori != null)
+                        @if (!string.IsNullOrEmpty(s.KiraciKategoriAd))
                         {
-                            <span class="badge badge-bos">@kiraci.KiraciKategori.Ad</span>
+                            <span class="badge badge-bos">@s.KiraciKategoriAd</span>
                         }
                     </div>
                 </div>
@@ -165,35 +161,35 @@
             <div class="flex flex-col gap-1.5">
                 <div class="flex items-center gap-2 text-[13px]">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-muted flex-shrink-0"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.1 19.79 19.79 0 0 1 1.61 4.59 2 2 0 0 1 3.58 2.41h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.52 17z"/></svg>
-                    @kiraci.Telefon
+                    @s.KiraciTelefon
                 </div>
                 <div class="flex items-center gap-2 text-[13px]">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-muted flex-shrink-0"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                    @kiraci.Email
+                    @s.KiraciEmail
                 </div>
             </div>
             <div class="mt-3">
-                <a href="/Kiraci/Detay/@kiraci.Id" class="btn btn-sm btn-secondary">Kiracı Profili</a>
+                <a href="/Kiraci/Detay/@s.KiraciId" class="btn btn-sm btn-secondary">Kiracı Profili</a>
             </div>
         </div>
 
         <!-- Sağ: Taşınmaz + Sözleşme Durumu -->
         <div class="text-right">
             <div class="text-[11.5px] font-semibold text-muted uppercase tracking-wider mb-2.5">Taşınmaz</div>
-            <div class="font-serif text-xl font-bold mb-1">@tasinmaz.Ad</div>
-            @if (birim.BirimTipi == BirimTipi.Birim)
+            <div class="font-serif text-xl font-bold mb-1">@s.TasinmazAd</div>
+            @if (s.BirimTipi == BirimTipi.Birim)
             {
-                <div class="text-sm text-muted mb-1">Birim @birim.BirimNo@(birim.KatNo.HasValue ? $" • {birim.KatNo}. Kat" : "") • @birim.Yuzolcumu.ToString("N0") m²</div>
-                <div class="text-[13px] text-muted mb-2.5">@tasinmaz.Ilce, @tasinmaz.Il</div>
+                <div class="text-sm text-muted mb-1">Birim @s.BirimNo@(s.BirimKatNo.HasValue ? $" • {s.BirimKatNo}. Kat" : "") • @s.BirimYuzolcumu.ToString("N0") m²</div>
+                <div class="text-[13px] text-muted mb-2.5">@s.TasinmazIlce, @s.TasinmazIl</div>
             }
             else
             {
-                <div class="text-sm text-muted mb-2.5">@birim.Ad • @tasinmaz.Ilce, @tasinmaz.Il</div>
+                <div class="text-sm text-muted mb-2.5">@s.BirimAd • @s.TasinmazIlce, @s.TasinmazIl</div>
             }
             <div class="mb-3">
                 <span class="badge @sozlesmeDurumBadgeCls text-[12.5px] px-3.5 py-1.5">@sozlesmeDurumLabel</span>
             </div>
-            <a href="/Tasinmaz/Detay/@tasinmaz.Id" class="btn btn-sm btn-secondary">Taşınmaz Detayı</a>
+            <a href="/Tasinmaz/Detay/@s.TasinmazId" class="btn btn-sm btn-secondary">Taşınmaz Detayı</a>
         </div>
     </div>
 </div>
@@ -393,19 +389,19 @@
                     <div class="flex flex-col gap-2.5">
                         <div>
                             <div class="text-xs text-muted">Ad</div>
-                            <div class="text-[15px] font-semibold">@birim.Ad</div>
+                            <div class="text-[15px] font-semibold">@s.BirimAd</div>
                         </div>
                         <div>
                             <div class="text-xs text-muted">Yüzölçüm</div>
-                            <div class="text-[15px] font-semibold">@birim.Yuzolcumu.ToString("N0") m²</div>
+                            <div class="text-[15px] font-semibold">@s.BirimYuzolcumu.ToString("N0") m²</div>
                         </div>
                         <div>
                             <div class="text-xs text-muted">Tip</div>
                             <div class="text-[15px] font-semibold">
-                                @if (birim.BirimTipi == BirimTipi.Birim)
+                                @if (s.BirimTipi == BirimTipi.Birim)
                                 {
-                                    <span>Birim @birim.BirimNo</span>
-                                    if (birim.KatNo.HasValue) { <span class="text-[13px] font-normal text-muted"> • @birim.KatNo. Kat</span> }
+                                    <span>Birim @s.BirimNo</span>
+                                    if (s.BirimKatNo.HasValue) { <span class="text-[13px] font-normal text-muted"> • @s.BirimKatNo. Kat</span> }
                                 }
                                 else { <span>Komple</span> }
                             </div>
@@ -417,15 +413,15 @@
                     <div class="flex flex-col gap-2.5">
                         <div>
                             <div class="text-xs text-muted">Ad</div>
-                            <div class="text-[15px] font-semibold">@tasinmaz.Ad</div>
+                            <div class="text-[15px] font-semibold">@s.TasinmazAd</div>
                         </div>
                         <div>
                             <div class="text-xs text-muted">Konum</div>
-                            <div class="text-[15px] font-semibold">@tasinmaz.Mahalle, @tasinmaz.Ilce / @tasinmaz.Il</div>
+                            <div class="text-[15px] font-semibold">@s.TasinmazMahalle, @s.TasinmazIlce / @s.TasinmazIl</div>
                         </div>
                         <div>
                             <div class="text-xs text-muted">Adres</div>
-                            <div class="text-sm">@tasinmaz.AcikAdres</div>
+                            <div class="text-sm">@s.TasinmazAcikAdres</div>
                         </div>
                     </div>
                 </div>
@@ -457,13 +453,13 @@
                         <tbody>
                             @foreach (var gs in Model.GecmisSozlesmeler)
                             {
-                                bool gAktif = Istatistik.Aktif(gs);
+                                bool gAktif = gs.Aktif;
                                 bool gFesih = gs.Durum == SozlesmeDurumu.Feshedildi;
                                 <tr>
-                                    <td class="font-semibold">@gs.Kiraci.GosterimAdi</td>
+                                    <td class="font-semibold">@gs.KiraciGosterimAdi</td>
                                     <td>@gs.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
                                     <td>@gs.BitisTarihi.ToString("dd.MM.yyyy")</td>
-                                    <td>@((await Istatistik.AylikBedelAsync(gs)).ToString("N0")) ₺</td>
+                                    <td>@gs.AylikBedel.ToString("N0") ₺</td>
                                     <td>
                                         @if (gFesih) { <span class="badge badge-gecmis">Feshedildi</span> }
                                         else if (gAktif) { <span class="badge badge-kirali">Aktif</span> }
@@ -645,7 +641,7 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    @foreach (var k in t.Kalemler.OrderBy(k => k.BorcTipi.Sira))
+                                                    @foreach (var k in t.Kalemler.OrderBy(k => k.BorcTipiSira))
                                                     {
                                                         string kaynakCls = k.KaynakTipi switch {
                                                             KalemKaynakTipi.TanimsizTarife    => "badge-bos",
@@ -668,7 +664,7 @@
                                                             _                                 => "Bilinmiyor"
                                                         };
                                                         <tr class="border-t border-[var(--color-border)]">
-                                                            <td class="px-2 py-1.5 font-mono font-bold text-xs">@k.BorcTipi.Kod</td>
+                                                            <td class="px-2 py-1.5 font-mono font-bold text-xs">@k.BorcTipiKod</td>
                                                             <td class="px-2 py-1.5">@k.Aciklama</td>
                                                             <td class="px-2 py-1.5 text-right">@k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
                                                             <td class="px-2 py-1.5 text-right text-muted">@k.Carpan.ToString("F2")</td>

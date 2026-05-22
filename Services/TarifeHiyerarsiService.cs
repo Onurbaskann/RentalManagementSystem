@@ -1,127 +1,79 @@
-using Microsoft.EntityFrameworkCore;
-using KiraTakip.Data;
-using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
 public class TarifeHiyerarsiService : ITarifeHiyerarsiService
 {
-    private readonly ApplicationDbContext _ctx;
+    private readonly ITasinmazTarifeRepository _tasinmazTarifeRepo;
+    private readonly IBirimTarifeRepository _birimTarifeRepo;
+    private readonly IGenelTarifeRepository _genelTarifeRepo;
+    private readonly IRezervasyonTarifeRepository _rezervasyonTarifeRepo;
+    private readonly IBirimRepository _birimRepo;
 
-    public TarifeHiyerarsiService(ApplicationDbContext ctx) => _ctx = ctx;
+    public TarifeHiyerarsiService(
+        ITasinmazTarifeRepository tasinmazTarifeRepo,
+        IBirimTarifeRepository birimTarifeRepo,
+        IGenelTarifeRepository genelTarifeRepo,
+        IRezervasyonTarifeRepository rezervasyonTarifeRepo,
+        IBirimRepository birimRepo)
+    {
+        _tasinmazTarifeRepo = tasinmazTarifeRepo;
+        _birimTarifeRepo = birimTarifeRepo;
+        _genelTarifeRepo = genelTarifeRepo;
+        _rezervasyonTarifeRepo = rezervasyonTarifeRepo;
+        _birimRepo = birimRepo;
+    }
 
     public async Task<ParentTarifeKartViewModel?> GetParentForAsync(
         TarifeHiyerarsiKatmani katman,
         int? tasinmazId = null,
-        int? birimId    = null,
+        int? birimId = null,
         int? kategoriId = null,
-        int? yil        = null)
+        int? yil = null)
     {
         int hedefYil = yil ?? DateTime.Now.Year;
 
         // Sozlesme katmanı: önce BirimTarife'e bak
         if (katman == TarifeHiyerarsiKatmani.Sozlesme && birimId.HasValue)
         {
-            IQueryable<BirimTarife> bq = _ctx.BirimTarifeler
-                .Include(r => r.KiraciKategori)
-                .Include(r => r.BorcTipi)
-                .Where(r => r.BirimId == birimId.Value);
-            if (kategoriId.HasValue)
-                bq = bq.Where(r => r.KiraciKategoriId == kategoriId.Value);
-
-            var rateler = await bq
-                .OrderBy(r => r.KiraciKategori.Sira)
-                .ThenBy(r => r.BorcTipi.Sira)
-                .ToListAsync();
-
-            if (rateler.Count > 0)
-                return new ParentTarifeKartViewModel
-                {
-                    KaynakAdi = "Birim Tarifesi",
-                    Satirlar  = rateler.Select(r => new ParentTarifeSatir
-                    {
-                        KategoriAd       = r.KiraciKategori.Ad,
-                        BorcTipiAd       = r.BorcTipi.Ad,
-                        HesaplamaYontemi = r.HesaplamaYontemi,
-                        BirimDeger       = r.BirimDeger,
-                        KdvOrani         = r.KdvOrani
-                    }).ToList()
-                };
+            var kartlar = await _birimTarifeRepo.GetByBirimForKartAsync(birimId.Value, kategoriId);
+            if (kartlar.Count > 0)
+                return kartlar[0];
 
             if (!tasinmazId.HasValue)
-            {
-                var birim = await _ctx.Birimler.FindAsync(birimId.Value);
-                tasinmazId = birim?.TasinmazId;
-            }
+                tasinmazId = await _birimRepo.GetTasinmazIdAsync(birimId.Value);
         }
 
         // Birim veya Sozlesme katmanı: TasinmazTarife'a bak
         if (katman is TarifeHiyerarsiKatmani.Birim or TarifeHiyerarsiKatmani.Sozlesme
             && tasinmazId.HasValue)
         {
-            IQueryable<TasinmazTarife> tq = _ctx.TasinmazTarifeler
-                .Include(f => f.KiraciKategori)
-                .Include(f => f.BorcTipi)
-                .Where(f => f.TasinmazId == tasinmazId.Value && f.Aktif);
-            if (kategoriId.HasValue)
-                tq = tq.Where(f => f.KiraciKategoriId == kategoriId.Value);
-
-            var fiyatlar = await tq
-                .OrderBy(f => f.KiraciKategori.Sira)
-                .ThenBy(f => f.BorcTipi.Sira)
-                .ToListAsync();
+            var fiyatlar = await _tasinmazTarifeRepo.GetForHiyerarsiAsync(tasinmazId.Value, kategoriId);
 
             if (fiyatlar.Count > 0)
                 return new ParentTarifeKartViewModel
                 {
                     KaynakAdi = "Taşınmaz Tarifesi",
-                    Satirlar  = fiyatlar.Select(f => new ParentTarifeSatir
+                    Satirlar = fiyatlar.Select(f => new ParentTarifeSatir
                     {
-                        KategoriAd       = f.KiraciKategori.Ad,
-                        BorcTipiAd       = f.BorcTipi.Ad,
+                        KategoriAd = f.KiraciKategori.Ad,
+                        BorcTipiAd = f.BorcTipi.Ad,
                         HesaplamaYontemi = f.HesaplamaYontemi,
-                        BirimDeger       = f.BirimDeger,
-                        KdvOrani         = f.KdvOrani
+                        BirimDeger = f.BirimDeger,
+                        KdvOrani = f.KdvOrani
                     }).ToList()
                 };
         }
 
         // Her katman için sonuç: Genel Tarife
-        IQueryable<GenelTarife> kq = _ctx.GenelTarifeler
-            .Include(k => k.KiraciKategori)
-            .Include(k => k.BorcTipi)
-            .Where(k => k.Yil == hedefYil && k.Aktif
-                     && k.BorcTipi.Davranis != BorcTipiDavranisi.KullaniciManuel
-                     && k.BorcTipi.Davranis != BorcTipiDavranisi.RezervasyonOzel);
-        if (kategoriId.HasValue)
-            kq = kq.Where(k => k.KiraciKategoriId == kategoriId.Value);
-
-        var kalemler = await kq
-            .OrderBy(k => k.KiraciKategori.Sira)
-            .ThenBy(k => k.BorcTipi.Sira)
-            .ToListAsync();
-
-        // O yıl tarifesi yok — boş kart döner, partial "tanımlanmamış" mesajı gösterir
-        if (kalemler.Count == 0)
-            return new ParentTarifeKartViewModel
-            {
-                KaynakAdi = $"Genel Tarife - {hedefYil}",
-                Satirlar  = []
-            };
+        var kalemler = await _genelTarifeRepo.GetByYilKategoriForKartAsync(hedefYil, kategoriId);
 
         return new ParentTarifeKartViewModel
         {
             KaynakAdi = $"Genel Tarife - {hedefYil}",
-            Satirlar  = kalemler.Select(k => new ParentTarifeSatir
-            {
-                KategoriAd       = k.KiraciKategori.Ad,
-                BorcTipiAd       = k.BorcTipi.Ad,
-                HesaplamaYontemi = k.HesaplamaYontemi,
-                BirimDeger       = k.BirimDeger,
-                KdvOrani         = k.KdvOrani
-            }).ToList()
+            Satirlar = kalemler
         };
     }
 
@@ -129,31 +81,12 @@ public class TarifeHiyerarsiService : ITarifeHiyerarsiService
     {
         int hedefYil = yil ?? DateTime.Now.Year;
 
-        var satirlar = await _ctx.RezervasyonTarifeler
-            .Include(r => r.BirimTuru)
-            .Where(r => r.BirimId == null && r.BirimTuruId != null && r.Yil == hedefYil && r.Aktif && r.BirimTuru!.Aktif)
-            .OrderBy(r => r.BirimTuru!.Sira)
-            .Select(r => new ParentRezervasyonTarifeSatir
-            {
-                BirimTuruAd                 = r.BirimTuru!.Ad,
-                UcretsizSureDakika          = r.UcretsizSureDakika,
-                UcretlendirmePeriyoduDakika = r.UcretlendirmePeriyoduDakika,
-                PeriyotUcreti               = r.PeriyotUcreti,
-                KdvOrani                    = r.KdvOrani
-            })
-            .ToListAsync();
-
-        if (satirlar.Count == 0)
-            return new ParentRezervasyonTarifeKartViewModel
-            {
-                KaynakAdi = $"Rezervasyon Tarifesi - {hedefYil}",
-                Satirlar  = []
-            };
+        var satirlar = await _rezervasyonTarifeRepo.GetGenelForKartAsync(hedefYil);
 
         return new ParentRezervasyonTarifeKartViewModel
         {
             KaynakAdi = $"Rezervasyon Tarifesi - {hedefYil}",
-            Satirlar  = satirlar
+            Satirlar = satirlar
         };
     }
 }

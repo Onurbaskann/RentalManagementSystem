@@ -1,11 +1,11 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
@@ -16,34 +16,33 @@ public class BirimController : Controller
     private readonly ApplicationDbContext _ctx;
     private readonly IRezervasyonService _rezervasyonService;
     private readonly ITarifeHiyerarsiService _tarifeHiyerarsisi;
+    private readonly IBirimService _birimService;
 
-    public BirimController(ApplicationDbContext ctx, IRezervasyonService rezervasyonService, ITarifeHiyerarsiService tarifeHiyerarsisi)
+    public BirimController(ApplicationDbContext ctx, IRezervasyonService rezervasyonService, ITarifeHiyerarsiService tarifeHiyerarsisi, IBirimService birimService)
     {
         _ctx = ctx;
         _rezervasyonService = rezervasyonService;
         _tarifeHiyerarsisi = tarifeHiyerarsisi;
+        _birimService = birimService;
     }
 
     [Authorize(Policy = PermissionCatalog.Birim.ManageRate)]
     [HttpGet("{id:int}/OzelFiyat")]
     public async Task<IActionResult> OzelFiyat(int id)
     {
-        var birim = await _ctx.Birimler
-            .Include(b => b.BirimTuru)
-            .Include(b => b.Tasinmaz)
-            .FirstOrDefaultAsync(b => b.Id == id);
+        var birim = await _birimService.GetByIdAsync(id);
 
         if (birim == null) return NotFound();
 
         var vm = new BirimOzelFiyatViewModel
         {
-            BirimId                  = birim.Id,
-            BirimAd                  = birim.Ad,
-            TasinmazId               = birim.TasinmazId,
-            TasinmazAd               = birim.Tasinmaz.Ad,
-            KiralanabilirMi          = birim.BirimTuru?.KiralanabilirMi ?? true,
-            RezervasyonYapilabilirMi = birim.BirimTuru?.RezervasyonYapilabilirMi ?? false,
-            BirimTuruAd              = birim.BirimTuru?.Ad
+            BirimId = birim.Id,
+            BirimAd = birim.Ad,
+            TasinmazId = birim.TasinmazId,
+            TasinmazAd = birim.TasinmazAd,
+            KiralanabilirMi = birim.KiralanabilirMi,
+            RezervasyonYapilabilirMi = birim.RezervasyonYapilabilirMi,
+            BirimTuruAd = birim.BirimTuruAd
         };
 
         if (vm.KiralanabilirMi)
@@ -67,29 +66,29 @@ public class BirimController : Controller
 
             vm.Kolonlar = aktifBorcTipleri.Select(bt => new BirimTarifeKolonu
             {
-                BorcTipiId       = bt.Id,
-                BorcTipiAd       = bt.Ad,
-                BorcTipiKod      = bt.Kod,
+                BorcTipiId = bt.Id,
+                BorcTipiAd = bt.Ad,
+                BorcTipiKod = bt.Kod,
                 BorcTipiDavranisi = bt.Davranis
             }).ToList();
 
             vm.Satirlar = kategoriler.Select(kat => new BirimTarifeKategoriSatiri
             {
-                KiraciKategoriId  = kat.Id,
-                KiraciKategoriAd  = kat.Ad,
+                KiraciKategoriId = kat.Id,
+                KiraciKategoriAd = kat.Ad,
                 Hucreler = aktifBorcTipleri.Select(bt =>
                 {
                     var rate = mevcutRateler.FirstOrDefault(r =>
                         r.KiraciKategoriId == kat.Id && r.BorcTipiId == bt.Id);
                     return new BirimTarifeHucre
                     {
-                        RateId           = rate?.Id ?? 0,
-                        KiraciKategoriId  = kat.Id,
-                        BorcTipiId        = bt.Id,
-                        OzelFiyatAktif    = rate != null,
-                        HesaplamaYontemi  = rate?.HesaplamaYontemi ?? HesaplamaYontemi.Sabit,
-                        BirimDeger        = rate?.BirimDeger ?? 0,
-                        KdvOrani          = rate?.KdvOrani ?? 0
+                        RateId = rate?.Id ?? 0,
+                        KiraciKategoriId = kat.Id,
+                        BorcTipiId = bt.Id,
+                        OzelFiyatAktif = rate != null,
+                        HesaplamaYontemi = rate?.HesaplamaYontemi ?? HesaplamaYontemi.Sabit,
+                        BirimDeger = rate?.BirimDeger ?? 0,
+                        KdvOrani = rate?.KdvOrani ?? 0
                     };
                 }).ToList()
             }).ToList();
@@ -128,19 +127,19 @@ public class BirimController : Controller
                     {
                         _ctx.BirimTarifeler.Add(new BirimTarife
                         {
-                            BirimId           = id,
-                            KiraciKategoriId   = hucre.KiraciKategoriId,
-                            BorcTipiId         = hucre.BorcTipiId,
-                            HesaplamaYontemi   = hucre.HesaplamaYontemi,
-                            BirimDeger         = hucre.BirimDeger,
-                            KdvOrani           = hucre.KdvOrani
+                            BirimId = id,
+                            KiraciKategoriId = hucre.KiraciKategoriId,
+                            BorcTipiId = hucre.BorcTipiId,
+                            HesaplamaYontemi = hucre.HesaplamaYontemi,
+                            BirimDeger = hucre.BirimDeger,
+                            KdvOrani = hucre.KdvOrani
                         });
                     }
                     else
                     {
                         mevcut.HesaplamaYontemi = hucre.HesaplamaYontemi;
-                        mevcut.BirimDeger       = hucre.BirimDeger;
-                        mevcut.KdvOrani         = hucre.KdvOrani;
+                        mevcut.BirimDeger = hucre.BirimDeger;
+                        mevcut.KdvOrani = hucre.KdvOrani;
                     }
                 }
                 else if (mevcut != null)

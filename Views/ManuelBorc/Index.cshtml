@@ -1,4 +1,4 @@
-@model List<KiraTahakkuk>
+@model List<KiraTakip.Models.Dtos.ManuelBorcListItemDto>
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Manuel Borçlar";
@@ -68,22 +68,21 @@
                         TahakkukDurumu.IptalEdildi  => "İptal Edildi",
                         _                           => "Bekleniyor"
                     };
-                    var ilkKalem = t.Kalemler.FirstOrDefault();
                     <tr>
                         <td>
-                            <div class="font-semibold text-slate-800">@t.KiraSozlesmesi.Kiraci.GosterimAdi</div>
+                            <div class="font-semibold text-slate-800">@(t.KiraciGosterimAdi ?? "-")</div>
                         </td>
                         <td>
-                            <div class="font-medium text-slate-700">@t.KiraSozlesmesi.Birim.Tasinmaz.Ad</div>
-                            <div class="text-[11px] text-muted">@t.KiraSozlesmesi.Birim.Ad</div>
+                            <div class="font-medium text-slate-700">@(t.TasinmazAd ?? "-")</div>
+                            <div class="text-[11px] text-muted">@(t.BirimAd ?? "-")</div>
                         </td>
                         <td class="text-center">
-                            @if (ilkKalem != null)
+                            @if (!string.IsNullOrEmpty(t.BorcTipiKod))
                             {
-                                <span class="font-mono text-[11px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">@ilkKalem.BorcTipi.Kod</span>
+                                <span class="font-mono text-[11px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">@t.BorcTipiKod</span>
                             }
                         </td>
-                        <td class="text-xs text-muted max-w-[200px] truncate">@(ilkKalem?.Aciklama ?? "-")</td>
+                        <td class="text-xs text-muted max-w-[200px] truncate">@(t.IlkKalemAciklama ?? "-")</td>
                         <td class="text-right text-xs text-slate-600">@t.BeklenenTutar.ToString("N2") ₺</td>
                         <td class="text-right text-[11px] text-muted/60">@t.KdvTutari.ToString("N2") ₺</td>
                         <td class="text-right font-bold text-slate-700">@t.ToplamTutar.ToString("N2") ₺</td>
@@ -92,7 +91,7 @@
                             <span class="badge @durumCls text-[10px] font-bold">@durumLabel.ToUpper()</span>
                             @if (!string.IsNullOrEmpty(t.IptalNotu))
                             {
-                                <div class="text-[10px] text-muted mt-1 italic truncate max-w-[100px]" title="@t.IptalNotu">↳ @t.IptalNotu</div>
+                                <div class="text-[10px] text-muted mt-1 italic truncate max-w-[100px]" title="@t.IptalNotu">⤵ @t.IptalNotu</div>
                             }
                         </td>
                         <td class="text-right">

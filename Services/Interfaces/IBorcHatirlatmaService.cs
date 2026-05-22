@@ -1,6 +1,3 @@
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace KiraTakip.Services.Interfaces;
 
 public class BorcHatirlatmaSonucDto

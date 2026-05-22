@@ -1,10 +1,10 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using KiraTakip.Authorization;
 using KiraTakip.Data;
-using KiraTakip.Models;
 using KiraTakip.Extensions;
+using KiraTakip.Models.ViewModels;
+using KiraTakip.Repositories.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace KiraTakip.Controllers;
 
@@ -12,91 +12,114 @@ namespace KiraTakip.Controllers;
 [Route("Admin/BorcTipi")]
 public class AdminBorcTipiController : Controller
 {
-    private readonly ApplicationDbContext _ctx;
+    private readonly IBorcTipiRepository _repo;
+    private readonly IBirimTuruRepository _birimTuruRepo;
+    private readonly IUnitOfWork _uow;
 
-    public AdminBorcTipiController(ApplicationDbContext ctx) => _ctx = ctx;
+    public AdminBorcTipiController(
+        IBorcTipiRepository repo,
+        IBirimTuruRepository birimTuruRepo,
+        IUnitOfWork uow)
+    {
+        _repo = repo;
+        _birimTuruRepo = birimTuruRepo;
+        _uow = uow;
+    }
 
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var list = await _ctx.BorcTipleri.OrderBy(b => b.Sira).ThenBy(b => b.Ad).ToListAsync();
+        var list = await _repo.GetListAsync();
         return View(list);
     }
 
     [HttpGet("Ekle")]
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
-        var nextSira = (_ctx.BorcTipleri.Max(b => (int?)b.Sira) ?? 0) + 1;
-        return View(new BorcTipi { Sira = nextSira });
+        var nextSira = (await _repo.GetMaxSiraAsync()) + 1;
+        return View(new BorcTipiFormViewModel { Sira = nextSira });
     }
 
     [HttpPost("Ekle")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(BorcTipi model)
+    public async Task<IActionResult> Create(BorcTipiFormViewModel model)
     {
         if (!model.Kod.IsValidBorcTipiKod())
-        {
             ModelState.AddModelError(nameof(model.Kod), "Kod yalnızca harf, rakam, alt çizgi ve boşluk içerebilir ve 2-50 karakter uzunluğunda olmalıdır.");
-        }
 
         if (!ModelState.IsValid) return View(model);
 
-        model.Kod = model.Kod.ToSafeCode();
-        if (await _ctx.BorcTipleri.AnyAsync(b => b.Kod == model.Kod))
+        var kod = model.Kod.ToSafeCode();
+        if (await _repo.KodExistsAsync(kod))
         {
             ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
             return View(model);
         }
 
-        _ctx.BorcTipleri.Add(model);
-        await _ctx.SaveChangesAsync();
-        TempData["Success"] = $"'{model.Ad}' borç tipi eklendi.";
+        var entity = new BorcTipi
+        {
+            Ad = model.Ad,
+            Kod = kod,
+            Davranis = model.Davranis,
+            Sira = model.Sira,
+            Aktif = model.Aktif,
+            Sistem = false
+        };
+
+        await _repo.AddAsync(entity);
+        await _uow.SaveChangesAsync();
+        TempData["Success"] = $"'{entity.Ad}' borç tipi eklendi.";
         return RedirectToAction(nameof(Index));
     }
 
     [HttpGet("Duzenle/{id:int}")]
     public async Task<IActionResult> Edit(int id)
     {
-        var entity = await _ctx.BorcTipleri.FindAsync(id);
+        var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
-        return View(entity);
+
+        var vm = ToFormVm(entity);
+        return View(vm);
     }
 
     [HttpPost("Duzenle/{id:int}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, BorcTipi model)
+    public async Task<IActionResult> Edit(int id, BorcTipiFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
 
-        var entity = await _ctx.BorcTipleri.FindAsync(id);
+        var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
 
-        // Sistem tiplerinde Kod değiştirilemez — form değeri yok sayılır
+        // Sistem tiplerinde Kod değiştirilemez
         if (entity.Sistem)
             model.Kod = entity.Kod;
 
         if (!model.Kod.IsValidBorcTipiKod())
-        {
             ModelState.AddModelError(nameof(model.Kod), "Kod yalnızca harf, rakam, alt çizgi ve boşluk içerebilir ve 2-50 karakter uzunluğunda olmalıdır.");
+
+        if (!ModelState.IsValid)
+        {
+            model.Sistem = entity.Sistem;
+            return View(model);
         }
 
-        if (!ModelState.IsValid) return View(model);
-
-        model.Kod = model.Kod.ToSafeCode();
-        if (await _ctx.BorcTipleri.AnyAsync(b => b.Kod == model.Kod && b.Id != id))
+        var kod = model.Kod.ToSafeCode();
+        if (await _repo.KodExistsAsync(kod, id))
         {
             ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
+            model.Sistem = entity.Sistem;
             return View(model);
         }
 
         entity.Ad = model.Ad;
-        entity.Kod = model.Kod;
+        entity.Kod = kod;
         entity.Davranis = model.Davranis;
         entity.Sira = model.Sira;
         entity.Aktif = model.Aktif;
         // entity.Sistem hiç değiştirilmez
 
-        await _ctx.SaveChangesAsync();
+        await _uow.SaveChangesAsync();
         TempData["Success"] = $"'{entity.Ad}' güncellendi.";
         return RedirectToAction(nameof(Index));
     }
@@ -105,7 +128,7 @@ public class AdminBorcTipiController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DurumDegistir(int id)
     {
-        var entity = await _ctx.BorcTipleri.FindAsync(id);
+        var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
 
         if (entity.Aktif)
@@ -116,9 +139,7 @@ public class AdminBorcTipiController : Controller
                 return RedirectToAction(nameof(Index));
             }
 
-            var bagliAktifBirimTuru = await _ctx.BirimTurleri
-                .AnyAsync(b => b.BorcTipiId == id && b.Aktif);
-            if (bagliAktifBirimTuru)
+            if (await _birimTuruRepo.AnyAktifByBorcTipiIdAsync(id))
             {
                 TempData["Error"] = "Bu borç tipi aktif bir birim türüne bağlı. Önce ilgili birim türünü pasif yapın.";
                 return RedirectToAction(nameof(Index));
@@ -126,7 +147,7 @@ public class AdminBorcTipiController : Controller
         }
 
         entity.Aktif = !entity.Aktif;
-        await _ctx.SaveChangesAsync();
+        await _uow.SaveChangesAsync();
         TempData["Success"] = $"'{entity.Ad}' {(entity.Aktif ? "aktif" : "pasif")} yapıldı.";
         return RedirectToAction(nameof(Index));
     }
@@ -135,10 +156,21 @@ public class AdminBorcTipiController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SiraDegistir(int id, int yeniSira)
     {
-        var entity = await _ctx.BorcTipleri.FindAsync(id);
+        var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
         entity.Sira = yeniSira;
-        await _ctx.SaveChangesAsync();
+        await _uow.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
     }
+
+    private static BorcTipiFormViewModel ToFormVm(BorcTipi e) => new()
+    {
+        Id = e.Id,
+        Ad = e.Ad,
+        Kod = e.Kod,
+        Davranis = e.Davranis,
+        Sira = e.Sira,
+        Aktif = e.Aktif,
+        Sistem = e.Sistem
+    };
 }

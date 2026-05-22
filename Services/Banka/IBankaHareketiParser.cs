@@ -1,5 +1,3 @@
-using KiraTakip.Models.Entities;
-
 namespace KiraTakip.Services.Banka;
 
 public interface IBankaHareketiParser

@@ -1,5 +1,3 @@
-using KiraTakip.Models.Entities.Interfaces;
-
 namespace KiraTakip.Models.Entities;
 
 public abstract class BaseEntity : IAuditable

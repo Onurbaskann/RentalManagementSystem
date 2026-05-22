@@ -1,65 +1,64 @@
+using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-/// <summary>
-/// Tahakkuk iş mantığı. Veritabanı erişimi ITahakkukRepository üzerinden sağlanır.
-/// </summary>
 public class TahakkukService : ITahakkukService
 {
     private readonly ITahakkukRepository _repo;
-    private readonly UserTasinmazYetkiService _yetkiService;
+    private readonly IUnitOfWork _uow;
+    private readonly IUserTasinmazYetkiService _yetkiService;
 
-    public TahakkukService(ITahakkukRepository repo, UserTasinmazYetkiService yetkiService)
+    public TahakkukService(ITahakkukRepository repo, IUnitOfWork uow, IUserTasinmazYetkiService yetkiService)
     {
-        _repo         = repo;
+        _repo = repo;
+        _uow = uow;
         _yetkiService = yetkiService;
     }
 
-    // ── Listeme ──────────────────────────────────────────────────────────────
-
-    public async Task<List<KiraTahakkuk>> GetAllAsync(int? sozlesmeId = null, string? userId = null)
+    // ── Listeleme ────────────────────────────────────────────────────────
+    public async Task<List<TahakkukListItemDto>> GetListAsync(int? sozlesmeId = null, string? userId = null)
     {
         var yetkiliIds = await ResolveYetkiAsync(userId);
-        return await _repo.GetAllAsync(sozlesmeId, yetkiliIds);
+        return await _repo.GetListAsync(sozlesmeId, yetkiliIds);
     }
 
-    public async Task<PagedResult<KiraTahakkuk>> GetPagedAsync(TableQuery q, int? sozlesmeId = null, string? userId = null)
+    public async Task<PagedResult<TahakkukListItemDto>> GetPagedAsync(TableQuery q, int? sozlesmeId = null, string? userId = null)
     {
         var yetkiliIds = await ResolveYetkiAsync(userId);
-        return await _repo.GetPagedAsync(q, sozlesmeId, yetkiliIds);
+        return await _repo.GetPagedListAsync(q, sozlesmeId, yetkiliIds);
     }
 
-    public async Task<KiraTahakkuk?> GetByIdAsync(int id) =>
-        await _repo.GetByIdAsync(id);
+    public Task<TahakkukDetayDto?> GetDetayAsync(int id) => _repo.GetDetayAsync(id);
 
-    // ── Gecikme Güncelleme ────────────────────────────────────────────────────
-
+    // ── Business: Gecikme Güncelleme ─────────────────────────────────────
     public async Task GecikmeleriGuncelleAsync()
     {
         var gecikmisBekleyenler = await _repo.GetGeciktirileceklerAsync(DateTime.Today);
+        if (gecikmisBekleyenler.Count == 0) return;
 
         foreach (var t in gecikmisBekleyenler)
+        {
             t.Durum = TahakkukDurumu.Gecikti;
+            await _repo.UpdateAsync(t);
+        }
 
-        if (gecikmisBekleyenler.Count > 0)
-            await _repo.SaveChangesAsync();
+        await _uow.SaveChangesAsync();
     }
 
-    // ── Ödenen Tutar Güncelleme ───────────────────────────────────────────────
-
+    // ── Business: Ödenen Tutar Güncelleme ────────────────────────────────
     public async Task OdenenTutarGuncelleAsync(int tahakkukId)
     {
-        var tahakkuk = await _repo.FindAsync(tahakkukId);
+        var tahakkuk = await _repo.GetByIdAsync(tahakkukId);
         if (tahakkuk == null) return;
 
         var odenenTutar = await _repo.GetOdenenTutarAsync(tahakkukId);
         tahakkuk.OdenenTutar = odenenTutar;
 
-        // İş kuralı: Durumu ödeme tutarına göre belirle
         tahakkuk.Durum = odenenTutar >= tahakkuk.ToplamTutar
             ? TahakkukDurumu.TamOdendi
             : odenenTutar > 0
@@ -68,11 +67,11 @@ public class TahakkukService : ITahakkukService
                     ? TahakkukDurumu.Gecikti
                     : TahakkukDurumu.Bekleniyor;
 
-        await _repo.SaveChangesAsync();
+        await _repo.UpdateAsync(tahakkuk);
+        await _uow.SaveChangesAsync();
     }
 
-    // ── Private Yardımcılar ───────────────────────────────────────────────────
-
+    // ── Yardımcılar ──────────────────────────────────────────────────────
     private async Task<List<int>?> ResolveYetkiAsync(string? userId) =>
         userId == null ? null : await _yetkiService.GetYetkiliTasinmazIdsAsync(userId);
 }

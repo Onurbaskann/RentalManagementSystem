@@ -1,47 +1,44 @@
 using KiraTakip.Data;
-using KiraTakip.Models;
-using Microsoft.EntityFrameworkCore;
+using KiraTakip.Repositories.Interfaces;
+using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-// Faz 4'te tam implemente edilecek. Şu an DB hazır değil.
-public class PermissionService(ApplicationDbContext context) : IPermissionService
+public class PermissionService : IPermissionService
 {
-    public async Task<IList<string>> GetUserPermissionsAsync(string userId)
+    private readonly IUserPermissionRepository _repo;
+    private readonly IUnitOfWork _uow;
+
+    public PermissionService(IUserPermissionRepository repo, IUnitOfWork uow)
     {
-        return await context.UserPermissions
-            .Where(p => p.UserId == userId)
-            .Select(p => p.Permission)
-            .ToListAsync();
+        _repo = repo;
+        _uow = uow;
     }
 
+    public async Task<IList<string>> GetUserPermissionsAsync(string userId)
+        => await _repo.GetUserPermissionsAsync(userId);
+
     public async Task<bool> HasPermissionAsync(string userId, string permission)
-    {
-        return await context.UserPermissions
-            .AnyAsync(p => p.UserId == userId && p.Permission == permission);
-    }
+        => await _repo.HasPermissionAsync(userId, permission);
 
     public async Task SetUserPermissionsAsync(string userId, IEnumerable<string> permissions, string grantedByUserId)
     {
         var permissionList = permissions.ToList();
 
-        var existing = await context.UserPermissions
-            .Where(p => p.UserId == userId)
-            .ToListAsync();
-
-        context.UserPermissions.RemoveRange(existing);
-        await context.SaveChangesAsync();
+        var existing = await _repo.GetForUserAsync(userId);
+        await _repo.RemoveRangeAsync(existing);
+        await _uow.SaveChangesAsync();
 
         var now = DateTime.UtcNow;
         var newPermissions = permissionList.Select(p => new UserPermission
         {
-            UserId      = userId,
-            Permission  = p,
-            GrantedBy   = grantedByUserId,
-            GrantedAt   = now,
+            UserId = userId,
+            Permission = p,
+            GrantedBy = grantedByUserId,
+            GrantedAt = now,
         });
 
-        await context.UserPermissions.AddRangeAsync(newPermissions);
-        await context.SaveChangesAsync();
+        await _repo.AddRangeAsync(newPermissions);
+        await _uow.SaveChangesAsync();
     }
 }

@@ -1,9 +1,10 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.ViewModels;
+using KiraTakip.Repositories.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace KiraTakip.Controllers;
 
@@ -11,74 +12,93 @@ namespace KiraTakip.Controllers;
 [Route("Admin/KiraciKategori")]
 public class AdminKiraciKategoriController : Controller
 {
-    private readonly ApplicationDbContext _ctx;
+    private const KategoriTipi Tipi = KategoriTipi.Kiraci;
+    private readonly IKategoriRepository _repo;
+    private readonly IUnitOfWork _uow;
 
-    public AdminKiraciKategoriController(ApplicationDbContext ctx) => _ctx = ctx;
-
-    private IQueryable<Kategori> Query() =>
-        _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Kiraci);
+    public AdminKiraciKategoriController(IKategoriRepository repo, IUnitOfWork uow)
+    {
+        _repo = repo;
+        _uow = uow;
+    }
 
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var list = await Query().OrderBy(k => k.Sira).ThenBy(k => k.Ad).ToListAsync();
+        var list = await _repo.GetListByTipiAsync(Tipi);
         return View(list);
     }
 
     [HttpGet("Ekle")]
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
-        var nextSira = (Query().Max(k => (int?)k.Sira) ?? 0) + 1;
-        return View(new Kategori { Tipi = KategoriTipi.Kiraci, Sira = nextSira, OlusturmaTarihi = DateTime.UtcNow });
+        var nextSira = (await _repo.GetMaxSiraByTipiAsync(Tipi)) + 1;
+        return View(new KategoriFormViewModel { Tipi = Tipi, Sira = nextSira });
     }
 
     [HttpPost("Ekle")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(Kategori model)
+    public async Task<IActionResult> Create(KategoriFormViewModel model)
     {
+        model.Tipi = Tipi;
         if (!ModelState.IsValid) return View(model);
 
-        model.Kod = model.Kod.Trim().ToUpper();
-        if (await Query().AnyAsync(k => k.Kod == model.Kod))
+        var kod = model.Kod.Trim().ToUpper();
+        if (await _repo.KodExistsByTipiAsync(Tipi, kod))
         {
             ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
             return View(model);
         }
 
-        model.Tipi = KategoriTipi.Kiraci;
-        model.OlusturmaTarihi = DateTime.UtcNow;
-        _ctx.Kategoriler.Add(model);
-        await _ctx.SaveChangesAsync();
-        TempData["Success"] = $"'{model.Ad}' kiracı kategorisi eklendi.";
+        var entity = new Kategori
+        {
+            Tipi = Tipi,
+            Ad = model.Ad,
+            Kod = kod,
+            Sira = model.Sira,
+            Aktif = model.Aktif,
+            OlusturmaTarihi = DateTime.UtcNow
+        };
+
+        await _repo.AddAsync(entity);
+        await _uow.SaveChangesAsync();
+        TempData["Success"] = $"'{entity.Ad}' kiracı kategorisi eklendi.";
         return RedirectToAction(nameof(Index));
     }
 
     [HttpGet("Duzenle/{id:int}")]
     public async Task<IActionResult> Edit(int id)
     {
-        var entity = await Query().FirstOrDefaultAsync(k => k.Id == id);
+        var entity = await _repo.GetByIdAndTipiAsync(id, Tipi);
         if (entity == null) return NotFound();
-        return View(entity);
+        return View(ToFormVm(entity));
     }
 
     [HttpPost("Duzenle/{id:int}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, Kategori model)
+    public async Task<IActionResult> Edit(int id, KategoriFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
+        model.Tipi = Tipi;
         if (!ModelState.IsValid) return View(model);
 
-        model.Kod = model.Kod.Trim().ToUpper();
-        if (await Query().AnyAsync(k => k.Kod == model.Kod && k.Id != id))
+        var entity = await _repo.GetByIdAndTipiAsync(id, Tipi);
+        if (entity == null) return NotFound();
+
+        var kod = model.Kod.Trim().ToUpper();
+        if (await _repo.KodExistsByTipiAsync(Tipi, kod, id))
         {
             ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
             return View(model);
         }
 
-        model.Tipi = KategoriTipi.Kiraci;
-        _ctx.Kategoriler.Update(model);
-        await _ctx.SaveChangesAsync();
-        TempData["Success"] = $"'{model.Ad}' güncellendi.";
+        entity.Ad = model.Ad;
+        entity.Kod = kod;
+        entity.Sira = model.Sira;
+        entity.Aktif = model.Aktif;
+
+        await _uow.SaveChangesAsync();
+        TempData["Success"] = $"'{entity.Ad}' güncellendi.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -86,11 +106,21 @@ public class AdminKiraciKategoriController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DurumDegistir(int id)
     {
-        var entity = await Query().FirstOrDefaultAsync(k => k.Id == id);
+        var entity = await _repo.GetByIdAndTipiAsync(id, Tipi);
         if (entity == null) return NotFound();
         entity.Aktif = !entity.Aktif;
-        await _ctx.SaveChangesAsync();
+        await _uow.SaveChangesAsync();
         TempData["Success"] = $"'{entity.Ad}' {(entity.Aktif ? "aktif" : "pasif")} yapıldı.";
         return RedirectToAction(nameof(Index));
     }
+
+    private static KategoriFormViewModel ToFormVm(Kategori e) => new()
+    {
+        Id = e.Id,
+        Tipi = e.Tipi,
+        Ad = e.Ad,
+        Kod = e.Kod,
+        Sira = e.Sira,
+        Aktif = e.Aktif
+    };
 }

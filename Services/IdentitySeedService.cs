@@ -1,6 +1,5 @@
 using KiraTakip.Authorization;
 using Microsoft.AspNetCore.Identity;
-using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Services;
 

@@ -1,5 +1,4 @@
 using KiraTakip.Authorization;
-using KiraTakip.Data;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -13,15 +12,12 @@ namespace KiraTakip.Controllers
     {
         private readonly ITasinmazFiyatService _fiyatService;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly ApplicationDbContext _ctx;
 
         public TasinmazFiyatController(ITasinmazFiyatService fiyatService,
-                                      UserManager<ApplicationUser> userManager,
-                                      ApplicationDbContext ctx)
+                                      UserManager<ApplicationUser> userManager)
         {
             _fiyatService = fiyatService;
             _userManager = userManager;
-            _ctx = ctx;
         }
 
         [HttpGet]

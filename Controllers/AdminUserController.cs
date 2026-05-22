@@ -1,6 +1,5 @@
 using KiraTakip.Authorization;
 using KiraTakip.Models.ViewModels;
-using KiraTakip.Services;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -16,14 +15,14 @@ public class AdminUserController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly ITasinmazService _tasinmazService;
-    private readonly UserTasinmazYetkiService _yetkiService;
+    private readonly IUserTasinmazYetkiService _yetkiService;
     private readonly IPermissionService _permissionService;
 
     public AdminUserController(
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole> roleManager,
         ITasinmazService tasinmazService,
-        UserTasinmazYetkiService yetkiService,
+        IUserTasinmazYetkiService yetkiService,
         IPermissionService permissionService)
     {
         _userManager = userManager;

@@ -1,5 +1,6 @@
 @model KiraTakip.Models.ViewModels.BankaEslesmeSecViewModel
 @using KiraTakip.Models
+@using KiraTakip.Models.Dtos
 @{
     ViewData["Title"] = "Ödeme Eşleştir";
     var b = Model.BankaHareketi;
@@ -81,8 +82,8 @@
                             sira++;
                         <tr style="@(sira == 1 ? "background:#f0fdf4;" : "")">
                             <td style="color:var(--color-muted);font-size:12.5px;">#@o.Id</td>
-                            <td style="font-weight:600;">@(o.KiraTahakkuk.KiraSozlesmesi?.Kiraci.GosterimAdi ?? "Rezervasyon Ödemesi")</td>
-                            <td style="font-size:13px;">@o.KiraTahakkuk.DonemBaslangic.ToString("MMMM yyyy")</td>
+                            <td style="font-weight:600;">@(string.IsNullOrEmpty(o.KiraciGosterimAdi) ? "Rezervasyon Ödemesi" : o.KiraciGosterimAdi)</td>
+                            <td style="font-size:13px;">@o.DonemBaslangic.ToString("MMMM yyyy")</td>
                             <td style="font-weight:@(tutarExact ? "700" : "400");">
                                 @o.Tutar.ToString("N0") ₺
                                 @if (!tutarExact)

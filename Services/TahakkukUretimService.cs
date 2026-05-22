@@ -1,45 +1,45 @@
-using Microsoft.EntityFrameworkCore;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
 public class TahakkukUretimService : ITahakkukUretimService
 {
-    private readonly ApplicationDbContext _ctx;
+    private readonly ITahakkukRepository _tahakkukRepo;
+    private readonly IUnitOfWork _uow;
     private readonly IRateResolverService _rateResolver;
+    private readonly ISozlesmeRepository _sozlesmeRepo;
+    private readonly IBirimRepository _birimRepo;
 
-    public TahakkukUretimService(ApplicationDbContext ctx, IRateResolverService rateResolver)
+    public TahakkukUretimService(
+        ITahakkukRepository tahakkukRepo,
+        IUnitOfWork uow,
+        IRateResolverService rateResolver,
+        ISozlesmeRepository sozlesmeRepo,
+        IBirimRepository birimRepo)
     {
-        _ctx = ctx;
+        _tahakkukRepo = tahakkukRepo;
+        _uow = uow;
         _rateResolver = rateResolver;
+        _sozlesmeRepo = sozlesmeRepo;
+        _birimRepo = birimRepo;
     }
 
     public async Task UretSozlesmeIcinAsync(int sozlesmeId)
     {
-        var sozlesme = await _ctx.Sozlesmeler
-            .Include(s => s.Birim)
-            .FirstOrDefaultAsync(s => s.Id == sozlesmeId);
+        var sozlesme = await _sozlesmeRepo.GetByIdAsync(sozlesmeId);
         if (sozlesme == null) return;
-
-        var aktifBorcTipleri = await _ctx.BorcTipleri
-            .Where(b => b.Aktif && (b.Davranis == BorcTipiDavranisi.AylikSabit || b.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik))
-            .OrderBy(b => b.Sira)
-            .ToListAsync();
-
-
 
         foreach (var donemIlkGunu in GetDonemler(sozlesme.BaslangicTarihi, sozlesme.BitisTarihi))
         {
-            var mevcutVar = await _ctx.KiraTahakkuklar
-                .AnyAsync(t => t.KiraSozlesmesiId == sozlesmeId
-                    && t.DonemBaslangic == donemIlkGunu
-                    && t.KaynakTipi == TahakkukKaynakTipi.Sozlesme);
+            var mevcutVar = await _tahakkukRepo.AnyAsync(t => t.KiraSozlesmesiId == sozlesmeId
+                && t.DonemBaslangic == donemIlkGunu
+                && t.KaynakTipi == TahakkukKaynakTipi.Sozlesme);
             if (mevcutVar) continue;
 
             var proRata = HesaplaProRataKatsayi(donemIlkGunu, sozlesme.BaslangicTarihi, sozlesme.BitisTarihi);
-            
             var composedPreviews = await ComposeKalemlerAsync(sozlesme.BirimId, sozlesme.KiraciId, donemIlkGunu, sozlesmeId);
             var kalemler = new List<TahakkukKalemi>();
 
@@ -64,8 +64,6 @@ public class TahakkukUretimService : ITahakkukUretimService
                 });
             }
 
-
-
             var ayBitis = donemIlkGunu.AddMonths(1).AddDays(-1);
             var donemBitis = sozlesme.BitisTarihi < ayBitis ? sozlesme.BitisTarihi : ayBitis;
 
@@ -85,52 +83,40 @@ public class TahakkukUretimService : ITahakkukUretimService
                 Kalemler = kalemler
             };
 
-            _ctx.KiraTahakkuklar.Add(tahakkuk);
+            await _tahakkukRepo.AddAsync(tahakkuk);
         }
 
-        await _ctx.SaveChangesAsync();
+        await _uow.SaveChangesAsync();
     }
 
     public async Task YenidenUretAsync(int sozlesmeId, DateTime baslangicTarihi)
     {
         var ilkGun = new DateTime(baslangicTarihi.Year, baslangicTarihi.Month, 1);
-
-        var silinecekler = await _ctx.KiraTahakkuklar
-            .Where(t => t.KiraSozlesmesiId == sozlesmeId
-                && t.DonemBaslangic >= ilkGun
-                && t.Durum != TahakkukDurumu.TamOdendi
-                && t.KaynakTipi == TahakkukKaynakTipi.Sozlesme
-                && !_ctx.KiraOdemeler.Any(o => o.KiraTahakkukId == t.Id))
-            .ToListAsync();
-
-        _ctx.KiraTahakkuklar.RemoveRange(silinecekler);
-        await _ctx.SaveChangesAsync();
-
+        var silinecekler = await _tahakkukRepo.GetSilineceklerAsync(sozlesmeId, ilkGun);
+        await _tahakkukRepo.DeleteRangeAsync(silinecekler);
+        await _uow.SaveChangesAsync();
         await UretSozlesmeIcinAsync(sozlesmeId);
     }
 
     public async Task IptalEtFutureTahakkuklarAsync(int sozlesmeId, DateTime fesihTarihi)
     {
         var ilkGun = new DateTime(fesihTarihi.Year, fesihTarihi.Month, 1).AddMonths(1);
-
-        var iptalEdilecekler = await _ctx.KiraTahakkuklar
-            .Where(t => t.KiraSozlesmesiId == sozlesmeId
-                && t.DonemBaslangic >= ilkGun
-                && t.Durum != TahakkukDurumu.TamOdendi
-                && t.KaynakTipi == TahakkukKaynakTipi.Sozlesme)
-            .ToListAsync();
+        var iptalEdilecekler = await _tahakkukRepo.GetAllAsync(t =>
+            t.KiraSozlesmesiId == sozlesmeId
+            && t.DonemBaslangic >= ilkGun
+            && t.Durum != TahakkukDurumu.TamOdendi
+            && t.KaynakTipi == TahakkukKaynakTipi.Sozlesme);
 
         foreach (var t in iptalEdilecekler)
             t.Durum = TahakkukDurumu.IptalEdildi;
 
         if (iptalEdilecekler.Count > 0)
-            await _ctx.SaveChangesAsync();
+            await _uow.SaveChangesAsync();
     }
 
     private static decimal HesaplaProRataKatsayi(DateTime donemIlkGunu, DateTime sozlesmeBaslangic, DateTime sozlesmeBitis)
     {
         var ayBitis = donemIlkGunu.AddMonths(1).AddDays(-1);
-
         var etkinBaslangic = sozlesmeBaslangic > donemIlkGunu ? sozlesmeBaslangic : donemIlkGunu;
         var etkinBitis = sozlesmeBitis < ayBitis ? sozlesmeBitis : ayBitis;
 
@@ -154,39 +140,28 @@ public class TahakkukUretimService : ITahakkukUretimService
 
     public async Task<IList<Models.DTOs.TahakkukKalemiPreview>> ComposeKalemlerAsync(int birimId, int kiraciId, DateTime donem, int? sozlesmeId = null)
     {
-        var birim = await _ctx.Birimler.FindAsync(birimId);
+        var birim = await _birimRepo.GetByIdAsync(birimId);
         if (birim == null) return new List<Models.DTOs.TahakkukKalemiPreview>();
 
-        var aktifBorcTipleri = await _ctx.BorcTipleri
-            .Where(b => b.Aktif && (b.Davranis == BorcTipiDavranisi.AylikSabit || b.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik))
-            .OrderBy(b => b.Sira)
-            .ToListAsync();
-
+        var aktifBorcTipleri = await _tahakkukRepo.GetAktifUretimBorcTipleriAsync();
         var previewList = new List<Models.DTOs.TahakkukKalemiPreview>();
 
         foreach (var bt in aktifBorcTipleri)
         {
-            // Tek seferlik kalemleri sadece ilk ayda göster/hesapla
             if (bt.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik)
             {
                 DateTime? start = null;
                 if (sozlesmeId.HasValue)
                 {
-                    start = await _ctx.Sozlesmeler
-                        .Where(s => s.Id == sozlesmeId.Value)
-                        .Select(s => s.BaslangicTarihi)
-                        .FirstOrDefaultAsync();
+                    start = await _sozlesmeRepo.GetByIdAsync<DateTime?>(sozlesmeId.Value, s => s.BaslangicTarihi);
                 }
                 else
                 {
-                    // Yeni sözleşme oluştururken 'donem' başlangıç tarihi olarak kabul edilir
                     start = donem;
                 }
 
                 if (start.HasValue && (donem.Year != start.Value.Year || donem.Month != start.Value.Month))
-                {
-                    continue; // İlk ay değilse tek seferlik kalemi ekleme
-                }
+                    continue;
             }
 
             RateSnapshot? snapshot = await _rateResolver.ResolveAsync(sozlesmeId, kiraciId, birimId, bt.Id, donem);

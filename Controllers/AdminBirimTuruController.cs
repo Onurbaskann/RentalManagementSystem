@@ -1,10 +1,10 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using KiraTakip.Authorization;
 using KiraTakip.Data;
-using KiraTakip.Models;
 using KiraTakip.Extensions;
+using KiraTakip.Models.ViewModels;
+using KiraTakip.Repositories.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace KiraTakip.Controllers;
 
@@ -12,108 +12,134 @@ namespace KiraTakip.Controllers;
 [Route("Admin/BirimTuru")]
 public class AdminBirimTuruController : Controller
 {
-    private readonly ApplicationDbContext _ctx;
+    private readonly IBirimTuruRepository _repo;
+    private readonly IBorcTipiRepository _borcTipiRepo;
+    private readonly IUnitOfWork _uow;
 
-    public AdminBirimTuruController(ApplicationDbContext ctx) => _ctx = ctx;
+    public AdminBirimTuruController(
+        IBirimTuruRepository repo,
+        IBorcTipiRepository borcTipiRepo,
+        IUnitOfWork uow)
+    {
+        _repo = repo;
+        _borcTipiRepo = borcTipiRepo;
+        _uow = uow;
+    }
 
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var list = await _ctx.BirimTurleri.OrderBy(b => b.Sira).ThenBy(b => b.Ad).ToListAsync();
+        var list = await _repo.GetListAsync();
         return View(list);
     }
 
     [HttpGet("Ekle")]
     public async Task<IActionResult> Create()
     {
-        var nextSira = (_ctx.BirimTurleri.Max(b => (int?)b.Sira) ?? 0) + 1;
-        await PopulateBorcTipleriAsync();
-        return View(new BirimTuru { Sira = nextSira, OlusturmaTarihi = DateTime.UtcNow });
+        var nextSira = (await _repo.GetMaxSiraAsync()) + 1;
+        var vm = new BirimTuruFormViewModel
+        {
+            Sira = nextSira,
+            KiralanabilirMi = true,
+            BorcTipiAdaylari = await _borcTipiRepo.GetRezervasyonAdaylariAsync()
+        };
+        return View(vm);
     }
 
     [HttpPost("Ekle")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(BirimTuru model)
+    public async Task<IActionResult> Create(BirimTuruFormViewModel model)
     {
         if (model.RezervasyonYapilabilirMi && (!model.BorcTipiId.HasValue || model.BorcTipiId <= 0))
             ModelState.AddModelError(nameof(model.BorcTipiId), "Rezervasyon birim türü için borç tipi seçilmelidir.");
 
-        if (!ModelState.IsValid)
-        {
-            await PopulateBorcTipleriAsync();
-            return View(model);
-        }
-
         if (model.KiralanabilirMi == model.RezervasyonYapilabilirMi)
-        {
             ModelState.AddModelError(string.Empty,
                 "Tam olarak bir kullanım türü seçilmelidir: Kiralanabilir VEYA Rezervasyon yapılabilir.");
-            await PopulateBorcTipleriAsync();
+
+        if (!ModelState.IsValid)
+        {
+            model.BorcTipiAdaylari = await _borcTipiRepo.GetRezervasyonAdaylariAsync();
             return View(model);
         }
 
-        if (model.KiralanabilirMi) model.BorcTipiId = null;
-
-        model.Kod = model.Kod.ToSafeCode();
-        if (await _ctx.BirimTurleri.AnyAsync(b => b.Kod == model.Kod))
+        var kod = model.Kod.ToSafeCode();
+        if (await _repo.KodExistsAsync(kod))
         {
             ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
-            await PopulateBorcTipleriAsync();
+            model.BorcTipiAdaylari = await _borcTipiRepo.GetRezervasyonAdaylariAsync();
             return View(model);
         }
 
-        model.OlusturmaTarihi = DateTime.UtcNow;
-        _ctx.BirimTurleri.Add(model);
-        await _ctx.SaveChangesAsync();
-        TempData["Success"] = $"'{model.Ad}' birim türü eklendi.";
+        var entity = new BirimTuru
+        {
+            Ad = model.Ad,
+            Kod = kod,
+            Sira = model.Sira,
+            KiralanabilirMi = model.KiralanabilirMi,
+            RezervasyonYapilabilirMi = model.RezervasyonYapilabilirMi,
+            BorcTipiId = model.KiralanabilirMi ? null : model.BorcTipiId,
+            Aktif = model.Aktif,
+            OlusturmaTarihi = DateTime.UtcNow
+        };
+
+        await _repo.AddAsync(entity);
+        await _uow.SaveChangesAsync();
+        TempData["Success"] = $"'{entity.Ad}' birim türü eklendi.";
         return RedirectToAction(nameof(Index));
     }
 
     [HttpGet("Duzenle/{id:int}")]
     public async Task<IActionResult> Edit(int id)
     {
-        var entity = await _ctx.BirimTurleri.FindAsync(id);
+        var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
-        await PopulateBorcTipleriAsync();
-        return View(entity);
+
+        var vm = ToFormVm(entity);
+        vm.BorcTipiAdaylari = await _borcTipiRepo.GetRezervasyonAdaylariAsync();
+        return View(vm);
     }
 
     [HttpPost("Duzenle/{id:int}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, BirimTuru model)
+    public async Task<IActionResult> Edit(int id, BirimTuruFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
-        
+
         if (model.RezervasyonYapilabilirMi && (!model.BorcTipiId.HasValue || model.BorcTipiId <= 0))
             ModelState.AddModelError(nameof(model.BorcTipiId), "Rezervasyon birim türü için borç tipi seçilmelidir.");
 
-        if (!ModelState.IsValid)
-        {
-            await PopulateBorcTipleriAsync();
-            return View(model);
-        }
-
         if (model.KiralanabilirMi == model.RezervasyonYapilabilirMi)
-        {
             ModelState.AddModelError(string.Empty,
                 "Tam olarak bir kullanım türü seçilmelidir: Kiralanabilir VEYA Rezervasyon yapılabilir.");
-            await PopulateBorcTipleriAsync();
+
+        if (!ModelState.IsValid)
+        {
+            model.BorcTipiAdaylari = await _borcTipiRepo.GetRezervasyonAdaylariAsync();
             return View(model);
         }
 
-        if (model.KiralanabilirMi) model.BorcTipiId = null;
+        var entity = await _repo.GetByIdAsync(id);
+        if (entity == null) return NotFound();
 
-        model.Kod = model.Kod.ToSafeCode();
-        if (await _ctx.BirimTurleri.AnyAsync(b => b.Kod == model.Kod && b.Id != id))
+        var kod = model.Kod.ToSafeCode();
+        if (await _repo.KodExistsAsync(kod, id))
         {
             ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
-            await PopulateBorcTipleriAsync();
+            model.BorcTipiAdaylari = await _borcTipiRepo.GetRezervasyonAdaylariAsync();
             return View(model);
         }
 
-        _ctx.BirimTurleri.Update(model);
-        await _ctx.SaveChangesAsync();
-        TempData["Success"] = $"'{model.Ad}' güncellendi.";
+        entity.Ad = model.Ad;
+        entity.Kod = kod;
+        entity.Sira = model.Sira;
+        entity.KiralanabilirMi = model.KiralanabilirMi;
+        entity.RezervasyonYapilabilirMi = model.RezervasyonYapilabilirMi;
+        entity.BorcTipiId = model.KiralanabilirMi ? null : model.BorcTipiId;
+        entity.Aktif = model.Aktif;
+
+        await _uow.SaveChangesAsync();
+        TempData["Success"] = $"'{entity.Ad}' güncellendi.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -121,61 +147,50 @@ public class AdminBirimTuruController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DurumDegistir(int id)
     {
-        var entity = await _ctx.BirimTurleri.FindAsync(id);
+        var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
 
         if (entity.Aktif) // Pasife çekme
         {
-            // 1. Bağlı Birim'ler aracılığıyla aktif tahakkuk kontrolü
-            var aktifTahakkukVar = await _ctx.KiraTahakkuklar
-                .AnyAsync(t => t.Durum != TahakkukDurumu.TamOdendi && 
-                               t.Durum != TahakkukDurumu.IptalEdildi &&
-                               _ctx.Birimler.Any(b => b.BirimTuruId == id && 
-                                                      (_ctx.Sozlesmeler.Any(s => s.BirimId == b.Id && s.Id == t.KiraSozlesmesiId) ||
-                                                       _ctx.Rezervasyonlari.Any(r => r.BirimId == b.Id && r.KiraTahakkukId == t.Id))));
-            
-            if (aktifTahakkukVar)
+            if (await _repo.HasAktifTahakkukForBirimTuruAsync(id))
             {
                 TempData["Error"] = "Bu birim türüne bağlı birimlerde aktif tahakkuk bulunduğu için pasif yapılamaz.";
                 return RedirectToAction(nameof(Index));
             }
 
-            // 2. Aktif rezervasyon kontrolü
-            var aktifRezervasyonVar = await _ctx.Rezervasyonlari
-                .AnyAsync(r => r.Durum == RezervasyonDurumu.Planlandi && 
-                               _ctx.Birimler.Any(b => b.BirimTuruId == id && b.Id == r.BirimId));
-
-            if (aktifRezervasyonVar)
+            if (await _repo.HasPlanlanmisRezervasyonForBirimTuruAsync(id))
             {
                 TempData["Error"] = "Bu birim türüne bağlı birimlerde planlanmış rezervasyon bulunduğu için pasif yapılamaz.";
                 return RedirectToAction(nameof(Index));
             }
 
-            // 3. Cascade BorcTipi pasif (başka aktif BirimTuru kullanmıyorsa)
+            // Cascade BorcTipi pasif (başka aktif BirimTuru kullanmıyorsa)
             if (entity.BorcTipiId.HasValue)
             {
-                var baskaKullananVar = await _ctx.BirimTurleri
-                    .AnyAsync(b => b.BorcTipiId == entity.BorcTipiId && b.Id != id && b.Aktif);
-
+                var baskaKullananVar = await _repo.AnyAktifByBorcTipiIdAsync(entity.BorcTipiId.Value, id);
                 if (!baskaKullananVar)
                 {
-                    var borcTipi = await _ctx.BorcTipleri.FindAsync(entity.BorcTipiId.Value);
+                    var borcTipi = await _borcTipiRepo.GetByIdAsync(entity.BorcTipiId.Value);
                     if (borcTipi != null) borcTipi.Aktif = false;
                 }
             }
         }
 
         entity.Aktif = !entity.Aktif;
-        await _ctx.SaveChangesAsync();
+        await _uow.SaveChangesAsync();
         TempData["Success"] = $"'{entity.Ad}' {(entity.Aktif ? "aktif" : "pasif")} yapıldı.";
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task PopulateBorcTipleriAsync()
+    private static BirimTuruFormViewModel ToFormVm(BirimTuru e) => new()
     {
-        ViewBag.BorcTipiAdaylari = await _ctx.BorcTipleri
-            .Where(b => b.Davranis == BorcTipiDavranisi.RezervasyonOzel && b.Aktif)
-            .OrderBy(b => b.Sira).ThenBy(b => b.Ad)
-            .ToListAsync();
-    }
+        Id = e.Id,
+        Ad = e.Ad,
+        Kod = e.Kod,
+        Sira = e.Sira,
+        KiralanabilirMi = e.KiralanabilirMi,
+        RezervasyonYapilabilirMi = e.RezervasyonYapilabilirMi,
+        BorcTipiId = e.BorcTipiId,
+        Aktif = e.Aktif
+    };
 }

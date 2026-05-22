@@ -19,7 +19,7 @@ public class OdemeController : Controller
     private readonly IBankaHareketiService _bankaService;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IConfiguration _config;
-    private readonly UserTasinmazYetkiService _yetkiService;
+    private readonly IUserTasinmazYetkiService _yetkiService;
 
     public OdemeController(
         IOdemeService odemeService,
@@ -28,7 +28,7 @@ public class OdemeController : Controller
         IBankaHareketiService bankaService,
         UserManager<ApplicationUser> userManager,
         IConfiguration config,
-        UserTasinmazYetkiService yetkiService)
+        IUserTasinmazYetkiService yetkiService)
     {
         _odemeService = odemeService;
         _tahakkukService = tahakkukService;
@@ -61,7 +61,7 @@ public class OdemeController : Controller
         {
             var userId = _userManager.GetUserId(User)!;
             var yetkiliTasinmazIds = await GetYetkiliTasinmazIdsAsync(userId);
-            var tasinmazId = odeme.KiraTahakkuk.KiraSozlesmesi?.Birim?.TasinmazId;
+            var tasinmazId = odeme.TasinmazId;
             if (tasinmazId == null || !yetkiliTasinmazIds.Contains(tasinmazId.Value))
                 return Forbid();
         }
@@ -73,7 +73,7 @@ public class OdemeController : Controller
     [Authorize(Policy = PermissionCatalog.Odeme.Create)]
     public async Task<IActionResult> Ekle(int tahakkukId)
     {
-        var tahakkuk = await _tahakkukService.GetByIdAsync(tahakkukId);
+        var tahakkuk = await _tahakkukService.GetDetayAsync(tahakkukId);
         if (tahakkuk == null) return NotFound();
 
         var vm = new OdemeEkleViewModel
@@ -93,21 +93,21 @@ public class OdemeController : Controller
     {
         if (!ModelState.IsValid)
         {
-            vm.Tahakkuk = await _tahakkukService.GetByIdAsync(vm.KiraTahakkukId);
+            vm.Tahakkuk = await _tahakkukService.GetDetayAsync(vm.KiraTahakkukId);
             return View(vm);
         }
 
         var userId = _userManager.GetUserId(User)!;
         var odeme = new KiraOdeme
         {
-            KiraTahakkukId   = vm.KiraTahakkukId,
+            KiraTahakkukId = vm.KiraTahakkukId,
             KiraSozlesmesiId = vm.KiraSozlesmesiId,
-            OdemeTarihi      = vm.OdemeTarihi,
-            Tutar            = vm.Tutar,
-            OdemeKanali      = vm.OdemeKanali,
-            OdemeKaynakTipi  = OdemeKaynakTipi.Manuel,
-            Aciklama         = vm.Aciklama,
-            GirenUserId      = userId
+            OdemeTarihi = vm.OdemeTarihi,
+            Tutar = vm.Tutar,
+            OdemeKanali = vm.OdemeKanali,
+            OdemeKaynakTipi = OdemeKaynakTipi.Manuel,
+            Aciklama = vm.Aciklama,
+            GirenUserId = userId
         };
 
         await _odemeService.EkleAsync(odeme);
@@ -187,12 +187,12 @@ public class OdemeController : Controller
             var userId = _userManager.GetUserId(User)!;
             var yetkiliIds = await GetYetkiliTasinmazIdsAsync(userId);
             var odeme = await _odemeService.GetByIdAsync(dekont.KiraOdemeId);
-            var tasinmazId2 = odeme?.KiraTahakkuk?.KiraSozlesmesi?.Birim?.TasinmazId;
+            var tasinmazId2 = odeme?.TasinmazId;
             if (tasinmazId2 == null || !yetkiliIds.Contains(tasinmazId2.Value))
                 return Forbid();
         }
 
-        var tamYol = _dekontService.GetTamYol(dekont);
+        var tamYol = _dekontService.GetTamYol(dekont.DosyaYolu);
         if (!System.IO.File.Exists(tamYol)) return NotFound();
 
         return PhysicalFile(tamYol, dekont.DosyaTipi, dekont.OrijinalDosyaAdi);
@@ -209,7 +209,7 @@ public class OdemeController : Controller
         {
             var userId = _userManager.GetUserId(User)!;
             var yetkiliIds = await GetYetkiliTasinmazIdsAsync(userId);
-            var tasinmazId3 = odeme.KiraTahakkuk.KiraSozlesmesi?.Birim?.TasinmazId;
+            var tasinmazId3 = odeme.TasinmazId;
             if (tasinmazId3 == null || !yetkiliIds.Contains(tasinmazId3.Value))
                 return Forbid();
         }

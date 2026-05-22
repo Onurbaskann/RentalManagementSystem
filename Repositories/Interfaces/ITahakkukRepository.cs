@@ -1,57 +1,28 @@
-using KiraTakip.Models;
 using KiraTakip.Models.Common;
+using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface ITahakkukRepository
+public interface ITahakkukRepository : IBaseRepository<KiraTahakkuk>
 {
-    /// <summary>
-    /// Tüm tahakkukları getirir. yetkiliTasinmazIds null ise filtreleme yapılmaz.
-    /// </summary>
-    Task<List<KiraTahakkuk>> GetAllAsync(int? sozlesmeId, List<int>? yetkiliTasinmazIds);
+    // Okuma — DTO döner
+    Task<List<TahakkukListItemDto>> GetListAsync(int? sozlesmeId, List<int>? yetkiliTasinmazIds);
+    Task<PagedResult<TahakkukListItemDto>> GetPagedListAsync(TableQuery q, int? sozlesmeId, List<int>? yetkiliTasinmazIds);
+    Task<TahakkukDetayDto?> GetDetayAsync(int id);
 
-    /// <summary>
-    /// Sayfalama, arama ve filtreleme destekli tahakkuk listesi.
-    /// </summary>
-    Task<PagedResult<KiraTahakkuk>> GetPagedAsync(TableQuery q, int? sozlesmeId, List<int>? yetkiliTasinmazIds);
+    // Manuel Borç — DTO döner
+    Task<List<ManuelBorcListItemDto>> GetManuelBorcListAsync(List<int>? yetkiliTasinmazIds);
 
-    /// <summary>
-    /// Tek bir tahakkuğu tüm ilişkileriyle (eager loading) getirir.
-    /// </summary>
-    Task<KiraTahakkuk?> GetByIdAsync(int id);
-
-    /// <summary>
-    /// Tahakkuk oluşturulacak sözleşmenin temel bilgilerini getirir.
-    /// </summary>
-    Task<KiraSozlesmesi?> GetSozlesmeAsync(int sozlesmeId);
-
-    /// <summary>
-    /// Belirli bir sözleşme + dönem kombinasyonu için otomatik tahakkuk var mı?
-    /// </summary>
-    Task<bool> ExistsForDonemAsync(int sozlesmeId, DateTime donemIlkGunu);
-
-    /// <summary>
-    /// Vadesi geçmiş, henüz "Gecikti" olarak işaretlenmemiş tahakkukları getirir.
-    /// </summary>
+    // Business logic — entity döner (tracked)
     Task<List<KiraTahakkuk>> GetGeciktirileceklerAsync(DateTime bugun);
+    Task<KiraTahakkuk?> GetManuelBorcByIdAsync(int id);
+    Task<List<KiraTahakkuk>> GetBekleyenBorclarAsync(DateTime limitVade, CancellationToken ct);
 
-    /// <summary>
-    /// Belirli bir tahakkuk için onaylı ödemelerin toplam tutarını döner.
-    /// </summary>
+    // Hesaplama
     Task<decimal> GetOdenenTutarAsync(int tahakkukId);
 
-    /// <summary>
-    /// Belirli bir tahakkuku id ile getirir (sadece ana entity, include yok).
-    /// </summary>
-    Task<KiraTahakkuk?> FindAsync(int id);
-
-    /// <summary>
-    /// Yeni bir tahakkuku takip listesine ekler.
-    /// </summary>
-    Task AddAsync(KiraTahakkuk tahakkuk);
-
-    /// <summary>
-    /// Beklemedeki tüm değişiklikleri veritabanına yazar.
-    /// </summary>
-    Task SaveChangesAsync();
+    // Üretim yardımcıları (TahakkukUretimService için)
+    Task<List<BorcTipi>> GetAktifUretimBorcTipleriAsync();
+    Task<List<KiraTahakkuk>> GetSilineceklerAsync(int sozlesmeId, DateTime ilkGun);
+    Task DeleteRangeAsync(IEnumerable<KiraTahakkuk> entities);
 }

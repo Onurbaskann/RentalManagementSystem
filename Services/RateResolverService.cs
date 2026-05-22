@@ -1,30 +1,44 @@
-using Microsoft.EntityFrameworkCore;
-using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
 public class RateResolverService : IRateResolverService
 {
-    private readonly ApplicationDbContext _ctx;
+    private readonly ISozlesmeTarifeRepository _sozlesmeTarifeRepo;
+    private readonly IBirimTarifeRepository _birimTarifeRepo;
+    private readonly ITasinmazTarifeRepository _tasinmazTarifeRepo;
+    private readonly IGenelTarifeRepository _genelTarifeRepo;
+    private readonly ISozlesmeRepository _sozlesmeRepo;
+    private readonly IBirimRepository _birimRepo;
+    private readonly IKiraciRepository _kiraciRepo;
 
-    public RateResolverService(ApplicationDbContext ctx) => _ctx = ctx;
+    public RateResolverService(
+        ISozlesmeTarifeRepository sozlesmeTarifeRepo,
+        IBirimTarifeRepository birimTarifeRepo,
+        ITasinmazTarifeRepository tasinmazTarifeRepo,
+        IGenelTarifeRepository genelTarifeRepo,
+        ISozlesmeRepository sozlesmeRepo,
+        IBirimRepository birimRepo,
+        IKiraciRepository kiraciRepo)
+    {
+        _sozlesmeTarifeRepo = sozlesmeTarifeRepo;
+        _birimTarifeRepo = birimTarifeRepo;
+        _tasinmazTarifeRepo = tasinmazTarifeRepo;
+        _genelTarifeRepo = genelTarifeRepo;
+        _sozlesmeRepo = sozlesmeRepo;
+        _birimRepo = birimRepo;
+        _kiraciRepo = kiraciRepo;
+    }
 
     public async Task<RateSnapshot?> ResolveAsync(int? sozlesmeId, int? kiraciId, int birimId, int borcTipiId, DateTime donem)
     {
         if (sozlesmeId.HasValue)
         {
-            var sozRate = await _ctx.SozlesmeTarifeler
-                .FirstOrDefaultAsync(r => r.KiraSozlesmesiId == sozlesmeId.Value && r.BorcTipiId == borcTipiId);
+            var sozRate = await _sozlesmeTarifeRepo.GetRateAsync(sozlesmeId.Value, borcTipiId);
             if (sozRate != null)
-                return new RateSnapshot
-                {
-                    HesaplamaYontemi = sozRate.HesaplamaYontemi,
-                    BirimDeger = sozRate.BirimDeger,
-                    KdvOrani = sozRate.KdvOrani,
-                    KaynakTipi = KalemKaynakTipi.SozlesmeTarifesi
-                };
+                return Wrap(sozRate, KalemKaynakTipi.SozlesmeTarifesi);
         }
 
         int? tasinmazId = null;
@@ -32,75 +46,47 @@ public class RateResolverService : IRateResolverService
 
         if (sozlesmeId.HasValue)
         {
-            var info = await _ctx.Sozlesmeler
-                .Where(s => s.Id == sozlesmeId.Value)
-                .Select(s => new { s.Birim.TasinmazId, s.Kiraci.KiraciKategoriId })
-                .FirstOrDefaultAsync();
+            var info = await _sozlesmeRepo.GetTasinmazVeKategoriAsync(sozlesmeId.Value);
             if (info != null)
             {
-                tasinmazId = info.TasinmazId;
-                kategoriId = info.KiraciKategoriId;
+                tasinmazId = info.Value.TasinmazId;
+                kategoriId = info.Value.KategoriId;
             }
         }
         else if (kiraciId.HasValue)
         {
-            var birim = await _ctx.Birimler.FindAsync(birimId);
-            tasinmazId = birim?.TasinmazId;
-
-            var kiraci = await _ctx.Kiraciler.FindAsync(kiraciId.Value);
-            kategoriId = kiraci?.KiraciKategoriId;
+            tasinmazId = await _birimRepo.GetTasinmazIdAsync(birimId);
+            kategoriId = await _kiraciRepo.GetKategoriIdAsync(kiraciId.Value);
         }
 
         if (kategoriId.HasValue)
         {
-            var birimRate = await _ctx.BirimTarifeler
-                .FirstOrDefaultAsync(r => r.BirimId == birimId
-                    && r.KiraciKategoriId == kategoriId.Value
-                    && r.BorcTipiId == borcTipiId);
+            var birimRate = await _birimTarifeRepo.GetRateAsync(birimId, kategoriId.Value, borcTipiId);
             if (birimRate != null)
-                return new RateSnapshot
-                {
-                    HesaplamaYontemi = birimRate.HesaplamaYontemi,
-                    BirimDeger = birimRate.BirimDeger,
-                    KdvOrani = birimRate.KdvOrani,
-                    KaynakTipi = KalemKaynakTipi.BirimTarifesi
-                };
+                return Wrap(birimRate, KalemKaynakTipi.BirimTarifesi);
         }
 
         if (tasinmazId.HasValue && kategoriId.HasValue)
         {
-            var fiyatMatrisi = await _ctx.TasinmazTarifeler
-                .FirstOrDefaultAsync(f => f.TasinmazId == tasinmazId.Value
-                    && f.KiraciKategoriId == kategoriId.Value
-                    && f.BorcTipiId == borcTipiId
-                    && f.Aktif);
-
+            var fiyatMatrisi = await _tasinmazTarifeRepo.GetRateAsync(tasinmazId.Value, kategoriId.Value, borcTipiId);
             if (fiyatMatrisi != null)
-                return new RateSnapshot
-                {
-                    HesaplamaYontemi = fiyatMatrisi.HesaplamaYontemi,
-                    BirimDeger = fiyatMatrisi.BirimDeger,
-                    KdvOrani = fiyatMatrisi.KdvOrani,
-                    KaynakTipi = KalemKaynakTipi.TasinmazTarifesi
-                };
+                return Wrap(fiyatMatrisi, KalemKaynakTipi.TasinmazTarifesi);
         }
 
         if (!kategoriId.HasValue) return null;
 
-        // Exact year first, then fall back to most recent active year
-        var kalem = await _ctx.GenelTarifeler
-            .Where(k => k.Aktif && k.KiraciKategoriId == kategoriId.Value && k.BorcTipiId == borcTipiId)
-            .OrderByDescending(k => k.Yil == donem.Year ? 1 : 0)
-            .ThenByDescending(k => k.Yil)
-            .FirstOrDefaultAsync();
+        var kalem = await _genelTarifeRepo.GetRateAsync(kategoriId.Value, borcTipiId, donem.Year);
         if (kalem == null) return null;
 
-        return new RateSnapshot
-        {
-            HesaplamaYontemi = kalem.HesaplamaYontemi,
-            BirimDeger = kalem.BirimDeger,
-            KdvOrani = kalem.KdvOrani,
-            KaynakTipi = KalemKaynakTipi.GenelTarife
-        };
+        return Wrap(kalem, KalemKaynakTipi.GenelTarife);
     }
+
+    private static RateSnapshot Wrap(Models.Dtos.RateValueDto v, KalemKaynakTipi kaynak)
+        => new RateSnapshot
+        {
+            HesaplamaYontemi = v.HesaplamaYontemi,
+            BirimDeger = v.BirimDeger,
+            KdvOrani = v.KdvOrani,
+            KaynakTipi = kaynak
+        };
 }

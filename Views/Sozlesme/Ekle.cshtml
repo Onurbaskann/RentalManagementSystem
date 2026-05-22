@@ -21,8 +21,8 @@
                     @foreach (var b in Model.MevcutBirimler)
                     {
                         string birimLabel = b.BirimTipi == KiraTakip.Models.BirimTipi.Birim
-                            ? $"{b.Tasinmaz.Ad} — Birim {b.BirimNo}{(b.KatNo.HasValue ? $" • {b.KatNo}. Kat" : "")} • {b.Yuzolcumu.ToString("N0")} m²"
-                            : $"{b.Tasinmaz.Ad} — Komple • {b.Yuzolcumu.ToString("N0")} m² • {b.Tasinmaz.Ilce}";
+                            ? $"{b.TasinmazAd} — Birim {b.BirimNo}{(b.KatNo.HasValue ? $" • {b.KatNo}. Kat" : "")} • {b.Yuzolcumu.ToString("N0")} m²"
+                            : $"{b.TasinmazAd} — Komple • {b.Yuzolcumu.ToString("N0")} m² • {b.Ilce}";
                         <option value="@b.Id">@birimLabel</option>
                     }
                 </select>
@@ -197,12 +197,12 @@
                 @foreach (var b in Model.MevcutBirimler)
                 {
                     string birimAd = b.BirimTipi == KiraTakip.Models.BirimTipi.Birim
-                        ? $"{b.Tasinmaz.Ad} — Birim {b.BirimNo}"
-                        : $"{b.Tasinmaz.Ad} — Komple";
+                        ? $"{b.TasinmazAd} — Birim {b.BirimNo}"
+                        : $"{b.TasinmazAd} — Komple";
                     string meta = b.BirimTipi == KiraTakip.Models.BirimTipi.Birim && b.KatNo.HasValue
                         ? $"{b.KatNo}. Kat • {b.Yuzolcumu.ToString("N0")} m²"
                         : $"{b.Yuzolcumu.ToString("N0")} m²";
-                    @Html.Raw($"{b.Id}: {{ad: '{birimAd.Replace("'", "\\'")}', m2: '{meta.Replace("'", "\\'")}', ilce: '{b.Tasinmaz.Ilce.Replace("'", "\\'")}', il: '{b.Tasinmaz.Il.Replace("'", "\\'")}'}},")
+                    @Html.Raw($"{b.Id}: {{ad: '{birimAd.Replace("'", "\\'")}', m2: '{meta.Replace("'", "\\'")}', ilce: '{b.Ilce.Replace("'", "\\'")}', il: '{b.Il.Replace("'", "\\'")}'}},")
                 }
             },
             birimYuzolcumular: @Html.Raw(ViewBag.BirimYuzolcumular ?? "{}"),

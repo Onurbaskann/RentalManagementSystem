@@ -1,50 +1,36 @@
-using Microsoft.EntityFrameworkCore;
 using KiraTakip.Data;
-using KiraTakip.Models;
+using KiraTakip.Models.Dtos;
+using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
 public class KiraciService : IKiraciService
 {
-    private readonly ApplicationDbContext _ctx;
+    private readonly IKiraciRepository _repo;
+    private readonly IUnitOfWork _uow;
+    private readonly IUserTasinmazYetkiService _yetkiService;
 
-    public KiraciService(ApplicationDbContext ctx) => _ctx = ctx;
-
-    public async Task<List<Kiraci>> GetAllAsync(string? userId = null)
+    public KiraciService(IKiraciRepository repo, IUnitOfWork uow, IUserTasinmazYetkiService yetkiService)
     {
-        if (userId != null)
-        {
-            var yetkiliTasinmazIds = await _ctx.UserTasinmazYetkileri
-                .Where(u => u.UserId == userId)
-                .Select(u => u.TasinmazId)
-                .ToListAsync();
-
-            var yetkiliKiraciIds = await _ctx.Sozlesmeler
-                .Where(s => yetkiliTasinmazIds.Contains(s.Birim.TasinmazId))
-                .Select(s => s.KiraciId)
-                .Distinct()
-                .ToListAsync();
-
-            return await _ctx.Kiraciler
-                .Include(k => k.KiraciKategori)
-                .Where(k => yetkiliKiraciIds.Contains(k.Id))
-                .OrderBy(k => k.Ad)
-                .ToListAsync();
-        }
-
-        return await _ctx.Kiraciler
-            .Include(k => k.KiraciKategori)
-            .OrderBy(k => k.Ad)
-            .ToListAsync();
+        _repo = repo;
+        _uow = uow;
+        _yetkiService = yetkiService;
     }
 
-    public async Task<Kiraci?> GetByIdAsync(int id)
+    public async Task<List<KiraciListItemDto>> GetAllAsync(string? userId = null)
     {
-        return await _ctx.Kiraciler
-            .Include(k => k.KiraciKategori)
-            .Include(k => k.Sektor)
-            .FirstOrDefaultAsync(k => k.Id == id);
+        List<int>? yetkiliIds = null;
+        if (userId != null)
+        {
+            yetkiliIds = await _yetkiService.GetYetkiliTasinmazIdsAsync(userId);
+        }
+        return await _repo.GetListAsync(yetkiliIds);
+    }
+
+    public async Task<KiraciDetayDto?> GetDetayAsync(int id)
+    {
+        return await _repo.GetDetayAsync(id);
     }
 
     public async Task<Kiraci> CreateAsync(Kiraci k)
@@ -52,20 +38,45 @@ public class KiraciService : IKiraciService
         if (string.IsNullOrWhiteSpace(k.KiraciNo))
             k.KiraciNo = await GenerateKiraciNoAsync();
         k.KayitTarihi = DateTime.Now;
-        _ctx.Kiraciler.Add(k);
-        await _ctx.SaveChangesAsync();
+        await _repo.AddAsync(k);
+        await _uow.SaveChangesAsync();
         return k;
     }
 
     public async Task UpdateAsync(Kiraci k)
     {
-        _ctx.Kiraciler.Update(k);
-        await _ctx.SaveChangesAsync();
+        var dbKiraci = await _repo.GetByIdAsync(k.Id);
+        if (dbKiraci == null) return;
+
+        dbKiraci.KiraciKategoriId = k.KiraciKategoriId;
+        dbKiraci.SektorId = k.SektorId;
+        dbKiraci.KiraciTuru = k.KiraciTuru;
+        dbKiraci.Ad = k.Ad;
+        dbKiraci.Soyad = k.Soyad;
+        dbKiraci.TcKimlikNo = k.TcKimlikNo;
+        dbKiraci.PasaportNo = k.PasaportNo;
+        dbKiraci.Unvan = k.Unvan;
+        dbKiraci.AnneAdi = k.AnneAdi;
+        dbKiraci.BabaAdi = k.BabaAdi;
+        dbKiraci.DogumTarihi = k.DogumTarihi;
+        dbKiraci.DogumYeri = k.DogumYeri;
+        dbKiraci.TicaretSicilNo = k.TicaretSicilNo;
+        dbKiraci.VergiNo = k.VergiNo;
+        dbKiraci.VergiDairesi = k.VergiDairesi;
+        dbKiraci.MersisNo = k.MersisNo;
+        dbKiraci.Telefon = k.Telefon;
+        dbKiraci.Email = k.Email;
+        dbKiraci.Adres = k.Adres;
+        dbKiraci.KvkkOnayi = k.KvkkOnayi;
+        dbKiraci.IsActive = k.IsActive;
+
+        await _repo.UpdateAsync(dbKiraci); // No-op marker
+        await _uow.SaveChangesAsync();
     }
 
     public async Task<string> GenerateKiraciNoAsync()
     {
-        var existing = await _ctx.Kiraciler.Select(k => k.KiraciNo).ToListAsync();
+        var existing = await _repo.GetExistingKiraciNosAsync();
         var usedSet = existing.ToHashSet();
         for (int i = 1; i <= 999999; i++)
         {
@@ -77,7 +88,7 @@ public class KiraciService : IKiraciService
 
     public async Task<bool> KiraciNoExistsAsync(string kiraciNo, int? excludeId = null)
     {
-        return await _ctx.Kiraciler.AnyAsync(k =>
+        return await _repo.AnyAsync(k =>
             k.KiraciNo == kiraciNo && (excludeId == null || k.Id != excludeId));
     }
 }

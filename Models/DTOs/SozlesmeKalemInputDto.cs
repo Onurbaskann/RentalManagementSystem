@@ -1,6 +1,3 @@
-using System;
-using KiraTakip.Models;
-
 namespace KiraTakip.Models.Dtos;
 
 public class SozlesmeKalemInputDto

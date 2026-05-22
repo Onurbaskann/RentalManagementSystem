@@ -1,4 +1,4 @@
-@model KiraOdeme
+@model KiraTakip.Models.Dtos.OdemeDetayDto
 @using KiraTakip.Models
 @{
     ViewData["Title"] = $"Ödeme #{Model.Id}";
@@ -38,7 +38,7 @@
             Ödemeler
         </a>
         <div class="page-title">Ödeme #@Model.Id</div>
-        <div class="page-subtitle">@(Model.KiraTahakkuk.KiraSozlesmesi?.Kiraci.GosterimAdi ?? "Rezervasyon Ödemesi") — @Model.KiraTahakkuk.DonemBaslangic.ToString("MMMM yyyy")</div>
+        <div class="page-subtitle">@Model.KiraciGosterimAdi — @Model.TahakkukDonemBaslangic.ToString("MMMM yyyy")</div>
     </div>
     @{
         string bgCls = Model.Durum switch {
@@ -86,13 +86,13 @@
                 </div>
                 <div>
                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Giriş Yapan</div>
-                    <div class="text-[14px] font-medium text-slate-600">@(Model.GirenUser?.AdSoyad ?? Model.GirenUser?.Email ?? "—")</div>
+                    <div class="text-[14px] font-medium text-slate-600">@(Model.GirenUserGosterimAdi ?? "—")</div>
                 </div>
                 @if (Model.Durum == OdemeDurumu.Onaylandi)
                 {
                     <div>
                         <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Onaylayan</div>
-                        <div class="text-[14px] font-bold text-emerald-600">@(Model.OnaylayanUser?.AdSoyad ?? "—")</div>
+                        <div class="text-[14px] font-bold text-emerald-600">@(Model.OnaylayanUserGosterimAdi ?? "—")</div>
                     </div>
                 }
             </div>
@@ -243,10 +243,10 @@
                     {
                         <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl group hover:border-emerald-200 transition-all">
                             <div class="flex items-center justify-between mb-1.5">
-                                <div class="text-[13px] font-bold text-slate-700">@e.BankaHareketi.Tutar.ToString("N2") ₺</div>
-                                <div class="text-[11px] font-bold text-slate-400">@e.BankaHareketi.HareketTarihi.ToString("dd.MM.yyyy")</div>
+                                <div class="text-[13px] font-bold text-slate-700">@e.BankaHareketiTutar.ToString("N2") ₺</div>
+                                <div class="text-[11px] font-bold text-slate-400">@e.BankaHareketiTarih.ToString("dd.MM.yyyy")</div>
                             </div>
-                            <div class="text-slate-500 text-[11.5px] leading-relaxed truncate mb-2" title="@e.BankaHareketi.Aciklama">@e.BankaHareketi.Aciklama</div>
+                            <div class="text-slate-500 text-[11.5px] leading-relaxed truncate mb-2" title="@e.BankaHareketiAciklama">@e.BankaHareketiAciklama</div>
                             <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-200/60">
                                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">@(e.EslesmeTipi == EslesmeTipi.Manuel ? "Manuel Eşleşme" : "Otomatik")</span>
                                 @if (canMatch)

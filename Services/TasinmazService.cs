@@ -1,56 +1,73 @@
-using Microsoft.EntityFrameworkCore;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
-using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Services;
 
 public class TasinmazService : ITasinmazService
 {
-    private readonly ApplicationDbContext _ctx;
+    private readonly ITasinmazRepository _repo;
+    private readonly IUnitOfWork _uow;
+    private readonly IUserTasinmazYetkiService _yetkiService;
+    private readonly IIstatistikService _istatistikService;
 
-    public TasinmazService(ApplicationDbContext ctx) => _ctx = ctx;
-
-    public async Task<List<Tasinmaz>> GetAllAsync(string? userId = null)
+    public TasinmazService(
+        ITasinmazRepository repo,
+        IUnitOfWork uow,
+        IUserTasinmazYetkiService yetkiService,
+        IIstatistikService istatistikService)
     {
-        var query = _ctx.Tasinmazlar
-            .Include(t => t.TasinmazTipi)
-            .Include(t => t.Birimler)
-                .ThenInclude(b => b.Sozlesmeler)
-                    .ThenInclude(s => s.Kiraci)
-            .AsQueryable();
-
-        if (userId != null)
-        {
-            var yetkiliIds = await _ctx.UserTasinmazYetkileri
-                .Where(u => u.UserId == userId)
-                .Select(u => u.TasinmazId)
-                .ToListAsync();
-            query = query.Where(t => yetkiliIds.Contains(t.Id));
-        }
-
-        return await query.OrderBy(t => t.Ad).ToListAsync();
+        _repo = repo;
+        _uow = uow;
+        _yetkiService = yetkiService;
+        _istatistikService = istatistikService;
     }
 
-    public async Task<Tasinmaz?> GetByIdAsync(int id)
+    public async Task<List<TasinmazListItemDto>> GetAllAsync(string? userId = null)
     {
-        return await _ctx.Tasinmazlar
-            .Include(t => t.TasinmazTipi)
-            .Include(t => t.Birimler)
-                .ThenInclude(b => b.BirimTuru)
-            .Include(t => t.Birimler)
-                .ThenInclude(b => b.Sozlesmeler)
-                    .ThenInclude(s => s.Kiraci)
-            .Include(t => t.Birimler)
-                .ThenInclude(b => b.Sozlesmeler)
-                    .ThenInclude(s => s.IslemGecmisi)
-            .Include(t => t.Birimler)
-                .ThenInclude(b => b.Sozlesmeler)
-                    .ThenInclude(s => s.SozlesmeTarifeler)
-                        .ThenInclude(r => r.BorcTipi)
-            .FirstOrDefaultAsync(t => t.Id == id);
+        var yetkiliIds = userId == null ? null : await _yetkiService.GetYetkiliTasinmazIdsAsync(userId);
+        return await _repo.GetListAsync(yetkiliIds);
+    }
+
+    public async Task<TasinmazDetayDto?> GetByIdAsync(int id)
+    {
+        var dto = await _repo.GetDetayAsync(id);
+        if (dto == null) return null;
+
+        // Birimlerin aktif sözleşmelerinin aylık bedellerini hesapla
+        foreach (var b in dto.Birimler)
+        {
+            if (b.AktifSozlesmeId.HasValue)
+            {
+                var dummySozlesme = new KiraSozlesmesi
+                {
+                    Id = b.AktifSozlesmeId.Value,
+                    KiraciId = b.AktifSozlesmeKiraciId ?? 0,
+                    BirimId = b.Id,
+                    Birim = new Birim { Id = b.Id, Yuzolcumu = b.Yuzolcumu }
+                };
+                b.AylikBedel = await _istatistikService.AylikBedelAsync(dummySozlesme);
+            }
+        }
+
+        // Sözleşme geçmişindeki sözleşmelerin aylık bedellerini hesapla
+        foreach (var s in dto.SozlesmeGecmisi)
+        {
+            var birimYuzolcumu = dto.Birimler.FirstOrDefault(b => b.Id == s.BirimId)?.Yuzolcumu ?? 0m;
+            var dummySozlesme = new KiraSozlesmesi
+            {
+                Id = s.Id,
+                KiraciId = s.KiraciId,
+                BirimId = s.BirimId,
+                Birim = new Birim { Id = s.BirimId, Yuzolcumu = birimYuzolcumu }
+            };
+            s.AylikBedel = await _istatistikService.AylikBedelAsync(dummySozlesme);
+        }
+
+        return dto;
     }
 
     public async Task<Tasinmaz> CreateAsync(Tasinmaz t, List<BirimInputViewModel>? birimler = null, List<RezervasyonAlaniInputViewModel>? rezervasyonAlanlari = null)
@@ -99,7 +116,7 @@ public class TasinmazService : ITasinmazService
                 t.Birimler.Add(birim);
 
                 // Ücret kuralını ekle
-                _ctx.RezervasyonTarifeler.Add(new RezervasyonTarife
+                await _repo.AddRezervasyonTarifeAsync(new RezervasyonTarife
                 {
                     Birim = birim,
                     UcretsizSureDakika = r.UcretsizSureDakika,
@@ -113,38 +130,20 @@ public class TasinmazService : ITasinmazService
             }
         }
 
-        _ctx.Tasinmazlar.Add(t);
-        await _ctx.SaveChangesAsync();
+        await _repo.AddAsync(t);
+        await _uow.SaveChangesAsync();
         return t;
     }
 
     public async Task UpdateAsync(Tasinmaz t)
     {
-        _ctx.Tasinmazlar.Update(t);
-        await _ctx.SaveChangesAsync();
+        await _repo.UpdateAsync(t);
+        await _uow.SaveChangesAsync();
     }
 
-    public async Task<List<Birim>> GetBosBirimlerAsync(string? userId = null)
+    public async Task<List<BirimLookupDto>> GetBosBirimlerAsync(string? userId = null)
     {
-        var now = DateTime.Now;
-        var query = _ctx.Birimler
-            .Include(b => b.Tasinmaz)
-            .Include(b => b.Sozlesmeler)
-            .Where(b => !b.Sozlesmeler.Any(s =>
-                s.Durum == SozlesmeDurumu.Aktif &&
-                s.BaslangicTarihi <= now &&
-                s.BitisTarihi >= now))
-            .AsQueryable();
-
-        if (userId != null)
-        {
-            var yetkiliIds = await _ctx.UserTasinmazYetkileri
-                .Where(u => u.UserId == userId)
-                .Select(u => u.TasinmazId)
-                .ToListAsync();
-            query = query.Where(b => yetkiliIds.Contains(b.TasinmazId));
-        }
-
-        return await query.ToListAsync();
+        var yetkiliIds = userId == null ? null : await _yetkiService.GetYetkiliTasinmazIdsAsync(userId);
+        return await _repo.GetBosBirimlerAsync(yetkiliIds);
     }
 }

@@ -23,7 +23,7 @@
                 <option value="">— Genel kural (tüm salonlar) —</option>
                 @foreach (var b in Model.RezervasyonBirimleri)
                 {
-                    <option value="@b.Id">@b.Tasinmaz.Ad — @b.Ad</option>
+                    <option value="@b.Id">@b.TasinmazAd — @b.Ad</option>
                 }
             </select>
         </div>

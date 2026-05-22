@@ -84,32 +84,32 @@ public enum EslesmeTipi
 public enum HesaplamaYontemi
 {
     Sabit = 1,
-    M2    = 2
+    M2 = 2
 }
 
 public enum KalemKaynakTipi
 {
-    TanimsizTarife              = 0,
-    SozlesmeTarifesi            = 1,
-    BirimTarifesi               = 2,
-    GenelTarife                 = 3,
-    TasinmazTarifesi            = 4,
-    ManuelGiris                 = 5,
-    RezervasyonKurali           = 6
+    TanimsizTarife = 0,
+    SozlesmeTarifesi = 1,
+    BirimTarifesi = 2,
+    GenelTarife = 3,
+    TasinmazTarifesi = 4,
+    ManuelGiris = 5,
+    RezervasyonKurali = 6
 }
 
 public enum TahakkukKaynakTipi
 {
-    Sozlesme    = 1,
-    Manuel      = 2,
+    Sozlesme = 1,
+    Manuel = 2,
     Rezervasyon = 3
 }
 
 public enum RezervasyonDurumu
 {
-    Planlandi          = 1,
-    Tamamlandi         = 2,
-    IptalEdildi        = 3,
+    Planlandi = 1,
+    Tamamlandi = 2,
+    IptalEdildi = 3,
     TahakkukaAktarildi = 4
 }
 
@@ -123,7 +123,7 @@ public enum BorcTipiDavranisi
 
 public enum OdemeKaynakTipi
 {
-    Manuel       = 1,
+    Manuel = 1,
     BankaEslesme = 2,
-    SanalPos     = 3
+    SanalPos = 3
 }

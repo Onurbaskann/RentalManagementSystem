@@ -1,62 +1,52 @@
-using Microsoft.EntityFrameworkCore;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Dtos;
+using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Services;
 
 public class SozlesmeService : ISozlesmeService
 {
-    private readonly ApplicationDbContext _ctx;
+    private readonly ISozlesmeRepository _repo;
+    private readonly IUnitOfWork _uow;
+    private readonly IUserTasinmazYetkiService _yetkiService;
+    private readonly IIstatistikService _istatistikService;
 
-    public SozlesmeService(ApplicationDbContext ctx) => _ctx = ctx;
-
-    public async Task<List<KiraSozlesmesi>> GetAllAsync(string? filtre = null, string? userId = null)
+    public SozlesmeService(
+        ISozlesmeRepository repo,
+        IUnitOfWork uow,
+        IUserTasinmazYetkiService yetkiService,
+        IIstatistikService istatistikService)
     {
-        var now = DateTime.Now;
-        var query = _ctx.Sozlesmeler
-            .Include(s => s.Birim)
-                .ThenInclude(b => b.Tasinmaz)
-            .Include(s => s.Kiraci)
-                .ThenInclude(k => k.KiraciKategori)
-            .Include(s => s.IslemGecmisi)
-            .AsQueryable();
-
-        if (userId != null)
-        {
-            var yetkiliIds = await _ctx.UserTasinmazYetkileri
-                .Where(u => u.UserId == userId)
-                .Select(u => u.TasinmazId)
-                .ToListAsync();
-            query = query.Where(s => yetkiliIds.Contains(s.Birim.TasinmazId));
-        }
-
-        query = filtre switch
-        {
-            "aktif"      => query.Where(s => s.Durum == SozlesmeDurumu.Aktif && s.BaslangicTarihi <= now && s.BitisTarihi >= now),
-            "surek"      => query.Where(s => s.Durum == SozlesmeDurumu.Aktif && s.BaslangicTarihi <= now && s.BitisTarihi >= now && s.BitisTarihi <= now.AddDays(30)),
-            "gecmis"     => query.Where(s => s.Durum == SozlesmeDurumu.SonaErdi),
-            "feshedildi" => query.Where(s => s.Durum == SozlesmeDurumu.Feshedildi),
-            _            => query
-        };
-
-        return await query.OrderByDescending(s => s.BaslangicTarihi).ToListAsync();
+        _repo = repo;
+        _uow = uow;
+        _yetkiService = yetkiService;
+        _istatistikService = istatistikService;
     }
 
-    public async Task<KiraSozlesmesi?> GetByIdAsync(int id)
+    public async Task<List<SozlesmeListItemDto>> GetAllAsync(string? filtre = null, string? userId = null)
     {
-        return await _ctx.Sozlesmeler
-            .Include(s => s.Birim)
-                .ThenInclude(b => b.Tasinmaz)
-            .Include(s => s.Birim)
-                .ThenInclude(b => b.Sozlesmeler)
-                    .ThenInclude(x => x.Kiraci)
-            .Include(s => s.Kiraci)
-                .ThenInclude(k => k.KiraciKategori)
-            .Include(s => s.IslemGecmisi)
-            .Include(s => s.SozlesmeTarifeler)
-                .ThenInclude(r => r.BorcTipi)
-            .FirstOrDefaultAsync(s => s.Id == id);
+        var yetkiliIds = userId == null ? null : await _yetkiService.GetYetkiliTasinmazIdsAsync(userId);
+        var list = await _repo.GetListAsync(filtre, yetkiliIds);
+        foreach (var s in list)
+        {
+            var dummySozlesme = new KiraSozlesmesi
+            {
+                Id = s.Id,
+                KiraciId = s.KiraciId,
+                BirimId = s.BirimId,
+                Birim = new Birim { Id = s.BirimId, Yuzolcumu = s.BirimYuzolcumu }
+            };
+            s.AylikBedel = await _istatistikService.AylikBedelAsync(dummySozlesme);
+        }
+        return list;
+    }
+
+    public async Task<SozlesmeDetayDto?> GetByIdAsync(int id)
+    {
+        return await _repo.GetDetayAsync(id);
     }
 
     public async Task<KiraSozlesmesi> CreateAsync(KiraSozlesmesi s, decimal? aylikBedel = null)
@@ -69,17 +59,15 @@ public class SozlesmeService : ISozlesmeService
             YeniKiraBedeli = aylikBedel
         });
 
-        _ctx.Sozlesmeler.Add(s);
-        await _ctx.SaveChangesAsync();
+        await _repo.AddAsync(s);
+        await _uow.SaveChangesAsync();
         return s;
     }
 
     public async Task UzatAsync(int id, DateTime yeniBitis, decimal eskiBedel, decimal yeniBedel,
         bool kdvUygulanacakMi, decimal kdvOrani, decimal? tufeOrani, string? aciklama)
     {
-        var s = await _ctx.Sozlesmeler
-            .Include(x => x.IslemGecmisi)
-            .FirstOrDefaultAsync(x => x.Id == id)
+        var s = await _repo.GetByIdAsync(id, include: q => q.Include(x => x.IslemGecmisi))
             ?? throw new InvalidOperationException($"Sözleşme {id} bulunamadı.");
 
         var eskiBitis = s.BitisTarihi;
@@ -107,14 +95,12 @@ public class SozlesmeService : ISozlesmeService
             KdvDahilTutar = kdvDahil
         });
 
-        await _ctx.SaveChangesAsync();
+        await _uow.SaveChangesAsync();
     }
 
     public async Task FeshetAsync(int id, DateTime fesihTarihi, string fesihNedeni, string? aciklama)
     {
-        var s = await _ctx.Sozlesmeler
-            .Include(x => x.IslemGecmisi)
-            .FirstOrDefaultAsync(x => x.Id == id)
+        var s = await _repo.GetByIdAsync(id, include: q => q.Include(x => x.IslemGecmisi))
             ?? throw new InvalidOperationException($"Sözleşme {id} bulunamadı.");
 
         s.Durum = SozlesmeDurumu.Feshedildi;
@@ -129,50 +115,45 @@ public class SozlesmeService : ISozlesmeService
             Aciklama = aciklama ?? fesihNedeni
         });
 
-        await _ctx.SaveChangesAsync();
+        await _uow.SaveChangesAsync();
     }
 
-    public async Task<List<KiraSozlesmesi>> GetByKiraciIdAsync(int kiraciId)
+    public async Task<List<SozlesmeListItemDto>> GetByKiraciIdAsync(int kiraciId)
     {
-        return await _ctx.Sozlesmeler
-            .Include(s => s.Birim)
-                .ThenInclude(b => b.Tasinmaz)
-            .Include(s => s.IslemGecmisi)
-            .Where(s => s.KiraciId == kiraciId)
-            .OrderByDescending(s => s.BaslangicTarihi)
-            .ToListAsync();
+        var list = await _repo.GetByKiraciIdAsync(kiraciId);
+        foreach (var s in list)
+        {
+            var dummySozlesme = new KiraSozlesmesi
+            {
+                Id = s.Id,
+                KiraciId = s.KiraciId,
+                BirimId = s.BirimId,
+                Birim = new Birim { Id = s.BirimId, Yuzolcumu = s.BirimYuzolcumu }
+            };
+            s.AylikBedel = await _istatistikService.AylikBedelAsync(dummySozlesme);
+        }
+        return list;
     }
 
-    public async Task<List<KiraSozlesmesi>> GetByBirimIdAsync(int birimId)
+    public async Task<List<SozlesmeListItemDto>> GetByBirimIdAsync(int birimId)
     {
-        return await _ctx.Sozlesmeler
-            .Include(s => s.Kiraci)
-            .Include(s => s.IslemGecmisi)
-            .Where(s => s.BirimId == birimId)
-            .OrderByDescending(s => s.BaslangicTarihi)
-            .ToListAsync();
+        var list = await _repo.GetByBirimIdAsync(birimId);
+        foreach (var s in list)
+        {
+            var dummySozlesme = new KiraSozlesmesi
+            {
+                Id = s.Id,
+                KiraciId = s.KiraciId,
+                BirimId = s.BirimId,
+                Birim = new Birim { Id = s.BirimId, Yuzolcumu = s.BirimYuzolcumu }
+            };
+            s.AylikBedel = await _istatistikService.AylikBedelAsync(dummySozlesme);
+        }
+        return list;
     }
 
     public async Task<Dictionary<int, decimal?>> GetDepozitoTutarlariAsync(IEnumerable<int> sozlesmeIds)
     {
-        var ids = sozlesmeIds.ToList();
-        if (ids.Count == 0) return new Dictionary<int, decimal?>();
-
-        var kalemler = await _ctx.TahakkukKalemleri
-            .Where(k => k.Tahakkuk.KiraSozlesmesiId.HasValue
-                && ids.Contains(k.Tahakkuk.KiraSozlesmesiId.Value)
-                && k.BorcTipi.Kod == "DEPOZITO"
-                && k.Tahakkuk.Durum != TahakkukDurumu.IptalEdildi)
-            .Select(k => new
-            {
-                SozlesmeId = k.Tahakkuk.KiraSozlesmesiId!.Value,
-                Donem = k.Tahakkuk.DonemBaslangic,
-                Tutar = k.ToplamTutar
-            })
-            .ToListAsync();
-
-        return kalemler
-            .GroupBy(x => x.SozlesmeId)
-            .ToDictionary(g => g.Key, g => (decimal?)g.OrderBy(x => x.Donem).First().Tutar);
+        return await _repo.GetDepozitoTutarlariAsync(sozlesmeIds);
     }
 }

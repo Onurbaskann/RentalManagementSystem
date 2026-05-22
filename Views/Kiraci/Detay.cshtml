@@ -1,7 +1,5 @@
 @model KiraTakip.Models.ViewModels.KiraciDetayViewModel
 @using KiraTakip.Models
-@using KiraTakip.Services.Interfaces
-@inject IIstatistikService Istatistik
 @{
     ViewData["Title"] = Model.Kiraci.GosterimAdi;
     var k = Model.Kiraci;
@@ -27,10 +25,10 @@
             else
             { <span class="badge badge-bireysel p-1 px-3 text-[12px]">Gerçek Kişi</span> }
             
-            @if (k.KiraciKategori != null)
+            @if (!string.IsNullOrEmpty(k.KiraciKategoriAd))
             {
                 <div class="w-1 h-1 rounded-full bg-slate-300"></div>
-                <span class="badge bg-slate-50 text-slate-600 border border-slate-200 p-1 px-3 text-[12px] font-semibold">@k.KiraciKategori.Ad</span>
+                <span class="badge bg-slate-50 text-slate-600 border border-slate-200 p-1 px-3 text-[12px] font-semibold">@k.KiraciKategoriAd</span>
             }
         </div>
     </div>
@@ -125,18 +123,18 @@
                     </div>
                 }
             }
-            @if (k.KiraciKategori != null)
+            @if (!string.IsNullOrEmpty(k.KiraciKategoriAd))
             {
                 <div>
                     <div class="text-[11.5px] text-muted mb-0.5">Kategori</div>
-                    <div class="text-[13px] font-medium">@k.KiraciKategori.Ad</div>
+                    <div class="text-[13px] font-medium">@k.KiraciKategoriAd</div>
                 </div>
             }
-            @if (k.Sektor != null)
+            @if (!string.IsNullOrEmpty(k.SektorAd))
             {
                 <div>
                     <div class="text-[11.5px] text-muted mb-0.5">Sektör</div>
-                    <div class="text-[13px] font-medium">@k.Sektor.Ad</div>
+                    <div class="text-[13px] font-medium">@k.SektorAd</div>
                 </div>
             }
         </div>
@@ -146,10 +144,10 @@
     <div class="card">
         <div class="card-title">Sözleşme Özeti</div>
         @{
-            var aktifler = Model.Sozlesmeler.Where(Istatistik.Aktif).ToList();
+            var aktifler = Model.Sozlesmeler.Where(s => s.Aktif).ToList();
             decimal toplamAylik = 0m;
             foreach (var aks in aktifler)
-                toplamAylik += await Istatistik.AylikBedelAsync(aks);
+                toplamAylik += aks.AylikBedel;
         }
         <div class="card-value text-2xl mt-2 font-bold">@aktifler.Count</div>
         <div class="card-sub text-muted text-xs">aktif sözleşme</div>
@@ -189,21 +187,21 @@
                 <tbody>
                     @foreach (var s in Model.Sozlesmeler)
                     {
-                        bool aktif = Istatistik.Aktif(s);
-                        int kalanGun = Istatistik.KalanGun(s);
+                        bool aktif = s.Aktif;
+                        int kalanGun = s.KalanGun;
                         bool surek = aktif && kalanGun <= 30;
                         bool feshedildi = s.Durum == SozlesmeDurumu.Feshedildi;
                         <tr>
                             <td>
-                                <div class="font-semibold">@s.Birim.Tasinmaz.Ad</div>
-                                <div class="text-xs text-muted">@s.Birim.Ad</div>
+                                <div class="font-semibold">@s.TasinmazAd</div>
+                                <div class="text-xs text-muted">@s.BirimAd</div>
                             </td>
                             <td>@s.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
                             <td>
                                 @s.BitisTarihi.ToString("dd.MM.yyyy")
                                 @if (surek) { <span class="day-badge day-badge-amber ml-1.5 text-[11px]">@kalanGun g</span> }
                             </td>
-                            <td class="font-bold">@((await Istatistik.AylikBedelAsync(s)).ToString("N0")) ₺</td>
+                            <td class="font-bold">@s.AylikBedel.ToString("N0") ₺</td>
                             <td>@(Model.DepozitoTutarlari.TryGetValue(s.Id, out var dep) && dep.HasValue ? dep.Value.ToString("N0") + " ₺" : "—")</td>
                             <td>
                                 @if (feshedildi) { <span class="badge badge-gecmis">Feshedildi</span> }

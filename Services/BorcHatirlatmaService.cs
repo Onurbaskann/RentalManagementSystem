@@ -1,22 +1,17 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Settings;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace KiraTakip.Services;
 
 public class BorcHatirlatmaService : IBorcHatirlatmaService
 {
-    private readonly ApplicationDbContext _ctx;
+    private readonly ITahakkukRepository _tahakkukRepo;
+    private readonly IUnitOfWork _uow;
     private readonly IPaymentLinkService _paymentLinkService;
     private readonly IMailService _mailService;
     private readonly IRazorViewToStringRenderer _renderer;
@@ -25,7 +20,8 @@ public class BorcHatirlatmaService : IBorcHatirlatmaService
     private readonly SmtpSettings _smtpSettings;
 
     public BorcHatirlatmaService(
-        ApplicationDbContext ctx,
+        ITahakkukRepository tahakkukRepo,
+        IUnitOfWork uow,
         IPaymentLinkService paymentLinkService,
         IMailService mailService,
         IRazorViewToStringRenderer renderer,
@@ -33,7 +29,8 @@ public class BorcHatirlatmaService : IBorcHatirlatmaService
         IOptions<PaymentLinkSettings> paymentOptions,
         IOptions<SmtpSettings> smtpOptions)
     {
-        _ctx = ctx;
+        _tahakkukRepo = tahakkukRepo;
+        _uow = uow;
         _paymentLinkService = paymentLinkService;
         _mailService = mailService;
         _renderer = renderer;
@@ -57,14 +54,7 @@ public class BorcHatirlatmaService : IBorcHatirlatmaService
         var cooldownThreshold = today.AddDays(-_paymentSettings.ReminderCooldownDays);
 
         // 2. Fetch Outstanding Debts
-        var borclar = await _ctx.KiraTahakkuklar
-            .Include(t => t.KiraSozlesmesi!).ThenInclude(s => s!.Kiraci)
-            .Include(t => t.KiraSozlesmesi!).ThenInclude(s => s!.Birim).ThenInclude(b => b.Tasinmaz)
-            .Include(t => t.Odemeler)
-            .Where(t => t.Durum != TahakkukDurumu.TamOdendi
-                     && t.Durum != TahakkukDurumu.IptalEdildi
-                     && t.VadeTarihi <= limitVade)
-            .ToListAsync(ct);
+        var borclar = await _tahakkukRepo.GetBekleyenBorclarAsync(limitVade, ct);
 
         // Group by Kiraci
         var groups = borclar.GroupBy(t => t.KiraSozlesmesi!.KiraciId).ToList();
@@ -131,13 +121,13 @@ public class BorcHatirlatmaService : IBorcHatirlatmaService
                     htmlBody,
                     ct
                 );
-                
+
                 // 7. Mark as sent ONLY for debts outside cooldown (so we reset their cooldown)
                 foreach (var debt in debtsOutsideCooldown)
                 {
                     debt.SonHatirlatmaTarihi = DateTime.Today;
                 }
-                
+
                 sonuc.BasariliGonderim++;
             }
             catch (Exception ex)
@@ -150,7 +140,7 @@ public class BorcHatirlatmaService : IBorcHatirlatmaService
         // 8. Save changes to DB (updates SonHatirlatmaTarihi)
         if (sonuc.BasariliGonderim > 0)
         {
-            await _ctx.SaveChangesAsync(ct);
+            await _uow.SaveChangesAsync(ct);
         }
 
         return sonuc;

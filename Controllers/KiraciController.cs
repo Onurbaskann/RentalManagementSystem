@@ -1,6 +1,7 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -41,7 +42,7 @@ public class KiraciController : Controller
         var kiraciler = await _kiraciService.GetAllAsync(filterUserId);
         var sozlesmeler = await _sozlesmeService.GetAllAsync(userId: filterUserId);
         ViewBag.AktifSozlesme = sozlesmeler
-            .Where(_istatistik.Aktif)
+            .Where(s => s.Aktif)
             .GroupBy(s => s.KiraciId)
             .ToDictionary(g => g.Key, g => g.Count());
         return View(kiraciler);
@@ -58,10 +59,10 @@ public class KiraciController : Controller
             if (!kiraciler.Any(k => k.Id == id)) return Forbid();
         }
 
-        var k = await _kiraciService.GetByIdAsync(id);
+        var k = await _kiraciService.GetDetayAsync(id);
         if (k == null) return NotFound();
 
-        List<KiraSozlesmesi> sozlesmeler;
+        List<SozlesmeListItemDto> sozlesmeler;
         if (scopedUserId != null)
         {
             var all = await _sozlesmeService.GetAllAsync(userId: scopedUserId);
@@ -123,7 +124,7 @@ public class KiraciController : Controller
     [Authorize(Policy = PermissionCatalog.Kiraci.Edit)]
     public async Task<IActionResult> Duzenle(int id)
     {
-        var k = await _kiraciService.GetByIdAsync(id);
+        var k = await _kiraciService.GetDetayAsync(id);
         if (k == null) return NotFound();
 
         await PopulateKiraciViewBagAsync();

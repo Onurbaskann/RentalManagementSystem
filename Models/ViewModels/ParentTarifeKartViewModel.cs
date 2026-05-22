@@ -9,15 +9,15 @@ public enum TarifeHiyerarsiKatmani
 
 public class ParentTarifeKartViewModel
 {
-    public string KaynakAdi { get; set; } = "";
+    public string KaynakAdi { get; set; } = string.Empty;
     public string? Aciklama { get; set; }
     public List<ParentTarifeSatir> Satirlar { get; set; } = [];
 }
 
 public class ParentTarifeSatir
 {
-    public string KategoriAd { get; set; } = "";
-    public string BorcTipiAd { get; set; } = "";
+    public string KategoriAd { get; set; } = string.Empty;
+    public string BorcTipiAd { get; set; } = string.Empty;
     public HesaplamaYontemi HesaplamaYontemi { get; set; }
     public decimal BirimDeger { get; set; }
     public decimal KdvOrani { get; set; }

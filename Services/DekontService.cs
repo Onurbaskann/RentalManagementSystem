@@ -1,20 +1,21 @@
-using Microsoft.EntityFrameworkCore;
 using KiraTakip.Data;
-using KiraTakip.Models;
+using KiraTakip.Models.Dtos;
+using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
-using Microsoft.AspNetCore.Http;
 
 namespace KiraTakip.Services;
 
 public class DekontService : IDekontService
 {
-    private readonly ApplicationDbContext _ctx;
+    private readonly IDekontRepository _repo;
+    private readonly IUnitOfWork _uow;
     private readonly IWebHostEnvironment _env;
     private readonly IConfiguration _config;
 
-    public DekontService(ApplicationDbContext ctx, IWebHostEnvironment env, IConfiguration config)
+    public DekontService(IDekontRepository repo, IUnitOfWork uow, IWebHostEnvironment env, IConfiguration config)
     {
-        _ctx = ctx;
+        _repo = repo;
+        _uow = uow;
         _env = env;
         _config = config;
     }
@@ -25,12 +26,12 @@ public class DekontService : IDekontService
         return Path.Combine(_env.ContentRootPath, relativePath);
     }
 
-    public string GetTamYol(Dekont dekont)
-        => Path.Combine(_env.ContentRootPath, dekont.DosyaYolu);
+    public string GetTamYol(string dosyaYolu)
+        => Path.Combine(_env.ContentRootPath, dosyaYolu);
 
     public async Task<Dekont> EkleAsync(int odemeId, IFormFile dosya, string userId)
     {
-        var odeme = await _ctx.KiraOdemeler.FindAsync(odemeId)
+        var odeme = await _repo.GetOdemeInfoAsync(odemeId)
             ?? throw new InvalidOperationException("Ödeme bulunamadı.");
 
         var kok = StorageKokYolu();
@@ -62,32 +63,27 @@ public class DekontService : IDekontService
             YuklemeTarihi = DateTime.Now
         };
 
-        _ctx.Dekontlar.Add(dekont);
-        await _ctx.SaveChangesAsync();
+        await _repo.AddAsync(dekont);
+        await _uow.SaveChangesAsync();
         return dekont;
     }
 
-    public async Task<List<Dekont>> GetByOdemeIdAsync(int odemeId)
-        => await _ctx.Dekontlar
-            .Include(d => d.YukleyenUser)
-            .Where(d => d.KiraOdemeId == odemeId)
-            .ToListAsync();
+    public Task<List<DekontListItemDto>> GetByOdemeIdAsync(int odemeId)
+        => _repo.GetByOdemeIdAsync(odemeId);
 
-    public async Task<Dekont?> GetByIdAsync(int id)
-        => await _ctx.Dekontlar
-            .Include(d => d.KiraOdeme)
-            .FirstOrDefaultAsync(d => d.Id == id);
+    public Task<DekontDetayDto?> GetByIdAsync(int id)
+        => _repo.GetDetayAsync(id);
 
     public async Task SilAsync(int id)
     {
-        var dekont = await _ctx.Dekontlar.FindAsync(id);
-        if (dekont == null) return;
+        var dosyaYolu = await _repo.GetByIdAsync<string?>(id, d => d.DosyaYolu);
+        if (dosyaYolu == null) return;
 
-        var tamYol = GetTamYol(dekont);
+        var tamYol = GetTamYol(dosyaYolu);
         if (File.Exists(tamYol))
             File.Delete(tamYol);
 
-        _ctx.Dekontlar.Remove(dekont);
-        await _ctx.SaveChangesAsync();
+        await _repo.DeleteAsync(id, hardDelete: true);
+        await _uow.SaveChangesAsync();
     }
 }

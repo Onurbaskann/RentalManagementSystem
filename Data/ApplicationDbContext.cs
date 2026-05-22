@@ -1,9 +1,8 @@
-using System.Linq.Expressions;
-using System.Security.Claims;
 using KiraTakip.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
+using System.Security.Claims;
 
 namespace KiraTakip.Data;
 

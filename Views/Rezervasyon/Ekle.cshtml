@@ -28,10 +28,10 @@
                     @foreach (var b in Model.RezervasyonBirimleri)
                     {
                         <option value="@b.Id"
-                            data-tasinmaz="@b.Tasinmaz.Ad"
-                            data-tur="@(b.BirimTuru?.Ad ?? "")">
-                            @b.Tasinmaz.Ad — @b.Ad
-                            @if (b.BirimTuru != null) { <text>(@b.BirimTuru.Ad)</text> }
+                            data-tasinmaz="@b.TasinmazAd"
+                            data-tur="@b.BirimTuruAd">
+                            @b.TasinmazAd — @b.Ad
+                            @if (!string.IsNullOrEmpty(b.BirimTuruAd)) { <text>(@b.BirimTuruAd)</text> }
                         </option>
                     }
                 </select>
@@ -47,6 +47,7 @@
                         {
                             <option value="@k.Id">@k.GosterimAdi</option>
                         }
+
                     </select>
                     <span asp-validation-for="KiraciId" class="form-error"></span>
                 </div>
@@ -154,7 +155,7 @@ function rezervasyonForm() {
         sozlesmeler: [
             @foreach (var s in Model.Sozlesmeler)
             {
-                <text>{ id: @s.Id, kiraciId: @s.KiraciId, label: '@s.Birim.Tasinmaz.Ad / @s.Birim.Ad (@s.BaslangicTarihi.ToString("dd.MM.yyyy"))' },</text>
+                <text>{ id: @s.Id, kiraciId: @s.KiraciId, label: '@s.TasinmazAd / @s.BirimAd (@s.BaslangicTarihi.ToString("dd.MM.yyyy"))' },</text>
             }
         ],
         _timer: null,

@@ -58,87 +58,10 @@ public class TasinmazController : Controller
         var t = await _tasinmazService.GetByIdAsync(id);
         if (t == null) return NotFound();
 
-        var birimler = new List<BirimDetayViewModel>();
-        foreach (var b in t.Birimler)
-        {
-            var aktifSozlesme = _istatistik.GetAktifSozlesme(b);
-            birimler.Add(new BirimDetayViewModel
-            {
-                Birim = b,
-                Durum = _istatistik.GetBirimDurumu(b),
-                AktifSozlesme = aktifSozlesme,
-                AylikBedel = aktifSozlesme != null ? await _istatistik.AylikBedelAsync(aktifSozlesme) : 0m
-            });
-        }
-
-        var rezBirimIds = birimler
-            .Where(b => b.Birim.BirimTuru?.RezervasyonYapilabilirMi == true)
-            .Select(b => b.Birim.Id)
-            .ToList();
-
-        if (rezBirimIds.Count > 0)
-        {
-            var ozelKurallar = await _ctx.RezervasyonTarifeler
-                .Where(r => r.BirimId != null && rezBirimIds.Contains(r.BirimId.Value))
-                .ToListAsync();
-
-            foreach (var b in birimler.Where(b => b.Birim.BirimTuru?.RezervasyonYapilabilirMi == true))
-                b.RezKural = ozelKurallar.FirstOrDefault(r => r.BirimId == b.Birim.Id);
-        }
-
-        var tumBirimIds = birimler.Select(b => b.Birim.Id).ToList();
-
-        var birimOzelFiyatlari = new List<BirimOzelFiyatOzeti>();
-        if (tumBirimIds.Count > 0)
-        {
-            var birimRateler = await _ctx.BirimTarifeler
-                .Include(r => r.KiraciKategori)
-                .Include(r => r.BorcTipi)
-                .Where(r => tumBirimIds.Contains(r.BirimId))
-                .OrderBy(r => r.KiraciKategori.Sira)
-                .ThenBy(r => r.BorcTipi.Sira)
-                .ToListAsync();
-
-            birimOzelFiyatlari = birimler
-                .Where(b => b.Birim.BirimTuru?.KiralanabilirMi == true)
-                .Select(b => new BirimOzelFiyatOzeti
-                {
-                    Birim = b.Birim,
-                    Rateler = birimRateler.Where(r => r.BirimId == b.Birim.Id).ToList()
-                })
-                .Where(b => b.Rateler.Any())
-                .ToList();
-        }
-
-        var rezervasyonlar = await _ctx.Rezervasyonlari
-            .Include(r => r.Birim)
-            .Include(r => r.Kiraci)
-            .Where(r => tumBirimIds.Contains(r.BirimId))
-            .OrderByDescending(r => r.BaslangicTarihi)
-            .ToListAsync();
-
-        var birimRezKurallari = rezBirimIds.Count > 0
-            ? await _ctx.RezervasyonTarifeler
-                .Where(r => r.BirimId != null && rezBirimIds.Contains(r.BirimId.Value))
-                .ToListAsync()
-            : new List<RezervasyonTarife>();
-
-        var sozlesmeBedelleri = new Dictionary<int, decimal>();
-        foreach (var s in t.Birimler.SelectMany(b => b.Sozlesmeler))
-        {
-            if (!sozlesmeBedelleri.ContainsKey(s.Id))
-                sozlesmeBedelleri[s.Id] = await _istatistik.AylikBedelAsync(s);
-        }
-
         var vm = new TasinmazDetayViewModel
         {
             Tasinmaz = t,
-            Birimler = birimler,
-            FiyatMatrisi = await _tasinmazFiyatService.GetMatrisiAsync(id, pageSize: 100),
-            Rezervasyonlar = rezervasyonlar,
-            BirimRezervasyonKurallari = birimRezKurallari,
-            BirimOzelFiyatlari = birimOzelFiyatlari,
-            SozlesmeAylikBedelleri = sozlesmeBedelleri
+            FiyatMatrisi = await _tasinmazFiyatService.GetMatrisiAsync(id, pageSize: 100)
         };
         return View(vm);
     }
@@ -152,7 +75,8 @@ public class TasinmazController : Controller
         ViewBag.TasinmazTipleri = tipler;
         ViewBag.TasinmazTipiKiralamaSekilleri = tipler.ToDictionary(
             t => t.Id,
-            t => {
+            t =>
+            {
                 var list = new List<int>();
                 if (t.TekParcaDestekli) list.Add((int)KiralamaSekli.TekParca);
                 if (t.BirimBazliDestekli) list.Add((int)KiralamaSekli.BirimBazli);

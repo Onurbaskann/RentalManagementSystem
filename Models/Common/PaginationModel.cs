@@ -5,8 +5,8 @@ public class PaginationModel
     public int Page { get; set; }
     public int Size { get; set; } = 25;
     public int Total { get; set; }
-    public string BasePath { get; set; } = "";
-    public Dictionary<string, string?> Extra { get; set; } = new();
+    public string BasePath { get; set; } = string.Empty;
+    public Dictionary<string, string?> Extra { get; set; } = [];
 
     public int TotalPages => Size > 0 ? Math.Max(1, (int)Math.Ceiling(Total / (double)Size)) : 1;
     public bool HasPrev => Page > 1;

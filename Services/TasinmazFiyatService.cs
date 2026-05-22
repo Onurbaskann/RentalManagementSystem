@@ -1,163 +1,143 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
-using KiraTakip.Models.Entities;
+using KiraTakip.Repositories.Interfaces;
 
-namespace KiraTakip.Services
+namespace KiraTakip.Services;
+
+public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
 {
-    public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
+    private readonly ITasinmazTarifeRepository _tarifeRepo;
+    private readonly ITasinmazRepository _tasinmazRepo;
+    private readonly IUnitOfWork _uow;
+
+    public TasinmazFiyatService(
+        ITasinmazTarifeRepository tarifeRepo,
+        ITasinmazRepository tasinmazRepo,
+        IUnitOfWork uow)
     {
-        private readonly ApplicationDbContext _ctx;
-        public TasinmazFiyatService(ApplicationDbContext ctx)
+        _tarifeRepo = tarifeRepo;
+        _tasinmazRepo = tasinmazRepo;
+        _uow = uow;
+    }
+
+    public async Task<TasinmazFiyatMatrisiViewModel> GetMatrisiAsync(int tasinmazId, int page = 1, int pageSize = 10)
+    {
+        Tasinmaz? tasinmaz = null;
+        if (tasinmazId > 0)
         {
-            _ctx = ctx;
+            tasinmaz = await _tasinmazRepo.GetByIdAsync(tasinmazId);
+            if (tasinmaz == null) throw new ArgumentException("Taşınmaz bulunamadı");
         }
 
-        public async Task<TasinmazFiyatMatrisiViewModel> GetMatrisiAsync(int tasinmazId, int page = 1, int pageSize = 10)
+        var kiraciKategorileri = await _tarifeRepo.GetKiraciKategorileriAsync();
+        var borcTipleri = await _tarifeRepo.GetBorcTipleriMatrisIcinAsync();
+        var mevcutFiyatlar = await _tarifeRepo.GetByTasinmazIdAsync(tasinmazId);
+
+        var vm = new TasinmazFiyatMatrisiViewModel
         {
-            Tasinmaz? tasinmaz = null;
-            if (tasinmazId > 0)
+            TasinmazId = tasinmazId,
+            TasinmazAd = tasinmaz?.Ad ?? "Yeni Taşınmaz",
+            Kolonlar = borcTipleri.Select(b => new BorcTipiFiyatKolonuViewModel
             {
-                tasinmaz = await _ctx.Tasinmazlar.FirstOrDefaultAsync(t => t.Id == tasinmazId);
-                if (tasinmaz == null) throw new ArgumentException("Taşınmaz bulunamadı");
-            }
+                BorcTipiId = b.Id,
+                BorcTipiAd = b.Ad,
+                BorcTipiKod = b.Kod,
+                BorcTipiDavranisi = b.Davranis
+            }).ToList()
+        };
 
-            // Aktif Kiracı Kategorileri (tümünü alıyoruz, pagination sonrası dilimleyeceğiz)
-            var kiraciKategorileri = await _ctx.Kategoriler
-                .Where(k => k.Tipi == KategoriTipi.Kiraci)
-                .OrderBy(k => k.Ad)
-                .ToListAsync();
-
-            var borcTipleri = await _ctx.BorcTipleri
-                .Where(b => b.Davranis != BorcTipiDavranisi.KullaniciManuel && b.Davranis != BorcTipiDavranisi.RezervasyonOzel)
-                .OrderBy(b => b.Sira)
-                .ToListAsync();
-
-            // Mevcut fiyat kayıtları
-            var mevcutFiyatlar = await _ctx.TasinmazTarifeler
-                .Where(f => f.TasinmazId == tasinmazId)
-                .ToListAsync();
-
-            // Sütunları doldur
-            var vm = new TasinmazFiyatMatrisiViewModel
+        var satirList = new List<KiraciKategoriFiyatSatiriViewModel>();
+        foreach (var kk in kiraciKategorileri)
+        {
+            var satir = new KiraciKategoriFiyatSatiriViewModel
             {
-                TasinmazId = tasinmazId,
-                TasinmazAd = tasinmaz?.Ad ?? "Yeni Taşınmaz",
-                Kolonlar = borcTipleri.Select(b => new BorcTipiFiyatKolonuViewModel
-                {
-                    BorcTipiId = b.Id,
-                    BorcTipiAd = b.Ad,
-                    BorcTipiKod = b.Kod,
-                    BorcTipiDavranisi = b.Davranis
-                }).ToList()
+                KiraciKategoriId = kk.Id,
+                KiraciKategoriAd = kk.Ad,
+                Hucreler = new List<TasinmazFiyatHucreViewModel>()
             };
-
-            // Satırları (Kiracı Kategorileri) oluştur
-            var satirList = new List<KiraciKategoriFiyatSatiriViewModel>();
-            foreach (var kk in kiraciKategorileri)
+            foreach (var bt in borcTipleri)
             {
-                var satir = new KiraciKategoriFiyatSatiriViewModel
+                var fiyat = mevcutFiyatlar.FirstOrDefault(f => f.KiraciKategoriId == kk.Id && f.BorcTipiId == bt.Id);
+                if (fiyat != null)
                 {
-                    KiraciKategoriId = kk.Id,
-                    KiraciKategoriAd = kk.Ad,
-                    Hucreler = new List<TasinmazFiyatHucreViewModel>()
-                };
-                foreach (var bt in borcTipleri)
-                {
-                    var fiyat = mevcutFiyatlar.FirstOrDefault(f => f.KiraciKategoriId == kk.Id && f.BorcTipiId == bt.Id);
-                    if (fiyat != null)
+                    satir.Hucreler.Add(new TasinmazFiyatHucreViewModel
                     {
-                        satir.Hucreler.Add(new TasinmazFiyatHucreViewModel
-                        {
-                            TasinmazTarifeId = fiyat.Id,
-                            TasinmazId = tasinmazId,
-                            KiraciKategoriId = kk.Id,
-                            BorcTipiId = bt.Id,
-                            BirimDeger = fiyat.BirimDeger,
-                            HesaplamaYontemi = fiyat.HesaplamaYontemi,
-                            KdvOrani = fiyat.KdvOrani,
-                            Aktif = fiyat.Aktif,
-                            Aciklama = fiyat.Aciklama,
-                            RateVarMi = true
-                        });
-                    }
-                    else
-                    {
-                        satir.Hucreler.Add(new TasinmazFiyatHucreViewModel
-                        {
-                            TasinmazTarifeId = null,
-                            TasinmazId = tasinmazId,
-                            KiraciKategoriId = kk.Id,
-                            BorcTipiId = bt.Id,
-                            BirimDeger = 0m,
-                            HesaplamaYontemi = HesaplamaYontemi.Sabit,
-                            KdvOrani = bt.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik ? 0m : 20m,
-                            Aktif = true,
-                            Aciklama = null,
-                            RateVarMi = false
-                        });
-                    }
+                        TasinmazTarifeId = fiyat.Id,
+                        TasinmazId = tasinmazId,
+                        KiraciKategoriId = kk.Id,
+                        BorcTipiId = bt.Id,
+                        BirimDeger = fiyat.BirimDeger,
+                        HesaplamaYontemi = fiyat.HesaplamaYontemi,
+                        KdvOrani = fiyat.KdvOrani,
+                        Aktif = fiyat.Aktif,
+                        Aciklama = fiyat.Aciklama,
+                        RateVarMi = true
+                    });
                 }
-                satirList.Add(satir);
+                else
+                {
+                    satir.Hucreler.Add(new TasinmazFiyatHucreViewModel
+                    {
+                        TasinmazTarifeId = null,
+                        TasinmazId = tasinmazId,
+                        KiraciKategoriId = kk.Id,
+                        BorcTipiId = bt.Id,
+                        BirimDeger = 0m,
+                        HesaplamaYontemi = HesaplamaYontemi.Sabit,
+                        KdvOrani = bt.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik ? 0m : 20m,
+                        Aktif = true,
+                        Aciklama = null,
+                        RateVarMi = false
+                    });
+                }
             }
-
-            // Pagination on KiraciKategori rows
-            var totalRows = satirList.Count;
-            var skip = (page - 1) * pageSize;
-            vm.TotalRows = totalRows;
-            vm.Satirlar = satirList.Skip(skip).Take(pageSize).ToList();
-
-            // Store pagination data in ViewBag later in controller
-            return vm;
+            satirList.Add(satir);
         }
 
-        public async Task SaveMatrisiAsync(int tasinmazId, TasinmazFiyatMatrisiViewModel model, string userId)
+        var totalRows = satirList.Count;
+        var skip = (page - 1) * pageSize;
+        vm.TotalRows = totalRows;
+        vm.Satirlar = satirList.Skip(skip).Take(pageSize).ToList();
+
+        return vm;
+    }
+
+    public async Task SaveMatrisiAsync(int tasinmazId, TasinmazFiyatMatrisiViewModel model, string userId)
+    {
+        foreach (var satir in model.Satirlar)
         {
-            // Transactional upsert
-            using var transaction = await _ctx.Database.BeginTransactionAsync();
-            foreach (var satir in model.Satirlar)
+            foreach (var hucre in satir.Hucreler)
             {
-                foreach (var hucre in satir.Hucreler)
+                if (hucre.TasinmazTarifeId.HasValue)
                 {
-                    if (hucre.TasinmazTarifeId.HasValue)
+                    var entity = await _tarifeRepo.GetByIdAsync(hucre.TasinmazTarifeId.Value);
+                    if (entity != null)
                     {
-                        // Update existing record
-                        var entity = await _ctx.TasinmazTarifeler
-                            .FirstOrDefaultAsync(f => f.Id == hucre.TasinmazTarifeId.Value);
-                        if (entity != null)
-                        {
-                            entity.BirimDeger = hucre.BirimDeger;
-                            entity.HesaplamaYontemi = hucre.HesaplamaYontemi;
-                            entity.KdvOrani = hucre.KdvOrani;
-                            entity.Aktif = hucre.Aktif;
-                            entity.Aciklama = hucre.Aciklama;
-                        }
-                    }
-                    else
-                    {
-                        // Insert new record only if user entered a value (or wants to create empty record)
-                        var newEntity = new TasinmazTarife
-                        {
-                            TasinmazId = tasinmazId,
-                            KiraciKategoriId = hucre.KiraciKategoriId,
-                            BorcTipiId = hucre.BorcTipiId,
-                            BirimDeger = hucre.BirimDeger,
-                            HesaplamaYontemi = hucre.HesaplamaYontemi,
-                            KdvOrani = hucre.KdvOrani,
-                            Aktif = hucre.Aktif,
-                            Aciklama = hucre.Aciklama
-                        };
-                        await _ctx.TasinmazTarifeler.AddAsync(newEntity);
+                        entity.BirimDeger = hucre.BirimDeger;
+                        entity.HesaplamaYontemi = hucre.HesaplamaYontemi;
+                        entity.KdvOrani = hucre.KdvOrani;
+                        entity.Aktif = hucre.Aktif;
+                        entity.Aciklama = hucre.Aciklama;
                     }
                 }
+                else
+                {
+                    var newEntity = new TasinmazTarife
+                    {
+                        TasinmazId = tasinmazId,
+                        KiraciKategoriId = hucre.KiraciKategoriId,
+                        BorcTipiId = hucre.BorcTipiId,
+                        BirimDeger = hucre.BirimDeger,
+                        HesaplamaYontemi = hucre.HesaplamaYontemi,
+                        KdvOrani = hucre.KdvOrani,
+                        Aktif = hucre.Aktif,
+                        Aciklama = hucre.Aciklama
+                    };
+                    await _tarifeRepo.AddAsync(newEntity);
+                }
             }
-            await _ctx.SaveChangesAsync();
-            await transaction.CommitAsync();
         }
+        await _uow.SaveChangesAsync();
     }
 }

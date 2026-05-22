@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using KiraTakip.Models.ViewModels;
 
 namespace KiraTakip.Services.Interfaces

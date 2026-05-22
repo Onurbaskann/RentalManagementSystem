@@ -65,7 +65,7 @@ public class TahakkukController : Controller
     [Authorize(Policy = PermissionCatalog.Odeme.View)]
     public async Task<IActionResult> Detay(int id)
     {
-        var tahakkuk = await _tahakkukService.GetByIdAsync(id);
+        var tahakkuk = await _tahakkukService.GetDetayAsync(id);
         if (tahakkuk == null) return NotFound();
 
         if (User.IsInRole(RoleNames.Goruntuleyici))
@@ -75,11 +75,10 @@ public class TahakkukController : Controller
                 .Where(u => u.UserId == userId)
                 .Select(u => u.TasinmazId)
                 .ToListAsync();
-            if (!yetkiliIds.Contains(tahakkuk.KiraSozlesmesi.Birim.TasinmazId))
+            if (tahakkuk.TasinmazId == null || !yetkiliIds.Contains(tahakkuk.TasinmazId.Value))
                 return Forbid();
         }
 
         return View(tahakkuk);
     }
-
 }

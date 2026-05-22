@@ -1,4 +1,4 @@
-@model List<Kiraci>
+@model List<KiraTakip.Models.Dtos.KiraciListItemDto>
 @using KiraTakip.Models
 @using KiraTakip.Services.Interfaces
 @inject IIstatistikService Istatistik
@@ -67,9 +67,9 @@
                             { <span class="badge badge-bireysel">Gerçek</span> }
                         </td>
                         <td>
-                            @if (k.KiraciKategori != null)
+                            @if (!string.IsNullOrEmpty(k.KiraciKategoriAd))
                             {
-                                <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[11px] font-medium border border-slate-200">@k.KiraciKategori.Ad</span>
+                                <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[11px] font-medium border border-slate-200">@k.KiraciKategoriAd</span>
                             }
                             else
                             {

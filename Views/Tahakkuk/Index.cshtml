@@ -1,4 +1,4 @@
-@model KiraTakip.Models.Common.PagedResult<KiraTahakkuk>
+@model KiraTakip.Models.Common.PagedResult<TahakkukListItemDto>
 @using KiraTakip.Models
 @using KiraTakip.Models.Common
 @{
@@ -184,10 +184,10 @@
                                 @t.DonemBaslangic.ToString("MMMM yyyy")
                             </div>
                         </td>
-                        <td class="font-medium text-slate-700">@(t.KiraSozlesmesi?.Kiraci?.GosterimAdi ?? "Toplantı Salonu Rez.")</td>
+                        <td class="font-medium text-slate-700">@(t.KiraciGosterimAdi ?? "Toplantı Salonu Rez.")</td>
                         <td>
-                            <div class="font-medium text-slate-700 text-xs">@(t.KiraSozlesmesi?.Birim?.Tasinmaz?.Ad ?? "Toplantı Salonu")</div>
-                            <div class="text-[10px] text-muted">@(t.KiraSozlesmesi?.Birim?.Ad ?? "Ortak Alan")</div>
+                            <div class="font-medium text-slate-700 text-xs">@(t.TasinmazAd ?? "Toplantı Salonu")</div>
+                            <div class="text-[10px] text-muted">@(t.BirimAd ?? "Ortak Alan")</div>
                         </td>
                         <td class="text-center text-xs text-slate-600">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
                         <td class="text-right font-bold text-slate-600">@t.ToplamTutar.ToString("N2") ₺</td>
@@ -225,7 +225,7 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    @foreach (var k in t.Kalemler.OrderBy(k => k.BorcTipi.Sira))
+                                                    @foreach (var k in t.Kalemler.OrderBy(k => k.BorcTipiSira))
                                                     {
                                                         string kaynakCls = k.KaynakTipi switch {
                                                             KalemKaynakTipi.TanimsizTarife    => "badge-bos",
@@ -248,7 +248,7 @@
                                                             _                                 => "Bilinmiyor"
                                                         };
                                                         <tr class="border-t border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
-                                                            <td class="p-2 px-3 font-mono font-bold text-slate-500">@k.BorcTipi.Kod</td>
+                                                            <td class="p-2 px-3 font-mono font-bold text-slate-500">@k.BorcTipiKod</td>
                                                             <td class="p-2 px-3 text-slate-600">@k.Aciklama</td>
                                                             <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺</td>
                                                             <td class="p-2 px-3 text-right text-slate-400 font-medium">@k.Carpan.ToString("F2") @(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m²" : "Adet")</td>

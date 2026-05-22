@@ -1,6 +1,5 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
-using KiraTakip.Models.Entities;
 using KiraTakip.Models.Settings;
 using KiraTakip.Repositories;
 using KiraTakip.Repositories.Interfaces;
@@ -57,7 +56,7 @@ builder.Services.AddControllersWithViews(options =>
     options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
 });
 builder.Services.AddScoped<IdentitySeedService>();
-builder.Services.AddScoped<UserTasinmazYetkiService>();
+builder.Services.AddScoped<IUserTasinmazYetkiService, UserTasinmazYetkiService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, PermissionClaimsTransformer>();
 builder.Services.AddSingleton<IAuthorizationHandler, AdminBypassHandler>();
@@ -67,7 +66,26 @@ builder.Services.AddScoped<IKiraciService, KiraciService>();
 builder.Services.AddScoped<ISozlesmeService, SozlesmeService>();
 builder.Services.AddScoped<IIstatistikService, IstatistikService>();
 builder.Services.AddScoped<SeedDataService>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IKiraciRepository, KiraciRepository>();
+builder.Services.AddScoped<ITasinmazRepository, TasinmazRepository>();
+builder.Services.AddScoped<IBirimRepository, BirimRepository>();
+builder.Services.AddScoped<ISozlesmeRepository, SozlesmeRepository>();
 builder.Services.AddScoped<ITahakkukRepository, TahakkukRepository>();
+builder.Services.AddScoped<IOdemeRepository, OdemeRepository>();
+builder.Services.AddScoped<IBankaHareketiRepository, BankaHareketiRepository>();
+builder.Services.AddScoped<IDekontRepository, DekontRepository>();
+builder.Services.AddScoped<ITasinmazTarifeRepository, TasinmazTarifeRepository>();
+builder.Services.AddScoped<IBorcTipiRepository, BorcTipiRepository>();
+builder.Services.AddScoped<ISozlesmeTarifeRepository, SozlesmeTarifeRepository>();
+builder.Services.AddScoped<IBirimTarifeRepository, BirimTarifeRepository>();
+builder.Services.AddScoped<IGenelTarifeRepository, GenelTarifeRepository>();
+builder.Services.AddScoped<IRezervasyonTarifeRepository, RezervasyonTarifeRepository>();
+builder.Services.AddScoped<IBirimTuruRepository, BirimTuruRepository>();
+builder.Services.AddScoped<IKategoriRepository, KategoriRepository>();
+builder.Services.AddScoped<IRezervasyonRepository, RezervasyonRepository>();
+builder.Services.AddScoped<IUserTasinmazYetkiRepository, UserTasinmazYetkiRepository>();
+builder.Services.AddScoped<IUserPermissionRepository, UserPermissionRepository>();
 builder.Services.AddScoped<ITahakkukService, TahakkukService>();
 builder.Services.AddScoped<IOdemeService, OdemeService>();
 builder.Services.AddScoped<IDekontService, DekontService>();
@@ -121,7 +139,7 @@ using (var scope = app.Services.CreateScope())
     if (app.Environment.IsDevelopment())
     {
         // [ANTIGRAVITY-TRIGGER]: Veri tabanını sıfırlayıp yeni seed verileriyle temiz bir başlangıç yapmak için aşağıdaki satırı aktif edin.
-        await domainSeed.ClearDomainDataAsync();
+        // await domainSeed.ClearDomainDataAsync();
     }
     // Sistem tanımları — her ortamda idempotent çalışır
     await domainSeed.SeedEnumDegerleriAsync();

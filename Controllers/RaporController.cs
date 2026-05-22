@@ -27,14 +27,16 @@ public class RaporController : Controller
 
         int secilenYil = yil ?? DateTime.Today.Year;
         var userId = User.IsInRole(RoleNames.Goruntuleyici) ? _userManager.GetUserId(User) : null;
-        var tahakkuklar = await _tahakkukService.GetAllAsync(userId: userId);
+        var tahakkuklar = await _tahakkukService.GetListAsync(userId: userId);
 
         var trCulture = new CultureInfo("tr-TR");
 
-        var satirlar = Enumerable.Range(1, 12).Select(ay => {
+        var satirlar = Enumerable.Range(1, 12).Select(ay =>
+        {
             var ayTahakkuklar = tahakkuklar.Where(t => t.DonemBaslangic.Year == secilenYil && t.DonemBaslangic.Month == ay).ToList();
             var gecikmisler = ayTahakkuklar.Where(t => t.Durum == TahakkukDurumu.Gecikti).ToList();
-            return new AylikRaporSatir {
+            return new AylikRaporSatir
+            {
                 Ay = ay,
                 AyAdi = new DateTime(secilenYil, ay, 1).ToString("MMMM", trCulture),
                 TahakkukSayisi = ayTahakkuklar.Count,

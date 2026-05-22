@@ -3,21 +3,17 @@ namespace KiraTakip.Models.ViewModels;
 public class DashboardViewModel
 {
     public int ToplamTasinmaz { get; set; }
-    public Dictionary<string, int> TipiDagilim { get; set; } = new();
-
+    public Dictionary<string, int> TipiDagilim { get; set; } = [];
     public int ToplamBirim { get; set; }
     public int KiraliBirim { get; set; }
     public int BosBirim { get; set; }
     public int SuresiDolmakUzereBirim { get; set; }
-
     public int AktifSozlesme { get; set; }
     public int BuAyYenilenecek { get; set; }
-
     public decimal AylikToplamGelir { get; set; }
     public decimal YillikProj { get; set; }
-
-    public List<SuresiDolmakUzereSozlesme> SuresiDolmakUzere { get; set; } = new();
-    public List<BosBirimOzet> BosBirimler { get; set; } = new();
+    public List<SuresiDolmakUzereSozlesme> SuresiDolmakUzere { get; set; } = [];
+    public List<BosBirimOzet> BosBirimler { get; set; } = [];
 
     // Ödeme KPI'ları
     public bool HasOdemeAccess { get; set; }

@@ -28,9 +28,9 @@
                     @foreach (var s in Model.AktifSozlesmeler)
                     {
                         <option value="@s.Id"
-                            data-kiraci="@s.Kiraci.GosterimAdi"
-                            data-birim="@(s.Birim.Tasinmaz.Ad) — @s.Birim.Ad">
-                            @s.Kiraci.GosterimAdi — @s.Birim.Tasinmaz.Ad / @s.Birim.Ad
+                            data-kiraci="@s.KiraciGosterimAdi"
+                            data-birim="@(s.TasinmazAd) — @s.BirimAd">
+                            @s.KiraciGosterimAdi — @s.TasinmazAd / @s.BirimAd
                         </option>
                     }
                 </select>

@@ -1,11 +1,9 @@
+using KiraTakip.Authorization;
+using KiraTakip.Models.ViewModels;
+using KiraTakip.Repositories.Interfaces;
+using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using KiraTakip.Authorization;
-using KiraTakip.Data;
-using KiraTakip.Models;
-using KiraTakip.Models.ViewModels;
-using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Controllers;
 
@@ -14,12 +12,12 @@ namespace KiraTakip.Controllers;
 public class AdminRezervasyonTarifeKuralController : Controller
 {
     private readonly IRezervasyonService _service;
-    private readonly ApplicationDbContext _ctx;
+    private readonly IBirimRepository _birimRepo;
 
-    public AdminRezervasyonTarifeKuralController(IRezervasyonService service, ApplicationDbContext ctx)
+    public AdminRezervasyonTarifeKuralController(IRezervasyonService service, IBirimRepository birimRepo)
     {
         _service = service;
-        _ctx = ctx;
+        _birimRepo = birimRepo;
     }
 
     [HttpGet("")]
@@ -120,11 +118,6 @@ public class AdminRezervasyonTarifeKuralController : Controller
 
     private async Task PopulateDropdownsAsync(RezervasyonTarifeKuralViewModel vm)
     {
-        vm.RezervasyonBirimleri = await _ctx.Birimler
-            .Include(b => b.BirimTuru)
-            .Include(b => b.Tasinmaz)
-            .Where(b => b.BirimTuru != null && b.BirimTuru.RezervasyonYapilabilirMi)
-            .OrderBy(b => b.Tasinmaz.Ad).ThenBy(b => b.Ad)
-            .ToListAsync();
+        vm.RezervasyonBirimleri = await _birimRepo.GetRezervasyonBirimleriAsync();
     }
 }

@@ -1,11 +1,7 @@
-@model KiraTahakkuk
+@model TahakkukDetayDto
 @using KiraTakip.Models
 @{
     ViewData["Title"] = $"Tahakkuk #{Model.Id}";
-    var s = Model.KiraSozlesmesi;
-    var kiraci = s?.Kiraci;
-    var birim = s?.Birim;
-    var tasinmaz = birim?.Tasinmaz;
 
     var kalan = Model.ToplamTutar - Model.OdenenTutar;
 
@@ -42,9 +38,9 @@
 <div class="flex items-center justify-between mb-5">
     <a href="/Tahakkuk" class="text-[12.5px] text-muted no-underline hover:text-primary transition-colors">← Tahakkuklar</a>
     <div class="flex gap-2">
-        @if (s != null)
+        @if (Model.KiraSozlesmesiId != null)
         {
-            <a href="/Sozlesme/Detay/@s.Id" class="btn btn-sm btn-secondary">Sözleşme Detayı</a>
+            <a href="/Sozlesme/Detay/@Model.KiraSozlesmesiId" class="btn btn-sm btn-secondary">Sözleşme Detayı</a>
         }
         @if (canCreate && !iptal && !tamOdendi)
         {
@@ -84,28 +80,28 @@
     <div class="mt-4 pt-3.5 border-t border-[var(--color-border)] flex gap-8 flex-wrap text-[13px]">
         <div>
             <span class="text-muted">Kiracı: </span>
-            @if (kiraci != null) {
-                <a href="/Kiraci/Detay/@kiraci.Id" class="font-semibold no-underline hover:underline">@kiraci.GosterimAdi</a>
+            @if (Model.KiraciId != null) {
+                <a href="/Kiraci/Detay/@Model.KiraciId" class="font-semibold no-underline hover:underline">@Model.KiraciGosterimAdi</a>
             } else {
                 <span class="font-semibold">Rezervasyon Sahibi</span>
             }
         </div>
         <div>
             <span class="text-muted">Taşınmaz: </span>
-            @if (tasinmaz != null) {
-                <a href="/Tasinmaz/Detay/@tasinmaz.Id" class="font-semibold no-underline hover:underline">@tasinmaz.Ad</a>
+            @if (Model.TasinmazId != null) {
+                <a href="/Tasinmaz/Detay/@Model.TasinmazId" class="font-semibold no-underline hover:underline">@Model.TasinmazAd</a>
             } else {
                 <span class="font-semibold">Toplantı Salonu</span>
             }
         </div>
         <div>
             <span class="text-muted">Birim: </span>
-            <span class="font-semibold">@(birim?.Ad ?? "Rezervasyon")</span>
+            <span class="font-semibold">@(Model.BirimAd ?? "Rezervasyon")</span>
         </div>
-        @if (s != null) {
+        @if (Model.KiraSozlesmesiId != null) {
             <div>
                 <span class="text-muted">Sözleşme: </span>
-                <a href="/Sozlesme/Detay/@s.Id" class="font-semibold no-underline hover:underline">#@s.Id</a>
+                <a href="/Sozlesme/Detay/@Model.KiraSozlesmesiId" class="font-semibold no-underline hover:underline">#@Model.KiraSozlesmesiId</a>
             </div>
         }
     </div>
@@ -136,7 +132,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var k in Model.Kalemler.OrderBy(k => k.BorcTipi.Sira))
+                    @foreach (var k in Model.Kalemler.OrderBy(k => k.BorcTipiSira))
                     {
                         string kaynakCls = k.KaynakTipi switch {
                             KalemKaynakTipi.TanimsizTarife    => "badge-bos",
@@ -169,7 +165,7 @@
                             _                                 => ""
                         };
                         <tr>
-                            <td><span class="font-mono font-bold text-[12.5px]">@k.BorcTipi.Kod</span></td>
+                            <td><span class="font-mono font-bold text-[12.5px]">@k.BorcTipiKod</span></td>
                             <td class="font-medium">@k.Aciklama</td>
                             <td class="text-[13px] text-muted">
                                 @(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m² Bazlı" : "Sabit")

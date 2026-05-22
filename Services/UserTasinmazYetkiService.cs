@@ -1,40 +1,31 @@
 using KiraTakip.Data;
-using KiraTakip.Models;
-using Microsoft.EntityFrameworkCore;
+using KiraTakip.Repositories.Interfaces;
+using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-public class UserTasinmazYetkiService
+public class UserTasinmazYetkiService : IUserTasinmazYetkiService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IUserTasinmazYetkiRepository _repo;
+    private readonly IUnitOfWork _uow;
 
-    public UserTasinmazYetkiService(ApplicationDbContext context)
+    public UserTasinmazYetkiService(IUserTasinmazYetkiRepository repo, IUnitOfWork uow)
     {
-        _context = context;
+        _repo = repo;
+        _uow = uow;
     }
 
     public async Task<List<int>> GetYetkiliTasinmazIdsAsync(string userId)
-    {
-        return await _context.UserTasinmazYetkileri
-            .Where(y => y.UserId == userId)
-            .Select(y => y.TasinmazId)
-            .ToListAsync();
-    }
+        => await _repo.GetYetkiliTasinmazIdsAsync(userId);
 
     public async Task<bool> CanViewTasinmazAsync(string userId, int tasinmazId)
-    {
-        return await _context.UserTasinmazYetkileri
-            .AnyAsync(y => y.UserId == userId && y.TasinmazId == tasinmazId);
-    }
+        => await _repo.CanViewTasinmazAsync(userId, tasinmazId);
 
     public async Task SetUserTasinmazYetkileriAsync(string userId, List<int> tasinmazIds, string atayanUserId)
     {
-        var existing = await _context.UserTasinmazYetkileri
-            .Where(y => y.UserId == userId)
-            .ToListAsync();
-
-        _context.UserTasinmazYetkileri.RemoveRange(existing);
-        await _context.SaveChangesAsync();
+        var existing = await _repo.GetForUserAsync(userId);
+        await _repo.RemoveRangeAsync(existing);
+        await _uow.SaveChangesAsync();
 
         if (tasinmazIds != null && tasinmazIds.Any())
         {
@@ -45,8 +36,8 @@ public class UserTasinmazYetkiService
                 AtanmaTarihi = DateTime.Now,
                 AtayanUserId = atayanUserId
             });
-            await _context.UserTasinmazYetkileri.AddRangeAsync(newRecords);
-            await _context.SaveChangesAsync();
+            await _repo.AddRangeAsync(newRecords);
+            await _uow.SaveChangesAsync();
         }
     }
 }

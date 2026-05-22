@@ -1,15 +1,14 @@
 namespace KiraTakip.Models.ViewModels
 {
     using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
     using KiraTakip.Models;
 
     public class TasinmazFiyatMatrisiViewModel
     {
         public int TasinmazId { get; set; }
         public string TasinmazAd { get; set; } = string.Empty;
-        public List<KiraciKategoriFiyatSatiriViewModel> Satirlar { get; set; } = new();
-        public List<BorcTipiFiyatKolonuViewModel> Kolonlar { get; set; } = new();
+        public List<KiraciKategoriFiyatSatiriViewModel> Satirlar { get; set; } = [];
+        public List<BorcTipiFiyatKolonuViewModel> Kolonlar { get; set; } = [];
         // Toplam satır sayısı (tüm kiracı kategorileri) – sayfalama için kullanılır
         public int TotalRows { get; set; }
     }
@@ -18,7 +17,7 @@ using System.ComponentModel.DataAnnotations;
     {
         public int KiraciKategoriId { get; set; }
         public string KiraciKategoriAd { get; set; } = string.Empty;
-        public List<TasinmazFiyatHucreViewModel> Hucreler { get; set; } = new();
+        public List<TasinmazFiyatHucreViewModel> Hucreler { get; set; } = [];
     }
 
     public class BorcTipiFiyatKolonuViewModel

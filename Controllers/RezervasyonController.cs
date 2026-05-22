@@ -1,12 +1,10 @@
 using KiraTakip.Authorization;
-using KiraTakip.Data;
-using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
@@ -14,14 +12,22 @@ namespace KiraTakip.Controllers;
 public class RezervasyonController : Controller
 {
     private readonly IRezervasyonService _service;
-    private readonly ApplicationDbContext _ctx;
+    private readonly IBirimRepository _birimRepo;
+    private readonly IKiraciRepository _kiraciRepo;
+    private readonly ISozlesmeRepository _sozlesmeRepo;
     private readonly UserManager<ApplicationUser> _userManager;
 
-    public RezervasyonController(IRezervasyonService service, ApplicationDbContext ctx,
+    public RezervasyonController(
+        IRezervasyonService service,
+        IBirimRepository birimRepo,
+        IKiraciRepository kiraciRepo,
+        ISozlesmeRepository sozlesmeRepo,
         UserManager<ApplicationUser> userManager)
     {
         _service = service;
-        _ctx = ctx;
+        _birimRepo = birimRepo;
+        _kiraciRepo = kiraciRepo;
+        _sozlesmeRepo = sozlesmeRepo;
         _userManager = userManager;
     }
 
@@ -133,22 +139,8 @@ public class RezervasyonController : Controller
 
     private async Task PopulateDropdownsAsync(RezervasyonCreateViewModel vm)
     {
-        vm.RezervasyonBirimleri = await _ctx.Birimler
-            .Include(b => b.BirimTuru)
-            .Include(b => b.Tasinmaz)
-            .Where(b => b.BirimTuru != null && b.BirimTuru.RezervasyonYapilabilirMi && b.BirimTuru.Aktif)
-            .OrderBy(b => b.Tasinmaz.Ad).ThenBy(b => b.Ad)
-            .ToListAsync();
-
-        vm.Kiraciler = await _ctx.Kiraciler
-            .OrderBy(k => k.Ad).ThenBy(k => k.Soyad)
-            .ToListAsync();
-
-        vm.Sozlesmeler = await _ctx.Sozlesmeler
-            .Include(s => s.Birim).ThenInclude(b => b.Tasinmaz)
-            .Include(s => s.Kiraci)
-            .Where(s => s.Durum == SozlesmeDurumu.Aktif)
-            .OrderBy(s => s.Kiraci.Ad)
-            .ToListAsync();
+        vm.RezervasyonBirimleri = await _birimRepo.GetRezervasyonBirimleriAsync();
+        vm.Kiraciler = await _kiraciRepo.GetListAsync(null);
+        vm.Sozlesmeler = await _sozlesmeRepo.GetListAsync("aktif", null);
     }
 }

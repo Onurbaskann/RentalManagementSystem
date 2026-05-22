@@ -1,12 +1,9 @@
 using KiraTakip.Authorization;
-using KiraTakip.Data;
-using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
@@ -14,14 +11,11 @@ namespace KiraTakip.Controllers;
 public class ManuelBorcController : Controller
 {
     private readonly IManuelBorcService _service;
-    private readonly ApplicationDbContext _ctx;
     private readonly UserManager<ApplicationUser> _userManager;
 
-    public ManuelBorcController(IManuelBorcService service, ApplicationDbContext ctx,
-        UserManager<ApplicationUser> userManager)
+    public ManuelBorcController(IManuelBorcService service, UserManager<ApplicationUser> userManager)
     {
         _service = service;
-        _ctx = ctx;
         _userManager = userManager;
     }
 
@@ -103,16 +97,7 @@ public class ManuelBorcController : Controller
 
     private async Task PopulateDropdownsAsync(ManuelBorcCreateViewModel vm)
     {
-        vm.AktifSozlesmeler = await _ctx.Sozlesmeler
-            .Include(s => s.Birim).ThenInclude(b => b.Tasinmaz)
-            .Include(s => s.Kiraci)
-            .Where(s => s.Durum == SozlesmeDurumu.Aktif)
-            .OrderBy(s => s.Kiraci.Ad)
-            .ToListAsync();
-
-        vm.BorcTipleri = await _ctx.BorcTipleri
-            .Where(b => b.Aktif && b.Davranis == BorcTipiDavranisi.KullaniciManuel)
-            .OrderBy(b => b.Sira)
-            .ToListAsync();
+        vm.AktifSozlesmeler = await _service.GetAktifSozlesmelerAsync();
+        vm.BorcTipleri = await _service.GetManuelBorcTipleriAsync();
     }
 }

@@ -48,47 +48,41 @@ public class HomeController : Controller
         var filterUserId = User.IsInRole(RoleNames.Goruntuleyici) ? userId : null;
 
         var tasinmazlar = await _tasinmazService.GetAllAsync(filterUserId);
-        var tumBirimler = tasinmazlar.SelectMany(t => t.Birimler).ToList();
         var sozlesmeler = await _sozlesmeService.GetAllAsync(userId: filterUserId);
         var bosBirimler = await _tasinmazService.GetBosBirimlerAsync(filterUserId);
 
-        var aktifSozlesmeler = sozlesmeler.Where(_istatistik.Aktif).ToList();
+        var aktifSozlesmeler = sozlesmeler.Where(s => s.Aktif).ToList();
         decimal aylikToplamGelir = 0m;
         foreach (var s in aktifSozlesmeler)
-            aylikToplamGelir += await _istatistik.AylikBedelAsync(s);
+            aylikToplamGelir += s.AylikBedel;
 
         var vm = new DashboardViewModel
         {
             ToplamTasinmaz = tasinmazlar.Count,
-            TipiDagilim = tasinmazlar.GroupBy(t => t.TasinmazTipi?.Ad ?? "Diğer").ToDictionary(g => g.Key, g => g.Count()),
-            ToplamBirim = tumBirimler.Count,
+            TipiDagilim = tasinmazlar.GroupBy(t => string.IsNullOrEmpty(t.TasinmazTipiAd) ? "Diğer" : t.TasinmazTipiAd).ToDictionary(g => g.Key, g => g.Count()),
+            ToplamBirim = tasinmazlar.Sum(t => t.BirimSayisi),
+            KiraliBirim = tasinmazlar.Sum(t => t.KiraliBirimSayisi),
+            BosBirim = tasinmazlar.Sum(t => t.BosBirimSayisi),
+            SuresiDolmakUzereBirim = tasinmazlar.Sum(t => t.SuresiDolmakUzereBirimSayisi),
             AktifSozlesme = aktifSozlesmeler.Count,
             AylikToplamGelir = aylikToplamGelir,
             YillikProj = aylikToplamGelir * 12,
         };
 
-        foreach (var birim in tumBirimler)
-        {
-            var durum = _istatistik.GetBirimDurumu(birim);
-            if (durum == KiraDurumu.Kirali) vm.KiraliBirim++;
-            else if (durum == KiraDurumu.SuresiDolmakUzere) vm.SuresiDolmakUzereBirim++;
-            else vm.BosBirim++;
-        }
-
         vm.BuAyYenilenecek = sozlesmeler
-            .Count(s => _istatistik.Aktif(s) && s.BitisTarihi.Year == now.Year && s.BitisTarihi.Month == now.Month);
+            .Count(s => s.Aktif && s.BitisTarihi.Year == now.Year && s.BitisTarihi.Month == now.Month);
 
         vm.SuresiDolmakUzere = sozlesmeler
-            .Where(s => _istatistik.Aktif(s) && _istatistik.KalanGun(s) <= 60)
+            .Where(s => s.Aktif && s.KalanGun <= 60)
             .OrderBy(s => s.BitisTarihi)
             .Take(5)
             .Select(s => new SuresiDolmakUzereSozlesme
             {
                 SozlesmeId = s.Id,
-                KiraciAdi = s.Kiraci.GosterimAdi,
-                TasinmazAdi = s.Birim.Tasinmaz.Ad,
-                BirimAdi = s.Birim.Ad,
-                KalanGun = _istatistik.KalanGun(s),
+                KiraciAdi = s.KiraciGosterimAdi,
+                TasinmazAdi = s.TasinmazAd,
+                BirimAdi = s.BirimAd,
+                KalanGun = s.KalanGun,
                 BitisTarihi = s.BitisTarihi
             }).ToList();
 
@@ -97,9 +91,9 @@ public class HomeController : Controller
             .Select(b => new BosBirimOzet
             {
                 BirimId = b.Id,
-                TasinmazAdi = b.Tasinmaz.Ad,
+                TasinmazAdi = b.TasinmazAd,
                 BirimAdi = b.Ad,
-                Ilce = b.Tasinmaz.Ilce,
+                Ilce = b.Ilce,
                 Yuzolcumu = b.Yuzolcumu
             }).ToList();
 
@@ -107,13 +101,13 @@ public class HomeController : Controller
         {
             vm.HasOdemeAccess = true;
             await _tahakkukService.GecikmeleriGuncelleAsync();
-            var tahakkuklar = await _tahakkukService.GetAllAsync(userId: filterUserId);
+            var tahakkuklar = await _tahakkukService.GetListAsync(userId: filterUserId);
             var buAyTahakkuklar = tahakkuklar.Where(t => t.DonemBaslangic.Year == now.Year && t.DonemBaslangic.Month == now.Month).ToList();
 
             vm.BuAyBeklenenTahsilat = buAyTahakkuklar.Sum(t => t.ToplamTutar);
-            vm.BuAyTahsilEdilen     = buAyTahakkuklar.Sum(t => t.OdenenTutar);
+            vm.BuAyTahsilEdilen = buAyTahakkuklar.Sum(t => t.OdenenTutar);
             vm.GecikmisTahakkukAdet = tahakkuklar.Count(t => t.Durum == TahakkukDurumu.Gecikti);
-            vm.GecikmisTutarToplam  = tahakkuklar.Where(t => t.Durum == TahakkukDurumu.Gecikti).Sum(t => t.ToplamTutar - t.OdenenTutar);
+            vm.GecikmisTutarToplam = tahakkuklar.Where(t => t.Durum == TahakkukDurumu.Gecikti).Sum(t => t.ToplamTutar - t.OdenenTutar);
 
             var odemeler = await _odemeService.GetAllAsync(userId: filterUserId);
             vm.OnayBekleyenOdemeAdet = odemeler.Count(o => o.Durum == OdemeDurumu.OnayBekliyor);
