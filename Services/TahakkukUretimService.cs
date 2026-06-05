@@ -72,7 +72,7 @@ public class TahakkukUretimService : ITahakkukUretimService
                 KiraSozlesmesiId = sozlesmeId,
                 DonemBaslangic = donemIlkGunu,
                 DonemBitis = donemBitis,
-                VadeTarihi = donemIlkGunu,
+                VadeTarihi = HesaplaVadeTarihi(donemIlkGunu, sozlesme.VadeKuraliTipi, sozlesme.VadeGunu),
                 BeklenenTutar = kalemler.Sum(k => k.Tutar),
                 KdvTutari = kalemler.Sum(k => k.KdvTutari),
                 ToplamTutar = kalemler.Sum(k => k.ToplamTutar),
@@ -98,6 +98,36 @@ public class TahakkukUretimService : ITahakkukUretimService
         await UretSozlesmeIcinAsync(sozlesmeId);
     }
 
+    public async Task BekleyenVadeleriYenidenHesaplaAsync(int sozlesmeId)
+    {
+        var sozlesme = await _sozlesmeRepo.GetByIdAsync(sozlesmeId);
+        if (sozlesme == null) return;
+
+        var hedefDurumlar = new[] { TahakkukDurumu.Bekleniyor, TahakkukDurumu.KismenOdendi, TahakkukDurumu.Gecikti };
+        var bekleyenler = await _tahakkukRepo.GetAllAsync(t =>
+            t.KiraSozlesmesiId == sozlesmeId
+            && t.KaynakTipi == TahakkukKaynakTipi.Sozlesme
+            && hedefDurumlar.Contains(t.Durum));
+
+        if (bekleyenler.Count == 0) return;
+
+        var bugun = DateTime.Today;
+        foreach (var t in bekleyenler)
+        {
+            t.VadeTarihi = HesaplaVadeTarihi(t.DonemBaslangic, sozlesme.VadeKuraliTipi, sozlesme.VadeGunu);
+
+            t.Durum = t.OdenenTutar >= t.ToplamTutar
+                ? TahakkukDurumu.TamOdendi
+                : t.OdenenTutar > 0
+                    ? TahakkukDurumu.KismenOdendi
+                    : bugun > t.VadeTarihi
+                        ? TahakkukDurumu.Gecikti
+                        : TahakkukDurumu.Bekleniyor;
+        }
+
+        await _uow.SaveChangesAsync();
+    }
+
     public async Task IptalEtFutureTahakkuklarAsync(int sozlesmeId, DateTime fesihTarihi)
     {
         var ilkGun = new DateTime(fesihTarihi.Year, fesihTarihi.Month, 1).AddMonths(1);
@@ -112,6 +142,19 @@ public class TahakkukUretimService : ITahakkukUretimService
 
         if (iptalEdilecekler.Count > 0)
             await _uow.SaveChangesAsync();
+    }
+
+    private static DateTime HesaplaVadeTarihi(DateTime donemIlkGunu, VadeKuraliTipi tip, int vadeGunu)
+    {
+        return tip switch
+        {
+            VadeKuraliTipi.SabitAyGunu =>
+                new DateTime(donemIlkGunu.Year, donemIlkGunu.Month,
+                    Math.Min(Math.Max(vadeGunu, 1), DateTime.DaysInMonth(donemIlkGunu.Year, donemIlkGunu.Month))),
+            VadeKuraliTipi.DonemBasiOfset =>
+                donemIlkGunu.AddDays(Math.Max(vadeGunu - 1, 0)),
+            _ => donemIlkGunu
+        };
     }
 
     private static decimal HesaplaProRataKatsayi(DateTime donemIlkGunu, DateTime sozlesmeBaslangic, DateTime sozlesmeBitis)

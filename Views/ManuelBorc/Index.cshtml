@@ -40,12 +40,12 @@
                 <tr>
                     <th>Kiracı</th>
                     <th>Taşınmaz / Birim</th>
-                    <th class="w-24 text-center">Tip</th>
+                    <th class="w-24 cell-center">Tip</th>
                     <th>Açıklama</th>
-                    <th class="w-28 text-right">Tutar</th>
-                    <th class="w-24 text-right text-muted">KDV</th>
-                    <th class="w-32 text-right">Toplam</th>
-                    <th class="w-28 text-center">Vade</th>
+                    <th class="w-28 num">Tutar</th>
+                    <th class="w-24 num">KDV</th>
+                    <th class="w-32 num">Toplam</th>
+                    <th class="w-28 cell-center">Vade</th>
                     <th class="w-32">Durum</th>
                     <th class="w-48 text-right"></th>
                 </tr>
@@ -70,25 +70,25 @@
                     };
                     <tr>
                         <td>
-                            <div class="font-semibold text-slate-800">@(t.KiraciGosterimAdi ?? "-")</div>
+                            <div class="font-semibold">@(t.KiraciGosterimAdi ?? "-")</div>
                         </td>
                         <td>
-                            <div class="font-medium text-slate-700">@(t.TasinmazAd ?? "-")</div>
-                            <div class="text-[11px] text-muted">@(t.BirimAd ?? "-")</div>
+                            <div>@(t.TasinmazAd ?? "-")</div>
+                            <span class="cell-sub">@(t.BirimAd ?? "-")</span>
                         </td>
-                        <td class="text-center">
+                        <td class="cell-center">
                             @if (!string.IsNullOrEmpty(t.BorcTipiKod))
                             {
                                 <span class="font-mono text-[11px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">@t.BorcTipiKod</span>
                             }
                         </td>
-                        <td class="text-xs text-muted max-w-[200px] truncate">@(t.IlkKalemAciklama ?? "-")</td>
-                        <td class="text-right text-xs text-slate-600">@t.BeklenenTutar.ToString("N2") ₺</td>
-                        <td class="text-right text-[11px] text-muted/60">@t.KdvTutari.ToString("N2") ₺</td>
-                        <td class="text-right font-bold text-slate-700">@t.ToplamTutar.ToString("N2") ₺</td>
-                        <td class="text-center text-xs">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="text-muted max-w-[200px] truncate">@(t.IlkKalemAciklama ?? "-")</td>
+                        <td class="num">@t.BeklenenTutar.ToString("N2") ₺</td>
+                        <td class="num num-muted">@t.KdvTutari.ToString("N2") ₺</td>
+                        <td class="num">@t.ToplamTutar.ToString("N2") ₺</td>
+                        <td class="cell-center">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
                         <td>
-                            <span class="badge @durumCls text-[10px] font-bold">@durumLabel.ToUpper()</span>
+                            <span class="badge @durumCls">@durumLabel</span>
                             @if (!string.IsNullOrEmpty(t.IptalNotu))
                             {
                                 <div class="text-[10px] text-muted mt-1 italic truncate max-w-[100px]" title="@t.IptalNotu">⤵ @t.IptalNotu</div>
@@ -96,14 +96,14 @@
                         </td>
                         <td class="text-right">
                             <div class="flex gap-1.5 justify-end items-center">
-                                <a href="/Tahakkuk/Detay/@t.Id" class="btn btn-sm btn-secondary py-1 px-2.5 text-[11px]">Detay</a>
+                                <a href="/Tahakkuk/Detay/@t.Id" class="btn btn-sm btn-secondary">Detay</a>
                                 @if (t.Durum != TahakkukDurumu.IptalEdildi && t.Durum != TahakkukDurumu.TamOdendi)
                                 {
-                                    <a href="/Odeme/Ekle?tahakkukId=@t.Id" class="btn btn-sm btn-primary py-1 px-2.5 text-[11px]">Ödeme</a>
+                                    <a href="/Odeme/Ekle?tahakkukId=@t.Id" class="btn btn-sm btn-primary">Ödeme</a>
                                 }
                                 @if (canCancel && t.Durum != TahakkukDurumu.IptalEdildi && t.Durum != TahakkukDurumu.TamOdendi)
                                 {
-                                    <button type="button" class="btn btn-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white py-1 px-2.5 text-[11px]"
+                                    <button type="button" class="btn btn-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white"
                                         data-confirm="Bu manuel borcu iptal etmek istediğinize emin misiniz?"
                                         data-confirm-title="Manuel Borç İptali"
                                         data-confirm-action="/ManuelBorc/Iptal/@t.Id"

@@ -74,7 +74,7 @@ public class SeedDataService
         await _ctx.BorcTipleri.Where(b => b.Kod == "ETKINLIK").ExecuteUpdateAsync(s => s.SetProperty(b => b.Davranis, BorcTipiDavranisi.RezervasyonOzel));
     }
 
-    public async Task EnsureVarsayilanRezervasyonGenelTarifeAsync()
+    public async Task EnsureVarsayilanRezervasyonTarifeAsync()
     {
         var cariYil = DateTime.Now.Year;
         var varsayilanUcret = 500m;
@@ -395,19 +395,26 @@ public class SeedDataService
         var sozlesmeler = new List<KiraSozlesmesi>
         {
             // Ofis 101: Matris/Birim üzerinden bedel alacak, aşağıda Sözleşme Tarifesi ile ezilecek
-            MakeSozlesme(birim101, yzCozum, startYearMinus1, startYearMinus1.AddYears(2), true),
+            MakeSozlesme(birim101, yzCozum, startYearMinus1, startYearMinus1.AddYears(2), true,
+                vadeKuraliTipi: VadeKuraliTipi.SabitAyGunu, vadeGunu: 5),
 
             // Diğerleri tamamen hiyerarşiyi (Birim -> Matris -> Genel) takip edecek
-            MakeSozlesme(birim201, ahmet, startYearMinus1.AddMonths(3), startYearMinus1.AddMonths(24), false),
-            MakeSozlesme(birim301, biyoLab, startYearMinus1.AddMonths(6), startYearMinus1.AddMonths(18), true),
-            MakeSozlesme(birim401, veriBilisim, startYearMinus1.AddMonths(1), startYearMinus1.AddMonths(13), true),
+            MakeSozlesme(birim201, ahmet, startYearMinus1.AddMonths(3), startYearMinus1.AddMonths(24), false,
+                vadeKuraliTipi: VadeKuraliTipi.SabitAyGunu, vadeGunu: 10),
+            MakeSozlesme(birim301, biyoLab, startYearMinus1.AddMonths(6), startYearMinus1.AddMonths(18), true,
+                vadeKuraliTipi: VadeKuraliTipi.SabitAyGunu, vadeGunu: 15),
+            MakeSozlesme(birim401, veriBilisim, startYearMinus1.AddMonths(1), startYearMinus1.AddMonths(13), true,
+                vadeKuraliTipi: VadeKuraliTipi.DonemBasiOfset, vadeGunu: 7),
 
             // Süresi dolan/dolmak üzere olanlar
-            MakeSozlesme(birim102, ayse, startYearMinus1.AddMonths(2), now.AddDays(15), false),
-            MakeSozlesme(birim302, yzCozum, startYearMinus1.AddMonths(0), now.AddDays(-5), true),
+            MakeSozlesme(birim102, ayse, startYearMinus1.AddMonths(2), now.AddDays(15), false,
+                vadeKuraliTipi: VadeKuraliTipi.SabitAyGunu, vadeGunu: 18),
+            MakeSozlesme(birim302, yzCozum, startYearMinus1.AddMonths(0), now.AddDays(-5), true,
+                vadeKuraliTipi: VadeKuraliTipi.SabitAyGunu, vadeGunu: 25),
 
             // Test Kiracısı (Onur Başkan)
-            MakeSozlesme(birim402, onurBaskan, now.AddMonths(-3), now.AddMonths(9), true)
+            MakeSozlesme(birim402, onurBaskan, now.AddMonths(-3), now.AddMonths(9), true,
+                vadeKuraliTipi: VadeKuraliTipi.SabitAyGunu, vadeGunu: 5)
         };
 
         foreach (var s in sozlesmeler)
@@ -867,7 +874,9 @@ public class SeedDataService
 
     private static KiraSozlesmesi MakeSozlesme(Birim birim, Kiraci kiraci,
         DateTime baslangic, DateTime bitis,
-        bool kdv, decimal kdvOrani = 20, string? notlar = null) => new()
+        bool kdv, decimal kdvOrani = 20, string? notlar = null,
+        VadeKuraliTipi vadeKuraliTipi = VadeKuraliTipi.SabitAyGunu,
+        int vadeGunu = 1) => new()
         {
             Birim = birim,
             BirimId = birim.Id,
@@ -877,7 +886,9 @@ public class SeedDataService
             BitisTarihi = bitis,
             Notlar = notlar,
             Durum = SozlesmeDurumu.Aktif,
-            KdvUygulanacakMi = kdv
+            KdvUygulanacakMi = kdv,
+            VadeKuraliTipi = vadeKuraliTipi,
+            VadeGunu = vadeGunu
         };
 
     public async Task ClearDomainDataAsync()

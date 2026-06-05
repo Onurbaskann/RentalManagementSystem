@@ -19,12 +19,12 @@
     </div>
 }
 
-<div class="page-header flex items-center justify-between">
+<div class="page-header flex flex-wrap items-center justify-between gap-3">
     <div>
         <div class="page-title">Sözleşmeler</div>
         <div class="page-subtitle">@Model.Count kayıt listeleniyor</div>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 flex-wrap">
         @{
             int borcluSayisi = ViewBag.BorcluSayisi ?? 0;
         }
@@ -82,10 +82,10 @@
                     <th class="w-16">#</th>
                     <th>Kiracı</th>
                     <th>Taşınmaz / Birim</th>
-                    <th class="w-28 text-center">Başlangıç</th>
-                    <th class="w-28 text-center">Bitiş</th>
-                    <th class="w-32 text-right">Aylık Bedel</th>
-                    <th class="w-24 text-center">Kalan</th>
+                    <th class="w-28 cell-center">Başlangıç</th>
+                    <th class="w-28 cell-center">Bitiş</th>
+                    <th class="w-32 num">Aylık Bedel</th>
+                    <th class="w-24 cell-center">Kalan</th>
                     <th class="w-24">Durum</th>
                     <th class="w-24"></th>
                 </tr>
@@ -105,21 +105,21 @@
                         <td>
                             <div class="flex items-center gap-1.5">
                                 <a href="/Kiraci/Detay/@s.KiraciId" class="font-semibold text-primary hover:underline">@s.KiraciGosterimAdi</a>
-                                @if (s.KiraciTuru == KiraciTuru.Tuzel) { <span class="badge badge-kurumsal text-[10px] px-1 py-0">T</span> }
+                                @if (s.KiraciTuru == KiraciTuru.Tuzel) { <span class="badge badge-kurumsal">T</span> }
                             </div>
                             @if (!string.IsNullOrEmpty(s.KiraciKategoriAd))
                             {
-                                <div class="text-[11px] text-muted font-medium mt-0.5">@s.KiraciKategoriAd</div>
+                                <div class="cell-sub">@s.KiraciKategoriAd</div>
                             }
                         </td>
                         <td>
-                            <a href="/Tasinmaz/Detay/@s.TasinmazId" class="font-medium text-slate-700 hover:text-primary transition-colors">@s.TasinmazAd</a>
-                            <div class="text-[11px] text-muted">@s.BirimAd</div>
+                            <a href="/Tasinmaz/Detay/@s.TasinmazId" class="font-medium hover:text-primary transition-colors">@s.TasinmazAd</a>
+                            <span class="cell-sub">@s.BirimAd</span>
                         </td>
-                        <td class="text-center text-xs text-slate-600">@s.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
-                        <td class="text-center text-xs text-slate-600 font-medium">@s.BitisTarihi.ToString("dd.MM.yyyy")</td>
-                        <td class="text-right font-bold text-slate-700">@s.AylikBedel.ToString("N2") ₺</td>
-                        <td class="text-center">
+                        <td class="cell-center">@s.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="cell-center">@s.BitisTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="num">@s.AylikBedel.ToString("N2") ₺</td>
+                        <td class="cell-center">
                             @if (feshedildi)
                             { <span class="text-muted text-[11px] italic">Feshedildi</span> }
                             else if (aktif)

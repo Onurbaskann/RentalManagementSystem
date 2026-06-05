@@ -26,7 +26,7 @@
     string gunMesaj = feshedildi ? "Sözleşme feshedildi." : Model.KalanGun <= 0 ? "Sözleşme sona erdi." : Model.KalanGun <= 30 ? "Süresi dolmak üzere!" : "Sözleşme aktif.";
 
     string TLFormat(decimal v) => v.ToString("N2") + " ₺";
-    bool canEdit = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Sozlesme.Extend) || User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Sozlesme.Terminate);
+    bool canEdit = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Sozlesme.Extend) || User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Sozlesme.Terminate) || User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Sozlesme.Edit);
     bool canRegenerate = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Tahakkuk.Regenerate);
 
     decimal aylikBedel = Model.AylikBedel;
@@ -56,6 +56,9 @@
     showUzat: false,
     showFesih: false,
     showYenidenUret: false,
+    showVade: false,
+    vadeKuraliTipi: @((int)s.VadeKuraliTipi),
+    vadeGunu: @s.VadeGunu,
     tufeEnabled: false,
     birimYuzolcumu: @s.BirimYuzolcumu.ToString(System.Globalization.CultureInfo.InvariantCulture),
     sozlesmeBirimId: @s.BirimId,
@@ -110,9 +113,9 @@
 }">
 
 <!-- Breadcrumb + Butonlar -->
-<div class="flex items-center justify-between mb-5">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
     <a href="/Sozlesme" class="text-[12.5px] text-muted no-underline">← Sözleşmeler</a>
-    <div class="flex gap-2.5">
+    <div class="flex flex-wrap gap-2.5">
         @if (canRegenerate && !feshedildi)
         {
             <button class="btn btn-secondary" type="button" @@click="showYenidenUret = true">
@@ -136,7 +139,7 @@
 
 <!-- Ana Kart -->
 <div class="card mb-4">
-    <div class="grid grid-cols-2 gap-6 items-start">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
         <!-- Sol: Kiracı -->
         <div>
             <div class="text-[11.5px] font-semibold text-muted uppercase tracking-wider mb-2.5">Kiracı</div>
@@ -195,7 +198,7 @@
 </div>
 
 <!-- 3 Kolonlu Özet -->
-<div class="grid grid-cols-3 gap-4 mb-4">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
     <!-- Kira Bedeli -->
     <div class="card">
         <div class="card-title">Kira Bedeli</div>
@@ -239,6 +242,25 @@
         </div>
         <div class="mt-2.5 text-xs text-muted">
             Toplam @((int)(s.BitisTarihi - s.BaslangicTarihi).TotalDays) gün
+        </div>
+        <div class="mt-3 pt-3 border-t border-[var(--color-border)] flex items-center justify-between">
+            <div>
+                <div class="text-[11.5px] text-muted">Vade Kuralı</div>
+                <div class="text-[13px] font-semibold mt-0.5">
+                    @if (s.VadeKuraliTipi == VadeKuraliTipi.SabitAyGunu)
+                    {
+                        <span>Her ayın @s.VadeGunu</span><span>'i</span>
+                    }
+                    else
+                    {
+                        <span>Dönem başı + @(s.VadeGunu - 1) gün</span>
+                    }
+                </div>
+            </div>
+            @if (canEdit && !feshedildi)
+            {
+                <button class="btn btn-sm btn-secondary" type="button" @@click="showVade = true">Düzenle</button>
+            }
         </div>
     </div>
 
@@ -338,7 +360,7 @@
     <!-- Tab 1: Detaylar -->
     <div class="tab-content">
         <div class="card">
-            <div class="grid grid-cols-2 gap-0">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-0">
                 @{
                     void Row(string label, string value) {
                         <div class="px-4 py-3 border-b border-[var(--color-border)]">
@@ -383,7 +405,7 @@
     <!-- Tab 2: Birim Bilgisi -->
     <div class="tab-content">
         <div class="card">
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <div class="detail-label mb-3">Birim</div>
                     <div class="flex flex-col gap-2.5">
@@ -561,7 +583,7 @@
             decimal toplamOdenen   = Model.Tahakkuklar.Sum(t => t.OdenenTutar);
             decimal toplamKalan    = toplamBeklenen - toplamOdenen;
             int gecikmisSayisi     = Model.Tahakkuklar.Count(t => t.Durum == KiraTakip.Models.TahakkukDurumu.Gecikti);
-            <div class="grid grid-cols-3 gap-3 mb-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                 <div class="card text-center">
                     <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Toplam Beklenen</div>
                     <div class="text-xl font-bold">@toplamBeklenen.ToString("N0") ₺</div>
@@ -587,8 +609,8 @@
                             <tr>
                                 <th>Dönem</th>
                                 <th>Vade</th>
-                                <th>Beklenen</th>
-                                <th>Ödenen</th>
+                                <th class="num">Beklenen</th>
+                                <th class="num">Ödenen</th>
                                 <th>Durum</th>
                                 <th></th>
                             </tr>
@@ -609,14 +631,14 @@
                                     _                                              => "Bekleniyor"
                                 };
                                 <tr @@click="open[@t.Id] = !open[@t.Id]" class="cursor-pointer">
-                                    <td class="font-semibold">
+                                    <td>
                                         <svg x-show="open[@t.Id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="mr-1 inline-block align-middle"><polyline points="18 15 12 9 6 15"/></svg>
                                         <svg x-show="!open[@t.Id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="mr-1 inline-block align-middle"><polyline points="6 9 12 15 18 9"/></svg>
                                         @t.DonemBaslangic.ToString("MMMM yyyy")
                                     </td>
-                                    <td class="text-[13px]">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
-                                    <td class="font-semibold">@t.ToplamTutar.ToString("N0") ₺</td>
-                                    <td class="text-[#065f46]">@t.OdenenTutar.ToString("N0") ₺</td>
+                                    <td>@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
+                                    <td class="num">@t.ToplamTutar.ToString("N0") ₺</td>
+                                    <td class="num num-positive">@t.OdenenTutar.ToString("N0") ₺</td>
                                     <td><span class="badge @tDurumCls">@tDurumLabel</span></td>
                                     <td @@click.stop="">
                                         <a href="/Odeme?tahakkukId=@t.Id" class="btn btn-sm btn-secondary">Ödemeler</a>
@@ -951,6 +973,55 @@
             <div class="flex gap-2.5 mt-1">
                 <button type="submit" class="btn btn-primary">Yeniden Üret</button>
                 <button type="button" class="btn btn-secondary" @@click="showYenidenUret = false">İptal</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: Vade Kuralını Güncelle -->
+<div x-show="showVade" x-cloak
+    class="fixed inset-0 bg-black/45 z-[1000] flex items-center justify-center p-5"
+    @@click.self="showVade = false">
+    <div class="bg-white rounded-2xl w-full max-w-[480px] p-7">
+        <div class="flex justify-between items-center mb-5">
+            <div class="text-lg font-bold">Vade Kuralını Güncelle</div>
+            <button @@click="showVade = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
+        </div>
+
+        <div class="bg-[#fffbeb] border border-[#fde68a] rounded-lg px-3.5 py-2.5 mb-4.5 text-[13px] text-[#92400e]">
+            Vade değişikliği <strong>Bekleniyor / KısmenÖdendi / Gecikti</strong> durumundaki tahakkukların vadelerini günceller. Tam ödenmiş veya iptal edilmiş tahakkuklara dokunulmaz.
+        </div>
+
+        <form method="post" action="/Sozlesme/VadeGuncelle/@s.Id">
+            @Html.AntiForgeryToken()
+
+            <div class="form-group">
+                <label class="form-label">Vade Kuralı *</label>
+                <select name="vadeKuraliTipi" class="form-control" x-model.number="vadeKuraliTipi">
+                    <option value="1">Sabit Ay Günü (ayın N'i)</option>
+                    <option value="2">Dönem Başı + N Gün</option>
+                </select>
+                <div class="text-[11px] text-muted mt-1.5">
+                    <span x-show="vadeKuraliTipi == 1">Her ay vade tarihi seçilen güne denk gelir. 31 gün olmayan aylarda son güne çekilir.</span>
+                    <span x-show="vadeKuraliTipi == 2">Vade her dönemin başlangıcından N gün sonradır (N=1 ⇒ dönem başı).</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Vade Günü *</label>
+                <input type="number" name="vadeGunu" min="1" max="31" class="form-control"
+                       x-model.number="vadeGunu" required />
+                <div class="text-red-500 text-xs mt-1.5 font-medium" x-show="vadeGunu < 1 || vadeGunu > 31" x-cloak>1-31 arasında bir değer girin.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Açıklama</label>
+                <textarea name="aciklama" class="form-control" rows="2" placeholder="Opsiyonel açıklama"></textarea>
+            </div>
+
+            <div class="flex gap-2.5 mt-1">
+                <button type="submit" class="btn btn-primary" :disabled="vadeGunu < 1 || vadeGunu > 31">Güncelle</button>
+                <button type="button" class="btn btn-secondary" @@click="showVade = false">İptal</button>
             </div>
         </form>
     </div>

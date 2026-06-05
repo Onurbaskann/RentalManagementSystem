@@ -11,6 +11,8 @@ public class KiraSozlesmesi : BaseEntity
     public DateTime? FesihTarihi { get; set; }
     public string? FesihNedeni { get; set; }
     public bool KdvUygulanacakMi { get; set; }
+    public VadeKuraliTipi VadeKuraliTipi { get; set; } = VadeKuraliTipi.SabitAyGunu;
+    public int VadeGunu { get; set; } = 1;
 
     public Birim Birim { get; set; } = null!;
     public Kiraci Kiraci { get; set; } = null!;

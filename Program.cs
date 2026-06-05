@@ -149,7 +149,7 @@ using (var scope = app.Services.CreateScope())
     await domainSeed.SeedKiraciKategorileriAsync();
     await domainSeed.SeedSektorlerAsync();
     await domainSeed.SeedTarifelerAsync(); // Tarife.Yil oluşur
-    await domainSeed.EnsureVarsayilanRezervasyonGenelTarifeAsync();
+    await domainSeed.EnsureVarsayilanRezervasyonTarifeAsync();
 
     if (app.Environment.IsDevelopment())
     {

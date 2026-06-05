@@ -71,8 +71,8 @@
                     <th class="w-28">Tarih</th>
                     <th>Açıklama</th>
                     <th class="w-48">Karşı Taraf</th>
-                    <th class="w-32 text-right">Tutar</th>
-                    <th class="w-24 text-center">Banka</th>
+                    <th class="w-32 num">Tutar</th>
+                    <th class="w-24 cell-center">Banka</th>
                     <th class="w-32">Durum</th>
                     @if (canMatch) { <th class="w-24"></th> }
                 </tr>
@@ -91,18 +91,18 @@
                         _                                 => "Bekliyor"
                     };
                     <tr>
-                        <td class="text-xs text-slate-600">@b.HareketTarihi.ToString("dd.MM.yyyy")</td>
-                        <td class="text-xs text-slate-700 max-w-[300px] truncate" title="@b.Aciklama">@b.Aciklama</td>
-                        <td class="text-[11px] text-muted truncate max-w-[150px]">@(b.KarsiUnvan ?? b.KarsiHesap ?? "—")</td>
-                        <td class="text-right font-bold text-slate-700">@b.Tutar.ToString("N2") ₺</td>
-                        <td class="text-center text-[11px] font-bold text-slate-500">@b.BankaKodu</td>
-                        <td><span class="badge @eslesmeCls text-[10px] font-bold">@eslesmeLabel.ToUpper()</span></td>
+                        <td>@b.HareketTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="max-w-[300px] truncate" title="@b.Aciklama">@b.Aciklama</td>
+                        <td class="text-muted truncate max-w-[150px]">@(b.KarsiUnvan ?? b.KarsiHesap ?? "—")</td>
+                        <td class="num">@b.Tutar.ToString("N2") ₺</td>
+                        <td class="cell-center">@b.BankaKodu</td>
+                        <td><span class="badge @eslesmeCls">@eslesmeLabel</span></td>
                         @if (canMatch)
                         {
                             <td class="text-right">
                                 @if (b.EslesmeDurumu == BankaEslesmeDurumu.Eslestirilmedi)
                                 {
-                                    <a href="/BankaHareketi/EslestirSec/@b.Id" class="btn btn-sm btn-primary py-1 px-2.5 text-[11px]">Eşleştir</a>
+                                    <a href="/BankaHareketi/EslestirSec/@b.Id" class="btn btn-sm btn-primary">Eşleştir</a>
                                 }
                             </td>
                         }

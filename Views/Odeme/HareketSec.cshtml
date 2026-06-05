@@ -5,41 +5,41 @@
     var o = Model.Odeme;
 }
 
-<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+<div class="page-header flex items-center justify-between">
     <div>
-        <a href="/Odeme/Detay/@o.Id" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">← Ödeme #@o.Id</a>
+        <a href="/Odeme/Detay/@o.Id" class="text-xs text-muted no-underline inline-flex items-center gap-1 mb-2">← Ödeme #@o.Id</a>
         <div class="page-title">Banka Hareketi Eşleştir</div>
         <div class="page-subtitle">Bu ödemeye karşılık gelen banka hareketini seçin</div>
     </div>
 </div>
 
 <!-- Ödeme bilgileri -->
-<div class="card" style="margin-bottom:20px;">
-    <div class="section-title" style="margin-bottom:12px;">Ödeme</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;">
+<div class="card mb-5">
+    <div class="section-title mb-3">Ödeme</div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: 0.875rem;">
         <div>
-            <div style="font-size:11.5px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:3px;">Kiracı</div>
-            <div style="font-weight:600;">@o.KiraciGosterimAdi</div>
+            <div class="detail-label">Kiracı</div>
+            <div class="font-semibold">@o.KiraciGosterimAdi</div>
         </div>
         <div>
-            <div style="font-size:11.5px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:3px;">Dönem</div>
+            <div class="detail-label">Dönem</div>
             <div>@o.TahakkukDonemBaslangic.ToString("MMMM yyyy")</div>
         </div>
         <div>
-            <div style="font-size:11.5px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:3px;">Ödeme Tarihi</div>
-            <div style="font-weight:600;">@o.OdemeTarihi.ToString("dd.MM.yyyy")</div>
+            <div class="detail-label">Ödeme Tarihi</div>
+            <div class="font-semibold">@o.OdemeTarihi.ToString("dd.MM.yyyy")</div>
         </div>
         <div>
-            <div style="font-size:11.5px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:3px;">Tutar</div>
-            <div style="font-size:18px;font-weight:700;font-family:'Fraunces',serif;">@o.Tutar.ToString("N0") ₺</div>
+            <div class="detail-label">Tutar</div>
+            <div style="font-size: 1.125rem; font-family: 'Fraunces', Georgia, serif;" class="font-bold">@o.Tutar.ToString("N0") ₺</div>
         </div>
     </div>
 </div>
 
 <!-- Aday hareketler -->
-<div class="card" style="padding:0;overflow:hidden;">
-    <div style="padding:16px 20px;border-bottom:1px solid var(--color-border);">
-        <div class="section-title" style="margin:0;">Eşleşmemiş Banka Hareketleri (@Model.HareketAdaylari.Count)</div>
+<div class="card p-0 overflow-hidden">
+    <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--color-border);">
+        <div class="section-title m-0">Eşleşmemiş Banka Hareketleri (@Model.HareketAdaylari.Count)</div>
     </div>
     @if (Model.HareketAdaylari.Any())
     {
@@ -70,15 +70,15 @@
                             else if (tutarClose && gunFark <= 15)  { uyumLabel = "Zayıf";  uyumCls = "badge-bos";    uyumTip = $"Tutar %2 toleransta • Tarih farkı {gunFark} gün"; }
                             else                                   { uyumLabel = "Düşük";  uyumCls = "badge-gecmis"; uyumTip = $"Tutar farkı %2'den fazla veya tarih uzak ({gunFark} gün)"; }
                             sira++;
-                        <tr style="@(sira == 1 ? "background:#f0fdf4;" : "")">
-                            <td style="font-weight:600;">@b.HareketTarihi.ToString("dd.MM.yyyy")</td>
-                            <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;">@b.Aciklama</td>
-                            <td style="font-size:12.5px;color:var(--color-muted);">@(b.KarsiUnvan ?? b.KarsiHesap ?? "—")</td>
-                            <td style="font-weight:@(tutarExact ? "700" : "400");">
+                        <tr class="@(sira == 1 ? "bg-green-50" : "")">
+                            <td class="font-semibold">@b.HareketTarihi.ToString("dd.MM.yyyy")</td>
+                            <td style="max-width: 13.75rem; font-size: 0.8125rem;" class="truncate">@b.Aciklama</td>
+                            <td class="text-xs text-muted">@(b.KarsiUnvan ?? b.KarsiHesap ?? "—")</td>
+                            <td class="@(tutarExact ? "font-bold" : "font-normal")">
                                 @b.Tutar.ToString("N0") ₺
                                 @if (!tutarExact)
                                 {
-                                    <span style="font-size:11px;color:var(--color-muted);"> (fark: @Math.Abs(b.Tutar - o.Tutar).ToString("N0") ₺)</span>
+                                    <span class="text-muted-sm"> (fark: @Math.Abs(b.Tutar - o.Tutar).ToString("N0") ₺)</span>
                                 }
                             </td>
                             <td><span class="badge @uyumCls" data-tip="@uyumTip">@uyumLabel</span></td>
@@ -99,7 +99,7 @@
     }
     else
     {
-        <div style="padding:32px;text-align:center;color:var(--color-muted);font-size:13.5px;">
+        <div class="p-8 text-center text-muted text-sm">
             Eşleştirilmemiş banka hareketi bulunamadı. CSV içe aktarın ve tekrar deneyin.
         </div>
     }

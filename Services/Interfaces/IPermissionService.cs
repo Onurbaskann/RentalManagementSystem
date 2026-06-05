@@ -1,4 +1,4 @@
-namespace KiraTakip.Services;
+namespace KiraTakip.Services.Interfaces;
 
 public interface IPermissionService
 {

@@ -127,3 +127,9 @@ public enum OdemeKaynakTipi
     BankaEslesme = 2,
     SanalPos = 3
 }
+
+public enum VadeKuraliTipi
+{
+    SabitAyGunu = 1,
+    DonemBasiOfset = 2
+}

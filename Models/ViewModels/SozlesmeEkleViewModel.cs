@@ -10,6 +10,8 @@ public class SozlesmeEkleViewModel
     public int KiraciId { get; set; }
     public DateTime BaslangicTarihi { get; set; } = DateTime.Today;
     public DateTime BitisTarihi { get; set; } = DateTime.Today.AddYears(1);
+    public VadeKuraliTipi VadeKuraliTipi { get; set; } = VadeKuraliTipi.SabitAyGunu;
+    public int VadeGunu { get; set; } = 1;
     public string? Notlar { get; set; }
     public List<BirimLookupDto> MevcutBirimler { get; set; } = [];
     public List<KiraciListItemDto> Kiraciler { get; set; } = [];

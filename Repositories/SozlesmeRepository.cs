@@ -84,6 +84,8 @@ public class SozlesmeRepository : BaseRepository<KiraSozlesmesi>, ISozlesmeRepos
                 FesihTarihi = s.FesihTarihi,
                 FesihNedeni = s.FesihNedeni,
                 KdvUygulanacakMi = s.KdvUygulanacakMi,
+                VadeKuraliTipi = s.VadeKuraliTipi,
+                VadeGunu = s.VadeGunu,
                 IslemGecmisi = s.IslemGecmisi
                     .OrderByDescending(ig => ig.IslemTarihi)
                     .Select(ig => new SozlesmeIslemGecmisiDto

@@ -29,6 +29,8 @@ public class SozlesmeDetayDto
     public DateTime? FesihTarihi { get; set; }
     public string? FesihNedeni { get; set; }
     public bool KdvUygulanacakMi { get; set; }
+    public VadeKuraliTipi VadeKuraliTipi { get; set; }
+    public int VadeGunu { get; set; }
     public List<SozlesmeIslemGecmisiDto> IslemGecmisi { get; set; } = [];
     public List<SozlesmeTarifeDto> SozlesmeTarifeler { get; set; } = [];
 }

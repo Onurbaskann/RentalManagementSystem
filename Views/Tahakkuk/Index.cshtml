@@ -137,11 +137,11 @@
                 <tr>
                     <th class="w-36">Dönem</th>
                     <th>Kiracı</th>
-                    <th>Taşınmaz</th>
-                    <th class="w-28 text-center">Vade</th>
-                    <th class="w-32 text-right">Beklenen</th>
-                    <th class="w-32 text-right">Ödenen</th>
-                    <th class="w-32 text-right">Kalan</th>
+                    <th>Taşınmaz / Birim</th>
+                    <th class="w-28 cell-center">Vade</th>
+                    <th class="w-32 num">Beklenen</th>
+                    <th class="w-32 num">Ödenen</th>
+                    <th class="w-32 num">Kalan</th>
                     <th class="w-32">Durum</th>
                     <th class="w-28">Kaynak</th>
                     <th class="w-20"></th>
@@ -176,7 +176,7 @@
                         _                              => "Sözleşme"
                     };
                     <tr @@click="open[@t.Id] = !open[@t.Id]" class="cursor-pointer transition-colors hover:bg-slate-50">
-                        <td class="font-bold text-slate-800">
+                        <td>
                             <div class="flex items-center gap-2">
                                 <span class="text-slate-300 transition-transform duration-200" :class="open[@t.Id] ? 'rotate-180' : ''">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
@@ -184,23 +184,23 @@
                                 @t.DonemBaslangic.ToString("MMMM yyyy")
                             </div>
                         </td>
-                        <td class="font-medium text-slate-700">@(t.KiraciGosterimAdi ?? "Toplantı Salonu Rez.")</td>
+                        <td>@(t.KiraciGosterimAdi ?? "Toplantı Salonu Rez.")</td>
                         <td>
-                            <div class="font-medium text-slate-700 text-xs">@(t.TasinmazAd ?? "Toplantı Salonu")</div>
-                            <div class="text-[10px] text-muted">@(t.BirimAd ?? "Ortak Alan")</div>
+                            @(t.TasinmazAd ?? "Toplantı Salonu")
+                            <span class="cell-sub">@(t.BirimAd ?? "Ortak Alan")</span>
                         </td>
-                        <td class="text-center text-xs text-slate-600">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
-                        <td class="text-right font-bold text-slate-600">@t.ToplamTutar.ToString("N2") ₺</td>
-                        <td class="text-right font-bold text-emerald-700">@t.OdenenTutar.ToString("N2") ₺</td>
-                        <td class="text-right font-bold @(kalan > 0 ? "text-red-700" : "text-emerald-700")">@kalan.ToString("N2") ₺</td>
-                        <td><span class="badge @durumCls text-[10px] font-bold">@durumLabel.ToUpper()</span></td>
-                        <td><span class="badge @tahakkukKaynakCls text-[10px] font-bold">@tahakkukKaynakLabel.ToUpper()</span></td>
-                        <td @@click.stop="" class="text-right">
+                        <td class="cell-center">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="num">@t.ToplamTutar.ToString("N2") ₺</td>
+                        <td class="num num-positive">@t.OdenenTutar.ToString("N2") ₺</td>
+                        <td class="num @(kalan > 0 ? "num-negative" : "num-positive")">@kalan.ToString("N2") ₺</td>
+                        <td><span class="badge @durumCls">@durumLabel</span></td>
+                        <td><span class="badge @tahakkukKaynakCls">@tahakkukKaynakLabel</span></td>
+                        <td @@click.stop="" class="num">
                             <div class="flex gap-1 justify-end">
                                 <a href="/Tahakkuk/Detay/@t.Id" class="btn btn-sm btn-secondary p-1" title="Detay"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a>
                                 @if (canCreate && t.Durum != TahakkukDurumu.TamOdendi && t.Durum != TahakkukDurumu.IptalEdildi)
                                 {
-                                    <a href="/Odeme/Ekle?tahakkukId=@t.Id" class="btn btn-sm btn-primary py-1 px-2 text-[10px] font-bold">ÖDEME</a>
+                                    <a href="/Odeme/Ekle?tahakkukId=@t.Id" class="btn btn-sm btn-primary">Ödeme</a>
                                 }
                             </div>
                         </td>
@@ -209,7 +209,7 @@
                                 <td colspan="10" class="p-4 px-12">
                                     @if (t.Kalemler.Any())
                                     {
-                                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Tarihçe ve Kalem Detayları</div>
+                                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Kalem Detayları</div>
                                         <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
                                             <table class="w-full text-xs">
                                                 <thead class="bg-slate-50 border-b border-slate-200">

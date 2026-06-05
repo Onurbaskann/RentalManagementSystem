@@ -5,18 +5,18 @@
 
 @if (TempData["Success"] != null)
 {
-    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">
+    <div class="alert-success mb-4">
         ✓ @TempData["Success"]
     </div>
 }
 @if (TempData["Error"] != null)
 {
-    <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13.5px;font-weight:500;">
+    <div class="alert-danger mb-4">
         ✕ @TempData["Error"]
     </div>
 }
 
-<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+<div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Kullanıcı Yönetimi</div>
         <div class="page-subtitle">@Model.Count kayıtlı kullanıcı</div>
@@ -27,10 +27,10 @@
     </a>
 </div>
 
-<div class="card" style="padding:0;overflow:hidden;" x-data="clientTable({ pageSize: 25 })" x-init="init()">
+<div class="card p-0 overflow-hidden" x-data="clientTable({ pageSize: 25 })" x-init="init()">
     <div class="table-toolbar">
         <input type="search" class="form-control toolbar-search" placeholder="Ara: ad, e-posta, rol…" x-model.debounce.250ms="q" />
-        <span class="pagination-info" style="margin-left:auto;"><span x-text="total"></span> kayıt</span>
+        <span class="pagination-info ml-auto"><span x-text="total"></span> kayıt</span>
     </div>
     <div class="table-wrapper">
         <table>
@@ -48,8 +48,8 @@
                 {
                     var search = $"{u.AdSoyad} {u.Email} {u.Rol}".ToLower();
                     <tr data-row data-search="@search">
-                        <td style="font-weight:600;">@u.AdSoyad</td>
-                        <td style="font-size:13px;color:var(--color-muted);">@u.Email</td>
+                        <td class="font-semibold">@u.AdSoyad</td>
+                        <td class="text-sm text-muted">@u.Email</td>
                         <td>
                             @{
                                 string rolCls = u.Rol switch {
@@ -70,9 +70,9 @@
                             else
                             { <span class="badge badge-gecmis">Pasif</span> }
                         </td>
-                        <td style="display:flex;gap:6px;justify-content:flex-end;">
+                        <td class="flex gap-1.5 justify-end">
                             <a href="/Admin/Kullanicilar/Duzenle/@u.Id" class="btn btn-sm btn-secondary">Düzenle</a>
-                            <form method="post" action="/Admin/Kullanicilar/DurumDegistir/@u.Id" data-confirm="@(u.IsActive ? "Kullanıcı pasif yapılsın mı? Oturum açamaz." : "Kullanıcı aktif yapılsın mı?")" style="display:inline;">
+                            <form method="post" action="/Admin/Kullanicilar/DurumDegistir/@u.Id" data-confirm="@(u.IsActive ? "Kullanıcı pasif yapılsın mı? Oturum açamaz." : "Kullanıcı aktif yapılsın mı?")" class="inline">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-sm @(u.IsActive ? "btn-danger" : "btn-amber")">
                                     @(u.IsActive ? "Pasif Yap" : "Aktif Yap")
@@ -95,6 +95,6 @@
         </nav>
     </div>
     <div class="pagination-wrap" x-show="total === 0 && q.length > 0" x-cloak>
-        <div class="pagination-info" style="margin:auto;">Aramaya uyan kayıt yok.</div>
+        <div class="pagination-info m-auto">Aramaya uyan kayıt yok.</div>
     </div>
 </div>

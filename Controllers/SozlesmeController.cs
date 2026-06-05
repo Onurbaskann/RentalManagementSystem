@@ -194,6 +194,9 @@ public class SozlesmeController : Controller
         if (vm.BitisTarihi <= vm.BaslangicTarihi)
             ModelState.AddModelError("BitisTarihi", "Bitiş tarihi başlangıç tarihinden büyük olmalıdır.");
 
+        if (vm.VadeGunu < 1 || vm.VadeGunu > 31)
+            ModelState.AddModelError("VadeGunu", "Vade günü 1-31 arasında olmalıdır.");
+
         if (!ModelState.IsValid) return View(vm);
 
         var kiraKalemi = vm.SozlesmeKalemleri
@@ -214,6 +217,8 @@ public class SozlesmeController : Controller
             Notlar = vm.Notlar,
             Durum = SozlesmeDurumu.Aktif,
             KdvUygulanacakMi = kdvUygulanacakMi,
+            VadeKuraliTipi = vm.VadeKuraliTipi,
+            VadeGunu = vm.VadeGunu,
         };
 
         await _sozlesmeService.CreateAsync(s, kiraBedeli);
@@ -304,6 +309,32 @@ public class SozlesmeController : Controller
         await _tahakkukUretim.UretSozlesmeIcinAsync(id);
 
         TempData["Success"] = "Sözleşme süresi başarıyla uzatıldı.";
+        return RedirectToAction("Detay", new { id });
+    }
+
+    [HttpPost]
+    [Authorize(Policy = PermissionCatalog.Sozlesme.Edit)]
+    public async Task<IActionResult> VadeGuncelle(int id, VadeKuraliTipi vadeKuraliTipi, int vadeGunu, string? aciklama)
+    {
+        var s = await _sozlesmeService.GetByIdAsync(id);
+        if (s == null) return NotFound();
+
+        if (s.Durum == SozlesmeDurumu.Feshedildi)
+        {
+            TempData["Error"] = "Feshedilmiş sözleşmenin vadesi güncellenemez.";
+            return RedirectToAction("Detay", new { id });
+        }
+
+        if (vadeGunu < 1 || vadeGunu > 31)
+        {
+            TempData["Error"] = "Vade günü 1-31 arasında olmalıdır.";
+            return RedirectToAction("Detay", new { id });
+        }
+
+        await _sozlesmeService.VadeGuncelleAsync(id, vadeKuraliTipi, vadeGunu, aciklama);
+        await _tahakkukUretim.BekleyenVadeleriYenidenHesaplaAsync(id);
+
+        TempData["Success"] = "Vade kuralı güncellendi ve bekleyen tahakkuklar yenilendi.";
         return RedirectToAction("Detay", new { id });
     }
 

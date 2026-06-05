@@ -8,7 +8,7 @@
 
 <div class="page-header">
     <div>
-        <a href="/Tahakkuk" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">← Tahakkuklar</a>
+        <a href="/Tahakkuk" class="text-xs text-muted no-underline inline-flex items-center gap-1 mb-2">← Tahakkuklar</a>
         <div class="page-title">Ödeme Ekle</div>
         @if (t != null)
         {
@@ -19,23 +19,23 @@
 
 @if (t != null)
 {
-    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
-        <div class="card card-sm" style="flex:1;min-width:150px;">
+    <div class="flex gap-3 mb-5 flex-wrap">
+        <div class="card card-sm flex-1 min-w-[9.375rem]">
             <div class="card-title">Toplam Tahakkuk</div>
-            <div class="card-value" style="font-size:22px;">@t.ToplamTutar.ToString("N0") ₺</div>
+            <div class="card-value" style="font-size: 1.375rem;">@t.ToplamTutar.ToString("N0") ₺</div>
         </div>
-        <div class="card card-sm" style="flex:1;min-width:150px;">
+        <div class="card card-sm flex-1 min-w-[9.375rem]">
             <div class="card-title">Ödenen</div>
-            <div class="card-value" style="font-size:22px;color:#065f46;">@t.OdenenTutar.ToString("N0") ₺</div>
+            <div class="card-value" style="font-size: 1.375rem; color: #065f46;">@t.OdenenTutar.ToString("N0") ₺</div>
         </div>
-        <div class="card card-sm" style="flex:1;min-width:150px;">
+        <div class="card card-sm flex-1 min-w-[9.375rem]">
             <div class="card-title">Kalan</div>
-            <div class="card-value" style="font-size:22px;@(kalan > 0 ? "color:#991b1b;" : "color:#065f46;")">@kalan.ToString("N0") ₺</div>
+            <div class="card-value" style="font-size: 1.375rem; @(kalan > 0 ? "color: #991b1b;" : "color: #065f46;")">@kalan.ToString("N0") ₺</div>
         </div>
     </div>
 }
 
-<div style="max-width:480px;">
+<div class="max-w-[30rem]">
     <div class="card">
         <form method="post" action="/Odeme/Ekle">
             @Html.AntiForgeryToken()
@@ -44,7 +44,7 @@
 
             @if (!ViewData.ModelState.IsValid)
             {
-                <div asp-validation-summary="All" style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 14px;border-radius:8px;margin-bottom:18px;font-size:13px;"></div>
+                <div asp-validation-summary="All" class="alert-danger mb-4"></div>
             }
 
             <div class="form-group">
@@ -70,15 +70,15 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Açıklama <span style="color:var(--color-muted);font-weight:400;">(opsiyonel)</span></label>
+                <label class="form-label">Açıklama <span class="text-muted font-normal">(opsiyonel)</span></label>
                 <textarea asp-for="Aciklama" class="form-control" rows="2"></textarea>
             </div>
 
-            <div style="background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:10px 14px;border-radius:8px;margin-bottom:18px;font-size:13px;">
+            <div style="background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 0.625rem 0.875rem; border-radius: 0.5rem; margin-bottom: 1.125rem; font-size: 0.8125rem;">
                 Ödeme kaydedildikten sonra yetkilinin onayı beklenecektir.
             </div>
 
-            <div style="display:flex;gap:10px;">
+            <div class="flex gap-2.5">
                 <button type="submit" class="btn btn-primary">Kaydet</button>
                 <a href="/Tahakkuk" class="btn btn-secondary">İptal</a>
             </div>

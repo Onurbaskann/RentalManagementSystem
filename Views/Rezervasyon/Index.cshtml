@@ -42,10 +42,10 @@
                     <th>Taşınmaz / Birim</th>
                     <th>Kiracı</th>
                     <th class="w-36">Zaman Dilimi</th>
-                    <th class="w-24 text-center">Toplam</th>
-                    <th class="w-24 text-center text-muted">Ücretsiz</th>
-                    <th class="w-24 text-center">Ücretli</th>
-                    <th class="w-32 text-right">Tutar</th>
+                    <th class="w-24 cell-center">Toplam</th>
+                    <th class="w-24 cell-center">Ücretsiz</th>
+                    <th class="w-24 cell-center">Ücretli</th>
+                    <th class="w-32 num">Tutar</th>
                     <th class="w-32">Durum</th>
                     <th class="w-40 text-right"></th>
                 </tr>
@@ -68,25 +68,25 @@
 
                     <tr>
                         <td>
-                            <div class="font-semibold text-slate-800">@r.BirimAd</div>
-                            <div class="text-[11px] text-muted">@r.TasinmazAd</div>
+                            @r.TasinmazAd
+                            <span class="cell-sub">@r.BirimAd</span>
                         </td>
-                        <td class="font-medium text-slate-700">@r.KiraciGosterimAdi</td>
+                        <td>@r.KiraciGosterimAdi</td>
                         <td>
-                            <div class="text-[12px] font-medium">@r.BaslangicTarihi.ToString("dd.MM HH:mm")</div>
-                            <div class="text-[11px] text-muted">@r.BitisTarihi.ToString("dd.MM HH:mm")</div>
+                            <div>@r.BaslangicTarihi.ToString("dd.MM HH:mm")</div>
+                            <span class="cell-sub">@r.BitisTarihi.ToString("dd.MM HH:mm")</span>
                         </td>
-                        <td class="text-center text-xs">@r.ToplamSureDakika dk</td>
-                        <td class="text-center text-xs text-muted/60">@r.UcretsizSureDakika dk</td>
-                        <td class="text-center text-xs font-semibold">@r.UcretliSureDakika dk</td>
-                        <td class="text-right text-sm">
+                        <td class="cell-center">@r.ToplamSureDakika dk</td>
+                        <td class="cell-center text-muted">@r.UcretsizSureDakika dk</td>
+                        <td class="cell-center">@r.UcretliSureDakika dk</td>
+                        <td class="num">
                             @if (r.ToplamTutar > 0)
-                            { <span class="font-bold text-slate-800">@r.ToplamTutar.ToString("N2") ₺</span> }
+                            { <text>@r.ToplamTutar.ToString("N2") ₺</text> }
                             else
-                            { <span class="text-muted text-xs italic">Ücretsiz</span> }
+                            { <span class="text-muted italic">Ücretsiz</span> }
                         </td>
                         <td>
-                            <span class="badge @durumCls text-[10px] font-bold">@durumLabel.ToUpper()</span>
+                            <span class="badge @durumCls">@durumLabel</span>
                         </td>
                         <td class="text-right">
                             <div class="flex gap-1.5 justify-end items-center">
@@ -95,12 +95,12 @@
                                     <form method="post" action="/Rezervasyon/TahakkukaAktar/@r.Id" class="inline"
                                           data-confirm="Bu rezervasyonu tahakkuka aktarmak istediğinize emin misiniz?">
                                         @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-sm btn-primary py-1 px-2.5 text-[11px]">Aktar</button>
+                                        <button type="submit" class="btn btn-sm btn-primary">Aktar</button>
                                     </form>
                                 }
                                 @if (canCancel && r.Durum == RezervasyonDurumu.Planlandi)
                                 {
-                                    <button type="button" class="btn btn-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white py-1 px-2.5 text-[11px]"
+                                    <button type="button" class="btn btn-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white"
                                         data-confirm="Bu rezervasyonu iptal etmek istediğinize emin misiniz?"
                                         data-confirm-title="Rezervasyon İptali"
                                         data-confirm-action="/Rezervasyon/Iptal/@r.Id"

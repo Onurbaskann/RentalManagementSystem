@@ -64,6 +64,26 @@
                     <div class="text-red-500 text-xs mt-1.5 font-medium" x-show="bitisTarihi && baslangicTarihi && bitisTarihi <= baslangicTarihi" x-cloak>Bitiş tarihi başlangıçtan büyük olmalıdır.</div>
                 </div>
             </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-3.5">
+                <div class="form-group mb-0">
+                    <label class="form-label">Vade Kuralı</label>
+                    <select asp-for="VadeKuraliTipi" class="form-control" x-model.number="vadeKuraliTipi">
+                        <option value="1">Sabit Ay Günü (ayın N'i)</option>
+                        <option value="2">Dönem Başı + N Gün</option>
+                    </select>
+                    <div class="text-[11px] text-muted mt-1.5">
+                        <span x-show="vadeKuraliTipi == 1">Her ay vade tarihi seçilen güne denk gelir. 31 gün olmayan aylarda son güne çekilir.</span>
+                        <span x-show="vadeKuraliTipi == 2">Vade her dönemin başlangıcından N gün sonradır.</span>
+                    </div>
+                </div>
+                <div class="form-group mb-0">
+                    <label class="form-label">Vade Günü *</label>
+                    <input asp-for="VadeGunu" type="number" min="1" max="31" class="form-control" x-model.number="vadeGunu" />
+                    <span asp-validation-for="VadeGunu" class="form-error"></span>
+                    <div class="text-red-500 text-xs mt-1.5 font-medium" x-show="vadeGunu < 1 || vadeGunu > 31" x-cloak>1-31 arasında bir değer girin.</div>
+                </div>
+            </div>
         </div>
 
 
@@ -190,6 +210,8 @@
             kiraciId: @(Model.KiraciId != 0 ? Model.KiraciId.ToString() : "null"),
             baslangicTarihi: '@Model.BaslangicTarihi.ToString("yyyy-MM-dd")',
             bitisTarihi: '@Model.BitisTarihi.ToString("yyyy-MM-dd")',
+            vadeKuraliTipi: @((int)Model.VadeKuraliTipi),
+            vadeGunu: @Model.VadeGunu,
             kalemler: [],
             loading: false,
             error: null,
@@ -276,8 +298,9 @@
             },
             isSubmitDisabled() {
                 const dateError = this.bitisTarihi && this.baslangicTarihi && this.bitisTarihi <= this.baslangicTarihi;
+                const vadeError = !this.vadeGunu || this.vadeGunu < 1 || this.vadeGunu > 31;
                 const kalemError = this.kalemler.some(k => k._error);
-                return dateError || kalemError;
+                return dateError || vadeError || kalemError;
             }
         }));
     });

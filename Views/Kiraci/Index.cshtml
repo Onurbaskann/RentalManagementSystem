@@ -38,7 +38,7 @@
                     <th class="w-32">Kategori</th>
                     <th class="w-32">İletişim</th>
                     <th class="w-32">Sözleşme</th>
-                    <th class="w-28 text-right">Kayıt Tarihi</th>
+                    <th class="w-28 cell-center">Kayıt Tarihi</th>
                     <th class="w-36"></th>
                 </tr>
             </thead>
@@ -50,14 +50,14 @@
                     <tr data-row data-search="@search">
                         <td class="font-mono text-xs text-muted">@k.KiraciNo</td>
                         <td>
-                            <div class="font-semibold text-slate-800">@k.GosterimAdi</div>
+                            <div class="font-semibold">@k.GosterimAdi</div>
                             @if (k.KiraciTuru == KiraciTuru.Tuzel && !string.IsNullOrEmpty(k.VergiNo))
                             {
-                                <div class="text-[11.5px] text-muted">VKN: @k.VergiNo</div>
+                                <span class="cell-sub">VKN: @k.VergiNo</span>
                             }
                             else if (k.KiraciTuru == KiraciTuru.Gercek && !string.IsNullOrEmpty(k.TcKimlikNo))
                             {
-                                <div class="text-[11.5px] text-muted">TC: @k.TcKimlikNo</div>
+                                <span class="cell-sub">TC: @k.TcKimlikNo</span>
                             }
                         </td>
                         <td>
@@ -77,8 +77,8 @@
                             }
                         </td>
                         <td>
-                            <div class="text-[13px] text-slate-700">@k.Telefon</div>
-                            <div class="text-[11px] text-muted truncate max-w-[120px]">@k.Email</div>
+                            <div>@k.Telefon</div>
+                            <span class="cell-sub truncate max-w-[120px]">@k.Email</span>
                         </td>
                         <td>
                             @if (aktifSozlesmeCount > 0)
@@ -90,7 +90,7 @@
                                 <span class="badge badge-bos">Yok</span>
                             }
                         </td>
-                        <td class="text-right text-xs text-muted whitespace-nowrap">@k.KayitTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="cell-center whitespace-nowrap">@k.KayitTarihi.ToString("dd.MM.yyyy")</td>
                         <td class="flex gap-1.5 justify-end">
                             <a href="/Kiraci/Detay/@k.Id" class="btn btn-sm btn-secondary">Detay</a>
                             @if (canEdit)
@@ -114,7 +114,7 @@
                         :class="p === page ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'" 
                         @@click="goto(p)" x-text="p"></button>
             </template>
-            <button type="button" class="w-8 h-8 flex items-center justify-center rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" :disabled="page === totalPages }" @@click="next()">›</button>
+            <button type="button" class="w-8 h-8 flex items-center justify-center rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" :disabled="page === totalPages" @@click="next()">›</button>
         </nav>
     </div>
     <div class="p-8 text-center" x-show="total === 0" x-cloak>

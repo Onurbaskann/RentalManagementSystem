@@ -76,8 +76,8 @@
                     <th class="w-28">Tarih</th>
                     <th>Kiracı</th>
                     <th class="w-32">Dönem</th>
-                    <th class="w-32 text-right">Tutar</th>
-                    <th class="w-24 text-center">Kanal</th>
+                    <th class="w-32 num">Tutar</th>
+                    <th class="w-24 cell-center">Kanal</th>
                     <th class="w-32">Giren</th>
                     <th class="w-36">Durum</th>
                     <th class="w-20"></th>
@@ -103,13 +103,13 @@
                         _                  => "Diğer"
                     };
                     <tr>
-                        <td class="text-xs text-slate-600">@o.OdemeTarihi.ToString("dd.MM.yyyy")</td>
-                        <td class="font-semibold text-slate-800">@o.KiraciGosterimAdi</td>
-                        <td class="text-xs text-muted">@o.TahakkukDonemBaslangic.ToString("MMMM yyyy")</td>
-                        <td class="text-right font-bold text-slate-700">@o.Tutar.ToString("N2") ₺</td>
-                        <td class="text-center text-[12px] font-medium text-slate-500">@kanalLabel</td>
-                        <td class="text-[11px] text-muted truncate max-w-[120px]">@(o.GirenUserGosterimAdi ?? "—")</td>
-                        <td><span class="badge @durumCls text-[10px] font-bold">@durumLabel.ToUpper()</span></td>
+                        <td>@o.OdemeTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="font-semibold">@o.KiraciGosterimAdi</td>
+                        <td class="text-muted">@o.TahakkukDonemBaslangic.ToString("MMMM yyyy")</td>
+                        <td class="num">@o.Tutar.ToString("N2") ₺</td>
+                        <td class="cell-center">@kanalLabel</td>
+                        <td class="text-muted truncate max-w-[120px]">@(o.GirenUserGosterimAdi ?? "—")</td>
+                        <td><span class="badge @durumCls">@durumLabel</span></td>
                         <td class="text-right"><a href="/Odeme/Detay/@o.Id" class="btn btn-sm btn-secondary">Detay</a></td>
                     </tr>
                 }
