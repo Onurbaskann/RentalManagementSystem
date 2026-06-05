@@ -4,55 +4,64 @@ Rental Management System, gayrimenkul portföylerini, kiracı ilişkilerini ve k
 
 ## 🚀 Öne Çıkan Özellikler
 
-- **Gelişmiş Dashboard:** Toplam gelir, doluluk oranları, bekleyen sözleşmeler ve süresi dolmak üzere olan kira kontratları için gerçek zamanlı istatistikler.
-- **Taşınmaz ve Birim Yönetimi:** 
-    - Bina, Arazi, Tarla ve Depo gibi farklı taşınmaz tipleri.
-    - Bina bazlı ofis/birim yönetimi (Kat ve ofis no takibi).
+- **Gelişmiş Dashboard:** Toplam gelir, doluluk oranları, bekleyen sözleşmeler, manuel borç ve rezervasyon metrikleri için gerçek zamanlı istatistikler.
+- **Taşınmaz ve Birim Yönetimi:**
+    - Bina, Arazi, Tarla, Depo, Otomat, Bankamatik, Kantin gibi yapılandırılabilir taşınmaz tipleri.
+    - Birim bazlı yönetim (kat, birim no, birim türü takibi).
     - Taşınmaz bazlı metrekare ve konum bilgileri.
 - **Kiracı Yönetimi:**
     - Gerçek ve Tüzel (Firma) kişi desteği.
-    - Kimlik bilgileri, vergi dairesi ve iletişim bilgileri takibi.
-- **Sözleşme ve Finans Yönetimi:**
-    - Dinamik kira periyotları (Aylık/Yıllık).
-    - TÜFE bazlı kira artış hesaplamaları.
+    - Kimlik, vergi dairesi, kategori, sektör ve iletişim bilgileri takibi.
+    - KVKK onayı kaydı.
+- **Sözleşme ve Çok Kalemli Tahakkuk:**
+    - Dinamik kira periyotları; pro-rata ilk ay hesabı.
+    - Borç tipi bazlı çok kalemli aylık tahakkuk (Kira, Ortak Gider, Portal vb.).
+    - Taşınmaz × Kiracı Kategorisi bazlı dinamik fiyatlandırma matrisi.
     - KDV dahil/hariç hesaplama seçenekleri.
-    - Depozito ve sözleşme geçmişi takibi.
+    - Sözleşme uzatma / fesih / yeniden üretim akışları ve işlem geçmişi.
+- **Ödeme Takip ve Banka Eşleştirme:**
+    - Manuel ödeme kaydı ve dekont yönetimi.
+    - CSV formatında banka hareketi import ve otomatik eşleştirme.
+    - Manuel borç oluşturma ve iptal akışı.
+- **Toplantı Salonu Rezervasyonu:**
+    - Çakışma kontrolü ile rezervasyon oluşturma ve iptal.
+    - Birim türü bazlı ücret kuralları; rezervasyondan tahakkuka otomatik aktarım.
+- **Mail Bildirim ve Ödeme Portalı:**
+    - Kiracılara toplu borç hatırlatma maili (MailKit / SMTP).
+    - HMAC imzalı, kiracıya özel ödeme portalı linki.
 - **Güvenlik ve Yetkilendirme:**
-    - **ASP.NET Core Identity** tabanlı kullanıcı yönetimi.
-    - **Taşınmaz Bazlı Görüntüleme Yetkisi:** "Görüntüleyici" rolündeki kullanıcılara sadece belirli taşınmazlar için veri erişimi kısıtlaması (Row-Level Authorization).
+    - ASP.NET Core Identity tabanlı kullanıcı yönetimi.
+    - Rol (Admin / Yönetici / Görüntüleyici) + Permission katmanlı yetki sistemi.
+    - Taşınmaz bazlı satır düzeyi erişim kısıtlaması (Row-Level Authorization).
 
 ## 🛠 Kullanılan Teknolojiler
 
-- **Backend:** .NET 8 (ASP.NET Core MVC)
-- **Database:** Entity Framework Core & SQLite
-- **Security:** ASP.NET Core Identity
-- **Frontend:** 
-    - Vanilla CSS (Özel Tasarım Sistemi)
+- **Backend:** .NET 9.0 (ASP.NET Core MVC)
+- **Database:** Entity Framework Core & SQL Server
+- **Security:** ASP.NET Core Identity + Claims tabanlı yetki sistemi
+- **Frontend:**
+    - Tailwind CSS
     - Alpine.js (Dinamik UI Bileşenleri)
-    - Lucide Icons & Google Fonts
-- **Kütüphaneler:** ApexCharts (Grafikler)
+- **Test:** xUnit (.NET 10.0)
 
 ## 📦 Kurulum
 
 Projeyi yerel ortamınızda çalıştırmak için aşağıdaki adımları izleyebilirsiniz:
 
-1. Repoyu klonlayın:
-   ```bash
-   git clone https://github.com/RentalManagementSystem.git
-   ```
-2. Proje dizinine gidin:
+1. Proje dizinine gidin:
    ```bash
    cd KiraTakip
    ```
-3. Bağımlılıkları yükleyin:
+2. Bağımlılıkları yükleyin:
    ```bash
-   dotnet restore
+   dotnet restore KiraTakip/KiraTakip.csproj
    ```
+3. `appsettings.json` dosyasındaki `DefaultConnection` bağlantı dizesini kendi SQL Server örneğinize göre düzenleyin.
 4. Veritabanını güncelleyin:
    ```bash
-   dotnet ef database update
+   dotnet ef database update --project KiraTakip --startup-project KiraTakip
    ```
 5. Uygulamayı çalıştırın:
    ```bash
-   dotnet run
+   dotnet run --project KiraTakip
    ```
