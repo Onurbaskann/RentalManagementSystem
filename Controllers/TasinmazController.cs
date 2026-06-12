@@ -98,6 +98,150 @@ public class TasinmazController : Controller
         return View(vm);
     }
 
+    [HttpGet]
+    [Authorize(Policy = PermissionCatalog.Tasinmaz.Edit)]
+    public async Task<IActionResult> Duzenle(int id)
+    {
+        if (User.IsInRole(RoleNames.Goruntuleyici))
+        {
+            var userId = _userManager.GetUserId(User);
+            var tasinmazlar = await _tasinmazService.GetAllAsync(userId);
+            if (!tasinmazlar.Any(t => t.Id == id)) return Forbid();
+        }
+
+        var vm = await _tasinmazService.GetForEditAsync(id);
+        if (vm == null) return NotFound();
+
+        vm.FiyatMatrisi = await _tasinmazFiyatService.GetMatrisiAsync(id, pageSize: 100);
+        vm.ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(TarifeHiyerarsiKatmani.Tasinmaz, yil: DateTime.Now.Year);
+        vm.ParentRezervasyonTarife = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(yil: DateTime.Now.Year);
+
+        await PopulateViewBagAsync();
+        return View(vm);
+    }
+
+    [HttpPost]
+    [Authorize(Policy = PermissionCatalog.Tasinmaz.Edit)]
+    public async Task<IActionResult> Duzenle(TasinmazDuzenleViewModel vm)
+    {
+        if (User.IsInRole(RoleNames.Goruntuleyici))
+        {
+            var userId = _userManager.GetUserId(User);
+            var tasinmazlar = await _tasinmazService.GetAllAsync(userId);
+            if (!tasinmazlar.Any(t => t.Id == vm.Id)) return Forbid();
+        }
+
+        if (string.IsNullOrWhiteSpace(vm.Ad))
+            ModelState.AddModelError("Ad", "Taşınmaz adı zorunludur.");
+        if (vm.TasinmazTipiId == null || vm.TasinmazTipiId <= 0)
+            ModelState.AddModelError("TasinmazTipiId", "Taşınmaz tipi zorunludur.");
+        if (string.IsNullOrWhiteSpace(vm.Il))
+            ModelState.AddModelError("Il", "İl zorunludur.");
+        if (string.IsNullOrWhiteSpace(vm.Ilce))
+            ModelState.AddModelError("Ilce", "İlçe zorunludur.");
+        if (string.IsNullOrWhiteSpace(vm.Mahalle))
+            ModelState.AddModelError("Mahalle", "Mahalle zorunludur.");
+        if (string.IsNullOrWhiteSpace(vm.AcikAdres))
+            ModelState.AddModelError("AcikAdres", "Açık adres zorunludur.");
+
+        if (vm.KiralamaSekli == KiralamaSekli.BirimBazli)
+        {
+            if (vm.Birimler == null || vm.Birimler.Count == 0)
+            {
+                ModelState.AddModelError("Birimler", "Birim bazlı kiralama için en az bir birim eklemelisiniz.");
+            }
+            else
+            {
+                for (int i = 0; i < vm.Birimler.Count; i++)
+                {
+                    var birim = vm.Birimler[i];
+                    if (string.IsNullOrWhiteSpace(birim.BirimNo))
+                        ModelState.AddModelError($"Birimler[{i}].BirimNo", "Birim No zorunludur.");
+                    if (birim.KatNo == null)
+                        ModelState.AddModelError($"Birimler[{i}].KatNo", "Kat No zorunludur.");
+                    if (birim.BirimTuruId == null || birim.BirimTuruId <= 0)
+                        ModelState.AddModelError($"Birimler[{i}].BirimTuruId", "Birim Türü zorunludur.");
+                    if (string.IsNullOrWhiteSpace(birim.Ad) && !string.IsNullOrWhiteSpace(birim.BirimNo))
+                        birim.Ad = "Birim " + birim.BirimNo;
+                    if (string.IsNullOrWhiteSpace(birim.Ad))
+                        ModelState.AddModelError($"Birimler[{i}].Ad", "Ad zorunludur.");
+                    if (birim.Yuzolcumu <= 0)
+                        ModelState.AddModelError($"Birimler[{i}].Yuzolcumu", "Yüzölçümü 0'dan büyük olmalıdır.");
+                }
+
+                var tekrarlayanBirimNo = vm.Birimler
+                    .Where(b => !string.IsNullOrWhiteSpace(b.BirimNo))
+                    .GroupBy(b => b.BirimNo.Trim().ToUpper())
+                    .Where(g => g.Count() > 1)
+                    .Select(g => g.Key)
+                    .FirstOrDefault();
+
+                if (tekrarlayanBirimNo != null)
+                    ModelState.AddModelError("Birimler", $"Birim No '{tekrarlayanBirimNo}' aynı taşınmaz içinde tekrar kullanılamaz.");
+            }
+        }
+
+        for (int i = 0; i < vm.RezervasyonAlanlari.Count; i++)
+        {
+            var alan = vm.RezervasyonAlanlari[i];
+            if (string.IsNullOrWhiteSpace(alan.Ad))
+                ModelState.AddModelError($"RezervasyonAlanlari[{i}].Ad", "Alan Adı zorunludur.");
+            if (alan.Yuzolcumu <= 0)
+                ModelState.AddModelError($"RezervasyonAlanlari[{i}].Yuzolcumu", "Yüzölçümü 0'dan büyük olmalıdır.");
+            if (alan.BirimTuruId == null || alan.BirimTuruId <= 0)
+                ModelState.AddModelError($"RezervasyonAlanlari[{i}].BirimTuruId", "Alan Türü zorunludur.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            await PopulateViewBagAsync();
+            var freshMatris = await _tasinmazFiyatService.GetMatrisiAsync(vm.Id, pageSize: 100);
+            vm.FiyatMatrisi.Kolonlar = freshMatris.Kolonlar;
+            if (vm.FiyatMatrisi.Satirlar == null || vm.FiyatMatrisi.Satirlar.Count == 0)
+                vm.FiyatMatrisi.Satirlar = freshMatris.Satirlar;
+            vm.ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(TarifeHiyerarsiKatmani.Tasinmaz, yil: DateTime.Now.Year);
+            vm.ParentRezervasyonTarife = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(yil: DateTime.Now.Year);
+
+            // AktifSozlesmesiVar flag'leri POST round-trip'te sıfırlanıyor, DB'den tekrar doldur
+            await RestoreAktifFlaglarAsync(vm);
+
+            return View(vm);
+        }
+
+        await _tasinmazService.UpdateWithChildrenAsync(vm);
+
+        var userId2 = _userManager.GetUserId(User);
+        await _tasinmazFiyatService.SaveMatrisiAsync(vm.Id, vm.FiyatMatrisi, userId2 ?? "");
+
+        TempData["Success"] = $"'{vm.Ad}' başarıyla güncellendi.";
+        return RedirectToAction("Detay", new { id = vm.Id });
+    }
+
+    private async Task RestoreAktifFlaglarAsync(TasinmazDuzenleViewModel vm)
+    {
+        var now = DateTime.Now;
+        foreach (var b in vm.Birimler.Where(b => b.Id.HasValue))
+        {
+            b.AktifSozlesmesiVar = await _ctx.Sozlesmeler
+                .AnyAsync(s => s.BirimId == b.Id!.Value
+                               && s.Durum == SozlesmeDurumu.Aktif
+                               && s.BaslangicTarihi <= now
+                               && s.BitisTarihi >= now);
+        }
+
+        var rezIds = vm.RezervasyonAlanlari.Where(a => a.Id.HasValue).Select(a => a.Id!.Value).ToList();
+        var aktifRezBirimIds = await _ctx.Rezervasyonlari
+            .Where(r => rezIds.Contains(r.BirimId)
+                        && r.Durum == RezervasyonDurumu.Planlandi
+                        && r.BitisTarihi >= now)
+            .Select(r => r.BirimId)
+            .Distinct()
+            .ToListAsync();
+
+        foreach (var r in vm.RezervasyonAlanlari.Where(r => r.Id.HasValue))
+            r.AktifRezervasyonuVar = aktifRezBirimIds.Contains(r.Id!.Value);
+    }
+
     [HttpPost]
     [Authorize(Policy = PermissionCatalog.Tasinmaz.Create)]
     public async Task<IActionResult> Ekle(TasinmazEkleViewModel vm)

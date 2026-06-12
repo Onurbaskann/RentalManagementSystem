@@ -4,6 +4,7 @@
 @{
     ViewData["Title"] = Model.Tasinmaz.Ad;
     bool canEdit = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Sozlesme.Create) || User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Rezervasyon.Create);
+    bool canDuzenle = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Tasinmaz.Edit);
     bool canManageRate = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Birim.ManageRate);
     bool canManageCarpan = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.TasinmazCarpanPerm.Manage);
 
@@ -40,13 +41,22 @@
         <div class="page-title">@Model.Tasinmaz.Ad</div>
         <div class="page-subtitle">@Model.Tasinmaz.Mahalle, @Model.Tasinmaz.Ilce / @Model.Tasinmaz.Il</div>
     </div>
-    @if (canEdit)
-    {
-        <a href="/Sozlesme/Ekle" class="btn btn-primary">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-            Sözleşme Ekle
-        </a>
-    }
+    <div class="flex items-center gap-2">
+        @if (canDuzenle)
+        {
+            <a href="/Tasinmaz/Duzenle/@Model.Tasinmaz.Id" class="btn btn-secondary">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                Düzenle
+            </a>
+        }
+        @if (canEdit)
+        {
+            <a href="/Sozlesme/Ekle" class="btn btn-primary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                Sözleşme Ekle
+            </a>
+        }
+    </div>
 </div>
 
 <div id="detay-tabs">
@@ -194,19 +204,32 @@
                 g => g.Key.HasValue ? g.Key.Value.ToString() : "none",
                 g => g.Any(b => b.AktifSozlesmeId.HasValue)
             );
+            var katSearchDataMapRaw = katGruplari.ToDictionary(
+                g => g.Key.HasValue ? g.Key.Value.ToString() : "none",
+                g => g.Select(b => ((b.BirimNo ?? "") + " " + (b.Ad ?? "")).ToLowerInvariant()).ToList()
+            );
             var katBosMapJson = System.Text.Json.JsonSerializer.Serialize(katBosMapRaw);
             var katKiraliMapJson = System.Text.Json.JsonSerializer.Serialize(katKiraliMapRaw);
+            var katSearchDataMapJson = System.Text.Json.JsonSerializer.Serialize(katSearchDataMapRaw);
 
-            <div x-data='{ "filter": "tum", "openFloors": {}, "search": "", "katBosMap": @Html.Raw(katBosMapJson), "katKiraliMap": @Html.Raw(katKiraliMapJson) }'
-                 x-init="$watch('filter', v => {
-                if (v !== 'tum') {
-                for (const [k, hasEmpty] of Object.entries(katBosMap)) {
-                if (v === 'bos') openFloors[k] = hasEmpty;
-                else if (v === 'kirali') openFloors[k] = katKiraliMap[k];
-                else openFloors[k] = false;
-                }
-                }
-                })">
+            <div x-data='{ "filter": "tum", "openFloors": {}, "search": "", "viewMode": "card", "katBosMap": @Html.Raw(katBosMapJson), "katKiraliMap": @Html.Raw(katKiraliMapJson), "katSearchDataMap": @Html.Raw(katSearchDataMapJson) }'
+                 x-init="
+                    $watch('filter', v => {
+                        if (v !== 'tum') {
+                            for (const [k, hasEmpty] of Object.entries(katBosMap)) {
+                                if (v === 'bos') openFloors[k] = hasEmpty;
+                                else if (v === 'kirali') openFloors[k] = katKiraliMap[k];
+                                else openFloors[k] = false;
+                            }
+                        }
+                    });
+                    $watch('search', v => {
+                        if (v !== '') {
+                            for (const [k, terms] of Object.entries(katSearchDataMap)) {
+                                if (terms.some(t => t.includes(v.toLowerCase()))) openFloors[k] = true;
+                            }
+                        }
+                    })">
 
                 <!-- Filtre Bar -->
                 <div class="flex items-center gap-2.5 mb-6 flex-wrap">
@@ -216,39 +239,65 @@
                         <option value="kirali">Kiralı</option>
                     </select>
                     <input type="text" x-model="search" placeholder="Birim ara..." class="form-control w-[180px] text-[13px] py-1.5 px-2.5" />
-                    <button type="button" class="btn btn-sm btn-secondary"
+                    <button type="button" class="btn btn-sm btn-secondary" x-show="viewMode === 'table'"
                         @@click="filter = 'tum'; Object.keys(katBosMap).forEach(k => { openFloors[k] = true })">
                         Tümünü Aç
                     </button>
-                    <button type="button" class="btn btn-sm btn-secondary"
+                    <button type="button" class="btn btn-sm btn-secondary" x-show="viewMode === 'table'"
                         @@click="filter = 'tum'; Object.keys(katBosMap).forEach(k => { openFloors[k] = false })">
                         Tümünü Kapat
                     </button>
+                    <div class="ml-auto flex items-center gap-1">
+                        <button type="button" @@click="viewMode = 'table'" title="Tablo görünümü"
+                                class="btn btn-sm w-8 h-8 p-0 flex items-center justify-center"
+                                :class="viewMode === 'table' ? 'btn-primary' : 'btn-secondary'">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="17" width="18" height="4" rx="1"/>
+                            </svg>
+                        </button>
+                        <button type="button" @@click="viewMode = 'card'" title="Kart görünümü"
+                                class="btn btn-sm w-8 h-8 p-0 flex items-center justify-center"
+                                :class="viewMode === 'card' ? 'btn-primary' : 'btn-secondary'">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                                <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Kat Accordion'ları -->
+                <!-- Tablo Görünümü -->
+                <div x-show="viewMode === 'table'">
                 @foreach (var grup in katGruplari)
                 {
                     var katKey = grup.Key.HasValue ? grup.Key.Value.ToString() : "none";
                     int katBirimSayisi = grup.Count();
                     int katBos = grup.Count(b => !b.AktifSozlesmeId.HasValue);
+                    int katKirali = katBirimSayisi - katBos;
                     int katRez = grup.Count(b => b.RezervasyonYapilabilirMi);
+                    int kiraliPct = katBirimSayisi > 0 ? katKirali * 100 / katBirimSayisi : 0;
 
-                    <div class="mb-2">
+                    <div class="mb-2 rounded-lg shadow-sm"
+                         x-show="!(filter === 'kirali' && !katKiraliMap['@katKey']) &&
+                                  !(filter === 'bos' && !katBosMap['@katKey']) &&
+                                  !(search !== '' && !(katSearchDataMap['@katKey'] || []).some(t => t.includes(search.toLowerCase())))">
                         <!-- Accordion Header -->
                         <div @@click="openFloors['@katKey'] = !openFloors['@katKey']"
-                            class="flex items-center gap-2.5 p-2.5 px-3.5 bg-primary-light border border-[#a3e0d2] rounded-lg cursor-pointer select-none"
-                            :class="openFloors['@katKey'] ? 'rounded-b-none border-b-transparent' : ''">
+                            class="flex items-center gap-2.5 p-2.5 px-3.5 bg-white border border-[var(--color-border)] rounded-lg cursor-pointer select-none transition-colors duration-150"
+                            :class="openFloors['@katKey'] ? 'rounded-b-none border-b-transparent bg-primary-light border-[#a3e0d2]' : 'hover:bg-[#fafbfc]'">
                             <svg :class="openFloors['@katKey'] ? 'rotate-90' : ''"
                                  class="transition-transform duration-200 flex-shrink-0"
                                  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5">
                                 <polyline points="9 18 15 12 9 6" />
                             </svg>
                             <span class="text-[13px] font-bold text-primary">@KatEtiketi(grup.Key)</span>
-                            <span class="text-xs text-muted font-medium">
-                                @katBirimSayisi birim@(katBos > 0 ? $" · {katBos} boş" : "")@(katRez > 0 ? $" · {katRez} rezervasyon" : "")
-                            </span>
-                            <div class="h-[1px] flex-1 bg-[#a3e0d2]"></div>
+                            <span class="text-xs text-muted font-medium ml-0.5">@katBirimSayisi birim</span>
+                            <div class="flex-1 flex items-center gap-2 min-w-0 mx-1">
+                                <div class="flex-1 h-1.5 bg-[#e8f0ee] rounded-full overflow-hidden">
+                                    <div class="h-full bg-[var(--color-primary)] rounded-full" style="width: @kiraliPct%"></div>
+                                </div>
+                                <span class="text-[11px] text-muted whitespace-nowrap">@katKirali/@katBirimSayisi kiralı@(katRez > 0 ? $" · {katRez} rez" : "")</span>
+                            </div>
                         </div>
 
                         <!-- Accordion Body -->
@@ -275,7 +324,7 @@
                                                 <th>Kiracı</th>
                                                 <th>Bitiş</th>
                                                 <th>Bedel</th>
-                                                <th class="text-center">İşlem</th>
+                                                <th class="text-right pr-3.5">İşlem</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -283,9 +332,15 @@
                                             {
                                                 var durumData = b.AktifSozlesmeId.HasValue ? "kirali" : "bos";
                                                 var searchData = ((b.BirimNo ?? "") + " " + (b.Ad ?? "")).ToLowerInvariant();
+                                                var rowHref = b.AktifSozlesmeId.HasValue
+                                                    ? $"/Sozlesme/Detay/{b.AktifSozlesmeId}"
+                                                    : (canEdit ? $"/Sozlesme/Ekle?birimId={b.Id}" : "");
                                                 <tr data-durum="@durumData"
                                                     data-search="@searchData"
-                                                    x-show="(filter === 'tum' || $el.getAttribute('data-durum') === filter) && (search === '' || $el.getAttribute('data-search').includes(search.toLowerCase()))">
+                                                    @Html.Raw(rowHref != "" ? $"data-href=\"{rowHref}\"" : "")
+                                                    class="@(rowHref != "" ? "cursor-pointer hover:bg-[#f7f9fb]" : "") transition-colors duration-100"
+                                                    @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)"
+                                                    x-show="(filter === 'tum' || $el.getAttribute('data-durum') === filter) && (search === '' || ($el.getAttribute('data-search') || '').includes(search.toLowerCase()))">
                                                     <td>
                                                         <span class="font-mono text-[13px] font-bold text-primary bg-primary-light px-2 py-0.5 rounded-md">@b.BirimNo</span>
                                                     </td>
@@ -302,7 +357,6 @@
                                                         }
                                                         else
                                                         {
-
                                                             <span class="text-[#c8cfd8]">—</span>
                                                         }
                                                     </td>
@@ -320,7 +374,6 @@
                                                         }
                                                         else
                                                         {
-
                                                             <span class="text-[#c8cfd8]">—</span>
                                                         }
                                                     </td>
@@ -334,7 +387,6 @@
                                                             }
                                                             else
                                                             {
-
                                                                 <span class="text-[#c8cfd8] text-xs">genel tarife</span>
                                                             }
                                                         }
@@ -347,33 +399,52 @@
                                                         }
                                                         else
                                                         {
-
                                                             <span class="text-[#c8cfd8]">—</span>
                                                         }
                                                     </td>
-                                                    <td class="text-center flex gap-1 justify-center flex-wrap">
-                                                        @if (b.RezervasyonYapilabilirMi)
-                                                        {
-                                                            @if (canEdit)
+                                                    <td data-stop>
+                                                        <div class="flex items-center justify-end gap-1.5">
+                                                            @if (b.RezervasyonYapilabilirMi)
                                                             {
-                                                                <a href="/Rezervasyon/Ekle?birimId=@b.Id" class="btn btn-sm btn-primary">Rezervasyon</a>
+                                                                @if (canEdit)
+                                                                {
+                                                                    <a href="/Rezervasyon/Ekle?birimId=@b.Id" class="btn btn-sm btn-primary">Rezervasyon</a>
+                                                                }
                                                             }
-                                                        }
-                                                        else
-                                                        {
-                                                            @if (b.AktifSozlesmeId.HasValue)
+                                                            else
                                                             {
-                                                                <a href="/Sozlesme/Detay/@b.AktifSozlesmeId" class="btn btn-sm btn-secondary">Sözleşme</a>
+                                                                @if (b.AktifSozlesmeId.HasValue)
+                                                                {
+                                                                    <a href="/Sozlesme/Detay/@b.AktifSozlesmeId" class="btn btn-sm btn-secondary">Sözleşme</a>
+                                                                }
+                                                                else if (canEdit)
+                                                                {
+                                                                    <a href="/Sozlesme/Ekle?birimId=@b.Id" class="btn btn-sm btn-primary">Kiraya Ver</a>
+                                                                }
                                                             }
-                                                            else if (canEdit)
+                                                            @if (canManageRate)
                                                             {
-                                                                <a href="/Sozlesme/Ekle?birimId=@b.Id" class="btn btn-sm btn-primary">Kiraya Ver</a>
+                                                                <div x-data="{ open: false }" class="relative">
+                                                                    <button type="button" @@click="open = !open"
+                                                                            class="btn btn-sm btn-secondary w-7 h-[30px] p-0 flex items-center justify-center">
+                                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                                                                            <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+                                                                        </svg>
+                                                                    </button>
+                                                                    <div x-show="open" @@click.outside="open = false" x-cloak
+                                                                         class="absolute right-0 mt-1 bg-white border border-[var(--color-border)] rounded-lg shadow-lg z-20 min-w-[150px] py-1">
+                                                                        <a href="/Birim/@b.Id/OzelFiyat"
+                                                                           class="flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--color-text)] hover:bg-[#f7f9fb] no-underline">
+                                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                                                <line x1="12" y1="1" x2="12" y2="23"/>
+                                                                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                                                                            </svg>
+                                                                            Özel Fiyat
+                                                                        </a>
+                                                                    </div>
+                                                                </div>
                                                             }
-                                                        }
-                                                        @if (canManageRate)
-                                                        {
-                                                            <a href="/Birim/@b.Id/OzelFiyat" class="btn btn-sm btn-secondary" title="Özel Fiyatlar">₺</a>
-                                                        }
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             }
@@ -384,6 +455,65 @@
                         </div>
                     </div>
                 }
+                </div>
+
+                <!-- Kart Görünümü -->
+                <div x-show="viewMode === 'card'" x-cloak>
+                @foreach (var grup in katGruplari)
+                {
+                    var katKey = grup.Key.HasValue ? grup.Key.Value.ToString() : "none";
+
+                    <div class="mb-5"
+                         x-show="!(filter === 'kirali' && !katKiraliMap['@katKey']) &&
+                                  !(filter === 'bos' && !katBosMap['@katKey']) &&
+                                  !(search !== '' && !(katSearchDataMap['@katKey'] || []).some(t => t.includes(search.toLowerCase())))">
+                        <div class="text-[11px] font-bold text-muted uppercase tracking-wider mb-2.5 px-0.5">@KatEtiketi(grup.Key)</div>
+                        <div class="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9 gap-2">
+                            @foreach (var b in grup.OrderBy(x => x.BirimNo))
+                            {
+                                var durumData = b.AktifSozlesmeId.HasValue ? "kirali" : "bos";
+                                var searchData = ((b.BirimNo ?? "") + " " + (b.Ad ?? "")).ToLowerInvariant();
+                                var cardHref = b.AktifSozlesmeId.HasValue
+                                    ? $"/Sozlesme/Detay/{b.AktifSozlesmeId}"
+                                    : (canEdit ? $"/Sozlesme/Ekle?birimId={b.Id}" : "");
+                                var cardBg = b.Durum switch {
+                                    KiraDurumu.Kirali => "border-l-[var(--color-primary)] bg-[#f0faf7]",
+                                    KiraDurumu.SuresiDolmakUzere => "border-l-amber-400 bg-[#fffbeb]",
+                                    _ => "border-l-[#d1d9e0] bg-white"
+                                };
+                                <div @Html.Raw(cardHref != "" ? $"data-href=\"{cardHref}\"" : "")
+                                     data-durum="@durumData"
+                                     data-search="@searchData"
+                                     class="relative border border-[var(--color-border)] border-l-4 @cardBg rounded-lg px-2.5 py-3 @(cardHref != "" ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md" : "") transition-all duration-200"
+                                     @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)"
+                                     x-show="(filter === 'tum' || $el.getAttribute('data-durum') === filter) && (search === '' || ($el.getAttribute('data-search') || '').includes(search.toLowerCase()))">
+                                    @if (canManageRate)
+                                    {
+                                        <a href="/Birim/@b.Id/OzelFiyat" data-stop title="Özel Fiyat"
+                                           class="absolute top-1.5 right-1.5 w-6 h-6 flex items-center justify-center rounded bg-white border border-[var(--color-border)] text-muted hover:text-primary hover:border-primary transition-colors text-[12px] font-bold no-underline leading-none">₺</a>
+                                    }
+                                    <div class="font-mono font-bold text-primary leading-none mb-1.5"
+                                         style="font-size: clamp(15px, 2vw, 20px)">@b.BirimNo</div>
+                                    <div class="text-[11.5px] text-muted font-medium">@b.Yuzolcumu.ToString("N0") m²</div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+                </div>
+
+                <!-- Boş durum -->
+                <div x-show="Object.keys(katBosMap).every(k =>
+                        (filter === 'kirali' && !katKiraliMap[k]) ||
+                        (filter === 'bos' && !katBosMap[k]) ||
+                        (search !== '' && !(katSearchDataMap[k] || []).some(t => t.includes(search.toLowerCase())))
+                    )" x-cloak
+                     class="flex flex-col items-center justify-center py-14 text-muted">
+                    <svg class="mb-3 opacity-25" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <p class="text-sm font-medium">Bu filtreye uygun birim bulunamadı</p>
+                </div>
             </div>
         }
         else
@@ -668,12 +798,12 @@
                                     @if (hucre.RateVarMi)
                                     {
                                         <div class="font-serif font-bold text-[15px]">
-                                            @hucre.BirimDeger.ToString("N2") ₺
+                                            @hucre.BirimDeger?.ToString("N2") ₺
                                             <small class="font-sans text-[11px] font-normal text-muted">
                                                 @(hucre.HesaplamaYontemi == HesaplamaYontemi.Sabit ? "/sabit" : "/m²")
                                             </small>
                                         </div>
-                                        <div class="text-[11px] text-muted mt-1">KDV: %@hucre.KdvOrani.ToString("N0")</div>
+                                        <div class="text-[11px] text-muted mt-1">KDV: %@hucre.KdvOrani?.ToString("N0")</div>
                                     }
                                     else
                                     {

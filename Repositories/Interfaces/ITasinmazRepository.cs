@@ -8,4 +8,5 @@ public interface ITasinmazRepository : IBaseRepository<Tasinmaz>
     Task<TasinmazDetayDto?> GetDetayAsync(int id);
     Task<List<BirimLookupDto>> GetBosBirimlerAsync(List<int>? yetkiliTasinmazIds);
     Task AddRezervasyonTarifeAsync(RezervasyonTarife tarife);
+    Task<Tasinmaz?> GetWithBirimlerTrackedAsync(int id);
 }

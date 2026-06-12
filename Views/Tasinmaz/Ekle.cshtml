@@ -162,18 +162,21 @@
             </div>
         </template>
 
-        @if (Model.ParentTarife != null)
-        {
-            <div class="mt-4">
-                <div class="text-xs text-muted mb-1">Aşağıda tanımlama yapmazsanız genel tarife uygulanır:</div>
-                @await Html.PartialAsync("_ParentTarifeKart", Model.ParentTarife)
-            </div>
-        }
-
         <!-- Fiyat Parametreleri Kartı -->
         <div class="card mt-4">
-            <div class="text-[15px] font-bold mb-4.5 pb-3.5 border-b border-[var(--color-border)]">Fiyat Parametreleri (Genel Tarife)</div>
+            <div class="text-[15px] font-bold mb-4.5 pb-3.5 border-b border-[var(--color-border)]">Taşınmaz Tarifesi</div>
             <div class="text-[12.5px] text-muted mb-4">Sözleşme eklerken bu matristeki fiyatlar otomatik olarak getirilir.</div>
+
+            @if (Model.ParentTarife != null)
+            {
+                <div class="mb-5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <div class="text-xs text-muted font-semibold mb-2 flex items-center gap-1.5">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        Aşağıda tanımlama yapmazsanız genel tarife uygulanır:
+                    </div>
+                    @await Html.PartialAsync("_ParentTarifeKart", Model.ParentTarife)
+                </div>
+            }
 
             <div>
                 @for (int i = 0; i < Model.FiyatMatrisi.Satirlar.Count; i++)
@@ -205,6 +208,9 @@
                                     var kolon = Model.FiyatMatrisi.Kolonlar[j];
                                     var isIlkAy = kolon.BorcTipiDavranisi == BorcTipiDavranisi.IlkAyTekSeferlik;
                                     var isDepozito = isIlkAy;
+                                    var parentSatir = Model.ParentTarife?.Satirlar?.FirstOrDefault(p => p.KategoriAd == satir.KiraciKategoriAd && p.BorcTipiAd == kolon.BorcTipiAd);
+                                    decimal? parentDeger = parentSatir?.BirimDeger;
+                                    decimal? parentKdv = parentSatir?.KdvOrani;
                                     <tr data-depozito="@(isDepozito ? "true" : "false")">
                                         <!-- Borç Tipi: nokta + davranış rozeti + ad -->
                                         <td class="p-1.5 pr-3 align-middle">
@@ -236,7 +242,9 @@
                                                 <span class="px-2 bg-[#f8f9fa] text-xs text-[#6c757d] border-r border-[#ced4da] flex items-center">₺</span>
                                                 <input type="number" step="0.01" min="0"
                                                        class="border-none outline-none p-1.5 px-2 w-[85px] text-[13px] bg-transparent"
-                                                       name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].BirimDeger" value="@hucre.BirimDeger.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                                                       name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].BirimDeger"
+                                                       value="@(hucre.BirimDeger?.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                                                       placeholder="@(parentDeger?.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) ?? "0.00")" />
                                             </div>
                                         </td>
                                         <!-- Yöntem — DEPOZITO için kilitli -->
@@ -262,7 +270,9 @@
                                             <div class="flex items-stretch border border-[#ced4da] rounded-md overflow-hidden bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all">
                                                 <input type="number" step="0.01" min="0" max="100"
                                                        class="border-none outline-none p-1.5 px-2 w-[60px] text-[13px] bg-transparent text-right"
-                                                       name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].KdvOrani" value="@hucre.KdvOrani.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                                                       name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].KdvOrani"
+                                                       value="@(hucre.KdvOrani?.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                                                       placeholder="@(parentKdv?.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) ?? "20")" />
                                                 <span class="px-2 bg-[#f8f9fa] text-xs text-[#6c757d] border-l border-[#ced4da] flex items-center">%</span>
                                             </div>
                                         </td>
@@ -283,14 +293,6 @@
             </div>
         </div>
 
-        @if (Model.ParentRezervasyonTarife != null)
-        {
-            <div class="mt-4">
-                <div class="text-xs text-muted mb-1">Aşağıda tanımlama yapmazsanız genel tarife uygulanır:</div>
-                <partial name="_ParentRezervasyonTarifeKart" model="Model.ParentRezervasyonTarife" />
-            </div>
-        }
-
         <!-- Rezervasyon Alanları -->
         <div class="card mt-4">
             <div class="flex items-center justify-between mb-4.5 pb-3.5 border-b border-[var(--color-border)]">
@@ -303,6 +305,17 @@
                     Alan Ekle
                 </button>
             </div>
+
+            @if (Model.ParentRezervasyonTarife != null)
+            {
+                <div class="mb-5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <div class="text-xs text-muted font-semibold mb-2 flex items-center gap-1.5">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        Aşağıda tanımlama yapmazsanız genel tarife uygulanır:
+                    </div>
+                    <partial name="_ParentRezervasyonTarifeKart" model="Model.ParentRezervasyonTarife" />
+                </div>
+            }
 
             <template x-for="(alan, i) in rezAlanlari" :key="i">
                 <div class="bg-[#fafbfc] border border-[var(--color-border)] rounded-lg p-3.5 px-4 mb-3 relative">

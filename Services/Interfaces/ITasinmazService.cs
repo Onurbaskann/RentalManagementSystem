@@ -12,5 +12,7 @@ public interface ITasinmazService
     Task<TasinmazDetayDto?> GetByIdAsync(int id);
     Task<Tasinmaz> CreateAsync(Tasinmaz t, List<BirimInputViewModel>? birimler = null, List<RezervasyonAlaniInputViewModel>? rezervasyonAlanlari = null);
     Task UpdateAsync(Tasinmaz t);
+    Task<TasinmazDuzenleViewModel?> GetForEditAsync(int id);
+    Task UpdateWithChildrenAsync(TasinmazDuzenleViewModel vm);
     Task<List<BirimLookupDto>> GetBosBirimlerAsync(string? userId = null);
 }

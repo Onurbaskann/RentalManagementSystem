@@ -1,5 +1,6 @@
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Entities;
 using KiraTakip.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -53,13 +54,13 @@ public class SeedDataService
         var existingCodes = await _ctx.BorcTipleri.Select(b => b.Kod).ToListAsync();
         var toAdd = new List<BorcTipi>();
 
-        if (!existingCodes.Contains("KIRA")) toAdd.Add(new BorcTipi { Ad = "Kira Bedeli", Kod = "KIRA", Aktif = true, Sira = 1, Davranis = BorcTipiDavranisi.AylikSabit, Sistem = true });
-        if (!existingCodes.Contains("DIGER")) toAdd.Add(new BorcTipi { Ad = "Diğer", Kod = "DIGER", Aktif = true, Sira = 100, Davranis = BorcTipiDavranisi.KullaniciManuel, Sistem = true });
+        if (!existingCodes.Contains(BorcTipiConsts.Kira)) toAdd.Add(new BorcTipi { Ad = "Kira Bedeli", Kod = BorcTipiConsts.Kira, Aktif = true, Sira = 1, Davranis = BorcTipiDavranisi.AylikSabit, Sistem = true });
+        if (!existingCodes.Contains(BorcTipiConsts.Diger)) toAdd.Add(new BorcTipi { Ad = "Diğer", Kod = BorcTipiConsts.Diger, Aktif = true, Sira = 100, Davranis = BorcTipiDavranisi.KullaniciManuel, Sistem = true });
         if (!existingCodes.Contains("ORTAK")) toAdd.Add(new BorcTipi { Ad = "Ortak Gider", Kod = "ORTAK", Aktif = true, Sira = 2, Davranis = BorcTipiDavranisi.AylikSabit, Sistem = false });
         if (!existingCodes.Contains("PORTAL")) toAdd.Add(new BorcTipi { Ad = "Portal Gideri", Kod = "PORTAL", Aktif = true, Sira = 3, Davranis = BorcTipiDavranisi.AylikSabit, Sistem = false });
         if (!existingCodes.Contains("TOPLANTI")) toAdd.Add(new BorcTipi { Ad = "Toplantı Salonu Kullanım Bedeli", Kod = "TOPLANTI", Aktif = true, Sira = 4, Davranis = BorcTipiDavranisi.RezervasyonOzel, Sistem = false });
         if (!existingCodes.Contains("ETKINLIK")) toAdd.Add(new BorcTipi { Ad = "Etkinlik Alanı Kullanım Bedeli", Kod = "ETKINLIK", Aktif = true, Sira = 5, Davranis = BorcTipiDavranisi.RezervasyonOzel, Sistem = false });
-        if (!existingCodes.Contains("DEPOZITO")) toAdd.Add(new BorcTipi { Ad = "Depozito", Kod = "DEPOZITO", Aktif = true, Sira = 99, Davranis = BorcTipiDavranisi.IlkAyTekSeferlik, Sistem = false });
+        if (!existingCodes.Contains(BorcTipiConsts.Depozito)) toAdd.Add(new BorcTipi { Ad = "Depozito", Kod = BorcTipiConsts.Depozito, Aktif = true, Sira = 99, Davranis = BorcTipiDavranisi.IlkAyTekSeferlik, Sistem = true });
 
         if (toAdd.Any())
         {
@@ -68,8 +69,9 @@ public class SeedDataService
         }
 
         // Mevcut kayıtların sistem bayraklarını ve davranışlarını doğrula (Idempotency)
-        await _ctx.BorcTipleri.Where(b => b.Kod == "KIRA").ExecuteUpdateAsync(s => s.SetProperty(b => b.Sistem, true).SetProperty(b => b.Davranis, BorcTipiDavranisi.AylikSabit));
-        await _ctx.BorcTipleri.Where(b => b.Kod == "DIGER").ExecuteUpdateAsync(s => s.SetProperty(b => b.Sistem, true).SetProperty(b => b.Davranis, BorcTipiDavranisi.KullaniciManuel));
+        await _ctx.BorcTipleri.Where(b => b.Kod == BorcTipiConsts.Kira).ExecuteUpdateAsync(s => s.SetProperty(b => b.Sistem, true).SetProperty(b => b.Davranis, BorcTipiDavranisi.AylikSabit));
+        await _ctx.BorcTipleri.Where(b => b.Kod == BorcTipiConsts.Diger).ExecuteUpdateAsync(s => s.SetProperty(b => b.Sistem, true).SetProperty(b => b.Davranis, BorcTipiDavranisi.KullaniciManuel));
+        await _ctx.BorcTipleri.Where(b => b.Kod == BorcTipiConsts.Depozito).ExecuteUpdateAsync(s => s.SetProperty(b => b.Sistem, true).SetProperty(b => b.Davranis, BorcTipiDavranisi.IlkAyTekSeferlik));
         await _ctx.BorcTipleri.Where(b => b.Kod == "TOPLANTI").ExecuteUpdateAsync(s => s.SetProperty(b => b.Davranis, BorcTipiDavranisi.RezervasyonOzel));
         await _ctx.BorcTipleri.Where(b => b.Kod == "ETKINLIK").ExecuteUpdateAsync(s => s.SetProperty(b => b.Davranis, BorcTipiDavranisi.RezervasyonOzel));
     }
@@ -228,13 +230,13 @@ public class SeedDataService
                     Aktif = true,
                     KiraciKategoriId = kat.Id,
                     BorcTipiId = bt.Id,
-                    HesaplamaYontemi = (bt.Kod == "KIRA" || bt.Kod == "ORTAK") ? HesaplamaYontemi.M2 : HesaplamaYontemi.Sabit,
+                    HesaplamaYontemi = (bt.Kod == BorcTipiConsts.Kira || bt.Kod == "ORTAK") ? HesaplamaYontemi.M2 : HesaplamaYontemi.Sabit,
                     BirimDeger = bt.Kod switch
                     {
-                        "KIRA" => kat.Kod == "AKADEMISYEN" ? 300m : 400m,
+                        BorcTipiConsts.Kira => kat.Kod == "AKADEMISYEN" ? 300m : 400m,
                         "ORTAK" => kat.Kod == "AKADEMISYEN" ? 100m : 150m,
                         "PORTAL" => kat.Kod == "AKADEMISYEN" ? 300m : 500m,
-                        "DEPOZITO" => kat.Kod == "AKADEMISYEN" ? 8000m : 15000m,
+                        BorcTipiConsts.Depozito => kat.Kod == "AKADEMISYEN" ? 8000m : 15000m,
                         _ => 0m
                     },
                     KdvOrani = bt.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik ? 0m : 20m
@@ -347,8 +349,8 @@ public class SeedDataService
         // --- 4. Tarifelerin Oluşturulması (Hiyerarşik Sıralama İçin Önce Bunlar Gelmeli) ---
         await SeedTasinmazFiyatlarAsync();
 
-        var btKiraId = (await _ctx.BorcTipleri.FirstAsync(b => b.Kod == "KIRA")).Id;
-        var btDepozitoId = (await _ctx.BorcTipleri.FirstAsync(b => b.Kod == "DEPOZITO")).Id;
+        var btKiraId = (await _ctx.BorcTipleri.FirstAsync(b => b.Kod == BorcTipiConsts.Kira)).Id;
+        var btDepozitoId = (await _ctx.BorcTipleri.FirstAsync(b => b.Kod == BorcTipiConsts.Depozito)).Id;
 
         var birim101 = teknokent.Birimler.First(b => b.BirimNo == "101");
         var birim102 = teknokent.Birimler.First(b => b.BirimNo == "102");
@@ -481,10 +483,10 @@ public class SeedDataService
         var katAkademisyen = await _ctx.Kategoriler.FirstAsync(k => k.Tipi == KategoriTipi.Kiraci && k.Kod == "AKADEMISYEN");
         var katAkadOlmayan = await _ctx.Kategoriler.FirstAsync(k => k.Tipi == KategoriTipi.Kiraci && k.Kod == "AKAD_OLMAYAN");
 
-        var btKira = await _ctx.BorcTipleri.FirstAsync(b => b.Kod == "KIRA");
+        var btKira = await _ctx.BorcTipleri.FirstAsync(b => b.Kod == BorcTipiConsts.Kira);
         var btOrtak = await _ctx.BorcTipleri.FirstAsync(b => b.Kod == "ORTAK");
         var btPortal = await _ctx.BorcTipleri.FirstAsync(b => b.Kod == "PORTAL");
-        var btDepozito = await _ctx.BorcTipleri.FirstAsync(b => b.Kod == "DEPOZITO");
+        var btDepozito = await _ctx.BorcTipleri.FirstAsync(b => b.Kod == BorcTipiConsts.Depozito);
 
         _ctx.TasinmazTarifeler.AddRange(
             // Akademisyen için (m2 bazlı kira ve ortak gider)
@@ -519,7 +521,7 @@ public class SeedDataService
             var adminId = adminUser?.Id ?? "admin-id-missing";
 
             // 1. Manuel Borçlar ve İptaller
-            var manuelBorcTipi = await _ctx.BorcTipleri.FirstOrDefaultAsync(b => b.Kod == "DIGER");
+            var manuelBorcTipi = await _ctx.BorcTipleri.FirstOrDefaultAsync(b => b.Kod == BorcTipiConsts.Diger);
             if (manuelBorcTipi != null)
             {
                 var targetSozlesme = sozlesmeler.First();

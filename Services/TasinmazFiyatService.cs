@@ -1,5 +1,6 @@
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Entities;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
 
@@ -83,9 +84,9 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
                         TasinmazId = tasinmazId,
                         KiraciKategoriId = kk.Id,
                         BorcTipiId = bt.Id,
-                        BirimDeger = 0m,
-                        HesaplamaYontemi = HesaplamaYontemi.Sabit,
-                        KdvOrani = bt.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik ? 0m : 20m,
+                        BirimDeger = null,
+                        HesaplamaYontemi = (bt.Kod == BorcTipiConsts.Kira) ? HesaplamaYontemi.M2 : HesaplamaYontemi.Sabit,
+                        KdvOrani = null,
                         Aktif = true,
                         Aciklama = null,
                         RateVarMi = false
@@ -114,27 +115,37 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
                     var entity = await _tarifeRepo.GetByIdAsync(hucre.TasinmazTarifeId.Value);
                     if (entity != null)
                     {
-                        entity.BirimDeger = hucre.BirimDeger;
-                        entity.HesaplamaYontemi = hucre.HesaplamaYontemi;
-                        entity.KdvOrani = hucre.KdvOrani;
-                        entity.Aktif = hucre.Aktif;
-                        entity.Aciklama = hucre.Aciklama;
+                        if (hucre.BirimDeger.HasValue)
+                        {
+                            entity.BirimDeger = hucre.BirimDeger.Value;
+                            entity.HesaplamaYontemi = hucre.HesaplamaYontemi;
+                            entity.KdvOrani = hucre.KdvOrani ?? 0m;
+                            entity.Aktif = hucre.Aktif;
+                            entity.Aciklama = hucre.Aciklama;
+                        }
+                        else
+                        {
+                            await _tarifeRepo.DeleteAsync(entity.Id);
+                        }
                     }
                 }
                 else
                 {
-                    var newEntity = new TasinmazTarife
+                    if (hucre.BirimDeger.HasValue)
                     {
-                        TasinmazId = tasinmazId,
-                        KiraciKategoriId = hucre.KiraciKategoriId,
-                        BorcTipiId = hucre.BorcTipiId,
-                        BirimDeger = hucre.BirimDeger,
-                        HesaplamaYontemi = hucre.HesaplamaYontemi,
-                        KdvOrani = hucre.KdvOrani,
-                        Aktif = hucre.Aktif,
-                        Aciklama = hucre.Aciklama
-                    };
-                    await _tarifeRepo.AddAsync(newEntity);
+                        var newEntity = new TasinmazTarife
+                        {
+                            TasinmazId = tasinmazId,
+                            KiraciKategoriId = hucre.KiraciKategoriId,
+                            BorcTipiId = hucre.BorcTipiId,
+                            BirimDeger = hucre.BirimDeger.Value,
+                            HesaplamaYontemi = hucre.HesaplamaYontemi,
+                            KdvOrani = hucre.KdvOrani ?? 0m,
+                            Aktif = hucre.Aktif,
+                            Aciklama = hucre.Aciklama
+                        };
+                        await _tarifeRepo.AddAsync(newEntity);
+                    }
                 }
             }
         }

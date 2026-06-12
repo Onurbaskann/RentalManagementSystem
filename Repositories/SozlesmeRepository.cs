@@ -1,6 +1,7 @@
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Entities;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -178,7 +179,7 @@ public class SozlesmeRepository : BaseRepository<KiraSozlesmesi>, ISozlesmeRepos
         var kalemler = await _ctx.TahakkukKalemleri
             .Where(k => k.Tahakkuk.KiraSozlesmesiId.HasValue
                 && ids.Contains(k.Tahakkuk.KiraSozlesmesiId.Value)
-                && k.BorcTipi.Kod == "DEPOZITO"
+                && k.BorcTipi.Kod == BorcTipiConsts.Depozito
                 && k.Tahakkuk.Durum != TahakkukDurumu.IptalEdildi)
             .Select(k => new
             {

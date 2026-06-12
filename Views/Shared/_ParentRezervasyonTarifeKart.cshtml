@@ -1,6 +1,10 @@
 @model KiraTakip.Models.ViewModels.ParentRezervasyonTarifeKartViewModel
 
-<details class="parent-rezervasyon-tarife-kart mb-3 group">
+@{
+    bool isOpen = ViewData["IsOpen"] as bool? ?? true;
+}
+
+<details class="parent-rezervasyon-tarife-kart mb-3 group" @(isOpen ? "open" : "")>
     <summary class="list-none cursor-pointer flex items-center gap-2.5 p-2 px-3 bg-fuchsia-50/50 border border-fuchsia-100 rounded-lg select-none group-open:rounded-b-none transition-all hover:bg-fuchsia-100/50">
         <span class="text-[9px] font-bold tracking-widest uppercase bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200 rounded px-1.5 py-0.5">
             @Model.KaynakAdi

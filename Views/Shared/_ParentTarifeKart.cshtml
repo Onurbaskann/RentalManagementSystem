@@ -4,9 +4,10 @@
 
 @{
     var gruplar = Model.Satirlar.GroupBy(s => s.KategoriAd).ToList();
+    bool isOpen = ViewData["IsOpen"] as bool? ?? true;
 }
 
-<details class="parent-tarife-kart mb-3 group">
+<details class="parent-tarife-kart mb-3 group" @(isOpen ? "open" : "")>
     <summary class="list-none cursor-pointer flex items-center gap-2.5 p-2 px-3 bg-slate-50 border border-slate-200 rounded-lg select-none group-open:rounded-b-none transition-all hover:bg-slate-100/50">
         <span class="text-[9px] font-bold tracking-widest uppercase bg-indigo-50 text-indigo-600 border border-indigo-100 rounded px-1.5 py-0.5">
             @Model.KaynakAdi

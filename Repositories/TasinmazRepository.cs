@@ -220,4 +220,14 @@ public class TasinmazRepository : BaseRepository<Tasinmaz>, ITasinmazRepository
     {
         await _ctx.RezervasyonTarifeler.AddAsync(tarife);
     }
+
+    public async Task<Tasinmaz?> GetWithBirimlerTrackedAsync(int id)
+    {
+        return await _dbSet
+            .Include(t => t.Birimler)
+                .ThenInclude(b => b.BirimTuru)
+            .Include(t => t.Birimler)
+                .ThenInclude(b => b.Sozlesmeler)
+            .FirstOrDefaultAsync(t => t.Id == id);
+    }
 }

@@ -86,7 +86,6 @@
                     <th class="w-28 cell-center">Bitiş</th>
                     <th class="w-32 num">Aylık Bedel</th>
                     <th class="w-24 cell-center">Kalan</th>
-                    <th class="w-24">Durum</th>
                     <th class="w-24"></th>
                 </tr>
             </thead>
@@ -121,17 +120,11 @@
                         <td class="num">@s.AylikBedel.ToString("N2") ₺</td>
                         <td class="cell-center">
                             @if (feshedildi)
-                            { <span class="text-muted text-[11px] italic">Feshedildi</span> }
+                            { <span class="text-muted text-[11px] italic" title="Durum: Feshedildi">Feshedildi</span> }
                             else if (aktif)
-                            { <span class="px-2 py-0.5 rounded text-[10px] font-bold border @dayBadgeClass">@kalanGun GÜN</span> }
+                            { <span class="px-2 py-0.5 rounded text-[10px] font-bold border @dayBadgeClass" title="Durum: @(surek ? "Doluyor" : "Aktif")">@kalanGun GÜN</span> }
                             else
-                            { <span class="text-muted text-[11px] italic">Sona erdi</span> }
-                        </td>
-                        <td>
-                            @if (feshedildi) { <span class="badge badge-gecmis">Feshedildi</span> }
-                            else if (surek) { <span class="badge badge-surek">Doluyor</span> }
-                            else if (aktif) { <span class="badge badge-kirali">Aktif</span> }
-                            else { <span class="badge badge-gecmis">Sona Erdi</span> }
+                            { <span class="text-muted text-[11px] italic" title="Durum: Sona Erdi">Sona erdi</span> }
                         </td>
                         <td class="text-right">
                             <a href="/Sozlesme/Detay/@s.Id" class="btn btn-sm btn-secondary">Detay</a>
@@ -140,7 +133,7 @@
                 }
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="9" class="text-center py-12 text-muted italic">Bu filtreye uygun sözleşme bulunamadı.</td></tr>
+                    <tr><td colspan="8" class="text-center py-12 text-muted italic">Bu filtreye uygun sözleşme bulunamadı.</td></tr>
                 }
             </tbody>
         </table>

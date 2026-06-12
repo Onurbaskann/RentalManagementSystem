@@ -34,9 +34,9 @@ namespace KiraTakip.Models.ViewModels
         public int TasinmazId { get; set; }
         public int KiraciKategoriId { get; set; }
         public int BorcTipiId { get; set; }
-        public decimal BirimDeger { get; set; }
+        public decimal? BirimDeger { get; set; }
         public HesaplamaYontemi HesaplamaYontemi { get; set; } = HesaplamaYontemi.Sabit;
-        public decimal KdvOrani { get; set; }
+        public decimal? KdvOrani { get; set; }
         public bool Aktif { get; set; } = true;
         public string? Aciklama { get; set; }
         public bool RateVarMi { get; set; }
