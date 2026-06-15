@@ -91,9 +91,12 @@ public class AdminBorcTipiController : Controller
         var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
 
-        // Sistem tiplerinde Kod değiştirilemez
+        // Sistem tiplerinde Kod ve Davranış değiştirilemez
         if (entity.Sistem)
+        {
             model.Kod = entity.Kod;
+            model.Davranis = entity.Davranis;
+        }
 
         if (!model.Kod.IsValidBorcTipiKod())
             ModelState.AddModelError(nameof(model.Kod), "Kod yalnızca harf, rakam, alt çizgi ve boşluk içerebilir ve 2-50 karakter uzunluğunda olmalıdır.");

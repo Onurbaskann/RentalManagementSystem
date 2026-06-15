@@ -16,4 +16,7 @@ public class ManuelBorcListItemDto
     public DateTime VadeTarihi { get; set; }
     public TahakkukDurumu Durum { get; set; }
     public string? IptalNotu { get; set; }
+    public int? KiraciId { get; set; }
+    public KiraciTuru? KiraciTuru { get; set; }
+    public string? KiraciKategoriAd { get; set; }
 }

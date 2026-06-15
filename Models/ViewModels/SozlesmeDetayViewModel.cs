@@ -19,4 +19,7 @@ public class SozlesmeDetayViewModel
     public DateTime? GuncelKalemDonemi { get; set; }
     public decimal? DepozitoTutari { get; set; }
     public decimal KdvOraniEtkin { get; set; }
+    public DateTime DefaultYenidenUretBaslangicTarihi { get; set; } = DateTime.Today;
+    public DateTime? SonOdenenDonem { get; set; }
+    public int OdenmemisTahakkukSayisi { get; set; }
 }

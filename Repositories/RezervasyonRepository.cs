@@ -35,7 +35,8 @@ public class RezervasyonRepository : BaseRepository<Rezervasyon>, IRezervasyonRe
                 UcretsizSureDakika = r.UcretsizSureDakika,
                 UcretliSureDakika = r.UcretliSureDakika,
                 ToplamTutar = r.ToplamTutar,
-                Durum = r.Durum
+                Durum = r.Durum,
+                Aciklama = r.Aciklama
             })
             .ToListAsync();
     }

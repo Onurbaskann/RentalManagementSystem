@@ -236,6 +236,11 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
                       {
                           Id = t.Id,
                           KiraSozlesmesiId = t.KiraSozlesmesiId,
+                          KiraciId = t.KiraSozlesmesi != null ? (int?)t.KiraSozlesmesi.KiraciId : null,
+                          KiraciTuru = t.KiraSozlesmesi != null ? (KiraciTuru?)t.KiraSozlesmesi.Kiraci.KiraciTuru : null,
+                          KiraciKategoriAd = t.KiraSozlesmesi != null && t.KiraSozlesmesi.Kiraci.KiraciKategori != null
+                              ? t.KiraSozlesmesi.Kiraci.KiraciKategori.Ad
+                              : null,
                           KiraciGosterimAdi = t.KiraSozlesmesi != null
                               ? (t.KiraSozlesmesi.Kiraci.KiraciTuru == KiraciTuru.Gercek
                                   ? (t.KiraSozlesmesi.Kiraci.Ad + " " + t.KiraSozlesmesi.Kiraci.Soyad).Trim()

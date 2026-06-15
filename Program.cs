@@ -24,7 +24,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     options.SignIn.RequireConfirmedAccount = false;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
-.AddDefaultTokenProviders();
+.AddDefaultTokenProviders()
+.AddErrorDescriber<KiraTakip.Infrastructure.TurkishIdentityErrorDescriber>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {

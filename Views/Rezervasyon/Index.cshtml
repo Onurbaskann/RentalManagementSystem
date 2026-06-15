@@ -87,6 +87,11 @@
                         </td>
                         <td>
                             <span class="badge @durumCls">@durumLabel</span>
+                            @if (r.Durum == RezervasyonDurumu.IptalEdildi && !string.IsNullOrEmpty(r.Aciklama))
+                            {
+                                var displayNeden = r.Aciklama.StartsWith("İptal:") ? r.Aciklama.Substring(6).Trim() : r.Aciklama;
+                                <div class="text-[10px] text-muted mt-1 italic truncate max-w-[100px]" title="@displayNeden">⤵ @displayNeden</div>
+                            }
                         </td>
                         <td class="text-right">
                             <div class="flex gap-1.5 justify-end items-center">

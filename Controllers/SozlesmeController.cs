@@ -133,11 +133,51 @@ public class SozlesmeController : Controller
                 .FirstOrDefault(r => r.BorcTipiDavranis == BorcTipiDavranisi.AylikSabit)?.KdvOrani ?? 20m
         };
 
-        if (User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.View))
+        var hasRegeneratePermission = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Tahakkuk.Regenerate);
+        if (User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.View) || hasRegeneratePermission)
         {
-            vm.HasOdemeAccess = true;
+            vm.HasOdemeAccess = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.View);
             await _tahakkukService.GecikmeleriGuncelleAsync();
             vm.Tahakkuklar = await _tahakkukService.GetListAsync(sozlesmeId: id);
+        }
+
+        if (vm.Tahakkuklar != null && vm.Tahakkuklar.Any())
+        {
+            var ilkOdenmemis = vm.Tahakkuklar
+                .Where(t => t.KaynakTipi == TahakkukKaynakTipi.Sozlesme 
+                            && t.Durum != TahakkukDurumu.TamOdendi 
+                            && t.OdenenTutar == 0)
+                .OrderBy(t => t.DonemBaslangic)
+                .FirstOrDefault();
+
+            if (ilkOdenmemis != null)
+            {
+                vm.DefaultYenidenUretBaslangicTarihi = ilkOdenmemis.DonemBaslangic;
+            }
+            else
+            {
+                vm.DefaultYenidenUretBaslangicTarihi = DateTime.Today;
+            }
+
+            var sonOdenen = vm.Tahakkuklar
+                .Where(t => t.KaynakTipi == TahakkukKaynakTipi.Sozlesme 
+                            && (t.Durum == TahakkukDurumu.TamOdendi || t.OdenenTutar > 0))
+                .OrderByDescending(t => t.DonemBaslangic)
+                .FirstOrDefault();
+
+            if (sonOdenen != null)
+            {
+                vm.SonOdenenDonem = sonOdenen.DonemBaslangic;
+            }
+
+            vm.OdenmemisTahakkukSayisi = vm.Tahakkuklar
+                .Count(t => t.KaynakTipi == TahakkukKaynakTipi.Sozlesme 
+                            && t.Durum != TahakkukDurumu.TamOdendi 
+                            && t.OdenenTutar == 0);
+        }
+        else
+        {
+            vm.DefaultYenidenUretBaslangicTarihi = DateTime.Today;
         }
 
         var bugun = DateTime.Today;

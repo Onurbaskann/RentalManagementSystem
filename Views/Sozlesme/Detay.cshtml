@@ -52,6 +52,10 @@
     </div>
 }
 
+<script>
+    window.sozlesmeTahakkuklar = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Tahakkuklar.Select(t => new { id = t.Id, donemBaslangic = t.DonemBaslangic.ToString("yyyy-MM-dd"), toplamTutar = t.ToplamTutar, odenenTutar = t.OdenenTutar, durum = (int)t.Durum, kaynakTipi = (int)t.KaynakTipi })));
+</script>
+
 <div x-data="{
     showUzat: false,
     showFesih: false,
@@ -70,11 +74,65 @@
     tarifeUzat: false,
     uzatKalemler: [],
     uzatKalemlerYuklendi: false,
+    yenidenUretBaslangicTarihi: '@Model.DefaultYenidenUretBaslangicTarihi.ToString("yyyy-MM-dd")',
+    tahakkuklar: window.sozlesmeTahakkuklar || [],
+    onPickerChanged(e) {
+        if (e.detail.field === 'baslangicTarihi') {
+            this.yenidenUretBaslangicTarihi = e.detail.value;
+            if (this.tarifeYenidenUret) {
+                this.yenidenUretKalemlerYuklendi = false;
+                this.fetchTarifeKalemler('yenidenUret');
+            }
+        }
+    },
+    selectedFirstOfMonth() {
+        if (!this.yenidenUretBaslangicTarihi) return null;
+        const parts = this.yenidenUretBaslangicTarihi.split('-');
+        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+    },
+    tFirstOfMonth(donemStr) {
+        const parts = donemStr.split('T')[0].split('-');
+        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+    },
+    formatDonem(dateStr) {
+        if (!dateStr) return '';
+        const parts = dateStr.split('T')[0].split('-');
+        const y = parts[0];
+        const m = parseInt(parts[1]) - 1;
+        const months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+        return months[m] + ' ' + y;
+    },
+    get etkilenecekTahakkuklar() {
+        const sel = this.selectedFirstOfMonth();
+        if (!sel) return [];
+        return this.tahakkuklar.filter(t => 
+            t.kaynakTipi === 1 && 
+            t.durum !== 3 && 
+            t.odenenTutar === 0 && 
+            this.tFirstOfMonth(t.donemBaslangic) >= sel
+        );
+    },
+    get korunanTahakkuklar() {
+        const sel = this.selectedFirstOfMonth();
+        if (!sel) return [];
+        return this.tahakkuklar.filter(t => 
+            t.kaynakTipi === 1 && 
+            (this.tFirstOfMonth(t.donemBaslangic) < sel || t.durum === 3 || t.odenenTutar > 0)
+        );
+    },
+    getDurumMetni(durum, odenen) {
+        if (durum === 3) return 'Ödendi';
+        if (odenen > 0) return 'Kısmen Ödendi';
+        if (durum === 4) return 'Gecikti';
+        if (durum === 5) return 'İptal Edildi';
+        return 'Bekleniyor';
+    },
     async fetchTarifeKalemler(hedef) {
         const yuklendi = hedef === 'yenidenUret' ? 'yenidenUretKalemlerYuklendi' : 'uzatKalemlerYuklendi';
         const kalemler = hedef === 'yenidenUret' ? 'yenidenUretKalemler' : 'uzatKalemler';
         if (this[yuklendi]) return;
-        const res = await fetch(`/Sozlesme/GetVarsayilanKalemler?birimId=${this.sozlesmeBirimId}&kiraciId=${this.sozlesmeKiraciId}&baslangic=@DateTime.Today.ToString("yyyy-MM-dd")&sozlesmeId=${this.sozlesmeId}`);
+        const dateParam = hedef === 'yenidenUret' ? this.yenidenUretBaslangicTarihi : '@DateTime.Today.ToString("yyyy-MM-dd")';
+        const res = await fetch(`/Sozlesme/GetVarsayilanKalemler?birimId=${this.sozlesmeBirimId}&kiraciId=${this.sozlesmeKiraciId}&baslangic=${dateParam}&sozlesmeId=${this.sozlesmeId}`);
         const data = await res.json();
         this[kalemler] = data.map(k => ({ ...k, originalBirimDeger: k.birimDeger, varsayilanHesaplamaYontemi: k.hesaplamaYontemi, _error: null }));
         this[yuklendi] = true;
@@ -908,7 +966,7 @@
 <div x-show="showYenidenUret" x-cloak
     class="fixed inset-0 bg-black/45 z-[1000] flex items-center justify-center p-5"
     @@click.self="showYenidenUret = false">
-    <div class="bg-white rounded-2xl w-full max-w-[480px] p-7">
+    <div class="bg-white rounded-2xl w-full max-w-[480px] p-7 max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center mb-5">
             <div class="text-lg font-bold">Tahakkuk Yeniden Üret</div>
             <button @@click="showYenidenUret = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
@@ -918,20 +976,99 @@
             Seçilen tarihten itibaren <strong>ödeme alınmamış</strong> tahakkuklar silinip yeniden üretilir. Ödeme kaydı olan tahakkuklara dokunulmaz.
         </div>
 
-        <form method="post" action="/Sozlesme/YenidenUret/@s.Id">
+        <!-- Bağlamsal Bilgi Paneli -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4 text-xs text-slate-700 space-y-2">
+            <div class="flex justify-between items-center pb-1.5 border-b border-slate-100">
+                <span class="font-medium text-slate-500">Sözleşme Süresi:</span>
+                <span class="font-semibold text-slate-800">@s.BaslangicTarihi.ToString("dd.MM.yyyy") — @s.BitisTarihi.ToString("dd.MM.yyyy")</span>
+            </div>
+            <div class="flex justify-between items-center pb-1.5 border-b border-slate-100">
+                <span class="font-medium text-slate-500">Son Ödenen Dönem:</span>
+                <span class="font-semibold text-emerald-600">
+                    @(Model.SonOdenenDonem.HasValue ? Model.SonOdenenDonem.Value.ToString("MMMM yyyy", trCulture) : "Ödeme Yok")
+                </span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="font-medium text-slate-500">Ödenmemiş Tahakkuk Sayısı:</span>
+                <span class="font-semibold text-amber-600">@Model.OdenmemisTahakkukSayisi adet</span>
+            </div>
+        </div>
+
+        <form method="post" action="/Sozlesme/YenidenUret/@s.Id" @@datechanged="onPickerChanged($event)">
             @Html.AntiForgeryToken()
 
-            <div class="form-group">
+            <div class="form-group mb-4">
                 <label class="form-label">Başlangıç Tarihi *</label>
                 @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
                     { "Name",  "baslangicTarihi" },
-                    { "Value", DateTime.Today.ToString("yyyy-MM-dd") },
+                    { "Value", Model.DefaultYenidenUretBaslangicTarihi.ToString("yyyy-MM-dd") },
                     { "Mode",  "date" },
                     { "Field", "baslangicTarihi" }
                 })
                 <div class="form-hint">Bu tarihten (dahil) itibaren ödenmemiş tahakkuklar etkilenir.</div>
             </div>
 
+            <!-- Dinamik Tahakkuk Önizleme -->
+            <div class="mt-4 mb-4 border border-slate-200 rounded-xl overflow-hidden text-xs" x-show="yenidenUretBaslangicTarihi">
+                <div class="bg-slate-50 border-b border-slate-200 px-3 py-2 font-semibold text-slate-700 flex justify-between items-center">
+                    <span>Tahakkuk Etki Önizlemesi</span>
+                    <span class="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-normal" x-text="`Toplam: ${tahakkuklar.length}`"></span>
+                </div>
+                
+                <div class="p-3 bg-white space-y-3">
+                    <!-- Silinecekler (Etkilenecekler) Listesi -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="font-semibold text-red-600 flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                Yeniden Üretilecekler
+                            </span>
+                            <span class="bg-red-50 text-red-700 font-bold px-1.5 py-0.5 rounded text-[10px]" x-text="`${etkilenecekTahakkuklar.length} adet`"></span>
+                        </div>
+                        
+                        <div class="max-h-[110px] overflow-y-auto pr-1 border border-red-100 rounded-lg p-2 bg-red-50/30 space-y-1.5" x-show="etkilenecekTahakkuklar.length > 0">
+                            <template x-for="t in etkilenecekTahakkuklar" :key="t.id">
+                                <div class="flex justify-between items-center py-0.5 border-b border-red-100/50 last:border-b-0">
+                                    <span class="font-medium text-slate-700" x-text="formatDonem(t.donemBaslangic)"></span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-slate-500" x-text="formatTl(t.toplamTutar)"></span>
+                                        <span class="bg-amber-100 text-amber-800 px-1 py-0.2 rounded text-[9px] font-semibold" x-text="getDurumMetni(t.durum, t.odenenTutar)"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="text-slate-400 text-center py-2 border border-dashed border-slate-200 rounded-lg bg-slate-50/50" x-show="etkilenecekTahakkuklar.length === 0">
+                            Yeniden üretilecek tahakkuk bulunmuyor.
+                        </div>
+                    </div>
+
+                    <!-- Korunanlar Listesi -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="font-semibold text-emerald-600 flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Korunacaklar (Değişmeyecek)
+                            </span>
+                            <span class="bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded text-[10px]" x-text="`${korunanTahakkuklar.length} adet`"></span>
+                        </div>
+                        
+                        <div class="max-h-[110px] overflow-y-auto pr-1 border border-emerald-100 rounded-lg p-2 bg-emerald-50/30 space-y-1.5" x-show="korunanTahakkuklar.length > 0">
+                            <template x-for="t in korunanTahakkuklar" :key="t.id">
+                                <div class="flex justify-between items-center py-0.5 border-b border-emerald-100/50 last:border-b-0">
+                                    <span class="font-medium text-slate-700" x-text="formatDonem(t.donemBaslangic)"></span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-slate-500" x-text="formatTl(t.toplamTutar)"></span>
+                                        <span class="bg-emerald-100 text-emerald-800 px-1 py-0.2 rounded text-[9px] font-semibold" x-text="getDurumMetni(t.durum, t.odenenTutar)"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="text-slate-400 text-center py-2 border border-dashed border-slate-200 rounded-lg bg-slate-50/50" x-show="korunanTahakkuklar.length === 0">
+                            Korunacak tahakkuk bulunmuyor.
+                        </div>
+                    </div>
+                </div>
+            </div>
             @if (User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Sozlesme.OverrideRate) || User.IsInRole(RoleNames.Admin))
             {
                 <div class="form-group mt-3">

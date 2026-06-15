@@ -5,12 +5,10 @@
 }
 
 <div class="max-w-[1000px] mx-auto">
-    <div class="page-header flex items-center justify-between">
-        <div>
-            <div class="page-title">Rezervasyon Ekle</div>
-            <div class="page-subtitle">Seçilen birim için tarih ve saat belirleyin</div>
-        </div>
-        <a href="/Rezervasyon" class="btn btn-secondary">← Geri</a>
+    <div class="page-header">
+        <a href="/Rezervasyon" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Rezervasyonlar</a>
+        <div class="page-title">Rezervasyon Ekle</div>
+        <div class="page-subtitle">Seçilen birim için tarih ve saat belirleyin</div>
     </div>
 
     <div x-data="rezervasyonForm()" @@datechanged="onPickerChanged($event)">
