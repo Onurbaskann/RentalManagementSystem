@@ -12,6 +12,7 @@ public class SozlesmeDetayViewModel
     public double SureYuzdesi { get; set; }
     public KiraDurumu Durum { get; set; }
     public List<SozlesmeListItemDto> GecmisSozlesmeler { get; set; } = [];
+    public List<SozlesmeListItemDto> KiraciSozlesmeleri { get; set; } = [];
     public List<TahakkukListItemDto> Tahakkuklar { get; set; } = [];
     public bool HasOdemeAccess { get; set; }
     public ParentTarifeKartViewModel? ParentTarife { get; set; }

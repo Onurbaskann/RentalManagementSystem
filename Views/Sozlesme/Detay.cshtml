@@ -33,6 +33,29 @@
     decimal kdvTutari = s.KdvUygulanacakMi ? aylikBedel * Model.KdvOraniEtkin / 100 : 0;
     decimal kdvDahilToplam = aylikBedel + kdvTutari;
     decimal aylikKdv = s.KdvUygulanacakMi ? aylikBedel * Model.KdvOraniEtkin / 100 : 0;
+
+    var sozlesmeTahakkuklari = Model.Tahakkuklar
+        .Where(t => t.KaynakTipi == TahakkukKaynakTipi.Sozlesme && t.Durum != TahakkukDurumu.IptalEdildi)
+        .ToList();
+    int thkOdenenSayi  = sozlesmeTahakkuklari.Count(t => t.Durum == TahakkukDurumu.TamOdendi);
+    int thkBekleyenSayi = sozlesmeTahakkuklari.Count(t => t.Durum == TahakkukDurumu.Bekleniyor || t.Durum == TahakkukDurumu.KismenOdendi);
+    int thkGecikenSayi = sozlesmeTahakkuklari.Count(t => t.Durum == TahakkukDurumu.Gecikti);
+    int thkToplamSayi  = sozlesmeTahakkuklari.Count;
+    decimal thkToplamTutar = sozlesmeTahakkuklari.Sum(t => t.ToplamTutar);
+    decimal thkOdenenTutar = sozlesmeTahakkuklari.Sum(t => t.OdenenTutar);
+    decimal thkBekleyenTutar = sozlesmeTahakkuklari
+        .Where(t => t.Durum == TahakkukDurumu.Bekleniyor || t.Durum == TahakkukDurumu.KismenOdendi)
+        .Sum(t => t.ToplamTutar - t.OdenenTutar);
+    decimal thkGecikenTutar = sozlesmeTahakkuklari
+        .Where(t => t.Durum == TahakkukDurumu.Gecikti)
+        .Sum(t => t.ToplamTutar - t.OdenenTutar);
+    decimal thkOdemeOrani = thkToplamTutar > 0 ? Math.Round(thkOdenenTutar / thkToplamTutar * 100, 0) : 0;
+    DateTime? thkSonrakiVade = sozlesmeTahakkuklari
+        .Where(t => t.Durum == TahakkukDurumu.Bekleniyor || t.Durum == TahakkukDurumu.KismenOdendi)
+        .OrderBy(t => t.VadeTarihi)
+        .Select(t => (DateTime?)t.VadeTarihi)
+        .FirstOrDefault();
+    string thkSagligiRenk = thkOdemeOrani >= 90 ? "var(--color-primary)" : thkOdemeOrani >= 70 ? "#b45309" : "#dc2626";
 }
 
 @if (TempData["Success"] != null)
@@ -59,6 +82,8 @@
 <div x-data="{
     showUzat: false,
     showFesih: false,
+    showFesihConfirm: false,
+    fesihNedeniSecim: '',
     showYenidenUret: false,
     showVade: false,
     vadeKuraliTipi: @((int)s.VadeKuraliTipi),
@@ -75,6 +100,8 @@
     uzatKalemler: [],
     uzatKalemlerYuklendi: false,
     yenidenUretBaslangicTarihi: '@Model.DefaultYenidenUretBaslangicTarihi.ToString("yyyy-MM-dd")',
+    yeniBitisTarihi: '@s.BitisTarihi.AddYears(1).ToString("yyyy-MM-dd")',
+    mevcutBitisTarihi: '@s.BitisTarihi.ToString("yyyy-MM-dd")',
     tahakkuklar: window.sozlesmeTahakkuklar || [],
     onPickerChanged(e) {
         if (e.detail.field === 'baslangicTarihi') {
@@ -83,6 +110,8 @@
                 this.yenidenUretKalemlerYuklendi = false;
                 this.fetchTarifeKalemler('yenidenUret');
             }
+        } else if (e.detail.field === 'yeniBitisTarihi') {
+            this.yeniBitisTarihi = e.detail.value;
         }
     },
     selectedFirstOfMonth() {
@@ -150,6 +179,26 @@
     get kdvTutari() { return this.kdvEnabled ? Math.round(this.yeniKiraBedeli * this.kdvOrani / 100) : 0; },
     get kdvDahilToplam() { return this.yeniKiraBedeli + this.kdvTutari; },
     formatTl(v) { return new Intl.NumberFormat('tr-TR').format(v) + ' ₺'; },
+    formatDate(iso) {
+        if (!iso) return '—';
+        const p = iso.split('-');
+        return `${p[2]}.${p[1]}.${p[0]}`;
+    },
+    get uzatmaAy() {
+        if (!this.yeniBitisTarihi || !this.mevcutBitisTarihi) return 0;
+        const yeni = new Date(this.yeniBitisTarihi);
+        const eski = new Date(this.mevcutBitisTarihi);
+        return (yeni.getFullYear() - eski.getFullYear()) * 12 + (yeni.getMonth() - eski.getMonth());
+    },
+    get tarifeBazliBedel() {
+        if (!this.tarifeUzat || !this.uzatKalemler.length) return null;
+        return this.uzatKalemler.reduce((s, k) => s + this.hesaplaPopupTutar(k), 0);
+    },
+    get goruntulenecekKiraBedeli() { return this.tarifeBazliBedel ?? this.yeniKiraBedeli; },
+    get goruntulenecekKdvTutari() { return this.kdvEnabled ? Math.round(this.goruntulenecekKiraBedeli * this.kdvOrani / 100) : 0; },
+    get goruntulenecekBrut() { return this.goruntulenecekKiraBedeli + this.goruntulenecekKdvTutari; },
+    get yillikBrut() { return this.goruntulenecekBrut * 12; },
+    get toplamUzatmaTutari() { return this.goruntulenecekBrut * Math.max(this.uzatmaAy, 0); },
     async applyTufe() {
         await this.fetchTarifeKalemler('uzat');
         if (this.tufeEnabled) {
@@ -283,7 +332,10 @@
 
     <!-- Sözleşme Süresi -->
     <div class="card">
-        <div class="card-title">Sözleşme Süresi</div>
+        <div class="flex items-center justify-between">
+            <div class="card-title">Sözleşme Süresi</div>
+            <span class="badge @sozlesmeDurumBadgeCls text-[11px]">@sozlesmeDurumLabel</span>
+        </div>
         <div class="mt-2.5 flex items-center gap-2 text-[13px] font-medium">
             <span>@s.BaslangicTarihi.ToString("dd.MM.yyyy")</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-muted flex-shrink-0"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -298,8 +350,13 @@
                 <div class="progress-fill @(Model.SureYuzdesi > 85 ? "progress-fill-amber" : "")" style="width:@Model.SureYuzdesi.ToString("F0")%;"></div>
             </div>
         </div>
-        <div class="mt-2.5 text-xs text-muted">
-            Toplam @((int)(s.BitisTarihi - s.BaslangicTarihi).TotalDays) gün
+        <div class="mt-2.5 flex items-baseline justify-between">
+            <div class="text-xs text-muted">Toplam @((int)(s.BitisTarihi - s.BaslangicTarihi).TotalDays) gün</div>
+            <div class="text-[13px] font-semibold"
+                 style="color:@(feshedildi || Model.KalanGun <= 0 ? "#dc2626" : Model.KalanGun <= 30 ? "#b45309" : "var(--color-primary)");">
+                @if (feshedildi) { <span>—</span> }
+                else { <span>@Math.Max(0, Model.KalanGun) gün kaldı</span> }
+            </div>
         </div>
         <div class="mt-3 pt-3 border-t border-[var(--color-border)] flex items-center justify-between">
             <div>
@@ -322,22 +379,71 @@
         </div>
     </div>
 
-    <!-- Kalan Gün -->
-    <div class="card text-center">
-        <div class="card-title text-center">Kalan Gün</div>
-        <div class="mt-3.5">
-            <div class="font-serif text-[52px] font-bold leading-none"
-                 style="color:@(feshedildi ? "#dc2626" : Model.KalanGun <= 10 ? "#dc2626" : Model.KalanGun <= 30 ? "#b45309" : "var(--color-primary)");">
-                @(feshedildi ? "—" : Math.Max(0, Model.KalanGun).ToString())
+    <!-- Tahakkuk Sağlığı -->
+    <div class="card">
+        <div class="flex items-center justify-between">
+            <div class="card-title">Tahakkuk Sağlığı</div>
+            <span class="text-[11px] text-muted">@thkToplamSayi tahakkuk</span>
+        </div>
+        @if (thkToplamSayi == 0)
+        {
+            <div class="mt-4 text-center text-muted text-[13px] italic py-6">Henüz tahakkuk üretilmedi.</div>
+        }
+        else
+        {
+            <div class="mt-2.5 flex items-baseline gap-2">
+                <div class="font-serif text-[40px] font-bold leading-none" style="color:@thkSagligiRenk">
+                    %@thkOdemeOrani.ToString("F0")
+                </div>
+                <div class="text-[12px] text-muted">ödeme oranı</div>
             </div>
-            <div class="text-[13px] text-muted mt-1">@(feshedildi ? "" : "gün kaldı")</div>
-        </div>
-        <div class="mt-3.5 pt-3 border-t border-[var(--color-border)]">
-            <span class="text-[13px] font-semibold" 
-                  style="color:@(feshedildi || Model.KalanGun <= 0 ? "#dc2626" : Model.KalanGun <= 30 ? "#b45309" : "#065f46");">
-                @gunMesaj
-            </span>
-        </div>
+
+            <div class="mt-3.5 flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:#10b981"></span>
+                        <span class="text-[12px] text-muted">Ödendi</span>
+                        <span class="text-[10.5px] text-muted bg-slate-100 px-1.5 py-0.5 rounded-full font-medium">@thkOdenenSayi</span>
+                    </div>
+                    <span class="text-[13px] font-semibold">@TLFormat(thkOdenenTutar)</span>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:#94a3b8"></span>
+                        <span class="text-[12px] text-muted">Bekleyen</span>
+                        <span class="text-[10.5px] text-muted bg-slate-100 px-1.5 py-0.5 rounded-full font-medium">@thkBekleyenSayi</span>
+                    </div>
+                    <span class="text-[13px] font-semibold">@TLFormat(thkBekleyenTutar)</span>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:#dc2626"></span>
+                        <span class="text-[12px] text-muted">Geciken</span>
+                        <span class="text-[10.5px] px-1.5 py-0.5 rounded-full font-medium @(thkGecikenSayi > 0 ? "bg-red-50 text-[#dc2626]" : "bg-slate-100 text-muted")">@thkGecikenSayi</span>
+                    </div>
+                    <span class="text-[13px] font-semibold @(thkGecikenSayi > 0 ? "text-[#dc2626]" : "")">@TLFormat(thkGecikenTutar)</span>
+                </div>
+            </div>
+
+            <div class="mt-3 pt-3 border-t border-[var(--color-border)] flex items-center justify-between">
+                <div>
+                    <div class="text-[11.5px] text-muted">Sonraki Vade</div>
+                    <div class="text-[13px] font-semibold mt-0.5">
+                        @(thkSonrakiVade?.ToString("dd.MM.yyyy") ?? "—")
+                    </div>
+                </div>
+                @if (Model.HasOdemeAccess)
+                {
+                    <button type="button" class="btn btn-sm btn-secondary inline-flex items-center gap-1"
+                            onclick="document.querySelector('#sozlesme-tabs [data-tab=&quot;odemeler&quot;]').click(); document.getElementById('sozlesme-tabs').scrollIntoView({ behavior: 'smooth', block: 'start' });">
+                        Ödemelere Git
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                    </button>
+                }
+            </div>
+        }
     </div>
 </div>
 
@@ -407,11 +513,11 @@
     <div class="tabs">
         <button class="tab">Detaylar</button>
         <button class="tab">Birim Bilgisi</button>
-        <button class="tab">Geçmiş Sözleşmeler (@Model.GecmisSozlesmeler.Count)</button>
+        <button class="tab">Geçmiş Sözleşmeler (@(Model.GecmisSozlesmeler.Count + Model.KiraciSozlesmeleri.Count))</button>
         <button class="tab">İşlem Geçmişi (@s.IslemGecmisi.Count)</button>
         @if (Model.HasOdemeAccess)
         {
-            <button class="tab">Ödemeler (@Model.Tahakkuklar.Count)</button>
+            <button class="tab" data-tab="odemeler">Ödemeler (@Model.Tahakkuklar.Count)</button>
         }
     </div>
 
@@ -511,48 +617,101 @@
 
     <!-- Tab 3: Geçmiş Sözleşmeler -->
     <div class="tab-content">
-        @if (!Model.GecmisSozlesmeler.Any())
-        {
-            <div class="card text-center text-muted p-8">Bu birime ait başka sözleşme yok.</div>
-        }
-        else
-        {
-            <div class="card p-0 overflow-hidden">
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Kiracı</th>
-                                <th>Başlangıç</th>
-                                <th>Bitiş</th>
-                                <th>Aylık Bedel</th>
-                                <th>Durum</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var gs in Model.GecmisSozlesmeler)
-                            {
-                                bool gAktif = gs.Aktif;
-                                bool gFesih = gs.Durum == SozlesmeDurumu.Feshedildi;
+        <div class="flex flex-col gap-6">
+        <!-- Bölüm 1: Bu Birim İçin Diğer Sözleşmeler -->
+        <div>
+            <div class="text-[13px] font-semibold text-slate-700 mb-2">Bu Birim İçin Diğer Sözleşmeler <span class="text-muted font-normal">(@Model.GecmisSozlesmeler.Count)</span></div>
+            @if (!Model.GecmisSozlesmeler.Any())
+            {
+                <div class="card text-center text-muted p-6 text-[13px]">Bu birime ait başka sözleşme yok.</div>
+            }
+            else
+            {
+                <div class="card p-0 overflow-hidden">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
                                 <tr>
-                                    <td class="font-semibold">@gs.KiraciGosterimAdi</td>
-                                    <td>@gs.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
-                                    <td>@gs.BitisTarihi.ToString("dd.MM.yyyy")</td>
-                                    <td>@gs.AylikBedel.ToString("N0") ₺</td>
-                                    <td>
-                                        @if (gFesih) { <span class="badge badge-gecmis">Feshedildi</span> }
-                                        else if (gAktif) { <span class="badge badge-kirali">Aktif</span> }
-                                        else { <span class="badge badge-gecmis">Geçmiş</span> }
-                                    </td>
-                                    <td><a href="/Sozlesme/Detay/@gs.Id" class="btn btn-sm btn-secondary">Detay</a></td>
+                                    <th>Kiracı</th>
+                                    <th>Başlangıç</th>
+                                    <th>Bitiş</th>
+                                    <th class="num">Aylık Bedel</th>
+                                    <th>Durum</th>
+                                    <th></th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach (var gs in Model.GecmisSozlesmeler)
+                                {
+                                    bool gAktif = gs.Aktif;
+                                    bool gFesih = gs.Durum == SozlesmeDurumu.Feshedildi;
+                                    <tr>
+                                        <td class="font-semibold">@gs.KiraciGosterimAdi</td>
+                                        <td>@gs.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
+                                        <td>@gs.BitisTarihi.ToString("dd.MM.yyyy")</td>
+                                        <td class="num">@gs.AylikBedel.ToString("N0") ₺</td>
+                                        <td>
+                                            @if (gFesih) { <span class="badge badge-gecmis">Feshedildi</span> }
+                                            else if (gAktif) { <span class="badge badge-kirali">Aktif</span> }
+                                            else { <span class="badge badge-gecmis">Geçmiş</span> }
+                                        </td>
+                                        <td><a href="/Sozlesme/Detay/@gs.Id" class="btn btn-sm btn-secondary">Detay</a></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-        }
+            }
+        </div>
+
+        <!-- Bölüm 2: Bu Kiracı İçin Diğer Sözleşmeler -->
+        <div>
+            <div class="text-[13px] font-semibold text-slate-700 mb-2">Bu Kiracı İçin Diğer Sözleşmeler <span class="text-muted font-normal">(@Model.KiraciSozlesmeleri.Count)</span></div>
+            @if (!Model.KiraciSozlesmeleri.Any())
+            {
+                <div class="card text-center text-muted p-6 text-[13px]">Bu kiracıya ait başka sözleşme yok.</div>
+            }
+            else
+            {
+                <div class="card p-0 overflow-hidden">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Birim</th>
+                                    <th>Başlangıç</th>
+                                    <th>Bitiş</th>
+                                    <th class="num">Aylık Bedel</th>
+                                    <th>Durum</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var ks in Model.KiraciSozlesmeleri)
+                                {
+                                    bool kAktif = ks.Aktif;
+                                    bool kFesih = ks.Durum == SozlesmeDurumu.Feshedildi;
+                                    <tr>
+                                        <td class="font-semibold">@ks.BirimAd</td>
+                                        <td>@ks.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
+                                        <td>@ks.BitisTarihi.ToString("dd.MM.yyyy")</td>
+                                        <td class="num">@ks.AylikBedel.ToString("N0") ₺</td>
+                                        <td>
+                                            @if (kFesih) { <span class="badge badge-gecmis">Feshedildi</span> }
+                                            else if (kAktif) { <span class="badge badge-kirali">Aktif</span> }
+                                            else { <span class="badge badge-gecmis">Geçmiş</span> }
+                                        </td>
+                                        <td><a href="/Sozlesme/Detay/@ks.Id" class="btn btn-sm btn-secondary">Detay</a></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        </div>
+        </div>
     </div>
 
     <!-- Tab 4: İşlem Geçmişi -->
@@ -637,15 +796,18 @@
         }
         else
         {
-            decimal toplamBeklenen = Model.Tahakkuklar.Sum(t => t.ToplamTutar);
-            decimal toplamOdenen   = Model.Tahakkuklar.Sum(t => t.OdenenTutar);
-            decimal toplamKalan    = toplamBeklenen - toplamOdenen;
-            int gecikmisSayisi     = Model.Tahakkuklar.Count(t => t.Durum == KiraTakip.Models.TahakkukDurumu.Gecikti);
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            var tumTahakkuklar      = Model.Tahakkuklar.Where(t => t.Durum != TahakkukDurumu.IptalEdildi).ToList();
+            decimal toplamBeklenen  = tumTahakkuklar.Sum(t => t.ToplamTutar);
+            decimal toplamOdenen    = tumTahakkuklar.Sum(t => t.OdenenTutar);
+            decimal toplamKalan     = toplamBeklenen - toplamOdenen;
+            decimal gecikmisTutar   = tumTahakkuklar.Where(t => t.Durum == TahakkukDurumu.Gecikti).Sum(t => t.ToplamTutar - t.OdenenTutar);
+            int gecikmisSayisi      = tumTahakkuklar.Count(t => t.Durum == TahakkukDurumu.Gecikti);
+            int bekleyenSayisi      = tumTahakkuklar.Count(t => t.Durum == TahakkukDurumu.Bekleniyor || t.Durum == TahakkukDurumu.KismenOdendi);
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 <div class="card text-center">
                     <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Toplam Beklenen</div>
                     <div class="text-xl font-bold">@toplamBeklenen.ToString("N0") ₺</div>
-                    <div class="text-[11.5px] text-muted">@Model.Tahakkuklar.Count tahakkuk</div>
+                    <div class="text-[11.5px] text-muted">@tumTahakkuklar.Count tahakkuk</div>
                 </div>
                 <div class="card text-center">
                     <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Tahsil Edilen</div>
@@ -653,10 +815,15 @@
                     @{ double pct = toplamBeklenen > 0 ? (double)(toplamOdenen / toplamBeklenen * 100) : 0; }
                     <div class="text-[11.5px] text-muted">%@pct.ToString("F0")</div>
                 </div>
-                <div class="card text-center @(toplamKalan > 0 ? "border-l-3 border-l-[#ef4444]" : "")">
-                    <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Kalan / Gecikmiş</div>
-                    <div class="text-xl font-bold @(toplamKalan > 0 ? "text-[#ef4444]" : "text-[#065f46]")">@toplamKalan.ToString("N0") ₺</div>
-                    <div class="text-[11.5px] text-muted">@(gecikmisSayisi > 0 ? $"{gecikmisSayisi} gecikmiş" : "Gecikme yok")</div>
+                <div class="card text-center">
+                    <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Kalan</div>
+                    <div class="text-xl font-bold text-[#2563eb]">@toplamKalan.ToString("N0") ₺</div>
+                    <div class="text-[11.5px] text-muted">@bekleyenSayisi bekleyen</div>
+                </div>
+                <div class="card text-center @(gecikmisSayisi > 0 ? "border-l-[3px] border-l-[#ef4444]" : "")">
+                    <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Gecikmiş</div>
+                    <div class="text-xl font-bold @(gecikmisSayisi > 0 ? "text-[#ef4444]" : "text-muted")">@gecikmisTutar.ToString("N0") ₺</div>
+                    <div class="text-[11.5px] text-muted">@(gecikmisSayisi > 0 ? $"{gecikmisSayisi} tahakkuk" : "Gecikme yok")</div>
                 </div>
             </div>
 
@@ -666,10 +833,12 @@
                         <thead>
                             <tr>
                                 <th>Dönem</th>
-                                <th>Vade</th>
+                                <th>Vade Tarihi</th>
+                                <th class="w-24">Gecikme</th>
                                 <th class="num">Beklenen</th>
                                 <th class="num">Ödenen</th>
-                                <th>Durum</th>
+                                <th class="num">Kalan</th>
+                                <th class="pl-4">Durum</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -688,6 +857,10 @@
                                     KiraTakip.Models.TahakkukDurumu.Gecikti      => "Gecikti",
                                     _                                              => "Bekleniyor"
                                 };
+                                decimal tKalan = t.ToplamTutar - t.OdenenTutar;
+                                int tGecikmeGun = (t.Durum != KiraTakip.Models.TahakkukDurumu.TamOdendi && t.VadeTarihi.Date < DateTime.Today)
+                                    ? (DateTime.Today - t.VadeTarihi.Date).Days : 0;
+                                string tGecikmeRenk = tGecikmeGun > 7 ? "#dc2626" : tGecikmeGun > 0 ? "#b45309" : "";
                                 <tr @@click="open[@t.Id] = !open[@t.Id]" class="cursor-pointer">
                                     <td>
                                         <svg x-show="open[@t.Id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="mr-1 inline-block align-middle"><polyline points="18 15 12 9 6 15"/></svg>
@@ -695,15 +868,28 @@
                                         @t.DonemBaslangic.ToString("MMMM yyyy")
                                     </td>
                                     <td>@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
+                                    <td>
+                                        @if (tGecikmeGun > 0)
+                                        {
+                                            <span class="text-[12.5px] font-semibold" style="color:@tGecikmeRenk">+@tGecikmeGun gün</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
                                     <td class="num">@t.ToplamTutar.ToString("N0") ₺</td>
                                     <td class="num num-positive">@t.OdenenTutar.ToString("N0") ₺</td>
-                                    <td><span class="badge @tDurumCls">@tDurumLabel</span></td>
+                                    <td class="num @(tKalan > 0 ? "font-semibold" : "text-muted")" style="@(tKalan > 0 ? "color:#dc2626" : "")">
+                                        @(tKalan > 0 ? tKalan.ToString("N0") + " ₺" : "—")
+                                    </td>
+                                    <td class="pl-4"><span class="badge @tDurumCls">@tDurumLabel</span></td>
                                     <td @@click.stop="">
                                         <a href="/Odeme?tahakkukId=@t.Id" class="btn btn-sm btn-secondary">Ödemeler</a>
                                     </td>
                                 </tr>
                                 <tr x-show="open[@t.Id]" x-cloak class="bg-[#f7f8fb]">
-                                    <td colspan="6" class="p-5 pb-3 px-5">
+                                    <td colspan="8" class="p-5 pb-3 px-5">
                                         @if (t.Kalemler.Any())
                                         {
                                             <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-2">Kalem Dökümü</div>
@@ -785,18 +971,13 @@
 <div x-show="showUzat" x-cloak
     class="fixed inset-0 bg-black/45 z-[1000] flex items-center justify-center p-5"
     @@click.self="showUzat = false">
-    <div class="bg-white rounded-2xl w-full max-w-[520px] p-7 max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-2xl w-full max-w-[680px] p-7 max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center mb-5">
             <div class="text-lg font-bold">Sözleşmeyi Uzat</div>
             <button @@click="showUzat = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
         </div>
 
-        <div class="bg-[#f7f8fa] rounded-lg px-3.5 py-2.5 mb-5 text-[13px]">
-            Mevcut bitiş: <strong>@s.BitisTarihi.ToString("dd.MM.yyyy")</strong> •
-            Mevcut kira: <strong>@TLFormat(aylikBedel)</strong>
-        </div>
-
-        <form method="post" action="/Sozlesme/Uzat/@s.Id">
+        <form method="post" action="/Sozlesme/Uzat/@s.Id" @@datechanged="onPickerChanged($event)">
             @Html.AntiForgeryToken()
             <input type="hidden" name="SozlesmeId" value="@s.Id" />
 
@@ -816,7 +997,10 @@
                     <input type="checkbox" name="TufeUygulanacakMi" value="true"
                         x-model="tufeEnabled" @@change="applyTufe()"
                         class="w-4 h-4 cursor-pointer" />
-                    TÜFE Artışı Uygula
+                    <span>TÜFE Artışı Uygula</span>
+                    <span x-show="tufeEnabled" x-cloak class="text-[12px] font-normal text-muted">
+                        · %<span x-text="tufeOrani"></span> → +<span x-text="formatTl(tufeArtisTutari)"></span>
+                    </span>
                 </label>
             </div>
             <div x-show="tufeEnabled" x-cloak class="bg-[#fffbeb] border border-[#fde68a] rounded-lg p-3.5 mb-3.5">
@@ -837,7 +1021,10 @@
                     <input type="checkbox" name="KdvUygulanacakMi" value="true"
                         x-model="kdvEnabled"
                         class="w-4 h-4 cursor-pointer" />
-                    KDV Uygula
+                    <span>KDV Uygula</span>
+                    <span x-show="kdvEnabled" x-cloak class="text-[12px] font-normal text-muted">
+                        · %<span x-text="kdvOrani"></span> → +<span x-text="formatTl(kdvTutari)"></span>
+                    </span>
                 </label>
             </div>
             <div x-show="kdvEnabled" x-cloak class="bg-[#f0f9ff] border border-[#bae6fd] rounded-lg p-3.5 mb-3.5">
@@ -907,6 +1094,61 @@
                 </div>
             }
 
+            <!-- ÖZET -->
+            <div class="border border-[var(--color-border)] rounded-lg bg-[#f7f8fa] p-4 mt-4 mb-4">
+                <div class="text-[11px] font-semibold uppercase tracking-wider text-muted mb-3">Özet</div>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-2.5 text-[13px]">
+
+                    <div class="text-muted">Bitiş Tarihi</div>
+                    <div class="text-right font-medium">
+                        <span x-text="formatDate(mevcutBitisTarihi)" class="text-muted"></span>
+                        <span class="text-muted mx-1">→</span>
+                        <span x-text="formatDate(yeniBitisTarihi)" class="font-semibold" style="color:var(--color-primary)"></span>
+                    </div>
+
+                    <div class="text-muted">Uzatma Süresi</div>
+                    <div class="text-right font-medium"><span x-text="uzatmaAy"></span> ay</div>
+
+                    <div class="text-muted">Aylık Kira</div>
+                    <div class="text-right font-medium">
+                        <span x-text="formatTl(currentBedel)" class="text-muted"></span>
+                        <span class="text-muted mx-1">→</span>
+                        <span x-text="formatTl(goruntulenecekKiraBedeli)" class="font-semibold" style="color:var(--color-primary)"></span>
+                    </div>
+
+                    <template x-if="tufeEnabled && !tarifeUzat">
+                        <div class="contents">
+                            <div class="text-muted pl-3 text-[12px]">TÜFE artışı</div>
+                            <div class="text-right text-[12px] text-muted">+<span x-text="formatTl(tufeArtisTutari)"></span></div>
+                        </div>
+                    </template>
+
+                    <template x-if="kdvEnabled">
+                        <div class="contents">
+                            <div class="text-muted pl-3 text-[12px]">KDV (%<span x-text="kdvOrani"></span>)</div>
+                            <div class="text-right text-[12px] text-muted">+<span x-text="formatTl(goruntulenecekKdvTutari)"></span></div>
+                        </div>
+                    </template>
+
+                    <div class="col-span-2 border-t border-[var(--color-border)] my-0.5"></div>
+
+                    <div class="text-muted">Aylık Brüt</div>
+                    <div class="text-right font-semibold text-[14px]" style="color:var(--color-primary)">
+                        <span x-text="formatTl(goruntulenecekBrut)"></span>
+                    </div>
+
+                    <div class="text-muted">Yıllık Brüt</div>
+                    <div class="text-right font-medium"><span x-text="formatTl(yillikBrut)"></span></div>
+
+                    <template x-if="uzatmaAy > 0">
+                        <div class="contents">
+                            <div class="text-muted text-[12px]">Toplam Uzatma Tutarı</div>
+                            <div class="text-right font-semibold text-[14px]"><span x-text="formatTl(toplamUzatmaTutari)"></span></div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
             <div class="flex gap-2.5 mt-1">
                 <button type="submit" class="btn btn-primary">Uzat</button>
                 <button type="button" class="btn btn-secondary" @@click="showUzat = false">İptal</button>
@@ -918,47 +1160,83 @@
 <!-- MODAL: Sözleşmeyi Feshet -->
 <div x-show="showFesih" x-cloak
     class="fixed inset-0 bg-black/45 z-[1000] flex items-center justify-center p-5"
-    @@click.self="showFesih = false">
-    <div class="bg-white rounded-2xl w-full max-w-[460px] p-7">
+    @@click.self="showFesih = false; showFesihConfirm = false;">
+    <div class="bg-white rounded-2xl w-full max-w-[480px] p-7">
         <div class="flex justify-between items-center mb-5">
             <div class="text-lg font-bold text-[#dc2626]">Sözleşmeyi Feshet</div>
-            <button @@click="showFesih = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
+            <button @@click="showFesih = false; showFesihConfirm = false;" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
         </div>
 
-        <div class="alert-danger mb-5 text-[13px]">
-            Bu işlem geri alınamaz. Feshedilen sözleşme aktif gelir hesaplarına dahil edilmez ve birim yeniden kiralanabilir hale gelir.
+        <!-- Adım 1: Form -->
+        <div x-show="!showFesihConfirm">
+            <div class="bg-red-50 border border-red-200 rounded-lg px-3.5 py-3 mb-5 text-[12.5px] text-[#991b1b] space-y-1">
+                <div class="font-semibold">Bu işlem geri alınamaz.</div>
+                <div>Feshedilen sözleşme aktif gelir hesaplarına dahil edilmez ve birim yeniden kiralanabilir hale gelir.</div>
+                <div class="pt-0.5 border-t border-red-200 text-[12px]">Fesih tarihini izleyen aydan itibaren ödeme alınmamış tahakkuklar otomatik olarak <strong>iptal edilir</strong>. Mevcut ay ve önceki dönemler ile ödenmişler etkilenmez.</div>
+            </div>
+
+            <form method="post" action="/Sozlesme/Feshet/@s.Id" id="fesih-form">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="SozlesmeId" value="@s.Id" />
+
+                <div class="form-group">
+                    <label class="form-label">Fesih Tarihi *</label>
+                    @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
+                        { "Name",  "FesihTarihi" },
+                        { "Value", DateTime.Today.ToString("yyyy-MM-dd") },
+                        { "Mode",  "date" },
+                        { "Field", "fesihTarihi" }
+                    })
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Fesih Nedeni *</label>
+                    <select x-model="fesihNedeniSecim" class="form-control" required>
+                        <option value="">— Seçiniz —</option>
+                        <option value="Kiracı talebi">Kiracı talebi</option>
+                        <option value="Mal sahibi talebi">Mal sahibi talebi</option>
+                        <option value="Kira ödeme ihlali">Kira ödeme ihlali</option>
+                        <option value="Erken çıkış">Erken çıkış</option>
+                        <option value="Anlaşmazlık">Anlaşmazlık</option>
+                        <option value="Diğer">Diğer</option>
+                    </select>
+                </div>
+
+                <div class="form-group" x-show="fesihNedeniSecim === 'Diğer'" x-cloak>
+                    <label class="form-label">Nedeni belirtin *</label>
+                    <input type="text" class="form-control" placeholder="Fesih nedenini açıklayın"
+                        :required="fesihNedeniSecim === 'Diğer'"
+                        x-on:input="$el.form.querySelector('[name=FesihNedeni]').value = $el.value" />
+                </div>
+
+                <input type="hidden" name="FesihNedeni"
+                    :value="fesihNedeniSecim !== 'Diğer' ? fesihNedeniSecim : ''" />
+
+                <div class="flex gap-2.5 mt-5">
+                    <button type="button" class="btn btn-danger"
+                        @@click="if(fesihNedeniSecim) showFesihConfirm = true">Devam Et →</button>
+                    <button type="button" class="btn btn-secondary" @@click="showFesih = false">İptal</button>
+                </div>
+            </form>
         </div>
 
-        <form method="post" action="/Sozlesme/Feshet/@s.Id">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="SozlesmeId" value="@s.Id" />
-
-            <div class="form-group">
-                <label class="form-label">Fesih Tarihi *</label>
-                @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
-                    { "Name",  "FesihTarihi" },
-                    { "Value", DateTime.Today.ToString("yyyy-MM-dd") },
-                    { "Mode",  "date" },
-                    { "Field", "fesihTarihi" }
-                })
+        <!-- Adım 2: Onay -->
+        <div x-show="showFesihConfirm" x-cloak>
+            <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-4 mb-5 text-[13px] text-[#991b1b] text-center">
+                <div class="text-2xl mb-2">⚠️</div>
+                <div class="font-semibold mb-1">Sözleşmeyi feshetmek üzeresiniz.</div>
+                <div>Bu işlem <strong>geri alınamaz</strong>. Emin misiniz?</div>
             </div>
-
-            <div class="form-group">
-                <label class="form-label">Fesih Nedeni *</label>
-                <input type="text" name="FesihNedeni" class="form-control"
-                    placeholder="Örn: Kiracı tarafından erken fesih" required />
+            <div class="bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5 mb-5 text-[12.5px] text-slate-600 space-y-1">
+                <div class="flex justify-between"><span class="text-muted">Kiracı</span><span class="font-semibold">@s.KiraciGosterimAdi</span></div>
+                <div class="flex justify-between"><span class="text-muted">Birim</span><span class="font-semibold">@s.BirimAd</span></div>
+                <div class="flex justify-between"><span class="text-muted">Neden</span><span class="font-semibold" x-text="fesihNedeniSecim"></span></div>
             </div>
-
-            <div class="form-group">
-                <label class="form-label">Açıklama</label>
-                <textarea name="Aciklama" class="form-control" rows="2" placeholder="Opsiyonel ek not"></textarea>
+            <div class="flex gap-2.5">
+                <button type="button" class="btn btn-danger" @@click="document.getElementById('fesih-form').submit()">Evet, Feshet</button>
+                <button type="button" class="btn btn-secondary" @@click="showFesihConfirm = false">← Geri Dön</button>
             </div>
-
-            <div class="flex gap-2.5 mt-1">
-                <button type="submit" class="btn btn-danger">Feshet</button>
-                <button type="button" class="btn btn-secondary" @@click="showFesih = false">İptal</button>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 
@@ -966,7 +1244,7 @@
 <div x-show="showYenidenUret" x-cloak
     class="fixed inset-0 bg-black/45 z-[1000] flex items-center justify-center p-5"
     @@click.self="showYenidenUret = false">
-    <div class="bg-white rounded-2xl w-full max-w-[480px] p-7 max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-2xl w-full max-w-[680px] p-7 max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center mb-5">
             <div class="text-lg font-bold">Tahakkuk Yeniden Üret</div>
             <button @@click="showYenidenUret = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
@@ -1026,7 +1304,7 @@
                             <span class="bg-red-50 text-red-700 font-bold px-1.5 py-0.5 rounded text-[10px]" x-text="`${etkilenecekTahakkuklar.length} adet`"></span>
                         </div>
                         
-                        <div class="max-h-[110px] overflow-y-auto pr-1 border border-red-100 rounded-lg p-2 bg-red-50/30 space-y-1.5" x-show="etkilenecekTahakkuklar.length > 0">
+                        <div class="max-h-[140px] overflow-y-auto pr-1 border border-red-100 rounded-lg p-2 bg-red-50/30 space-y-1.5" x-show="etkilenecekTahakkuklar.length > 0">
                             <template x-for="t in etkilenecekTahakkuklar" :key="t.id">
                                 <div class="flex justify-between items-center py-0.5 border-b border-red-100/50 last:border-b-0">
                                     <span class="font-medium text-slate-700" x-text="formatDonem(t.donemBaslangic)"></span>
@@ -1052,7 +1330,7 @@
                             <span class="bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded text-[10px]" x-text="`${korunanTahakkuklar.length} adet`"></span>
                         </div>
                         
-                        <div class="max-h-[110px] overflow-y-auto pr-1 border border-emerald-100 rounded-lg p-2 bg-emerald-50/30 space-y-1.5" x-show="korunanTahakkuklar.length > 0">
+                        <div class="max-h-[140px] overflow-y-auto pr-1 border border-emerald-100 rounded-lg p-2 bg-emerald-50/30 space-y-1.5" x-show="korunanTahakkuklar.length > 0">
                             <template x-for="t in korunanTahakkuklar" :key="t.id">
                                 <div class="flex justify-between items-center py-0.5 border-b border-emerald-100/50 last:border-b-0">
                                     <span class="font-medium text-slate-700" x-text="formatDonem(t.donemBaslangic)"></span>

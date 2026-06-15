@@ -100,6 +100,7 @@ public class SozlesmeController : Controller
         }
 
         var gecmis = await _sozlesmeService.GetByBirimIdAsync(s.BirimId);
+        var kiraciSozlesmeleri = await _sozlesmeService.GetByKiraciIdAsync(s.KiraciId);
 
         var dummySozlesme = new KiraSozlesmesi
         {
@@ -129,6 +130,7 @@ public class SozlesmeController : Controller
             SureYuzdesi = _istatistik.SureYuzdesi(dummySozlesme),
             Durum = _istatistik.GetBirimDurumu(dummySozlesme.Birim),
             GecmisSozlesmeler = gecmis.Where(x => x.Id != id).ToList(),
+            KiraciSozlesmeleri = kiraciSozlesmeleri.Where(x => x.Id != id && x.BirimId != s.BirimId).ToList(),
             KdvOraniEtkin = s.SozlesmeTarifeler
                 .FirstOrDefault(r => r.BorcTipiDavranis == BorcTipiDavranisi.AylikSabit)?.KdvOrani ?? 20m
         };
