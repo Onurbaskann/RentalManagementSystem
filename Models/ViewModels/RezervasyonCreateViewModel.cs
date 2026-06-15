@@ -5,8 +5,13 @@ namespace KiraTakip.Models.ViewModels;
 
 public class RezervasyonCreateViewModel
 {
-    public int BirimId { get; set; }
-    public int KiraciId { get; set; }
+    [Required(ErrorMessage = "{0} seçilmelidir.")]
+    [Display(Name = "Taşınmaz Birimi")]
+    public int? BirimId { get; set; }
+
+    [Required(ErrorMessage = "{0} seçilmelidir.")]
+    [Display(Name = "Kiracı")]
+    public int? KiraciId { get; set; }
     public int? KiraSozlesmesiId { get; set; }
     public DateTime BaslangicTarihi { get; set; } = DateTime.Today;
     public DateTime BitisTarihi { get; set; } = DateTime.Today.AddHours(2);

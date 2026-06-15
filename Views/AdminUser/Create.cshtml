@@ -4,7 +4,7 @@
     string[] roller = ViewBag.Roller;
 }
 
-<div class="page-header flex items-center justify-between">
+<div class="max-w-[800px] mx-auto"><div class="page-header flex items-center justify-between">
     <div>
         <a href="/Admin/Kullanicilar" class="inline-flex items-center gap-1.5 text-xs text-muted hover:text-primary transition-colors mb-2">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -14,7 +14,7 @@
     </div>
 </div>
 
-<div class="max-w-xl">
+<div>
     <div class="card p-6">
         <form method="post" action="/Admin/Kullanicilar/Ekle" x-data="{ seciliRol: '@Model.Rol' }">
             @Html.AntiForgeryToken()
@@ -88,4 +88,5 @@
             </div>
         </form>
     </div>
+</div>
 </div>

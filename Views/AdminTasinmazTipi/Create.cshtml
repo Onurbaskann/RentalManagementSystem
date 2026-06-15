@@ -3,7 +3,7 @@
     ViewData["Title"] = "Yeni Taşınmaz Tipi";
 }
 
-<div class="page-header">
+<div class="max-w-[600px] mx-auto"><div class="page-header">
     <div class="page-title">Yeni Taşınmaz Tipi</div>
 </div>
 
@@ -17,7 +17,7 @@
     </div>
 }
 
-<div class="card max-w-[480px]">
+<div class="card">
     <form method="post" action="/Admin/TasinmazTipi/Ekle">
         @Html.AntiForgeryToken()
 
@@ -66,6 +66,7 @@
             <a href="/Admin/TasinmazTipi" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>
+</div>
 </div>
 
 @section Scripts {

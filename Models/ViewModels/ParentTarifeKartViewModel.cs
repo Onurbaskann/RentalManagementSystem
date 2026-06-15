@@ -21,4 +21,5 @@ public class ParentTarifeSatir
     public HesaplamaYontemi HesaplamaYontemi { get; set; }
     public decimal BirimDeger { get; set; }
     public decimal KdvOrani { get; set; }
+    public string? Kaynak { get; set; }
 }

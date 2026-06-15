@@ -6,36 +6,37 @@
     var kalan = t != null ? t.ToplamTutar - t.OdenenTutar : 0;
 }
 
-<div class="page-header">
+<div class="max-w-[600px] mx-auto">
+    <div class="page-header">
+        <div>
+            <a href="/Tahakkuk" class="text-xs text-muted no-underline inline-flex items-center gap-1 mb-2">← Tahakkuklar</a>
+            <div class="page-title">Ödeme Ekle</div>
+            @if (t != null)
+            {
+                <div class="page-subtitle">@t.KiraciGosterimAdi — @t.DonemBaslangic.ToString("MMMM yyyy")</div>
+            }
+        </div>
+    </div>
+
+    @if (t != null)
+    {
+        <div class="flex gap-3 mb-5 flex-wrap">
+            <div class="card card-sm flex-1 min-w-[9.375rem]">
+                <div class="card-title">Toplam Tahakkuk</div>
+                <div class="card-value" style="font-size: 1.375rem;">@t.ToplamTutar.ToString("N0") ₺</div>
+            </div>
+            <div class="card card-sm flex-1 min-w-[9.375rem]">
+                <div class="card-title">Ödenen</div>
+                <div class="card-value" style="font-size: 1.375rem; color: #065f46;">@t.OdenenTutar.ToString("N0") ₺</div>
+            </div>
+            <div class="card card-sm flex-1 min-w-[9.375rem]">
+                <div class="card-title">Kalan</div>
+                <div class="card-value" style="font-size: 1.375rem; @(kalan > 0 ? "color: #991b1b;" : "color: #065f46;")">@kalan.ToString("N0") ₺</div>
+            </div>
+        </div>
+    }
+
     <div>
-        <a href="/Tahakkuk" class="text-xs text-muted no-underline inline-flex items-center gap-1 mb-2">← Tahakkuklar</a>
-        <div class="page-title">Ödeme Ekle</div>
-        @if (t != null)
-        {
-            <div class="page-subtitle">@t.KiraciGosterimAdi — @t.DonemBaslangic.ToString("MMMM yyyy")</div>
-        }
-    </div>
-</div>
-
-@if (t != null)
-{
-    <div class="flex gap-3 mb-5 flex-wrap">
-        <div class="card card-sm flex-1 min-w-[9.375rem]">
-            <div class="card-title">Toplam Tahakkuk</div>
-            <div class="card-value" style="font-size: 1.375rem;">@t.ToplamTutar.ToString("N0") ₺</div>
-        </div>
-        <div class="card card-sm flex-1 min-w-[9.375rem]">
-            <div class="card-title">Ödenen</div>
-            <div class="card-value" style="font-size: 1.375rem; color: #065f46;">@t.OdenenTutar.ToString("N0") ₺</div>
-        </div>
-        <div class="card card-sm flex-1 min-w-[9.375rem]">
-            <div class="card-title">Kalan</div>
-            <div class="card-value" style="font-size: 1.375rem; @(kalan > 0 ? "color: #991b1b;" : "color: #065f46;")">@kalan.ToString("N0") ₺</div>
-        </div>
-    </div>
-}
-
-<div class="max-w-[30rem]">
     <div class="card">
         <form method="post" action="/Odeme/Ekle">
             @Html.AntiForgeryToken()
@@ -49,7 +50,12 @@
 
             <div class="form-group">
                 <label class="form-label">Ödeme Tarihi</label>
-                <input asp-for="OdemeTarihi" type="date" class="form-control" />
+                @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
+                    { "Name",  "OdemeTarihi" },
+                    { "Value", Model.OdemeTarihi.ToString("yyyy-MM-dd") },
+                    { "Mode",  "date" },
+                    { "Field", "odemeTarihi" }
+                })
                 <span asp-validation-for="OdemeTarihi" class="form-error"></span>
             </div>
 
@@ -84,4 +90,5 @@
             </div>
         </form>
     </div>
+</div>
 </div>

@@ -184,6 +184,8 @@ public class TasinmazController : Controller
         for (int i = 0; i < vm.RezervasyonAlanlari.Count; i++)
         {
             var alan = vm.RezervasyonAlanlari[i];
+            if (string.IsNullOrWhiteSpace(alan.BirimNo))
+                ModelState.AddModelError($"RezervasyonAlanlari[{i}].BirimNo", "Birim No zorunludur.");
             if (string.IsNullOrWhiteSpace(alan.Ad))
                 ModelState.AddModelError($"RezervasyonAlanlari[{i}].Ad", "Alan Adı zorunludur.");
             if (alan.Yuzolcumu <= 0)
@@ -196,9 +198,28 @@ public class TasinmazController : Controller
         {
             await PopulateViewBagAsync();
             var freshMatris = await _tasinmazFiyatService.GetMatrisiAsync(vm.Id, pageSize: 100);
-            vm.FiyatMatrisi.Kolonlar = freshMatris.Kolonlar;
-            if (vm.FiyatMatrisi.Satirlar == null || vm.FiyatMatrisi.Satirlar.Count == 0)
-                vm.FiyatMatrisi.Satirlar = freshMatris.Satirlar;
+            if (vm.FiyatMatrisi?.Satirlar != null)
+            {
+                foreach (var freshSatir in freshMatris.Satirlar)
+                {
+                    var userSatir = vm.FiyatMatrisi.Satirlar.FirstOrDefault(s => s.KiraciKategoriId == freshSatir.KiraciKategoriId);
+                    if (userSatir != null)
+                    {
+                        foreach (var freshHucre in freshSatir.Hucreler)
+                        {
+                            var userHucre = userSatir.Hucreler.FirstOrDefault(h => h.BorcTipiId == freshHucre.BorcTipiId);
+                            if (userHucre != null)
+                            {
+                                freshHucre.BirimDeger = userHucre.BirimDeger;
+                                freshHucre.HesaplamaYontemi = userHucre.HesaplamaYontemi;
+                                freshHucre.KdvOrani = userHucre.KdvOrani;
+                            }
+                        }
+                    }
+                }
+            }
+            vm.FiyatMatrisi = freshMatris;
+
             vm.ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(TarifeHiyerarsiKatmani.Tasinmaz, yil: DateTime.Now.Year);
             vm.ParentRezervasyonTarife = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(yil: DateTime.Now.Year);
 
@@ -319,6 +340,8 @@ public class TasinmazController : Controller
         for (int i = 0; i < vm.RezervasyonAlanlari.Count; i++)
         {
             var alan = vm.RezervasyonAlanlari[i];
+            if (string.IsNullOrWhiteSpace(alan.BirimNo))
+                ModelState.AddModelError($"RezervasyonAlanlari[{i}].BirimNo", "Birim No zorunludur.");
             if (string.IsNullOrWhiteSpace(alan.Ad))
                 ModelState.AddModelError($"RezervasyonAlanlari[{i}].Ad", "Alan Adı zorunludur.");
             if (alan.Yuzolcumu <= 0)
@@ -332,9 +355,27 @@ public class TasinmazController : Controller
             await PopulateViewBagAsync();
 
             var freshMatris = await _tasinmazFiyatService.GetMatrisiAsync(0, pageSize: 100);
-            vm.FiyatMatrisi.Kolonlar = freshMatris.Kolonlar;
-            if (vm.FiyatMatrisi.Satirlar == null || vm.FiyatMatrisi.Satirlar.Count == 0)
-                vm.FiyatMatrisi.Satirlar = freshMatris.Satirlar;
+            if (vm.FiyatMatrisi?.Satirlar != null)
+            {
+                foreach (var freshSatir in freshMatris.Satirlar)
+                {
+                    var userSatir = vm.FiyatMatrisi.Satirlar.FirstOrDefault(s => s.KiraciKategoriId == freshSatir.KiraciKategoriId);
+                    if (userSatir != null)
+                    {
+                        foreach (var freshHucre in freshSatir.Hucreler)
+                        {
+                            var userHucre = userSatir.Hucreler.FirstOrDefault(h => h.BorcTipiId == freshHucre.BorcTipiId);
+                            if (userHucre != null)
+                            {
+                                freshHucre.BirimDeger = userHucre.BirimDeger;
+                                freshHucre.HesaplamaYontemi = userHucre.HesaplamaYontemi;
+                                freshHucre.KdvOrani = userHucre.KdvOrani;
+                            }
+                        }
+                    }
+                }
+            }
+            vm.FiyatMatrisi = freshMatris;
 
             vm.ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(TarifeHiyerarsiKatmani.Tasinmaz, yil: DateTime.Now.Year);
             vm.ParentRezervasyonTarife = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(yil: DateTime.Now.Year);

@@ -45,10 +45,16 @@ document.addEventListener('alpine:init', () => {
         open: false,
         message: '',
         title: 'Onay',
+        needsInput: false,
+        inputLabel: '',
+        inputValue: '',
         _resolve: null,
-        ask(message, title) {
+        ask(message, title, needsInput = false, inputLabel = '') {
             this.message = message || 'Devam edilsin mi?';
             this.title = title || 'Onay';
+            this.needsInput = needsInput;
+            this.inputLabel = inputLabel;
+            this.inputValue = '';
             this.open = true;
             return new Promise(r => { this._resolve = r; });
         },
@@ -56,7 +62,13 @@ document.addEventListener('alpine:init', () => {
             this.open = false;
             const r = this._resolve;
             this._resolve = null;
-            if (r) r(yes);
+            if (r) {
+                if (yes) {
+                    r(this.needsInput ? (this.inputValue || '').trim() : true);
+                } else {
+                    r(false);
+                }
+            }
         }
     });
 

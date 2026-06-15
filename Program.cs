@@ -53,7 +53,7 @@ builder.Services.AddControllersWithViews(options =>
     options.ModelBindingMessageProvider.SetUnknownValueIsInvalidAccessor((x) => $"'{x}' alanı için değer geçersizdir.");
     options.ModelBindingMessageProvider.SetValueIsInvalidAccessor((x) => $"'{x}' değeri geçersizdir.");
     options.ModelBindingMessageProvider.SetValueMustBeANumberAccessor((x) => $"'{x}' alanı sayı olmalıdır.");
-    options.ModelBindingMessageProvider.SetValueMustNotBeNullAccessor((x) => $"'{x}' alanı boş bırakılamaz.");
+    options.ModelBindingMessageProvider.SetValueMustNotBeNullAccessor((x) => "Bu alan boş bırakılamaz.");
     options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
 });
 builder.Services.AddScoped<IdentitySeedService>();

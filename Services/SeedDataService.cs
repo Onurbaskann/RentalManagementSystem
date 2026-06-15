@@ -258,17 +258,17 @@ public class SeedDataService
         var sekMap = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Sektor).ToDictionaryAsync(k => k.Kod, k => k.Id);
 
         // --- Kiracılar ---
-        var ahmet = Kiraci("KRC-001", KiraciTuru.Gercek, katMap["AKADEMISYEN"], sekMap["EGITIM"], "Ahmet", "Yılmaz",
+        var ahmet = Kiraci("KRC-000001", KiraciTuru.Gercek, katMap["AKADEMISYEN"], sekMap["EGITIM"], "Ahmet", "Yılmaz",
             tcNo: "12345678901", telefon: "0532 111 2233", email: "ahmet@ege.edu.tr", adres: "İzmir, Bornova");
-        var ayse = Kiraci("KRC-002", KiraciTuru.Gercek, katMap["AKADEMISYEN"], sekMap["YAZILIM"], "Ayşe", "Demir",
+        var ayse = Kiraci("KRC-000002", KiraciTuru.Gercek, katMap["AKADEMISYEN"], sekMap["YAZILIM"], "Ayşe", "Demir",
             tcNo: "98765432100", telefon: "0533 222 3344", email: "ayse@ege.edu.tr", adres: "İzmir, Karşıyaka");
-        var yzCozum = Kiraci("KRC-003", KiraciTuru.Tuzel, katMap["AKAD_OLMAYAN"], sekMap["YAZILIM"], "Yapay Zeka Çözümleri A.Ş.", null,
+        var yzCozum = Kiraci("KRC-000003", KiraciTuru.Tuzel, katMap["AKAD_OLMAYAN"], sekMap["YAZILIM"], "Yapay Zeka Çözümleri A.Ş.", null,
             vergiNo: "1234567890", ticaretSicilNo: "İZM-123", telefon: "0232 444 5566", email: "info@yz.com", adres: "Teknokent");
-        var biyoLab = Kiraci("KRC-004", KiraciTuru.Tuzel, katMap["AKADEMISYEN"], sekMap["YAZILIM"], "BiyoTek Laboratuvarları Ltd.", null,
+        var biyoLab = Kiraci("KRC-000004", KiraciTuru.Tuzel, katMap["AKADEMISYEN"], sekMap["YAZILIM"], "BiyoTek Laboratuvarları Ltd.", null,
             vergiNo: "9876543210", ticaretSicilNo: "İZM-456", telefon: "0232 555 6677", email: "info@biyotek.com", adres: "Teknokent");
-        var veriBilisim = Kiraci("KRC-005", KiraciTuru.Tuzel, katMap["AKAD_OLMAYAN"], sekMap["YAZILIM"], "Veri Bilişim A.Ş.", null,
+        var veriBilisim = Kiraci("KRC-000005", KiraciTuru.Tuzel, katMap["AKAD_OLMAYAN"], sekMap["YAZILIM"], "Veri Bilişim A.Ş.", null,
             vergiNo: "5556667770", ticaretSicilNo: "İZM-789", telefon: "0232 666 7788", email: "iletisim@veribilisim.com", adres: "Teknokent");
-        var onurBaskan = Kiraci("KRC-006", KiraciTuru.Gercek, katMap["AKAD_OLMAYAN"], sekMap["YAZILIM"], "Onur", "Başkan",
+        var onurBaskan = Kiraci("KRC-000006", KiraciTuru.Gercek, katMap["AKAD_OLMAYAN"], sekMap["YAZILIM"], "Onur", "Başkan",
             tcNo: "11122233344", telefon: "0500 123 4567", email: "onur.baskan@unipa.com.tr", adres: "Unipa Bilişim, İzmir");
 
         _ctx.Kiraciler.AddRange(ahmet, ayse, yzCozum, biyoLab, veriBilisim, onurBaskan);

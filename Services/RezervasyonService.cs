@@ -127,25 +127,25 @@ public class RezervasyonService : IRezervasyonService
             return (false, "Bitiş tarihi başlangıç tarihinden büyük olmalıdır.", 0);
 
         // 8.5.4 — Çakışma kontrolü
-        if (await _repo.IsConflictAsync(model.BirimId, model.BaslangicTarihi, model.BitisTarihi))
+        if (await _repo.IsConflictAsync(model.BirimId.Value, model.BaslangicTarihi, model.BitisTarihi))
             return (false, "Seçilen zaman aralığında bu birim için başka bir rezervasyon mevcut.", 0);
 
-        var kiraci = await _kiraciRepo.GetByIdAsync(model.KiraciId);
+        var kiraci = await _kiraciRepo.GetByIdAsync(model.KiraciId.Value);
         if (kiraci == null)
             return (false, "Kiracı bulunamadı.", 0);
 
-        var birim = await _birimRepo.GetByIdAsync(model.BirimId, q => q.Include(b => b.BirimTuru));
+        var birim = await _birimRepo.GetByIdAsync(model.BirimId.Value, q => q.Include(b => b.BirimTuru));
         if (birim == null)
             return (false, "Birim bulunamadı.", 0);
         if (birim.BirimTuru == null || !birim.BirimTuru.RezervasyonYapilabilirMi)
             return (false, "Seçilen birim rezervasyon yapılabilir türde değil.", 0);
 
-        var hesap = await HesaplaAsync(model.BirimId, model.BaslangicTarihi, model.BitisTarihi);
+        var hesap = await HesaplaAsync(model.BirimId.Value, model.BaslangicTarihi, model.BitisTarihi);
 
         var rezervasyon = new Rezervasyon
         {
-            BirimId = model.BirimId,
-            KiraciId = model.KiraciId,
+            BirimId = model.BirimId.Value,
+            KiraciId = model.KiraciId.Value,
             KiraSozlesmesiId = model.KiraSozlesmesiId,
             BaslangicTarihi = model.BaslangicTarihi,
             BitisTarihi = model.BitisTarihi,

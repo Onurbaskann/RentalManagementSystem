@@ -81,8 +81,8 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
                                      EF.Functions.Like(t.KiraSozlesmesi.Birim.Tasinmaz.Ad, $"%{s}%"));
         }
 
-        if (q.From.HasValue) query = query.Where(t => t.DonemBaslangic >= q.From.Value);
-        if (q.To.HasValue) query = query.Where(t => t.DonemBaslangic <= q.To.Value);
+        if (q.From.HasValue) query = query.Where(t => t.VadeTarihi >= q.From.Value);
+        if (q.To.HasValue) query = query.Where(t => t.VadeTarihi <= q.To.Value);
         if (q.Min.HasValue) query = query.Where(t => t.ToplamTutar >= q.Min.Value);
         if (q.Max.HasValue) query = query.Where(t => t.ToplamTutar <= q.Max.Value);
         if (q.TasinmazId.HasValue) query = query.Where(t => t.KiraSozlesmesi!.Birim.TasinmazId == q.TasinmazId.Value);

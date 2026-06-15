@@ -27,7 +27,7 @@ public class KiraciRepository : BaseRepository<Kiraci>, IKiraciRepository
         }
 
         return await q
-            .OrderBy(k => k.Ad)
+            .OrderBy(k => k.KiraciNo)
             .Select(k => new KiraciListItemDto
             {
                 Id = k.Id,

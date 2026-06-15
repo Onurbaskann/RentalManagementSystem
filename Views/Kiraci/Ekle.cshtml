@@ -17,12 +17,11 @@
     var errorsJson = System.Text.Json.JsonSerializer.Serialize(errorsDict);
 }
 
-<div class="page-header">
-    <a href="/Kiraci" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Kiracılar</a>
-    <div class="page-title">Yeni Kiracı Ekle</div>
-</div>
-
-<div class="max-w-[600px]">
+<div class="max-w-[800px] mx-auto">
+    <div class="page-header">
+        <a href="/Kiraci" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Kiracılar</a>
+        <div class="page-title">Yeni Kiracı Ekle</div>
+    </div>
     <form asp-action="Ekle" method="post"
           x-data="kiraciFormData('@initTur', @Model.TcVatandasiDegil.ToString().ToLower(), @Model.KvkkOnayi.ToString().ToLower())"
           @@submit.prevent="handleSubmit($event)"
@@ -119,7 +118,12 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Doğum Tarihi *</label>
-                    <input asp-for="DogumTarihi" type="date" class="form-control" />
+                    @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
+                        { "Name",  "DogumTarihi" },
+                        { "Value", Model.DogumTarihi?.ToString("yyyy-MM-dd") ?? "" },
+                        { "Mode",  "date" },
+                        { "Field", "dogumTarihi" }
+                    })
                     <span x-show="errors.dogumTarihi" x-text="errors.dogumTarihi" class="form-error"></span>
                 </div>
                 <div class="form-group">
@@ -218,6 +222,7 @@
             <a href="/Kiraci" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>
+</div>
 </div>
 
 @section Scripts {

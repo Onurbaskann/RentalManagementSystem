@@ -337,6 +337,7 @@ public class AdminUserController : Controller
         "Edit"                => "Düzenle",
         "Extend"              => "Süre Uzat",
         "Terminate"           => "Feshet",
+        "OverrideRate"        => "Elle Müdahale",
         "Approve"             => "Onayla",
         "Reject"              => "Reddet",
         "UploadDekont"        => "Dekont Yükle",

@@ -4,13 +4,13 @@
     var mevcutYillar = ViewBag.MevcutYillar as IEnumerable<int> ?? [];
 }
 
-<div class="page-header">
+<div class="max-w-[600px] mx-auto"><div class="page-header">
     <div>
         <div class="page-title">Yeni Tarife Yılı</div>
     </div>
 </div>
 
-<div class="card" style="max-width:480px;">
+<div class="card">
     <form method="post" action="/Admin/Tarife/YilEkle">
         @Html.AntiForgeryToken()
 
@@ -37,6 +37,7 @@
             <a href="/Admin/Tarife" class="btn btn-secondary">İptal</a>
         </div>
     </form>
+</div>
 </div>
 
 @section Scripts {

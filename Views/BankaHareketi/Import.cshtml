@@ -3,15 +3,16 @@
     ViewData["Title"] = "Banka Hareketi İçe Aktar";
 }
 
-<div class="page-header">
-    <div>
-        <a href="/BankaHareketi" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">← Banka Hareketleri</a>
-        <div class="page-title">CSV İçe Aktar</div>
-        <div class="page-subtitle">Bankanızdan indirdiğiniz CSV dosyasını yükleyin.</div>
+<div class="max-w-[600px] mx-auto">
+    <div class="page-header">
+        <div>
+            <a href="/BankaHareketi" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">← Banka Hareketleri</a>
+            <div class="page-title">CSV İçe Aktar</div>
+            <div class="page-subtitle">Bankanızdan indirdiğiniz CSV dosyasını yükleyin.</div>
+        </div>
     </div>
-</div>
 
-<div style="max-width:480px;">
+    <div>
     <div class="card">
         <form method="post" action="/BankaHareketi/Import" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
@@ -44,5 +45,6 @@
                 <a href="/BankaHareketi" class="btn btn-secondary">İptal</a>
             </div>
         </form>
+    </div>
     </div>
 </div>

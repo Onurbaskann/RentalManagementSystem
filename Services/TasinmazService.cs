@@ -112,6 +112,7 @@ public class TasinmazService : ITasinmazService
                 var birim = new Birim
                 {
                     BirimTipi = BirimTipi.Birim,
+                    BirimNo = r.BirimNo,
                     Ad = string.IsNullOrWhiteSpace(r.Ad) ? "Rezervasyon Alanı" : r.Ad,
                     Yuzolcumu = r.Yuzolcumu,
                     Aciklama = r.Aciklama,
@@ -183,6 +184,7 @@ public class TasinmazService : ITasinmazService
                 rezAlanlari.Add(new RezervasyonAlaniDuzenleViewModel
                 {
                     Id = b.Id,
+                    BirimNo = b.BirimNo ?? string.Empty,
                     Ad = b.Ad,
                     Yuzolcumu = b.Yuzolcumu,
                     BirimTuruId = b.BirimTuruId,
@@ -332,11 +334,12 @@ public class TasinmazService : ITasinmazService
                 var mevcut = t.Birimler.FirstOrDefault(x => x.Id == r.Id.Value);
                 if (mevcut != null)
                 {
+                    mevcut.BirimNo = r.BirimNo;
                     mevcut.Ad = r.Ad ?? string.Empty;
                     mevcut.Yuzolcumu = r.Yuzolcumu;
                     mevcut.Aciklama = r.Aciklama;
                     mevcut.BirimTuruId = r.BirimTuruId;
-
+ 
                     if (rezTarifeByBirimId.TryGetValue(mevcut.Id, out var tarife))
                     {
                         tarife.UcretsizSureDakika = r.UcretsizSureDakika;
@@ -350,6 +353,7 @@ public class TasinmazService : ITasinmazService
                 var yeniBirim = new Birim
                 {
                     BirimTipi = BirimTipi.Birim,
+                    BirimNo = r.BirimNo,
                     Ad = r.Ad ?? "Rezervasyon Alanı",
                     Yuzolcumu = r.Yuzolcumu,
                     Aciklama = r.Aciklama,

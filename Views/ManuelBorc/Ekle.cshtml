@@ -4,22 +4,26 @@
     ViewData["Title"] = "Manuel Borç Ekle";
 }
 
-<div class="page-header flex items-center justify-between">
-    <div>
-        <div class="page-title">Manuel Borç Ekle</div>
-        <div class="page-subtitle">Aktif sözleşmeye tek seferlik borç kalemi ekleyin</div>
+<div class="max-w-[1000px] mx-auto">
+    <div class="page-header flex items-center justify-between">
+        <div>
+            <div class="page-title">Manuel Borç Ekle</div>
+            <div class="page-subtitle">Aktif sözleşmeye tek seferlik borç kalemi ekleyin</div>
+        </div>
+        <a href="/ManuelBorc" class="btn btn-secondary">← Geri</a>
     </div>
-    <a href="/ManuelBorc" class="btn btn-secondary">← Geri</a>
-</div>
 
-<div class="max-w-[640px]" x-data="manuelBorcForm()">
+    <div x-data="manuelBorcForm()">
     <form asp-action="Ekle" method="post">
         @Html.AntiForgeryToken()
 
         <div asp-validation-summary="ModelOnly" class="form-error bg-red-50 border border-red-200 rounded-lg p-3 mb-5"></div>
 
         <div class="card mb-4">
-            <div class="text-lg font-bold mb-5">Sözleşme Seçimi</div>
+            <div class="text-lg font-bold mb-5 flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                <span>Sözleşme Seçimi</span>
+            </div>
 
             <div class="form-group mb-5">
                 <label asp-for="SozlesmeId" class="form-label">Sözleşme <span class="text-red-500">*</span></label>
@@ -46,7 +50,10 @@
         </div>
 
         <div class="card mb-4">
-            <div class="text-lg font-bold mb-5">Borç Detayı</div>
+            <div class="text-lg font-bold mb-5 flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                <span>Borç Detayı</span>
+            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div class="form-group mb-0">
@@ -63,8 +70,12 @@
 
                 <div class="form-group mb-0">
                     <label asp-for="VadeTarihi" class="form-label">Vade Tarihi <span class="text-red-500">*</span></label>
-                    <input asp-for="VadeTarihi" type="date" class="form-control"
-                           value="@Model.VadeTarihi.ToString("yyyy-MM-dd")" />
+                    @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
+                        { "Name",  "VadeTarihi" },
+                        { "Value", Model.VadeTarihi.ToString("yyyy-MM-dd") },
+                        { "Mode",  "date" },
+                        { "Field", "vadeTarihi" }
+                    })
                     <span asp-validation-for="VadeTarihi" class="form-error"></span>
                 </div>
             </div>
@@ -132,6 +143,7 @@
             <button type="submit" class="btn btn-primary px-6">Manuel Borç Oluştur</button>
         </div>
     </form>
+</div>
 </div>
 
 @section Scripts {

@@ -3,13 +3,13 @@
     ViewData["Title"] = "Birim Türü Düzenle";
 }
 
-<div class="page-header">
+<div class="max-w-[600px] mx-auto"><div class="page-header">
     <div>
         <div class="page-title">Birim Türü Düzenle</div>
     </div>
 </div>
 
-<div class="card max-w-[480px]" x-data="{ tur: '@(Model.RezervasyonYapilabilirMi ? "rez" : "kira")' }">
+<div class="card" x-data="{ tur: '@(Model.RezervasyonYapilabilirMi ? "rez" : "kira")' }">
     <form method="post" action="/Admin/BirimTuru/Duzenle/@Model.Id">
         @Html.AntiForgeryToken()
         <input asp-for="Id" type="hidden" />
@@ -77,6 +77,7 @@
             <a href="/Admin/BirimTuru" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>
+</div>
 </div>
 
 @section Scripts {

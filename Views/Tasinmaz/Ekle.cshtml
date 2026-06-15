@@ -4,29 +4,33 @@
     ViewData["Title"] = "Yeni Taşınmaz";
 }
 
-<div class="page-header">
-    <a href="/Tasinmaz" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">← Taşınmazlar</a>
-    <div class="page-title">Yeni Taşınmaz Ekle</div>
-</div>
-
-@if (!ViewData.ModelState.IsValid)
-{
-    <div class="bg-red-50 border border-red-200 text-red-800 p-3 px-4 rounded-lg mb-5">
-        <div class="font-bold mb-2 text-sm">Lütfen aşağıdaki hataları düzeltiniz:</div>
-        <ul class="m-0 pl-5 text-[13px] list-disc">
-            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
-            {
-                <li>@error.ErrorMessage</li>
-            }
-        </ul>
+<div class="max-w-[1000px] mx-auto">
+    <div class="page-header">
+        <a href="/Tasinmaz" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">← Taşınmazlar</a>
+        <div class="page-title">Yeni Taşınmaz Ekle</div>
     </div>
-}
 
-<div class="max-w-[760px]" x-data="tasinmazFormData()" x-cloak>
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="bg-red-50 border border-red-200 text-red-800 p-3 px-4 rounded-lg mb-5">
+            <div class="font-bold mb-2 text-sm">Lütfen aşağıdaki hataları düzeltiniz:</div>
+            <ul class="m-0 pl-5 text-[13px] list-disc">
+                @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                {
+                    <li>@error.ErrorMessage</li>
+                }
+            </ul>
+        </div>
+    }
 
-    <form asp-action="Ekle" method="post" @@submit.prevent="handleSubmit($event)">
+    <div x-data="tasinmazFormData()" x-cloak>
+
+        <form asp-action="Ekle" method="post" @@submit.prevent="handleSubmit($event)">
         <div class="card">
-            <div class="text-[15px] font-bold mb-4.5 pb-3.5 border-b border-[var(--color-border)]">Temel Bilgiler</div>
+            <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                <span>Temel Bilgiler</span>
+            </div>
 
             <div class="form-group">
                 <label class="form-label">Taşınmaz Adı *</label>
@@ -86,8 +90,11 @@
         <!-- Birim Bazlı bölümü -->
         <template x-if="sekli == '2'">
             <div class="card mt-4">
-                <div class="flex items-center justify-between mb-4.5 pb-3.5 border-b border-[var(--color-border)]">
-                    <div class="text-[15px] font-bold">Birimler</div>
+                <div class="flex items-center justify-between mb-5 pb-3 border-b border-[var(--color-border)]">
+                    <div class="text-[15px] font-bold flex items-center gap-2">
+                        <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                        <span>Birimler</span>
+                    </div>
                     <button type="button" class="btn btn-secondary btn-sm" @@click="addBirim()">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                         Birim Ekle
@@ -164,8 +171,10 @@
 
         <!-- Fiyat Parametreleri Kartı -->
         <div class="card mt-4">
-            <div class="text-[15px] font-bold mb-4.5 pb-3.5 border-b border-[var(--color-border)]">Taşınmaz Tarifesi</div>
-            <div class="text-[12.5px] text-muted mb-4">Sözleşme eklerken bu matristeki fiyatlar otomatik olarak getirilir.</div>
+            <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                <span>Taşınmaz Tarifesi</span>
+            </div>
 
             @if (Model.ParentTarife != null)
             {
@@ -177,6 +186,15 @@
                     @await Html.PartialAsync("_ParentTarifeKart", Model.ParentTarife)
                 </div>
             }
+
+            <div class="bg-indigo-50 border border-indigo-200 text-indigo-900 p-3.5 px-4 rounded-xl mb-5 flex items-start gap-3 shadow-sm">
+                <svg class="text-indigo-600 mt-0.5 flex-shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                <div class="text-[13.5px] leading-relaxed">
+                    <strong>Bilgi:</strong> Sözleşme eklerken bu matristeki fiyatlar otomatik olarak getirilir. Tanımlanmayan kalemler için ise yukarıdaki varsayılan tarifeler uygulanır.
+                </div>
+            </div>
 
             <div>
                 @for (int i = 0; i < Model.FiyatMatrisi.Satirlar.Count; i++)
@@ -192,13 +210,14 @@
                             </button>
                         </div>
                         <input type="hidden" name="FiyatMatrisi.Satirlar[@i].KiraciKategoriId" value="@satir.Hucreler[0].KiraciKategoriId" />
-                        <table class="w-full border-collapse">
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[520px] border-collapse">
                             <thead>
                                 <tr>
                                     <th class="text-left text-[11px] text-muted font-medium p-1 pr-3 pb-1.5">Borç Tipi</th>
                                     <th class="text-left text-[11px] text-muted font-medium p-1 px-3 pb-1.5 w-[145px]">Tutar</th>
                                     <th class="text-left text-[11px] text-muted font-medium p-1 px-3 pb-1.5 w-[110px]">Yöntem</th>
-                                    <th class="text-left text-[11px] text-muted font-medium p-1 pl-3 pb-1.5 w-[105px]">KDV %</th>
+                                    <th class="text-left text-[11px] text-muted font-medium p-1 pl-3 pb-1.5 w-[125px]">KDV %</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -269,7 +288,7 @@
                                         <td class="p-1.5 pl-3 align-middle">
                                             <div class="flex items-stretch border border-[#ced4da] rounded-md overflow-hidden bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all">
                                                 <input type="number" step="0.01" min="0" max="100"
-                                                       class="border-none outline-none p-1.5 px-2 w-[60px] text-[13px] bg-transparent text-right"
+                                                       class="border-none outline-none p-1.5 px-2 w-[80px] text-[13px] bg-transparent text-right"
                                                        name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].KdvOrani"
                                                        value="@(hucre.KdvOrani?.ToString(System.Globalization.CultureInfo.InvariantCulture))"
                                                        placeholder="@(parentKdv?.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) ?? "20")" />
@@ -280,6 +299,7 @@
                                 }
                             </tbody>
                         </table>
+                        </div>
                     </div>
                 }
                 <script>
@@ -295,9 +315,12 @@
 
         <!-- Rezervasyon Alanları -->
         <div class="card mt-4">
-            <div class="flex items-center justify-between mb-4.5 pb-3.5 border-b border-[var(--color-border)]">
+            <div class="flex items-center justify-between mb-5 pb-3 border-b border-[var(--color-border)]">
                 <div>
-                    <div class="text-[15px] font-bold">Rezervasyon Alanları</div>
+                    <div class="text-[15px] font-bold flex items-center gap-2">
+                        <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                        <span>Rezervasyon Alanları</span>
+                    </div>
                     <div class="text-[12.5px] text-muted mt-0.5">Toplantı salonu, etkinlik alanı gibi rezerve edilebilen ortak alanlar</div>
                 </div>
                 <button type="button" class="btn btn-secondary btn-sm" @@click="addRezAlani()">
@@ -311,7 +334,8 @@
                 <div class="mb-5 bg-slate-50 border border-slate-200 rounded-lg p-3">
                     <div class="text-xs text-muted font-semibold mb-2 flex items-center gap-1.5">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                        Aşağıda tanımlama yapmazsanız genel tarife uygulanır:
+                        <span x-show="rezAlanlari.length > 0">Aşağıda tanımlama yapmazsanız genel tarife uygulanır:</span>
+                        <span x-show="rezAlanlari.length === 0">Tanımlayacağınız alanlar için geçerli varsayılan genel tarife:</span>
                     </div>
                     <partial name="_ParentRezervasyonTarifeKart" model="Model.ParentRezervasyonTarife" />
                 </div>
@@ -325,7 +349,12 @@
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></svg>
                     </button>
                     <!-- Üst satır: Temel bilgiler -->
-                    <div class="grid grid-cols-[1fr_100px_1fr] gap-3 mb-3 mr-10">
+                    <div class="grid grid-cols-[100px_1fr_100px_1fr] gap-3 mb-3 mr-10">
+                        <div>
+                            <div class="form-label mb-1">No *</div>
+                            <input class="form-control" :name="'RezervasyonAlanlari['+i+'].BirimNo'" x-model="alan.birimNo" placeholder="Z01" />
+                            <span x-show="rezErrors[i]?.birimNo" x-text="rezErrors[i]?.birimNo" class="form-error"></span>
+                        </div>
                         <div>
                             <div class="form-label mb-1">Alan Adı *</div>
                             <input class="form-control" :name="'RezervasyonAlanlari['+i+'].Ad'" x-model="alan.ad" placeholder="Toplantı Salonu A" />
@@ -379,7 +408,10 @@
 
         <!-- Adres Kartı -->
         <div class="card mt-4">
-            <div class="text-[15px] font-bold mb-4.5 pb-3.5 border-b border-[var(--color-border)]">Adres Bilgileri</div>
+            <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                <span>Adres Bilgileri</span>
+            </div>
 
             <div class="grid grid-cols-2 gap-3.5 mb-3.5">
                 <div class="form-group">
@@ -416,6 +448,7 @@
         </div>
     </form>
 </div>
+</div>
 
 @section Scripts {
     @{
@@ -436,6 +469,7 @@
             Model.RezervasyonAlanlari.Count > 0
                 ? (IEnumerable<object>)Model.RezervasyonAlanlari.Select(r => new
                 {
+                    birimNo = r.BirimNo ?? "",
                     ad = r.Ad ?? "",
                     yuzolcumu = r.Yuzolcumu.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     birimTuruId = r.BirimTuruId?.ToString() ?? "",
@@ -459,6 +493,7 @@
         var rezErrorsJson = System.Text.Json.JsonSerializer.Serialize(
             Enumerable.Range(0, Model.RezervasyonAlanlari.Count).Select(i => new
             {
+                birimNo = ViewData.ModelState[$"RezervasyonAlanlari[{i}].BirimNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 ad = ViewData.ModelState[$"RezervasyonAlanlari[{i}].Ad"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 yuzolcumu = ViewData.ModelState[$"RezervasyonAlanlari[{i}].Yuzolcumu"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 birimTuruId = ViewData.ModelState[$"RezervasyonAlanlari[{i}].BirimTuruId"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
@@ -506,7 +541,7 @@
                 },
                 autoAd(b) { if (!b.ad && b.birimNo) b.ad = 'Birim ' + b.birimNo; },
                 addRezAlani() {
-                    this.rezAlanlari.push({ ad: '', yuzolcumu: '', birimTuruId: '', aciklama: '', ucretsizSureDakika: 0, saatlikUcret: 0, kdvOrani: 20 });
+                    this.rezAlanlari.push({ birimNo: '', ad: '', yuzolcumu: '', birimTuruId: '', aciklama: '', ucretsizSureDakika: 0, saatlikUcret: 0, kdvOrani: 20 });
                     this.rezErrors.push({});
                 },
                 removeRezAlani(i) {
@@ -530,6 +565,7 @@
                     });
                     this.rezErrors = this.rezAlanlari.map(a => {
                         var e = {};
+                        if (!a.birimNo?.trim()) e.birimNo = 'No zorunludur.';
                         if (!a.ad?.trim()) e.ad = 'Alan Adı zorunludur.';
                         if (!a.yuzolcumu || parseFloat(a.yuzolcumu) <= 0) e.yuzolcumu = 'Yüzölçümü 0\'dan büyük olmalıdır.';
                         if (!a.birimTuruId) e.birimTuruId = 'Alan Türü zorunludur.';

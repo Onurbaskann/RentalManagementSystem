@@ -51,15 +51,21 @@
 
 <div class="card p-0 overflow-hidden">
     <form method="get" class="flex flex-wrap items-center gap-3 p-3 bg-slate-50/50 border-b border-slate-200" action="/Odeme">
-        <input type="search" name="q" value="@q.Q" class="form-control w-full max-w-xs" placeholder="Ara: kiracı, açıklama…" />
+        <input type="search" name="q" value="@q.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: kiracı, açıklama…" />
         <div class="flex items-center gap-2">
-            <input type="date" name="from" value="@(q.From?.ToString("yyyy-MM-dd"))" class="form-control w-36 text-xs" title="Başlangıç" />
+            @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
+                { "Name", "from" }, { "Value", q.From?.ToString("yyyy-MM-dd") ?? "" },
+                { "Mode", "date" }, { "Field", "from" }, { "Compact", true }, { "WrapperClass", "w-36" }
+            })
             <span class="text-muted">–</span>
-            <input type="date" name="to" value="@(q.To?.ToString("yyyy-MM-dd"))" class="form-control w-36 text-xs" title="Bitiş" />
+            @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
+                { "Name", "to" }, { "Value", q.To?.ToString("yyyy-MM-dd") ?? "" },
+                { "Mode", "date" }, { "Field", "to" }, { "Compact", true }, { "WrapperClass", "w-36" }
+            })
         </div>
         <div class="flex items-center gap-2">
-            <input type="number" name="min" value="@q.Min?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-24 text-xs" placeholder="Min ₺" />
-            <input type="number" name="max" value="@q.Max?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-24 text-xs" placeholder="Max ₺" />
+            <input type="number" name="min" value="@q.Min?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-24 text-xs font-medium" placeholder="Min ₺" />
+            <input type="number" name="max" value="@q.Max?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-24 text-xs font-medium" placeholder="Max ₺" />
         </div>
         @if (durum != "tum") { <input type="hidden" name="durum" value="@durum" /> }
         @if (tahakkukId.HasValue) { <input type="hidden" name="tahakkukId" value="@tahakkukId" /> }

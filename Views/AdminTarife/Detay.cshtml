@@ -64,6 +64,12 @@
                                         <input type="hidden" name="Hucreler[@idx].BorcTipiId"       value="@hucre.BorcTipiId" />
 
                                         <div class="mb-2">
+                                            <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">Birim Değer (₺)</label>
+                                            <input type="number" name="Hucreler[@idx].BirimDeger" 
+                                                   value="@hucre.BirimDeger.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
+                                                   class="form-control form-control-sm text-xs font-mono" step="0.01" min="0" />
+                                        </div>
+                                        <div class="mb-2">
                                             <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">Yöntem</label>
                                             <select name="Hucreler[@idx].HesaplamaYontemi" class="form-control form-control-sm text-xs">
                                                 @if (hucre.HesaplamaYontemi == KiraTakip.Models.HesaplamaYontemi.Sabit)
@@ -77,12 +83,6 @@
                                                     <option value="2" selected>m²</option>
                                                 }
                                             </select>
-                                        </div>
-                                        <div class="mb-2">
-                                            <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">Birim Değer (₺)</label>
-                                            <input type="number" name="Hucreler[@idx].BirimDeger" 
-                                                   value="@hucre.BirimDeger.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
-                                                   class="form-control form-control-sm text-xs font-mono" step="0.01" min="0" />
                                         </div>
                                         <div>
                                             <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">KDV (%)</label>

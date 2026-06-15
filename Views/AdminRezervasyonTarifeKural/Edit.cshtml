@@ -10,7 +10,7 @@
     <a href="/Admin/RezervasyonTarifeKural" class="btn btn-secondary">← Geri</a>
 </div>
 
-<div class="card" style="max-width:560px;">
+<div class="card">
     <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
         @Html.AntiForgeryToken()
 
@@ -72,6 +72,7 @@
             <a href="/Admin/RezervasyonTarifeKural" class="btn btn-secondary">İptal</a>
         </div>
     </form>
+</div>
 </div>
 
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

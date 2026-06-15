@@ -645,7 +645,7 @@
                                     </td>
                                 </tr>
                                 <tr x-show="open[@t.Id]" x-cloak class="bg-[#f7f8fb]">
-                                    <td colspan="6" class="p-5 pb-3.5 px-5">
+                                    <td colspan="6" class="p-5 pb-3 px-5">
                                         @if (t.Kalemler.Any())
                                         {
                                             <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-2">Kalem Dökümü</div>
@@ -733,7 +733,7 @@
             <button @@click="showUzat = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
         </div>
 
-        <div class="bg-[#f7f8fa] rounded-lg px-3.5 py-2.5 mb-4.5 text-[13px]">
+        <div class="bg-[#f7f8fa] rounded-lg px-3.5 py-2.5 mb-5 text-[13px]">
             Mevcut bitiş: <strong>@s.BitisTarihi.ToString("dd.MM.yyyy")</strong> •
             Mevcut kira: <strong>@TLFormat(aylikBedel)</strong>
         </div>
@@ -744,8 +744,12 @@
 
             <div class="form-group">
                 <label class="form-label">Yeni Bitiş Tarihi *</label>
-                <input type="date" name="YeniBitisTarihi" class="form-control"
-                    value="@s.BitisTarihi.AddYears(1).ToString("yyyy-MM-dd")" required />
+                @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
+                    { "Name",  "YeniBitisTarihi" },
+                    { "Value", s.BitisTarihi.AddYears(1).ToString("yyyy-MM-dd") },
+                    { "Mode",  "date" },
+                    { "Field", "yeniBitisTarihi" }
+                })
             </div>
 
             <!-- TÜFE bölümü -->
@@ -808,16 +812,8 @@
                 <div x-show="tarifeUzat" x-cloak class="border border-[var(--color-border)] rounded-lg p-3.5 mb-3.5">
                     <div class="text-xs text-muted mb-2.5">Yalnızca değiştirdiğiniz kalemler SözleşmeTarife olarak yazılır.</div>
                     <template x-for="(k, i) in uzatKalemler" :key="k.borcTipiId">
-                        <div class="grid grid-cols-[1fr_110px_1fr_80px] gap-2 items-end mb-2">
+                        <div class="grid grid-cols-[1fr_1fr_110px_80px] gap-2 items-end mb-2">
                             <div class="text-[13px] font-medium self-center" x-text="k.borcTipiAd"></div>
-                            <div>
-                                <label class="form-label text-[11px] mb-[3px]">Yöntem</label>
-                                <select class="form-control form-control-sm" x-model.number="k.hesaplamaYontemi"
-                                        @@change="k.kullaniciDegistirdiMi = true">
-                                    <option value="1">Sabit</option>
-                                    <option value="2" :disabled="birimYuzolcumu === 0">m²</option>
-                                </select>
-                            </div>
                             <div>
                                 <label class="form-label text-[11px] mb-[3px]">
                                     <span x-show="k.hesaplamaYontemi != 2">Tutar (₺)</span>
@@ -826,6 +822,14 @@
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
                                        x-model.number="k.birimDeger"
                                        @@input="k.kullaniciDegistirdiMi = true">
+                            </div>
+                            <div>
+                                <label class="form-label text-[11px] mb-[3px]">Yöntem</label>
+                                <select class="form-control form-control-sm" x-model.number="k.hesaplamaYontemi"
+                                        @@change="k.kullaniciDegistirdiMi = true">
+                                    <option value="1">Sabit</option>
+                                    <option value="2" :disabled="birimYuzolcumu === 0">m²</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="form-label text-[11px] mb-[3px]">KDV (%)</label>
@@ -863,7 +867,7 @@
             <button @@click="showFesih = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
         </div>
 
-        <div class="alert-danger mb-4.5 text-[13px]">
+        <div class="alert-danger mb-5 text-[13px]">
             Bu işlem geri alınamaz. Feshedilen sözleşme aktif gelir hesaplarına dahil edilmez ve birim yeniden kiralanabilir hale gelir.
         </div>
 
@@ -873,8 +877,12 @@
 
             <div class="form-group">
                 <label class="form-label">Fesih Tarihi *</label>
-                <input type="date" name="FesihTarihi" class="form-control"
-                    value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
+                    { "Name",  "FesihTarihi" },
+                    { "Value", DateTime.Today.ToString("yyyy-MM-dd") },
+                    { "Mode",  "date" },
+                    { "Field", "fesihTarihi" }
+                })
             </div>
 
             <div class="form-group">
@@ -906,7 +914,7 @@
             <button @@click="showYenidenUret = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
         </div>
 
-        <div class="bg-[#fffbeb] border border-[#fde68a] rounded-lg px-3.5 py-2.5 mb-4.5 text-[13px] text-[#92400e]">
+        <div class="bg-[#fffbeb] border border-[#fde68a] rounded-lg px-3.5 py-2.5 mb-5 text-[13px] text-[#92400e]">
             Seçilen tarihten itibaren <strong>ödeme alınmamış</strong> tahakkuklar silinip yeniden üretilir. Ödeme kaydı olan tahakkuklara dokunulmaz.
         </div>
 
@@ -915,8 +923,12 @@
 
             <div class="form-group">
                 <label class="form-label">Başlangıç Tarihi *</label>
-                <input type="date" name="baslangicTarihi" class="form-control"
-                    value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
+                    { "Name",  "baslangicTarihi" },
+                    { "Value", DateTime.Today.ToString("yyyy-MM-dd") },
+                    { "Mode",  "date" },
+                    { "Field", "baslangicTarihi" }
+                })
                 <div class="form-hint">Bu tarihten (dahil) itibaren ödenmemiş tahakkuklar etkilenir.</div>
             </div>
 
@@ -933,16 +945,8 @@
                 <div x-show="tarifeYenidenUret" x-cloak class="border border-[var(--color-border)] rounded-lg p-3.5 mb-3.5">
                     <div class="text-xs text-muted mb-2.5">Yalnızca değiştirdiğiniz kalemler SözleşmeTarife olarak yazılır.</div>
                     <template x-for="(k, i) in yenidenUretKalemler" :key="k.borcTipiId">
-                        <div class="grid grid-cols-[1fr_110px_1fr_80px] gap-2 items-end mb-2">
+                        <div class="grid grid-cols-[1fr_1fr_110px_80px] gap-2 items-end mb-2">
                             <div class="text-[13px] font-medium self-center" x-text="k.borcTipiAd"></div>
-                            <div>
-                                <label class="form-label text-[11px] mb-[3px]">Yöntem</label>
-                                <select class="form-control form-control-sm" x-model.number="k.hesaplamaYontemi"
-                                        @@change="k.kullaniciDegistirdiMi = true">
-                                    <option value="1">Sabit</option>
-                                    <option value="2" :disabled="birimYuzolcumu === 0">m²</option>
-                                </select>
-                            </div>
                             <div>
                                 <label class="form-label text-[11px] mb-[3px]">
                                     <span x-show="k.hesaplamaYontemi != 2">Tutar (₺)</span>
@@ -951,6 +955,14 @@
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
                                        x-model.number="k.birimDeger"
                                        @@input="k.kullaniciDegistirdiMi = true">
+                            </div>
+                            <div>
+                                <label class="form-label text-[11px] mb-[3px]">Yöntem</label>
+                                <select class="form-control form-control-sm" x-model.number="k.hesaplamaYontemi"
+                                        @@change="k.kullaniciDegistirdiMi = true">
+                                    <option value="1">Sabit</option>
+                                    <option value="2" :disabled="birimYuzolcumu === 0">m²</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="form-label text-[11px] mb-[3px]">KDV (%)</label>
@@ -988,7 +1000,7 @@
             <button @@click="showVade = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
         </div>
 
-        <div class="bg-[#fffbeb] border border-[#fde68a] rounded-lg px-3.5 py-2.5 mb-4.5 text-[13px] text-[#92400e]">
+        <div class="bg-[#fffbeb] border border-[#fde68a] rounded-lg px-3.5 py-2.5 mb-5 text-[13px] text-[#92400e]">
             Vade değişikliği <strong>Bekleniyor / KısmenÖdendi / Gecikti</strong> durumundaki tahakkukların vadelerini günceller. Tam ödenmiş veya iptal edilmiş tahakkuklara dokunulmaz.
         </div>
 

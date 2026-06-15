@@ -47,9 +47,6 @@ public class BirimController : Controller
 
         if (vm.KiralanabilirMi)
         {
-            vm.ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(
-                TarifeHiyerarsiKatmani.Birim, tasinmazId: birim.TasinmazId, yil: DateTime.Now.Year);
-
             var aktifBorcTipleri = await _ctx.BorcTipleri
                 .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.KullaniciManuel && b.Davranis != BorcTipiDavranisi.RezervasyonOzel)
                 .OrderBy(b => b.Sira)
@@ -63,6 +60,66 @@ public class BirimController : Controller
             var mevcutRateler = await _ctx.BirimTarifeler
                 .Where(r => r.BirimId == id)
                 .ToListAsync();
+
+            var tasinmazFiyatlar = await _ctx.TasinmazTarifeler
+                .Where(f => f.TasinmazId == birim.TasinmazId)
+                .ToListAsync();
+
+            var genelFiyatlar = await _ctx.GenelTarifeler
+                .Where(g => g.Yil == DateTime.Now.Year)
+                .ToListAsync();
+
+            // Yürürlükteki tüm üst tarifeleri tek bir listede topla
+            var parentTarifeSatirlar = new List<ParentTarifeSatir>();
+            foreach (var kat in kategoriler)
+            {
+                foreach (var bt in aktifBorcTipleri)
+                {
+                    var tasinmazRate = tasinmazFiyatlar.FirstOrDefault(tf => tf.KiraciKategoriId == kat.Id && tf.BorcTipiId == bt.Id);
+                    var genelRate = genelFiyatlar.FirstOrDefault(gf => gf.KiraciKategoriId == kat.Id && gf.BorcTipiId == bt.Id);
+
+                    decimal deger = 0;
+                    decimal kdv = 0;
+                    HesaplamaYontemi yontem = (bt.Kod == Models.Entities.BorcTipiConsts.Kira ? HesaplamaYontemi.M2 : HesaplamaYontemi.Sabit);
+                    string kaynak = "Tanımsız";
+
+                    if (tasinmazRate != null)
+                    {
+                        deger = tasinmazRate.BirimDeger;
+                        kdv = tasinmazRate.KdvOrani;
+                        yontem = tasinmazRate.HesaplamaYontemi;
+                        kaynak = "Taşınmaz Tarifesi";
+                    }
+                    else if (genelRate != null)
+                    {
+                        deger = genelRate.BirimDeger;
+                        kdv = genelRate.KdvOrani;
+                        yontem = genelRate.HesaplamaYontemi;
+                        kaynak = "Genel Tarife";
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    parentTarifeSatirlar.Add(new ParentTarifeSatir
+                    {
+                        KategoriAd = kat.Ad,
+                        BorcTipiAd = bt.Ad,
+                        HesaplamaYontemi = yontem,
+                        BirimDeger = deger,
+                        KdvOrani = kdv,
+                        Kaynak = kaynak
+                    });
+                }
+            }
+
+            vm.ParentTarife = new ParentTarifeKartViewModel
+            {
+                KaynakAdi = "Yürürlükteki Üst Tarifeler (Varsayılanlar)",
+                Aciklama = "Taşınmaz ve Genel Tarifelerin birleşimi",
+                Satirlar = parentTarifeSatirlar
+            };
 
             vm.Kolonlar = aktifBorcTipleri.Select(bt => new BirimTarifeKolonu
             {
@@ -80,15 +137,43 @@ public class BirimController : Controller
                 {
                     var rate = mevcutRateler.FirstOrDefault(r =>
                         r.KiraciKategoriId == kat.Id && r.BorcTipiId == bt.Id);
+
+                    var tasinmazRate = tasinmazFiyatlar.FirstOrDefault(tf => tf.KiraciKategoriId == kat.Id && tf.BorcTipiId == bt.Id);
+                    var genelRate = genelFiyatlar.FirstOrDefault(gf => gf.KiraciKategoriId == kat.Id && gf.BorcTipiId == bt.Id);
+
+                    decimal varsayilanDeger = 0;
+                    decimal varsayilanKdv = 0;
+                    HesaplamaYontemi varsayilanYontem = (bt.Kod == Models.Entities.BorcTipiConsts.Kira ? HesaplamaYontemi.M2 : HesaplamaYontemi.Sabit);
+                    string kaynak = "Tanımsız";
+
+                    if (tasinmazRate != null)
+                    {
+                        varsayilanDeger = tasinmazRate.BirimDeger;
+                        varsayilanKdv = tasinmazRate.KdvOrani;
+                        varsayilanYontem = tasinmazRate.HesaplamaYontemi;
+                        kaynak = "Taşınmaz Tarifesi";
+                    }
+                    else if (genelRate != null)
+                    {
+                        varsayilanDeger = genelRate.BirimDeger;
+                        varsayilanKdv = genelRate.KdvOrani;
+                        varsayilanYontem = genelRate.HesaplamaYontemi;
+                        kaynak = "Genel Tarife";
+                    }
+
                     return new BirimTarifeHucre
                     {
                         RateId = rate?.Id ?? 0,
                         KiraciKategoriId = kat.Id,
                         BorcTipiId = bt.Id,
                         OzelFiyatAktif = rate != null,
-                        HesaplamaYontemi = rate?.HesaplamaYontemi ?? HesaplamaYontemi.Sabit,
+                        HesaplamaYontemi = rate?.HesaplamaYontemi ?? (bt.Kod == Models.Entities.BorcTipiConsts.Kira ? HesaplamaYontemi.M2 : HesaplamaYontemi.Sabit),
                         BirimDeger = rate?.BirimDeger ?? 0,
-                        KdvOrani = rate?.KdvOrani ?? 0
+                        KdvOrani = rate?.KdvOrani ?? 0,
+                        VarsayilanBirimDeger = varsayilanDeger,
+                        VarsayilanKdvOrani = varsayilanKdv,
+                        VarsayilanHesaplamaYontemi = varsayilanYontem,
+                        VarsayilanKaynak = kaynak
                     };
                 }).ToList()
             }).ToList();

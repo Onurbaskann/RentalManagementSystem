@@ -138,7 +138,7 @@ public static class PermissionCatalog
         Tasinmaz.View, Tasinmaz.Create, Tasinmaz.Edit,
         Birim.View, Birim.Create, Birim.Edit,
         Kiraci.View, Kiraci.Create, Kiraci.Edit,
-        Sozlesme.View, Sozlesme.Create, Sozlesme.Edit, Sozlesme.Extend, Sozlesme.Terminate,
+        Sozlesme.View, Sozlesme.Create, Sozlesme.Edit, Sozlesme.Extend, Sozlesme.Terminate, Sozlesme.OverrideRate,
         Odeme.View, Odeme.Create, Odeme.UploadDekont, Odeme.Approve, Odeme.Reject,
         Odeme.ImportBankStatement, Odeme.MatchBankTransaction,
         ManuelBorc.View, ManuelBorc.Create, ManuelBorc.Cancel,

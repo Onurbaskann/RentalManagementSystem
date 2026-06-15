@@ -139,39 +139,39 @@
 @section Scripts {
 <script>
 document.querySelectorAll('[data-confirm]').forEach(btn => {
-    btn.addEventListener('click', function() {
+    btn.addEventListener('click', async function() {
         const needsReason = this.dataset.confirmNeedsReason === 'true';
+        if (!needsReason) return;
+
         const action = this.dataset.confirmAction;
         const title = this.dataset.confirmTitle || 'Onay';
         const message = this.dataset.confirm;
         const reasonLabel = this.dataset.confirmReasonLabel || 'Neden';
-
-        if (needsReason) {
-            const neden = prompt(`${title}\n\n${message}\n\n${reasonLabel}:`);
-            if (neden === null || neden.trim() === '') return;
-
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = action;
-
-            const token = document.querySelector('input[name="__RequestVerificationToken"]');
-            if (token) {
-                const t = document.createElement('input');
-                t.type = 'hidden';
-                t.name = '__RequestVerificationToken';
-                t.value = token.value;
-                form.appendChild(t);
-            }
-
-            const n = document.createElement('input');
-            n.type = 'hidden';
-            n.name = 'neden';
-            n.value = neden.trim();
-            form.appendChild(n);
-
-            document.body.appendChild(form);
-            form.submit();
+ 
+        const neden = await window.Alpine.store('confirm').ask(message, title, true, reasonLabel);
+        if (!neden) return;
+ 
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = action;
+ 
+        const token = document.querySelector('input[name="__RequestVerificationToken"]');
+        if (token) {
+            const t = document.createElement('input');
+            t.type = 'hidden';
+            t.name = '__RequestVerificationToken';
+            t.value = token.value;
+            form.appendChild(t);
         }
+ 
+        const n = document.createElement('input');
+        n.type = 'hidden';
+        n.name = 'neden';
+        n.value = neden;
+        form.appendChild(n);
+ 
+        document.body.appendChild(form);
+        form.submit();
     });
 });
 </script>
