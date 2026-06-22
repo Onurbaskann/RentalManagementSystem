@@ -11,26 +11,21 @@ public class TahakkukService : ITahakkukService
 {
     private readonly ITahakkukRepository _repo;
     private readonly IUnitOfWork _uow;
-    private readonly IUserTasinmazYetkiService _yetkiService;
-
-    public TahakkukService(ITahakkukRepository repo, IUnitOfWork uow, IUserTasinmazYetkiService yetkiService)
+    public TahakkukService(ITahakkukRepository repo, IUnitOfWork uow)
     {
         _repo = repo;
         _uow = uow;
-        _yetkiService = yetkiService;
     }
 
     // ── Listeleme ────────────────────────────────────────────────────────
-    public async Task<List<TahakkukListItemDto>> GetListAsync(int? sozlesmeId = null, string? userId = null)
+    public async Task<List<TahakkukListItemDto>> GetListAsync(int? sozlesmeId = null, IReadOnlyList<int>? tasinmazIds = null)
     {
-        var yetkiliIds = await ResolveYetkiAsync(userId);
-        return await _repo.GetListAsync(sozlesmeId, yetkiliIds);
+        return await _repo.GetListAsync(sozlesmeId, tasinmazIds?.ToList());
     }
 
-    public async Task<PagedResult<TahakkukListItemDto>> GetPagedAsync(TableQuery q, int? sozlesmeId = null, string? userId = null)
+    public async Task<PagedResult<TahakkukListItemDto>> GetPagedAsync(TableQuery q, int? sozlesmeId = null, IReadOnlyList<int>? tasinmazIds = null)
     {
-        var yetkiliIds = await ResolveYetkiAsync(userId);
-        return await _repo.GetPagedListAsync(q, sozlesmeId, yetkiliIds);
+        return await _repo.GetPagedListAsync(q, sozlesmeId, tasinmazIds?.ToList());
     }
 
     public Task<TahakkukDetayDto?> GetDetayAsync(int id) => _repo.GetDetayAsync(id);
@@ -71,7 +66,4 @@ public class TahakkukService : ITahakkukService
         await _uow.SaveChangesAsync();
     }
 
-    // ── Yardımcılar ──────────────────────────────────────────────────────
-    private async Task<List<int>?> ResolveYetkiAsync(string? userId) =>
-        userId == null ? null : await _yetkiService.GetYetkiliTasinmazIdsAsync(userId);
 }

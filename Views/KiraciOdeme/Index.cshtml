@@ -1,0 +1,65 @@
+@model List<KiraTakip.Models.Entities.KiraOdeme>
+@using KiraTakip.Models
+@{
+    Layout = "_KiraciLayout";
+    ViewData["Title"] = "Ödemelerim";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Ödemelerim</div>
+        <div class="page-subtitle">@Model.Count kayıt</div>
+    </div>
+</div>
+
+<div class="card p-0 overflow-hidden" x-data="clientTable({ pageSize: 25 })" x-init="init()">
+    <div class="table-toolbar">
+        <input type="search" class="form-control toolbar-search" placeholder="Ara…" x-model.debounce.250ms="q" />
+        <span class="pagination-info ml-auto"><span x-text="total"></span> kayıt</span>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Tarih</th>
+                    <th>Birim</th>
+                    <th>Tutar</th>
+                    <th>Kanal</th>
+                    <th>Durum</th>
+                </tr>
+            </thead>
+            <tbody x-ref="tbody">
+                @foreach (var o in Model)
+                {
+                    var birimAd = o.KiraSozlesmesi?.Birim?.Ad ?? "—";
+                    var search = $"{birimAd} {o.OdemeTarihi:dd.MM.yyyy}".ToLower();
+                    var durumClass = o.Durum switch {
+                        OdemeDurumu.Onaylandi => "badge-kirali",
+                        OdemeDurumu.OnayBekliyor => "badge-bos",
+                        OdemeDurumu.Reddedildi => "badge-gecmis",
+                        _ => "badge-bos"
+                    };
+                    var durumLabel = o.Durum switch {
+                        OdemeDurumu.Onaylandi => "Onaylandi",
+                        OdemeDurumu.OnayBekliyor => "Onay Bekliyor",
+                        OdemeDurumu.Reddedildi => "Reddedildi",
+                        _ => o.Durum.ToString()
+                    };
+                    var kanalLabel = o.OdemeKanali switch {
+                        OdemeKanali.Havale => "Havale",
+                        OdemeKanali.EFT => "EFT",
+                        OdemeKanali.Nakit => "Nakit",
+                        _ => "Diğer"
+                    };
+                    <tr data-row data-search="@search">
+                        <td class="text-sm">@o.OdemeTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="font-semibold">@birimAd</td>
+                        <td class="text-sm font-medium">@o.Tutar.ToString("N2") ₺</td>
+                        <td class="text-sm text-muted">@kanalLabel</td>
+                        <td><span class="badge @durumClass">@durumLabel</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

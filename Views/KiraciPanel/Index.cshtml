@@ -1,0 +1,28 @@
+@{
+    Layout = "_KiraciLayout";
+    ViewData["Title"] = "Kiracı Paneli";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Hoş geldiniz, @ViewBag.KiraciAd</div>
+        <div class="page-subtitle">Kiracı portalı özet bilgileri</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="card text-center">
+        <div class="text-3xl font-bold text-primary">@ViewBag.AktifSozlesme</div>
+        <div class="text-sm text-muted mt-1">Aktif Sözleşme</div>
+    </div>
+    <div class="card text-center">
+        <div class="text-3xl font-bold @(ViewBag.BekleyenBorc > 0 ? "text-red-600" : "text-primary")">
+            @((decimal)ViewBag.BekleyenBorc).ToString("N2") ₺
+        </div>
+        <div class="text-sm text-muted mt-1">Bekleyen Borç</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="text-sm text-muted">Sol menüden sözleşmelerinize, borçlarınıza ve rezervasyonlarınıza ulaşabilirsiniz.</div>
+</div>

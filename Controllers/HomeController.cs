@@ -20,6 +20,7 @@ public class HomeController : Controller
     private readonly IBankaHareketiService _bankaHareketiService;
     private readonly IRezervasyonService _rezervasyonService;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IYetkiKapsamiProvider _provider;
 
     public HomeController(
         ITasinmazService tasinmazService,
@@ -29,7 +30,8 @@ public class HomeController : Controller
         IOdemeService odemeService,
         IBankaHareketiService bankaHareketiService,
         IRezervasyonService rezervasyonService,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        IYetkiKapsamiProvider provider)
     {
         _tasinmazService = tasinmazService;
         _sozlesmeService = sozlesmeService;
@@ -39,17 +41,21 @@ public class HomeController : Controller
         _bankaHareketiService = bankaHareketiService;
         _rezervasyonService = rezervasyonService;
         _userManager = userManager;
+        _provider = provider;
     }
 
     public async Task<IActionResult> Index()
     {
-        var now = DateTime.Now;
-        var userId = _userManager.GetUserId(User);
-        var filterUserId = User.IsInRole(RoleNames.Goruntuleyici) ? userId : null;
+        var user = await _userManager.GetUserAsync(User);
+        if (user?.UserType == UserType.Kiraci)
+            return RedirectToAction("Index", "KiraciPanel");
 
-        var tasinmazlar = await _tasinmazService.GetAllAsync(filterUserId);
-        var sozlesmeler = await _sozlesmeService.GetAllAsync(userId: filterUserId);
-        var bosBirimler = await _tasinmazService.GetBosBirimlerAsync(filterUserId);
+        var now = DateTime.Now;
+        var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
+
+        var tasinmazlar = await _tasinmazService.GetAllAsync(tasinmazIds);
+        var sozlesmeler = await _sozlesmeService.GetAllAsync(tasinmazIds: tasinmazIds);
+        var bosBirimler = await _tasinmazService.GetBosBirimlerAsync(tasinmazIds);
 
         var aktifSozlesmeler = sozlesmeler.Where(s => s.Aktif).ToList();
         decimal aylikToplamGelir = 0m;
@@ -101,7 +107,7 @@ public class HomeController : Controller
         {
             vm.HasOdemeAccess = true;
             await _tahakkukService.GecikmeleriGuncelleAsync();
-            var tahakkuklar = await _tahakkukService.GetListAsync(userId: filterUserId);
+            var tahakkuklar = await _tahakkukService.GetListAsync(tasinmazIds: tasinmazIds);
             var buAyTahakkuklar = tahakkuklar.Where(t => t.DonemBaslangic.Year == now.Year && t.DonemBaslangic.Month == now.Month).ToList();
 
             vm.BuAyBeklenenTahsilat = buAyTahakkuklar.Sum(t => t.ToplamTutar);
@@ -109,7 +115,7 @@ public class HomeController : Controller
             vm.GecikmisTahakkukAdet = tahakkuklar.Count(t => t.Durum == TahakkukDurumu.Gecikti);
             vm.GecikmisTutarToplam = tahakkuklar.Where(t => t.Durum == TahakkukDurumu.Gecikti).Sum(t => t.ToplamTutar - t.OdenenTutar);
 
-            var odemeler = await _odemeService.GetAllAsync(userId: filterUserId);
+            var odemeler = await _odemeService.GetAllAsync(tasinmazIds: tasinmazIds);
             vm.OnayBekleyenOdemeAdet = odemeler.Count(o => o.Durum == OdemeDurumu.OnayBekliyor);
 
             var eslesmemisler = await _bankaHareketiService.GetAllAsync(BankaEslesmeDurumu.Eslestirilmedi);
@@ -122,7 +128,7 @@ public class HomeController : Controller
                 .Where(t => t.KaynakTipi == TahakkukKaynakTipi.Rezervasyon && t.Durum != TahakkukDurumu.IptalEdildi)
                 .Sum(t => t.ToplamTutar);
 
-            var rezervasyonlar = await _rezervasyonService.GetAllAsync(userId: filterUserId);
+            var rezervasyonlar = await _rezervasyonService.GetAllAsync(tasinmazIds);
             vm.TahakkukaAktarilmamisRezervasyonAdet = rezervasyonlar
                 .Count(r => r.Durum == RezervasyonDurumu.Planlandi && r.ToplamTutar > 0 && r.KiraTahakkukId == null);
         }

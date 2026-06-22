@@ -12,7 +12,7 @@ public interface IBankaHareketiRepository : IBaseRepository<BankaHareketi>
     Task<BankaHareketiDetayDto?> GetDetayAsync(int id);
 
     // Eşleştirme adayları (DTO)
-    Task<List<OdemeAdayDto>> GetOdemeAdaylariAsync(int bankaHareketiId, string? userId = null);
+    Task<List<OdemeAdayDto>> GetOdemeAdaylariAsync(int bankaHareketiId, IReadOnlyList<int>? tasinmazIds = null);
     Task<List<BankaHareketiListItemDto>> GetHareketAdaylariAsync(int odemeId);
 
     // Eşleştirme yazma işlemleri

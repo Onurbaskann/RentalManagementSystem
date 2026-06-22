@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — Kiracı Portalı</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#1a6b5c',
+                            50: '#f0faf7',
+                            600: '#1a6b5c',
+                            700: '#155549',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        summary { list-style: none; }
+        summary::-webkit-details-marker { display: none; }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <link rel="stylesheet" href="~/css/app.css" asp-append-version="true" />
+</head>
+<body x-data>
+    <button type="button" class="sidebar-toggle" aria-label="Menüyü aç" @@click="$store.ui.toggle()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="sidebar-overlay" :class="{ 'is-open': $store.ui.sidebarOpen }" @@click="$store.ui.close()"></div>
+
+    @await Html.PartialAsync("_KiraciSidebar")
+
+    <main class="main-content">
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert-success mb-4">✓ @TempData["Success"]</div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert-danger mb-4">✕ @TempData["Error"]</div>
+        }
+        @RenderBody()
+    </main>
+
+    @await Html.PartialAsync("_ConfirmDialog")
+    <div id="toast"></div>
+
+    <script>
+        function showToast(msg, type) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.style.background = type === 'error' ? '#dc2626' : '#1a2332';
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3200);
+        }
+
+        function initTabs(containerId) {
+            const c = document.getElementById(containerId);
+            if (!c) return;
+            const tabs = c.querySelectorAll('.tab');
+            const contents = c.querySelectorAll('.tab-content');
+            tabs.forEach((tab, i) => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('tab-active'));
+                    contents.forEach(ct => ct.classList.remove('tab-content-active'));
+                    tab.classList.add('tab-active');
+                    if (contents[i]) contents[i].classList.add('tab-content-active');
+                });
+            });
+            if (tabs.length > 0 && contents.length > 0) {
+                tabs[0].classList.add('tab-active');
+                contents[0].classList.add('tab-content-active');
+            }
+        }
+    </script>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+    <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -30,8 +30,10 @@ public class OdemePortalController : Controller
     [Route("Odeme/Portal")]
     public async Task<IActionResult> Index(string t)
     {
-        if (!_paymentLink.TryValidate(t, out var kiraciId, out var reason))
-            return View("Invalid", reason ?? "Geçersiz veya süresi dolmuş ödeme linki.");
+        var validation = await _paymentLink.TryValidateAsync(t);
+        if (!validation.Success)
+            return View("Invalid", validation.Reason ?? "Geçersiz veya süresi dolmuş ödeme linki.");
+        var kiraciId = validation.KiraciId;
 
         var kiraci = await _ctx.Kiraciler.FirstOrDefaultAsync(k => k.Id == kiraciId);
         if (kiraci == null) return View("Invalid", "Kiracı bulunamadı.");
@@ -54,7 +56,7 @@ public class OdemePortalController : Controller
             {
                 KiraciId = kiraci.Id,
                 Ad = kiraci.Ad,
-                Soyad = kiraci.Soyad ?? "",
+                Soyad = "",
                 Email = kiraci.Email ?? ""
             };
             return View("NoDebt", noDebtModel);
@@ -64,7 +66,7 @@ public class OdemePortalController : Controller
         {
             KiraciId = kiraci.Id,
             Ad = kiraci.Ad,
-            Soyad = kiraci.Soyad ?? "",
+            Soyad = "",
             Email = kiraci.Email ?? "",
             Borclar = borclar.Select(b => new BorcKart
             {

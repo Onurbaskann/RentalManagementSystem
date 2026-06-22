@@ -5,7 +5,6 @@ public class SozlesmeListItemDto
     public int Id { get; set; }
     public int KiraciId { get; set; }
     public string KiraciGosterimAdi { get; set; } = string.Empty;
-    public KiraciTuru KiraciTuru { get; set; }
     public string KiraciKategoriAd { get; set; } = string.Empty;
     public int BirimId { get; set; }
     public string BirimAd { get; set; } = string.Empty;

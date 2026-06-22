@@ -17,13 +17,15 @@ public class BirimController : Controller
     private readonly IRezervasyonService _rezervasyonService;
     private readonly ITarifeHiyerarsiService _tarifeHiyerarsisi;
     private readonly IBirimService _birimService;
+    private readonly IYetkiKapsamiProvider _provider;
 
-    public BirimController(ApplicationDbContext ctx, IRezervasyonService rezervasyonService, ITarifeHiyerarsiService tarifeHiyerarsisi, IBirimService birimService)
+    public BirimController(ApplicationDbContext ctx, IRezervasyonService rezervasyonService, ITarifeHiyerarsiService tarifeHiyerarsisi, IBirimService birimService, IYetkiKapsamiProvider provider)
     {
         _ctx = ctx;
         _rezervasyonService = rezervasyonService;
         _tarifeHiyerarsisi = tarifeHiyerarsisi;
         _birimService = birimService;
+        _provider = provider;
     }
 
     [Authorize(Policy = PermissionCatalog.Birim.ManageRate)]
@@ -33,6 +35,8 @@ public class BirimController : Controller
         var birim = await _birimService.GetByIdAsync(id);
 
         if (birim == null) return NotFound();
+
+        if (!_provider.KapsamdaMi(birim.TasinmazId)) return Forbid();
 
         var vm = new BirimOzelFiyatViewModel
         {

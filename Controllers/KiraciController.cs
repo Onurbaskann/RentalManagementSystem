@@ -19,28 +19,39 @@ public class KiraciController : Controller
     private readonly IIstatistikService _istatistik;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _ctx;
+    private readonly IRolService _rolService;
+    private readonly IDavetiyeService _davetiyeService;
+    private readonly IYetkiKapsamiProvider _provider;
+    private readonly IBelgeService _belgeService;
 
     public KiraciController(
         IKiraciService kiraciService,
         ISozlesmeService sozlesmeService,
         IIstatistikService istatistik,
         UserManager<ApplicationUser> userManager,
-        ApplicationDbContext ctx)
+        ApplicationDbContext ctx,
+        IRolService rolService,
+        IDavetiyeService davetiyeService,
+        IYetkiKapsamiProvider provider,
+        IBelgeService belgeService)
     {
         _kiraciService = kiraciService;
         _sozlesmeService = sozlesmeService;
         _istatistik = istatistik;
         _userManager = userManager;
         _ctx = ctx;
+        _rolService = rolService;
+        _davetiyeService = davetiyeService;
+        _provider = provider;
+        _belgeService = belgeService;
     }
 
     [Authorize(Policy = PermissionCatalog.Kiraci.View)]
     public async Task<IActionResult> Index()
     {
-        var userId = _userManager.GetUserId(User);
-        var filterUserId = User.IsInRole(RoleNames.Goruntuleyici) ? userId : null;
-        var kiraciler = await _kiraciService.GetAllAsync(filterUserId);
-        var sozlesmeler = await _sozlesmeService.GetAllAsync(userId: filterUserId);
+        var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
+        var kiraciler = await _kiraciService.GetAllAsync(tasinmazIds);
+        var sozlesmeler = await _sozlesmeService.GetAllAsync(tasinmazIds: tasinmazIds);
         ViewBag.AktifSozlesme = sozlesmeler
             .Where(s => s.Aktif)
             .GroupBy(s => s.KiraciId)
@@ -51,11 +62,10 @@ public class KiraciController : Controller
     [Authorize(Policy = PermissionCatalog.Kiraci.View)]
     public async Task<IActionResult> Detay(int id)
     {
-        string? scopedUserId = null;
-        if (User.IsInRole(RoleNames.Goruntuleyici))
+        var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
+        if (!_provider.GlobalErisim)
         {
-            scopedUserId = _userManager.GetUserId(User);
-            var kiraciler = await _kiraciService.GetAllAsync(scopedUserId);
+            var kiraciler = await _kiraciService.GetAllAsync(tasinmazIds);
             if (!kiraciler.Any(k => k.Id == id)) return Forbid();
         }
 
@@ -63,9 +73,9 @@ public class KiraciController : Controller
         if (k == null) return NotFound();
 
         List<SozlesmeListItemDto> sozlesmeler;
-        if (scopedUserId != null)
+        if (!_provider.GlobalErisim)
         {
-            var all = await _sozlesmeService.GetAllAsync(userId: scopedUserId);
+            var all = await _sozlesmeService.GetAllAsync(tasinmazIds: tasinmazIds);
             sozlesmeler = all.Where(s => s.KiraciId == id).ToList();
         }
         else
@@ -74,12 +84,16 @@ public class KiraciController : Controller
         }
 
         var depozitoTutarlari = await _sozlesmeService.GetDepozitoTutarlariAsync(sozlesmeler.Select(s => s.Id));
+        var belgeler = await _belgeService.GetListAsync(Models.Entities.BelgeOwnerTipi.Kiraci, id);
+        var belgeTurleri = await _belgeService.GetTurlerAsync(Models.Entities.BelgeOwnerTipi.Kiraci);
 
         var vm = new KiraciDetayViewModel
         {
             Kiraci = k,
             Sozlesmeler = sozlesmeler,
-            DepozitoTutarlari = depozitoTutarlari
+            DepozitoTutarlari = depozitoTutarlari,
+            Belgeler = belgeler,
+            BelgeTurleri = belgeTurleri
         };
         return View(vm);
     }
@@ -88,6 +102,7 @@ public class KiraciController : Controller
     {
         ViewBag.Kategoriler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Kiraci && k.Aktif).OrderBy(k => k.Sira).ToListAsync();
         ViewBag.Sektorler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Sektor && k.Aktif).OrderBy(k => k.Sira).ToListAsync();
+        ViewBag.BelgeTurleri = await _belgeService.GetTurlerAsync(Models.Entities.BelgeOwnerTipi.Kiraci);
     }
 
     [HttpGet]
@@ -116,7 +131,46 @@ public class KiraciController : Controller
 
         var k = BuildKiraciFromVm(vm);
         await _kiraciService.CreateAsync(k);
-        TempData["Success"] = $"'{k.GosterimAdi}' başarıyla eklendi.";
+
+        // Yüklenen belgeleri kaydet
+        var belgeTurleri = await _belgeService.GetTurlerAsync(Models.Entities.BelgeOwnerTipi.Kiraci);
+        foreach (var bt in belgeTurleri)
+        {
+            var file = Request.Form.Files.GetFile($"dosya_{bt.Id}");
+            if (file == null || file.Length == 0) continue;
+            using var ms = new MemoryStream();
+            await file.CopyToAsync(ms);
+            await _belgeService.UploadAsync(
+                Models.Entities.BelgeOwnerTipi.Kiraci, k.Id, bt.Id,
+                file.FileName, file.ContentType, ms.ToArray());
+        }
+
+        // Kiracı rol şablonlarını oluştur (Firma Yetkilisi + Finans Yetkilisi)
+        var currentUserId = _userManager.GetUserId(User)!;
+        await _rolService.SeedKiraciRolleriAsync(k.Id, currentUserId);
+
+        // İlk firma yetkilisine otomatik davet gönder (e-posta girilmişse)
+        if (!string.IsNullOrWhiteSpace(vm.IlkYetkiliEmail))
+        {
+            try
+            {
+                var firmaRol = await _ctx.Roller
+                    .FirstOrDefaultAsync(r => r.KiraciId == k.Id && r.Ad == RoleNames.FirmaYetkilisi);
+                if (firmaRol != null)
+                    await _davetiyeService.GonderAsync(vm.IlkYetkiliEmail, vm.IlkYetkiliAdSoyad, firmaRol.Id, currentUserId, k.Id);
+                TempData["Success"] = $"'{k.GosterimAdi}' eklendi ve {vm.IlkYetkiliEmail} adresine davet gönderildi.";
+            }
+            catch
+            {
+                TempData["Success"] = $"'{k.GosterimAdi}' başarıyla eklendi.";
+                TempData["Error"] = "İlk yetkili daveti gönderilemedi; Kiracı > Kullanıcılar ekranından tekrar deneyebilirsiniz.";
+            }
+        }
+        else
+        {
+            TempData["Success"] = $"'{k.GosterimAdi}' başarıyla eklendi.";
+        }
+
         return RedirectToAction("Detay", new { id = k.Id });
     }
 
@@ -132,19 +186,7 @@ public class KiraciController : Controller
         {
             Id = k.Id,
             KiraciNo = k.KiraciNo,
-            KiraciTuru = k.KiraciTuru,
             Ad = k.Ad,
-            GercekAd = k.KiraciTuru == KiraciTuru.Gercek ? k.Ad : null,
-            TuzelAd = k.KiraciTuru == KiraciTuru.Tuzel ? k.Ad : null,
-            Soyad = k.Soyad,
-            TcVatandasiDegil = !string.IsNullOrWhiteSpace(k.PasaportNo),
-            TcKimlikNo = k.TcKimlikNo,
-            PasaportNo = k.PasaportNo,
-            Unvan = k.Unvan,
-            AnneAdi = k.AnneAdi,
-            BabaAdi = k.BabaAdi,
-            DogumTarihi = k.DogumTarihi,
-            DogumYeri = k.DogumYeri,
             TicaretSicilNo = k.TicaretSicilNo,
             VergiNo = k.VergiNo,
             VergiDairesi = k.VergiDairesi,
@@ -152,7 +194,6 @@ public class KiraciController : Controller
             Telefon = k.Telefon,
             Email = k.Email,
             Adres = k.Adres,
-            KvkkOnayi = k.KvkkOnayi,
             KiraciKategoriId = k.KiraciKategoriId,
             SektorId = k.SektorId
         };
@@ -182,22 +223,10 @@ public class KiraciController : Controller
 
     private async Task ValidateKiraciAsync(KiraciFormViewModel vm, int? excludeId = null)
     {
-        ModelState.Remove("Ad");
-        ModelState.Remove("GercekAd");
-        ModelState.Remove("TuzelAd");
-        ModelState.Remove("Soyad");
-
         if (string.IsNullOrWhiteSpace(vm.KiraciNo))
-        {
             ModelState.AddModelError("KiraciNo", "Kiracı No zorunludur.");
-        }
         else if (await _kiraciService.KiraciNoExistsAsync(vm.KiraciNo, excludeId))
-        {
             ModelState.AddModelError("KiraciNo", "Bu Kiracı No zaten kullanımda.");
-        }
-
-        if (vm.KiraciTuru == null)
-            ModelState.AddModelError("KiraciTuru", "Kiracı türü seçilmelidir.");
 
         if (!vm.KiraciKategoriId.HasValue || vm.KiraciKategoriId <= 0)
             ModelState.AddModelError("KiraciKategoriId", "Kiracı kategorisi seçilmelidir.");
@@ -205,49 +234,16 @@ public class KiraciController : Controller
         if (!vm.SektorId.HasValue || vm.SektorId <= 0)
             ModelState.AddModelError("SektorId", "Sektör seçilmelidir.");
 
-        if (vm.KiraciTuru == KiraciTuru.Gercek)
-        {
-            vm.Ad = vm.GercekAd;
+        if (string.IsNullOrWhiteSpace(vm.Ad))
+            ModelState.AddModelError("Ad", "Firma / Kurum Adı zorunludur.");
 
-            if (string.IsNullOrWhiteSpace(vm.GercekAd))
-                ModelState.AddModelError("GercekAd", "Ad zorunludur.");
-            if (string.IsNullOrWhiteSpace(vm.Soyad))
-                ModelState.AddModelError("Soyad", "Soyad zorunludur.");
-            if (!vm.DogumTarihi.HasValue)
-                ModelState.AddModelError("DogumTarihi", "Doğum Tarihi zorunludur.");
-            if (string.IsNullOrWhiteSpace(vm.AnneAdi))
-                ModelState.AddModelError("AnneAdi", "Anne Adı zorunludur.");
-            if (string.IsNullOrWhiteSpace(vm.BabaAdi))
-                ModelState.AddModelError("BabaAdi", "Baba Adı zorunludur.");
+        if (string.IsNullOrWhiteSpace(vm.VergiNo))
+            ModelState.AddModelError("VergiNo", "Vergi No zorunludur.");
+        else if (vm.VergiNo.Length != 10 || !vm.VergiNo.All(char.IsDigit))
+            ModelState.AddModelError("VergiNo", "Vergi No 10 haneli rakamdan oluşmalıdır.");
 
-            if (vm.TcVatandasiDegil)
-            {
-                if (string.IsNullOrWhiteSpace(vm.PasaportNo))
-                    ModelState.AddModelError("PasaportNo", "Pasaport No zorunludur.");
-            }
-            else
-            {
-                if (string.IsNullOrWhiteSpace(vm.TcKimlikNo))
-                    ModelState.AddModelError("TcKimlikNo", "TC Kimlik No zorunludur.");
-                else if (vm.TcKimlikNo.Length != 11 || !vm.TcKimlikNo.All(char.IsDigit))
-                    ModelState.AddModelError("TcKimlikNo", "TC Kimlik No 11 haneli rakamdan oluşmalıdır.");
-            }
-        }
-        else if (vm.KiraciTuru == KiraciTuru.Tuzel)
-        {
-            vm.Ad = vm.TuzelAd;
-
-            if (string.IsNullOrWhiteSpace(vm.TuzelAd))
-                ModelState.AddModelError("TuzelAd", "Firma / Kurum Adı zorunludur.");
-
-            if (string.IsNullOrWhiteSpace(vm.VergiNo))
-                ModelState.AddModelError("VergiNo", "Vergi No zorunludur.");
-            else if (vm.VergiNo.Length != 10 || !vm.VergiNo.All(char.IsDigit))
-                ModelState.AddModelError("VergiNo", "Vergi No 10 haneli rakamdan oluşmalıdır.");
-
-            if (string.IsNullOrWhiteSpace(vm.VergiDairesi))
-                ModelState.AddModelError("VergiDairesi", "Vergi Dairesi zorunludur.");
-        }
+        if (string.IsNullOrWhiteSpace(vm.VergiDairesi))
+            ModelState.AddModelError("VergiDairesi", "Vergi Dairesi zorunludur.");
 
         if (string.IsNullOrWhiteSpace(vm.Telefon))
             ModelState.AddModelError("Telefon", "Telefon zorunludur.");
@@ -255,58 +251,23 @@ public class KiraciController : Controller
             ModelState.AddModelError("Email", "E-posta zorunludur.");
         if (string.IsNullOrWhiteSpace(vm.Adres))
             ModelState.AddModelError("Adres", "Adres zorunludur.");
-
-        if (!vm.KvkkOnayi)
-            ModelState.AddModelError("KvkkOnayi", "KVKK aydınlatma metni onayı zorunludur.");
     }
 
     private static Kiraci BuildKiraciFromVm(KiraciFormViewModel vm)
     {
-        var tur = vm.KiraciTuru ?? KiraciTuru.Gercek;
-        var k = new Kiraci
+        return new Kiraci
         {
             KiraciNo = vm.KiraciNo,
-            KiraciTuru = tur,
             Ad = vm.Ad,
+            TicaretSicilNo = vm.TicaretSicilNo,
+            VergiNo = vm.VergiNo,
+            VergiDairesi = vm.VergiDairesi,
+            MersisNo = vm.MersisNo,
             Telefon = vm.Telefon,
             Email = vm.Email,
             Adres = vm.Adres,
-            KvkkOnayi = vm.KvkkOnayi,
             KiraciKategoriId = vm.KiraciKategoriId,
             SektorId = vm.SektorId
         };
-
-        if (tur == KiraciTuru.Gercek)
-        {
-            k.Soyad = vm.Soyad;
-            k.TcKimlikNo = vm.TcVatandasiDegil ? null : vm.TcKimlikNo;
-            k.PasaportNo = vm.TcVatandasiDegil ? vm.PasaportNo : null;
-            k.Unvan = vm.Unvan;
-            k.AnneAdi = vm.AnneAdi;
-            k.BabaAdi = vm.BabaAdi;
-            k.DogumTarihi = vm.DogumTarihi;
-            k.DogumYeri = vm.DogumYeri;
-            k.TicaretSicilNo = null;
-            k.VergiNo = null;
-            k.VergiDairesi = null;
-            k.MersisNo = null;
-        }
-        else
-        {
-            k.TicaretSicilNo = vm.TicaretSicilNo;
-            k.VergiNo = vm.VergiNo;
-            k.VergiDairesi = vm.VergiDairesi;
-            k.MersisNo = vm.MersisNo;
-            k.Soyad = null;
-            k.TcKimlikNo = null;
-            k.PasaportNo = null;
-            k.Unvan = null;
-            k.AnneAdi = null;
-            k.BabaAdi = null;
-            k.DogumTarihi = null;
-            k.DogumYeri = null;
-        }
-
-        return k;
     }
 }

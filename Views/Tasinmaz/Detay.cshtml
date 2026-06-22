@@ -334,7 +334,7 @@
                                                 var searchData = ((b.BirimNo ?? "") + " " + (b.Ad ?? "")).ToLowerInvariant();
                                                 var rowHref = b.AktifSozlesmeId.HasValue
                                                     ? $"/Sozlesme/Detay/{b.AktifSozlesmeId}"
-                                                    : (canEdit ? $"/Sozlesme/Ekle?birimId={b.Id}" : "");
+                                                    : (canEdit ? (b.RezervasyonYapilabilirMi ? $"/Rezervasyon/Ekle?birimId={b.Id}" : $"/Sozlesme/Ekle?birimId={b.Id}") : "");
                                                 <tr data-durum="@durumData"
                                                     data-search="@searchData"
                                                     @Html.Raw(rowHref != "" ? $"data-href=\"{rowHref}\"" : "")
@@ -475,7 +475,7 @@
                                 var searchData = ((b.BirimNo ?? "") + " " + (b.Ad ?? "")).ToLowerInvariant();
                                 var cardHref = b.AktifSozlesmeId.HasValue
                                     ? $"/Sozlesme/Detay/{b.AktifSozlesmeId}"
-                                    : (canEdit ? $"/Sozlesme/Ekle?birimId={b.Id}" : "");
+                                    : (canEdit ? (b.RezervasyonYapilabilirMi ? $"/Rezervasyon/Ekle?birimId={b.Id}" : $"/Sozlesme/Ekle?birimId={b.Id}") : "");
                                 var cardBg = b.Durum switch {
                                     KiraDurumu.Kirali => "border-l-[var(--color-primary)] bg-[#f0faf7]",
                                     KiraDurumu.SuresiDolmakUzere => "border-l-amber-400 bg-[#fffbeb]",

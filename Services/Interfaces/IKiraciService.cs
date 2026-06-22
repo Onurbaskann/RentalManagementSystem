@@ -4,7 +4,7 @@ namespace KiraTakip.Services.Interfaces;
 
 public interface IKiraciService
 {
-    Task<List<KiraciListItemDto>> GetAllAsync(string? userId = null);
+    Task<List<KiraciListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null);
     Task<KiraciDetayDto?> GetDetayAsync(int id);
     Task<Kiraci> CreateAsync(Kiraci k);
     Task UpdateAsync(Kiraci k);

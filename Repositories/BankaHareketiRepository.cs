@@ -116,7 +116,7 @@ public class BankaHareketiRepository : BaseRepository<BankaHareketi>, IBankaHare
                        .FirstOrDefaultAsync();
 
     // ── Eşleştirme adayları ───────────────────────────────────────────────
-    public async Task<List<OdemeAdayDto>> GetOdemeAdaylariAsync(int bankaHareketiId, string? userId = null)
+    public async Task<List<OdemeAdayDto>> GetOdemeAdaylariAsync(int bankaHareketiId, IReadOnlyList<int>? tasinmazIds = null)
     {
         var hareketi = await _dbSet.AsNoTracking()
                                    .Where(b => b.Id == bankaHareketiId)
@@ -132,14 +132,11 @@ public class BankaHareketiRepository : BaseRepository<BankaHareketi>, IBankaHare
             .Where(o => o.Durum == OdemeDurumu.OnayBekliyor || o.Durum == OdemeDurumu.Onaylandi)
             .Where(o => !_ctx.OdemeBankaEslesmeleri.Any(e => e.KiraOdemeId == o.Id && e.BankaHareketiId == bankaHareketiId));
 
-        if (userId != null)
+        if (tasinmazIds != null)
         {
-            var yetkiliIds = await _ctx.UserTasinmazYetkileri.AsNoTracking()
-                .Where(u => u.UserId == userId)
-                .Select(u => u.TasinmazId)
-                .ToListAsync();
+            var ids = tasinmazIds.ToList();
             query = query.Where(o => o.KiraTahakkuk.KiraSozlesmesiId != null
-                && yetkiliIds.Contains(o.KiraTahakkuk.KiraSozlesmesi!.Birim.TasinmazId));
+                && ids.Contains(o.KiraTahakkuk.KiraSozlesmesi!.Birim.TasinmazId));
         }
 
         var liste = await query.Select(o => new OdemeAdayDto
@@ -149,9 +146,7 @@ public class BankaHareketiRepository : BaseRepository<BankaHareketi>, IBankaHare
             OdemeTarihi = o.OdemeTarihi,
             Durum = o.Durum,
             KiraciGosterimAdi = o.KiraTahakkuk.KiraSozlesmesi != null
-                ? (o.KiraTahakkuk.KiraSozlesmesi.Kiraci.KiraciTuru == KiraciTuru.Gercek
-                    ? (o.KiraTahakkuk.KiraSozlesmesi.Kiraci.Ad + " " + o.KiraTahakkuk.KiraSozlesmesi.Kiraci.Soyad).Trim()
-                    : o.KiraTahakkuk.KiraSozlesmesi.Kiraci.Ad)
+                ? o.KiraTahakkuk.KiraSozlesmesi.Kiraci.Ad
                 : "Rezervasyon Ödemesi",
             DonemBaslangic = o.KiraTahakkuk.DonemBaslangic
         }).ToListAsync();

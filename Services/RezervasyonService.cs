@@ -15,33 +15,25 @@ public class RezervasyonService : IRezervasyonService
     private readonly IBirimRepository _birimRepo;
     private readonly IKiraciRepository _kiraciRepo;
     private readonly IUnitOfWork _uow;
-    private readonly IUserTasinmazYetkiService _yetkiService;
-
     public RezervasyonService(
         IRezervasyonRepository repo,
         IRezervasyonTarifeRepository tarifeRepo,
         IBirimRepository birimRepo,
         IKiraciRepository kiraciRepo,
-        IUnitOfWork uow,
-        IUserTasinmazYetkiService yetkiService)
+        IUnitOfWork uow)
     {
         _repo = repo;
         _tarifeRepo = tarifeRepo;
         _birimRepo = birimRepo;
         _kiraciRepo = kiraciRepo;
         _uow = uow;
-        _yetkiService = yetkiService;
     }
 
     // ── Listeleme ──────────────────────────────────────────────────────────────
 
-    public async Task<List<RezervasyonListItemDto>> GetAllAsync(string? userId = null)
+    public async Task<List<RezervasyonListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null)
     {
-        List<int>? yetkiliIds = null;
-        if (userId != null)
-            yetkiliIds = await _yetkiService.GetYetkiliTasinmazIdsAsync(userId);
-
-        return await _repo.GetListAsync(yetkiliIds);
+        return await _repo.GetListAsync(tasinmazIds?.ToList());
     }
 
     // ── Ücret Hesaplama (precedence: birime özel → birim türü genel tarife → hata) ─

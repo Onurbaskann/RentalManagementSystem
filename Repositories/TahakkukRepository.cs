@@ -29,9 +29,7 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
                           KiraSozlesmesiId = t.KiraSozlesmesiId,
                           KiraciId = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.KiraciId : null,
                           KiraciGosterimAdi = t.KiraSozlesmesi != null
-                              ? (t.KiraSozlesmesi.Kiraci.KiraciTuru == KiraciTuru.Gercek
-                                  ? (t.KiraSozlesmesi.Kiraci.Ad + " " + t.KiraSozlesmesi.Kiraci.Soyad).Trim()
-                                  : t.KiraSozlesmesi.Kiraci.Ad)
+                              ? t.KiraSozlesmesi.Kiraci.Ad
                               : null,
                           TasinmazId = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.TasinmazId : null,
                           TasinmazAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Tasinmaz.Ad : null,
@@ -76,8 +74,6 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
         {
             var s = q.Q.Trim();
             query = query.Where(t => EF.Functions.Like(t.KiraSozlesmesi!.Kiraci.Ad, $"%{s}%") ||
-                                     (t.KiraSozlesmesi.Kiraci.Soyad != null &&
-                                      EF.Functions.Like(t.KiraSozlesmesi.Kiraci.Soyad, $"%{s}%")) ||
                                      EF.Functions.Like(t.KiraSozlesmesi.Birim.Tasinmaz.Ad, $"%{s}%"));
         }
 
@@ -124,9 +120,7 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
                                    KiraSozlesmesiId = t.KiraSozlesmesiId,
                                    KiraciId = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.KiraciId : null,
                                    KiraciGosterimAdi = t.KiraSozlesmesi != null
-                                       ? (t.KiraSozlesmesi.Kiraci.KiraciTuru == KiraciTuru.Gercek
-                                           ? (t.KiraSozlesmesi.Kiraci.Ad + " " + t.KiraSozlesmesi.Kiraci.Soyad).Trim()
-                                           : t.KiraSozlesmesi.Kiraci.Ad)
+                                       ? t.KiraSozlesmesi.Kiraci.Ad
                                        : null,
                                    TasinmazId = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.TasinmazId : null,
                                    TasinmazAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Tasinmaz.Ad : null,
@@ -175,9 +169,7 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
                                KiraSozlesmesiId = t.KiraSozlesmesiId,
                                KiraciId = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.KiraciId : null,
                                KiraciGosterimAdi = t.KiraSozlesmesi != null
-                                   ? (t.KiraSozlesmesi.Kiraci.KiraciTuru == KiraciTuru.Gercek
-                                       ? (t.KiraSozlesmesi.Kiraci.Ad + " " + t.KiraSozlesmesi.Kiraci.Soyad).Trim()
-                                       : t.KiraSozlesmesi.Kiraci.Ad)
+                                   ? t.KiraSozlesmesi.Kiraci.Ad
                                    : null,
                                TasinmazId = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.TasinmazId : null,
                                TasinmazAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Tasinmaz.Ad : null,
@@ -237,14 +229,11 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
                           Id = t.Id,
                           KiraSozlesmesiId = t.KiraSozlesmesiId,
                           KiraciId = t.KiraSozlesmesi != null ? (int?)t.KiraSozlesmesi.KiraciId : null,
-                          KiraciTuru = t.KiraSozlesmesi != null ? (KiraciTuru?)t.KiraSozlesmesi.Kiraci.KiraciTuru : null,
                           KiraciKategoriAd = t.KiraSozlesmesi != null && t.KiraSozlesmesi.Kiraci.KiraciKategori != null
                               ? t.KiraSozlesmesi.Kiraci.KiraciKategori.Ad
                               : null,
                           KiraciGosterimAdi = t.KiraSozlesmesi != null
-                              ? (t.KiraSozlesmesi.Kiraci.KiraciTuru == KiraciTuru.Gercek
-                                  ? (t.KiraSozlesmesi.Kiraci.Ad + " " + t.KiraSozlesmesi.Kiraci.Soyad).Trim()
-                                  : t.KiraSozlesmesi.Kiraci.Ad)
+                              ? t.KiraSozlesmesi.Kiraci.Ad
                               : null,
                           TasinmazAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Tasinmaz.Ad : null,
                           BirimAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Ad : null,

@@ -13,30 +13,23 @@ public class ManuelBorcService : IManuelBorcService
     private readonly ISozlesmeRepository _sozlesmeRepo;
     private readonly IBorcTipiRepository _borcTipiRepo;
     private readonly IUnitOfWork _uow;
-    private readonly IUserTasinmazYetkiService _yetkiService;
 
     public ManuelBorcService(
         ITahakkukRepository tahakkukRepo,
         ISozlesmeRepository sozlesmeRepo,
         IBorcTipiRepository borcTipiRepo,
-        IUnitOfWork uow,
-        IUserTasinmazYetkiService yetkiService)
+        IUnitOfWork uow)
     {
         _tahakkukRepo = tahakkukRepo;
         _sozlesmeRepo = sozlesmeRepo;
         _borcTipiRepo = borcTipiRepo;
         _uow = uow;
-        _yetkiService = yetkiService;
     }
 
     // ── Listeleme (DTO) ───────────────────────────────────────────────────
-    public async Task<List<ManuelBorcListItemDto>> GetAllAsync(string? userId = null)
+    public async Task<List<ManuelBorcListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null)
     {
-        List<int>? yetkiliIds = null;
-        if (userId != null)
-            yetkiliIds = await _yetkiService.GetYetkiliTasinmazIdsAsync(userId);
-
-        return await _tahakkukRepo.GetManuelBorcListAsync(yetkiliIds);
+        return await _tahakkukRepo.GetManuelBorcListAsync(tasinmazIds?.ToList());
     }
 
     // ── Dropdown verileri ────────────────────────────────────────────────

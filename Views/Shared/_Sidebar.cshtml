@@ -94,6 +94,14 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
                 Kullanıcı Yönetimi
             </a>
+            <a href="/Admin/Roller" class="nav-item @(currentController == "AdminRol" ? "nav-item-active" : "")">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><polyline points="15 11 17 13 21 9"/></svg>
+                Rol Yönetimi
+            </a>
+            <a href="/Admin/HareketGecmisi" class="nav-item @(currentController == "AdminHareketGecmisi" ? "nav-item-active" : "")">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Hareket Geçmişi
+            </a>
             <div class="nav-separator"></div>
             <div class="nav-group-label">Parametreler</div>
             <a href="/Admin/BirimTuru" class="nav-item nav-item-sub @(currentController == "AdminBirimTuru" ? "nav-item-active" : "")">
@@ -119,6 +127,10 @@
             <a href="/Admin/Tarife" class="nav-item nav-item-sub @(currentController == "AdminTarife" ? "nav-item-active" : "")">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                 Yıllık Tarifeler
+            </a>
+            <a href="/Admin/BelgeTuru" class="nav-item nav-item-sub @(currentController == "AdminBelgeTuru" ? "nav-item-active" : "")">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Belge Türleri
             </a>
         }
 

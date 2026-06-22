@@ -12,28 +12,24 @@ public class TasinmazService : ITasinmazService
 {
     private readonly ITasinmazRepository _repo;
     private readonly IUnitOfWork _uow;
-    private readonly IUserTasinmazYetkiService _yetkiService;
     private readonly IIstatistikService _istatistikService;
     private readonly ApplicationDbContext _ctx;
 
     public TasinmazService(
         ITasinmazRepository repo,
         IUnitOfWork uow,
-        IUserTasinmazYetkiService yetkiService,
         IIstatistikService istatistikService,
         ApplicationDbContext ctx)
     {
         _repo = repo;
         _uow = uow;
-        _yetkiService = yetkiService;
         _istatistikService = istatistikService;
         _ctx = ctx;
     }
 
-    public async Task<List<TasinmazListItemDto>> GetAllAsync(string? userId = null)
+    public async Task<List<TasinmazListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null)
     {
-        var yetkiliIds = userId == null ? null : await _yetkiService.GetYetkiliTasinmazIdsAsync(userId);
-        return await _repo.GetListAsync(yetkiliIds);
+        return await _repo.GetListAsync(tasinmazIds?.ToList());
     }
 
     public async Task<TasinmazDetayDto?> GetByIdAsync(int id)
@@ -377,9 +373,8 @@ public class TasinmazService : ITasinmazService
         await _uow.SaveChangesAsync();
     }
 
-    public async Task<List<BirimLookupDto>> GetBosBirimlerAsync(string? userId = null)
+    public async Task<List<BirimLookupDto>> GetBosBirimlerAsync(IReadOnlyList<int>? tasinmazIds = null)
     {
-        var yetkiliIds = userId == null ? null : await _yetkiService.GetYetkiliTasinmazIdsAsync(userId);
-        return await _repo.GetBosBirimlerAsync(yetkiliIds);
+        return await _repo.GetBosBirimlerAsync(tasinmazIds?.ToList());
     }
 }

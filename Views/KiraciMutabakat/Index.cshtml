@@ -1,0 +1,72 @@
+@model List<KiraTakip.Models.Entities.KiraTahakkuk>
+@using KiraTakip.Models
+@{
+    Layout = "_KiraciLayout";
+    ViewData["Title"] = "Cari Mutabakat";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Cari Mutabakat</div>
+        <div class="page-subtitle">Hesap bakiyeniz ve bekleyen borçlarınız</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="card text-center">
+        <div class="text-xs text-muted uppercase tracking-widest mb-1">Toplam Borç</div>
+        <div class="text-2xl font-bold text-red-600">@((decimal)ViewBag.ToplamBorc).ToString("N2") ₺</div>
+    </div>
+    <div class="card text-center">
+        <div class="text-xs text-muted uppercase tracking-widest mb-1">Toplam Ödeme</div>
+        <div class="text-2xl font-bold text-emerald-600">@((decimal)ViewBag.ToplamOdeme).ToString("N2") ₺</div>
+    </div>
+    <div class="card text-center">
+        <div class="text-xs text-muted uppercase tracking-widest mb-1">Net Bakiye</div>
+        @{
+            decimal bakiye = ViewBag.Bakiye;
+        }
+        <div class="text-2xl font-bold @(bakiye > 0 ? "text-red-600" : "text-emerald-600")">@bakiye.ToString("N2") ₺</div>
+    </div>
+</div>
+
+@if (Model.Any())
+{
+    <div class="card">
+        <div class="card-title mb-3">Bekleyen Borçlar</div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Dönem</th>
+                        <th>Birim</th>
+                        <th>Vade</th>
+                        <th>Tutar</th>
+                        <th>Ödenen</th>
+                        <th>Kalan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in Model)
+                    {
+                        var birimAd = t.KiraSozlesmesi?.Birim?.Ad ?? "—";
+                        var kalan = t.ToplamTutar - t.OdenenTutar;
+                        var gecikmisMi = t.VadeTarihi < DateTime.Now;
+                        <tr>
+                            <td class="text-sm">@t.DonemBaslangic.ToString("MM.yyyy")</td>
+                            <td class="font-semibold">@birimAd</td>
+                            <td class="text-sm @(gecikmisMi ? "text-red-600 font-medium" : "")">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
+                            <td class="text-sm">@t.ToplamTutar.ToString("N2") ₺</td>
+                            <td class="text-sm">@t.OdenenTutar.ToString("N2") ₺</td>
+                            <td class="text-sm font-medium @(kalan > 0 ? "text-red-600" : "text-emerald-600")">@kalan.ToString("N2") ₺</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card text-center text-muted py-8">Bekleyen borç bulunmuyor.</div>
+}

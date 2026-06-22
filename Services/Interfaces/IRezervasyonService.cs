@@ -5,7 +5,7 @@ namespace KiraTakip.Services.Interfaces;
 
 public interface IRezervasyonService
 {
-    Task<List<RezervasyonListItemDto>> GetAllAsync(string? userId = null);
+    Task<List<RezervasyonListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null);
     Task<RezervasyonHesapSonucu> HesaplaAsync(int birimId, DateTime baslangic, DateTime bitis);
     Task<(bool Basarili, string? Hata, int RezervasyonId)> CreateAsync(RezervasyonCreateViewModel model, string userId);
     Task<(bool Basarili, string? Hata)> CancelAsync(int id, string userId, string neden);

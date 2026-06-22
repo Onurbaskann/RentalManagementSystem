@@ -1,0 +1,76 @@
+@model List<KiraTakip.Models.ViewModels.RolListeViewModel>
+@using KiraTakip.Authorization
+@{
+    Layout = "_KiraciLayout";
+    ViewData["Title"] = "Rol Yönetimi";
+    var canCreate = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.KiraciPortal.Rol.Create);
+    var canDelete = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.KiraciPortal.Rol.Delete);
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert-success mb-4">✓ @TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert-danger mb-4">✕ @TempData["Error"]</div>
+}
+
+<div class="page-header flex items-center justify-between">
+    <div>
+        <div class="page-title">Rol Yönetimi</div>
+        <div class="page-subtitle">@Model.Count rol tanımlı</div>
+    </div>
+    @if (canCreate)
+    {
+        <a href="/Kiraci/Roller/Ekle" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Yeni Rol
+        </a>
+    }
+</div>
+
+<div class="card p-0 overflow-hidden">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rol Adı</th>
+                    <th>Açıklama</th>
+                    <th>Kullanıcılar</th>
+                    <th>İzinler</th>
+                    <th>Tür</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model)
+                {
+                    <tr>
+                        <td class="font-semibold">@r.Ad</td>
+                        <td class="text-sm text-muted">@(r.Aciklama ?? "—")</td>
+                        <td class="text-sm">@r.KullaniciSayisi kullanıcı</td>
+                        <td class="text-sm">@r.IzinSayisi izin</td>
+                        <td>
+                            @if (r.IsSystemRole)
+                            { <span class="badge badge-kurumsal">Sistem</span> }
+                            else
+                            { <span class="badge badge-bos">Özel</span> }
+                        </td>
+                        <td class="flex gap-1.5 justify-end">
+                            <a href="/Kiraci/Roller/Duzenle/@r.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                            @if (canDelete && !r.IsSystemRole)
+                            {
+                                <form method="post" action="/Kiraci/Roller/Sil/@r.Id"
+                                      data-confirm="'@r.Ad' rolünü silmek istediğinizden emin misiniz?" class="inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-danger">Sil</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

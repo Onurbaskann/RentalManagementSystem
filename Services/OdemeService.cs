@@ -12,40 +12,25 @@ public class OdemeService : IOdemeService
     private readonly IOdemeRepository _repo;
     private readonly IUnitOfWork _uow;
     private readonly ITahakkukService _tahakkukService;
-    private readonly IUserTasinmazYetkiService _yetkiService;
 
     public OdemeService(
         IOdemeRepository repo,
         IUnitOfWork uow,
-        ITahakkukService tahakkukService,
-        IUserTasinmazYetkiService yetkiService)
+        ITahakkukService tahakkukService)
     {
         _repo = repo;
         _uow = uow;
         _tahakkukService = tahakkukService;
-        _yetkiService = yetkiService;
     }
 
-    public async Task<List<OdemeListItemDto>> GetAllAsync(int? tahakkukId = null, string? userId = null)
+    public async Task<List<OdemeListItemDto>> GetAllAsync(int? tahakkukId = null, IReadOnlyList<int>? tasinmazIds = null)
     {
-        List<int>? yetkiliIds = null;
-        if (userId != null)
-        {
-            yetkiliIds = await _yetkiService.GetYetkiliTasinmazIdsAsync(userId);
-        }
-
-        return await _repo.GetListAsync(tahakkukId, yetkiliIds);
+        return await _repo.GetListAsync(tahakkukId, tasinmazIds?.ToList());
     }
 
-    public async Task<PagedResult<OdemeListItemDto>> GetPagedAsync(TableQuery q, int? tahakkukId = null, string? userId = null)
+    public async Task<PagedResult<OdemeListItemDto>> GetPagedAsync(TableQuery q, int? tahakkukId = null, IReadOnlyList<int>? tasinmazIds = null)
     {
-        List<int>? yetkiliIds = null;
-        if (userId != null)
-        {
-            yetkiliIds = await _yetkiService.GetYetkiliTasinmazIdsAsync(userId);
-        }
-
-        return await _repo.GetPagedListAsync(q, tahakkukId, yetkiliIds);
+        return await _repo.GetPagedListAsync(q, tahakkukId, tasinmazIds?.ToList());
     }
 
     public async Task<OdemeDetayDto?> GetByIdAsync(int id)

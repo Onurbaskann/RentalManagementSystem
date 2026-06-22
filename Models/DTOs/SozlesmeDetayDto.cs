@@ -7,7 +7,6 @@ public class SozlesmeDetayDto
     public string KiraciGosterimAdi { get; set; } = string.Empty;
     public string? KiraciTelefon { get; set; }
     public string? KiraciEmail { get; set; }
-    public KiraciTuru KiraciTuru { get; set; }
     public int? KiraciKategoriId { get; set; }
     public string? KiraciKategoriAd { get; set; }
     public int BirimId { get; set; }

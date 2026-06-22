@@ -1,0 +1,55 @@
+@model KiraTakip.Models.ViewModels.KiraciDavetViewModel
+@{
+    ViewData["Title"] = "Kullanıcı Davet Et";
+    var kiraciId = ViewBag.KiraciId as int? ?? 0;
+    var kiraciAd = ViewBag.KiraciAd as string ?? "—";
+}
+
+<div class="page-header">
+    <div>
+        <a href="/Admin/Kiracilar/@kiraciId/Kullanicilar" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
+            ← @kiraciAd — Kullanıcılar
+        </a>
+        <div class="page-title">Kullanıcı Davet Et</div>
+        <div class="page-subtitle">@kiraciAd kiracısına yeni kullanıcı davet edin</div>
+    </div>
+</div>
+
+<div class="card">
+    <form method="post" action="/Admin/Kiracilar/@kiraciId/Kullanicilar/Davet">
+        @Html.AntiForgeryToken()
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div asp-validation-summary="All" class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-5 text-sm"></div>
+        }
+
+        <div class="form-group">
+            <label class="form-label">E-posta *</label>
+            <input asp-for="Email" class="form-control" type="email" placeholder="ornek@sirket.com" />
+            <span asp-validation-for="Email" class="form-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Ad Soyad</label>
+            <input asp-for="AdSoyad" class="form-control" placeholder="Opsiyonel" />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Rol *</label>
+            <select asp-for="RolId" class="form-control">
+                <option value="0">— Seçin —</option>
+                @foreach (var r in Model.Roller)
+                {
+                    <option value="@r.Id">@r.Ad</option>
+                }
+            </select>
+            <span asp-validation-for="RolId" class="form-error"></span>
+        </div>
+
+        <div class="flex gap-2.5 mt-6">
+            <button type="submit" class="btn btn-primary px-6">Davet Gönder</button>
+            <a href="/Admin/Kiracilar/@kiraciId/Kullanicilar" class="btn btn-secondary px-6">İptal</a>
+        </div>
+    </form>
+</div>

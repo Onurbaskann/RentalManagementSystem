@@ -57,7 +57,6 @@ public class OdemeRepository : BaseRepository<KiraOdeme>, IOdemeRepository
             var s = q.Q.Trim();
             query = query.Where(o =>
                 (o.KiraSozlesmesi != null && o.KiraSozlesmesi.Kiraci != null && EF.Functions.Like(o.KiraSozlesmesi.Kiraci.Ad, $"%{s}%")) ||
-                (o.KiraSozlesmesi != null && o.KiraSozlesmesi.Kiraci != null && o.KiraSozlesmesi.Kiraci.Soyad != null && EF.Functions.Like(o.KiraSozlesmesi.Kiraci.Soyad, $"%{s}%")) ||
                 (o.Aciklama != null && EF.Functions.Like(o.Aciklama, $"%{s}%")));
         }
 

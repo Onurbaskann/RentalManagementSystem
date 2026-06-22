@@ -12,6 +12,6 @@ public interface IBankaHareketiService
     Task<BankaHareketiDetayDto?> GetByIdAsync(int id);
     Task EslestirAsync(int odemeId, int bankaHareketiId, string userId);
     Task EslesmeCozAsync(int eslesmeId);
-    Task<List<OdemeAdayDto>> GetOdemeAdaylariAsync(int bankaHareketiId, string? userId = null);
+    Task<List<OdemeAdayDto>> GetOdemeAdaylariAsync(int bankaHareketiId, IReadOnlyList<int>? tasinmazIds = null);
     Task<List<BankaHareketiListItemDto>> GetHareketAdaylariAsync(int odemeId);
 }

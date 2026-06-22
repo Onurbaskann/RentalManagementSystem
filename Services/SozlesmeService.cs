@@ -11,24 +11,21 @@ public class SozlesmeService : ISozlesmeService
 {
     private readonly ISozlesmeRepository _repo;
     private readonly IUnitOfWork _uow;
-    private readonly IUserTasinmazYetkiService _yetkiService;
     private readonly IIstatistikService _istatistikService;
 
     public SozlesmeService(
         ISozlesmeRepository repo,
         IUnitOfWork uow,
-        IUserTasinmazYetkiService yetkiService,
         IIstatistikService istatistikService)
     {
         _repo = repo;
         _uow = uow;
-        _yetkiService = yetkiService;
         _istatistikService = istatistikService;
     }
 
-    public async Task<List<SozlesmeListItemDto>> GetAllAsync(string? filtre = null, string? userId = null)
+    public async Task<List<SozlesmeListItemDto>> GetAllAsync(string? filtre = null, IReadOnlyList<int>? tasinmazIds = null)
     {
-        var yetkiliIds = userId == null ? null : await _yetkiService.GetYetkiliTasinmazIdsAsync(userId);
+        var yetkiliIds = tasinmazIds?.ToList();
         var list = await _repo.GetListAsync(filtre, yetkiliIds);
         foreach (var s in list)
         {

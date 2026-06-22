@@ -12,18 +12,20 @@ public class ManuelBorcController : Controller
 {
     private readonly IManuelBorcService _service;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IYetkiKapsamiProvider _provider;
 
-    public ManuelBorcController(IManuelBorcService service, UserManager<ApplicationUser> userManager)
+    public ManuelBorcController(IManuelBorcService service, UserManager<ApplicationUser> userManager, IYetkiKapsamiProvider provider)
     {
         _service = service;
         _userManager = userManager;
+        _provider = provider;
     }
 
     [Authorize(Policy = PermissionCatalog.ManuelBorc.View)]
     public async Task<IActionResult> Index()
     {
-        var userId = User.IsInRole(RoleNames.Goruntuleyici) ? _userManager.GetUserId(User) : null;
-        var liste = await _service.GetAllAsync(userId);
+        var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
+        var liste = await _service.GetAllAsync(tasinmazIds);
         return View(liste);
     }
 

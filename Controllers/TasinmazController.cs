@@ -19,6 +19,7 @@ public class TasinmazController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _ctx;
     private readonly ITarifeHiyerarsiService _tarifeHiyerarsisi;
+    private readonly IYetkiKapsamiProvider _provider;
 
     public TasinmazController(
         ITasinmazService tasinmazService,
@@ -26,7 +27,8 @@ public class TasinmazController : Controller
         IIstatistikService istatistik,
         UserManager<ApplicationUser> userManager,
         ApplicationDbContext ctx,
-        ITarifeHiyerarsiService tarifeHiyerarsisi)
+        ITarifeHiyerarsiService tarifeHiyerarsisi,
+        IYetkiKapsamiProvider provider)
     {
         _tasinmazService = tasinmazService;
         _tasinmazFiyatService = tasinmazFiyatService;
@@ -34,26 +36,20 @@ public class TasinmazController : Controller
         _userManager = userManager;
         _ctx = ctx;
         _tarifeHiyerarsisi = tarifeHiyerarsisi;
+        _provider = provider;
     }
 
     [Authorize(Policy = PermissionCatalog.Tasinmaz.View)]
     public async Task<IActionResult> Index()
     {
-        var userId = _userManager.GetUserId(User);
-        var filterUserId = User.IsInRole(RoleNames.Goruntuleyici) ? userId : null;
-        var tasinmazlar = await _tasinmazService.GetAllAsync(filterUserId);
+        var tasinmazlar = await _tasinmazService.GetAllAsync(_provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
         return View(tasinmazlar);
     }
 
     [Authorize(Policy = PermissionCatalog.Tasinmaz.View)]
     public async Task<IActionResult> Detay(int id)
     {
-        if (User.IsInRole(RoleNames.Goruntuleyici))
-        {
-            var userId = _userManager.GetUserId(User);
-            var tasinmazlar = await _tasinmazService.GetAllAsync(userId);
-            if (!tasinmazlar.Any(t => t.Id == id)) return Forbid();
-        }
+        if (!_provider.KapsamdaMi(id)) return Forbid();
 
         var t = await _tasinmazService.GetByIdAsync(id);
         if (t == null) return NotFound();
@@ -102,12 +98,7 @@ public class TasinmazController : Controller
     [Authorize(Policy = PermissionCatalog.Tasinmaz.Edit)]
     public async Task<IActionResult> Duzenle(int id)
     {
-        if (User.IsInRole(RoleNames.Goruntuleyici))
-        {
-            var userId = _userManager.GetUserId(User);
-            var tasinmazlar = await _tasinmazService.GetAllAsync(userId);
-            if (!tasinmazlar.Any(t => t.Id == id)) return Forbid();
-        }
+        if (!_provider.KapsamdaMi(id)) return Forbid();
 
         var vm = await _tasinmazService.GetForEditAsync(id);
         if (vm == null) return NotFound();
@@ -124,12 +115,7 @@ public class TasinmazController : Controller
     [Authorize(Policy = PermissionCatalog.Tasinmaz.Edit)]
     public async Task<IActionResult> Duzenle(TasinmazDuzenleViewModel vm)
     {
-        if (User.IsInRole(RoleNames.Goruntuleyici))
-        {
-            var userId = _userManager.GetUserId(User);
-            var tasinmazlar = await _tasinmazService.GetAllAsync(userId);
-            if (!tasinmazlar.Any(t => t.Id == vm.Id)) return Forbid();
-        }
+        _provider.TasinmazGuard(vm.Id);
 
         if (string.IsNullOrWhiteSpace(vm.Ad))
             ModelState.AddModelError("Ad", "Taşınmaz adı zorunludur.");

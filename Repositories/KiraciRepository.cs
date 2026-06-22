@@ -32,10 +32,8 @@ public class KiraciRepository : BaseRepository<Kiraci>, IKiraciRepository
             {
                 Id = k.Id,
                 KiraciNo = k.KiraciNo,
-                GosterimAdi = k.KiraciTuru == KiraciTuru.Gercek ? (k.Ad + " " + k.Soyad).Trim() : k.Ad,
-                KiraciTuru = k.KiraciTuru,
+                GosterimAdi = k.Ad,
                 VergiNo = k.VergiNo,
-                TcKimlikNo = k.TcKimlikNo,
                 KiraciKategoriAd = k.KiraciKategori != null ? k.KiraciKategori.Ad : null,
                 Telefon = k.Telefon,
                 Email = k.Email,
@@ -56,16 +54,7 @@ public class KiraciRepository : BaseRepository<Kiraci>, IKiraciRepository
                 SektorId = k.SektorId,
                 SektorAd = k.Sektor != null ? k.Sektor.Ad : null,
                 KiraciNo = k.KiraciNo,
-                KiraciTuru = k.KiraciTuru,
                 Ad = k.Ad,
-                Soyad = k.Soyad,
-                TcKimlikNo = k.TcKimlikNo,
-                PasaportNo = k.PasaportNo,
-                Unvan = k.Unvan,
-                AnneAdi = k.AnneAdi,
-                BabaAdi = k.BabaAdi,
-                DogumTarihi = k.DogumTarihi,
-                DogumYeri = k.DogumYeri,
                 TicaretSicilNo = k.TicaretSicilNo,
                 VergiNo = k.VergiNo,
                 VergiDairesi = k.VergiDairesi,
@@ -73,7 +62,6 @@ public class KiraciRepository : BaseRepository<Kiraci>, IKiraciRepository
                 Telefon = k.Telefon,
                 Email = k.Email,
                 Adres = k.Adres,
-                KvkkOnayi = k.KvkkOnayi,
                 KayitTarihi = k.KayitTarihi
             })
             .FirstOrDefaultAsync();

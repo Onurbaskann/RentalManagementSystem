@@ -12,20 +12,36 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<KiraTakip.Infrastructure.AuditSaveChangesInterceptor>();
+builder.Services.AddScoped<KiraTakip.Services.Interfaces.IMaskingService, KiraTakip.Services.MaskingService>();
+builder.Services.AddScoped<KiraTakip.Services.Interfaces.ICurrentUserContext, KiraTakip.Services.CurrentUserContext>();
+
+builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    options.AddInterceptors(sp.GetRequiredService<KiraTakip.Infrastructure.AuditSaveChangesInterceptor>());
+});
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.Password.RequireDigit = true;
     options.Password.RequiredLength = 6;
     options.Password.RequireUppercase = true;
+    options.Password.RequireLowercase = true;
     options.Password.RequireNonAlphanumeric = true;
     options.SignIn.RequireConfirmedAccount = false;
+    options.Lockout.AllowedForNewUsers = true;
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders()
 .AddErrorDescriber<KiraTakip.Infrastructure.TurkishIdentityErrorDescriber>();
+
+builder.Services.Configure<SecurityStampValidatorOptions>(o =>
+{
+    o.ValidationInterval = TimeSpan.FromMinutes(3);
+});
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -37,12 +53,21 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddAuthorization(options =>
 {
-    foreach (var perm in PermissionCatalog.All)
+    foreach (var perm in PermissionCatalog.All.Concat(PermissionCatalog.KiraciAll))
         options.AddPolicy(perm, policy => policy.RequireClaim(AppClaimTypes.Permission, perm));
+
+    options.AddPolicy("KiraciKullanici", policy =>
+        policy.RequireClaim(AppClaimTypes.UserType, ((int)KiraTakip.Models.UserType.Kiraci).ToString()));
 });
+
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<IYetkiKapsamiCache, YetkiKapsamiCacheService>();
+builder.Services.AddScoped<IYetkiKapsamiProvider, YetkiKapsamiProvider>();
+builder.Services.AddScoped<YetkiKapsamiActionFilter>();
 
 builder.Services.AddControllersWithViews(options =>
 {
+    options.Filters.AddService<YetkiKapsamiActionFilter>();
     options.ModelBinderProviders.Insert(0, new KiraTakip.Infrastructure.InvariantDecimalModelBinderProvider());
     options.ModelBindingMessageProvider.SetAttemptedValueIsInvalidAccessor((x, y) => $"'{x}' değeri '{y}' alanı için geçersizdir.");
     options.ModelBindingMessageProvider.SetMissingBindRequiredValueAccessor((x) => $"'{x}' alanı için bir değer belirtilmelidir.");
@@ -58,8 +83,12 @@ builder.Services.AddControllersWithViews(options =>
     options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
 });
 builder.Services.AddScoped<IdentitySeedService>();
-builder.Services.AddScoped<IUserTasinmazYetkiService, UserTasinmazYetkiService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<IUserRolService, UserRolService>();
+builder.Services.AddScoped<IUserSecurityService, UserSecurityService>();
+builder.Services.AddScoped<IRolService, RolService>();
+builder.Services.AddScoped<IKiraciKullaniciService, KiraciKullaniciService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, PermissionClaimsTransformer>();
 builder.Services.AddSingleton<IAuthorizationHandler, AdminBypassHandler>();
 builder.Services.AddScoped<ITasinmazService, TasinmazService>();
@@ -84,9 +113,9 @@ builder.Services.AddScoped<IBirimTarifeRepository, BirimTarifeRepository>();
 builder.Services.AddScoped<IGenelTarifeRepository, GenelTarifeRepository>();
 builder.Services.AddScoped<IRezervasyonTarifeRepository, RezervasyonTarifeRepository>();
 builder.Services.AddScoped<IBirimTuruRepository, BirimTuruRepository>();
+builder.Services.AddScoped<IBelgeTuruRepository, BelgeTuruRepository>();
 builder.Services.AddScoped<IKategoriRepository, KategoriRepository>();
 builder.Services.AddScoped<IRezervasyonRepository, RezervasyonRepository>();
-builder.Services.AddScoped<IUserTasinmazYetkiRepository, UserTasinmazYetkiRepository>();
 builder.Services.AddScoped<IUserPermissionRepository, UserPermissionRepository>();
 builder.Services.AddScoped<ITahakkukService, TahakkukService>();
 builder.Services.AddScoped<IOdemeService, OdemeService>();
@@ -101,11 +130,16 @@ builder.Services.AddScoped<ITasinmazFiyatService, TasinmazFiyatService>();
 builder.Services.AddScoped<ITarifeHiyerarsiService, TarifeHiyerarsiService>();
 
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
+builder.Services.Configure<KiraTakip.Models.Settings.SecureTokenSettings>(builder.Configuration.GetSection("SecureToken"));
 builder.Services.Configure<PaymentLinkSettings>(builder.Configuration.GetSection("PaymentLink"));
 builder.Services.AddScoped<IMailService, SmtpMailService>();
 builder.Services.AddScoped<IPaymentLinkService, PaymentLinkService>();
 builder.Services.AddScoped<IBorcHatirlatmaService, BorcHatirlatmaService>();
+builder.Services.AddSingleton<ISecureTokenService, SecureTokenService>();
+builder.Services.AddScoped<IDavetiyeService, DavetiyeService>();
+builder.Services.AddScoped<ISifreSifirlamaService, SifreSifirlamaService>();
 builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
+builder.Services.AddScoped<IBelgeService, BelgeService>();
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();

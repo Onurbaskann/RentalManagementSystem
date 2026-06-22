@@ -22,8 +22,8 @@ public class SozlesmeController : Controller
     private readonly IIstatistikService _istatistik;
     private readonly ITahakkukService _tahakkukService;
     private readonly ITahakkukUretimService _tahakkukUretim;
-    private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _ctx;
+    private readonly IYetkiKapsamiProvider _provider;
     private readonly ITarifeHiyerarsiService _tarifeHiyerarsisi;
     private readonly IMailService _mail;
     private readonly IPaymentLinkService _paymentLink;
@@ -38,14 +38,14 @@ public class SozlesmeController : Controller
         IIstatistikService istatistik,
         ITahakkukService tahakkukService,
         ITahakkukUretimService tahakkukUretim,
-        UserManager<ApplicationUser> userManager,
         ApplicationDbContext ctx,
         ITarifeHiyerarsiService tarifeHiyerarsisi,
         IMailService mail,
         IPaymentLinkService paymentLink,
         IRazorViewToStringRenderer razorRenderer,
         IOptions<PaymentLinkSettings> paymentLinkOptions,
-        ILogger<SozlesmeController> logger)
+        ILogger<SozlesmeController> logger,
+        IYetkiKapsamiProvider provider)
     {
         _sozlesmeService = sozlesmeService;
         _tasinmazService = tasinmazService;
@@ -53,7 +53,6 @@ public class SozlesmeController : Controller
         _istatistik = istatistik;
         _tahakkukService = tahakkukService;
         _tahakkukUretim = tahakkukUretim;
-        _userManager = userManager;
         _ctx = ctx;
         _tarifeHiyerarsisi = tarifeHiyerarsisi;
         _mail = mail;
@@ -61,14 +60,13 @@ public class SozlesmeController : Controller
         _razorRenderer = razorRenderer;
         _paymentLinkOptions = paymentLinkOptions;
         _logger = logger;
+        _provider = provider;
     }
 
     [Authorize(Policy = PermissionCatalog.Sozlesme.View)]
     public async Task<IActionResult> Index(string? filtre)
     {
-        var userId = _userManager.GetUserId(User);
-        var filterUserId = User.IsInRole(RoleNames.Goruntuleyici) ? userId : null;
-        var sozlesmeler = await _sozlesmeService.GetAllAsync(filtre, filterUserId);
+        var sozlesmeler = await _sozlesmeService.GetAllAsync(filtre, _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
 
         var now = DateTime.Today;
         var esik = now.AddDays(_paymentLinkOptions.Value.ReminderDaysBefore);
@@ -92,12 +90,7 @@ public class SozlesmeController : Controller
         var s = await _sozlesmeService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
-        if (User.IsInRole(RoleNames.Goruntuleyici))
-        {
-            var userId = _userManager.GetUserId(User);
-            var tasinmazlar = await _tasinmazService.GetAllAsync(userId);
-            if (!tasinmazlar.Any(t => t.Id == s.TasinmazId)) return Forbid();
-        }
+        if (!_provider.KapsamdaMi(s.TasinmazId)) return Forbid();
 
         var gecmis = await _sozlesmeService.GetByBirimIdAsync(s.BirimId);
         var kiraciSozlesmeleri = await _sozlesmeService.GetByKiraciIdAsync(s.KiraciId);

@@ -77,8 +77,8 @@ public class BankaHareketiService : IBankaHareketiService
         await _uow.SaveChangesAsync();
     }
 
-    public Task<List<OdemeAdayDto>> GetOdemeAdaylariAsync(int bankaHareketiId, string? userId = null)
-        => _repo.GetOdemeAdaylariAsync(bankaHareketiId, userId);
+    public Task<List<OdemeAdayDto>> GetOdemeAdaylariAsync(int bankaHareketiId, IReadOnlyList<int>? tasinmazIds = null)
+        => _repo.GetOdemeAdaylariAsync(bankaHareketiId, tasinmazIds);
 
     public Task<List<BankaHareketiListItemDto>> GetHareketAdaylariAsync(int odemeId)
         => _repo.GetHareketAdaylariAsync(odemeId);

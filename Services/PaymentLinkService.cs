@@ -1,72 +1,106 @@
+using KiraTakip.Data;
+using KiraTakip.Models;
+using KiraTakip.Models.Entities;
 using KiraTakip.Models.Settings;
 using KiraTakip.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace KiraTakip.Services;
 
 public class PaymentLinkService : IPaymentLinkService
 {
+    private readonly ApplicationDbContext _db;
+    private readonly ISecureTokenService _tokenService;
     private readonly PaymentLinkSettings _settings;
+    private const string Purpose = "payment-portal";
 
-    public PaymentLinkService(IOptions<PaymentLinkSettings> options)
+    public PaymentLinkService(
+        ApplicationDbContext db,
+        ISecureTokenService tokenService,
+        IOptions<PaymentLinkSettings> options)
     {
+        _db = db;
+        _tokenService = tokenService;
         _settings = options.Value;
     }
 
-    public string BuildLink(int kiraciId)
+    public async Task<string> BuildLinkAsync(int kiraciId, CancellationToken ct = default)
     {
-        var expiresUnix = DateTimeOffset.UtcNow.AddHours(_settings.TokenTtlHours).ToUnixTimeSeconds();
-        var token = BuildToken(kiraciId, expiresUnix);
-        return $"{_settings.BaseUrl.TrimEnd('/')}/Odeme/Portal?t={Uri.EscapeDataString(token)}";
+        var ttl = TimeSpan.FromHours(_settings.TokenTtlHours);
+        var kayit = new OdemeLinkKayit
+        {
+            KiraciId = kiraciId,
+            ExpiresAt = DateTime.UtcNow.Add(ttl)
+        };
+        _db.OdemeLinkKayitlari.Add(kayit);
+        await _db.SaveChangesAsync(ct);
+
+        var result = _tokenService.Generate(kayit.Id.ToString(), Purpose, ttl);
+        kayit.TokenHash = result.TokenHash;
+        await _db.SaveChangesAsync(ct);
+
+        return $"{_settings.BaseUrl.TrimEnd('/')}/Odeme/Portal?t={Uri.EscapeDataString(result.RawToken)}";
     }
 
-    public bool TryValidate(string token, out int kiraciId, out string? reason)
+    public async Task<(bool Success, int KiraciId, string? Reason)> TryValidateAsync(string token, CancellationToken ct = default)
     {
-        kiraciId = 0;
-        reason = null;
         var parts = token.Split('.');
         if (parts.Length != 3)
+            return (false, 0, "Geçersiz token formatı.");
+
+        string entityId;
+        try
         {
-            reason = "Geçersiz token formatı.";
-            return false;
+            var padded = parts[0].Replace('-', '+').Replace('_', '/');
+            padded += (padded.Length % 4) switch { 2 => "==", 3 => "=", _ => "" };
+            entityId = Encoding.UTF8.GetString(Convert.FromBase64String(padded));
+        }
+        catch
+        {
+            return (false, 0, "Geçersiz token formatı.");
         }
 
-        if (!long.TryParse(parts[0], out var expiresUnix) || !int.TryParse(parts[1], out kiraciId))
+        if (!int.TryParse(entityId, out var kayitId))
+            return (false, 0, "Geçersiz token formatı.");
+
+        var kayit = await _db.OdemeLinkKayitlari
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(o => o.Id == kayitId, ct);
+
+        if (kayit == null)
+            return (false, 0, "Ödeme linki bulunamadı.");
+
+        if (kayit.Durum == OdemeLinkDurum.IptalEdildi)
+            return (false, 0, "Bu ödeme linki iptal edilmiştir.");
+
+        if (!_tokenService.TryValidate(token, entityId, Purpose, out var reason))
         {
-            reason = "Geçersiz token formatı.";
-            return false;
+            if (kayit.Durum == OdemeLinkDurum.Aktif && kayit.ExpiresAt < DateTime.UtcNow)
+            {
+                kayit.Durum = OdemeLinkDurum.SuresiDolmus;
+                await _db.SaveChangesAsync(ct);
+            }
+            return (false, 0, reason ?? "Geçersiz ödeme linki.");
         }
 
-        if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() > expiresUnix)
-        {
-            reason = "Ödeme linkinin süresi dolmuştur.";
-            return false;
-        }
-
-        var expected = BuildToken(kiraciId, expiresUnix);
-        var expectedParts = expected.Split('.');
-        if (!CryptographicOperations.FixedTimeEquals(
-                Encoding.UTF8.GetBytes(parts[2]),
-                Encoding.UTF8.GetBytes(expectedParts[2])))
-        {
-            reason = "Geçersiz veya değiştirilmiş token.";
-            return false;
-        }
-
-        return true;
+        return (true, kayit.KiraciId, null);
     }
 
-    private string BuildToken(int kiraciId, long expiresUnix)
+    public async Task IptalEtAsync(int kayitId, string iptalEdenUserId, CancellationToken ct = default)
     {
-        var plaintext = $"{kiraciId}|{expiresUnix}|payment-portal";
-        var keyBytes = Encoding.UTF8.GetBytes(_settings.Secret.PadRight(32, '0'));
-        var hmac = HMACSHA256.HashData(keyBytes, Encoding.UTF8.GetBytes(plaintext));
-        var hmacBase64Url = Convert.ToBase64String(hmac)
-            .TrimEnd('=')
-            .Replace('+', '-')
-            .Replace('/', '_');
-        return $"{expiresUnix}.{kiraciId}.{hmacBase64Url}";
+        var kayit = await _db.OdemeLinkKayitlari
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(o => o.Id == kayitId, ct)
+            ?? throw new InvalidOperationException("Kayıt bulunamadı.");
+
+        if (kayit.Durum != OdemeLinkDurum.Aktif)
+            throw new InvalidOperationException("Yalnızca aktif linkler iptal edilebilir.");
+
+        kayit.Durum = OdemeLinkDurum.IptalEdildi;
+        kayit.IptalEdenUserId = iptalEdenUserId;
+        kayit.IptalTarihi = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
     }
 }

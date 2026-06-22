@@ -47,7 +47,7 @@
                     <option value="">— Kiracı seçin —</option>
                     @foreach (var k in Model.Kiraciler)
                     {
-                        <option value="@k.Id">@k.GosterimAdi (@(k.KiraciTuru == KiraTakip.Models.KiraciTuru.Tuzel ? "Tüzel" : "Gerçek"))</option>
+                        <option value="@k.Id">@k.GosterimAdi</option>
                     }
                 </select>
             </div>

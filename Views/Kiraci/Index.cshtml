@@ -34,7 +34,6 @@
                 <tr>
                     <th class="w-24">No</th>
                     <th>Kiracı Bilgisi</th>
-                    <th class="w-20">Tür</th>
                     <th class="w-32">Kategori</th>
                     <th class="w-32">İletişim</th>
                     <th class="w-32">Sözleşme</th>
@@ -46,25 +45,15 @@
                 @foreach (var k in Model)
                 {
                     var aktifSozlesmeCount = ((Dictionary<int,int>)ViewBag.AktifSozlesme).GetValueOrDefault(k.Id, 0);
-                    var search = $"{k.KiraciNo} {k.GosterimAdi} {k.VergiNo} {k.TcKimlikNo} {k.Telefon} {k.Email}".ToLower();
+                    var search = $"{k.KiraciNo} {k.GosterimAdi} {k.VergiNo} {k.Telefon} {k.Email}".ToLower();
                     <tr data-row data-search="@search">
                         <td class="font-mono text-xs text-muted">@k.KiraciNo</td>
                         <td>
                             <div class="font-semibold">@k.GosterimAdi</div>
-                            @if (k.KiraciTuru == KiraciTuru.Tuzel && !string.IsNullOrEmpty(k.VergiNo))
+                            @if (!string.IsNullOrEmpty(k.VergiNo))
                             {
                                 <span class="cell-sub">VKN: @k.VergiNo</span>
                             }
-                            else if (k.KiraciTuru == KiraciTuru.Gercek && !string.IsNullOrEmpty(k.TcKimlikNo))
-                            {
-                                <span class="cell-sub">TC: @k.TcKimlikNo</span>
-                            }
-                        </td>
-                        <td>
-                            @if (k.KiraciTuru == KiraciTuru.Tuzel)
-                            { <span class="badge badge-kurumsal">Tüzel</span> }
-                            else
-                            { <span class="badge badge-bireysel">Gerçek</span> }
                         </td>
                         <td>
                             @if (!string.IsNullOrEmpty(k.KiraciKategoriAd))

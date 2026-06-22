@@ -14,13 +14,13 @@ public class TahakkukController : Controller
 {
     private readonly ITahakkukService _tahakkukService;
     private readonly ApplicationDbContext _ctx;
-    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IYetkiKapsamiProvider _provider;
 
-    public TahakkukController(ITahakkukService tahakkukService, ApplicationDbContext ctx, UserManager<ApplicationUser> userManager)
+    public TahakkukController(ITahakkukService tahakkukService, ApplicationDbContext ctx, IYetkiKapsamiProvider provider)
     {
         _tahakkukService = tahakkukService;
         _ctx = ctx;
-        _userManager = userManager;
+        _provider = provider;
     }
 
     [Authorize(Policy = PermissionCatalog.Odeme.View)]
@@ -28,20 +28,17 @@ public class TahakkukController : Controller
     {
         await _tahakkukService.GecikmeleriGuncelleAsync();
 
-        var userId = User.IsInRole(RoleNames.Goruntuleyici) ? _userManager.GetUserId(User) : null;
-        var pagedResult = await _tahakkukService.GetPagedAsync(query, userId: userId);
+        var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
+        var pagedResult = await _tahakkukService.GetPagedAsync(query, tasinmazIds: tasinmazIds);
 
-        if (User.IsInRole(RoleNames.Goruntuleyici))
+        if (!_provider.GlobalErisim)
         {
-            var uid = _userManager.GetUserId(User)!;
-            var yetkiliIds = await _ctx.UserTasinmazYetkileri
-                .Where(u => u.UserId == uid).Select(u => u.TasinmazId).ToListAsync();
             ViewBag.Tasinmazlar = await _ctx.Tasinmazlar
-                .Where(t => yetkiliIds.Contains(t.Id)).OrderBy(t => t.Ad).ToListAsync();
+                .Where(t => tasinmazIds!.Contains(t.Id)).OrderBy(t => t.Ad).ToListAsync();
             ViewBag.Birimler = await _ctx.Birimler
-                .Where(b => yetkiliIds.Contains(b.TasinmazId)).OrderBy(b => b.TasinmazId).ThenBy(b => b.Ad).ToListAsync();
+                .Where(b => tasinmazIds!.Contains(b.TasinmazId)).OrderBy(b => b.TasinmazId).ThenBy(b => b.Ad).ToListAsync();
             var sozKiraciIds = await _ctx.Sozlesmeler
-                .Where(s => yetkiliIds.Contains(s.Birim.TasinmazId)).Select(s => s.KiraciId).Distinct().ToListAsync();
+                .Where(s => tasinmazIds!.Contains(s.Birim.TasinmazId)).Select(s => s.KiraciId).Distinct().ToListAsync();
             ViewBag.Kiracilar = await _ctx.Kiraciler
                 .Where(k => sozKiraciIds.Contains(k.Id)).OrderBy(k => k.Ad).ToListAsync();
         }
@@ -68,16 +65,8 @@ public class TahakkukController : Controller
         var tahakkuk = await _tahakkukService.GetDetayAsync(id);
         if (tahakkuk == null) return NotFound();
 
-        if (User.IsInRole(RoleNames.Goruntuleyici))
-        {
-            var userId = _userManager.GetUserId(User);
-            var yetkiliIds = await _ctx.UserTasinmazYetkileri
-                .Where(u => u.UserId == userId)
-                .Select(u => u.TasinmazId)
-                .ToListAsync();
-            if (tahakkuk.TasinmazId == null || !yetkiliIds.Contains(tahakkuk.TasinmazId.Value))
-                return Forbid();
-        }
+        if (tahakkuk.TasinmazId != null && !_provider.KapsamdaMi(tahakkuk.TasinmazId.Value))
+            return Forbid();
 
         return View(tahakkuk);
     }

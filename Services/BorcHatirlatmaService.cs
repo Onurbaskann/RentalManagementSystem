@@ -84,9 +84,9 @@ public class BorcHatirlatmaService : IBorcHatirlatmaService
             var mailModel = new KiraciBorcHatirlatmaMailModel
             {
                 Ad = kiraci.Ad,
-                Soyad = kiraci.Soyad ?? "",
+                Soyad = "",
                 Email = kiraci.Email,
-                OdemeLink = _paymentLinkService.BuildLink(kiraci.Id),
+                OdemeLink = await _paymentLinkService.BuildLinkAsync(kiraci.Id, ct),
                 Borclar = group.OrderBy(t => t.VadeTarihi).Select(t => new BorcSatiri
                 {
                     TasinmazAdi = t.KiraSozlesmesi!.Birim!.Tasinmaz!.Ad,

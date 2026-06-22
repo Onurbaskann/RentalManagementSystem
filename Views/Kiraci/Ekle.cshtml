@@ -2,13 +2,11 @@
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Yeni Kiracı";
-    string initTur = Model.KiraciTuru.HasValue ? ((int)Model.KiraciTuru.Value).ToString() : "1";
 
     string[] errorKeys = new[] {
-        "KiraciNo","KiraciTuru","KiraciKategoriId","SektorId",
-        "GercekAd","Soyad","DogumTarihi","AnneAdi","BabaAdi","TcKimlikNo","PasaportNo",
-        "TuzelAd","VergiNo","VergiDairesi",
-        "Telefon","Email","Adres","KvkkOnayi"
+        "KiraciNo","KiraciKategoriId","SektorId",
+        "Ad","VergiNo","VergiDairesi",
+        "Telefon","Email","Adres"
     };
     var errorsDict = errorKeys.ToDictionary(
         k => char.ToLowerInvariant(k[0]) + k.Substring(1),
@@ -22,8 +20,8 @@
         <a href="/Kiraci" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Kiracılar</a>
         <div class="page-title">Yeni Kiracı Ekle</div>
     </div>
-    <form asp-action="Ekle" method="post"
-          x-data="kiraciFormData('@initTur', @Model.TcVatandasiDegil.ToString().ToLower(), @Model.KvkkOnayi.ToString().ToLower())"
+    <form asp-action="Ekle" method="post" enctype="multipart/form-data"
+          x-data="kiraciFormData()"
           @@submit.prevent="handleSubmit($event)"
           x-cloak>
         @Html.AntiForgeryToken()
@@ -35,24 +33,12 @@
                 Temel Bilgiler
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-3.5 gap-y-4 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-x-3.5 gap-y-4">
                 <div class="form-group mb-0">
                     <label class="form-label">Kiracı No *</label>
                     <input asp-for="KiraciNo" class="form-control font-mono" />
                     <span x-show="errors.kiraciNo" x-text="errors.kiraciNo" class="form-error"></span>
                 </div>
-                <div class="form-group mb-0">
-                    <label class="form-label">Kiracı Türü *</label>
-                    <select asp-for="KiraciTuru" class="form-control" x-model="kiraciTuru">
-                        <option value="">— Seçin —</option>
-                        <option value="1">Gerçek Kişi</option>
-                        <option value="2">Tüzel Kişi</option>
-                    </select>
-                    <span x-show="errors.kiraciTuru" x-text="errors.kiraciTuru" class="form-error"></span>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-3.5 gap-y-4">
                 <div class="form-group mb-0">
                     <label class="form-label">Kiracı Kategorisi *</label>
                     <select asp-for="KiraciKategoriId" class="form-control">
@@ -78,73 +64,8 @@
             </div>
         </div>
 
-        <!-- Gerçek kişi alanları -->
-        <div class="card mb-5" x-show="kiraciTuru === '1'">
-            <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-100 gap-4">
-                <div class="text-[15px] font-bold flex items-center gap-2">
-                    <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
-                    Gerçek Kişi Bilgileri
-                </div>
-                <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-400 cursor-pointer select-none uppercase tracking-tight">
-                    <input type="checkbox" asp-for="TcVatandasiDegil" x-model="tcVatandasiDegil" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
-                    <span>TC Vatandaşı Değil</span>
-                </label>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-3.5 gap-y-4">
-                <div class="form-group">
-                    <label class="form-label">Ad *</label>
-                    <input name="GercekAd" class="form-control" placeholder="Örn: Ahmet" value="@Model.GercekAd" />
-                    <span x-show="errors.gercekAd" x-text="errors.gercekAd" class="form-error"></span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Soyad *</label>
-                    <input name="Soyad" class="form-control" placeholder="Örn: Yılmaz" value="@Model.Soyad" />
-                    <span x-show="errors.soyad" x-text="errors.soyad" class="form-error"></span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Ünvan</label>
-                    <input asp-for="Unvan" class="form-control" placeholder="Örn: Dr., Av." />
-                </div>
-                <div class="form-group" x-show="!tcVatandasiDegil">
-                    <label class="form-label">TC Kimlik No *</label>
-                    <input asp-for="TcKimlikNo" class="form-control" maxlength="11" inputmode="numeric" pattern="\d{11}" placeholder="11 haneli TC kimlik" />
-                    <span x-show="errors.tcKimlikNo" x-text="errors.tcKimlikNo" class="form-error"></span>
-                </div>
-                <div class="form-group" x-show="tcVatandasiDegil">
-                    <label class="form-label">Pasaport No *</label>
-                    <input asp-for="PasaportNo" class="form-control" placeholder="Pasaport no" />
-                    <span x-show="errors.pasaportNo" x-text="errors.pasaportNo" class="form-error"></span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Doğum Tarihi *</label>
-                    @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
-                        { "Name",  "DogumTarihi" },
-                        { "Value", Model.DogumTarihi?.ToString("yyyy-MM-dd") ?? "" },
-                        { "Mode",  "date" },
-                        { "Field", "dogumTarihi" }
-                    })
-                    <span x-show="errors.dogumTarihi" x-text="errors.dogumTarihi" class="form-error"></span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Doğum Yeri</label>
-                    <input asp-for="DogumYeri" class="form-control" placeholder="İl / ilçe" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Anne Adı *</label>
-                    <input asp-for="AnneAdi" class="form-control" />
-                    <span x-show="errors.anneAdi" x-text="errors.anneAdi" class="form-error"></span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Baba Adı *</label>
-                    <input asp-for="BabaAdi" class="form-control" />
-                    <span x-show="errors.babaAdi" x-text="errors.babaAdi" class="form-error"></span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tüzel kişi alanları -->
-        <div class="card mb-5" x-show="kiraciTuru === '2'">
+        <!-- Tüzel Kişi Bilgileri -->
+        <div class="card mb-5">
             <div class="text-[15px] font-bold mb-5 pb-3 border-b border-slate-100 flex items-center gap-2">
                 <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
                 Tüzel Kişi Bilgileri
@@ -152,8 +73,8 @@
 
             <div class="form-group mb-3.5">
                 <label class="form-label">Firma / Kurum Adı *</label>
-                <input name="TuzelAd" class="form-control" placeholder="Örn: Yıldız Yazılım A.Ş." value="@Model.TuzelAd" />
-                <span x-show="errors.tuzelAd" x-text="errors.tuzelAd" class="form-error"></span>
+                <input asp-for="Ad" class="form-control" placeholder="Örn: Yıldız Yazılım A.Ş." />
+                <span x-show="errors.ad" x-text="errors.ad" class="form-error"></span>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-3.5 gap-y-4">
@@ -203,15 +124,51 @@
             </div>
         </div>
 
-        <!-- KVKK Onayı -->
-        <div class="card mb-6 bg-slate-50 border-slate-200">
-            <label class="flex gap-3 items-start cursor-pointer select-none">
-                <input type="checkbox" asp-for="KvkkOnayi" x-model="kvkkOnayi" class="mt-1 w-4.5 h-4.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
-                <span class="text-[13px] leading-relaxed text-slate-600 font-medium">
-                    Kişisel verilerin işlenmesine ilişkin aydınlatma metnini okudum, kiracı bilgilerinin sözleşme süreci boyunca işlenmesini onaylıyorum. <span class="text-red-500 font-bold">*</span>
-                </span>
-            </label>
-            <span x-show="errors.kvkkOnayi" x-text="errors.kvkkOnayi" class="form-error block mt-2 text-xs"></span>
+        @{
+            var belgeTurleri = ViewBag.BelgeTurleri as List<KiraTakip.Models.Entities.BelgeTuru>;
+        }
+        @if (belgeTurleri != null && belgeTurleri.Any())
+        {
+        <div class="card mb-5">
+            <div class="text-[15px] font-bold mb-5 pb-3 border-b border-slate-100 flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                Belgeler
+            </div>
+            <div class="flex flex-col gap-4">
+                @foreach (var bt in belgeTurleri)
+                {
+                    <div class="flex flex-col gap-1">
+                        <label class="form-label">
+                            @bt.Ad
+                            @if (bt.Zorunlu) { <span class="text-red-500 font-bold ml-0.5">*</span> }
+                            <span class="text-muted font-normal text-[11.5px] ml-1">(@bt.IzinVerilenUzantilar, maks. @bt.MaxBoyutMb MB)</span>
+                        </label>
+                        @if (!string.IsNullOrEmpty(bt.Aciklama))
+                        {
+                            <div class="text-xs text-muted -mt-1 mb-1">@bt.Aciklama</div>
+                        }
+                        <input type="file" name="dosya_@bt.Id" class="form-control"
+                               accept="@string.Join(",", bt.IzinVerilenUzantilar.Split(',').Select(e => "." + e.Trim()))" />
+                    </div>
+                }
+            </div>
+        </div>
+        }
+
+        <div class="card mt-4 bg-indigo-50/60 border border-indigo-100">
+            <div class="text-sm font-semibold text-slate-700 mb-3">İlk Firma Yetkilisi Daveti <span class="text-muted font-normal">(opsiyonel)</span></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="form-label">E-posta</label>
+                    <input asp-for="IlkYetkiliEmail" type="email" class="form-control" placeholder="yetkili@firma.com" />
+                    <span asp-validation-for="IlkYetkiliEmail" class="form-error"></span>
+                </div>
+                <div>
+                    <label class="form-label">Ad Soyad</label>
+                    <input asp-for="IlkYetkiliAdSoyad" type="text" class="form-control" placeholder="Ad Soyad" />
+                </div>
+            </div>
+            <div class="text-xs text-muted mt-2">Girilirse, kiracı oluşturulduktan hemen sonra Firma Yetkilisi rolüyle davet e-postası gönderilir.</div>
         </div>
 
         <div class="flex gap-3 mt-6">
@@ -223,15 +180,11 @@
         </div>
     </form>
 </div>
-</div>
 
 @section Scripts {
 <script>
-function kiraciFormData(initTur, initTcVatandasiDegil, initKvkkOnayi) {
+function kiraciFormData() {
     return {
-        kiraciTuru: initTur || '',
-        tcVatandasiDegil: !!initTcVatandasiDegil,
-        kvkkOnayi: !!initKvkkOnayi,
         errors: @Html.Raw(errorsJson),
         validate() {
             var form = this.$el;
@@ -241,41 +194,17 @@ function kiraciFormData(initTur, initTcVatandasiDegil, initKvkkOnayi) {
             };
             var e = {};
 
-            var kiraciNo = get('KiraciNo');
-            if (!kiraciNo) e.kiraciNo = 'Kiracı No zorunludur.';
-
-            if (!this.kiraciTuru) e.kiraciTuru = 'Kiracı türü seçilmelidir.';
-
+            if (!get('KiraciNo')) e.kiraciNo = 'Kiracı No zorunludur.';
             if (!get('KiraciKategoriId')) e.kiraciKategoriId = 'Kiracı kategorisi seçilmelidir.';
             if (!get('SektorId')) e.sektorId = 'Sektör seçilmelidir.';
-
-            if (this.kiraciTuru === '1') {
-                if (!get('GercekAd')) e.gercekAd = 'Ad zorunludur.';
-                if (!get('Soyad')) e.soyad = 'Soyad zorunludur.';
-                if (!get('DogumTarihi')) e.dogumTarihi = 'Doğum Tarihi zorunludur.';
-                if (!get('AnneAdi')) e.anneAdi = 'Anne Adı zorunludur.';
-                if (!get('BabaAdi')) e.babaAdi = 'Baba Adı zorunludur.';
-
-                if (this.tcVatandasiDegil) {
-                    if (!get('PasaportNo')) e.pasaportNo = 'Pasaport No zorunludur.';
-                } else {
-                    var tc = get('TcKimlikNo');
-                    if (!tc) e.tcKimlikNo = 'TC Kimlik No zorunludur.';
-                    else if (!/^\d{11}$/.test(tc)) e.tcKimlikNo = 'TC Kimlik No 11 haneli rakamdan oluşmalıdır.';
-                }
-            } else if (this.kiraciTuru === '2') {
-                if (!get('TuzelAd')) e.tuzelAd = 'Firma / Kurum Adı zorunludur.';
-                var vno = get('VergiNo');
-                if (!vno) e.vergiNo = 'Vergi No zorunludur.';
-                else if (!/^\d{10}$/.test(vno)) e.vergiNo = 'Vergi No 10 haneli rakamdan oluşmalıdır.';
-                if (!get('VergiDairesi')) e.vergiDairesi = 'Vergi Dairesi zorunludur.';
-            }
-
+            if (!get('Ad')) e.ad = 'Firma / Kurum Adı zorunludur.';
+            var vno = get('VergiNo');
+            if (!vno) e.vergiNo = 'Vergi No zorunludur.';
+            else if (!/^\d{10}$/.test(vno)) e.vergiNo = 'Vergi No 10 haneli rakamdan oluşmalıdır.';
+            if (!get('VergiDairesi')) e.vergiDairesi = 'Vergi Dairesi zorunludur.';
             if (!get('Telefon')) e.telefon = 'Telefon zorunludur.';
             if (!get('Email')) e.email = 'E-posta zorunludur.';
             if (!get('Adres')) e.adres = 'Adres zorunludur.';
-
-            if (!this.kvkkOnayi) e.kvkkOnayi = 'KVKK aydınlatma metni onayı zorunludur.';
 
             this.errors = e;
             return Object.keys(e).length === 0;

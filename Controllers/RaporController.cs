@@ -13,12 +13,12 @@ namespace KiraTakip.Controllers;
 public class RaporController : Controller
 {
     private readonly ITahakkukService _tahakkukService;
-    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IYetkiKapsamiProvider _provider;
 
-    public RaporController(ITahakkukService tahakkukService, UserManager<ApplicationUser> userManager)
+    public RaporController(ITahakkukService tahakkukService, IYetkiKapsamiProvider provider)
     {
         _tahakkukService = tahakkukService;
-        _userManager = userManager;
+        _provider = provider;
     }
 
     public async Task<IActionResult> Index(int? yil)
@@ -26,8 +26,8 @@ public class RaporController : Controller
         await _tahakkukService.GecikmeleriGuncelleAsync();
 
         int secilenYil = yil ?? DateTime.Today.Year;
-        var userId = User.IsInRole(RoleNames.Goruntuleyici) ? _userManager.GetUserId(User) : null;
-        var tahakkuklar = await _tahakkukService.GetListAsync(userId: userId);
+        var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
+        var tahakkuklar = await _tahakkukService.GetListAsync(tasinmazIds: tasinmazIds);
 
         var trCulture = new CultureInfo("tr-TR");
 

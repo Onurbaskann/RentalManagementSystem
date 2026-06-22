@@ -14,15 +14,18 @@ public class BankaHareketiController : Controller
     private readonly IBankaHareketiService _bankaService;
     private readonly IOdemeService _odemeService;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IYetkiKapsamiProvider _provider;
 
     public BankaHareketiController(
         IBankaHareketiService bankaService,
         IOdemeService odemeService,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        IYetkiKapsamiProvider provider)
     {
         _bankaService = bankaService;
         _odemeService = odemeService;
         _userManager = userManager;
+        _provider = provider;
     }
 
     [Authorize(Policy = PermissionCatalog.Odeme.View)]
@@ -77,8 +80,8 @@ public class BankaHareketiController : Controller
         var hareketi = await _bankaService.GetByIdAsync(id);
         if (hareketi == null) return NotFound();
 
-        var userId = User.IsInRole(RoleNames.Goruntuleyici) ? _userManager.GetUserId(User) : null;
-        var adaylar = await _bankaService.GetOdemeAdaylariAsync(id, userId);
+        var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
+        var adaylar = await _bankaService.GetOdemeAdaylariAsync(id, tasinmazIds);
 
         return View(new BankaEslesmeSecViewModel { BankaHareketi = hareketi, OdemeAdaylari = adaylar });
     }

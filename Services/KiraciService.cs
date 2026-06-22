@@ -9,23 +9,15 @@ public class KiraciService : IKiraciService
 {
     private readonly IKiraciRepository _repo;
     private readonly IUnitOfWork _uow;
-    private readonly IUserTasinmazYetkiService _yetkiService;
-
-    public KiraciService(IKiraciRepository repo, IUnitOfWork uow, IUserTasinmazYetkiService yetkiService)
+    public KiraciService(IKiraciRepository repo, IUnitOfWork uow)
     {
         _repo = repo;
         _uow = uow;
-        _yetkiService = yetkiService;
     }
 
-    public async Task<List<KiraciListItemDto>> GetAllAsync(string? userId = null)
+    public async Task<List<KiraciListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null)
     {
-        List<int>? yetkiliIds = null;
-        if (userId != null)
-        {
-            yetkiliIds = await _yetkiService.GetYetkiliTasinmazIdsAsync(userId);
-        }
-        return await _repo.GetListAsync(yetkiliIds);
+        return await _repo.GetListAsync(tasinmazIds?.ToList());
     }
 
     public async Task<KiraciDetayDto?> GetDetayAsync(int id)
@@ -50,16 +42,7 @@ public class KiraciService : IKiraciService
 
         dbKiraci.KiraciKategoriId = k.KiraciKategoriId;
         dbKiraci.SektorId = k.SektorId;
-        dbKiraci.KiraciTuru = k.KiraciTuru;
         dbKiraci.Ad = k.Ad;
-        dbKiraci.Soyad = k.Soyad;
-        dbKiraci.TcKimlikNo = k.TcKimlikNo;
-        dbKiraci.PasaportNo = k.PasaportNo;
-        dbKiraci.Unvan = k.Unvan;
-        dbKiraci.AnneAdi = k.AnneAdi;
-        dbKiraci.BabaAdi = k.BabaAdi;
-        dbKiraci.DogumTarihi = k.DogumTarihi;
-        dbKiraci.DogumYeri = k.DogumYeri;
         dbKiraci.TicaretSicilNo = k.TicaretSicilNo;
         dbKiraci.VergiNo = k.VergiNo;
         dbKiraci.VergiDairesi = k.VergiDairesi;
@@ -67,7 +50,6 @@ public class KiraciService : IKiraciService
         dbKiraci.Telefon = k.Telefon;
         dbKiraci.Email = k.Email;
         dbKiraci.Adres = k.Adres;
-        dbKiraci.KvkkOnayi = k.KvkkOnayi;
         dbKiraci.IsActive = k.IsActive;
 
         await _repo.UpdateAsync(dbKiraci); // No-op marker

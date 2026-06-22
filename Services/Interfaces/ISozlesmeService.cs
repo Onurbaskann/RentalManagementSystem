@@ -6,7 +6,7 @@ namespace KiraTakip.Services.Interfaces;
 
 public interface ISozlesmeService
 {
-    Task<List<SozlesmeListItemDto>> GetAllAsync(string? filtre = null, string? userId = null);
+    Task<List<SozlesmeListItemDto>> GetAllAsync(string? filtre = null, IReadOnlyList<int>? tasinmazIds = null);
     Task<SozlesmeDetayDto?> GetByIdAsync(int id);
     Task<KiraSozlesmesi> CreateAsync(KiraSozlesmesi s, decimal? aylikBedel = null);
     Task UzatAsync(int id, DateTime yeniBitis, decimal eskiBedel, decimal yeniBedel, bool kdvUygulanacakMi, decimal kdvOrani, decimal? tufeOrani, string? aciklama);

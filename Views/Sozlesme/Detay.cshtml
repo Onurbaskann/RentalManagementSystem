@@ -257,10 +257,7 @@
                 <div>
                     <div class="font-serif text-[22px] font-bold leading-tight">@s.KiraciGosterimAdi</div>
                     <div class="mt-1 flex gap-1.5 items-center">
-                        @if (s.KiraciTuru == KiraciTuru.Tuzel)
-                        { <span class="badge badge-kurumsal">Tüzel Kişi</span> }
-                        else
-                        { <span class="badge badge-bireysel">Gerçek Kişi</span> }
+                        <span class="badge badge-kurumsal">Tüzel Kişi</span>
                         @if (!string.IsNullOrEmpty(s.KiraciKategoriAd))
                         {
                             <span class="badge badge-bos">@s.KiraciKategoriAd</span>

@@ -16,35 +16,38 @@ public class RezervasyonController : Controller
     private readonly IKiraciRepository _kiraciRepo;
     private readonly ISozlesmeRepository _sozlesmeRepo;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IYetkiKapsamiProvider _provider;
 
     public RezervasyonController(
         IRezervasyonService service,
         IBirimRepository birimRepo,
         IKiraciRepository kiraciRepo,
         ISozlesmeRepository sozlesmeRepo,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        IYetkiKapsamiProvider provider)
     {
         _service = service;
         _birimRepo = birimRepo;
         _kiraciRepo = kiraciRepo;
         _sozlesmeRepo = sozlesmeRepo;
         _userManager = userManager;
+        _provider = provider;
     }
 
     [Authorize(Policy = PermissionCatalog.Rezervasyon.View)]
     public async Task<IActionResult> Index()
     {
-        var userId = User.IsInRole(RoleNames.Goruntuleyici) ? _userManager.GetUserId(User) : null;
-        var liste = await _service.GetAllAsync(userId);
+        var liste = await _service.GetAllAsync(_provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
         return View(liste);
     }
 
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.Rezervasyon.Create)]
-    public async Task<IActionResult> Ekle()
+    public async Task<IActionResult> Ekle(int? birimId)
     {
         var vm = new RezervasyonCreateViewModel
         {
+            BirimId = birimId,
             BaslangicTarihi = DateTime.Today.AddHours(9),
             BitisTarihi = DateTime.Today.AddHours(11)
         };

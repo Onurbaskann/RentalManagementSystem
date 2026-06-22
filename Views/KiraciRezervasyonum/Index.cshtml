@@ -1,0 +1,62 @@
+@model List<KiraTakip.Models.Dtos.RezervasyonListItemDto>
+@using KiraTakip.Models
+@{
+    Layout = "_KiraciLayout";
+    ViewData["Title"] = "Rezervasyonlarım";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Rezervasyonlarım</div>
+        <div class="page-subtitle">@Model.Count kayıt</div>
+    </div>
+</div>
+
+<div class="card p-0 overflow-hidden" x-data="clientTable({ pageSize: 25 })" x-init="init()">
+    <div class="table-toolbar">
+        <input type="search" class="form-control toolbar-search" placeholder="Ara: birim, taşınmaz…" x-model.debounce.250ms="q" />
+        <span class="pagination-info ml-auto"><span x-text="total"></span> kayıt</span>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Birim</th>
+                    <th>Taşınmaz</th>
+                    <th>Başlangıç</th>
+                    <th>Bitiş</th>
+                    <th>Tutar</th>
+                    <th>Durum</th>
+                </tr>
+            </thead>
+            <tbody x-ref="tbody">
+                @foreach (var r in Model)
+                {
+                    var search = $"{r.BirimAd} {r.TasinmazAd}".ToLower();
+                    var durumClass = r.Durum switch {
+                        RezervasyonDurumu.Planlandi => "badge-bos",
+                        RezervasyonDurumu.Tamamlandi => "badge-kirali",
+                        RezervasyonDurumu.IptalEdildi => "badge-gecmis",
+                        RezervasyonDurumu.TahakkukaAktarildi => "badge-kurumsal",
+                        _ => "badge-bos"
+                    };
+                    var durumLabel = r.Durum switch {
+                        RezervasyonDurumu.Planlandi => "Planlandı",
+                        RezervasyonDurumu.Tamamlandi => "Tamamlandı",
+                        RezervasyonDurumu.IptalEdildi => "İptal",
+                        RezervasyonDurumu.TahakkukaAktarildi => "Faturalandı",
+                        _ => r.Durum.ToString()
+                    };
+                    <tr data-row data-search="@search">
+                        <td class="font-semibold">@r.BirimAd</td>
+                        <td class="text-sm text-muted">@r.TasinmazAd</td>
+                        <td class="text-sm">@r.BaslangicTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td class="text-sm">@r.BitisTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td class="text-sm font-medium">@r.ToplamTutar.ToString("N2") ₺</td>
+                        <td><span class="badge @durumClass">@durumLabel</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -2,6 +2,7 @@ namespace KiraTakip.Services.Interfaces;
 
 public interface IPaymentLinkService
 {
-    string BuildLink(int kiraciId);
-    bool TryValidate(string token, out int kiraciId, out string? reason);
+    Task<string> BuildLinkAsync(int kiraciId, CancellationToken ct = default);
+    Task<(bool Success, int KiraciId, string? Reason)> TryValidateAsync(string token, CancellationToken ct = default);
+    Task IptalEtAsync(int kayitId, string iptalEdenUserId, CancellationToken ct = default);
 }

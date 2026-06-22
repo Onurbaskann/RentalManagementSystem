@@ -1,0 +1,75 @@
+@model KiraTakip.Models.ViewModels.DavetGonderViewModel
+@{
+    ViewData["Title"] = "Davet Gönder";
+}
+
+<div class="page-header">
+    <div>
+        <a href="/Admin/Kullanicilar" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
+            ← Kullanıcı Yönetimi
+        </a>
+        <div class="page-title">Davet Gönder</div>
+        <div class="page-subtitle">Yeni bir kullanıcıyı sisteme davet edin</div>
+    </div>
+</div>
+
+<div class="card" x-data="{ seciliRolId: @(Model.RolId > 0 ? Model.RolId.ToString() : "0") }">
+    <form method="post" action="/Admin/Kullanicilar/Davet">
+        @Html.AntiForgeryToken()
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div asp-validation-summary="All" class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-5 text-sm"></div>
+        }
+
+        <div class="form-group">
+            <label class="form-label">E-posta <span class="text-red-500">*</span></label>
+            <input asp-for="Email" class="form-control" type="email" placeholder="ornek@sirket.com" />
+            <span asp-validation-for="Email" class="form-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Ad Soyad</label>
+            <input asp-for="AdSoyad" class="form-control" placeholder="Opsiyonel — davetiye e-postasında kullanılır" />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Rol <span class="text-red-500">*</span></label>
+            <select asp-for="RolId" class="form-control" x-model="seciliRolId">
+                <option value="0">— Seçin —</option>
+                @foreach (var r in Model.Roller)
+                {
+                    <option value="@r.Id">@(r.Ad == "Goruntuleyici" ? "Görüntüleyici" : r.Ad)</option>
+                }
+            </select>
+            <span asp-validation-for="RolId" class="form-error"></span>
+        </div>
+
+        @if (Model.Tasinmazlar.Any())
+        {
+            <div class="form-group" x-show="seciliRolId == '@(Model.Roller.FirstOrDefault(r => r.Ad == "Goruntuleyici")?.Id.ToString() ?? "0")'" x-cloak>
+                <label class="form-label">Taşınmaz Yetkileri</label>
+                <p class="text-sm text-muted mb-3">Görüntüleyici rolünde hangi taşınmazları görebileceğini seçin.</p>
+                <div class="grid grid-cols-1 gap-1.5">
+                    @for (int i = 0; i < Model.Tasinmazlar.Count; i++)
+                    {
+                        <label class="flex items-center gap-2 cursor-pointer text-sm">
+                            <input type="checkbox"
+                                   name="SelectedTasinmazIds"
+                                   value="@Model.Tasinmazlar[i].TasinmazId"
+                                   @(Model.Tasinmazlar[i].Selected ? "checked" : "")
+                                   class="rounded" />
+                            <span class="font-medium">@Model.Tasinmazlar[i].Ad</span>
+                            <span class="text-muted">— @Model.Tasinmazlar[i].Konum</span>
+                        </label>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="flex gap-2 mt-6">
+            <button type="submit" class="btn btn-primary">Daveti Gönder</button>
+            <a href="/Admin/Kullanicilar" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>

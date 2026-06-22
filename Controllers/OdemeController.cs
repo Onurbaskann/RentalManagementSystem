@@ -19,7 +19,7 @@ public class OdemeController : Controller
     private readonly IBankaHareketiService _bankaService;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IConfiguration _config;
-    private readonly IUserTasinmazYetkiService _yetkiService;
+    private readonly IYetkiKapsamiProvider _provider;
 
     public OdemeController(
         IOdemeService odemeService,
@@ -28,7 +28,7 @@ public class OdemeController : Controller
         IBankaHareketiService bankaService,
         UserManager<ApplicationUser> userManager,
         IConfiguration config,
-        IUserTasinmazYetkiService yetkiService)
+        IYetkiKapsamiProvider provider)
     {
         _odemeService = odemeService;
         _tahakkukService = tahakkukService;
@@ -36,14 +36,13 @@ public class OdemeController : Controller
         _bankaService = bankaService;
         _userManager = userManager;
         _config = config;
-        _yetkiService = yetkiService;
+        _provider = provider;
     }
 
     [Authorize(Policy = PermissionCatalog.Odeme.View)]
     public async Task<IActionResult> Index([FromQuery] TableQuery query, int? tahakkukId = null)
     {
-        var userId = User.IsInRole(RoleNames.Goruntuleyici) ? _userManager.GetUserId(User) : null;
-        var paged = await _odemeService.GetPagedAsync(query, tahakkukId, userId);
+        var paged = await _odemeService.GetPagedAsync(query, tahakkukId, _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
 
         ViewBag.TahakkukId = tahakkukId;
         ViewBag.Query = query;
@@ -57,14 +56,8 @@ public class OdemeController : Controller
         var odeme = await _odemeService.GetByIdAsync(id);
         if (odeme == null) return NotFound();
 
-        if (User.IsInRole(RoleNames.Goruntuleyici))
-        {
-            var userId = _userManager.GetUserId(User)!;
-            var yetkiliTasinmazIds = await GetYetkiliTasinmazIdsAsync(userId);
-            var tasinmazId = odeme.TasinmazId;
-            if (tasinmazId == null || !yetkiliTasinmazIds.Contains(tasinmazId.Value))
-                return Forbid();
-        }
+        if (odeme.TasinmazId != null && !_provider.KapsamdaMi(odeme.TasinmazId.Value))
+            return Forbid();
 
         return View(odeme);
     }
@@ -182,13 +175,10 @@ public class OdemeController : Controller
         var dekont = await _dekontService.GetByIdAsync(id);
         if (dekont == null) return NotFound();
 
-        if (User.IsInRole(RoleNames.Goruntuleyici))
+        if (!_provider.GlobalErisim)
         {
-            var userId = _userManager.GetUserId(User)!;
-            var yetkiliIds = await GetYetkiliTasinmazIdsAsync(userId);
             var odeme = await _odemeService.GetByIdAsync(dekont.KiraOdemeId);
-            var tasinmazId2 = odeme?.TasinmazId;
-            if (tasinmazId2 == null || !yetkiliIds.Contains(tasinmazId2.Value))
+            if (odeme?.TasinmazId == null || !_provider.KapsamdaMi(odeme.TasinmazId.Value))
                 return Forbid();
         }
 
@@ -205,14 +195,8 @@ public class OdemeController : Controller
         var odeme = await _odemeService.GetByIdAsync(id);
         if (odeme == null) return NotFound();
 
-        if (User.IsInRole(RoleNames.Goruntuleyici))
-        {
-            var userId = _userManager.GetUserId(User)!;
-            var yetkiliIds = await GetYetkiliTasinmazIdsAsync(userId);
-            var tasinmazId3 = odeme.TasinmazId;
-            if (tasinmazId3 == null || !yetkiliIds.Contains(tasinmazId3.Value))
-                return Forbid();
-        }
+        if (odeme.TasinmazId != null && !_provider.KapsamdaMi(odeme.TasinmazId.Value))
+            return Forbid();
 
         var adaylar = await _bankaService.GetHareketAdaylariAsync(id);
         return View(new OdemeHareketSecViewModel { Odeme = odeme, HareketAdaylari = adaylar });
@@ -228,6 +212,4 @@ public class OdemeController : Controller
         return RedirectToAction(nameof(Detay), new { id = odemeId });
     }
 
-    private Task<List<int>> GetYetkiliTasinmazIdsAsync(string userId)
-        => _yetkiService.GetYetkiliTasinmazIdsAsync(userId);
 }

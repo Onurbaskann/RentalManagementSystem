@@ -1,0 +1,122 @@
+@model KiraTakip.Models.ViewModels.KiraciKullaniciListeViewModel
+@using KiraTakip.Models.Entities
+@{
+    ViewData["Title"] = "Kiracı Kullanıcıları";
+    var kiraciId = ViewBag.KiraciId as int? ?? 0;
+    var kiraciAd = ViewBag.KiraciAd as string ?? "—";
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert-success mb-4">✓ @TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert-danger mb-4">✕ @TempData["Error"]</div>
+}
+
+<div class="page-header flex items-center justify-between">
+    <div>
+        <a href="/Kiraci/Detay/@kiraciId" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
+            ← @kiraciAd
+        </a>
+        <div class="page-title">Kiracı Kullanıcıları</div>
+    </div>
+    <a href="/Admin/Kiracilar/@kiraciId/Kullanicilar/Davet" class="btn btn-primary">+ Davet Gönder</a>
+</div>
+
+<div class="card p-0 overflow-hidden" x-data="clientTable({ pageSize: 25 })" x-init="init()">
+    <div class="table-toolbar">
+        <input type="search" class="form-control toolbar-search" placeholder="Ara: ad, e-posta, rol…" x-model.debounce.250ms="q" />
+        <span class="pagination-info ml-auto"><span x-text="total"></span> kayıt</span>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Ad Soyad</th>
+                    <th>E-posta</th>
+                    <th>Rol</th>
+                    <th>Durum</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody x-ref="tbody">
+                @foreach (var u in Model.Kullanicilar)
+                {
+                    var search = $"{u.AdSoyad} {u.Email} {u.RolAd}".ToLower();
+                    <tr data-row data-search="@search">
+                        <td class="font-semibold">@u.AdSoyad</td>
+                        <td class="text-sm text-muted">@u.Email</td>
+                        <td><span class="badge badge-bos">@u.RolAd</span></td>
+                        <td>
+                            @if (u.IsActive)
+                            { <span class="badge badge-kirali">Aktif</span> }
+                            else
+                            { <span class="badge badge-gecmis">Pasif</span> }
+                        </td>
+                        <td class="flex gap-1.5 justify-end">
+                            <form method="post" action="/Admin/Kiracilar/@kiraciId/Kullanicilar/DurumDegistir/@u.Id"
+                                  data-confirm="@(u.IsActive ? "Kullanıcı pasif yapılsın mı?" : "Kullanıcı aktif yapılsın mı?")" class="inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm @(u.IsActive ? "btn-danger" : "btn-amber")">
+                                    @(u.IsActive ? "Pasif Yap" : "Aktif Yap")
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (Model.BekleyenDavetler.Any())
+{
+    <div class="mt-6">
+        <div class="page-header">
+            <div class="page-title text-base">Bekleyen Davetler</div>
+        </div>
+        <div class="card p-0 overflow-hidden">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>E-posta</th>
+                            <th>Ad Soyad</th>
+                            <th>Rol</th>
+                            <th>Gönderilme</th>
+                            <th>Son Tarih</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var d in Model.BekleyenDavetler)
+                        {
+                            <tr>
+                                <td>@d.Email</td>
+                                <td class="text-sm text-muted">@(d.AdSoyad ?? "—")</td>
+                                <td><span class="badge badge-bos">@d.RolAd</span></td>
+                                <td class="text-sm text-muted">@d.GonderimTarihi.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                                <td class="text-sm @(d.ExpiresAt < DateTime.UtcNow.AddDays(1) ? "text-red-600" : "text-muted")">
+                                    @d.ExpiresAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                                </td>
+                                <td class="flex gap-1.5 justify-end">
+                                    <form method="post" action="/Admin/Kiracilar/@kiraciId/Kullanicilar/Davet/YenidenGonder/@d.Id" class="inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-secondary">Yeniden Gönder</button>
+                                    </form>
+                                    <form method="post" action="/Admin/Kiracilar/@kiraciId/Kullanicilar/Davet/Iptal/@d.Id"
+                                          data-confirm="Bu daveti iptal etmek istediğinizden emin misiniz?" class="inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-danger">İptal</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}

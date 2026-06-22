@@ -1,4 +1,7 @@
 using KiraTakip.Authorization;
+using KiraTakip.Data;
+using KiraTakip.Models;
+using KiraTakip.Models.Entities;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -13,37 +16,47 @@ namespace KiraTakip.Controllers;
 public class AdminUserController : Controller
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly RoleManager<IdentityRole> _roleManager;
     private readonly ITasinmazService _tasinmazService;
-    private readonly IUserTasinmazYetkiService _yetkiService;
     private readonly IPermissionService _permissionService;
+    private readonly IUserRolService _userRolService;
+    private readonly IDavetiyeService _davetiyeService;
+    private readonly IAuditService _auditService;
+    private readonly IYetkiKapsamiCache _kapsamCache;
+    private readonly ApplicationDbContext _db;
 
     public AdminUserController(
         UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole> roleManager,
         ITasinmazService tasinmazService,
-        IUserTasinmazYetkiService yetkiService,
-        IPermissionService permissionService)
+        IPermissionService permissionService,
+        IUserRolService userRolService,
+        IDavetiyeService davetiyeService,
+        IAuditService auditService,
+        IYetkiKapsamiCache kapsamCache,
+        ApplicationDbContext db)
     {
         _userManager = userManager;
-        _roleManager = roleManager;
         _tasinmazService = tasinmazService;
-        _yetkiService = yetkiService;
         _permissionService = permissionService;
+        _userRolService = userRolService;
+        _davetiyeService = davetiyeService;
+        _auditService = auditService;
+        _kapsamCache = kapsamCache;
+        _db = db;
     }
-
-    private static readonly string[] Roller = [RoleNames.Admin, RoleNames.Yonetici, RoleNames.Goruntuleyici];
 
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var users = await _userManager.Users.OrderBy(u => u.AdSoyad).ToListAsync();
-        var model = new List<KullaniciListeViewModel>();
+        var icKullanicilar = await _userManager.Users
+            .Where(u => u.KiraciId == null)
+            .OrderBy(u => u.AdSoyad)
+            .ToListAsync();
 
-        foreach (var u in users)
+        var icItems = new List<KullaniciListeViewModel>();
+        foreach (var u in icKullanicilar)
         {
-            var roles = await _userManager.GetRolesAsync(u);
-            model.Add(new KullaniciListeViewModel
+            var roles = await _userRolService.GetUserRolesAsync(u.Id);
+            icItems.Add(new KullaniciListeViewModel
             {
                 Id = u.Id,
                 AdSoyad = u.AdSoyad ?? u.Email ?? "—",
@@ -53,75 +66,42 @@ public class AdminUserController : Controller
             });
         }
 
-        return View(model);
-    }
+        var kiraciKullanicilar = await _db.Users
+            .IgnoreQueryFilters()
+            .Where(u => u.KiraciId != null)
+            .OrderBy(u => u.AdSoyad)
+            .ToListAsync();
 
-    [HttpGet("Ekle")]
-    public async Task<IActionResult> Create()
-    {
-        ViewBag.Roller = Roller;
-        var model = new KullaniciEkleViewModel();
-        await PopulateTasinmazlarAsync(model.Tasinmazlar, new List<int>());
-        return View(model);
-    }
-
-    [HttpPost("Ekle")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(KullaniciEkleViewModel model)
-    {
-        ViewBag.Roller = Roller;
-
-        if (string.IsNullOrWhiteSpace(model.AdSoyad))
-            ModelState.AddModelError("AdSoyad", "Ad soyad zorunludur.");
-        if (string.IsNullOrWhiteSpace(model.Email))
-            ModelState.AddModelError("Email", "E-posta adresi zorunludur.");
-        if (string.IsNullOrWhiteSpace(model.Password))
-            ModelState.AddModelError("Password", "Şifre zorunludur.");
-        if (string.IsNullOrWhiteSpace(model.Rol))
-            ModelState.AddModelError("Rol", "Rol seçilmelidir.");
-
-        if (!ModelState.IsValid)
+        var kiraciItems = new List<KiraciKullaniciListItemViewModel>();
+        foreach (var u in kiraciKullanicilar)
         {
-            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
-            return View(model);
+            var kiraci = await _db.Kiraciler.IgnoreQueryFilters()
+                .FirstOrDefaultAsync(k => k.Id == u.KiraciId);
+            var rol = await _db.UserRoller
+                .Where(ur => ur.UserId == u.Id)
+                .Join(_db.Roller, ur => ur.RolId, r => r.Id, (ur, r) => r.Ad)
+                .FirstOrDefaultAsync();
+
+            kiraciItems.Add(new KiraciKullaniciListItemViewModel
+            {
+                Id = u.Id,
+                AdSoyad = u.AdSoyad ?? u.Email ?? "—",
+                Email = u.Email ?? "—",
+                KiraciId = u.KiraciId!.Value,
+                KiraciAd = kiraci?.GosterimAdi ?? "—",
+                RolAd = rol ?? "—",
+                IsActive = u.IsActive
+            });
         }
 
-        if (!Roller.Contains(model.Rol))
+        var vm = new AdminKullaniciIndexViewModel
         {
-            ModelState.AddModelError("Rol", "Geçersiz rol seçildi.");
-            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
-            return View(model);
-        }
-
-        var user = new ApplicationUser
-        {
-            UserName = model.Email,
-            Email = model.Email,
-            AdSoyad = model.AdSoyad,
-            IsActive = true,
-            EmailConfirmed = true
+            IcKullanicilar = icItems,
+            KiraciKullanicilar = kiraciItems,
+            BekleyenDavetler = await _davetiyeService.GetBekleyenlerAsync()
         };
 
-        var result = await _userManager.CreateAsync(user, model.Password);
-        if (!result.Succeeded)
-        {
-            foreach (var e in result.Errors)
-                ModelState.AddModelError(string.Empty, e.Description);
-
-            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
-            return View(model);
-        }
-
-        await _userManager.AddToRoleAsync(user, model.Rol);
-
-        if (model.Rol == RoleNames.Goruntuleyici && model.SelectedTasinmazIds != null && model.SelectedTasinmazIds.Any())
-        {
-            var currentUserId = _userManager.GetUserId(User);
-            await _yetkiService.SetUserTasinmazYetkileriAsync(user.Id, model.SelectedTasinmazIds, currentUserId ?? "system");
-        }
-
-        TempData["Success"] = $"{model.AdSoyad} kullanıcısı başarıyla oluşturuldu.";
-        return RedirectToAction(nameof(Index));
+        return View(vm);
     }
 
     [HttpGet("Duzenle/{id}")]
@@ -131,25 +111,29 @@ public class AdminUserController : Controller
         if (user == null) return NotFound();
 
         var currentUserId = _userManager.GetUserId(User);
-        var roles = await _userManager.GetRolesAsync(user);
-        var yetkiliIds = await _yetkiService.GetYetkiliTasinmazIdsAsync(user.Id);
-        var mevcutPermissions = await _permissionService.GetUserPermissionsAsync(user.Id);
+        var yetkiliIds = await _db.KullaniciYetkiKapsamlari
+            .Where(k => k.UserId == user.Id && k.KapsamTipi == KapsamTipi.Tasinmaz && !k.IsDeleted)
+            .Select(k => k.KapsamId)
+            .ToListAsync();
+        var mevcutRolId = await _db.UserRoller
+            .Where(ur => ur.UserId == user.Id)
+            .Select(ur => (int?)ur.RolId)
+            .FirstOrDefaultAsync() ?? 0;
 
-        ViewBag.Roller = Roller;
         var model = new KullaniciDuzenleViewModel
         {
             Id = user.Id,
             AdSoyad = user.AdSoyad ?? string.Empty,
             Email = user.Email ?? string.Empty,
-            Rol = roles.FirstOrDefault() ?? string.Empty,
+            RolId = mevcutRolId,
             IsActive = user.IsActive,
             IsCurrentUser = user.Id == currentUserId,
-            SelectedTasinmazIds = yetkiliIds,
-            SelectedPermissions = mevcutPermissions.ToList()
+            TumTasinmazlaraErisim = user.TumTasinmazlaraErisim,
+            SelectedTasinmazIds = yetkiliIds
         };
 
+        await PopulateRollerAsync(model.Roller);
         await PopulateTasinmazlarAsync(model.Tasinmazlar, yetkiliIds);
-        PopulatePermissions(model);
         return View(model);
     }
 
@@ -157,81 +141,70 @@ public class AdminUserController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(string id, KullaniciDuzenleViewModel model)
     {
-        ViewBag.Roller = Roller;
-
         var user = await _userManager.FindByIdAsync(id);
         if (user == null) return NotFound();
 
         var currentUserId = _userManager.GetUserId(User);
         model.IsCurrentUser = user.Id == currentUserId;
 
-        if (string.IsNullOrWhiteSpace(model.Rol))
-            ModelState.AddModelError("Rol", "Rol seçilmelidir.");
+        if (model.RolId <= 0)
+            ModelState.AddModelError("RolId", "Rol seçilmelidir.");
 
         if (!ModelState.IsValid)
         {
+            await PopulateRollerAsync(model.Roller);
             await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
-            PopulatePermissions(model);
             return View(model);
         }
 
-        if (!Roller.Contains(model.Rol))
+        var yeniRol = await _db.Roller.FindAsync(model.RolId);
+        if (yeniRol == null)
         {
-            ModelState.AddModelError("Rol", "Geçersiz rol seçildi.");
+            ModelState.AddModelError("RolId", "Geçersiz rol seçildi.");
+            await PopulateRollerAsync(model.Roller);
             await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
-            PopulatePermissions(model);
             return View(model);
         }
 
-        if (user.Id == currentUserId)
+        var existingRoleNames = await _userRolService.GetUserRolesAsync(user.Id);
+        var mevcutRolId = await _db.UserRoller
+            .Where(ur => ur.UserId == user.Id)
+            .Select(ur => (int?)ur.RolId)
+            .FirstOrDefaultAsync() ?? 0;
+
+        if (user.Id == currentUserId && mevcutRolId != model.RolId)
         {
-            var currentRoles = await _userManager.GetRolesAsync(user);
-            if (currentRoles.FirstOrDefault() != model.Rol)
-            {
-                ModelState.AddModelError("Rol", "Kendi rolünüzü değiştiremezsiniz.");
-                await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
-                PopulatePermissions(model);
-                return View(model);
-            }
+            ModelState.AddModelError("RolId", "Kendi rolünüzü değiştiremezsiniz.");
+            await PopulateRollerAsync(model.Roller);
+            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
+            return View(model);
         }
 
-        var existingRoles = await _userManager.GetRolesAsync(user);
-        if (existingRoles.Contains(RoleNames.Admin) && model.Rol != RoleNames.Admin)
+        if (existingRoleNames.Contains(RoleNames.Admin) && yeniRol.Ad != RoleNames.Admin)
         {
             if (await AktifAdminSayisi() <= 1)
             {
-                ModelState.AddModelError("Rol", "Sistemde en az bir aktif Admin bulunmalıdır.");
+                ModelState.AddModelError("RolId", "Sistemde en az bir aktif Admin bulunmalıdır.");
+                await PopulateRollerAsync(model.Roller);
                 await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
-                PopulatePermissions(model);
                 return View(model);
             }
         }
 
-        await _userManager.RemoveFromRolesAsync(user, existingRoles);
-        await _userManager.AddToRoleAsync(user, model.Rol);
+        await _userRolService.RemoveAllRolesAsync(user.Id);
+        await _userRolService.AddRoleByRolIdAsync(user.Id, model.RolId, currentUserId);
 
-        var selectedPerms = model.SelectedPermissions ?? new List<string>();
-
-        if (model.Rol == RoleNames.Admin)
-        {
-            await _permissionService.SetUserPermissionsAsync(user.Id, Array.Empty<string>(), currentUserId ?? "system");
-            await _yetkiService.SetUserTasinmazYetkileriAsync(user.Id, new List<int>(), currentUserId ?? "system");
-        }
-        else if (model.Rol == RoleNames.Yonetici)
-        {
-            var allowed = selectedPerms.Where(p => PermissionCatalog.AssignableToYonetici.Contains(p)).ToList();
-            await _permissionService.SetUserPermissionsAsync(user.Id, allowed, currentUserId ?? "system");
-            await _yetkiService.SetUserTasinmazYetkileriAsync(user.Id, new List<int>(), currentUserId ?? "system");
-        }
-        else if (model.Rol == RoleNames.Goruntuleyici)
-        {
-            var allowed = selectedPerms.Where(p => PermissionCatalog.AssignableToGoruntuleyici.Contains(p)).ToList();
-            await _permissionService.SetUserPermissionsAsync(user.Id, allowed, currentUserId ?? "system");
-            await _yetkiService.SetUserTasinmazYetkileriAsync(user.Id, model.SelectedTasinmazIds, currentUserId ?? "system");
-        }
+        // İzinler artık rolden geliyor — per-user izin kaydı temizlenir
+        await _permissionService.SetUserPermissionsAsync(user.Id, Array.Empty<string>(), currentUserId ?? "system");
 
         user.AdSoyad = model.AdSoyad;
+        user.TumTasinmazlaraErisim = yeniRol.Ad != RoleNames.Admin && model.TumTasinmazlaraErisim;
         await _userManager.UpdateAsync(user);
+
+        var scopeIds = (yeniRol.Ad == RoleNames.Goruntuleyici && !model.TumTasinmazlaraErisim)
+            ? model.SelectedTasinmazIds
+            : new List<int>();
+        await SetKapsamAsync(user.Id, scopeIds, currentUserId ?? "system");
 
         TempData["Success"] = $"{user.AdSoyad ?? user.Email} kullanıcısı güncellendi.";
         return RedirectToAction(nameof(Index));
@@ -254,7 +227,7 @@ public class AdminUserController : Controller
 
         if (user.IsActive)
         {
-            var roles = await _userManager.GetRolesAsync(user);
+            var roles = await _userRolService.GetUserRolesAsync(user.Id);
             if (roles.Contains(RoleNames.Admin) && await AktifAdminSayisi() <= 1)
             {
                 TempData["Error"] = "Sistemde en az bir aktif Admin bulunmalıdır.";
@@ -264,15 +237,142 @@ public class AdminUserController : Controller
 
         user.IsActive = !user.IsActive;
         await _userManager.UpdateAsync(user);
+        await _userManager.UpdateSecurityStampAsync(user);
+
+        var eventType = user.IsActive ? "User.Activated" : "User.Deactivated";
+        await _auditService.LogAsync(eventType, "ApplicationUser", user.Id, user.Email);
 
         TempData["Success"] = $"{user.AdSoyad ?? user.Email} {(user.IsActive ? "aktif" : "pasif")} hale getirildi.";
         return RedirectToAction(nameof(Index));
     }
 
+    [HttpGet("Davet")]
+    public async Task<IActionResult> Davet()
+    {
+        var model = new DavetGonderViewModel();
+        await PopulateDavetRollerAsync(model);
+        await PopulateTasinmazlarAsync(model.Tasinmazlar, new List<int>());
+        return View(model);
+    }
+
+    [HttpPost("Davet")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Davet(DavetGonderViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            await PopulateDavetRollerAsync(model);
+            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
+            return View(model);
+        }
+
+        var currentUserId = _userManager.GetUserId(User)!;
+        try
+        {
+            await _davetiyeService.GonderAsync(model.Email, model.AdSoyad, model.RolId, currentUserId);
+
+            var rol = await _db.Roller.FindAsync(model.RolId);
+            if (rol?.Ad == RoleNames.Goruntuleyici && model.SelectedTasinmazIds.Any())
+            {
+                var invitedUser = await _userManager.FindByEmailAsync(model.Email);
+                if (invitedUser != null)
+                    await SetKapsamAsync(invitedUser.Id, model.SelectedTasinmazIds, currentUserId);
+            }
+
+            TempData["Success"] = $"{model.Email} adresine davet gönderildi.";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            await PopulateDavetRollerAsync(model);
+            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
+            return View(model);
+        }
+    }
+
+    [HttpPost("DavetIptal/{id}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DavetIptal(int id)
+    {
+        try
+        {
+            await _davetiyeService.IptalEtAsync(id);
+            TempData["Success"] = "Davet iptal edildi.";
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost("DavetYenidenGonder/{id}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DavetYenidenGonder(int id)
+    {
+        var currentUserId = _userManager.GetUserId(User)!;
+        try
+        {
+            await _davetiyeService.YenidenGonderAsync(id, currentUserId);
+            TempData["Success"] = "Davet yeniden gönderildi.";
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        return RedirectToAction(nameof(Index));
+    }
+
+    private async Task SetKapsamAsync(string userId, List<int> tasinmazIds, string atayan)
+    {
+        var mevcutlar = await _db.KullaniciYetkiKapsamlari
+            .Where(k => k.UserId == userId && k.KapsamTipi == KapsamTipi.Tasinmaz)
+            .ToListAsync();
+        _db.KullaniciYetkiKapsamlari.RemoveRange(mevcutlar);
+
+        foreach (var tasinmazId in tasinmazIds)
+        {
+            _db.KullaniciYetkiKapsamlari.Add(new KullaniciYetkiKapsami
+            {
+                UserId = userId,
+                KapsamTipi = KapsamTipi.Tasinmaz,
+                KapsamId = tasinmazId,
+                AtayanUserId = atayan,
+                AtanmaTarihi = DateTime.UtcNow
+            });
+        }
+
+        await _db.SaveChangesAsync();
+        _kapsamCache.Invalidate(userId);
+
+        var detail = tasinmazIds.Count == 0 ? "Kapsam temizlendi" : $"Kapsam: {tasinmazIds.Count} taşınmaz";
+        await _auditService.LogAsync("User.ScopeChanged", "ApplicationUser", userId, detail);
+    }
+
     private async Task<int> AktifAdminSayisi()
     {
-        var admins = await _userManager.GetUsersInRoleAsync(RoleNames.Admin);
+        var admins = await _userRolService.GetUsersInRoleAsync(RoleNames.Admin);
         return admins.Count(u => u.IsActive);
+    }
+
+    private async Task PopulateRollerAsync(List<RolSecenekViewModel> liste)
+    {
+        liste.Clear();
+        var roller = await _db.Roller
+            .Where(r => r.Scope == RolScope.Internal && r.IsActive && !r.IsDeleted)
+            .OrderBy(r => r.IsSystemRole ? 0 : 1).ThenBy(r => r.Ad)
+            .ToListAsync();
+        liste.AddRange(roller.Select(r => new RolSecenekViewModel { Id = r.Id, Ad = r.Ad }));
+    }
+
+    private async Task PopulateDavetRollerAsync(DavetGonderViewModel model)
+    {
+        model.Roller = await _db.Roller
+            .Where(r => r.Scope == RolScope.Internal && r.IsActive && !r.IsDeleted)
+            .OrderBy(r => r.IsSystemRole ? 0 : 1).ThenBy(r => r.Ad)
+            .Select(r => new RolSecenekViewModel { Id = r.Id, Ad = r.Ad })
+            .ToListAsync();
     }
 
     private async Task PopulateTasinmazlarAsync(List<TasinmazYetkiCheckboxViewModel> liste, List<int> selectedIds)
@@ -290,60 +390,4 @@ public class AdminUserController : Controller
             });
         }
     }
-
-    private static void PopulatePermissions(KullaniciDuzenleViewModel model)
-    {
-        var selected = model.SelectedPermissions ?? new List<string>();
-
-        model.YoneticiPermissions = PermissionCatalog.AssignableToYonetici
-            .GroupBy(p => p.Split('.')[0])
-            .Select(g => new PermissionGrupViewModel
-            {
-                GrupAdi = GetModuleLabel(g.Key),
-                Permissions = g.Select(p => new PermissionCheckboxViewModel
-                {
-                    Value = p,
-                    Etiket = GetActionLabel(p.Split('.')[1]),
-                    Selected = selected.Contains(p)
-                }).ToList()
-            })
-            .ToList();
-
-        model.GoruntuleyiciPermissions = PermissionCatalog.AssignableToGoruntuleyici
-            .Select(p => new PermissionCheckboxViewModel
-            {
-                Value = p,
-                Etiket = $"{GetModuleLabel(p.Split('.')[0])} — Görüntüle",
-                Selected = selected.Contains(p)
-            })
-            .ToList();
-    }
-
-    private static string GetModuleLabel(string module) => module switch
-    {
-        "Tasinmaz" => "Taşınmaz",
-        "Birim"    => "Birim / Ofis",
-        "Kiraci"   => "Kiracı",
-        "Sozlesme" => "Sözleşme",
-        "Odeme"    => "Ödeme",
-        "Kullanici" => "Kullanıcı Yönetimi",
-        _          => module
-    };
-
-    private static string GetActionLabel(string action) => action switch
-    {
-        "View"                => "Görüntüle",
-        "Create"              => "Ekle",
-        "Edit"                => "Düzenle",
-        "Extend"              => "Süre Uzat",
-        "Terminate"           => "Feshet",
-        "OverrideRate"        => "Elle Müdahale",
-        "Approve"             => "Onayla",
-        "Reject"              => "Reddet",
-        "UploadDekont"        => "Dekont Yükle",
-        "ImportBankStatement" => "Banka Hareketleri İçe Aktar",
-        "MatchBankTransaction" => "Banka Hareketi Eşleştir",
-        "AssignPermission"    => "Yetki Ata",
-        _                     => action
-    };
 }

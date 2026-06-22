@@ -1,10 +1,17 @@
 namespace KiraTakip.Models;
 
-public enum KiraciTuru
+public enum UserType
 {
-    Gercek = 1,
-    Tuzel = 2
+    Internal = 1,
+    Kiraci = 2
 }
+
+public enum RolScope
+{
+    Internal = 1,
+    Kiraci = 2
+}
+
 
 public enum SozlesmeDurumu
 {
@@ -132,4 +139,27 @@ public enum VadeKuraliTipi
 {
     SabitAyGunu = 1,
     DonemBasiOfset = 2
+}
+
+public enum DavetiyeDurum
+{
+    Beklemede = 1,
+    KabulEdildi = 2,
+    SuresiDolmus = 3,
+    IptalEdildi = 4
+}
+
+public enum SifreSifirlamaDurum
+{
+    Beklemede = 1,
+    Kullanildi = 2,
+    SuresiDolmus = 3,
+    IptalEdildi = 4
+}
+
+public enum OdemeLinkDurum
+{
+    Aktif = 1,
+    IptalEdildi = 2,
+    SuresiDolmus = 3
 }
