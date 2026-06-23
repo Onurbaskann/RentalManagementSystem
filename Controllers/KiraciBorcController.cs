@@ -25,7 +25,7 @@ public class KiraciBorcController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var tahakkuklar = await _db.KiraTahakkuklar
+        var tahakkuklar = await _db.Tahakkuklar
             .Include(t => t.KiraSozlesmesi!)
                 .ThenInclude(s => s.Birim)
             .OrderByDescending(t => t.VadeTarihi)

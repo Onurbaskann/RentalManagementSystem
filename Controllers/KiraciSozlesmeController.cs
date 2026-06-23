@@ -89,7 +89,7 @@ public class KiraciSozlesmeController : Controller
         vm.Tahakkuklar = await _tahakkukService.GetListAsync(sozlesmeId: id);
 
         var bugun = DateTime.Today;
-        var guncelTahakkuk = await _db.KiraTahakkuklar
+        var guncelTahakkuk = await _db.Tahakkuklar
             .Include(t => t.Kalemler).ThenInclude(k => k.BorcTipi)
             .Where(t => t.KiraSozlesmesiId == id && t.Durum != TahakkukDurumu.IptalEdildi && t.DonemBaslangic <= bugun)
             .OrderByDescending(t => t.DonemBaslangic)

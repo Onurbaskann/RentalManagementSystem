@@ -66,7 +66,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<BirimTarife> BirimTarifeler { get; set; }
     public DbSet<SozlesmeTarife> SozlesmeTarifeler { get; set; }
 
-    public DbSet<KiraTahakkuk> KiraTahakkuklar { get; set; }
+    public DbSet<Tahakkuk> Tahakkuklar { get; set; }
     public DbSet<TahakkukKalemi> TahakkukKalemleri { get; set; }
     public DbSet<KiraOdeme> KiraOdemeler { get; set; }
     public DbSet<Dekont> Dekontlar { get; set; }
@@ -209,7 +209,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             entity.Property(f => f.BirimDeger).HasPrecision(18, 2);
             entity.Property(f => f.KdvOrani).HasPrecision(5, 2);
-            entity.Property(f => f.Aciklama).HasMaxLength(300);
             entity.HasIndex(f => new { f.TasinmazId, f.KiraciKategoriId, f.BorcTipiId }).IsUnique();
             entity.HasOne(f => f.Tasinmaz)
                   .WithMany()
@@ -273,7 +272,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        builder.Entity<KiraTahakkuk>(entity =>
+        builder.Entity<Tahakkuk>(entity =>
         {
             entity.Property(t => t.BeklenenTutar).HasPrecision(18, 2);
             entity.Property(t => t.Durum).HasComment(EC<TahakkukDurumu>());
@@ -282,11 +281,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(t => t.ToplamTutar).HasPrecision(18, 2);
             entity.Property(t => t.OdenenTutar).HasPrecision(18, 2);
             entity.Property(t => t.IptalNotu).HasMaxLength(500);
+            entity.HasOne(t => t.Kiraci)
+                  .WithMany()
+                  .HasForeignKey(t => t.KiraciId)
+                  .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(t => t.KiraSozlesmesi)
                   .WithMany()
                   .OnDelete(DeleteBehavior.Restrict);
-            // Unique index kaldırıldı: Manuel tahakkuklar aynı sözleşme + dönemde birden fazla olabilir.
-            // Otomatik tahakkukların tekliği servis katmanında kod ile korunur.
             entity.HasIndex(t => new { t.KiraSozlesmesiId, t.DonemBaslangic });
         });
 
@@ -317,7 +318,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(o => o.OdemeKanali).HasComment(EC<OdemeKanali>());
             entity.Property(o => o.OdemeKaynakTipi).HasComment(EC<OdemeKaynakTipi>());
             entity.Property(o => o.Durum).HasComment(EC<OdemeDurumu>());
-            entity.HasOne(o => o.KiraTahakkuk)
+            entity.HasOne(o => o.Tahakkuk)
                   .WithMany(t => t.Odemeler)
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(o => o.KiraSozlesmesi)
@@ -363,6 +364,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<OdemeBankaEslesme>(entity =>
         {
             entity.Property(e => e.EslesmeTipi).HasComment(EC<EslesmeTipi>());
+            entity.Property(e => e.EslesenTutar).HasPrecision(18, 2);
             entity.HasOne(e => e.KiraOdeme)
                   .WithMany(o => o.BankaEslesmeleri)
                   .OnDelete(DeleteBehavior.Restrict);
@@ -409,10 +411,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasOne(r => r.Kiraci)
                   .WithMany()
                   .OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne(r => r.KiraSozlesmesi)
-                  .WithMany()
-                  .OnDelete(DeleteBehavior.SetNull);
-            entity.HasOne(r => r.KiraTahakkuk)
+            entity.HasOne(r => r.Tahakkuk)
                   .WithMany()
                   .OnDelete(DeleteBehavior.SetNull);
             entity.HasIndex(r => new { r.BirimId, r.BaslangicTarihi });
@@ -560,17 +559,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<KiraSozlesmesi>().HasQueryFilter(
             s => !s.IsDeleted && (!_currentUser.IsKiraciUser || s.KiraciId == _currentUser.KiraciId));
 
-        builder.Entity<KiraTahakkuk>().HasQueryFilter(
-            t => !t.IsDeleted && (!_currentUser.IsKiraciUser ||
-                 (t.KiraSozlesmesiId != null && t.KiraSozlesmesi!.KiraciId == _currentUser.KiraciId)));
+        builder.Entity<Tahakkuk>().HasQueryFilter(
+            t => !t.IsDeleted && (!_currentUser.IsKiraciUser || t.KiraciId == _currentUser.KiraciId));
 
         builder.Entity<KiraOdeme>().HasQueryFilter(
-            o => !o.IsDeleted && (!_currentUser.IsKiraciUser ||
-                 (o.KiraSozlesmesiId != null && o.KiraSozlesmesi!.KiraciId == _currentUser.KiraciId)));
+            o => !o.IsDeleted && (!_currentUser.IsKiraciUser || o.Tahakkuk.KiraciId == _currentUser.KiraciId));
 
         builder.Entity<Dekont>().HasQueryFilter(
-            d => !d.IsDeleted && (!_currentUser.IsKiraciUser ||
-                 (d.KiraOdeme.KiraSozlesmesiId != null && d.KiraOdeme.KiraSozlesmesi!.KiraciId == _currentUser.KiraciId)));
+            d => !d.IsDeleted && (!_currentUser.IsKiraciUser || d.KiraOdeme.Tahakkuk.KiraciId == _currentUser.KiraciId));
 
         builder.Entity<Rezervasyon>().HasQueryFilter(
             r => !r.IsDeleted && (!_currentUser.IsKiraciUser || r.KiraciId == _currentUser.KiraciId));

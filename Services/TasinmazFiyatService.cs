@@ -71,8 +71,6 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
                         BirimDeger = fiyat.BirimDeger,
                         HesaplamaYontemi = fiyat.HesaplamaYontemi,
                         KdvOrani = fiyat.KdvOrani,
-                        Aktif = fiyat.Aktif,
-                        Aciklama = fiyat.Aciklama,
                         RateVarMi = true
                     });
                 }
@@ -87,8 +85,6 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
                         BirimDeger = null,
                         HesaplamaYontemi = (bt.Kod == BorcTipiConsts.Kira) ? HesaplamaYontemi.M2 : HesaplamaYontemi.Sabit,
                         KdvOrani = null,
-                        Aktif = true,
-                        Aciklama = null,
                         RateVarMi = false
                     });
                 }
@@ -120,8 +116,6 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
                             entity.BirimDeger = hucre.BirimDeger.Value;
                             entity.HesaplamaYontemi = hucre.HesaplamaYontemi;
                             entity.KdvOrani = hucre.KdvOrani ?? 0m;
-                            entity.Aktif = hucre.Aktif;
-                            entity.Aciklama = hucre.Aciklama;
                         }
                         else
                         {
@@ -140,9 +134,7 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
                             BorcTipiId = hucre.BorcTipiId,
                             BirimDeger = hucre.BirimDeger.Value,
                             HesaplamaYontemi = hucre.HesaplamaYontemi,
-                            KdvOrani = hucre.KdvOrani ?? 0m,
-                            Aktif = hucre.Aktif,
-                            Aciklama = hucre.Aciklama
+                            KdvOrani = hucre.KdvOrani ?? 0m
                         };
                         await _tarifeRepo.AddAsync(newEntity);
                     }

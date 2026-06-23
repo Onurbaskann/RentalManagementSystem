@@ -241,7 +241,6 @@ public class SeedDataService
                 _ctx.GenelTarifeler.Add(new GenelTarife
                 {
                     Yil = cariYil,
-                    Aktif = true,
                     KiraciKategoriId = kat.Id,
                     BorcTipiId = bt.Id,
                     HesaplamaYontemi = (bt.Kod == BorcTipiConsts.Kira || bt.Kod == "ORTAK") ? HesaplamaYontemi.M2 : HesaplamaYontemi.Sabit,
@@ -639,7 +638,7 @@ public class SeedDataService
     public async Task SeedTahakkuklarAsync()
     {
         // Geriye dönük uyumluluk için (UretSozlesmeIcinAsync SeedDomainDataAsync içinde çağrılıyor)
-        if (await _ctx.KiraTahakkuklar.AnyAsync()) return;
+        if (await _ctx.Tahakkuklar.AnyAsync()) return;
         var aktifSozlesmeler = await _ctx.Sozlesmeler.Where(s => s.Durum == SozlesmeDurumu.Aktif).ToListAsync();
         foreach (var s in aktifSozlesmeler) await _tahakkukUretim.UretSozlesmeIcinAsync(s.Id);
     }
@@ -656,7 +655,7 @@ public class SeedDataService
             if (manuelBorcTipi != null)
             {
                 var targetSozlesme = sozlesmeler.First();
-                _ctx.KiraTahakkuklar.Add(new KiraTahakkuk
+                _ctx.Tahakkuklar.Add(new Tahakkuk
                 {
                     KiraSozlesmesiId = targetSozlesme.Id,
                     DonemBaslangic = DateTime.Today.AddDays(-5),
@@ -668,12 +667,11 @@ public class SeedDataService
                     OdenenTutar = 0m,
                     Durum = TahakkukDurumu.Bekleniyor,
                     KaynakTipi = TahakkukKaynakTipi.Manuel,
-                    OlusturmaTarihi = DateTime.Now,
                     Kalemler = new List<TahakkukKalemi> { new TahakkukKalemi { BorcTipiId = manuelBorcTipi.Id, Aciklama = "Ekstra Temizlik Bedeli", BirimDeger = 2500m, Carpan = 1m, Tutar = 2500m, KdvOrani = 20m, KdvTutari = 500m, ToplamTutar = 3000m, KaynakTipi = KalemKaynakTipi.ManuelGiris } }
                 });
 
                 // İptal Edilen Kayıt
-                _ctx.KiraTahakkuklar.Add(new KiraTahakkuk
+                _ctx.Tahakkuklar.Add(new Tahakkuk
                 {
                     KiraSozlesmesiId = targetSozlesme.Id,
                     DonemBaslangic = DateTime.Today.AddMonths(-1),
@@ -685,7 +683,6 @@ public class SeedDataService
                     OdenenTutar = 0m,
                     Durum = TahakkukDurumu.IptalEdildi,
                     KaynakTipi = TahakkukKaynakTipi.Manuel,
-                    OlusturmaTarihi = DateTime.Now,
                     IptalNotu = "Hatalı giriş nedeniyle iptal edildi.",
                     Kalemler = new List<TahakkukKalemi> { new TahakkukKalemi { BorcTipiId = manuelBorcTipi.Id, Aciklama = "Yanlış Borç Kaydı", BirimDeger = 500m, Tutar = 500m, KdvOrani = 20m, ToplamTutar = 600m, KaynakTipi = KalemKaynakTipi.ManuelGiris } }
                 });
@@ -714,7 +711,7 @@ public class SeedDataService
 
     private async Task SeedGecmisYilOdemeleriAsync(int yil, double oran, string adminId)
     {
-        var query = _ctx.KiraTahakkuklar
+        var query = _ctx.Tahakkuklar
             .Where(t => t.DonemBaslangic.Year == yil && t.Durum == TahakkukDurumu.Bekleniyor);
 
         // Eğer cari yıl ise (2026), sadece bugünü ve geçmiş ayları öde (Gerçekçilik için)
@@ -746,7 +743,7 @@ public class SeedDataService
             var odeme = new KiraOdeme
             {
                 KiraSozlesmesiId = t.KiraSozlesmesiId,
-                KiraTahakkukId = t.Id,
+                TahakkukId = t.Id,
                 OdemeTarihi = gecikmis ? t.VadeTarihi.AddDays(Random.Shared.Next(15, 45)) : t.VadeTarihi.AddDays(Random.Shared.Next(-5, 5)),
                 Tutar = odemeTutari,
                 OdemeKanali = (OdemeKanali)Random.Shared.Next(1, 5),
@@ -763,7 +760,7 @@ public class SeedDataService
 
     private async Task SeedKismiOdemelerAsync(string adminId)
     {
-        var bekleyenler = await _ctx.KiraTahakkuklar
+        var bekleyenler = await _ctx.Tahakkuklar
             .Where(t => t.Durum == TahakkukDurumu.Bekleniyor)
             .Take(3)
             .ToListAsync();
@@ -774,7 +771,7 @@ public class SeedDataService
             var odeme = new KiraOdeme
             {
                 KiraSozlesmesiId = t.KiraSozlesmesiId,
-                KiraTahakkukId = t.Id,
+                TahakkukId = t.Id,
                 OdemeTarihi = DateTime.Today.AddDays(-2),
                 Tutar = kismiTutar,
                 OdemeKanali = OdemeKanali.EFT,
@@ -804,7 +801,6 @@ public class SeedDataService
         {
             BirimId = salon.Id,
             KiraciId = kiraci.Id,
-            KiraSozlesmesiId = sozlesme?.Id,
             BaslangicTarihi = DateTime.Today.AddDays(-10).AddHours(10),
             BitisTarihi = DateTime.Today.AddDays(-10).AddHours(13),
             ToplamSureDakika = 180,
@@ -823,9 +819,9 @@ public class SeedDataService
 
         if (btRezervasyon != null)
         {
-            var tahakkuk = new KiraTahakkuk
+            var tahakkuk = new Tahakkuk
             {
-                KiraSozlesmesiId = sozlesme?.Id,
+                KiraciId = kiraci.Id,
                 DonemBaslangic = rezervasyon1.BaslangicTarihi.Date,
                 DonemBitis = rezervasyon1.BitisTarihi.Date,
                 VadeTarihi = rezervasyon1.BitisTarihi.Date,
@@ -835,7 +831,6 @@ public class SeedDataService
                 OdenenTutar = 0,
                 Durum = TahakkukDurumu.Bekleniyor,
                 KaynakTipi = TahakkukKaynakTipi.Rezervasyon,
-                OlusturmaTarihi = DateTime.Now.AddDays(-10),
                 Kalemler = new List<TahakkukKalemi>
                 {
                     new TahakkukKalemi
@@ -853,10 +848,10 @@ public class SeedDataService
                     }
                 }
             };
-            _ctx.KiraTahakkuklar.Add(tahakkuk);
+            _ctx.Tahakkuklar.Add(tahakkuk);
             await _ctx.SaveChangesAsync();
 
-            rezervasyon1.KiraTahakkukId = tahakkuk.Id;
+            rezervasyon1.TahakkukId = tahakkuk.Id;
             await _ctx.SaveChangesAsync();
         }
 
@@ -865,7 +860,6 @@ public class SeedDataService
         {
             BirimId = salon.Id,
             KiraciId = kiraci.Id,
-            KiraSozlesmesiId = sozlesme?.Id,
             BaslangicTarihi = DateTime.Today.AddDays(3).AddHours(14),
             BitisTarihi = DateTime.Today.AddDays(3).AddHours(17),
             ToplamSureDakika = 180,
@@ -882,14 +876,12 @@ public class SeedDataService
 
         // 3. B Blok Rezervasyonu (Gelecek - Planlandı)
         var kiraciVeri = await _ctx.Kiraciler.FirstOrDefaultAsync(k => k.Email == "iletisim@veribilisim.com");
-        var sozlesmeVeri = await _ctx.Sozlesmeler.FirstOrDefaultAsync(s => s.KiraciId == (kiraciVeri != null ? kiraciVeri.Id : 0));
         if (salonB != null && kiraciVeri != null)
         {
             _ctx.Rezervasyonlari.Add(new Rezervasyon
             {
                 BirimId = salonB.Id,
                 KiraciId = kiraciVeri.Id,
-                KiraSozlesmesiId = sozlesmeVeri?.Id,
                 BaslangicTarihi = DateTime.Today.AddDays(4).AddHours(10),
                 BitisTarihi = DateTime.Today.AddDays(4).AddHours(12),
                 ToplamSureDakika = 120,
@@ -1011,7 +1003,7 @@ public class SeedDataService
         _ctx.RezervasyonTarifeler.RemoveRange(_ctx.RezervasyonTarifeler);
 
         _ctx.TahakkukKalemleri.RemoveRange(_ctx.TahakkukKalemleri);
-        _ctx.KiraTahakkuklar.RemoveRange(_ctx.KiraTahakkuklar);
+        _ctx.Tahakkuklar.RemoveRange(_ctx.Tahakkuklar);
 
         _ctx.SozlesmeTarifeler.RemoveRange(_ctx.SozlesmeTarifeler);
         _ctx.SozlesmeIslemGecmisleri.RemoveRange(_ctx.SozlesmeIslemGecmisleri);

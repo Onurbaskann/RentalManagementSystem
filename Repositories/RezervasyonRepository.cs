@@ -27,8 +27,7 @@ public class RezervasyonRepository : BaseRepository<Rezervasyon>, IRezervasyonRe
                 TasinmazAd = r.Birim.Tasinmaz.Ad,
                 KiraciId = r.KiraciId,
                 KiraciGosterimAdi = r.Kiraci.GosterimAdi,
-                KiraSozlesmesiId = r.KiraSozlesmesiId,
-                KiraTahakkukId = r.KiraTahakkukId,
+                TahakkukId = r.TahakkukId,
                 BaslangicTarihi = r.BaslangicTarihi,
                 BitisTarihi = r.BitisTarihi,
                 ToplamSureDakika = r.ToplamSureDakika,
@@ -85,9 +84,9 @@ public class RezervasyonRepository : BaseRepository<Rezervasyon>, IRezervasyonRe
         await _ctx.RezervasyonTarifeler.AddAsync(kural);
     }
 
-    public async Task AddTahakkukAsync(KiraTahakkuk tahakkuk)
+    public async Task AddTahakkukAsync(Tahakkuk tahakkuk)
     {
-        await _ctx.KiraTahakkuklar.AddAsync(tahakkuk);
+        await _ctx.Tahakkuklar.AddAsync(tahakkuk);
     }
 
     public async Task<BorcTipi?> ResolveRezervasyonBorcTipiAsync(int? preferredBorcTipiId)

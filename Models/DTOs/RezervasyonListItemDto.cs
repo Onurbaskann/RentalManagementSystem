@@ -8,8 +8,7 @@ public class RezervasyonListItemDto
     public string TasinmazAd { get; set; } = string.Empty;
     public int KiraciId { get; set; }
     public string KiraciGosterimAdi { get; set; } = string.Empty;
-    public int? KiraSozlesmesiId { get; set; }
-    public int? KiraTahakkukId { get; set; }
+    public int? TahakkukId { get; set; }
     public DateTime BaslangicTarihi { get; set; }
     public DateTime BitisTarihi { get; set; }
     public int ToplamSureDakika { get; set; }

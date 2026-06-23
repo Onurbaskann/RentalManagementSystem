@@ -6,5 +6,5 @@ public interface IDekontRepository : IBaseRepository<Dekont>
 {
     Task<List<DekontListItemDto>> GetByOdemeIdAsync(int odemeId);
     Task<DekontDetayDto?> GetDetayAsync(int id);
-    Task<(int? KiraSozlesmesiId, int KiraTahakkukId)?> GetOdemeInfoAsync(int odemeId);
+    Task<(int? KiraSozlesmesiId, int TahakkukId)?> GetOdemeInfoAsync(int odemeId);
 }

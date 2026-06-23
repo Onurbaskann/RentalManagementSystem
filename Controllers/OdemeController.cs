@@ -71,7 +71,7 @@ public class OdemeController : Controller
 
         var vm = new OdemeEkleViewModel
         {
-            KiraTahakkukId = tahakkukId,
+            TahakkukId = tahakkukId,
             KiraSozlesmesiId = tahakkuk.KiraSozlesmesiId,
             Tutar = tahakkuk.ToplamTutar - tahakkuk.OdenenTutar,
             Tahakkuk = tahakkuk
@@ -86,14 +86,14 @@ public class OdemeController : Controller
     {
         if (!ModelState.IsValid)
         {
-            vm.Tahakkuk = await _tahakkukService.GetDetayAsync(vm.KiraTahakkukId);
+            vm.Tahakkuk = await _tahakkukService.GetDetayAsync(vm.TahakkukId);
             return View(vm);
         }
 
         var userId = _userManager.GetUserId(User)!;
         var odeme = new KiraOdeme
         {
-            KiraTahakkukId = vm.KiraTahakkukId,
+            TahakkukId = vm.TahakkukId,
             KiraSozlesmesiId = vm.KiraSozlesmesiId,
             OdemeTarihi = vm.OdemeTarihi,
             Tutar = vm.Tutar,

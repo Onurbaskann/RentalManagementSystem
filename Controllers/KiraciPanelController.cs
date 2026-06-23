@@ -36,10 +36,8 @@ public class KiraciPanelController : Controller
         var aktifSozlesme = await _db.Sozlesmeler
             .CountAsync(s => s.KiraciId == kiraciId && s.Durum == SozlesmeDurumu.Aktif);
 
-        var bekleyenBorc = await _db.KiraTahakkuklar
-            .Where(t => t.KiraSozlesmesiId != null &&
-                        t.KiraSozlesmesi!.KiraciId == kiraciId &&
-                        t.Durum == TahakkukDurumu.Bekleniyor)
+        var bekleyenBorc = await _db.Tahakkuklar
+            .Where(t => t.KiraciId == kiraciId && t.Durum == TahakkukDurumu.Bekleniyor)
             .SumAsync(t => (decimal?)t.ToplamTutar) ?? 0m;
 
         ViewBag.KiraciAd = kiraci.GosterimAdi;

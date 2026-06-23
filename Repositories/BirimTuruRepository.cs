@@ -39,12 +39,12 @@ public class BirimTuruRepository : BaseRepository<BirimTuru>, IBirimTuruReposito
             .AnyAsync(b => b.BorcTipiId == borcTipiId && b.Aktif && (excludeId == null || b.Id != excludeId));
 
     public async Task<bool> HasAktifTahakkukForBirimTuruAsync(int birimTuruId)
-        => await _ctx.KiraTahakkuklar.AsNoTracking()
+        => await _ctx.Tahakkuklar.AsNoTracking()
             .AnyAsync(t => t.Durum != TahakkukDurumu.TamOdendi
                         && t.Durum != TahakkukDurumu.IptalEdildi
                         && _ctx.Birimler.Any(b => b.BirimTuruId == birimTuruId
                             && (_ctx.Sozlesmeler.Any(s => s.BirimId == b.Id && s.Id == t.KiraSozlesmesiId)
-                                || _ctx.Rezervasyonlari.Any(r => r.BirimId == b.Id && r.KiraTahakkukId == t.Id))));
+                                || _ctx.Rezervasyonlari.Any(r => r.BirimId == b.Id && r.TahakkukId == t.Id))));
 
     public async Task<bool> HasPlanlanmisRezervasyonForBirimTuruAsync(int birimTuruId)
         => await _ctx.Rezervasyonlari.AsNoTracking()

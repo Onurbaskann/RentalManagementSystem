@@ -138,7 +138,6 @@ public class RezervasyonService : IRezervasyonService
         {
             BirimId = model.BirimId.Value,
             KiraciId = model.KiraciId.Value,
-            KiraSozlesmesiId = model.KiraSozlesmesiId,
             BaslangicTarihi = model.BaslangicTarihi,
             BitisTarihi = model.BitisTarihi,
             ToplamSureDakika = hesap.ToplamSureDakika,
@@ -166,7 +165,7 @@ public class RezervasyonService : IRezervasyonService
     public async Task<(bool Basarili, string? Hata)> CancelAsync(int id, string userId, string neden)
     {
         var rezervasyon = await _repo.GetByIdAsync(id, q => q
-            .Include(r => r.KiraTahakkuk!)
+            .Include(r => r.Tahakkuk!)
                 .ThenInclude(t => t!.Odemeler));
 
         if (rezervasyon == null)
@@ -177,15 +176,15 @@ public class RezervasyonService : IRezervasyonService
 
         if (rezervasyon.Durum == RezervasyonDurumu.TahakkukaAktarildi)
         {
-            var odemeVar = rezervasyon.KiraTahakkuk?.Odemeler
+            var odemeVar = rezervasyon.Tahakkuk?.Odemeler
                 .Any(o => o.Durum == OdemeDurumu.Onaylandi) ?? false;
             if (odemeVar)
                 return (false, "Ödemesi alınmış tahakkuka bağlı rezervasyon iptal edilemez.");
 
-            if (rezervasyon.KiraTahakkuk != null)
+            if (rezervasyon.Tahakkuk != null)
             {
-                rezervasyon.KiraTahakkuk.Durum = TahakkukDurumu.IptalEdildi;
-                rezervasyon.KiraTahakkuk.IptalNotu = $"Rezervasyon iptal edildi: {neden}";
+                rezervasyon.Tahakkuk.Durum = TahakkukDurumu.IptalEdildi;
+                rezervasyon.Tahakkuk.IptalNotu = $"Rezervasyon iptal edildi: {neden}";
             }
         }
 
@@ -211,7 +210,7 @@ public class RezervasyonService : IRezervasyonService
         if (rezervasyon.Durum != RezervasyonDurumu.Planlandi)
             return (false, "Sadece 'Planlandı' durumundaki rezervasyonlar tahakkuka aktarılabilir.", null);
 
-        if (rezervasyon.KiraTahakkukId != null)
+        if (rezervasyon.TahakkukId != null)
             return (false, "Bu rezervasyon zaten tahakkuka aktarılmış.", null);
 
         if (rezervasyon.ToplamTutar <= 0)
@@ -240,9 +239,9 @@ public class RezervasyonService : IRezervasyonService
             KaynakTipi = KalemKaynakTipi.RezervasyonKurali
         };
 
-        var tahakkuk = new KiraTahakkuk
+        var tahakkuk = new Tahakkuk
         {
-            KiraSozlesmesiId = rezervasyon.KiraSozlesmesiId,
+            KiraciId = rezervasyon.KiraciId,
             DonemBaslangic = rezervasyon.BaslangicTarihi.Date,
             DonemBitis = rezervasyon.BitisTarihi.Date,
             VadeTarihi = rezervasyon.BitisTarihi.Date,
@@ -252,16 +251,13 @@ public class RezervasyonService : IRezervasyonService
             OdenenTutar = 0,
             Durum = TahakkukDurumu.Bekleniyor,
             KaynakTipi = TahakkukKaynakTipi.Rezervasyon,
-            OlusturmaTarihi = DateTime.Now,
             Kalemler = new List<TahakkukKalemi> { kalem }
         };
 
-        // KiraTahakkuk farklı aggregate — _repo üzerinden ekliyoruz (BaseRepository'nin _ctx'i ortak)
-        // Tahakkuk entity'si doğrudan tracked eklenir; SaveChanges her iki entity'yi de persist eder
         await _repo.AddTahakkukAsync(tahakkuk);
         await _uow.SaveChangesAsync();
 
-        rezervasyon.KiraTahakkukId = tahakkuk.Id;
+        rezervasyon.TahakkukId = tahakkuk.Id;
         rezervasyon.Durum = RezervasyonDurumu.TahakkukaAktarildi;
         await _uow.SaveChangesAsync();
 

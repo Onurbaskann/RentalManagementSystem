@@ -37,7 +37,7 @@ public class TasinmazTarifeRepository : BaseRepository<TasinmazTarife>, ITasinma
             .AsNoTracking()
             .Include(f => f.KiraciKategori)
             .Include(f => f.BorcTipi)
-            .Where(f => f.TasinmazId == tasinmazId && f.Aktif);
+            .Where(f => f.TasinmazId == tasinmazId && f.IsActive);
 
         if (kategoriId.HasValue)
             q = q.Where(f => f.KiraciKategoriId == kategoriId.Value);
@@ -53,7 +53,7 @@ public class TasinmazTarifeRepository : BaseRepository<TasinmazTarife>, ITasinma
             .Where(f => f.TasinmazId == tasinmazId
                      && f.KiraciKategoriId == kategoriId
                      && f.BorcTipiId == borcTipiId
-                     && f.Aktif)
+                     && f.IsActive)
             .Select(f => new RateValueDto
             {
                 HesaplamaYontemi = f.HesaplamaYontemi,

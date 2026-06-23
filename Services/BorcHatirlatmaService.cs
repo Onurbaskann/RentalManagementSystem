@@ -57,12 +57,12 @@ public class BorcHatirlatmaService : IBorcHatirlatmaService
         var borclar = await _tahakkukRepo.GetBekleyenBorclarAsync(limitVade, ct);
 
         // Group by Kiraci
-        var groups = borclar.GroupBy(t => t.KiraSozlesmesi!.KiraciId).ToList();
+        var groups = borclar.GroupBy(t => t.KiraciId).ToList();
         sonuc.ToplamBorclu = groups.Count;
 
         foreach (var group in groups)
         {
-            var kiraci = group.First().KiraSozlesmesi!.Kiraci;
+            var kiraci = group.First().Kiraci;
             if (kiraci == null || string.IsNullOrWhiteSpace(kiraci.Email))
             {
                 _logger.LogWarning("Kiraci {KiraciId} için geçerli e-posta adresi bulunamadı. Atlanıyor.", group.Key);
@@ -89,8 +89,8 @@ public class BorcHatirlatmaService : IBorcHatirlatmaService
                 OdemeLink = await _paymentLinkService.BuildLinkAsync(kiraci.Id, ct),
                 Borclar = group.OrderBy(t => t.VadeTarihi).Select(t => new BorcSatiri
                 {
-                    TasinmazAdi = t.KiraSozlesmesi!.Birim!.Tasinmaz!.Ad,
-                    BirimAdi = t.KiraSozlesmesi!.Birim!.Ad,
+                    TasinmazAdi = t.KiraSozlesmesi?.Birim?.Tasinmaz?.Ad ?? "-",
+                    BirimAdi = t.KiraSozlesmesi?.Birim?.Ad ?? "-",
                     DonemBaslangic = t.DonemBaslangic,
                     VadeTarihi = t.VadeTarihi,
                     ToplamTutar = t.ToplamTutar,

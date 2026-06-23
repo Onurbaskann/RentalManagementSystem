@@ -3,7 +3,7 @@ namespace KiraTakip.Models.Dtos;
 public class OdemeDetayDto
 {
     public int Id { get; set; }
-    public int KiraTahakkukId { get; set; }
+    public int TahakkukId { get; set; }
     public int? KiraSozlesmesiId { get; set; }
     public DateTime OdemeTarihi { get; set; }
     public decimal Tutar { get; set; }

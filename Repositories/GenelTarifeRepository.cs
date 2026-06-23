@@ -13,7 +13,7 @@ public class GenelTarifeRepository : BaseRepository<GenelTarife>, IGenelTarifeRe
 
     public async Task<RateValueDto?> GetRateAsync(int kategoriId, int borcTipiId, int donemYil)
         => await _dbSet.AsNoTracking()
-            .Where(k => k.Aktif && k.KiraciKategoriId == kategoriId && k.BorcTipiId == borcTipiId)
+            .Where(k => k.IsActive && k.KiraciKategoriId == kategoriId && k.BorcTipiId == borcTipiId)
             .OrderByDescending(k => k.Yil == donemYil ? 1 : 0)
             .ThenByDescending(k => k.Yil)
             .Select(k => new RateValueDto
@@ -27,7 +27,7 @@ public class GenelTarifeRepository : BaseRepository<GenelTarife>, IGenelTarifeRe
     public async Task<List<ParentTarifeSatir>> GetByYilKategoriForKartAsync(int yil, int? kategoriId)
     {
         var q = _dbSet.AsNoTracking()
-            .Where(k => k.Yil == yil && k.Aktif
+            .Where(k => k.Yil == yil && k.IsActive
                      && k.BorcTipi.Davranis != BorcTipiDavranisi.KullaniciManuel
                      && k.BorcTipi.Davranis != BorcTipiDavranisi.RezervasyonOzel);
         if (kategoriId.HasValue)

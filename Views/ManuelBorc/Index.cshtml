@@ -70,7 +70,7 @@
                     };
                     <tr>
                         <td>
-                            @if (t.KiraciId.HasValue)
+                            @if (t.KiraciId > 0)
                             {
                                 <div class="flex items-center gap-1.5">
                                     <a href="/Kiraci/Detay/@t.KiraciId" class="font-semibold text-primary hover:underline">@t.KiraciGosterimAdi</a>

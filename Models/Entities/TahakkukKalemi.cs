@@ -14,6 +14,6 @@ public class TahakkukKalemi : BaseEntity
     public decimal ToplamTutar { get; set; }
     public KalemKaynakTipi KaynakTipi { get; set; }
 
-    public KiraTahakkuk Tahakkuk { get; set; } = null!;
+    public Tahakkuk Tahakkuk { get; set; } = null!;
     public BorcTipi BorcTipi { get; set; } = null!;
 }

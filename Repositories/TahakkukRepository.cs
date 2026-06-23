@@ -7,30 +7,31 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukRepository
+public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
 {
     public TahakkukRepository(ApplicationDbContext ctx) : base(ctx) { }
 
     // ── Listeleme (DTO) ───────────────────────────────────────────────────
     public async Task<List<TahakkukListItemDto>> GetListAsync(int? sozlesmeId, List<int>? yetkiliTasinmazIds)
     {
-        IQueryable<KiraTahakkuk> q = _dbSet.AsNoTracking();
+        IQueryable<Tahakkuk> q = _dbSet.AsNoTracking();
 
         if (sozlesmeId.HasValue)
             q = q.Where(t => t.KiraSozlesmesiId == sozlesmeId.Value);
 
         if (yetkiliTasinmazIds != null)
-            q = q.Where(t => yetkiliTasinmazIds.Contains(t.KiraSozlesmesi!.Birim.TasinmazId));
+            q = q.Where(t =>
+                (t.KiraSozlesmesiId != null && yetkiliTasinmazIds.Contains(t.KiraSozlesmesi!.Birim.TasinmazId)) ||
+                (t.KaynakTipi == TahakkukKaynakTipi.Rezervasyon &&
+                 _ctx.Rezervasyonlari.Any(r => r.TahakkukId == t.Id && yetkiliTasinmazIds.Contains(r.Birim.TasinmazId))));
 
         return await q.OrderByDescending(t => t.DonemBaslangic)
                       .Select(t => new TahakkukListItemDto
                       {
                           Id = t.Id,
                           KiraSozlesmesiId = t.KiraSozlesmesiId,
-                          KiraciId = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.KiraciId : null,
-                          KiraciGosterimAdi = t.KiraSozlesmesi != null
-                              ? t.KiraSozlesmesi.Kiraci.Ad
-                              : null,
+                          KiraciId = t.KiraciId,
+                          KiraciGosterimAdi = t.Kiraci.Ad,
                           TasinmazId = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.TasinmazId : null,
                           TasinmazAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Tasinmaz.Ad : null,
                           BirimAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Ad : null,
@@ -62,19 +63,22 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
     // ── Sayfalı listeleme (DTO) ───────────────────────────────────────────
     public async Task<PagedResult<TahakkukListItemDto>> GetPagedListAsync(TableQuery q, int? sozlesmeId, List<int>? yetkiliTasinmazIds)
     {
-        IQueryable<KiraTahakkuk> query = _dbSet.AsNoTracking();
+        IQueryable<Tahakkuk> query = _dbSet.AsNoTracking();
 
         if (sozlesmeId.HasValue)
             query = query.Where(t => t.KiraSozlesmesiId == sozlesmeId.Value);
 
         if (yetkiliTasinmazIds != null)
-            query = query.Where(t => yetkiliTasinmazIds.Contains(t.KiraSozlesmesi!.Birim.TasinmazId));
+            query = query.Where(t =>
+                (t.KiraSozlesmesiId != null && yetkiliTasinmazIds.Contains(t.KiraSozlesmesi!.Birim.TasinmazId)) ||
+                (t.KaynakTipi == TahakkukKaynakTipi.Rezervasyon &&
+                 _ctx.Rezervasyonlari.Any(r => r.TahakkukId == t.Id && yetkiliTasinmazIds.Contains(r.Birim.TasinmazId))));
 
         if (!string.IsNullOrWhiteSpace(q.Q))
         {
             var s = q.Q.Trim();
-            query = query.Where(t => EF.Functions.Like(t.KiraSozlesmesi!.Kiraci.Ad, $"%{s}%") ||
-                                     EF.Functions.Like(t.KiraSozlesmesi.Birim.Tasinmaz.Ad, $"%{s}%"));
+            query = query.Where(t => EF.Functions.Like(t.Kiraci.Ad, $"%{s}%") ||
+                                     (t.KiraSozlesmesi != null && EF.Functions.Like(t.KiraSozlesmesi.Birim.Tasinmaz.Ad, $"%{s}%")));
         }
 
         if (q.From.HasValue) query = query.Where(t => t.VadeTarihi >= q.From.Value);
@@ -83,7 +87,7 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
         if (q.Max.HasValue) query = query.Where(t => t.ToplamTutar <= q.Max.Value);
         if (q.TasinmazId.HasValue) query = query.Where(t => t.KiraSozlesmesi!.Birim.TasinmazId == q.TasinmazId.Value);
         if (q.BirimId.HasValue) query = query.Where(t => t.KiraSozlesmesi!.BirimId == q.BirimId.Value);
-        if (q.KiraciId.HasValue) query = query.Where(t => t.KiraSozlesmesi!.KiraciId == q.KiraciId.Value);
+        if (q.KiraciId.HasValue) query = query.Where(t => t.KiraciId == q.KiraciId.Value);
         if (q.Yil.HasValue) query = query.Where(t => t.DonemBaslangic.Year == q.Yil.Value);
 
         if (!string.IsNullOrWhiteSpace(q.Kaynak))
@@ -118,10 +122,8 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
                                {
                                    Id = t.Id,
                                    KiraSozlesmesiId = t.KiraSozlesmesiId,
-                                   KiraciId = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.KiraciId : null,
-                                   KiraciGosterimAdi = t.KiraSozlesmesi != null
-                                       ? t.KiraSozlesmesi.Kiraci.Ad
-                                       : null,
+                                   KiraciId = t.KiraciId,
+                                   KiraciGosterimAdi = t.Kiraci.Ad,
                                    TasinmazId = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.TasinmazId : null,
                                    TasinmazAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Tasinmaz.Ad : null,
                                    BirimAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Ad : null,
@@ -167,10 +169,8 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
                            {
                                Id = t.Id,
                                KiraSozlesmesiId = t.KiraSozlesmesiId,
-                               KiraciId = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.KiraciId : null,
-                               KiraciGosterimAdi = t.KiraSozlesmesi != null
-                                   ? t.KiraSozlesmesi.Kiraci.Ad
-                                   : null,
+                               KiraciId = t.KiraciId,
+                               KiraciGosterimAdi = t.Kiraci.Ad,
                                TasinmazId = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.TasinmazId : null,
                                TasinmazAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Tasinmaz.Ad : null,
                                BirimAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Ad : null,
@@ -183,7 +183,7 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
                                OdenenTutar = t.OdenenTutar,
                                Durum = t.Durum,
                                KaynakTipi = t.KaynakTipi,
-                               OlusturmaTarihi = t.OlusturmaTarihi,
+                               OlusturmaTarihi = t.CreatedAt,
                                Kalemler = t.Kalemler.Select(k => new TahakkukKalemDto
                                {
                                    BorcTipiKod = k.BorcTipi.Kod,
@@ -216,25 +216,21 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
     // ── Manuel Borç — DTO ─────────────────────────────────────────────────
     public async Task<List<ManuelBorcListItemDto>> GetManuelBorcListAsync(List<int>? yetkiliTasinmazIds)
     {
-        IQueryable<KiraTahakkuk> q = _dbSet.AsNoTracking()
+        IQueryable<Tahakkuk> q = _dbSet.AsNoTracking()
             .Where(t => t.KaynakTipi == TahakkukKaynakTipi.Manuel);
 
         if (yetkiliTasinmazIds != null)
             q = q.Where(t => t.KiraSozlesmesi != null &&
                              yetkiliTasinmazIds.Contains(t.KiraSozlesmesi.Birim.TasinmazId));
 
-        return await q.OrderByDescending(t => t.OlusturmaTarihi)
+        return await q.OrderByDescending(t => t.CreatedAt)
                       .Select(t => new ManuelBorcListItemDto
                       {
                           Id = t.Id,
                           KiraSozlesmesiId = t.KiraSozlesmesiId,
-                          KiraciId = t.KiraSozlesmesi != null ? (int?)t.KiraSozlesmesi.KiraciId : null,
-                          KiraciKategoriAd = t.KiraSozlesmesi != null && t.KiraSozlesmesi.Kiraci.KiraciKategori != null
-                              ? t.KiraSozlesmesi.Kiraci.KiraciKategori.Ad
-                              : null,
-                          KiraciGosterimAdi = t.KiraSozlesmesi != null
-                              ? t.KiraSozlesmesi.Kiraci.Ad
-                              : null,
+                          KiraciId = t.KiraciId,
+                          KiraciKategoriAd = t.Kiraci.KiraciKategori != null ? t.Kiraci.KiraciKategori.Ad : null,
+                          KiraciGosterimAdi = t.Kiraci.Ad,
                           TasinmazAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Tasinmaz.Ad : null,
                           BirimAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Ad : null,
                           BorcTipiKod = t.Kalemler
@@ -257,14 +253,14 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
     }
 
     // ── Business logic — entity döner ─────────────────────────────────────
-    public async Task<KiraTahakkuk?> GetManuelBorcByIdAsync(int id)
+    public async Task<Tahakkuk?> GetManuelBorcByIdAsync(int id)
     {
         return await _dbSet
             .Include(t => t.Odemeler)
             .FirstOrDefaultAsync(t => t.Id == id && t.KaynakTipi == TahakkukKaynakTipi.Manuel);
     }
 
-    public async Task<List<KiraTahakkuk>> GetGeciktirileceklerAsync(DateTime bugun)
+    public async Task<List<Tahakkuk>> GetGeciktirileceklerAsync(DateTime bugun)
     {
         return await _dbSet.Where(t => t.Durum != TahakkukDurumu.TamOdendi &&
                                        t.Durum != TahakkukDurumu.IptalEdildi &&
@@ -272,9 +268,9 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
                            .ToListAsync();
     }
 
-    public async Task<List<KiraTahakkuk>> GetBekleyenBorclarAsync(DateTime limitVade, CancellationToken ct)
+    public async Task<List<Tahakkuk>> GetBekleyenBorclarAsync(DateTime limitVade, CancellationToken ct)
         => await _dbSet
-            .Include(t => t.KiraSozlesmesi!).ThenInclude(s => s!.Kiraci)
+            .Include(t => t.Kiraci)
             .Include(t => t.KiraSozlesmesi!).ThenInclude(s => s!.Birim).ThenInclude(b => b.Tasinmaz)
             .Include(t => t.Odemeler)
             .Where(t => t.Durum != TahakkukDurumu.TamOdendi
@@ -286,7 +282,7 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
     public async Task<decimal> GetOdenenTutarAsync(int tahakkukId)
     {
         return await _ctx.KiraOdemeler.AsNoTracking()
-                                      .Where(o => o.KiraTahakkukId == tahakkukId && o.Durum == OdemeDurumu.Onaylandi)
+                                      .Where(o => o.TahakkukId == tahakkukId && o.Durum == OdemeDurumu.Onaylandi)
                                       .SumAsync(o => (decimal?)o.Tutar) ?? 0m;
     }
 
@@ -297,15 +293,15 @@ public class TahakkukRepository : BaseRepository<KiraTahakkuk>, ITahakkukReposit
                                  .OrderBy(b => b.Sira)
                                  .ToListAsync();
 
-    public async Task<List<KiraTahakkuk>> GetSilineceklerAsync(int sozlesmeId, DateTime ilkGun)
+    public async Task<List<Tahakkuk>> GetSilineceklerAsync(int sozlesmeId, DateTime ilkGun)
         => await _dbSet.Where(t => t.KiraSozlesmesiId == sozlesmeId
                                 && t.DonemBaslangic >= ilkGun
                                 && t.Durum != TahakkukDurumu.TamOdendi
                                 && t.KaynakTipi == TahakkukKaynakTipi.Sozlesme
-                                && !_ctx.KiraOdemeler.Any(o => o.KiraTahakkukId == t.Id))
+                                && !_ctx.KiraOdemeler.Any(o => o.TahakkukId == t.Id))
                        .ToListAsync();
 
-    public Task DeleteRangeAsync(IEnumerable<KiraTahakkuk> entities)
+    public Task DeleteRangeAsync(IEnumerable<Tahakkuk> entities)
     {
         _dbSet.RemoveRange(entities);
         return Task.CompletedTask;

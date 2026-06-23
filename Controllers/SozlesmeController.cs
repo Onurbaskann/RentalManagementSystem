@@ -70,7 +70,7 @@ public class SozlesmeController : Controller
 
         var now = DateTime.Today;
         var esik = now.AddDays(_paymentLinkOptions.Value.ReminderDaysBefore);
-        var borcluSayisi = await _ctx.KiraTahakkuklar
+        var borcluSayisi = await _ctx.Tahakkuklar
             .Where(t => t.VadeTarihi <= esik
                 && t.Durum != TahakkukDurumu.TamOdendi
                 && t.Durum != TahakkukDurumu.IptalEdildi
@@ -176,7 +176,7 @@ public class SozlesmeController : Controller
         }
 
         var bugun = DateTime.Today;
-        var guncelTahakkuk = await _ctx.KiraTahakkuklar
+        var guncelTahakkuk = await _ctx.Tahakkuklar
             .Include(t => t.Kalemler).ThenInclude(k => k.BorcTipi)
             .Where(t => t.KiraSozlesmesiId == id && t.Durum != TahakkukDurumu.IptalEdildi && t.DonemBaslangic <= bugun)
             .OrderByDescending(t => t.DonemBaslangic)

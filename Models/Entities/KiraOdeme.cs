@@ -2,7 +2,7 @@ namespace KiraTakip.Models.Entities;
 
 public class KiraOdeme : BaseEntity
 {
-    public int KiraTahakkukId { get; set; }
+    public int TahakkukId { get; set; }
     public int? KiraSozlesmesiId { get; set; }
     public string GirenUserId { get; set; } = string.Empty;
     public string? OnaylayanUserId { get; set; }
@@ -17,7 +17,7 @@ public class KiraOdeme : BaseEntity
     public DateTime? OnayTarihi { get; set; }
     public string? RedNedeni { get; set; }
 
-    public KiraTahakkuk KiraTahakkuk { get; set; } = null!;
+    public Tahakkuk Tahakkuk { get; set; } = null!;
     public KiraSozlesmesi? KiraSozlesmesi { get; set; }
     public ApplicationUser GirenUser { get; set; } = null!;
     public ApplicationUser? OnaylayanUser { get; set; }

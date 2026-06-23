@@ -130,7 +130,7 @@ public class HomeController : Controller
 
             var rezervasyonlar = await _rezervasyonService.GetAllAsync(tasinmazIds);
             vm.TahakkukaAktarilmamisRezervasyonAdet = rezervasyonlar
-                .Count(r => r.Durum == RezervasyonDurumu.Planlandi && r.ToplamTutar > 0 && r.KiraTahakkukId == null);
+                .Count(r => r.Durum == RezervasyonDurumu.Planlandi && r.ToplamTutar > 0 && r.TahakkukId == null);
         }
 
         return View(vm);

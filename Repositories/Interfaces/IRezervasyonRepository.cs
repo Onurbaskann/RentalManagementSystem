@@ -20,6 +20,6 @@ public interface IRezervasyonRepository : IBaseRepository<Rezervasyon>
     // BorcTipi — rezervasyon tahakkuk üretimi için
     Task<BorcTipi?> ResolveRezervasyonBorcTipiAsync(int? preferredBorcTipiId);
 
-    // KiraTahakkuk — Transfer işlemi için
-    Task AddTahakkukAsync(KiraTahakkuk tahakkuk);
+    // Tahakkuk — Transfer işlemi için
+    Task AddTahakkukAsync(Tahakkuk tahakkuk);
 }

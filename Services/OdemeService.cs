@@ -58,7 +58,7 @@ public class OdemeService : IOdemeService
         await _repo.UpdateAsync(odeme);
         await _uow.SaveChangesAsync();
 
-        await _tahakkukService.OdenenTutarGuncelleAsync(odeme.KiraTahakkukId);
+        await _tahakkukService.OdenenTutarGuncelleAsync(odeme.TahakkukId);
         return true;
     }
 
@@ -72,7 +72,7 @@ public class OdemeService : IOdemeService
         await _repo.UpdateAsync(odeme);
         await _uow.SaveChangesAsync();
 
-        await _tahakkukService.OdenenTutarGuncelleAsync(odeme.KiraTahakkukId);
+        await _tahakkukService.OdenenTutarGuncelleAsync(odeme.TahakkukId);
         return true;
     }
 }

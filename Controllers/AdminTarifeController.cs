@@ -24,7 +24,7 @@ public class AdminTarifeController : Controller
             .Select(g => new TarifeYilOzetiViewModel
             {
                 Yil         = g.Key,
-                Aktif       = g.Any(k => k.Aktif),
+                Aktif       = g.Any(k => k.IsActive),
                 KalemSayisi = g.Count()
             })
             .OrderByDescending(o => o.Yil)
@@ -56,7 +56,7 @@ public class AdminTarifeController : Controller
         var vm = new TarifeMatrisViewModel
         {
             Yil   = yil,
-            Aktif = kalemler.Any(k => k.Aktif),
+            Aktif = kalemler.Any(k => k.IsActive),
             Kolonlar = borcTipleri.Select(bt => new TarifeMatrisBorcTipiKolon
             {
                 BorcTipiId  = bt.Id,
@@ -129,7 +129,6 @@ public class AdminTarifeController : Controller
                 _ctx.GenelTarifeler.Add(new GenelTarife
                 {
                     Yil              = yil,
-                    Aktif            = true,
                     KiraciKategoriId = hucre.KiraciKategoriId,
                     BorcTipiId       = hucre.BorcTipiId,
                     HesaplamaYontemi = hucre.HesaplamaYontemi,
@@ -223,7 +222,6 @@ public class AdminTarifeController : Controller
                 _ctx.GenelTarifeler.Add(new GenelTarife
                 {
                     Yil              = vm.Yil,
-                    Aktif            = true,
                     KiraciKategoriId = kalem.KiraciKategoriId,
                     BorcTipiId       = kalem.BorcTipiId,
                     HesaplamaYontemi = kalem.HesaplamaYontemi,
@@ -265,7 +263,6 @@ public class AdminTarifeController : Controller
                     _ctx.GenelTarifeler.Add(new GenelTarife
                     {
                         Yil              = vm.Yil,
-                        Aktif            = true,
                         KiraciKategoriId = kat.Id,
                         BorcTipiId       = bt.Id,
                         HesaplamaYontemi = HesaplamaYontemi.Sabit,
@@ -308,11 +305,11 @@ public class AdminTarifeController : Controller
         var kalem = await _ctx.GenelTarifeler.FirstOrDefaultAsync(k => k.Yil == yil);
         if (kalem == null) return NotFound();
 
-        var yeniDeger = !kalem.Aktif;
+        var yeniDeger = !kalem.IsActive;
 
         await _ctx.GenelTarifeler
             .Where(k => k.Yil == yil)
-            .ExecuteUpdateAsync(s => s.SetProperty(k => k.Aktif, yeniDeger));
+            .ExecuteUpdateAsync(s => s.SetProperty(k => k.IsActive, yeniDeger));
 
         await _ctx.RezervasyonTarifeler
             .Where(r => r.BirimId == null && r.Yil == yil)

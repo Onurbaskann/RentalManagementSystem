@@ -16,17 +16,20 @@ public class OdemeRepository : BaseRepository<KiraOdeme>, IOdemeRepository
         IQueryable<KiraOdeme> query = _dbSet.AsNoTracking();
 
         if (tahakkukId.HasValue)
-            query = query.Where(o => o.KiraTahakkukId == tahakkukId.Value);
+            query = query.Where(o => o.TahakkukId == tahakkukId.Value);
 
         if (yetkiliTasinmazIds != null)
-            query = query.Where(o => o.KiraTahakkuk.KiraSozlesmesiId != null && yetkiliTasinmazIds.Contains(o.KiraTahakkuk.KiraSozlesmesi.Birim.TasinmazId));
+            query = query.Where(o =>
+                (o.Tahakkuk.KiraSozlesmesiId != null && yetkiliTasinmazIds.Contains(o.Tahakkuk.KiraSozlesmesi!.Birim.TasinmazId)) ||
+                (o.Tahakkuk.KaynakTipi == TahakkukKaynakTipi.Rezervasyon &&
+                 _ctx.Rezervasyonlari.Any(r => r.TahakkukId == o.TahakkukId && yetkiliTasinmazIds.Contains(r.Birim.TasinmazId))));
 
         return await query
             .OrderByDescending(o => o.GirisTarihi)
             .Select(o => new OdemeListItemDto
             {
                 Id = o.Id,
-                KiraTahakkukId = o.KiraTahakkukId,
+                TahakkukId = o.TahakkukId,
                 KiraSozlesmesiId = o.KiraSozlesmesiId,
                 OdemeTarihi = o.OdemeTarihi,
                 Tutar = o.Tutar,
@@ -35,8 +38,8 @@ public class OdemeRepository : BaseRepository<KiraOdeme>, IOdemeRepository
                 Durum = o.Durum,
                 GirisTarihi = o.GirisTarihi,
                 Aciklama = o.Aciklama,
-                KiraciGosterimAdi = o.KiraSozlesmesi != null && o.KiraSozlesmesi.Kiraci != null ? o.KiraSozlesmesi.Kiraci.GosterimAdi : string.Empty,
-                TahakkukDonemBaslangic = o.KiraTahakkuk.DonemBaslangic,
+                KiraciGosterimAdi = o.Tahakkuk.Kiraci.Ad,
+                TahakkukDonemBaslangic = o.Tahakkuk.DonemBaslangic,
                 GirenUserGosterimAdi = o.GirenUser != null ? (o.GirenUser.AdSoyad ?? o.GirenUser.Email) : null
             })
             .ToListAsync();
@@ -47,16 +50,19 @@ public class OdemeRepository : BaseRepository<KiraOdeme>, IOdemeRepository
         IQueryable<KiraOdeme> query = _dbSet.AsNoTracking();
 
         if (tahakkukId.HasValue)
-            query = query.Where(o => o.KiraTahakkukId == tahakkukId.Value);
+            query = query.Where(o => o.TahakkukId == tahakkukId.Value);
 
         if (yetkiliTasinmazIds != null)
-            query = query.Where(o => o.KiraTahakkuk.KiraSozlesmesiId != null && yetkiliTasinmazIds.Contains(o.KiraTahakkuk.KiraSozlesmesi.Birim.TasinmazId));
+            query = query.Where(o =>
+                (o.Tahakkuk.KiraSozlesmesiId != null && yetkiliTasinmazIds.Contains(o.Tahakkuk.KiraSozlesmesi!.Birim.TasinmazId)) ||
+                (o.Tahakkuk.KaynakTipi == TahakkukKaynakTipi.Rezervasyon &&
+                 _ctx.Rezervasyonlari.Any(r => r.TahakkukId == o.TahakkukId && yetkiliTasinmazIds.Contains(r.Birim.TasinmazId))));
 
         if (!string.IsNullOrWhiteSpace(q.Q))
         {
             var s = q.Q.Trim();
             query = query.Where(o =>
-                (o.KiraSozlesmesi != null && o.KiraSozlesmesi.Kiraci != null && EF.Functions.Like(o.KiraSozlesmesi.Kiraci.Ad, $"%{s}%")) ||
+                EF.Functions.Like(o.Tahakkuk.Kiraci.Ad, $"%{s}%") ||
                 (o.Aciklama != null && EF.Functions.Like(o.Aciklama, $"%{s}%")));
         }
 
@@ -84,7 +90,7 @@ public class OdemeRepository : BaseRepository<KiraOdeme>, IOdemeRepository
             .Select(o => new OdemeListItemDto
             {
                 Id = o.Id,
-                KiraTahakkukId = o.KiraTahakkukId,
+                TahakkukId = o.TahakkukId,
                 KiraSozlesmesiId = o.KiraSozlesmesiId,
                 OdemeTarihi = o.OdemeTarihi,
                 Tutar = o.Tutar,
@@ -93,8 +99,8 @@ public class OdemeRepository : BaseRepository<KiraOdeme>, IOdemeRepository
                 Durum = o.Durum,
                 GirisTarihi = o.GirisTarihi,
                 Aciklama = o.Aciklama,
-                KiraciGosterimAdi = o.KiraSozlesmesi != null && o.KiraSozlesmesi.Kiraci != null ? o.KiraSozlesmesi.Kiraci.GosterimAdi : string.Empty,
-                TahakkukDonemBaslangic = o.KiraTahakkuk.DonemBaslangic,
+                KiraciGosterimAdi = o.Tahakkuk.Kiraci.Ad,
+                TahakkukDonemBaslangic = o.Tahakkuk.DonemBaslangic,
                 GirenUserGosterimAdi = o.GirenUser != null ? (o.GirenUser.AdSoyad ?? o.GirenUser.Email) : null
             })
             .ToListAsync();
@@ -115,7 +121,7 @@ public class OdemeRepository : BaseRepository<KiraOdeme>, IOdemeRepository
             .Select(o => new OdemeDetayDto
             {
                 Id = o.Id,
-                KiraTahakkukId = o.KiraTahakkukId,
+                TahakkukId = o.TahakkukId,
                 KiraSozlesmesiId = o.KiraSozlesmesiId,
                 OdemeTarihi = o.OdemeTarihi,
                 Tutar = o.Tutar,
@@ -127,9 +133,9 @@ public class OdemeRepository : BaseRepository<KiraOdeme>, IOdemeRepository
                 GirisTarihi = o.GirisTarihi,
                 OnayTarihi = o.OnayTarihi,
                 RedNedeni = o.RedNedeni,
-                TasinmazId = o.KiraTahakkuk.KiraSozlesmesi != null && o.KiraTahakkuk.KiraSozlesmesi.Birim != null ? (int?)o.KiraTahakkuk.KiraSozlesmesi.Birim.TasinmazId : null,
-                KiraciGosterimAdi = o.KiraTahakkuk.KiraSozlesmesi != null && o.KiraTahakkuk.KiraSozlesmesi.Kiraci != null ? o.KiraTahakkuk.KiraSozlesmesi.Kiraci.GosterimAdi : "Rezervasyon Ödemesi",
-                TahakkukDonemBaslangic = o.KiraTahakkuk.DonemBaslangic,
+                TasinmazId = o.Tahakkuk.KiraSozlesmesi != null && o.Tahakkuk.KiraSozlesmesi.Birim != null ? (int?)o.Tahakkuk.KiraSozlesmesi.Birim.TasinmazId : null,
+                KiraciGosterimAdi = o.Tahakkuk.Kiraci.Ad,
+                TahakkukDonemBaslangic = o.Tahakkuk.DonemBaslangic,
                 GirenUserGosterimAdi = o.GirenUser != null ? (o.GirenUser.AdSoyad ?? o.GirenUser.Email) : null,
                 OnaylayanUserGosterimAdi = o.OnaylayanUser != null ? o.OnaylayanUser.AdSoyad : null,
                 Dekontlar = o.Dekontlar.Select(d => new OdemeDekontDto

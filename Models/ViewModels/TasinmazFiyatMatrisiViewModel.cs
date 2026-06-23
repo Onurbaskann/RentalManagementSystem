@@ -37,8 +37,6 @@ namespace KiraTakip.Models.ViewModels
         public decimal? BirimDeger { get; set; }
         public HesaplamaYontemi HesaplamaYontemi { get; set; } = HesaplamaYontemi.Sabit;
         public decimal? KdvOrani { get; set; }
-        public bool Aktif { get; set; } = true;
-        public string? Aciklama { get; set; }
         public bool RateVarMi { get; set; }
     }
 }

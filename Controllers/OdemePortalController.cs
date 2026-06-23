@@ -40,7 +40,7 @@ public class OdemePortalController : Controller
 
         var vadeEsigi = DateTime.Today.AddDays(_paymentLinkSettings.ReminderDaysBefore);
 
-        var borclar = await _ctx.KiraTahakkuklar
+        var borclar = await _ctx.Tahakkuklar
             .Include(x => x.KiraSozlesmesi!).ThenInclude(s => s!.Birim).ThenInclude(b => b.Tasinmaz)
             .Include(x => x.Odemeler)
             .Where(x => x.KiraSozlesmesi!.KiraciId == kiraciId

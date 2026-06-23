@@ -14,7 +14,6 @@ public class RezervasyonController : Controller
     private readonly IRezervasyonService _service;
     private readonly IBirimRepository _birimRepo;
     private readonly IKiraciRepository _kiraciRepo;
-    private readonly ISozlesmeRepository _sozlesmeRepo;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IYetkiKapsamiProvider _provider;
 
@@ -22,14 +21,12 @@ public class RezervasyonController : Controller
         IRezervasyonService service,
         IBirimRepository birimRepo,
         IKiraciRepository kiraciRepo,
-        ISozlesmeRepository sozlesmeRepo,
         UserManager<ApplicationUser> userManager,
         IYetkiKapsamiProvider provider)
     {
         _service = service;
         _birimRepo = birimRepo;
         _kiraciRepo = kiraciRepo;
-        _sozlesmeRepo = sozlesmeRepo;
         _userManager = userManager;
         _provider = provider;
     }
@@ -144,6 +141,5 @@ public class RezervasyonController : Controller
     {
         vm.RezervasyonBirimleri = await _birimRepo.GetRezervasyonBirimleriAsync();
         vm.Kiraciler = await _kiraciRepo.GetListAsync(null);
-        vm.Sozlesmeler = await _sozlesmeRepo.GetListAsync("aktif", null);
     }
 }

@@ -67,8 +67,9 @@ public class TahakkukUretimService : ITahakkukUretimService
             var ayBitis = donemIlkGunu.AddMonths(1).AddDays(-1);
             var donemBitis = sozlesme.BitisTarihi < ayBitis ? sozlesme.BitisTarihi : ayBitis;
 
-            var tahakkuk = new KiraTahakkuk
+            var tahakkuk = new Tahakkuk
             {
+                KiraciId = sozlesme.KiraciId,
                 KiraSozlesmesiId = sozlesmeId,
                 DonemBaslangic = donemIlkGunu,
                 DonemBitis = donemBitis,
@@ -79,7 +80,6 @@ public class TahakkukUretimService : ITahakkukUretimService
                 OdenenTutar = 0,
                 Durum = TahakkukDurumu.Bekleniyor,
                 KaynakTipi = TahakkukKaynakTipi.Sozlesme,
-                OlusturmaTarihi = DateTime.Now,
                 Kalemler = kalemler
             };
 

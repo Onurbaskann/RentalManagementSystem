@@ -5,7 +5,7 @@ namespace KiraTakip.Models.ViewModels;
 
 public class OdemeEkleViewModel
 {
-    public int KiraTahakkukId { get; set; }
+    public int TahakkukId { get; set; }
     public int? KiraSozlesmesiId { get; set; }
     public DateTime OdemeTarihi { get; set; } = DateTime.Today;
 

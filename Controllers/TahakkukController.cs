@@ -48,7 +48,7 @@ public class TahakkukController : Controller
             ViewBag.Birimler = await _ctx.Birimler.OrderBy(b => b.TasinmazId).ThenBy(b => b.Ad).ToListAsync();
             ViewBag.Kiracilar = await _ctx.Kiraciler.OrderBy(k => k.Ad).ToListAsync();
         }
-        ViewBag.MevcutYillar = await _ctx.KiraTahakkuklar
+        ViewBag.MevcutYillar = await _ctx.Tahakkuklar
             .Select(t => t.DonemBaslangic.Year)
             .Distinct()
             .OrderByDescending(y => y)

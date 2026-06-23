@@ -41,13 +41,13 @@ public class DekontRepository : BaseRepository<Dekont>, IDekontRepository
                        })
                        .FirstOrDefaultAsync();
 
-    public async Task<(int? KiraSozlesmesiId, int KiraTahakkukId)?> GetOdemeInfoAsync(int odemeId)
+    public async Task<(int? KiraSozlesmesiId, int TahakkukId)?> GetOdemeInfoAsync(int odemeId)
     {
         var result = await _ctx.KiraOdemeler.AsNoTracking()
             .Where(o => o.Id == odemeId)
-            .Select(o => new { o.KiraSozlesmesiId, o.KiraTahakkukId })
+            .Select(o => new { o.KiraSozlesmesiId, o.TahakkukId })
             .FirstOrDefaultAsync();
         if (result == null) return null;
-        return (result.KiraSozlesmesiId, result.KiraTahakkukId);
+        return (result.KiraSozlesmesiId, result.TahakkukId);
     }
 }

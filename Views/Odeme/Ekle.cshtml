@@ -40,7 +40,7 @@
     <div class="card">
         <form method="post" action="/Odeme/Ekle">
             @Html.AntiForgeryToken()
-            <input type="hidden" asp-for="KiraTahakkukId" />
+            <input type="hidden" asp-for="TahakkukId" />
             <input type="hidden" asp-for="KiraSozlesmesiId" />
 
             @if (!ViewData.ModelState.IsValid)

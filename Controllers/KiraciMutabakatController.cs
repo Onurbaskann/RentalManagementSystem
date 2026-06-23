@@ -25,7 +25,7 @@ public class KiraciMutabakatController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var toplamBorc = await _db.KiraTahakkuklar
+        var toplamBorc = await _db.Tahakkuklar
             .Where(t => t.Durum == TahakkukDurumu.Bekleniyor || t.Durum == TahakkukDurumu.KismenOdendi)
             .SumAsync(t => (decimal?)t.ToplamTutar) ?? 0m;
 
@@ -37,7 +37,7 @@ public class KiraciMutabakatController : Controller
         ViewBag.ToplamOdeme = toplamOdeme;
         ViewBag.Bakiye = toplamBorc - toplamOdeme;
 
-        var sonBorclar = await _db.KiraTahakkuklar
+        var sonBorclar = await _db.Tahakkuklar
             .Include(t => t.KiraSozlesmesi!).ThenInclude(s => s.Birim)
             .Where(t => t.Durum != TahakkukDurumu.TamOdendi && t.Durum != TahakkukDurumu.IptalEdildi)
             .OrderBy(t => t.VadeTarihi)

@@ -77,8 +77,9 @@ public class ManuelBorcService : IManuelBorcService
             KaynakTipi = KalemKaynakTipi.ManuelGiris
         };
 
-        var tahakkuk = new KiraTahakkuk
+        var tahakkuk = new Tahakkuk
         {
+            KiraciId = sozlesme.KiraciId,
             KiraSozlesmesiId = sozlesme.Id,
             DonemBaslangic = model.VadeTarihi,
             DonemBitis = model.VadeTarihi,
@@ -90,7 +91,6 @@ public class ManuelBorcService : IManuelBorcService
             Durum = TahakkukDurumu.Bekleniyor,
             KaynakTipi = TahakkukKaynakTipi.Manuel,
             IptalNotu = model.Not,
-            OlusturmaTarihi = DateTime.Now,
             Kalemler = new List<TahakkukKalemi> { kalem }
         };
 
