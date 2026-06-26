@@ -1,6 +1,7 @@
 using KiraTakip.Authorization;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
+using KiraTakip.Models.Entities;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services;
 using KiraTakip.Services.Interfaces;
@@ -15,7 +16,7 @@ public class OdemeController : Controller
 {
     private readonly IOdemeService _odemeService;
     private readonly ITahakkukService _tahakkukService;
-    private readonly IDekontService _dekontService;
+    private readonly IBelgeService _belgeService;
     private readonly IBankaHareketiService _bankaService;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IConfiguration _config;
@@ -24,7 +25,7 @@ public class OdemeController : Controller
     public OdemeController(
         IOdemeService odemeService,
         ITahakkukService tahakkukService,
-        IDekontService dekontService,
+        IBelgeService belgeService,
         IBankaHareketiService bankaService,
         UserManager<ApplicationUser> userManager,
         IConfiguration config,
@@ -32,7 +33,7 @@ public class OdemeController : Controller
     {
         _odemeService = odemeService;
         _tahakkukService = tahakkukService;
-        _dekontService = dekontService;
+        _belgeService = belgeService;
         _bankaService = bankaService;
         _userManager = userManager;
         _config = config;
@@ -59,6 +60,7 @@ public class OdemeController : Controller
         if (odeme.TasinmazId != null && !_provider.KapsamdaMi(odeme.TasinmazId.Value))
             return Forbid();
 
+        ViewBag.Belgeler = await _belgeService.GetListAsync(BelgeOwnerTipi.Odeme, id);
         return View(odeme);
     }
 
@@ -91,7 +93,7 @@ public class OdemeController : Controller
         }
 
         var userId = _userManager.GetUserId(User)!;
-        var odeme = new KiraOdeme
+        var odeme = new TahakkukOdeme
         {
             TahakkukId = vm.TahakkukId,
             KiraSozlesmesiId = vm.KiraSozlesmesiId,
@@ -138,25 +140,36 @@ public class OdemeController : Controller
     [HttpPost]
     [Authorize(Policy = PermissionCatalog.Odeme.UploadDekont)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DekontYukle(DekontYukleViewModel vm)
+    public async Task<IActionResult> DekontYukle(int odemeId, IFormFile? dosya)
     {
-        if (vm.Dosya == null || vm.Dosya.Length == 0)
+        if (dosya == null || dosya.Length == 0)
         {
             TempData["Error"] = "Dosya seçiniz.";
-            return RedirectToAction(nameof(Detay), new { id = vm.OdemeId });
+            return RedirectToAction(nameof(Detay), new { id = odemeId });
         }
 
         var maxMb = _config.GetValue<int>("MaxDekontFileSizeMb", 5);
-        if (vm.Dosya.Length > maxMb * 1024 * 1024)
+        if (dosya.Length > maxMb * 1024 * 1024)
         {
             TempData["Error"] = $"Dosya boyutu {maxMb} MB'ı aşamaz.";
-            return RedirectToAction(nameof(Detay), new { id = vm.OdemeId });
+            return RedirectToAction(nameof(Detay), new { id = odemeId });
         }
 
-        var userId = _userManager.GetUserId(User)!;
-        await _dekontService.EkleAsync(vm.OdemeId, vm.Dosya, userId);
+        var turleri = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Odeme);
+        if (!turleri.Any())
+        {
+            TempData["Error"] = "Ödeme belgesi türü tanımlanmamış.";
+            return RedirectToAction(nameof(Detay), new { id = odemeId });
+        }
+
+        using var ms = new MemoryStream();
+        await dosya.CopyToAsync(ms);
+
+        await _belgeService.UploadAsync(BelgeOwnerTipi.Odeme, odemeId, turleri.First().Id,
+            dosya.FileName, dosya.ContentType, ms.ToArray(), invalidateOld: false);
+
         TempData["Success"] = "Dekont yüklendi.";
-        return RedirectToAction(nameof(Detay), new { id = vm.OdemeId });
+        return RedirectToAction(nameof(Detay), new { id = odemeId });
     }
 
     [HttpPost]
@@ -164,7 +177,7 @@ public class OdemeController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DekontSil(int id, int odemeId)
     {
-        await _dekontService.SilAsync(id);
+        await _belgeService.DeleteAsync(id);
         TempData["Success"] = "Dekont silindi.";
         return RedirectToAction(nameof(Detay), new { id = odemeId });
     }
@@ -172,20 +185,23 @@ public class OdemeController : Controller
     [Authorize(Policy = PermissionCatalog.Odeme.View)]
     public async Task<IActionResult> DekontIndir(int id)
     {
-        var dekont = await _dekontService.GetByIdAsync(id);
-        if (dekont == null) return NotFound();
-
-        if (!_provider.GlobalErisim)
+        try
         {
-            var odeme = await _odemeService.GetByIdAsync(dekont.KiraOdemeId);
-            if (odeme?.TasinmazId == null || !_provider.KapsamdaMi(odeme.TasinmazId.Value))
-                return Forbid();
+            var (meta, icerik) = await _belgeService.DownloadAsync(id);
+
+            if (!_provider.GlobalErisim)
+            {
+                var odeme = await _odemeService.GetByIdAsync(meta.OwnerId);
+                if (odeme?.TasinmazId == null || !_provider.KapsamdaMi(odeme.TasinmazId.Value))
+                    return Forbid();
+            }
+
+            return File(icerik, meta.MimeType, meta.DosyaAdi);
         }
-
-        var tamYol = _dekontService.GetTamYol(dekont.DosyaYolu);
-        if (!System.IO.File.Exists(tamYol)) return NotFound();
-
-        return PhysicalFile(tamYol, dekont.DosyaTipi, dekont.OrijinalDosyaAdi);
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
     }
 
     [HttpGet]

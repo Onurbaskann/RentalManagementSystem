@@ -19,12 +19,7 @@
                 .Where(p => p.Length > 0).Take(2).Select(p => char.ToUpper(p[0])));
 
             var roles = await UserManager.GetRolesAsync(currentUser);
-            userRole = roles.FirstOrDefault() switch {
-                "Admin" => "Yönetici",
-                "Yonetici" => "Yönetici",
-                "Goruntuleyici" => "Görüntüleyici",
-                _ => "Kullanıcı"
-            };
+            userRole = roles.FirstOrDefault() ?? "Kullanıcı";
         }
     }
 }
@@ -87,7 +82,7 @@
             </a>
         }
 
-        @if (User.IsInRole(RoleNames.Admin))
+        @if (User.IsInRole(RoleNames.SistemYoneticisi))
         {
             <div class="nav-separator"></div>
             <a href="/Admin/Kullanicilar" class="nav-item @(currentController == "AdminUser" ? "nav-item-active" : "")">
@@ -134,7 +129,7 @@
             </a>
         }
 
-        @if (User.IsInRole(RoleNames.Admin) || User.IsInRole(RoleNames.Yonetici))
+        @if (User.IsInRole(RoleNames.SistemYoneticisi) || User.IsInRole(RoleNames.OperasyonMuduru))
         {
             <div class="nav-separator"></div>
             <div class="nav-group-label">Hızlı Ekle</div>

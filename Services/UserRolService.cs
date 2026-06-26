@@ -40,8 +40,6 @@ public class UserRolService : IUserRolService
         {
             UserId = userId,
             RolId = rol.Id,
-            AtanmaTarihi = DateTime.UtcNow,
-            AtayanUserId = atayanUserId
         });
         await _db.SaveChangesAsync();
     }
@@ -53,14 +51,14 @@ public class UserRolService : IUserRolService
                              where ur.UserId == userId && r.Ad == roleName
                              select ur).FirstOrDefaultAsync();
         if (userRol == null) return;
-        _db.UserRoller.Remove(userRol);
+        userRol.IsDeleted = true;
         await _db.SaveChangesAsync();
     }
 
     public async Task RemoveAllRolesAsync(string userId)
     {
         var userRoller = await _db.UserRoller.Where(ur => ur.UserId == userId).ToListAsync();
-        _db.UserRoller.RemoveRange(userRoller);
+        foreach (var ur in userRoller) ur.IsDeleted = true;
         await _db.SaveChangesAsync();
     }
 
@@ -90,8 +88,6 @@ public class UserRolService : IUserRolService
         {
             UserId = userId,
             RolId = rolId,
-            AtanmaTarihi = DateTime.UtcNow,
-            AtayanUserId = atayanUserId
         });
         await _db.SaveChangesAsync();
     }

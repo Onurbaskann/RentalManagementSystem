@@ -7,13 +7,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class OdemeRepository : BaseRepository<KiraOdeme>, IOdemeRepository
+public class OdemeRepository : BaseRepository<TahakkukOdeme>, IOdemeRepository
 {
     public OdemeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
     public async Task<List<OdemeListItemDto>> GetListAsync(int? tahakkukId, List<int>? yetkiliTasinmazIds)
     {
-        IQueryable<KiraOdeme> query = _dbSet.AsNoTracking();
+        IQueryable<TahakkukOdeme> query = _dbSet.AsNoTracking();
 
         if (tahakkukId.HasValue)
             query = query.Where(o => o.TahakkukId == tahakkukId.Value);
@@ -47,7 +47,7 @@ public class OdemeRepository : BaseRepository<KiraOdeme>, IOdemeRepository
 
     public async Task<PagedResult<OdemeListItemDto>> GetPagedListAsync(TableQuery q, int? tahakkukId, List<int>? yetkiliTasinmazIds)
     {
-        IQueryable<KiraOdeme> query = _dbSet.AsNoTracking();
+        IQueryable<TahakkukOdeme> query = _dbSet.AsNoTracking();
 
         if (tahakkukId.HasValue)
             query = query.Where(o => o.TahakkukId == tahakkukId.Value);
@@ -138,22 +138,12 @@ public class OdemeRepository : BaseRepository<KiraOdeme>, IOdemeRepository
                 TahakkukDonemBaslangic = o.Tahakkuk.DonemBaslangic,
                 GirenUserGosterimAdi = o.GirenUser != null ? (o.GirenUser.AdSoyad ?? o.GirenUser.Email) : null,
                 OnaylayanUserGosterimAdi = o.OnaylayanUser != null ? o.OnaylayanUser.AdSoyad : null,
-                Dekontlar = o.Dekontlar.Select(d => new OdemeDekontDto
-                {
-                    Id = d.Id,
-                    OrijinalDosyaAdi = d.OrijinalDosyaAdi,
-                    DiskDosyaAdi = d.DiskDosyaAdi,
-                    DosyaYolu = d.DosyaYolu,
-                    DosyaTipi = d.DosyaTipi,
-                    DosyaBoyutu = d.DosyaBoyutu,
-                    YuklemeTarihi = d.YuklemeTarihi
-                }).ToList(),
                 BankaEslesmeleri = o.BankaEslesmeleri.Select(e => new OdemeBankaEslesmeDto
                 {
                     Id = e.Id,
                     EslesmeTipi = e.EslesmeTipi,
-                    BankaHareketiTutar = e.BankaHareketi.Tutar,
-                    BankaHareketiTarih = e.BankaHareketi.HareketTarihi,
+                    BankaHareketiTutar = e.BankaHareketi.IslemTutari,
+                    BankaHareketiTarih = e.BankaHareketi.IslemTarihi,
                     BankaHareketiAciklama = e.BankaHareketi.Aciklama ?? string.Empty
                 }).ToList()
             })

@@ -97,10 +97,10 @@
                         _                                 => "Bekliyor"
                     };
                     <tr>
-                        <td>@b.HareketTarihi.ToString("dd.MM.yyyy")</td>
+                        <td>@b.IslemTarihi.ToString("dd.MM.yyyy")</td>
                         <td class="max-w-[300px] truncate" title="@b.Aciklama">@b.Aciklama</td>
-                        <td class="text-muted truncate max-w-[150px]">@(b.KarsiUnvan ?? b.KarsiHesap ?? "—")</td>
-                        <td class="num">@b.Tutar.ToString("N2") ₺</td>
+                        <td class="text-muted truncate max-w-[150px]">@(b.GonderenBilgisi ?? b.GonderenIban ?? "—")</td>
+                        <td class="num">@b.IslemTutari.ToString("N2") ₺</td>
                         <td class="cell-center">@b.BankaKodu</td>
                         <td><span class="badge @eslesmeCls">@eslesmeLabel</span></td>
                         @if (canMatch)

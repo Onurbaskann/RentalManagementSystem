@@ -30,7 +30,7 @@ public class BirimService : IBirimService
 
         if (dto.AktifSozlesmeId.HasValue)
         {
-            var dummySozlesme = new KiraSozlesmesi
+            var dummySozlesme = new Sozlesme
             {
                 Id = dto.AktifSozlesmeId.Value,
                 KiraciId = dto.AktifSozlesmeKiraciId ?? 0,

@@ -293,7 +293,7 @@ else if (Model.RezervasyonYapilabilirMi)
 
                 <div class="form-group my-2">
                     <label class="flex items-center gap-2.5 cursor-pointer bg-slate-50 p-3 rounded-lg border border-slate-200 hover:border-indigo-300 transition-colors">
-                        <input type="checkbox" name="Aktif" value="true" @(Model.OzelRezervasyonKural.Aktif ? "checked" : "") class="w-4.5 h-4.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                        <input type="checkbox" name="Aktif" value="true" @(Model.OzelRezervasyonKural.IsActive ? "checked" : "") class="w-4.5 h-4.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                         <span class="text-sm font-bold text-slate-700">Kural Aktif</span>
                     </label>
                 </div>

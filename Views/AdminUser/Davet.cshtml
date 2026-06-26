@@ -39,7 +39,7 @@
                 <option value="0">— Seçin —</option>
                 @foreach (var r in Model.Roller)
                 {
-                    <option value="@r.Id">@(r.Ad == "Goruntuleyici" ? "Görüntüleyici" : r.Ad)</option>
+                    <option value="@r.Id">@r.Ad</option>
                 }
             </select>
             <span asp-validation-for="RolId" class="form-error"></span>
@@ -47,7 +47,7 @@
 
         @if (Model.Tasinmazlar.Any())
         {
-            <div class="form-group" x-show="seciliRolId == '@(Model.Roller.FirstOrDefault(r => r.Ad == "Goruntuleyici")?.Id.ToString() ?? "0")'" x-cloak>
+            <div class="form-group" x-show="seciliRolId !== '0' && seciliRolId !== '@(Model.Roller.FirstOrDefault(r => r.Ad == "Sistem Yöneticisi")?.Id.ToString() ?? "0")'" x-cloak>
                 <label class="form-label">Taşınmaz Yetkileri</label>
                 <p class="text-sm text-muted mb-3">Görüntüleyici rolünde hangi taşınmazları görebileceğini seçin.</p>
                 <div class="grid grid-cols-1 gap-1.5">

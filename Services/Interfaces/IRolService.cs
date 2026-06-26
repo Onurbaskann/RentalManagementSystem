@@ -12,5 +12,5 @@ public interface IRolService
     Task<List<string>> GetRolPermissionsAsync(int rolId);
     Task SetRolPermissionsAsync(int rolId, IEnumerable<string> permissions, string updatedBy);
     Task<List<Rol>> GetKiraciRollerAsync(int kiraciId);
-    Task SeedKiraciRolleriAsync(int kiraciId, string createdBy);
+    Task EnsureGlobalKiraciRolleriAsync(string createdBy);
 }

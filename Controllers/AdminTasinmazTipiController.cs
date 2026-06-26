@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Policy = PermissionCatalog.TasinmazTipiPerm.Manage)]
+[Authorize(Policy = PermissionCatalog.TasinmazTipi.Manage)]
 [Route("Admin/TasinmazTipi")]
 public class AdminTasinmazTipiController : Controller
 {

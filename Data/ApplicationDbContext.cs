@@ -7,7 +7,7 @@ using System.Security.Claims;
 
 namespace KiraTakip.Data;
 
-public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ICurrentUserContext _currentUser;
@@ -48,7 +48,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Tasinmaz> Tasinmazlar { get; set; }
     public DbSet<Birim> Birimler { get; set; }
     public DbSet<Kiraci> Kiraciler { get; set; }
-    public DbSet<KiraSozlesmesi> Sozlesmeler { get; set; }
+    public DbSet<Sozlesme> Sozlesmeler { get; set; }
     public DbSet<SozlesmeIslemGecmisi> SozlesmeIslemGecmisleri { get; set; }
     public DbSet<KullaniciYetkiKapsami> KullaniciYetkiKapsamlari { get; set; }
     public DbSet<UserPermission> UserPermissions { get; set; }
@@ -68,8 +68,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<Tahakkuk> Tahakkuklar { get; set; }
     public DbSet<TahakkukKalemi> TahakkukKalemleri { get; set; }
-    public DbSet<KiraOdeme> KiraOdemeler { get; set; }
-    public DbSet<Dekont> Dekontlar { get; set; }
+    public DbSet<TahakkukOdeme> TahakkukOdemeler { get; set; }
     public DbSet<BankaHareketi> BankaHareketleri { get; set; }
     public DbSet<OdemeBankaEslesme> OdemeBankaEslesmeleri { get; set; }
     public DbSet<EnumDegeri> EnumDegerleri { get; set; }
@@ -145,7 +144,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                   .OnDelete(DeleteBehavior.ClientSetNull);
         });
 
-        builder.Entity<KiraSozlesmesi>(entity =>
+        builder.Entity<Sozlesme>(entity =>
         {
             entity.Property(s => s.Durum).HasComment(EC<SozlesmeDurumu>());
             entity.HasOne(s => s.Birim)
@@ -154,6 +153,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasOne(s => s.Kiraci)
                   .WithMany()
                   .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(s => s.BirimId)
+                  .IsUnique()
+                  .HasFilter("[Durum] = 1 AND [IsDeleted] = 0");
         });
 
         builder.Entity<SozlesmeIslemGecmisi>(entity =>
@@ -182,7 +184,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<KullaniciYetkiKapsami>(entity =>
         {
             entity.Property(k => k.UserId).IsRequired().HasMaxLength(450);
-            entity.Property(k => k.AtayanUserId).HasMaxLength(450);
             entity.HasIndex(k => new { k.UserId, k.KapsamTipi, k.KapsamId }).IsUnique();
         });
 
@@ -288,7 +289,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasOne(t => t.KiraSozlesmesi)
                   .WithMany()
                   .OnDelete(DeleteBehavior.Restrict);
-            entity.HasIndex(t => new { t.KiraSozlesmesiId, t.DonemBaslangic });
+            entity.HasIndex(t => new { t.KiraSozlesmesiId, t.DonemBaslangic })
+                  .IsUnique()
+                  .HasFilter("[KiraSozlesmesiId] IS NOT NULL AND [KaynakTipi] = 1 AND [IsDeleted] = 0");
         });
 
         builder.Entity<TahakkukKalemi>(entity =>
@@ -310,7 +313,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        builder.Entity<KiraOdeme>(entity =>
+        builder.Entity<TahakkukOdeme>(entity =>
         {
             entity.Property(o => o.Tutar).HasPrecision(18, 2);
             entity.Property(o => o.RedNedeni).HasMaxLength(500);
@@ -332,48 +335,35 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                   .OnDelete(DeleteBehavior.NoAction);
         });
 
-        builder.Entity<Dekont>(entity =>
-        {
-            entity.Property(d => d.OrijinalDosyaAdi).HasMaxLength(255);
-            entity.Property(d => d.DiskDosyaAdi).HasMaxLength(255);
-            entity.Property(d => d.DosyaYolu).HasMaxLength(500);
-            entity.Property(d => d.DosyaTipi).HasMaxLength(100);
-            entity.HasOne(d => d.KiraOdeme)
-                  .WithMany(o => o.Dekontlar)
-                  .OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(d => d.YukleyenUser)
-                  .WithMany()
-                  .OnDelete(DeleteBehavior.Restrict);
-        });
-
         builder.Entity<BankaHareketi>(entity =>
         {
-            entity.Property(b => b.Tutar).HasPrecision(18, 2);
-            entity.Property(b => b.Bakiye).HasPrecision(18, 2);
+            entity.Property(b => b.IslemTutari).HasPrecision(18, 2);
             entity.Property(b => b.Aciklama).HasMaxLength(500);
             entity.Property(b => b.EslesmeDurumu).HasComment(EC<BankaEslesmeDurumu>());
-            entity.Property(b => b.KarsiHesap).HasMaxLength(50);
-            entity.Property(b => b.KarsiUnvan).HasMaxLength(200);
+            entity.Property(b => b.GonderenIban).HasMaxLength(50);
+            entity.Property(b => b.GonderenBilgisi).HasMaxLength(200);
+            entity.Property(b => b.BankaReferansNo).HasMaxLength(100);
             entity.Property(b => b.BankaKodu).HasMaxLength(20);
-            entity.HasOne(b => b.ImportEdenUser)
-                  .WithMany()
-                  .OnDelete(DeleteBehavior.Restrict);
-            entity.HasIndex(b => b.ImportBatchId);
+            entity.HasIndex(b => b.BankaReferansNo)
+                  .IsUnique()
+                  .HasFilter("[BankaReferansNo] IS NOT NULL AND [IsDeleted] = 0");
         });
 
         builder.Entity<OdemeBankaEslesme>(entity =>
         {
             entity.Property(e => e.EslesmeTipi).HasComment(EC<EslesmeTipi>());
-            entity.Property(e => e.EslesenTutar).HasPrecision(18, 2);
-            entity.HasOne(e => e.KiraOdeme)
+            entity.HasOne(e => e.TahakkukOdeme)
                   .WithMany(o => o.BankaEslesmeleri)
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(e => e.BankaHareketi)
                   .WithMany(b => b.OdemeEslesmeleri)
                   .OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne(e => e.EslestirenUser)
-                  .WithMany()
-                  .OnDelete(DeleteBehavior.NoAction);
+            entity.HasIndex(e => e.BankaHareketiId)
+                  .IsUnique()
+                  .HasFilter("[IsDeleted] = 0");
+            entity.HasIndex(e => e.TahakkukOdemeId)
+                  .IsUnique()
+                  .HasFilter("[IsDeleted] = 0");
         });
 
         builder.Entity<RezervasyonTarife>(entity =>
@@ -404,7 +394,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(r => r.KdvTutari).HasPrecision(18, 2);
             entity.Property(r => r.ToplamTutar).HasPrecision(18, 2);
             entity.Property(r => r.Aciklama).HasMaxLength(500);
-            entity.Property(r => r.OlusturanUserId).HasMaxLength(450);
             entity.HasOne(r => r.Birim)
                   .WithMany()
                   .OnDelete(DeleteBehavior.Restrict);
@@ -541,7 +530,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         foreach (var entityType in builder.Model.GetEntityTypes())
         {
-            if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))
+            if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType) && entityType.FindProperty(nameof(BaseEntity.IsDeleted)) != null)
             {
                 var param = Expression.Parameter(entityType.ClrType, "e");
                 var body = Expression.Equal(
@@ -556,17 +545,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<Kiraci>().HasQueryFilter(
             k => !k.IsDeleted && (!_currentUser.IsKiraciUser || k.Id == _currentUser.KiraciId));
 
-        builder.Entity<KiraSozlesmesi>().HasQueryFilter(
+        builder.Entity<Sozlesme>().HasQueryFilter(
             s => !s.IsDeleted && (!_currentUser.IsKiraciUser || s.KiraciId == _currentUser.KiraciId));
 
         builder.Entity<Tahakkuk>().HasQueryFilter(
             t => !t.IsDeleted && (!_currentUser.IsKiraciUser || t.KiraciId == _currentUser.KiraciId));
 
-        builder.Entity<KiraOdeme>().HasQueryFilter(
+        builder.Entity<TahakkukOdeme>().HasQueryFilter(
             o => !o.IsDeleted && (!_currentUser.IsKiraciUser || o.Tahakkuk.KiraciId == _currentUser.KiraciId));
-
-        builder.Entity<Dekont>().HasQueryFilter(
-            d => !d.IsDeleted && (!_currentUser.IsKiraciUser || d.KiraOdeme.Tahakkuk.KiraciId == _currentUser.KiraciId));
 
         builder.Entity<Rezervasyon>().HasQueryFilter(
             r => !r.IsDeleted && (!_currentUser.IsKiraciUser || r.KiraciId == _currentUser.KiraciId));
@@ -574,6 +560,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<SozlesmeIslemGecmisi>().HasQueryFilter(
             g => !g.IsDeleted && (!_currentUser.IsKiraciUser ||
                  g.KiraSozlesmesi!.KiraciId == _currentUser.KiraciId));
+
+        builder.Entity<UserRol>().HasQueryFilter(ur => !ur.IsDeleted);
+        builder.Entity<UserPermission>().HasQueryFilter(p => !p.IsDeleted);
+        builder.Entity<ApplicationUser>().HasQueryFilter(u => !u.IsDeleted);
 
     }
 

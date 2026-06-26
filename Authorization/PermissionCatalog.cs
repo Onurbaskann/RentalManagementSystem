@@ -2,7 +2,7 @@ namespace KiraTakip.Authorization;
 
 public static class PermissionCatalog
 {
-    // ─── İç Ekip (Internal.*) ────────────────────────────────────────────────
+    // ─── İç Ekip Operasyonel (Internal.*) ────────────────────────────────────
 
     public static class Tasinmaz
     {
@@ -38,42 +38,13 @@ public static class PermissionCatalog
 
     public static class Odeme
     {
-        public const string View               = "Internal.Odeme.View";
-        public const string Create             = "Internal.Odeme.Create";
-        public const string UploadDekont       = "Internal.Odeme.UploadDekont";
-        public const string Approve            = "Internal.Odeme.Approve";
-        public const string Reject             = "Internal.Odeme.Reject";
-        public const string ImportBankStatement   = "Internal.Odeme.ImportBankStatement";
-        public const string MatchBankTransaction  = "Internal.Odeme.MatchBankTransaction";
-    }
-
-    public static class Kullanici
-    {
-        public const string View             = "Internal.Kullanici.View";
-        public const string Create           = "Internal.Kullanici.Create";
-        public const string Edit             = "Internal.Kullanici.Edit";
-        public const string AssignPermission = "Internal.Kullanici.AssignPermission";
-    }
-
-    public static class Rol
-    {
-        public const string View   = "Internal.Rol.View";
-        public const string Create = "Internal.Rol.Create";
-        public const string Edit   = "Internal.Rol.Edit";
-        public const string Delete = "Internal.Rol.Delete";
-    }
-
-    public static class Davetiye
-    {
-        public const string View   = "Internal.Davetiye.View";
-        public const string Create = "Internal.Davetiye.Create";
-        public const string Cancel = "Internal.Davetiye.Cancel";
-        public const string Resend = "Internal.Davetiye.Resend";
-    }
-
-    public static class Audit
-    {
-        public const string View = "Internal.Audit.View";
+        public const string View                 = "Internal.Odeme.View";
+        public const string Create               = "Internal.Odeme.Create";
+        public const string UploadDekont         = "Internal.Odeme.UploadDekont";
+        public const string Approve              = "Internal.Odeme.Approve";
+        public const string Reject               = "Internal.Odeme.Reject";
+        public const string ImportBankStatement  = "Internal.Odeme.ImportBankStatement";
+        public const string MatchBankTransaction = "Internal.Odeme.MatchBankTransaction";
     }
 
     public static class BorcTipi
@@ -87,31 +58,31 @@ public static class PermissionCatalog
         public const string Manage = "Internal.Parametre.Manage";
     }
 
-    public static class TasinmazTipiPerm
+    public static class TasinmazTipi
     {
         public const string View   = "Internal.TasinmazTipi.View";
         public const string Manage = "Internal.TasinmazTipi.Manage";
     }
 
-    public static class BirimTuruPerm
+    public static class BirimTuru
     {
         public const string View   = "Internal.BirimTuru.View";
         public const string Manage = "Internal.BirimTuru.Manage";
     }
 
-    public static class KiraciKategoriPerm
+    public static class KiraciKategori
     {
         public const string View   = "Internal.KiraciKategori.View";
         public const string Manage = "Internal.KiraciKategori.Manage";
     }
 
-    public static class SektorPerm
+    public static class Sektor
     {
         public const string View   = "Internal.Sektor.View";
         public const string Manage = "Internal.Sektor.Manage";
     }
 
-    public static class BelgeTuruPerm
+    public static class BelgeTuru
     {
         public const string View   = "Internal.BelgeTuru.View";
         public const string Manage = "Internal.BelgeTuru.Manage";
@@ -144,13 +115,13 @@ public static class PermissionCatalog
         public const string TransferToTahakkuk = "Internal.Rezervasyon.TransferToTahakkuk";
     }
 
-    public static class TasinmazCarpanPerm
+    public static class TasinmazCarpan
     {
         public const string View   = "Internal.TasinmazCarpan.View";
         public const string Manage = "Internal.TasinmazCarpan.Manage";
     }
 
-    public static class RezervasyonTarifeKuralPerm
+    public static class RezervasyonTarifeKural
     {
         public const string Manage = "Internal.RezervasyonTarifeKural.Manage";
     }
@@ -158,7 +129,37 @@ public static class PermissionCatalog
     public static class Bildirim
     {
         public const string BorcHatirlatma = "Internal.Bildirim.BorcHatirlatma";
-        public static IEnumerable<string> All() => new[] { BorcHatirlatma };
+    }
+
+    // ─── Sistem Yönetimi (System.*) ───────────────────────────────────────────
+
+    public static class Kullanici
+    {
+        public const string View             = "System.Kullanici.View";
+        public const string Create           = "System.Kullanici.Create";
+        public const string Edit             = "System.Kullanici.Edit";
+        public const string AssignPermission = "System.Kullanici.AssignPermission";
+    }
+
+    public static class Rol
+    {
+        public const string View   = "System.Rol.View";
+        public const string Create = "System.Rol.Create";
+        public const string Edit   = "System.Rol.Edit";
+        public const string Delete = "System.Rol.Delete";
+    }
+
+    public static class Davetiye
+    {
+        public const string View   = "System.Davetiye.View";
+        public const string Create = "System.Davetiye.Create";
+        public const string Cancel = "System.Davetiye.Cancel";
+        public const string Resend = "System.Davetiye.Resend";
+    }
+
+    public static class Audit
+    {
+        public const string View = "System.Audit.View";
     }
 
     // ─── Kiracı Portal (Kiraci.*) ─────────────────────────────────────────────
@@ -197,21 +198,22 @@ public static class PermissionCatalog
             public const string Cancel = "Kiraci.Rezervasyon.Cancel";
         }
 
+        // Kiracı firma içi yönetim (Kiraci.System.*)
         public static class Kullanici
         {
-            public const string View       = "Kiraci.Kullanici.View";
-            public const string Invite     = "Kiraci.Kullanici.Invite";
-            public const string Edit       = "Kiraci.Kullanici.Edit";
-            public const string Deactivate = "Kiraci.Kullanici.Deactivate";
-            public const string Manage     = "Kiraci.Kullanici.Manage";
+            public const string View       = "Kiraci.System.Kullanici.View";
+            public const string Invite     = "Kiraci.System.Kullanici.Invite";
+            public const string Edit       = "Kiraci.System.Kullanici.Edit";
+            public const string Deactivate = "Kiraci.System.Kullanici.Deactivate";
+            public const string Manage     = "Kiraci.System.Kullanici.Manage";
         }
 
         public static class Rol
         {
-            public const string View   = "Kiraci.Rol.View";
-            public const string Create = "Kiraci.Rol.Create";
-            public const string Edit   = "Kiraci.Rol.Edit";
-            public const string Delete = "Kiraci.Rol.Delete";
+            public const string View   = "Kiraci.System.Rol.View";
+            public const string Create = "Kiraci.System.Rol.Create";
+            public const string Edit   = "Kiraci.System.Rol.Edit";
+            public const string Delete = "Kiraci.System.Rol.Delete";
         }
     }
 
@@ -227,77 +229,14 @@ public static class PermissionCatalog
         ManuelBorc.View, ManuelBorc.Create, ManuelBorc.Cancel,
         Rezervasyon.View, Rezervasyon.Create, Rezervasyon.Edit, Rezervasyon.Cancel, Rezervasyon.TransferToTahakkuk,
         Tahakkuk.Regenerate,
-        TasinmazCarpanPerm.View, TasinmazCarpanPerm.Manage,
-        RezervasyonTarifeKuralPerm.Manage,
+        TasinmazCarpan.View, TasinmazCarpan.Manage,
+        RezervasyonTarifeKural.Manage,
     ];
 
     public static bool IsScopeAware(string permission) => ScopeAware.Contains(permission);
 
-    public static readonly IReadOnlyList<string> AssignableToYonetici =
-    [
-        Tasinmaz.View, Tasinmaz.Create, Tasinmaz.Edit,
-        Birim.View, Birim.Create, Birim.Edit,
-        Kiraci.View, Kiraci.Create, Kiraci.Edit,
-        Sozlesme.View, Sozlesme.Create, Sozlesme.Edit, Sozlesme.Extend, Sozlesme.Terminate, Sozlesme.OverrideRate,
-        Odeme.View, Odeme.Create, Odeme.UploadDekont, Odeme.Approve, Odeme.Reject,
-        Odeme.ImportBankStatement, Odeme.MatchBankTransaction,
-        ManuelBorc.View, ManuelBorc.Create, ManuelBorc.Cancel,
-        Rezervasyon.View, Rezervasyon.Create, Rezervasyon.Edit, Rezervasyon.Cancel, Rezervasyon.TransferToTahakkuk,
-        TasinmazCarpanPerm.View, TasinmazCarpanPerm.Manage,
-        Bildirim.BorcHatirlatma,
-    ];
-
-    public static readonly IReadOnlyList<string> AssignableToGoruntuleyici =
-    [
-        Tasinmaz.View,
-        Birim.View,
-        Kiraci.View,
-        Sozlesme.View,
-        Odeme.View,
-        ManuelBorc.View,
-        Rezervasyon.View,
-    ];
-
-    // Firma Yetkilisi varsayılan izinleri (tüm kiraci izinler)
-    public static readonly IReadOnlyList<string> FirmaYetkilisiIzinleri =
-    [
-        KiraciPortal.Sozlesme.View,
-        KiraciPortal.Borc.View,
-        KiraciPortal.Odeme.View,
-        KiraciPortal.Cari.View,
-        KiraciPortal.Mutabakat.Manage,
-        KiraciPortal.Rezervasyon.View, KiraciPortal.Rezervasyon.Create, KiraciPortal.Rezervasyon.Cancel,
-        KiraciPortal.Kullanici.View, KiraciPortal.Kullanici.Invite, KiraciPortal.Kullanici.Edit,
-        KiraciPortal.Kullanici.Deactivate, KiraciPortal.Kullanici.Manage,
-        KiraciPortal.Rol.View, KiraciPortal.Rol.Create, KiraciPortal.Rol.Edit, KiraciPortal.Rol.Delete,
-    ];
-
-    // Finans Yetkilisi varsayılan izinleri (yalnızca finansal görünüm)
-    public static readonly IReadOnlyList<string> FinansYetkilisiIzinleri =
-    [
-        KiraciPortal.Sozlesme.View,
-        KiraciPortal.Borc.View,
-        KiraciPortal.Odeme.View,
-        KiraciPortal.Cari.View,
-        KiraciPortal.Mutabakat.Manage,
-    ];
-
-    // Tüm Kiraci.* izinler (policy kaydı + kiracı seed için)
-    public static readonly IReadOnlyList<string> KiraciAll =
-    [
-        KiraciPortal.Sozlesme.View,
-        KiraciPortal.Borc.View,
-        KiraciPortal.Odeme.View,
-        KiraciPortal.Cari.View,
-        KiraciPortal.Mutabakat.Manage,
-        KiraciPortal.Rezervasyon.View, KiraciPortal.Rezervasyon.Create, KiraciPortal.Rezervasyon.Cancel,
-        KiraciPortal.Kullanici.View, KiraciPortal.Kullanici.Invite, KiraciPortal.Kullanici.Edit,
-        KiraciPortal.Kullanici.Deactivate, KiraciPortal.Kullanici.Manage,
-        KiraciPortal.Rol.View, KiraciPortal.Rol.Create, KiraciPortal.Rol.Edit, KiraciPortal.Rol.Delete,
-    ];
-
-    // Tüm Internal.* izinler (policy kaydı + Admin bypass için)
-    public static readonly IReadOnlyList<string> All =
+    // Tüm Internal.* izinler — Operasyon Müdürü için
+    public static readonly IReadOnlyList<string> OperasyonMuduruIzinleri =
     [
         Tasinmaz.View, Tasinmaz.Create, Tasinmaz.Edit,
         Birim.View, Birim.Create, Birim.Edit, Birim.ManageRate,
@@ -305,23 +244,78 @@ public static class PermissionCatalog
         Sozlesme.View, Sozlesme.Create, Sozlesme.Edit, Sozlesme.Extend, Sozlesme.Terminate, Sozlesme.OverrideRate,
         Odeme.View, Odeme.Create, Odeme.UploadDekont, Odeme.Approve, Odeme.Reject,
         Odeme.ImportBankStatement, Odeme.MatchBankTransaction,
-        Kullanici.View, Kullanici.Create, Kullanici.Edit, Kullanici.AssignPermission,
-        Rol.View, Rol.Create, Rol.Edit, Rol.Delete,
-        Davetiye.View, Davetiye.Create, Davetiye.Cancel, Davetiye.Resend,
-        Audit.View,
         BorcTipi.Manage,
         Tarife.View, Tarife.Manage,
         Tahakkuk.Regenerate,
         Parametre.View, Parametre.Manage,
-        TasinmazTipiPerm.View, TasinmazTipiPerm.Manage,
-        BirimTuruPerm.View, BirimTuruPerm.Manage,
-        KiraciKategoriPerm.View, KiraciKategoriPerm.Manage,
-        SektorPerm.View, SektorPerm.Manage,
-        BelgeTuruPerm.View, BelgeTuruPerm.Manage,
+        TasinmazTipi.View, TasinmazTipi.Manage,
+        BirimTuru.View, BirimTuru.Manage,
+        KiraciKategori.View, KiraciKategori.Manage,
+        Sektor.View, Sektor.Manage,
+        BelgeTuru.View, BelgeTuru.Manage,
         ManuelBorc.View, ManuelBorc.Create, ManuelBorc.Cancel,
         Rezervasyon.View, Rezervasyon.Create, Rezervasyon.Edit, Rezervasyon.Cancel, Rezervasyon.TransferToTahakkuk,
-        TasinmazCarpanPerm.View, TasinmazCarpanPerm.Manage,
-        RezervasyonTarifeKuralPerm.Manage,
+        TasinmazCarpan.View, TasinmazCarpan.Manage,
+        RezervasyonTarifeKural.Manage,
         Bildirim.BorcHatirlatma,
+    ];
+
+    // Kiraci.* + Kiraci.System.* — Kiracı Yöneticisi için
+    public static readonly IReadOnlyList<string> KiraciYoneticisiIzinleri =
+    [
+        KiraciPortal.Sozlesme.View,
+        KiraciPortal.Borc.View,
+        KiraciPortal.Odeme.View,
+        KiraciPortal.Cari.View,
+        KiraciPortal.Mutabakat.Manage,
+        KiraciPortal.Rezervasyon.View, KiraciPortal.Rezervasyon.Create, KiraciPortal.Rezervasyon.Cancel,
+        KiraciPortal.Kullanici.View, KiraciPortal.Kullanici.Invite, KiraciPortal.Kullanici.Edit,
+        KiraciPortal.Kullanici.Deactivate, KiraciPortal.Kullanici.Manage,
+        KiraciPortal.Rol.View, KiraciPortal.Rol.Create, KiraciPortal.Rol.Edit, KiraciPortal.Rol.Delete,
+    ];
+
+    // Kiraci.* (Kiraci.System.* hariç) — Kiracı Sorumlusu için
+    public static readonly IReadOnlyList<string> KiraciSorumlusuIzinleri =
+    [
+        KiraciPortal.Sozlesme.View,
+        KiraciPortal.Borc.View,
+        KiraciPortal.Odeme.View,
+        KiraciPortal.Cari.View,
+        KiraciPortal.Mutabakat.Manage,
+        KiraciPortal.Rezervasyon.View, KiraciPortal.Rezervasyon.Create, KiraciPortal.Rezervasyon.Cancel,
+    ];
+
+    // Tüm Kiraci.* izinler (policy kaydı + kiracı seed için)
+    public static readonly IReadOnlyList<string> KiraciAll = KiraciYoneticisiIzinleri;
+
+    // Tüm Internal.* + System.* izinler (policy kaydı + Admin bypass için)
+    public static readonly IReadOnlyList<string> All =
+    [
+        // Internal.*
+        Tasinmaz.View, Tasinmaz.Create, Tasinmaz.Edit,
+        Birim.View, Birim.Create, Birim.Edit, Birim.ManageRate,
+        Kiraci.View, Kiraci.Create, Kiraci.Edit,
+        Sozlesme.View, Sozlesme.Create, Sozlesme.Edit, Sozlesme.Extend, Sozlesme.Terminate, Sozlesme.OverrideRate,
+        Odeme.View, Odeme.Create, Odeme.UploadDekont, Odeme.Approve, Odeme.Reject,
+        Odeme.ImportBankStatement, Odeme.MatchBankTransaction,
+        BorcTipi.Manage,
+        Tarife.View, Tarife.Manage,
+        Tahakkuk.Regenerate,
+        Parametre.View, Parametre.Manage,
+        TasinmazTipi.View, TasinmazTipi.Manage,
+        BirimTuru.View, BirimTuru.Manage,
+        KiraciKategori.View, KiraciKategori.Manage,
+        Sektor.View, Sektor.Manage,
+        BelgeTuru.View, BelgeTuru.Manage,
+        ManuelBorc.View, ManuelBorc.Create, ManuelBorc.Cancel,
+        Rezervasyon.View, Rezervasyon.Create, Rezervasyon.Edit, Rezervasyon.Cancel, Rezervasyon.TransferToTahakkuk,
+        TasinmazCarpan.View, TasinmazCarpan.Manage,
+        RezervasyonTarifeKural.Manage,
+        Bildirim.BorcHatirlatma,
+        // System.*
+        Kullanici.View, Kullanici.Create, Kullanici.Edit, Kullanici.AssignPermission,
+        Rol.View, Rol.Create, Rol.Edit, Rol.Delete,
+        Davetiye.View, Davetiye.Create, Davetiye.Cancel, Davetiye.Resend,
+        Audit.View,
     ];
 }

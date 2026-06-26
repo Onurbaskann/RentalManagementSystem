@@ -30,7 +30,7 @@
         </div>
     </div>
     <div class="flex gap-2">
-        @if (User.IsInRole(RoleNames.Admin))
+        @if (User.IsInRole(RoleNames.SistemYoneticisi))
         {
             <a href="/Admin/Kiracilar/@k.Id/Kullanicilar" class="btn btn-secondary">Kullanıcılar</a>
         }

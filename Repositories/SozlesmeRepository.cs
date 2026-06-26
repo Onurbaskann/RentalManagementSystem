@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class SozlesmeRepository : BaseRepository<KiraSozlesmesi>, ISozlesmeRepository
+public class SozlesmeRepository : BaseRepository<Sozlesme>, ISozlesmeRepository
 {
     public SozlesmeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
@@ -78,7 +78,7 @@ public class SozlesmeRepository : BaseRepository<KiraSozlesmesi>, ISozlesmeRepos
                 TasinmazAcikAdres = s.Birim.Tasinmaz.AcikAdres,
                 BaslangicTarihi = s.BaslangicTarihi,
                 BitisTarihi = s.BitisTarihi,
-                Notlar = s.Notlar,
+                Aciklama = s.Aciklama,
                 Durum = s.Durum,
                 FesihTarihi = s.FesihTarihi,
                 FesihNedeni = s.FesihNedeni,
@@ -190,7 +190,7 @@ public class SozlesmeRepository : BaseRepository<KiraSozlesmesi>, ISozlesmeRepos
             .ToDictionary(g => g.Key, g => (decimal?)g.OrderBy(x => x.Donem).First().Tutar);
     }
 
-    public async Task<List<KiraSozlesmesi>> GetAktiflerAsync()
+    public async Task<List<Sozlesme>> GetAktiflerAsync()
         => await _dbSet
             .Include(s => s.Kiraci)
             .Include(s => s.Birim).ThenInclude(b => b.Tasinmaz)

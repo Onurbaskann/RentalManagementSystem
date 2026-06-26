@@ -25,13 +25,14 @@ public class BelgeService : IBelgeService
             .ToListAsync();
 
     public async Task<Belge> UploadAsync(BelgeOwnerTipi ownerType, int ownerId, int belgeTuruId,
-        string dosyaAdi, string mimeType, byte[] icerik, string? aciklama = null)
+        string dosyaAdi, string mimeType, byte[] icerik, string? aciklama = null, bool invalidateOld = true)
     {
-        // Aynı türde varsa eskiyi geçersiz yap
-        var eskiBelge = await _db.Belgeler
-            .Where(b => b.OwnerType == ownerType && b.OwnerId == ownerId
-                     && b.BelgeTuruId == belgeTuruId && !b.Gecersiz && !b.IsDeleted)
-            .FirstOrDefaultAsync();
+        var eskiBelge = invalidateOld
+            ? await _db.Belgeler
+                .Where(b => b.OwnerType == ownerType && b.OwnerId == ownerId
+                         && b.BelgeTuruId == belgeTuruId && !b.Gecersiz && !b.IsDeleted)
+                .FirstOrDefaultAsync()
+            : null;
 
         var yeni = new Belge
         {

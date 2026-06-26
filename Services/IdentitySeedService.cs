@@ -6,60 +6,48 @@ using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
+
 namespace KiraTakip.Services;
 
 public class IdentitySeedService
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly RoleManager<IdentityRole> _roleManager;
     private readonly IUserRolService _userRolService;
+    private readonly IRolService _rolService;
     private readonly ApplicationDbContext _db;
     private readonly IWebHostEnvironment _env;
 
     public IdentitySeedService(
         UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole> roleManager,
         IUserRolService userRolService,
+        IRolService rolService,
         ApplicationDbContext db,
         IWebHostEnvironment env)
     {
         _userManager = userManager;
-        _roleManager = roleManager;
         _userRolService = userRolService;
+        _rolService = rolService;
         _db = db;
         _env = env;
     }
 
     public async Task SeedAsync()
     {
-        string[] roleNames = [RoleNames.Admin, RoleNames.Yonetici, RoleNames.Goruntuleyici];
+        string[] roleNames = [RoleNames.SistemYoneticisi, RoleNames.OperasyonMuduru];
 
-        // Identity şema uyumluluğu için AspNetRoles'u koru
-        foreach (var roleName in roleNames)
-        {
-            if (!await _roleManager.RoleExistsAsync(roleName))
-                await _roleManager.CreateAsync(new IdentityRole(roleName));
-        }
-
-        // Kendi Rol tablomuzu besle
         await EnsureRollerAsync(roleNames);
+        await _rolService.EnsureGlobalKiraciRolleriAsync("system");
 
-        // Admin her ortamda seed'lenir — sisteme giriş noktası
-        await EnsureUser("admin@kiratakip.local", "Admin123!", RoleNames.Admin, "Admin Kullanıcı");
+        // Sistem Yöneticisi her ortamda seed'lenir — sisteme giriş noktası
+        await EnsureUser("admin@kiratakip.local", "Admin123!", RoleNames.SistemYoneticisi, "Sistem Yöneticisi");
 
-        // Test kullanıcıları sadece development'ta; production'da davet sistemi kullanılır
-        if (_env.IsDevelopment())
-        {
-            await EnsureUser("yonetici@kiratakip.local", "Yonetici123!", RoleNames.Yonetici,      "Yönetici Kullanıcı",      tumTasinmazlaraErisim: true);
-            await EnsureUser("viewer@kiratakip.local",   "Viewer123!",   RoleNames.Goruntuleyici, "Görüntüleyici Kullanıcı", tumTasinmazlaraErisim: false);
-        }
     }
 
     private async Task EnsureRollerAsync(string[] roleNames)
     {
         foreach (var roleName in roleNames)
         {
-            var isSystemRole = roleName == RoleNames.Admin;
+            var isSystemRole = true;
             var existing = await _db.Roller.FirstOrDefaultAsync(r => r.Ad == roleName && r.Scope == RolScope.Internal);
             if (existing == null)
             {
@@ -85,22 +73,16 @@ public class IdentitySeedService
 
     private async Task EnsureRolPermissionsAsync()
     {
-        var yonetici = await _db.Roller.FirstOrDefaultAsync(r => r.Ad == RoleNames.Yonetici && r.Scope == RolScope.Internal);
-        if (yonetici != null && !await _db.RolPermissions.AnyAsync(rp => rp.RolId == yonetici.Id))
+        var operasyonMuduru = await _db.Roller.FirstOrDefaultAsync(r => r.Ad == RoleNames.OperasyonMuduru && r.Scope == RolScope.Internal);
+        if (operasyonMuduru != null && !await _db.RolPermissions.AnyAsync(rp => rp.RolId == operasyonMuduru.Id))
         {
-            foreach (var perm in PermissionCatalog.AssignableToYonetici)
-                _db.RolPermissions.Add(new RolPermission { RolId = yonetici.Id, Permission = perm });
-        }
-
-        var goruntuleyici = await _db.Roller.FirstOrDefaultAsync(r => r.Ad == RoleNames.Goruntuleyici && r.Scope == RolScope.Internal);
-        if (goruntuleyici != null && !await _db.RolPermissions.AnyAsync(rp => rp.RolId == goruntuleyici.Id))
-        {
-            foreach (var perm in PermissionCatalog.AssignableToGoruntuleyici)
-                _db.RolPermissions.Add(new RolPermission { RolId = goruntuleyici.Id, Permission = perm });
+            foreach (var perm in PermissionCatalog.OperasyonMuduruIzinleri)
+                _db.RolPermissions.Add(new RolPermission { RolId = operasyonMuduru.Id, Permission = perm });
         }
 
         await _db.SaveChangesAsync();
     }
+
 
     private async Task EnsureUser(string email, string password, string roleName, string adSoyad, bool tumTasinmazlaraErisim = false)
     {

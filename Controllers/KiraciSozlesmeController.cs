@@ -53,7 +53,7 @@ public class KiraciSozlesmeController : Controller
         var kiraciId = _currentUser.KiraciId!.Value;
         if (s.KiraciId != kiraciId) return Forbid();
 
-        var dummySozlesme = new KiraSozlesmesi
+        var dummySozlesme = new Sozlesme
         {
             Id = s.Id,
             KiraciId = s.KiraciId,

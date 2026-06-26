@@ -57,12 +57,11 @@ public class BankaHareketiController : Controller
             return View(vm);
         }
 
-        var userId = _userManager.GetUserId(User)!;
         try
         {
             await using var stream = vm.Dosya.OpenReadStream();
-            var (adet, batchId) = await _bankaService.ImportAsync(stream, vm.BankaKodu, userId);
-            TempData["Success"] = $"{adet} hareket içe aktarıldı. (Batch: {batchId:N})";
+            var adet = await _bankaService.ImportAsync(stream, vm.BankaKodu);
+            TempData["Success"] = $"{adet} hareket içe aktarıldı.";
         }
         catch (InvalidOperationException ex)
         {
@@ -91,8 +90,7 @@ public class BankaHareketiController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Eslestir(EslesmeViewModel vm)
     {
-        var userId = _userManager.GetUserId(User)!;
-        await _bankaService.EslestirAsync(vm.OdemeId, vm.BankaHareketiId, userId);
+        await _bankaService.EslestirAsync(vm.OdemeId, vm.BankaHareketiId);
         TempData["Success"] = "Eşleştirme yapıldı.";
         return RedirectToAction(nameof(Index));
     }

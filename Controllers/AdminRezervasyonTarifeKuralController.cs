@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Policy = PermissionCatalog.RezervasyonTarifeKuralPerm.Manage)]
+[Authorize(Policy = PermissionCatalog.RezervasyonTarifeKural.Manage)]
 [Route("Admin/RezervasyonTarifeKural")]
 public class AdminRezervasyonTarifeKuralController : Controller
 {
@@ -35,7 +35,7 @@ public class AdminRezervasyonTarifeKuralController : Controller
             UcretsizSureDakika = 120,
             UcretlendirmePeriyoduDakika = 60,
             KdvOrani = 20,
-            Aktif = true
+            IsActive = true
         };
         await PopulateDropdownsAsync(vm);
         return View(vm);
@@ -77,7 +77,7 @@ public class AdminRezervasyonTarifeKuralController : Controller
             UcretlendirmePeriyoduDakika = kural.UcretlendirmePeriyoduDakika,
             PeriyotUcreti = kural.PeriyotUcreti,
             KdvOrani = kural.KdvOrani,
-            Aktif = kural.Aktif,
+            IsActive = kural.IsActive,
             Aciklama = kural.Aciklama
         };
         await PopulateDropdownsAsync(vm);

@@ -3,7 +3,7 @@ using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IOdemeRepository : IBaseRepository<KiraOdeme>
+public interface IOdemeRepository : IBaseRepository<TahakkukOdeme>
 {
     Task<List<OdemeListItemDto>> GetListAsync(int? tahakkukId, List<int>? yetkiliTasinmazIds);
     Task<PagedResult<OdemeListItemDto>> GetPagedListAsync(TableQuery q, int? tahakkukId, List<int>? yetkiliTasinmazIds);

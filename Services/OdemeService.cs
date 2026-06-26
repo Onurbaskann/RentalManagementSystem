@@ -38,7 +38,7 @@ public class OdemeService : IOdemeService
         return await _repo.GetDetayAsync(id);
     }
 
-    public async Task<KiraOdeme> EkleAsync(KiraOdeme odeme)
+    public async Task<TahakkukOdeme> EkleAsync(TahakkukOdeme odeme)
     {
         odeme.GirisTarihi = DateTime.Now;
         odeme.Durum = OdemeDurumu.OnayBekliyor;

@@ -54,6 +54,9 @@ namespace KiraTakip.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
                     b.Property<int?>("KiraciId")
                         .HasColumnType("int");
 
@@ -185,14 +188,14 @@ namespace KiraTakip.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<decimal?>("Bakiye")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<string>("BankaKodu")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("BankaReferansNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -205,18 +208,13 @@ namespace KiraTakip.Migrations
                         .HasColumnType("int")
                         .HasComment("Eslestirilmedi=1, Eslesti=2, ManuelEslesti=3");
 
-                    b.Property<DateTime>("HareketTarihi")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("GonderenBilgisi")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
-                    b.Property<Guid>("ImportBatchId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ImportEdenUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("ImportTarihi")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("GonderenIban")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -224,15 +222,10 @@ namespace KiraTakip.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<string>("KarsiHesap")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                    b.Property<DateTime>("IslemTarihi")
+                        .HasColumnType("datetime2");
 
-                    b.Property<string>("KarsiUnvan")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<decimal>("Tutar")
+                    b.Property<decimal>("IslemTutari")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
@@ -244,9 +237,9 @@ namespace KiraTakip.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ImportBatchId");
-
-                    b.HasIndex("ImportEdenUserId");
+                    b.HasIndex("BankaReferansNo")
+                        .IsUnique()
+                        .HasFilter("[BankaReferansNo] IS NOT NULL AND [IsDeleted] = 0");
 
                     b.ToTable("BankaHareketleri");
                 });
@@ -306,7 +299,7 @@ namespace KiraTakip.Migrations
 
                     b.Property<int>("OwnerType")
                         .HasColumnType("int")
-                        .HasComment("Kiraci=1, Sablon=99");
+                        .HasComment("Kiraci=1, Odeme=2, Sablon=99");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -365,7 +358,7 @@ namespace KiraTakip.Migrations
 
                     b.Property<int>("HedefEntite")
                         .HasColumnType("int")
-                        .HasComment("Kiraci=1, Sablon=99");
+                        .HasComment("Kiraci=1, Odeme=2, Sablon=99");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -735,75 +728,6 @@ namespace KiraTakip.Migrations
                     b.ToTable("Davetiyeler");
                 });
 
-            modelBuilder.Entity("KiraTakip.Models.Entities.Dekont", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DiskDosyaAdi")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<long>("DosyaBoyutu")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("DosyaTipi")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("DosyaYolu")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("KiraOdemeId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("OrijinalDosyaAdi")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("YuklemeTarihi")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("YukleyenUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("KiraOdemeId");
-
-                    b.HasIndex("YukleyenUserId");
-
-                    b.ToTable("Dekontlar");
-                });
-
             modelBuilder.Entity("KiraTakip.Models.Entities.EnumDegeri", b =>
                 {
                     b.Property<int>("Id")
@@ -980,165 +904,6 @@ namespace KiraTakip.Migrations
                     b.ToTable("Kategoriler");
                 });
 
-            modelBuilder.Entity("KiraTakip.Models.Entities.KiraOdeme", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Aciklama")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Durum")
-                        .HasColumnType("int")
-                        .HasComment("OnayBekliyor=1, Onaylandi=2, Reddedildi=3");
-
-                    b.Property<string>("GirenUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("GirisTarihi")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<int?>("KiraSozlesmesiId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("OdemeKanali")
-                        .HasColumnType("int")
-                        .HasComment("Havale=1, EFT=2, Nakit=3, Diger=4");
-
-                    b.Property<int>("OdemeKaynakTipi")
-                        .HasColumnType("int")
-                        .HasComment("Manuel=1, BankaEslesme=2, SanalPos=3");
-
-                    b.Property<DateTime>("OdemeTarihi")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("OnayTarihi")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("OnaylayanUserId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("PosReferansNo")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("RedNedeni")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("TahakkukId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Tutar")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GirenUserId");
-
-                    b.HasIndex("KiraSozlesmesiId");
-
-                    b.HasIndex("OnaylayanUserId");
-
-                    b.HasIndex("TahakkukId");
-
-                    b.ToTable("KiraOdemeler");
-                });
-
-            modelBuilder.Entity("KiraTakip.Models.Entities.KiraSozlesmesi", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("BaslangicTarihi")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("BirimId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("BitisTarihi")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Durum")
-                        .HasColumnType("int")
-                        .HasComment("Aktif=1, SonaErdi=2, Feshedildi=3");
-
-                    b.Property<string>("FesihNedeni")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("FesihTarihi")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("KdvUygulanacakMi")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("KiraciId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Notlar")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("VadeGunu")
-                        .HasColumnType("int");
-
-                    b.Property<int>("VadeKuraliTipi")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BirimId");
-
-                    b.HasIndex("KiraciId");
-
-                    b.ToTable("Sozlesmeler");
-                });
-
             modelBuilder.Entity("KiraTakip.Models.Entities.Kiraci", b =>
                 {
                     b.Property<int>("Id")
@@ -1235,13 +1000,6 @@ namespace KiraTakip.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("AtanmaTarihi")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("AtayanUserId")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1298,19 +1056,9 @@ namespace KiraTakip.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal>("EslesenTutar")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("EslesmeTarihi")
-                        .HasColumnType("datetime2");
-
                     b.Property<int>("EslesmeTipi")
                         .HasColumnType("int")
                         .HasComment("Otomatik=1, Manuel=2");
-
-                    b.Property<string>("EslestirenUserId")
-                        .HasColumnType("nvarchar(450)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -1318,7 +1066,7 @@ namespace KiraTakip.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<int>("KiraOdemeId")
+                    b.Property<int>("TahakkukOdemeId")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -1329,11 +1077,13 @@ namespace KiraTakip.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BankaHareketiId");
+                    b.HasIndex("BankaHareketiId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
 
-                    b.HasIndex("EslestirenUserId");
-
-                    b.HasIndex("KiraOdemeId");
+                    b.HasIndex("TahakkukOdemeId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("OdemeBankaEslesmeleri");
                 });
@@ -1446,14 +1196,6 @@ namespace KiraTakip.Migrations
                     b.Property<int>("KiraciId")
                         .HasColumnType("int");
 
-                    b.Property<string>("OlusturanUserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("OlusturmaTarihi")
-                        .HasColumnType("datetime2");
-
                     b.Property<int?>("TahakkukId")
                         .HasColumnType("int");
 
@@ -1503,9 +1245,6 @@ namespace KiraTakip.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
 
-                    b.Property<bool>("Aktif")
-                        .HasColumnType("bit");
-
                     b.Property<int?>("BirimId")
                         .HasColumnType("int");
 
@@ -1528,9 +1267,6 @@ namespace KiraTakip.Migrations
                     b.Property<decimal>("KdvOrani")
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
-
-                    b.Property<DateTime>("OlusturmaTarihi")
-                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("PeriyotUcreti")
                         .HasPrecision(18, 2)
@@ -1700,6 +1436,78 @@ namespace KiraTakip.Migrations
                     b.HasIndex("UserId", "Durum");
 
                     b.ToTable("SifreSifirlamaTalepleri");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.Sozlesme", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Aciklama")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("BaslangicTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("BirimId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("BitisTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Durum")
+                        .HasColumnType("int")
+                        .HasComment("Aktif=1, SonaErdi=2, Feshedildi=3");
+
+                    b.Property<string>("FesihNedeni")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("FesihTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("KdvUygulanacakMi")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("KiraciId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("VadeGunu")
+                        .HasColumnType("int");
+
+                    b.Property<int>("VadeKuraliTipi")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BirimId")
+                        .IsUnique()
+                        .HasFilter("[Durum] = 1 AND [IsDeleted] = 0");
+
+                    b.HasIndex("KiraciId");
+
+                    b.ToTable("Sozlesmeler");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.SozlesmeIslemGecmisi", b =>
@@ -1915,7 +1723,9 @@ namespace KiraTakip.Migrations
 
                     b.HasIndex("KiraciId");
 
-                    b.HasIndex("KiraSozlesmesiId", "DonemBaslangic");
+                    b.HasIndex("KiraSozlesmesiId", "DonemBaslangic")
+                        .IsUnique()
+                        .HasFilter("[KiraSozlesmesiId] IS NOT NULL AND [KaynakTipi] = 1 AND [IsDeleted] = 0");
 
                     b.ToTable("Tahakkuklar");
                 });
@@ -1999,6 +1809,95 @@ namespace KiraTakip.Migrations
                     b.ToTable("TahakkukKalemleri");
                 });
 
+            modelBuilder.Entity("KiraTakip.Models.Entities.TahakkukOdeme", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Aciklama")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Durum")
+                        .HasColumnType("int")
+                        .HasComment("OnayBekliyor=1, Onaylandi=2, Reddedildi=3");
+
+                    b.Property<string>("GirenUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("GirisTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("KiraSozlesmesiId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OdemeKanali")
+                        .HasColumnType("int")
+                        .HasComment("Havale=1, EFT=2, Nakit=3, Diger=4");
+
+                    b.Property<int>("OdemeKaynakTipi")
+                        .HasColumnType("int")
+                        .HasComment("Manuel=1, BankaEslesme=2, SanalPos=3");
+
+                    b.Property<DateTime>("OdemeTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("OnayTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OnaylayanUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("PosReferansNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("RedNedeni")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("TahakkukId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Tutar")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GirenUserId");
+
+                    b.HasIndex("KiraSozlesmesiId");
+
+                    b.HasIndex("OnaylayanUserId");
+
+                    b.HasIndex("TahakkukId");
+
+                    b.ToTable("TahakkukOdemeler");
+                });
+
             modelBuilder.Entity("KiraTakip.Models.Entities.Tasinmaz", b =>
                 {
                     b.Property<int>("Id")
@@ -2053,9 +1952,6 @@ namespace KiraTakip.Migrations
 
                     b.Property<int?>("KatSayisi")
                         .HasColumnType("int");
-
-                    b.Property<DateTime>("KayitTarihi")
-                        .HasColumnType("datetime2");
 
                     b.Property<int>("KiralamaSekli")
                         .HasColumnType("int")
@@ -2156,12 +2052,6 @@ namespace KiraTakip.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("GrantedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("GrantedBy")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -2199,14 +2089,27 @@ namespace KiraTakip.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("AtanmaTarihi")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("AtayanUserId")
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<int>("RolId")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -2220,58 +2123,6 @@ namespace KiraTakip.Migrations
                         .IsUnique();
 
                     b.ToTable("UserRoller");
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("NormalizedName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NormalizedName")
-                        .IsUnique()
-                        .HasDatabaseName("RoleNameIndex")
-                        .HasFilter("[NormalizedName] IS NOT NULL");
-
-                    b.ToTable("AspNetRoles", (string)null);
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ClaimType")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ClaimValue")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RoleId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RoleId");
-
-                    b.ToTable("AspNetRoleClaims", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
@@ -2321,21 +2172,6 @@ namespace KiraTakip.Migrations
                     b.ToTable("AspNetUserLogins", (string)null);
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
-                {
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("RoleId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("UserId", "RoleId");
-
-                    b.HasIndex("RoleId");
-
-                    b.ToTable("AspNetUserRoles", (string)null);
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
                     b.Property<string>("UserId")
@@ -2361,17 +2197,6 @@ namespace KiraTakip.Migrations
                         .WithMany()
                         .HasForeignKey("KiraciId")
                         .OnDelete(DeleteBehavior.Restrict);
-                });
-
-            modelBuilder.Entity("KiraTakip.Models.Entities.BankaHareketi", b =>
-                {
-                    b.HasOne("KiraTakip.Models.Entities.ApplicationUser", "ImportEdenUser")
-                        .WithMany()
-                        .HasForeignKey("ImportEdenUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("ImportEdenUser");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.Belge", b =>
@@ -2479,25 +2304,6 @@ namespace KiraTakip.Migrations
                     b.Navigation("Rol");
                 });
 
-            modelBuilder.Entity("KiraTakip.Models.Entities.Dekont", b =>
-                {
-                    b.HasOne("KiraTakip.Models.Entities.KiraOdeme", "KiraOdeme")
-                        .WithMany("Dekontlar")
-                        .HasForeignKey("KiraOdemeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("KiraTakip.Models.Entities.ApplicationUser", "YukleyenUser")
-                        .WithMany()
-                        .HasForeignKey("YukleyenUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("KiraOdeme");
-
-                    b.Navigation("YukleyenUser");
-                });
-
             modelBuilder.Entity("KiraTakip.Models.Entities.GenelTarife", b =>
                 {
                     b.HasOne("KiraTakip.Models.Entities.BorcTipi", "BorcTipi")
@@ -2515,58 +2321,6 @@ namespace KiraTakip.Migrations
                     b.Navigation("BorcTipi");
 
                     b.Navigation("KiraciKategori");
-                });
-
-            modelBuilder.Entity("KiraTakip.Models.Entities.KiraOdeme", b =>
-                {
-                    b.HasOne("KiraTakip.Models.Entities.ApplicationUser", "GirenUser")
-                        .WithMany()
-                        .HasForeignKey("GirenUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("KiraTakip.Models.Entities.KiraSozlesmesi", "KiraSozlesmesi")
-                        .WithMany()
-                        .HasForeignKey("KiraSozlesmesiId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("KiraTakip.Models.Entities.ApplicationUser", "OnaylayanUser")
-                        .WithMany()
-                        .HasForeignKey("OnaylayanUserId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("KiraTakip.Models.Entities.Tahakkuk", "Tahakkuk")
-                        .WithMany("Odemeler")
-                        .HasForeignKey("TahakkukId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("GirenUser");
-
-                    b.Navigation("KiraSozlesmesi");
-
-                    b.Navigation("OnaylayanUser");
-
-                    b.Navigation("Tahakkuk");
-                });
-
-            modelBuilder.Entity("KiraTakip.Models.Entities.KiraSozlesmesi", b =>
-                {
-                    b.HasOne("KiraTakip.Models.Entities.Birim", "Birim")
-                        .WithMany("Sozlesmeler")
-                        .HasForeignKey("BirimId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("KiraTakip.Models.Entities.Kiraci", "Kiraci")
-                        .WithMany()
-                        .HasForeignKey("KiraciId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Birim");
-
-                    b.Navigation("Kiraci");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.Kiraci", b =>
@@ -2593,22 +2347,15 @@ namespace KiraTakip.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("KiraTakip.Models.Entities.ApplicationUser", "EslestirenUser")
-                        .WithMany()
-                        .HasForeignKey("EslestirenUserId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("KiraTakip.Models.Entities.KiraOdeme", "KiraOdeme")
+                    b.HasOne("KiraTakip.Models.Entities.TahakkukOdeme", "TahakkukOdeme")
                         .WithMany("BankaEslesmeleri")
-                        .HasForeignKey("KiraOdemeId")
+                        .HasForeignKey("TahakkukOdemeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("BankaHareketi");
 
-                    b.Navigation("EslestirenUser");
-
-                    b.Navigation("KiraOdeme");
+                    b.Navigation("TahakkukOdeme");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.OdemeLinkKayit", b =>
@@ -2684,9 +2431,28 @@ namespace KiraTakip.Migrations
                     b.Navigation("Rol");
                 });
 
+            modelBuilder.Entity("KiraTakip.Models.Entities.Sozlesme", b =>
+                {
+                    b.HasOne("KiraTakip.Models.Entities.Birim", "Birim")
+                        .WithMany("Sozlesmeler")
+                        .HasForeignKey("BirimId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("KiraTakip.Models.Entities.Kiraci", "Kiraci")
+                        .WithMany()
+                        .HasForeignKey("KiraciId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Birim");
+
+                    b.Navigation("Kiraci");
+                });
+
             modelBuilder.Entity("KiraTakip.Models.Entities.SozlesmeIslemGecmisi", b =>
                 {
-                    b.HasOne("KiraTakip.Models.Entities.KiraSozlesmesi", "KiraSozlesmesi")
+                    b.HasOne("KiraTakip.Models.Entities.Sozlesme", "KiraSozlesmesi")
                         .WithMany("IslemGecmisi")
                         .HasForeignKey("KiraSozlesmesiId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2703,7 +2469,7 @@ namespace KiraTakip.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("KiraTakip.Models.Entities.KiraSozlesmesi", "KiraSozlesmesi")
+                    b.HasOne("KiraTakip.Models.Entities.Sozlesme", "KiraSozlesmesi")
                         .WithMany("SozlesmeTarifeler")
                         .HasForeignKey("KiraSozlesmesiId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2716,7 +2482,7 @@ namespace KiraTakip.Migrations
 
             modelBuilder.Entity("KiraTakip.Models.Entities.Tahakkuk", b =>
                 {
-                    b.HasOne("KiraTakip.Models.Entities.KiraSozlesmesi", "KiraSozlesmesi")
+                    b.HasOne("KiraTakip.Models.Entities.Sozlesme", "KiraSozlesmesi")
                         .WithMany()
                         .HasForeignKey("KiraSozlesmesiId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -2747,6 +2513,39 @@ namespace KiraTakip.Migrations
                         .IsRequired();
 
                     b.Navigation("BorcTipi");
+
+                    b.Navigation("Tahakkuk");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.TahakkukOdeme", b =>
+                {
+                    b.HasOne("KiraTakip.Models.Entities.ApplicationUser", "GirenUser")
+                        .WithMany()
+                        .HasForeignKey("GirenUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("KiraTakip.Models.Entities.Sozlesme", "KiraSozlesmesi")
+                        .WithMany()
+                        .HasForeignKey("KiraSozlesmesiId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("KiraTakip.Models.Entities.ApplicationUser", "OnaylayanUser")
+                        .WithMany()
+                        .HasForeignKey("OnaylayanUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("KiraTakip.Models.Entities.Tahakkuk", "Tahakkuk")
+                        .WithMany("Odemeler")
+                        .HasForeignKey("TahakkukId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("GirenUser");
+
+                    b.Navigation("KiraSozlesmesi");
+
+                    b.Navigation("OnaylayanUser");
 
                     b.Navigation("Tahakkuk");
                 });
@@ -2799,15 +2598,6 @@ namespace KiraTakip.Migrations
                     b.Navigation("Rol");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
-                {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
                     b.HasOne("KiraTakip.Models.Entities.ApplicationUser", null)
@@ -2819,21 +2609,6 @@ namespace KiraTakip.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("KiraTakip.Models.Entities.ApplicationUser", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
-                {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("KiraTakip.Models.Entities.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -2865,20 +2640,6 @@ namespace KiraTakip.Migrations
                     b.Navigation("Sozlesmeler");
                 });
 
-            modelBuilder.Entity("KiraTakip.Models.Entities.KiraOdeme", b =>
-                {
-                    b.Navigation("BankaEslesmeleri");
-
-                    b.Navigation("Dekontlar");
-                });
-
-            modelBuilder.Entity("KiraTakip.Models.Entities.KiraSozlesmesi", b =>
-                {
-                    b.Navigation("IslemGecmisi");
-
-                    b.Navigation("SozlesmeTarifeler");
-                });
-
             modelBuilder.Entity("KiraTakip.Models.Entities.Rol", b =>
                 {
                     b.Navigation("RolPermissions");
@@ -2886,11 +2647,23 @@ namespace KiraTakip.Migrations
                     b.Navigation("UserRoller");
                 });
 
+            modelBuilder.Entity("KiraTakip.Models.Entities.Sozlesme", b =>
+                {
+                    b.Navigation("IslemGecmisi");
+
+                    b.Navigation("SozlesmeTarifeler");
+                });
+
             modelBuilder.Entity("KiraTakip.Models.Entities.Tahakkuk", b =>
                 {
                     b.Navigation("Kalemler");
 
                     b.Navigation("Odemeler");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.TahakkukOdeme", b =>
+                {
+                    b.Navigation("BankaEslesmeleri");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.Tasinmaz", b =>

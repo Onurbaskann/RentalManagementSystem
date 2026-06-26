@@ -95,7 +95,7 @@ public class SozlesmeController : Controller
         var gecmis = await _sozlesmeService.GetByBirimIdAsync(s.BirimId);
         var kiraciSozlesmeleri = await _sozlesmeService.GetByKiraciIdAsync(s.KiraciId);
 
-        var dummySozlesme = new KiraSozlesmesi
+        var dummySozlesme = new Sozlesme
         {
             Id = s.Id,
             KiraciId = s.KiraciId,
@@ -243,13 +243,13 @@ public class SozlesmeController : Controller
             .Where(k => k.Davranis == BorcTipiDavranisi.AylikSabit)
             .Sum(k => k.Tutar);
 
-        var s = new KiraSozlesmesi
+        var s = new Sozlesme
         {
             BirimId = vm.BirimId!.Value,
             KiraciId = vm.KiraciId,
             BaslangicTarihi = vm.BaslangicTarihi,
             BitisTarihi = vm.BitisTarihi,
-            Notlar = vm.Notlar,
+            Aciklama = vm.Aciklama,
             Durum = SozlesmeDurumu.Aktif,
             KdvUygulanacakMi = kdvUygulanacakMi,
             VadeKuraliTipi = vm.VadeKuraliTipi,
@@ -307,7 +307,7 @@ public class SozlesmeController : Controller
             return RedirectToAction("Detay", new { id });
         }
 
-        var dummySozlesme = new KiraSozlesmesi
+        var dummySozlesme = new Sozlesme
         {
             Id = s.Id,
             KiraciId = s.KiraciId,

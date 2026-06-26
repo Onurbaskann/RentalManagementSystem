@@ -126,7 +126,7 @@ public class KiraciKullaniciController : Controller
         var kiraciId = _currentUser.KiraciId!.Value;
         var currentUserId = _userManager.GetUserId(User)!;
 
-        var rol = await _db.Roller.FirstOrDefaultAsync(r => r.Id == model.RolId && r.KiraciId == kiraciId);
+        var rol = await _db.Roller.FirstOrDefaultAsync(r => r.Id == model.RolId && (r.KiraciId == null || r.KiraciId == kiraciId));
         if (rol == null)
         {
             ModelState.AddModelError("RolId", "Geçersiz rol seçildi.");
@@ -251,7 +251,7 @@ public class KiraciKullaniciController : Controller
         }
 
         var yeniRol = await _db.Roller
-            .FirstOrDefaultAsync(r => r.Id == model.RolId && r.KiraciId == kiraciId);
+            .FirstOrDefaultAsync(r => r.Id == model.RolId && (r.KiraciId == null || r.KiraciId == kiraciId));
         if (yeniRol == null)
         {
             ModelState.AddModelError("RolId", "Geçersiz rol seçildi.");
@@ -326,7 +326,7 @@ public class KiraciKullaniciController : Controller
     {
         var kiraciId = _currentUser.KiraciId!.Value;
         var roller = await _db.Roller
-            .Where(r => r.KiraciId == kiraciId && r.IsActive && !r.IsDeleted)
+            .Where(r => (r.KiraciId == null || r.KiraciId == kiraciId) && r.IsActive && !r.IsDeleted)
             .OrderBy(r => r.Ad)
             .ToListAsync();
 

@@ -24,7 +24,7 @@ public class KiraciOdemeController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var odemeler = await _db.KiraOdemeler
+        var odemeler = await _db.TahakkukOdemeler
             .Include(o => o.KiraSozlesmesi!)
                 .ThenInclude(s => s.Birim)
             .OrderByDescending(o => o.OdemeTarihi)

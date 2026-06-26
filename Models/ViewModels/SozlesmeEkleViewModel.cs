@@ -12,7 +12,7 @@ public class SozlesmeEkleViewModel
     public DateTime BitisTarihi { get; set; } = DateTime.Today.AddYears(1);
     public VadeKuraliTipi VadeKuraliTipi { get; set; } = VadeKuraliTipi.SabitAyGunu;
     public int VadeGunu { get; set; } = 1;
-    public string? Notlar { get; set; }
+    public string? Aciklama { get; set; }
     public List<BirimLookupDto> MevcutBirimler { get; set; } = [];
     public List<KiraciListItemDto> Kiraciler { get; set; } = [];
     public List<SozlesmeKalemInputDto> SozlesmeKalemleri { get; set; } = [];

@@ -16,7 +16,7 @@ public interface IBankaHareketiRepository : IBaseRepository<BankaHareketi>
     Task<List<BankaHareketiListItemDto>> GetHareketAdaylariAsync(int odemeId);
 
     // Eşleştirme yazma işlemleri
-    Task<bool> EslesmeVarMiAsync(int kiraOdemeId, int bankaHareketiId);
+    Task<bool> EslesmeVarMiAsync(int tahakkukOdemeId, int bankaHareketiId);
     Task AddEslesmeAsync(OdemeBankaEslesme eslesme);
     Task<OdemeBankaEslesme?> GetEslesmeWithBankaHareketiAsync(int eslesmeId);
     Task RemoveEslesmeAsync(OdemeBankaEslesme eslesme);

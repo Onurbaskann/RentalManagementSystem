@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Roles = RoleNames.Admin)]
+[Authorize(Roles = RoleNames.SistemYoneticisi)]
 [Route("Admin/Kiracilar/{kiraciId:int}/Kullanicilar")]
 public class AdminKiraciKullaniciController : Controller
 {
@@ -41,7 +41,7 @@ public class AdminKiraciKullaniciController : Controller
     private async Task PopulateRollerAsync(List<RolSecenekViewModel> liste, int kiraciId)
     {
         var roller = await _db.Roller.IgnoreQueryFilters()
-            .Where(r => r.KiraciId == kiraciId && r.IsActive && !r.IsDeleted)
+            .Where(r => (r.KiraciId == null || r.KiraciId == kiraciId) && r.IsActive && !r.IsDeleted)
             .OrderBy(r => r.Ad)
             .ToListAsync();
         liste.AddRange(roller.Select(r => new RolSecenekViewModel { Id = r.Id, Ad = r.Ad }));
@@ -192,7 +192,7 @@ public class AdminKiraciKullaniciController : Controller
         }
 
         var rol = await _db.Roller.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(r => r.Id == model.RolId && r.KiraciId == kiraciId);
+            .FirstOrDefaultAsync(r => r.Id == model.RolId && (r.KiraciId == null || r.KiraciId == kiraciId));
         if (rol == null)
         {
             ModelState.AddModelError("RolId", "Geçersiz rol seçildi.");

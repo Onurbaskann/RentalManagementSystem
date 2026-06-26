@@ -15,7 +15,7 @@ public class RezervasyonTarifeRepository : BaseRepository<RezervasyonTarife>, IR
             .Where(r => r.BirimId == null
                      && r.BirimTuruId != null
                      && r.Yil == yil
-                     && r.Aktif
+                     && r.IsActive
                      && r.BirimTuru!.Aktif)
             .OrderBy(r => r.BirimTuru!.Sira)
             .Select(r => new ParentRezervasyonTarifeSatir
@@ -43,7 +43,7 @@ public class RezervasyonTarifeRepository : BaseRepository<RezervasyonTarife>, IR
                 UcretlendirmePeriyoduDakika = r.UcretlendirmePeriyoduDakika,
                 PeriyotUcreti = r.PeriyotUcreti,
                 KdvOrani = r.KdvOrani,
-                Aktif = r.Aktif,
+                IsActive = r.IsActive,
                 Aciklama = r.Aciklama
             })
             .ToListAsync();

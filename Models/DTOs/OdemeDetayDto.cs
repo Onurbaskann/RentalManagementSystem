@@ -20,6 +20,5 @@ public class OdemeDetayDto
     public DateTime TahakkukDonemBaslangic { get; set; }
     public string? GirenUserGosterimAdi { get; set; }
     public string? OnaylayanUserGosterimAdi { get; set; }
-    public List<OdemeDekontDto> Dekontlar { get; set; } = [];
     public List<OdemeBankaEslesmeDto> BankaEslesmeleri { get; set; } = [];
 }

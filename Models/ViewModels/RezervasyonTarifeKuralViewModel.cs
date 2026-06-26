@@ -18,9 +18,9 @@ public class RezervasyonTarifeKuralViewModel
     public decimal PeriyotUcreti { get; set; }
     [Range(0, 100, ErrorMessage = "KDV oranı 0–100 arasında olmalıdır.")]
     public decimal KdvOrani { get; set; } = 20;
-    public bool Aktif { get; set; } = true;
 
     [MaxLength(300)]
     public string? Aciklama { get; set; }
+    public bool IsActive { get; set; } = true;
     public List<BirimListItemDto> RezervasyonBirimleri { get; set; } = [];
 }

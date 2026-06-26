@@ -145,9 +145,7 @@ public class KiraciController : Controller
                 file.FileName, file.ContentType, ms.ToArray());
         }
 
-        // Kiracı rol şablonlarını oluştur (Firma Yetkilisi + Finans Yetkilisi)
         var currentUserId = _userManager.GetUserId(User)!;
-        await _rolService.SeedKiraciRolleriAsync(k.Id, currentUserId);
 
         // İlk firma yetkilisine otomatik davet gönder (e-posta girilmişse)
         if (!string.IsNullOrWhiteSpace(vm.IlkYetkiliEmail))
@@ -155,7 +153,7 @@ public class KiraciController : Controller
             try
             {
                 var firmaRol = await _ctx.Roller
-                    .FirstOrDefaultAsync(r => r.KiraciId == k.Id && r.Ad == RoleNames.FirmaYetkilisi);
+                    .FirstOrDefaultAsync(r => r.KiraciId == null && r.Ad == RoleNames.KiraciYoneticisi);
                 if (firmaRol != null)
                     await _davetiyeService.GonderAsync(vm.IlkYetkiliEmail, vm.IlkYetkiliAdSoyad, firmaRol.Id, currentUserId, k.Id);
                 TempData["Success"] = $"'{k.GosterimAdi}' eklendi ve {vm.IlkYetkiliEmail} adresine davet gönderildi.";

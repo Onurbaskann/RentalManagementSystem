@@ -18,7 +18,7 @@ public class RezervasyonRepository : BaseRepository<Rezervasyon>, IRezervasyonRe
             query = query.Where(r => yetkiliTasinmazIds.Contains(r.Birim.TasinmazId));
 
         return await query
-            .OrderByDescending(r => r.OlusturmaTarihi)
+            .OrderByDescending(r => r.CreatedAt)
             .Select(r => new RezervasyonListItemDto
             {
                 Id = r.Id,
@@ -52,14 +52,14 @@ public class RezervasyonRepository : BaseRepository<Rezervasyon>, IRezervasyonRe
     public async Task<RezervasyonTarife?> GetAktifTarifeForBirimAsync(int birimId)
     {
         return await _ctx.RezervasyonTarifeler
-            .Where(k => k.Aktif && k.BirimId == birimId)
+            .Where(k => k.IsActive && k.BirimId == birimId)
             .FirstOrDefaultAsync();
     }
 
     public async Task<RezervasyonTarife?> GetGenelTarifeAsync(int birimTuruId, int yil)
     {
         return await _ctx.RezervasyonTarifeler
-            .Where(g => g.BirimId == null && g.BirimTuruId == birimTuruId && g.Aktif && g.Yil == yil)
+            .Where(g => g.BirimId == null && g.BirimTuruId == birimTuruId && g.IsActive && g.Yil == yil)
             .FirstOrDefaultAsync();
     }
 

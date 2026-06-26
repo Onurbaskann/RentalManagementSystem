@@ -90,6 +90,24 @@ public class SeedDataService
         await _ctx.BorcTipleri.Where(b => b.Kod == "ETKINLIK").ExecuteUpdateAsync(s => s.SetProperty(b => b.Davranis, BorcTipiDavranisi.RezervasyonOzel));
     }
 
+    public async Task EnsureOdemeBelgeTuruAsync()
+    {
+        if (!await _ctx.BelgeTurleri.AnyAsync(t => t.Kod == "ODEME_DEKONT"))
+        {
+            _ctx.BelgeTurleri.Add(new BelgeTuru
+            {
+                Kod = "ODEME_DEKONT",
+                Ad = "Ödeme Dekontu",
+                HedefEntite = BelgeOwnerTipi.Odeme,
+                IzinVerilenUzantilar = "pdf,jpg,jpeg,png",
+                MaxBoyutMb = 5,
+                Sira = 1,
+                IsActive = true
+            });
+            await _ctx.SaveChangesAsync();
+        }
+    }
+
     public async Task EnsureVarsayilanRezervasyonTarifeAsync()
     {
         var cariYil = DateTime.Now.Year;
@@ -113,14 +131,12 @@ public class SeedDataService
             _ctx.RezervasyonTarifeler.Add(new RezervasyonTarife
             {
                 Yil = cariYil,
-                Aktif = true,
                 BirimTuruId = bt.Id,
                 UcretsizSureDakika = varsayilanUcretsizSure,
                 UcretlendirmePeriyoduDakika = varsayilanPeriyot,
                 PeriyotUcreti = varsayilanUcret,
                 KdvOrani = varsayilanKdv,
-                Aciklama = $"{cariYil} varsayılan — {bt.Ad}",
-                OlusturmaTarihi = DateTime.UtcNow
+                Aciklama = $"{cariYil} varsayılan — {bt.Ad}"
             });
         }
         await _ctx.SaveChangesAsync();
@@ -296,8 +312,7 @@ public class SeedDataService
             AcikYuzolcumu = 500,
             KapaliYuzolcumu = 4500,
             KatSayisi = 4,
-            Aciklama = "Ofis bazlı kiralanabilir teknokent binası",
-            KayitTarihi = now.AddMonths(-36)
+            Aciklama = "Ofis bazlı kiralanabilir teknokent binası"
         };
 
         // 16 Ofis Ekleme
@@ -347,8 +362,6 @@ public class SeedDataService
             UcretlendirmePeriyoduDakika = salonPeriyot,
             PeriyotUcreti = salonUcret,
             KdvOrani = salonKdv,
-            Aktif = true,
-            OlusturmaTarihi = now,
             Aciklama = "Seed — Ana Toplantı Salonu için varsayılan kural"
         });
         await _ctx.SaveChangesAsync();
@@ -366,8 +379,7 @@ public class SeedDataService
             AcikYuzolcumu = 300,
             KapaliYuzolcumu = 2000,
             KatSayisi = 2,
-            Aciklama = "B Blok ofis bazlı kiralanabilir teknokent binası",
-            KayitTarihi = now.AddMonths(-24)
+            Aciklama = "B Blok ofis bazlı kiralanabilir teknokent binası"
         };
 
         // 4 Ofis Ekleme
@@ -456,7 +468,7 @@ public class SeedDataService
 
         var bedelB101 = await ResolveKiraBedeli(birimB101, veriBilisim);
 
-        var sozlesmeler = new List<KiraSozlesmesi>
+        var sozlesmeler = new List<Sozlesme>
         {
             // Ofis 101: Matris/Birim üzerinden bedel alacak, aşağıda Sözleşme Tarifesi ile ezilecek
             MakeSozlesme(birim101, yzCozum, startYearMinus1, startYearMinus1.AddYears(2), true,
@@ -539,7 +551,6 @@ public class SeedDataService
         var seededKiraciler = await _ctx.Kiraciler.ToListAsync();
         foreach (var k in seededKiraciler)
         {
-            await _rolService.SeedKiraciRolleriAsync(k.Id, "system");
 
             if (!string.IsNullOrWhiteSpace(k.Email))
             {
@@ -556,24 +567,7 @@ public class SeedDataService
             }
         }
 
-        // --- 10. Yetki Kapsamı Seeding (Faz 17) ---
-        var viewerUser = await _userManager.FindByEmailAsync("viewer@kiratakip.local");
-        if (viewerUser != null)
-        {
-            var exists = await _ctx.KullaniciYetkiKapsamlari.AnyAsync(s => s.UserId == viewerUser.Id && s.KapsamTipi == KapsamTipi.Tasinmaz && s.KapsamId == teknokent.Id);
-            if (!exists)
-            {
-                _ctx.KullaniciYetkiKapsamlari.Add(new KullaniciYetkiKapsami
-                {
-                    UserId = viewerUser.Id,
-                    KapsamTipi = KapsamTipi.Tasinmaz,
-                    KapsamId = teknokent.Id,
-                    AtanmaTarihi = DateTime.UtcNow,
-                    AtayanUserId = "system"
-                });
-                await _ctx.SaveChangesAsync();
-            }
-        }
+
     }
 
     public async Task SeedTasinmazFiyatlarAsync()
@@ -643,7 +637,7 @@ public class SeedDataService
         foreach (var s in aktifSozlesmeler) await _tahakkukUretim.UretSozlesmeIcinAsync(s.Id);
     }
 
-    private async Task SeedTahakkuklarVeOdemelerAsync(List<KiraSozlesmesi> sozlesmeler)
+    private async Task SeedTahakkuklarVeOdemelerAsync(List<Sozlesme> sozlesmeler)
     {
         try
         {
@@ -740,7 +734,7 @@ public class SeedDataService
                 odemeTutari = Math.Round(t.ToplamTutar * kismiOran, 2);
             }
 
-            var odeme = new KiraOdeme
+            var odeme = new TahakkukOdeme
             {
                 KiraSozlesmesiId = t.KiraSozlesmesiId,
                 TahakkukId = t.Id,
@@ -754,7 +748,7 @@ public class SeedDataService
 
             t.OdenenTutar = odemeTutari;
             t.Durum = kismiMi ? TahakkukDurumu.KismenOdendi : TahakkukDurumu.TamOdendi;
-            _ctx.KiraOdemeler.Add(odeme);
+            _ctx.TahakkukOdemeler.Add(odeme);
         }
     }
 
@@ -768,7 +762,7 @@ public class SeedDataService
         foreach (var t in bekleyenler)
         {
             var kismiTutar = Math.Round(t.ToplamTutar / 2, 2);
-            var odeme = new KiraOdeme
+            var odeme = new TahakkukOdeme
             {
                 KiraSozlesmesiId = t.KiraSozlesmesiId,
                 TahakkukId = t.Id,
@@ -781,7 +775,7 @@ public class SeedDataService
             };
             t.OdenenTutar = kismiTutar;
             t.Durum = TahakkukDurumu.KismenOdendi;
-            _ctx.KiraOdemeler.Add(odeme);
+            _ctx.TahakkukOdemeler.Add(odeme);
         }
     }
 
@@ -812,7 +806,6 @@ public class SeedDataService
             KdvTutari = 200,
             ToplamTutar = 1200,
             Durum = RezervasyonDurumu.TahakkukaAktarildi,
-            OlusturmaTarihi = DateTime.Now.AddDays(-15)
         };
         _ctx.Rezervasyonlari.Add(rezervasyon1);
         await _ctx.SaveChangesAsync();
@@ -871,7 +864,6 @@ public class SeedDataService
             KdvTutari = 200,
             ToplamTutar = 1200,
             Durum = RezervasyonDurumu.Planlandi,
-            OlusturmaTarihi = DateTime.Now
         });
 
         // 3. B Blok Rezervasyonu (Gelecek - Planlandı)
@@ -892,8 +884,7 @@ public class SeedDataService
                 KdvOrani = 20,
                 KdvTutari = 100,
                 ToplamTutar = 600,
-                Durum = RezervasyonDurumu.Planlandi,
-                OlusturmaTarihi = DateTime.Now
+                Durum = RezervasyonDurumu.Planlandi
             });
         }
 
@@ -902,33 +893,26 @@ public class SeedDataService
 
     private async Task SeedBankaHareketleriAsync()
     {
-        var admin = await _ctx.Users.FirstOrDefaultAsync();
-        var adminId = admin?.Id ?? "";
-
         // Eşleşmiş Hareket
         _ctx.BankaHareketleri.Add(new BankaHareketi
         {
-            HareketTarihi = DateTime.Today.AddDays(-1),
-            Tutar = 1500,
+            IslemTarihi = DateTime.Today.AddDays(-1),
+            IslemTutari = 1500,
             Aciklama = "KİRA ÖDEMESİ - TEKNOKENT",
-            KarsiUnvan = "Yapay Zeka Çözümleri A.Ş.",
+            GonderenBilgisi = "Yapay Zeka Çözümleri A.Ş.",
             BankaKodu = "TR01",
             EslesmeDurumu = BankaEslesmeDurumu.Eslesti,
-            ImportBatchId = Guid.NewGuid(),
-            ImportEdenUserId = adminId
         });
 
         // Eşleşmemiş (Açıkta) Hareket
         _ctx.BankaHareketleri.Add(new BankaHareketi
         {
-            HareketTarihi = DateTime.Today.AddDays(-2),
-            Tutar = 5000,
+            IslemTarihi = DateTime.Today.AddDays(-2),
+            IslemTutari = 5000,
             Aciklama = "HAVALE - BİLİNMEYEN",
-            KarsiHesap = "TR123456789...",
+            GonderenIban = "TR123456789...",
             BankaKodu = "TR01",
             EslesmeDurumu = BankaEslesmeDurumu.Eslestirilmedi,
-            ImportBatchId = Guid.NewGuid(),
-            ImportEdenUserId = adminId
         });
 
         await _ctx.SaveChangesAsync();
@@ -954,7 +938,7 @@ public class SeedDataService
             KayitTarihi = DateTime.Now.AddMonths(-Random.Shared.Next(6, 36))
         };
 
-    private static KiraSozlesmesi MakeSozlesme(Birim birim, Kiraci kiraci,
+    private static Sozlesme MakeSozlesme(Birim birim, Kiraci kiraci,
         DateTime baslangic, DateTime bitis,
         bool kdv, decimal kdvOrani = 20, string? notlar = null,
         VadeKuraliTipi vadeKuraliTipi = VadeKuraliTipi.SabitAyGunu,
@@ -966,7 +950,7 @@ public class SeedDataService
             KiraciId = kiraci.Id,
             BaslangicTarihi = baslangic,
             BitisTarihi = bitis,
-            Notlar = notlar,
+            Aciklama = notlar,
             Durum = SozlesmeDurumu.Aktif,
             KdvUygulanacakMi = kdv,
             VadeKuraliTipi = vadeKuraliTipi,
@@ -986,7 +970,7 @@ public class SeedDataService
             await _userManager.DeleteAsync(ku);
         }
 
-        var kiraciRoller = await _ctx.Roller.Where(r => r.Scope == RolScope.Kiraci).ToListAsync();
+        var kiraciRoller = await _ctx.Roller.Where(r => r.Scope == RolScope.Kiraci && r.KiraciId != null).ToListAsync();
         _ctx.Roller.RemoveRange(kiraciRoller);
 
         _ctx.Davetiyeler.RemoveRange(_ctx.Davetiyeler);
@@ -995,8 +979,7 @@ public class SeedDataService
 
         // Temizlik sırası önemlidir (FK kısıtlamaları nedeniyle)
         _ctx.OdemeBankaEslesmeleri.RemoveRange(_ctx.OdemeBankaEslesmeleri);
-        _ctx.KiraOdemeler.RemoveRange(_ctx.KiraOdemeler);
-        _ctx.Dekontlar.RemoveRange(_ctx.Dekontlar);
+        _ctx.TahakkukOdemeler.RemoveRange(_ctx.TahakkukOdemeler);
         _ctx.BankaHareketleri.RemoveRange(_ctx.BankaHareketleri);
 
         _ctx.Rezervasyonlari.RemoveRange(_ctx.Rezervasyonlari);
@@ -1055,7 +1038,7 @@ public class SeedDataService
             await _userManager.UpdateAsync(user);
         }
 
-        var firmaRol = await _ctx.Roller.FirstOrDefaultAsync(r => r.KiraciId == kiraciId && r.Ad == RoleNames.FirmaYetkilisi);
+        var firmaRol = await _ctx.Roller.FirstOrDefaultAsync(r => r.KiraciId == null && r.Ad == RoleNames.KiraciYoneticisi);
         if (firmaRol != null)
         {
             var hasRole = await _ctx.UserRoller.AnyAsync(ur => ur.UserId == user.Id && ur.RolId == firmaRol.Id);

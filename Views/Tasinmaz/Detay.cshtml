@@ -6,7 +6,7 @@
     bool canEdit = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Sozlesme.Create) || User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Rezervasyon.Create);
     bool canDuzenle = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Tasinmaz.Edit);
     bool canManageRate = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Birim.ManageRate);
-    bool canManageCarpan = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.TasinmazCarpanPerm.Manage);
+    bool canManageCarpan = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.TasinmazCarpan.Manage);
 
     string DurumBadge(KiraDurumu d) => d switch
     {

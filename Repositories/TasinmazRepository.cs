@@ -94,23 +94,23 @@ public class TasinmazRepository : BaseRepository<Tasinmaz>, ITasinmazRepository
                             : KiraDurumu.Kirali)
                         : KiraDurumu.Bos,
                     RezKuralId = _ctx.RezervasyonTarifeler
-                        .Where(rt => rt.BirimId == b.Id && rt.Aktif)
+                        .Where(rt => rt.BirimId == b.Id && rt.IsActive)
                         .Select(rt => (int?)rt.Id)
                         .FirstOrDefault(),
                     RezKuralPeriyotUcreti = _ctx.RezervasyonTarifeler
-                        .Where(rt => rt.BirimId == b.Id && rt.Aktif)
+                        .Where(rt => rt.BirimId == b.Id && rt.IsActive)
                         .Select(rt => (decimal?)rt.PeriyotUcreti)
                         .FirstOrDefault(),
                     RezKuralUcretlendirmePeriyoduDakika = _ctx.RezervasyonTarifeler
-                        .Where(rt => rt.BirimId == b.Id && rt.Aktif)
+                        .Where(rt => rt.BirimId == b.Id && rt.IsActive)
                         .Select(rt => (int?)rt.UcretlendirmePeriyoduDakika)
                         .FirstOrDefault(),
                     RezKuralUcretsizSureDakika = _ctx.RezervasyonTarifeler
-                        .Where(rt => rt.BirimId == b.Id && rt.Aktif)
+                        .Where(rt => rt.BirimId == b.Id && rt.IsActive)
                         .Select(rt => (int?)rt.UcretsizSureDakika)
                         .FirstOrDefault(),
                     RezKuralKdvOrani = _ctx.RezervasyonTarifeler
-                        .Where(rt => rt.BirimId == b.Id && rt.Aktif)
+                        .Where(rt => rt.BirimId == b.Id && rt.IsActive)
                         .Select(rt => (decimal?)rt.KdvOrani)
                         .FirstOrDefault()
                 }).ToList(),
@@ -132,7 +132,7 @@ public class TasinmazRepository : BaseRepository<Tasinmaz>, ITasinmazRepository
                         Durum = r.Durum
                     }).ToList(),
                 BirimRezervasyonKurallari = _ctx.RezervasyonTarifeler
-                    .Where(rt => rt.BirimId != null && t.Birimler.Select(b => b.Id).Contains(rt.BirimId.Value) && rt.Aktif)
+                    .Where(rt => rt.BirimId != null && t.Birimler.Select(b => b.Id).Contains(rt.BirimId.Value) && rt.IsActive)
                     .Select(rt => new BirimRezervasyonKuralDto
                     {
                         Id = rt.Id,

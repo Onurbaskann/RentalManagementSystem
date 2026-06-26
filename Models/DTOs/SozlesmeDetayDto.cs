@@ -23,7 +23,7 @@ public class SozlesmeDetayDto
     public string TasinmazAcikAdres { get; set; } = string.Empty;
     public DateTime BaslangicTarihi { get; set; }
     public DateTime BitisTarihi { get; set; }
-    public string? Notlar { get; set; }
+    public string? Aciklama { get; set; }
     public SozlesmeDurumu Durum { get; set; }
     public DateTime? FesihTarihi { get; set; }
     public string? FesihNedeni { get; set; }

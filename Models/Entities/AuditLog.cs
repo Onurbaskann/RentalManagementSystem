@@ -1,5 +1,3 @@
-using KiraTakip.Models;
-
 namespace KiraTakip.Models.Entities;
 
 public class AuditLog

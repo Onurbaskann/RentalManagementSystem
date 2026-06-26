@@ -42,7 +42,7 @@ public class TasinmazService : ITasinmazService
         {
             if (b.AktifSozlesmeId.HasValue)
             {
-                var dummySozlesme = new KiraSozlesmesi
+                var dummySozlesme = new Sozlesme
                 {
                     Id = b.AktifSozlesmeId.Value,
                     KiraciId = b.AktifSozlesmeKiraciId ?? 0,
@@ -57,7 +57,7 @@ public class TasinmazService : ITasinmazService
         foreach (var s in dto.SozlesmeGecmisi)
         {
             var birimYuzolcumu = dto.Birimler.FirstOrDefault(b => b.Id == s.BirimId)?.Yuzolcumu ?? 0m;
-            var dummySozlesme = new KiraSozlesmesi
+            var dummySozlesme = new Sozlesme
             {
                 Id = s.Id,
                 KiraciId = s.KiraciId,
@@ -72,8 +72,6 @@ public class TasinmazService : ITasinmazService
 
     public async Task<Tasinmaz> CreateAsync(Tasinmaz t, List<BirimInputViewModel>? birimler = null, List<RezervasyonAlaniInputViewModel>? rezervasyonAlanlari = null)
     {
-        t.KayitTarihi = DateTime.Now;
-
         if (t.KiralamaSekli == KiralamaSekli.BirimBazli && birimler != null && birimler.Count > 0)
         {
             foreach (var b in birimler)
@@ -124,8 +122,6 @@ public class TasinmazService : ITasinmazService
                     UcretlendirmePeriyoduDakika = 60,
                     PeriyotUcreti = r.SaatlikUcret,
                     KdvOrani = r.KdvOrani,
-                    Aktif = true,
-                    OlusturmaTarihi = DateTime.Now,
                     Aciklama = $"{r.Ad} için otomatik oluşturuldu"
                 });
             }
@@ -151,7 +147,7 @@ public class TasinmazService : ITasinmazService
         var birimIds = t.Birimler.Select(b => b.Id).ToList();
 
         var rezTarife = await _ctx.RezervasyonTarifeler
-            .Where(rt => rt.BirimId != null && birimIds.Contains(rt.BirimId.Value) && rt.Aktif)
+            .Where(rt => rt.BirimId != null && birimIds.Contains(rt.BirimId.Value) && rt.IsActive)
             .ToListAsync();
         var rezTarifeByBirimId = rezTarife.ToDictionary(rt => rt.BirimId!.Value);
 
@@ -245,7 +241,7 @@ public class TasinmazService : ITasinmazService
         var now = DateTime.Now;
         var birimIds = t.Birimler.Select(b => b.Id).ToList();
         var rezTarifeler = await _ctx.RezervasyonTarifeler
-            .Where(rt => rt.BirimId != null && birimIds.Contains(rt.BirimId.Value) && rt.Aktif)
+            .Where(rt => rt.BirimId != null && birimIds.Contains(rt.BirimId.Value) && rt.IsActive)
             .ToListAsync();
         var rezTarifeByBirimId = rezTarifeler.ToDictionary(rt => rt.BirimId!.Value);
 
@@ -363,8 +359,6 @@ public class TasinmazService : ITasinmazService
                     UcretlendirmePeriyoduDakika = 60,
                     PeriyotUcreti = r.SaatlikUcret,
                     KdvOrani = r.KdvOrani,
-                    Aktif = true,
-                    OlusturmaTarihi = DateTime.Now,
                     Aciklama = $"{r.Ad} için otomatik oluşturuldu"
                 });
             }

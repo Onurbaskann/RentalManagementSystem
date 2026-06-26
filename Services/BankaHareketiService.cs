@@ -21,17 +21,16 @@ public class BankaHareketiService : IBankaHareketiService
         _uow = uow;
     }
 
-    public async Task<(int Adet, Guid BatchId)> ImportAsync(Stream dosya, string bankaKodu, string userId)
+    public async Task<int> ImportAsync(Stream dosya, string bankaKodu)
     {
         var parser = _parsers.FirstOrDefault(p =>
             p.BankaKodu.Equals(bankaKodu, StringComparison.OrdinalIgnoreCase))
             ?? throw new InvalidOperationException($"'{bankaKodu}' için parser bulunamadı.");
 
-        var batchId = Guid.NewGuid();
-        var hareketler = parser.Parse(dosya, batchId, userId).ToList();
+        var hareketler = parser.Parse(dosya).ToList();
         await _repo.AddRangeAsync(hareketler);
         await _uow.SaveChangesAsync();
-        return (hareketler.Count, batchId);
+        return hareketler.Count;
     }
 
     public Task<List<BankaHareketiListItemDto>> GetAllAsync(BankaEslesmeDurumu? durum = null)
@@ -43,7 +42,7 @@ public class BankaHareketiService : IBankaHareketiService
     public Task<BankaHareketiDetayDto?> GetByIdAsync(int id)
         => _repo.GetDetayAsync(id);
 
-    public async Task EslestirAsync(int odemeId, int bankaHareketiId, string userId)
+    public async Task EslestirAsync(int odemeId, int bankaHareketiId)
     {
         if (await _repo.EslesmeVarMiAsync(odemeId, bankaHareketiId)) return;
 
@@ -52,11 +51,9 @@ public class BankaHareketiService : IBankaHareketiService
 
         var eslesme = new OdemeBankaEslesme
         {
-            KiraOdemeId = odemeId,
+            TahakkukOdemeId = odemeId,
             BankaHareketiId = bankaHareketiId,
             EslesmeTipi = EslesmeTipi.Manuel,
-            EslestirenUserId = userId,
-            EslesmeTarihi = DateTime.Now
         };
 
         hareketi.EslesmeDurumu = BankaEslesmeDurumu.ManuelEslesti;

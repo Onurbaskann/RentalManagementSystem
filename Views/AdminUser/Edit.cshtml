@@ -1,8 +1,7 @@
 @model KiraTakip.Models.ViewModels.KullaniciDuzenleViewModel
 @{
     ViewData["Title"] = "Kullanıcı Düzenle";
-    var goruntuleyiciRolId = Model.Roller.FirstOrDefault(r => r.Ad == "Goruntuleyici")?.Id.ToString() ?? "0";
-    var adminRolId = Model.Roller.FirstOrDefault(r => r.Ad == "Admin")?.Id.ToString() ?? "0";
+    var adminRolId = Model.Roller.FirstOrDefault(r => r.Ad == "Sistem Yöneticisi")?.Id.ToString() ?? "0";
 }
 
 <div class="page-header">
@@ -52,7 +51,7 @@
             {
                 var mevcutRolAd = Model.Roller.FirstOrDefault(r => r.Id == Model.RolId)?.Ad ?? "—";
                 <div class="form-control bg-slate-50 text-muted cursor-default">
-                    @(mevcutRolAd == "Goruntuleyici" ? "Görüntüleyici" : mevcutRolAd)
+                    @mevcutRolAd
                 </div>
                 <input type="hidden" asp-for="RolId" />
             }
@@ -62,8 +61,7 @@
                     <option value="0">— Seçin —</option>
                     @foreach (var r in Model.Roller)
                     {
-                        string label = r.Ad == "Goruntuleyici" ? "Görüntüleyici" : r.Ad;
-                        <option value="@r.Id">@label</option>
+                        <option value="@r.Id">@r.Ad</option>
                     }
                 </select>
                 <span asp-validation-for="RolId" class="form-error"></span>
@@ -71,7 +69,7 @@
         </div>
 
         <div class="bg-slate-50 border border-slate-100 rounded-lg p-3 mt-1 text-[13px] text-slate-500"
-             x-show="seciliRolId != '@goruntuleyiciRolId' && seciliRolId != '0'" x-cloak>
+             x-show="seciliRolId != '0'" x-cloak>
             İzinler bu rol için rol yönetiminde tanımlanır.
             <a href="/Admin/Roller" class="text-primary underline">Rolleri yönet →</a>
         </div>
@@ -99,7 +97,7 @@
                 <!-- Spesifik taşınmazlar: yalnızca Görüntüleyici + global toggle kapalı -->
                 @if (Model.Tasinmazlar.Any())
                 {
-                    <div x-show="seciliRolId === '@goruntuleyiciRolId' && !globalErisim" x-cloak class="mt-3">
+                    <div x-show="seciliRolId !== '@adminRolId' && seciliRolId !== '0' && !globalErisim" x-cloak class="mt-3">
                         <div class="flex flex-col gap-2.5">
                             @for (int i = 0; i < Model.Tasinmazlar.Count; i++)
                             {

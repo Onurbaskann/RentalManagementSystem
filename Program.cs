@@ -22,7 +22,10 @@ builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
     options.AddInterceptors(sp.GetRequiredService<KiraTakip.Infrastructure.AuditSaveChangesInterceptor>());
 });
 
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
+    .AddIdentityCookies();
+
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
 {
     options.Password.RequireDigit = true;
     options.Password.RequiredLength = 6;
@@ -35,6 +38,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
+.AddSignInManager()
 .AddDefaultTokenProviders()
 .AddErrorDescriber<KiraTakip.Infrastructure.TurkishIdentityErrorDescriber>();
 
@@ -105,7 +109,6 @@ builder.Services.AddScoped<ISozlesmeRepository, SozlesmeRepository>();
 builder.Services.AddScoped<ITahakkukRepository, TahakkukRepository>();
 builder.Services.AddScoped<IOdemeRepository, OdemeRepository>();
 builder.Services.AddScoped<IBankaHareketiRepository, BankaHareketiRepository>();
-builder.Services.AddScoped<IDekontRepository, DekontRepository>();
 builder.Services.AddScoped<ITasinmazTarifeRepository, TasinmazTarifeRepository>();
 builder.Services.AddScoped<IBorcTipiRepository, BorcTipiRepository>();
 builder.Services.AddScoped<ISozlesmeTarifeRepository, SozlesmeTarifeRepository>();
@@ -119,7 +122,6 @@ builder.Services.AddScoped<IRezervasyonRepository, RezervasyonRepository>();
 builder.Services.AddScoped<IUserPermissionRepository, UserPermissionRepository>();
 builder.Services.AddScoped<ITahakkukService, TahakkukService>();
 builder.Services.AddScoped<IOdemeService, OdemeService>();
-builder.Services.AddScoped<IDekontService, DekontService>();
 builder.Services.AddScoped<IBankaHareketiService, BankaHareketiService>();
 builder.Services.AddSingleton<IBankaHareketiParser, AkbankCsvParser>();
 builder.Services.AddScoped<IRateResolverService, RateResolverService>();
@@ -180,6 +182,7 @@ using (var scope = app.Services.CreateScope())
     // Sistem tanımları — her ortamda idempotent çalışır
     await domainSeed.SeedEnumDegerleriAsync();
     await domainSeed.SeedBorcTipleriAsync();
+    await domainSeed.EnsureOdemeBelgeTuruAsync();
     await domainSeed.SeedTasinmazTipleriAsync();
     await domainSeed.SeedBirimTurleriAsync();
     await domainSeed.SeedKiraciKategorileriAsync();

@@ -150,8 +150,6 @@ public class RezervasyonService : IRezervasyonService
             ToplamTutar = hesap.ToplamTutar,
             Durum = RezervasyonDurumu.Planlandi,
             Aciklama = model.Aciklama,
-            OlusturanUserId = userId,
-            OlusturmaTarihi = DateTime.Now
         };
 
         await _repo.AddAsync(rezervasyon);
@@ -280,7 +278,7 @@ public class RezervasyonService : IRezervasyonService
         RezervasyonTarife kural;
         if (model.Id == 0)
         {
-            kural = new RezervasyonTarife { OlusturmaTarihi = DateTime.Now };
+            kural = new RezervasyonTarife();
             await _repo.AddUcretKuralAsync(kural);
         }
         else
@@ -294,7 +292,7 @@ public class RezervasyonService : IRezervasyonService
         kural.UcretlendirmePeriyoduDakika = model.UcretlendirmePeriyoduDakika;
         kural.PeriyotUcreti = model.PeriyotUcreti;
         kural.KdvOrani = model.KdvOrani;
-        kural.Aktif = model.Aktif;
+        kural.IsActive = model.IsActive;
         kural.Aciklama = model.Aciklama;
 
         await _uow.SaveChangesAsync();
@@ -307,7 +305,7 @@ public class RezervasyonService : IRezervasyonService
         if (kural == null)
             return (false, "Kural bulunamadı.");
 
-        kural.Aktif = !kural.Aktif;
+        kural.IsActive = !kural.IsActive;
         await _uow.SaveChangesAsync();
         return (true, null);
     }

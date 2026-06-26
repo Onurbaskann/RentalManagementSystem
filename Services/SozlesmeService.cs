@@ -29,7 +29,7 @@ public class SozlesmeService : ISozlesmeService
         var list = await _repo.GetListAsync(filtre, yetkiliIds);
         foreach (var s in list)
         {
-            var dummySozlesme = new KiraSozlesmesi
+            var dummySozlesme = new Sozlesme
             {
                 Id = s.Id,
                 KiraciId = s.KiraciId,
@@ -46,7 +46,7 @@ public class SozlesmeService : ISozlesmeService
         return await _repo.GetDetayAsync(id);
     }
 
-    public async Task<KiraSozlesmesi> CreateAsync(KiraSozlesmesi s, decimal? aylikBedel = null)
+    public async Task<Sozlesme> CreateAsync(Sozlesme s, decimal? aylikBedel = null)
     {
         s.IslemGecmisi.Add(new SozlesmeIslemGecmisi
         {
@@ -147,7 +147,7 @@ public class SozlesmeService : ISozlesmeService
         var list = await _repo.GetByKiraciIdAsync(kiraciId);
         foreach (var s in list)
         {
-            var dummySozlesme = new KiraSozlesmesi
+            var dummySozlesme = new Sozlesme
             {
                 Id = s.Id,
                 KiraciId = s.KiraciId,
@@ -164,7 +164,7 @@ public class SozlesmeService : ISozlesmeService
         var list = await _repo.GetByBirimIdAsync(birimId);
         foreach (var s in list)
         {
-            var dummySozlesme = new KiraSozlesmesi
+            var dummySozlesme = new Sozlesme
             {
                 Id = s.Id,
                 KiraciId = s.KiraciId,

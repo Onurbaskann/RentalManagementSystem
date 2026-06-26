@@ -21,7 +21,7 @@ public class PermissionService : IPermissionService
     public async Task<bool> HasPermissionAsync(string userId, string permission)
         => await _repo.HasPermissionAsync(userId, permission);
 
-    public async Task SetUserPermissionsAsync(string userId, IEnumerable<string> permissions, string grantedByUserId)
+    public async Task SetUserPermissionsAsync(string userId, IEnumerable<string> permissions)
     {
         var permissionList = permissions.ToList();
 
@@ -29,13 +29,10 @@ public class PermissionService : IPermissionService
         await _repo.RemoveRangeAsync(existing);
         await _uow.SaveChangesAsync();
 
-        var now = DateTime.UtcNow;
         var newPermissions = permissionList.Select(p => new UserPermission
         {
             UserId = userId,
             Permission = p,
-            GrantedBy = grantedByUserId,
-            GrantedAt = now,
         });
 
         await _repo.AddRangeAsync(newPermissions);

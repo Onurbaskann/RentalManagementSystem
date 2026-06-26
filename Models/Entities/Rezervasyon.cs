@@ -5,7 +5,6 @@ public class Rezervasyon : BaseEntity
     public int BirimId { get; set; }
     public int KiraciId { get; set; }
     public int? TahakkukId { get; set; }
-    public string OlusturanUserId { get; set; } = string.Empty;
     public DateTime BaslangicTarihi { get; set; }
     public DateTime BitisTarihi { get; set; }
     public int ToplamSureDakika { get; set; }
@@ -18,7 +17,6 @@ public class Rezervasyon : BaseEntity
     public decimal ToplamTutar { get; set; }
     public RezervasyonDurumu Durum { get; set; } = RezervasyonDurumu.Planlandi;
     public string? Aciklama { get; set; }
-    public DateTime OlusturmaTarihi { get; set; }
 
     public Birim Birim { get; set; } = null!;
     public Kiraci Kiraci { get; set; } = null!;

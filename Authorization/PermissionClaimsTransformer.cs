@@ -6,16 +6,15 @@ using System.Security.Claims;
 
 namespace KiraTakip.Authorization;
 
-public class PermissionClaimsTransformer : UserClaimsPrincipalFactory<ApplicationUser, IdentityRole>
+public class PermissionClaimsTransformer : UserClaimsPrincipalFactory<ApplicationUser>
 {
     private readonly IUserRolService _userRolService;
 
     public PermissionClaimsTransformer(
         UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole> roleManager,
         IOptions<IdentityOptions> optionsAccessor,
         IUserRolService userRolService)
-        : base(userManager, roleManager, optionsAccessor)
+        : base(userManager, optionsAccessor)
     {
         _userRolService = userRolService;
     }
@@ -35,7 +34,7 @@ public class PermissionClaimsTransformer : UserClaimsPrincipalFactory<Applicatio
             identity.AddClaim(new Claim(ClaimTypes.Role, roleName));
 
         // Permission claim'leri: Admin hariç izinler rol tanımından (RolPermissions) gelir
-        if (roles.Contains(RoleNames.Admin))
+        if (roles.Contains(RoleNames.SistemYoneticisi))
         {
             foreach (var p in PermissionCatalog.All)
                 identity.AddClaim(new Claim(AppClaimTypes.Permission, p));
@@ -43,10 +42,28 @@ public class PermissionClaimsTransformer : UserClaimsPrincipalFactory<Applicatio
         else
         {
             var rolePerms = await _userRolService.GetUserPermissionsFromRolesAsync(user.Id);
-            foreach (var p in rolePerms.Distinct())
+            var expanded = ExpandWithImpliedViews(rolePerms.Distinct().ToHashSet());
+            foreach (var p in expanded)
                 identity.AddClaim(new Claim(AppClaimTypes.Permission, p));
         }
 
         return identity;
+    }
+
+    private static HashSet<string> ExpandWithImpliedViews(HashSet<string> permissions)
+    {
+        var allKnown = PermissionCatalog.All.Concat(PermissionCatalog.KiraciAll).ToHashSet();
+        var toAdd = new List<string>();
+        foreach (var perm in permissions)
+        {
+            if (perm.EndsWith(".View")) continue;
+            var dot = perm.LastIndexOf('.');
+            if (dot < 0) continue;
+            var viewPerm = perm[..dot] + ".View";
+            if (allKnown.Contains(viewPerm) && !permissions.Contains(viewPerm))
+                toAdd.Add(viewPerm);
+        }
+        foreach (var v in toAdd) permissions.Add(v);
+        return permissions;
     }
 }

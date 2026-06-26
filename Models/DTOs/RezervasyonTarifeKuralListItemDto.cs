@@ -10,6 +10,6 @@ public class RezervasyonTarifeKuralListItemDto
     public int UcretlendirmePeriyoduDakika { get; set; }
     public decimal PeriyotUcreti { get; set; }
     public decimal KdvOrani { get; set; }
-    public bool Aktif { get; set; }
     public string? Aciklama { get; set; }
+    public bool IsActive { get; set; }
 }

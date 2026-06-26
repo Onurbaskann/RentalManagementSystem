@@ -17,7 +17,7 @@ public class Tahakkuk : BaseEntity
     public DateTime? SonHatirlatmaTarihi { get; set; }
 
     public Kiraci Kiraci { get; set; } = null!;
-    public KiraSozlesmesi? KiraSozlesmesi { get; set; }
-    public List<KiraOdeme> Odemeler { get; set; } = [];
+    public Sozlesme? KiraSozlesmesi { get; set; }
+    public List<TahakkukOdeme> Odemeler { get; set; } = [];
     public ICollection<TahakkukKalemi> Kalemler { get; set; } = [];
 }

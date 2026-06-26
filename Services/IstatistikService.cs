@@ -34,7 +34,7 @@ public class IstatistikService : IIstatistikService
         return kalanGun <= 30 ? KiraDurumu.SuresiDolmakUzere : KiraDurumu.Kirali;
     }
 
-    public KiraSozlesmesi? GetAktifSozlesme(Birim birim)
+    public Sozlesme? GetAktifSozlesme(Birim birim)
     {
         return birim.Sozlesmeler
             .Where(s =>
@@ -45,12 +45,12 @@ public class IstatistikService : IIstatistikService
             .FirstOrDefault();
     }
 
-    public bool Aktif(KiraSozlesmesi s) =>
+    public bool Aktif(Sozlesme s) =>
         s.Durum == SozlesmeDurumu.Aktif &&
         s.BaslangicTarihi <= DateTime.Now &&
         s.BitisTarihi >= DateTime.Now;
 
-    public async Task<decimal> AylikBedelAsync(KiraSozlesmesi s)
+    public async Task<decimal> AylikBedelAsync(Sozlesme s)
     {
         var yuzolcumu = s.Birim?.Yuzolcumu ?? 0m;
         var tumBorcTipleri = await _tahakkukRepo.GetAktifUretimBorcTipleriAsync();
@@ -69,11 +69,11 @@ public class IstatistikService : IIstatistikService
         return toplam;
     }
 
-    public async Task<decimal> YillikBedelAsync(KiraSozlesmesi s) => await AylikBedelAsync(s) * 12;
+    public async Task<decimal> YillikBedelAsync(Sozlesme s) => await AylikBedelAsync(s) * 12;
 
-    public int KalanGun(KiraSozlesmesi s) => (int)(s.BitisTarihi - DateTime.Now).TotalDays;
+    public int KalanGun(Sozlesme s) => (int)(s.BitisTarihi - DateTime.Now).TotalDays;
 
-    public double SureYuzdesi(KiraSozlesmesi s)
+    public double SureYuzdesi(Sozlesme s)
     {
         var toplam = (s.BitisTarihi - s.BaslangicTarihi).TotalDays;
         var gecen = (DateTime.Now - s.BaslangicTarihi).TotalDays;

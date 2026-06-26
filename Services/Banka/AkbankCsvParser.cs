@@ -11,7 +11,7 @@ public class AkbankCsvParser : IBankaHareketiParser
     // Beklenen kolon sırası: Tarih;Açıklama;Borç;Alacak;Bakiye;KarşıHesap;KarşıUnvan
     // Alacak sütunundaki değerler pozitif tutar (gelen para).
     // Borç sütunundaki değerler negatif tutar (giden para) olarak kaydedilir.
-    public IEnumerable<BankaHareketi> Parse(Stream csv, Guid batchId, string userId)
+    public IEnumerable<BankaHareketi> Parse(Stream csv)
     {
         using var reader = new StreamReader(csv, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
 
@@ -20,13 +20,12 @@ public class AkbankCsvParser : IBankaHareketiParser
 
         var headers = headerLine.Split(';').Select(h => h.Trim().ToLowerInvariant()).ToArray();
 
-        int idxTarih       = FindIndex(headers, "tarih", "işlem tarihi", "islem tarihi");
-        int idxAciklama    = FindIndex(headers, "açıklama", "aciklama", "işlem açıklaması");
-        int idxBorc        = FindIndex(headers, "borç", "borc");
-        int idxAlacak      = FindIndex(headers, "alacak");
-        int idxBakiye      = FindIndex(headers, "bakiye");
-        int idxKarsiHesap  = FindIndex(headers, "karşı hesap no", "karsi hesap", "karşı hesap");
-        int idxKarsiUnvan  = FindIndex(headers, "karşı hesap adı", "karsi unvan", "karşı unvan");
+        int idxTarih      = FindIndex(headers, "tarih", "işlem tarihi", "islem tarihi");
+        int idxAciklama   = FindIndex(headers, "açıklama", "aciklama", "işlem açıklaması");
+        int idxBorc       = FindIndex(headers, "borç", "borc");
+        int idxAlacak     = FindIndex(headers, "alacak");
+        int idxGonderenIban = FindIndex(headers, "karşı hesap no", "karsi hesap", "karşı hesap");
+        int idxGonderenBilgi = FindIndex(headers, "karşı hesap adı", "karsi unvan", "karşı unvan");
 
         string? line;
         while ((line = reader.ReadLine()) != null)
@@ -45,17 +44,13 @@ public class AkbankCsvParser : IBankaHareketiParser
 
             yield return new BankaHareketi
             {
-                ImportBatchId    = batchId,
-                HareketTarihi    = tarih.Value,
-                Tutar            = tutar,
-                Aciklama         = Get(cols, idxAciklama),
-                KarsiHesap       = Get(cols, idxKarsiHesap) is { Length: > 0 } kh ? kh : null,
-                KarsiUnvan       = Get(cols, idxKarsiUnvan) is { Length: > 0 } ku ? ku : null,
-                Bakiye           = idxBakiye >= 0 ? ParseDecimal(Get(cols, idxBakiye)) : null,
-                BankaKodu        = BankaKodu,
-                EslesmeDurumu    = BankaEslesmeDurumu.Eslestirilmedi,
-                ImportTarihi     = DateTime.Now,
-                ImportEdenUserId = userId
+                IslemTarihi     = tarih.Value,
+                IslemTutari     = tutar,
+                Aciklama        = Get(cols, idxAciklama),
+                GonderenIban    = Get(cols, idxGonderenIban) is { Length: > 0 } gi ? gi : null,
+                GonderenBilgisi = Get(cols, idxGonderenBilgi) is { Length: > 0 } gb ? gb : null,
+                BankaKodu       = BankaKodu,
+                EslesmeDurumu   = BankaEslesmeDurumu.Eslestirilmedi,
             };
         }
     }

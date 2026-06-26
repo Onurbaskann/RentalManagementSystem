@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Roles = RoleNames.Admin)]
+[Authorize(Roles = RoleNames.SistemYoneticisi)]
 [Route("Admin/Roller")]
 public class AdminRolController : Controller
 {

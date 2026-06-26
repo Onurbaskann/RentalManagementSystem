@@ -56,7 +56,6 @@ public static class AuditDisplayNames
         ["Tasinmaz"]                = "Taşınmaz",
         ["Birim"]                   = "Birim",
         ["BankaHareketi"]           = "Banka hareketi",
-        ["Dekont"]                  = "Dekont",
         ["Rezervasyon"]             = "Rezervasyon",
         ["UserPermission"]          = "Kullanıcı izni",
         ["UserTasinmazYetki"]       = "Taşınmaz yetkisi",

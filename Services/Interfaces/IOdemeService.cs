@@ -9,7 +9,7 @@ public interface IOdemeService
     Task<List<OdemeListItemDto>> GetAllAsync(int? tahakkukId = null, IReadOnlyList<int>? tasinmazIds = null);
     Task<PagedResult<OdemeListItemDto>> GetPagedAsync(TableQuery q, int? tahakkukId = null, IReadOnlyList<int>? tasinmazIds = null);
     Task<OdemeDetayDto?> GetByIdAsync(int id);
-    Task<KiraOdeme> EkleAsync(KiraOdeme odeme);
+    Task<TahakkukOdeme> EkleAsync(TahakkukOdeme odeme);
     Task<bool> OnaylaAsync(int id, string onaylayanUserId);
     Task<bool> ReddetAsync(int id, string neden);
 }

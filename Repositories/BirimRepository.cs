@@ -97,23 +97,23 @@ public class BirimRepository : BaseRepository<Birim>, IBirimRepository
                         : KiraDurumu.Kirali)
                     : KiraDurumu.Bos,
                 RezKuralId = _ctx.RezervasyonTarifeler
-                    .Where(rt => rt.BirimId == b.Id && rt.Aktif)
+                    .Where(rt => rt.BirimId == b.Id && rt.IsActive)
                     .Select(rt => (int?)rt.Id)
                     .FirstOrDefault(),
                 RezKuralPeriyotUcreti = _ctx.RezervasyonTarifeler
-                    .Where(rt => rt.BirimId == b.Id && rt.Aktif)
+                    .Where(rt => rt.BirimId == b.Id && rt.IsActive)
                     .Select(rt => (decimal?)rt.PeriyotUcreti)
                     .FirstOrDefault(),
                 RezKuralUcretlendirmePeriyoduDakika = _ctx.RezervasyonTarifeler
-                    .Where(rt => rt.BirimId == b.Id && rt.Aktif)
+                    .Where(rt => rt.BirimId == b.Id && rt.IsActive)
                     .Select(rt => (int?)rt.UcretlendirmePeriyoduDakika)
                     .FirstOrDefault(),
                 RezKuralUcretsizSureDakika = _ctx.RezervasyonTarifeler
-                    .Where(rt => rt.BirimId == b.Id && rt.Aktif)
+                    .Where(rt => rt.BirimId == b.Id && rt.IsActive)
                     .Select(rt => (int?)rt.UcretsizSureDakika)
                     .FirstOrDefault(),
                 RezKuralKdvOrani = _ctx.RezervasyonTarifeler
-                    .Where(rt => rt.BirimId == b.Id && rt.Aktif)
+                    .Where(rt => rt.BirimId == b.Id && rt.IsActive)
                     .Select(rt => (decimal?)rt.KdvOrani)
                     .FirstOrDefault(),
                 AylikBedel = 0

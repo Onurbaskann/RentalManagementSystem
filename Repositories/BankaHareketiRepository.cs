@@ -16,19 +16,17 @@ public class BankaHareketiRepository : BaseRepository<BankaHareketi>, IBankaHare
     {
         IQueryable<BankaHareketi> q = _dbSet.AsNoTracking();
         if (durum.HasValue) q = q.Where(b => b.EslesmeDurumu == durum.Value);
-        return await q.OrderByDescending(b => b.HareketTarihi)
+        return await q.OrderByDescending(b => b.IslemTarihi)
                       .Select(b => new BankaHareketiListItemDto
                       {
                           Id = b.Id,
-                          HareketTarihi = b.HareketTarihi,
-                          Tutar = b.Tutar,
+                          IslemTarihi = b.IslemTarihi,
+                          IslemTutari = b.IslemTutari,
                           Aciklama = b.Aciklama,
-                          KarsiHesap = b.KarsiHesap,
-                          KarsiUnvan = b.KarsiUnvan,
+                          GonderenIban = b.GonderenIban,
+                          GonderenBilgisi = b.GonderenBilgisi,
                           BankaKodu = b.BankaKodu,
                           EslesmeDurumu = b.EslesmeDurumu,
-                          ImportTarihi = b.ImportTarihi,
-                          ImportEdenUserAdi = b.ImportEdenUser != null ? b.ImportEdenUser.UserName : null
                       })
                       .ToListAsync();
     }
@@ -42,13 +40,13 @@ public class BankaHareketiRepository : BaseRepository<BankaHareketi>, IBankaHare
             var s = q.Q.Trim();
             query = query.Where(b =>
                 EF.Functions.Like(b.Aciklama, $"%{s}%") ||
-                (b.KarsiUnvan != null && EF.Functions.Like(b.KarsiUnvan, $"%{s}%")) ||
-                (b.KarsiHesap != null && EF.Functions.Like(b.KarsiHesap, $"%{s}%")));
+                (b.GonderenBilgisi != null && EF.Functions.Like(b.GonderenBilgisi, $"%{s}%")) ||
+                (b.GonderenIban != null && EF.Functions.Like(b.GonderenIban, $"%{s}%")));
         }
-        if (q.From.HasValue) query = query.Where(b => b.HareketTarihi >= q.From.Value);
-        if (q.To.HasValue) query = query.Where(b => b.HareketTarihi <= q.To.Value);
-        if (q.Min.HasValue) query = query.Where(b => b.Tutar >= q.Min.Value);
-        if (q.Max.HasValue) query = query.Where(b => b.Tutar <= q.Max.Value);
+        if (q.From.HasValue) query = query.Where(b => b.IslemTarihi >= q.From.Value);
+        if (q.To.HasValue) query = query.Where(b => b.IslemTarihi <= q.To.Value);
+        if (q.Min.HasValue) query = query.Where(b => b.IslemTutari >= q.Min.Value);
+        if (q.Max.HasValue) query = query.Where(b => b.IslemTutari <= q.Max.Value);
         if (!string.IsNullOrWhiteSpace(q.Durum) && q.Durum != "tum")
         {
             BankaEslesmeDurumu? d = q.Durum switch
@@ -62,20 +60,18 @@ public class BankaHareketiRepository : BaseRepository<BankaHareketi>, IBankaHare
         }
 
         int total = await query.CountAsync();
-        var items = await query.OrderByDescending(b => b.HareketTarihi)
+        var items = await query.OrderByDescending(b => b.IslemTarihi)
                                .Skip(q.Skip).Take(q.Take)
                                .Select(b => new BankaHareketiListItemDto
                                {
                                    Id = b.Id,
-                                   HareketTarihi = b.HareketTarihi,
-                                   Tutar = b.Tutar,
+                                   IslemTarihi = b.IslemTarihi,
+                                   IslemTutari = b.IslemTutari,
                                    Aciklama = b.Aciklama,
-                                   KarsiHesap = b.KarsiHesap,
-                                   KarsiUnvan = b.KarsiUnvan,
+                                   GonderenIban = b.GonderenIban,
+                                   GonderenBilgisi = b.GonderenBilgisi,
                                    BankaKodu = b.BankaKodu,
                                    EslesmeDurumu = b.EslesmeDurumu,
-                                   ImportTarihi = b.ImportTarihi,
-                                   ImportEdenUserAdi = b.ImportEdenUser != null ? b.ImportEdenUser.UserName : null
                                })
                                .ToListAsync();
 
@@ -94,22 +90,19 @@ public class BankaHareketiRepository : BaseRepository<BankaHareketi>, IBankaHare
                        .Select(b => new BankaHareketiDetayDto
                        {
                            Id = b.Id,
-                           HareketTarihi = b.HareketTarihi,
-                           Tutar = b.Tutar,
+                           IslemTarihi = b.IslemTarihi,
+                           IslemTutari = b.IslemTutari,
                            Aciklama = b.Aciklama,
-                           KarsiHesap = b.KarsiHesap,
-                           KarsiUnvan = b.KarsiUnvan,
-                           Bakiye = b.Bakiye,
+                           GonderenIban = b.GonderenIban,
+                           GonderenBilgisi = b.GonderenBilgisi,
                            BankaKodu = b.BankaKodu,
                            EslesmeDurumu = b.EslesmeDurumu,
-                           ImportTarihi = b.ImportTarihi,
-                           ImportEdenUserAdi = b.ImportEdenUser != null ? b.ImportEdenUser.UserName : null,
                            Eslesmeleri = b.OdemeEslesmeleri.Select(e => new OdemeBankaEslesmeDto
                            {
                                Id = e.Id,
                                EslesmeTipi = e.EslesmeTipi,
-                               BankaHareketiTutar = b.Tutar,
-                               BankaHareketiTarih = b.HareketTarihi,
+                               BankaHareketiTutar = b.IslemTutari,
+                               BankaHareketiTarih = b.IslemTarihi,
                                BankaHareketiAciklama = b.Aciklama
                            }).ToList()
                        })
@@ -120,17 +113,17 @@ public class BankaHareketiRepository : BaseRepository<BankaHareketi>, IBankaHare
     {
         var hareketi = await _dbSet.AsNoTracking()
                                    .Where(b => b.Id == bankaHareketiId)
-                                   .Select(b => new { b.Tutar, b.HareketTarihi })
+                                   .Select(b => new { b.IslemTutari, b.IslemTarihi })
                                    .FirstOrDefaultAsync();
         if (hareketi == null) return [];
 
-        decimal tutar = hareketi.Tutar;
-        DateTime tarih = hareketi.HareketTarihi;
+        decimal tutar = hareketi.IslemTutari;
+        DateTime tarih = hareketi.IslemTarihi;
         decimal tolerans = tutar * 0.02m;
 
-        IQueryable<KiraOdeme> query = _ctx.KiraOdemeler.AsNoTracking()
+        IQueryable<TahakkukOdeme> query = _ctx.TahakkukOdemeler.AsNoTracking()
             .Where(o => o.Durum == OdemeDurumu.OnayBekliyor || o.Durum == OdemeDurumu.Onaylandi)
-            .Where(o => !_ctx.OdemeBankaEslesmeleri.Any(e => e.KiraOdemeId == o.Id && e.BankaHareketiId == bankaHareketiId));
+            .Where(o => !_ctx.OdemeBankaEslesmeleri.Any(e => e.TahakkukOdemeId == o.Id && e.BankaHareketiId == bankaHareketiId));
 
         if (tasinmazIds != null)
         {
@@ -168,7 +161,7 @@ public class BankaHareketiRepository : BaseRepository<BankaHareketi>, IBankaHare
 
     public async Task<List<BankaHareketiListItemDto>> GetHareketAdaylariAsync(int odemeId)
     {
-        var odeme = await _ctx.KiraOdemeler.AsNoTracking()
+        var odeme = await _ctx.TahakkukOdemeler.AsNoTracking()
                               .Where(o => o.Id == odemeId)
                               .Select(o => new { o.Tutar, o.OdemeTarihi })
                               .FirstOrDefaultAsync();
@@ -180,40 +173,39 @@ public class BankaHareketiRepository : BaseRepository<BankaHareketi>, IBankaHare
 
         var liste = await _dbSet.AsNoTracking()
             .Where(b => b.EslesmeDurumu == BankaEslesmeDurumu.Eslestirilmedi)
-            .Where(b => !_ctx.OdemeBankaEslesmeleri.Any(e => e.BankaHareketiId == b.Id && e.KiraOdemeId == odemeId))
+            .Where(b => !_ctx.OdemeBankaEslesmeleri.Any(e => e.BankaHareketiId == b.Id && e.TahakkukOdemeId == odemeId))
             .Select(b => new BankaHareketiListItemDto
             {
                 Id = b.Id,
-                HareketTarihi = b.HareketTarihi,
-                Tutar = b.Tutar,
+                IslemTarihi = b.IslemTarihi,
+                IslemTutari = b.IslemTutari,
                 Aciklama = b.Aciklama,
-                KarsiHesap = b.KarsiHesap,
-                KarsiUnvan = b.KarsiUnvan,
+                GonderenIban = b.GonderenIban,
+                GonderenBilgisi = b.GonderenBilgisi,
                 BankaKodu = b.BankaKodu,
                 EslesmeDurumu = b.EslesmeDurumu,
-                ImportTarihi = b.ImportTarihi
             })
             .ToListAsync();
 
         return liste.OrderBy(b =>
         {
-            bool tutarExact = b.Tutar == tutar;
-            bool tutarClose = Math.Abs(b.Tutar - tutar) <= tolerans;
-            int gunFark = Math.Abs((b.HareketTarihi - tarih).Days);
+            bool tutarExact = b.IslemTutari == tutar;
+            bool tutarClose = Math.Abs(b.IslemTutari - tutar) <= tolerans;
+            int gunFark = Math.Abs((b.IslemTarihi - tarih).Days);
             if (tutarExact && gunFark <= 15) return 0;
             if (tutarExact) return 1;
             if (tutarClose && gunFark <= 15) return 2;
             return 3;
         })
-        .ThenBy(b => Math.Abs((b.HareketTarihi - tarih).Days))
-        .ThenBy(b => Math.Abs(b.Tutar - tutar))
+        .ThenBy(b => Math.Abs((b.IslemTarihi - tarih).Days))
+        .ThenBy(b => Math.Abs(b.IslemTutari - tutar))
         .ToList();
     }
 
     // ── Eşleştirme yazma işlemleri ────────────────────────────────────────
     public Task<bool> EslesmeVarMiAsync(int kiraOdemeId, int bankaHareketiId)
         => _ctx.OdemeBankaEslesmeleri.AsNoTracking()
-               .AnyAsync(e => e.KiraOdemeId == kiraOdemeId && e.BankaHareketiId == bankaHareketiId);
+               .AnyAsync(e => e.TahakkukOdemeId == kiraOdemeId && e.BankaHareketiId == bankaHareketiId);
 
     public async Task AddEslesmeAsync(OdemeBankaEslesme eslesme)
         => await _ctx.OdemeBankaEslesmeleri.AddAsync(eslesme);

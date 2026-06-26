@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Roles = RoleNames.Admin)]
+[Authorize(Roles = RoleNames.SistemYoneticisi)]
 [Route("Admin/Kullanicilar")]
 public class AdminUserController : Controller
 {
@@ -180,7 +180,7 @@ public class AdminUserController : Controller
             return View(model);
         }
 
-        if (existingRoleNames.Contains(RoleNames.Admin) && yeniRol.Ad != RoleNames.Admin)
+        if (existingRoleNames.Contains(RoleNames.SistemYoneticisi) && yeniRol.Ad != RoleNames.SistemYoneticisi)
         {
             if (await AktifAdminSayisi() <= 1)
             {
@@ -195,13 +195,13 @@ public class AdminUserController : Controller
         await _userRolService.AddRoleByRolIdAsync(user.Id, model.RolId, currentUserId);
 
         // İzinler artık rolden geliyor — per-user izin kaydı temizlenir
-        await _permissionService.SetUserPermissionsAsync(user.Id, Array.Empty<string>(), currentUserId ?? "system");
+        await _permissionService.SetUserPermissionsAsync(user.Id, Array.Empty<string>());
 
         user.AdSoyad = model.AdSoyad;
-        user.TumTasinmazlaraErisim = yeniRol.Ad != RoleNames.Admin && model.TumTasinmazlaraErisim;
+        user.TumTasinmazlaraErisim = yeniRol.Ad != RoleNames.SistemYoneticisi && model.TumTasinmazlaraErisim;
         await _userManager.UpdateAsync(user);
 
-        var scopeIds = (yeniRol.Ad == RoleNames.Goruntuleyici && !model.TumTasinmazlaraErisim)
+        var scopeIds = (yeniRol.Ad == RoleNames.OperasyonMuduru && !model.TumTasinmazlaraErisim)
             ? model.SelectedTasinmazIds
             : new List<int>();
         await SetKapsamAsync(user.Id, scopeIds, currentUserId ?? "system");
@@ -228,7 +228,7 @@ public class AdminUserController : Controller
         if (user.IsActive)
         {
             var roles = await _userRolService.GetUserRolesAsync(user.Id);
-            if (roles.Contains(RoleNames.Admin) && await AktifAdminSayisi() <= 1)
+            if (roles.Contains(RoleNames.SistemYoneticisi) && await AktifAdminSayisi() <= 1)
             {
                 TempData["Error"] = "Sistemde en az bir aktif Admin bulunmalıdır.";
                 return RedirectToAction(nameof(Index));
@@ -272,7 +272,7 @@ public class AdminUserController : Controller
             await _davetiyeService.GonderAsync(model.Email, model.AdSoyad, model.RolId, currentUserId);
 
             var rol = await _db.Roller.FindAsync(model.RolId);
-            if (rol?.Ad == RoleNames.Goruntuleyici && model.SelectedTasinmazIds.Any())
+            if (rol?.Ad == RoleNames.OperasyonMuduru && model.SelectedTasinmazIds.Any())
             {
                 var invitedUser = await _userManager.FindByEmailAsync(model.Email);
                 if (invitedUser != null)
@@ -338,8 +338,6 @@ public class AdminUserController : Controller
                 UserId = userId,
                 KapsamTipi = KapsamTipi.Tasinmaz,
                 KapsamId = tasinmazId,
-                AtayanUserId = atayan,
-                AtanmaTarihi = DateTime.UtcNow
             });
         }
 
@@ -352,7 +350,7 @@ public class AdminUserController : Controller
 
     private async Task<int> AktifAdminSayisi()
     {
-        var admins = await _userRolService.GetUsersInRoleAsync(RoleNames.Admin);
+        var admins = await _userRolService.GetUsersInRoleAsync(RoleNames.SistemYoneticisi);
         return admins.Count(u => u.IsActive);
     }
 

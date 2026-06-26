@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Policy = PermissionCatalog.BelgeTuruPerm.Manage)]
+[Authorize(Policy = PermissionCatalog.BelgeTuru.Manage)]
 [Route("Admin/BelgeTuru")]
 public class AdminBelgeTuruController : Controller
 {

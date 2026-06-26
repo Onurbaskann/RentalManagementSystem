@@ -16,5 +16,5 @@ public class SozlesmeIslemGecmisi : BaseEntity
     public decimal? KdvTutari { get; set; }
     public decimal? KdvDahilTutar { get; set; }
 
-    public KiraSozlesmesi? KiraSozlesmesi { get; set; }
+    public Sozlesme? KiraSozlesmesi { get; set; }
 }

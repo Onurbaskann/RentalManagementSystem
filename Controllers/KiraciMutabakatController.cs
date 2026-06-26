@@ -29,7 +29,7 @@ public class KiraciMutabakatController : Controller
             .Where(t => t.Durum == TahakkukDurumu.Bekleniyor || t.Durum == TahakkukDurumu.KismenOdendi)
             .SumAsync(t => (decimal?)t.ToplamTutar) ?? 0m;
 
-        var toplamOdeme = await _db.KiraOdemeler
+        var toplamOdeme = await _db.TahakkukOdemeler
             .Where(o => o.Durum == OdemeDurumu.Onaylandi)
             .SumAsync(o => (decimal?)o.Tutar) ?? 0m;
 

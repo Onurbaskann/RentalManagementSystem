@@ -49,14 +49,13 @@
                     <option value="">— Rol Seçin —</option>
                     @foreach (var r in roller)
                     {
-                        string label = r == "Goruntuleyici" ? "Görüntüleyici" : r;
-                        <option value="@r">@label</option>
+                        <option value="@r">@r</option>
                     }
                 </select>
                 <span asp-validation-for="Rol" class="form-error"></span>
             </div>
 
-            <div class="form-group border border-slate-200 bg-slate-50/50 p-4 rounded-xl mt-6" x-show="seciliRol === 'Goruntuleyici'" x-cloak>
+            <div class="form-group border border-slate-200 bg-slate-50/50 p-4 rounded-xl mt-6" x-show="seciliRol !== '' && seciliRol !== 'Sistem Yöneticisi'" x-cloak>
                 <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-4">Taşınmaz Görüntüleme Yetkileri</label>
                 <div class="flex flex-col gap-2.5">
                     @if(Model.Tasinmazlar != null && Model.Tasinmazlar.Any())

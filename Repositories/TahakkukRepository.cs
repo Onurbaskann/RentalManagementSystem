@@ -281,7 +281,7 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
     // ── Hesaplama ─────────────────────────────────────────────────────────
     public async Task<decimal> GetOdenenTutarAsync(int tahakkukId)
     {
-        return await _ctx.KiraOdemeler.AsNoTracking()
+        return await _ctx.TahakkukOdemeler.AsNoTracking()
                                       .Where(o => o.TahakkukId == tahakkukId && o.Durum == OdemeDurumu.Onaylandi)
                                       .SumAsync(o => (decimal?)o.Tutar) ?? 0m;
     }
@@ -298,7 +298,7 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
                                 && t.DonemBaslangic >= ilkGun
                                 && t.Durum != TahakkukDurumu.TamOdendi
                                 && t.KaynakTipi == TahakkukKaynakTipi.Sozlesme
-                                && !_ctx.KiraOdemeler.Any(o => o.TahakkukId == t.Id))
+                                && !_ctx.TahakkukOdemeler.Any(o => o.TahakkukId == t.Id))
                        .ToListAsync();
 
     public Task DeleteRangeAsync(IEnumerable<Tahakkuk> entities)

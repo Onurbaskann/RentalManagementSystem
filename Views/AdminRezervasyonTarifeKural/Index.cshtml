@@ -62,15 +62,15 @@
                         <td style="text-align:right;font-weight:600;">@k.PeriyotUcreti.ToString("N2") ₺</td>
                         <td style="text-align:center;">%@k.KdvOrani.ToString("F0")</td>
                         <td>
-                            @if (k.Aktif) { <span class="badge badge-kirali">Aktif</span> }
+                            @if (k.IsActive) { <span class="badge badge-kirali">Aktif</span> }
                             else { <span class="badge badge-gecmis">Pasif</span> }
                         </td>
                         <td style="display:flex;gap:6px;justify-content:flex-end;">
                             <a href="/Admin/RezervasyonTarifeKural/Duzenle/@k.Id" class="btn btn-sm btn-secondary">Düzenle</a>
                             <form method="post" action="/Admin/RezervasyonTarifeKural/DurumDegistir/@k.Id" style="display:inline;">
                                 @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm @(k.Aktif ? "btn-danger" : "btn-amber")">
-                                    @(k.Aktif ? "Pasif Yap" : "Aktif Yap")
+                                <button type="submit" class="btn btn-sm @(k.IsActive ? "btn-danger" : "btn-amber")">
+                                    @(k.IsActive ? "Pasif Yap" : "Aktif Yap")
                                 </button>
                             </form>
                         </td>

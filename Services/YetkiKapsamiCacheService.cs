@@ -42,7 +42,7 @@ public class YetkiKapsamiCacheService : IYetkiKapsamiCache
             isGlobal = await db.UserRoller
                 .Where(ur => ur.UserId == userId)
                 .Join(db.Roller, ur => ur.RolId, r => r.Id, (ur, r) => r.Ad)
-                .AnyAsync(ad => ad == RoleNames.Admin);
+                .AnyAsync(ad => ad == RoleNames.SistemYoneticisi);
         }
 
         KullaniciKapsamDto dto;

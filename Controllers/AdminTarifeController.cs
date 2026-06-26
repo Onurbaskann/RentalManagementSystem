@@ -154,13 +154,11 @@ public class AdminTarifeController : Controller
                 _ctx.RezervasyonTarifeler.Add(new RezervasyonTarife
                 {
                     Yil                         = yil,
-                    Aktif                       = true,
                     BirimTuruId                 = rez.BirimTuruId,
                     UcretsizSureDakika          = rez.UcretsizSureDakika,
                     UcretlendirmePeriyoduDakika = rez.UcretlendirmePeriyoduDakika,
                     PeriyotUcreti               = rez.PeriyotUcreti,
-                    KdvOrani                    = rez.KdvOrani,
-                    OlusturmaTarihi             = DateTime.Now
+                    KdvOrani                    = rez.KdvOrani
                 });
             }
             else
@@ -239,13 +237,11 @@ public class AdminTarifeController : Controller
                 _ctx.RezervasyonTarifeler.Add(new RezervasyonTarife
                 {
                     Yil                         = vm.Yil,
-                    Aktif                       = true,
                     BirimTuruId                 = rez.BirimTuruId,
                     UcretsizSureDakika          = rez.UcretsizSureDakika,
                     UcretlendirmePeriyoduDakika = rez.UcretlendirmePeriyoduDakika,
                     PeriyotUcreti               = rez.PeriyotUcreti,
-                    KdvOrani                    = rez.KdvOrani,
-                    OlusturmaTarihi             = DateTime.Now
+                    KdvOrani                    = rez.KdvOrani
                 });
             }
         }
@@ -281,13 +277,11 @@ public class AdminTarifeController : Controller
                 _ctx.RezervasyonTarifeler.Add(new RezervasyonTarife
                 {
                     Yil                         = vm.Yil,
-                    Aktif                       = true,
                     BirimTuruId                 = bt.Id,
                     UcretsizSureDakika          = 0,
                     UcretlendirmePeriyoduDakika = 60,
                     PeriyotUcreti               = 0,
-                    KdvOrani                    = 0,
-                    OlusturmaTarihi             = DateTime.Now
+                    KdvOrani                    = 0
                 });
             }
         }
@@ -313,7 +307,7 @@ public class AdminTarifeController : Controller
 
         await _ctx.RezervasyonTarifeler
             .Where(r => r.BirimId == null && r.Yil == yil)
-            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Aktif, yeniDeger));
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.IsActive, yeniDeger));
 
         TempData["Success"] = $"{yil} yılı tarifeleri {(yeniDeger ? "aktif" : "pasif")} yapıldı.";
         return RedirectToAction(nameof(Index));

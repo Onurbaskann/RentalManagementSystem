@@ -112,53 +112,57 @@ public class RolService : IRolService
 
     public Task<List<Rol>> GetKiraciRollerAsync(int kiraciId)
         => _db.Roller
-              .Where(r => r.Scope == RolScope.Kiraci && r.KiraciId == kiraciId && r.IsActive && !r.IsDeleted)
+              .Where(r => r.Scope == RolScope.Kiraci && (r.KiraciId == null || r.KiraciId == kiraciId) && r.IsActive && !r.IsDeleted)
               .OrderBy(r => r.IsSystemRole ? 0 : 1)
               .ThenBy(r => r.Ad)
               .ToListAsync();
 
-    public async Task SeedKiraciRolleriAsync(int kiraciId, string createdBy)
+    public async Task EnsureGlobalKiraciRolleriAsync(string createdBy)
     {
         var now = DateTime.UtcNow;
 
-        // Firma Yetkilisi — sistem rolü, silinemez
-        if (!await _db.Roller.AnyAsync(r => r.KiraciId == kiraciId && r.Ad == RoleNames.FirmaYetkilisi))
+        var kiraciYonetici = await _db.Roller.FirstOrDefaultAsync(r => r.KiraciId == null && r.Ad == RoleNames.KiraciYoneticisi);
+        if (kiraciYonetici == null)
         {
-            var firmaRol = new Rol
+            kiraciYonetici = new Rol
             {
-                Ad = RoleNames.FirmaYetkilisi,
+                Ad = RoleNames.KiraciYoneticisi,
                 Scope = RolScope.Kiraci,
-                KiraciId = kiraciId,
+                KiraciId = null,
                 IsSystemRole = true,
                 IsActive = true,
                 CreatedBy = createdBy,
                 CreatedAt = now
             };
-            _db.Roller.Add(firmaRol);
+            _db.Roller.Add(kiraciYonetici);
             await _db.SaveChangesAsync();
-
-            foreach (var perm in PermissionCatalog.FirmaYetkilisiIzinleri)
-                _db.RolPermissions.Add(new RolPermission { RolId = firmaRol.Id, Permission = perm });
+        }
+        if (!await _db.RolPermissions.AnyAsync(rp => rp.RolId == kiraciYonetici.Id))
+        {
+            foreach (var perm in PermissionCatalog.KiraciYoneticisiIzinleri)
+                _db.RolPermissions.Add(new RolPermission { RolId = kiraciYonetici.Id, Permission = perm });
         }
 
-        // Finans Yetkilisi — kiracı silebilir
-        if (!await _db.Roller.AnyAsync(r => r.KiraciId == kiraciId && r.Ad == RoleNames.FinansYetkilisi))
+        var kiraciSorumlu = await _db.Roller.FirstOrDefaultAsync(r => r.KiraciId == null && r.Ad == RoleNames.KiraciSorumlusu);
+        if (kiraciSorumlu == null)
         {
-            var finansRol = new Rol
+            kiraciSorumlu = new Rol
             {
-                Ad = RoleNames.FinansYetkilisi,
+                Ad = RoleNames.KiraciSorumlusu,
                 Scope = RolScope.Kiraci,
-                KiraciId = kiraciId,
-                IsSystemRole = false,
+                KiraciId = null,
+                IsSystemRole = true,
                 IsActive = true,
                 CreatedBy = createdBy,
                 CreatedAt = now
             };
-            _db.Roller.Add(finansRol);
+            _db.Roller.Add(kiraciSorumlu);
             await _db.SaveChangesAsync();
-
-            foreach (var perm in PermissionCatalog.FinansYetkilisiIzinleri)
-                _db.RolPermissions.Add(new RolPermission { RolId = finansRol.Id, Permission = perm });
+        }
+        if (!await _db.RolPermissions.AnyAsync(rp => rp.RolId == kiraciSorumlu.Id))
+        {
+            foreach (var perm in PermissionCatalog.KiraciSorumlusuIzinleri)
+                _db.RolPermissions.Add(new RolPermission { RolId = kiraciSorumlu.Id, Permission = perm });
         }
 
         await _db.SaveChangesAsync();

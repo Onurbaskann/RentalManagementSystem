@@ -8,6 +8,6 @@ public class SozlesmeTarife : BaseEntity
     public decimal BirimDeger { get; set; }
     public decimal KdvOrani { get; set; }
 
-    public KiraSozlesmesi KiraSozlesmesi { get; set; } = null!;
+    public Sozlesme KiraSozlesmesi { get; set; } = null!;
     public BorcTipi BorcTipi { get; set; } = null!;
 }

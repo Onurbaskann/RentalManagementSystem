@@ -1,6 +1,6 @@
 namespace KiraTakip.Models.Entities;
 
-public class KiraOdeme : BaseEntity
+public class TahakkukOdeme : BaseEntity
 {
     public int TahakkukId { get; set; }
     public int? KiraSozlesmesiId { get; set; }
@@ -18,9 +18,8 @@ public class KiraOdeme : BaseEntity
     public string? RedNedeni { get; set; }
 
     public Tahakkuk Tahakkuk { get; set; } = null!;
-    public KiraSozlesmesi? KiraSozlesmesi { get; set; }
+    public Sozlesme? KiraSozlesmesi { get; set; }
     public ApplicationUser GirenUser { get; set; } = null!;
     public ApplicationUser? OnaylayanUser { get; set; }
-    public List<Dekont> Dekontlar { get; set; } = [];
     public List<OdemeBankaEslesme> BankaEslesmeleri { get; set; } = [];
 }
