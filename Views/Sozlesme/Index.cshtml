@@ -102,10 +102,7 @@
                     <tr data-row data-search="@search">
                         <td class="text-xs text-muted font-mono">@s.Id</td>
                         <td>
-                            <div class="flex items-center gap-1.5">
-                                <a href="/Kiraci/Detay/@s.KiraciId" class="font-semibold text-primary hover:underline">@s.KiraciGosterimAdi</a>
-                                <span class="badge badge-kurumsal">T</span>
-                            </div>
+                            <a href="/Kiraci/Detay/@s.KiraciId" class="font-semibold text-primary hover:underline">@s.KiraciGosterimAdi</a>
                             @if (!string.IsNullOrEmpty(s.KiraciKategoriAd))
                             {
                                 <div class="cell-sub">@s.KiraciKategoriAd</div>

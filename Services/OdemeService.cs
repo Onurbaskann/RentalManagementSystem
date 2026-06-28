@@ -1,4 +1,5 @@
 using KiraTakip.Data;
+using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
@@ -7,7 +8,7 @@ using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-public class OdemeService : IOdemeService
+public class OdemeService : IOdemeService, ITransactionalService
 {
     private readonly IOdemeRepository _repo;
     private readonly IUnitOfWork _uow;

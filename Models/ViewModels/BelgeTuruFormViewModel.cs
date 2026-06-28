@@ -7,10 +7,6 @@ public class BelgeTuruFormViewModel
 {
     public int Id { get; set; }
 
-    [Required(ErrorMessage = "Kod zorunludur.")]
-    [MaxLength(50)]
-    public string Kod { get; set; } = string.Empty;
-
     [Required(ErrorMessage = "Ad zorunludur.")]
     [MaxLength(200)]
     public string Ad { get; set; } = string.Empty;
@@ -34,4 +30,5 @@ public class BelgeTuruFormViewModel
     public int Sira { get; set; } = 1;
 
     public bool IsActive { get; set; } = true;
+    public bool Sistem { get; set; }
 }

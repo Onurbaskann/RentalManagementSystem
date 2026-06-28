@@ -123,6 +123,14 @@ public class KiraciController : Controller
     {
         await ValidateKiraciAsync(vm);
 
+        var belgeTurleri = await _belgeService.GetTurlerAsync(Models.Entities.BelgeOwnerTipi.Kiraci);
+        foreach (var bt in belgeTurleri.Where(bt => bt.Zorunlu))
+        {
+            var f = Request.Form.Files.GetFile($"dosya_{bt.Id}");
+            if (f == null || f.Length == 0)
+                ModelState.AddModelError($"dosya_{bt.Id}", $"'{bt.Ad}' belgesi zorunludur.");
+        }
+
         if (!ModelState.IsValid)
         {
             await PopulateKiraciViewBagAsync();
@@ -133,7 +141,6 @@ public class KiraciController : Controller
         await _kiraciService.CreateAsync(k);
 
         // Yüklenen belgeleri kaydet
-        var belgeTurleri = await _belgeService.GetTurlerAsync(Models.Entities.BelgeOwnerTipi.Kiraci);
         foreach (var bt in belgeTurleri)
         {
             var file = Request.Form.Files.GetFile($"dosya_{bt.Id}");

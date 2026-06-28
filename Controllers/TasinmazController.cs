@@ -67,7 +67,7 @@ public class TasinmazController : Controller
         var birimTurleri = await _ctx.BirimTurleri.Where(b => b.Aktif).OrderBy(b => b.Sira).ToListAsync();
         ViewBag.BirimTurleri = birimTurleri.Where(b => b.KiralanabilirMi).ToList();
         ViewBag.RezervasyonBirimTurleri = birimTurleri.Where(b => b.RezervasyonYapilabilirMi).ToList();
-        var tipler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Tasinmaz && k.Aktif).OrderBy(t => t.Sira).ToListAsync();
+        var tipler = await _ctx.TasinmazTipleri.Where(k => k.Aktif).OrderBy(t => t.Sira).ToListAsync();
         ViewBag.TasinmazTipleri = tipler;
         ViewBag.TasinmazTipiKiralamaSekilleri = tipler.ToDictionary(
             t => t.Id,
@@ -268,7 +268,7 @@ public class TasinmazController : Controller
 
         if (vm.TasinmazTipiId != null && vm.TasinmazTipiId > 0)
         {
-            var tip = await _ctx.Kategoriler.FirstOrDefaultAsync(k => k.Id == vm.TasinmazTipiId.Value && k.Tipi == KategoriTipi.Tasinmaz);
+            var tip = await _ctx.TasinmazTipleri.FirstOrDefaultAsync(k => k.Id == vm.TasinmazTipiId.Value);
             if (tip != null)
             {
                 var secimIzinli = vm.KiralamaSekli == KiralamaSekli.TekParca ? tip.TekParcaDestekli : tip.BirimBazliDestekli;

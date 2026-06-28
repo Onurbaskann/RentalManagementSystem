@@ -1,5 +1,6 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
+using KiraTakip.Helpers;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
@@ -43,10 +44,10 @@ public class AdminKiraciKategoriController : Controller
         model.Tipi = Tipi;
         if (!ModelState.IsValid) return View(model);
 
-        var kod = model.Kod.Trim().ToUpper();
+        var kod = CodeSlugger.ToCode(model.Ad);
         if (await _repo.KodExistsByTipiAsync(Tipi, kod))
         {
-            ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
+            ModelState.AddModelError(nameof(model.Ad), "Bu ad zaten kullanılıyor. Farklı bir ad girin.");
             return View(model);
         }
 
@@ -85,15 +86,7 @@ public class AdminKiraciKategoriController : Controller
         var entity = await _repo.GetByIdAndTipiAsync(id, Tipi);
         if (entity == null) return NotFound();
 
-        var kod = model.Kod.Trim().ToUpper();
-        if (await _repo.KodExistsByTipiAsync(Tipi, kod, id))
-        {
-            ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
-            return View(model);
-        }
-
         entity.Ad = model.Ad;
-        entity.Kod = kod;
         entity.Sira = model.Sira;
         entity.Aktif = model.Aktif;
 
@@ -119,7 +112,6 @@ public class AdminKiraciKategoriController : Controller
         Id = e.Id,
         Tipi = e.Tipi,
         Ad = e.Ad,
-        Kod = e.Kod,
         Sira = e.Sira,
         Aktif = e.Aktif
     };

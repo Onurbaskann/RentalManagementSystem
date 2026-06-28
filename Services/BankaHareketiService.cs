@@ -1,4 +1,5 @@
 using KiraTakip.Data;
+using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
@@ -8,7 +9,7 @@ using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-public class BankaHareketiService : IBankaHareketiService
+public class BankaHareketiService : IBankaHareketiService, ITransactionalService
 {
     private readonly IBankaHareketiRepository _repo;
     private readonly IEnumerable<IBankaHareketiParser> _parsers;

@@ -15,6 +15,6 @@ public class Tasinmaz : BaseEntity
     public string AcikAdres { get; set; } = string.Empty;
     public string? Aciklama { get; set; }
 
-    public Kategori? TasinmazTipi { get; set; }
+    public TasinmazTipi? TasinmazTipi { get; set; }
     public List<Birim> Birimler { get; set; } = [];
 }

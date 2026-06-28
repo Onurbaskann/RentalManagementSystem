@@ -102,6 +102,8 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
 
     public async Task SaveMatrisiAsync(int tasinmazId, TasinmazFiyatMatrisiViewModel model, string userId)
     {
+        if (model?.Satirlar == null) return;
+
         foreach (var satir in model.Satirlar)
         {
             foreach (var hucre in satir.Hucreler)

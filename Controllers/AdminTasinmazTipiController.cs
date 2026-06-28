@@ -1,6 +1,7 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
-using KiraTakip.Models;
+using KiraTakip.Helpers;
+using KiraTakip.Models.Entities;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -12,11 +13,10 @@ namespace KiraTakip.Controllers;
 [Route("Admin/TasinmazTipi")]
 public class AdminTasinmazTipiController : Controller
 {
-    private const KategoriTipi Tipi = KategoriTipi.Tasinmaz;
-    private readonly IKategoriRepository _repo;
+    private readonly ITasinmazTipiRepository _repo;
     private readonly IUnitOfWork _uow;
 
-    public AdminTasinmazTipiController(IKategoriRepository repo, IUnitOfWork uow)
+    public AdminTasinmazTipiController(ITasinmazTipiRepository repo, IUnitOfWork uow)
     {
         _repo = repo;
         _uow = uow;
@@ -25,38 +25,35 @@ public class AdminTasinmazTipiController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var list = await _repo.GetListByTipiAsync(Tipi);
+        var list = await _repo.GetListAsync();
         return View(list);
     }
 
     [HttpGet("Ekle")]
     public async Task<IActionResult> Create()
     {
-        var nextSira = (await _repo.GetMaxSiraByTipiAsync(Tipi)) + 1;
-        return View(new KategoriFormViewModel { Tipi = Tipi, Sira = nextSira, TekParcaDestekli = true });
+        var nextSira = (await _repo.GetMaxSiraAsync()) + 1;
+        return View(new TasinmazTipiFormViewModel { Sira = nextSira, TekParcaDestekli = true });
     }
 
     [HttpPost("Ekle")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(KategoriFormViewModel model)
+    public async Task<IActionResult> Create(TasinmazTipiFormViewModel model)
     {
-        model.Tipi = Tipi;
-
         if (!model.TekParcaDestekli && !model.BirimBazliDestekli)
             ModelState.AddModelError("kiralamaSekli", "En az bir kiralama şekli seçilmelidir.");
 
         if (!ModelState.IsValid) return View(model);
 
-        var kod = model.Kod.Trim().ToUpper();
-        if (await _repo.KodExistsByTipiAsync(Tipi, kod))
+        var kod = CodeSlugger.ToCode(model.Ad);
+        if (await _repo.KodExistsAsync(kod))
         {
-            ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
+            ModelState.AddModelError(nameof(model.Ad), "Bu ad zaten kullanılıyor. Farklı bir ad girin.");
             return View(model);
         }
 
-        var entity = new Kategori
+        var entity = new TasinmazTipi
         {
-            Tipi = Tipi,
             Ad = model.Ad,
             Kod = kod,
             Sira = model.Sira,
@@ -75,35 +72,26 @@ public class AdminTasinmazTipiController : Controller
     [HttpGet("Duzenle/{id:int}")]
     public async Task<IActionResult> Edit(int id)
     {
-        var entity = await _repo.GetByIdAndTipiAsync(id, Tipi);
+        var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
         return View(ToFormVm(entity));
     }
 
     [HttpPost("Duzenle/{id:int}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, KategoriFormViewModel model)
+    public async Task<IActionResult> Edit(int id, TasinmazTipiFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
-        model.Tipi = Tipi;
 
         if (!model.TekParcaDestekli && !model.BirimBazliDestekli)
             ModelState.AddModelError("kiralamaSekli", "En az bir kiralama şekli seçilmelidir.");
 
         if (!ModelState.IsValid) return View(model);
 
-        var entity = await _repo.GetByIdAndTipiAsync(id, Tipi);
+        var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
 
-        var kod = model.Kod.Trim().ToUpper();
-        if (await _repo.KodExistsByTipiAsync(Tipi, kod, id))
-        {
-            ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
-            return View(model);
-        }
-
         entity.Ad = model.Ad;
-        entity.Kod = kod;
         entity.Sira = model.Sira;
         entity.Aktif = model.Aktif;
         entity.TekParcaDestekli = model.TekParcaDestekli;
@@ -118,7 +106,7 @@ public class AdminTasinmazTipiController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DurumDegistir(int id)
     {
-        var entity = await _repo.GetByIdAndTipiAsync(id, Tipi);
+        var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
         entity.Aktif = !entity.Aktif;
         await _uow.SaveChangesAsync();
@@ -126,12 +114,10 @@ public class AdminTasinmazTipiController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private static KategoriFormViewModel ToFormVm(Kategori e) => new()
+    private static TasinmazTipiFormViewModel ToFormVm(TasinmazTipi e) => new()
     {
         Id = e.Id,
-        Tipi = e.Tipi,
         Ad = e.Ad,
-        Kod = e.Kod,
         Sira = e.Sira,
         Aktif = e.Aktif,
         TekParcaDestekli = e.TekParcaDestekli,

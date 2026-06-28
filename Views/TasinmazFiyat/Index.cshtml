@@ -32,32 +32,43 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var satir in Model.Satirlar)
+                @if (Model.Satirlar == null || !Model.Satirlar.Any())
                 {
-                    <tr class="hover:bg-slate-50/30 transition-colors">
-                        <td class="font-bold text-slate-800 bg-slate-50/20">@satir.KiraciKategoriAd</td>
-                        @foreach (var hucre in satir.Hucreler)
-                        {
-                            <td class="p-4 text-center border-l border-slate-50 @(hucre.RateVarMi ? "bg-white" : "bg-slate-50/40")">
-                                @if (hucre.RateVarMi)
-                                {
-                                    <div class="text-base font-bold text-slate-800 flex items-baseline justify-center gap-1">
-                                        @hucre.BirimDeger?.ToString("N2") <span class="text-xs font-normal">₺</span>
-                                        <span class="text-[10px] font-medium text-slate-400 uppercase ml-0.5">
-                                            @(hucre.HesaplamaYontemi == KiraTakip.Models.HesaplamaYontemi.Sabit ? "Sbt" : "m²")
-                                        </span>
-                                    </div>
-                                    <div class="text-[10px] font-bold text-indigo-500 uppercase tracking-tighter mt-1">
-                                        KDV %@hucre.KdvOrani?.ToString("N0")
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div class="text-[10px] text-slate-300 font-bold uppercase tracking-widest">BOŞ</div>
-                                }
-                            </td>
-                        }
+                    <tr>
+                        <td colspan="@(Model.Kolonlar.Count + 1)" class="text-center py-8 text-slate-400">
+                            Tanımlı fiyat parametresi bulunmuyor.
+                        </td>
                     </tr>
+                }
+                else
+                {
+                    @foreach (var satir in Model.Satirlar)
+                    {
+                        <tr class="hover:bg-slate-50/30 transition-colors">
+                            <td class="font-bold text-slate-800 bg-slate-50/20">@satir.KiraciKategoriAd</td>
+                            @foreach (var hucre in satir.Hucreler)
+                            {
+                                <td class="p-4 text-center border-l border-slate-50 @(hucre.RateVarMi ? "bg-white" : "bg-slate-50/40")">
+                                    @if (hucre.RateVarMi)
+                                    {
+                                        <div class="text-base font-bold text-slate-800 flex items-baseline justify-center gap-1">
+                                            @hucre.BirimDeger?.ToString("N2") <span class="text-xs font-normal">₺</span>
+                                            <span class="text-[10px] font-medium text-slate-400 uppercase ml-0.5">
+                                                @(hucre.HesaplamaYontemi == KiraTakip.Models.HesaplamaYontemi.Sabit ? "Sbt" : "m²")
+                                            </span>
+                                        </div>
+                                        <div class="text-[10px] font-bold text-indigo-500 uppercase tracking-tighter mt-1">
+                                            KDV %@hucre.KdvOrani?.ToString("N0")
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-[10px] text-slate-300 font-bold uppercase tracking-widest">BOŞ</div>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
                 }
             </tbody>
         </table>

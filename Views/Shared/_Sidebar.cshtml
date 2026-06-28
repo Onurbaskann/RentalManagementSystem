@@ -1,7 +1,9 @@
 @using Microsoft.AspNetCore.Identity
 @using KiraTakip.Models
+@using KiraTakip.Services.Interfaces
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
+@inject IUserRolService UserRolService
 @{
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
     ApplicationUser? currentUser = null;
@@ -18,7 +20,7 @@
             userInitials = string.Join("", userAdSoyad.Split(' ')
                 .Where(p => p.Length > 0).Take(2).Select(p => char.ToUpper(p[0])));
 
-            var roles = await UserManager.GetRolesAsync(currentUser);
+            var roles = await UserRolService.GetUserRolesAsync(currentUser.Id);
             userRole = roles.FirstOrDefault() ?? "Kullanıcı";
         }
     }
@@ -28,7 +30,7 @@
     <div class="sidebar-header flex items-center gap-3">
         <div class="sidebar-logo flex-shrink-0">
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="28" height="28" rx="8" class="fill-indigo-600"/>
+                <rect width="28" height="28" rx="8" fill="#1a6b5c"/>
                 <path d="M7 20V11L14 7L21 11V20H17V15H11V20H7Z" fill="white"/>
             </svg>
         </div>

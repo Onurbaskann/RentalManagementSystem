@@ -1,5 +1,6 @@
 @model KiraTakip.Models.ViewModels.TasinmazEkleViewModel
 @using KiraTakip.Models
+@using KiraTakip.Models.Entities
 @{
     ViewData["Title"] = "Yeni Taşınmaz";
 }
@@ -42,7 +43,7 @@
                 <label class="form-label">Taşınmaz Tipi *</label>
                 <select asp-for="TasinmazTipiId" class="form-control" x-model="tasinmazTipiId" @@change="onTasinmazTipiChange()">
                     <option value="">— Seçiniz —</option>
-                    @foreach (var tt in (IEnumerable<Kategori>)ViewBag.TasinmazTipleri)
+                    @foreach (var tt in (IEnumerable<TasinmazTipi>)ViewBag.TasinmazTipleri)
                     {
                         <option value="@tt.Id">@tt.Ad</option>
                     }
@@ -197,7 +198,23 @@
             </div>
 
             <div>
-                @for (int i = 0; i < Model.FiyatMatrisi.Satirlar.Count; i++)
+            @if (Model.FiyatMatrisi?.Satirlar == null || Model.FiyatMatrisi.Satirlar.Count == 0)
+            {
+                <div class="bg-amber-50 border border-amber-200 text-amber-900 p-3.5 px-4 rounded-xl mb-5 flex items-start gap-3 shadow-sm">
+                    <svg class="text-amber-600 mt-0.5 flex-shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    <div class="text-[13.5px] leading-relaxed">
+                        <strong>Uyarı:</strong> Sistemde tanımlı kiracı kategorisi veya borç tipi bulunmadığı için taşınmaz tarifesi (fiyat matrisi) boş. Lütfen önce sistem tanımlarından en az bir kiracı kategorisi ve borç tipi ekleyiniz.
+                    </div>
+                </div>
+            }
+            
+            @if (Model.FiyatMatrisi?.Satirlar != null && Model.FiyatMatrisi.Satirlar.Count > 0)
+            {
+                for (int i = 0; i < Model.FiyatMatrisi.Satirlar.Count; i++)
                 {
                     var satir = Model.FiyatMatrisi.Satirlar[i];
                     <div class="fiyat-kategori-blok mb-5">
@@ -302,6 +319,7 @@
                         </div>
                     </div>
                 }
+            }
                 <script>
                                     function topluKdvAta(btn, value) {
                                         const blok = btn.closest('.fiyat-kategori-blok');

@@ -1,5 +1,6 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
+using KiraTakip.Helpers;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
@@ -44,10 +45,10 @@ public class AdminBelgeTuruController : Controller
     {
         if (!ModelState.IsValid) return View(model);
 
-        var kod = model.Kod.Trim().ToUpperInvariant();
+        var kod = CodeSlugger.ToCode(model.Ad);
         if (await _repo.KodExistsAsync(kod))
         {
-            ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
+            ModelState.AddModelError(nameof(model.Ad), "Bu ad zaten kullanılıyor. Farklı bir ad girin.");
             return View(model);
         }
 
@@ -61,7 +62,8 @@ public class AdminBelgeTuruController : Controller
             IzinVerilenUzantilar = model.IzinVerilenUzantilar.Trim().ToLowerInvariant(),
             MaxBoyutMb = model.MaxBoyutMb,
             Sira = model.Sira,
-            IsActive = model.IsActive
+            IsActive = model.IsActive,
+            Sistem = false
         };
 
         await _repo.AddAsync(entity);
@@ -83,19 +85,20 @@ public class AdminBelgeTuruController : Controller
     public async Task<IActionResult> Edit(int id, BelgeTuruFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
-        if (!ModelState.IsValid) return View(model);
 
         var entity = await _repo.GetByIdAsync(id);
         if (entity == null || entity.IsDeleted) return NotFound();
 
-        var kod = model.Kod.Trim().ToUpperInvariant();
-        if (await _repo.KodExistsAsync(kod, id))
+        // Sistem tiplerinde HedefEntite değiştirilemez
+        if (entity.Sistem)
+            model.HedefEntite = entity.HedefEntite;
+
+        if (!ModelState.IsValid)
         {
-            ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
+            model.Sistem = entity.Sistem;
             return View(model);
         }
 
-        entity.Kod = kod;
         entity.Ad = model.Ad.Trim();
         entity.Aciklama = model.Aciklama?.Trim();
         entity.HedefEntite = model.HedefEntite;
@@ -117,6 +120,12 @@ public class AdminBelgeTuruController : Controller
         var entity = await _repo.GetByIdAsync(id);
         if (entity == null || entity.IsDeleted) return NotFound();
 
+        if (entity.IsActive && entity.Sistem)
+        {
+            TempData["Error"] = $"'{entity.Ad}' bir sistem kaydıdır ve pasif yapılamaz.";
+            return RedirectToAction(nameof(Index));
+        }
+
         entity.IsActive = !entity.IsActive;
         await _uow.SaveChangesAsync();
         TempData["Success"] = $"'{entity.Ad}' {(entity.IsActive ? "aktif" : "pasif")} yapıldı.";
@@ -130,6 +139,12 @@ public class AdminBelgeTuruController : Controller
         var entity = await _repo.GetByIdAsync(id);
         if (entity == null || entity.IsDeleted) return NotFound();
 
+        if (entity.Sistem)
+        {
+            TempData["Error"] = $"'{entity.Ad}' bir sistem kaydıdır ve silinemez.";
+            return RedirectToAction(nameof(Index));
+        }
+
         entity.IsDeleted = true;
         await _uow.SaveChangesAsync();
         TempData["Success"] = $"'{entity.Ad}' silindi.";
@@ -139,7 +154,6 @@ public class AdminBelgeTuruController : Controller
     private static BelgeTuruFormViewModel ToFormVm(BelgeTuru e) => new()
     {
         Id = e.Id,
-        Kod = e.Kod,
         Ad = e.Ad,
         Aciklama = e.Aciklama,
         HedefEntite = e.HedefEntite,
@@ -147,6 +161,7 @@ public class AdminBelgeTuruController : Controller
         IzinVerilenUzantilar = e.IzinVerilenUzantilar,
         MaxBoyutMb = e.MaxBoyutMb,
         Sira = e.Sira,
-        IsActive = e.IsActive
+        IsActive = e.IsActive,
+        Sistem = e.Sistem
     };
 }

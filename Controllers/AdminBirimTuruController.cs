@@ -1,6 +1,6 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
-using KiraTakip.Extensions;
+using KiraTakip.Helpers;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -63,10 +63,10 @@ public class AdminBirimTuruController : Controller
             return View(model);
         }
 
-        var kod = model.Kod.ToSafeCode();
+        var kod = CodeSlugger.ToCode(model.Ad);
         if (await _repo.KodExistsAsync(kod))
         {
-            ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
+            ModelState.AddModelError(nameof(model.Ad), "Bu ad zaten kullanılıyor. Farklı bir ad girin.");
             model.BorcTipiAdaylari = await _borcTipiRepo.GetRezervasyonAdaylariAsync();
             return View(model);
         }
@@ -122,16 +122,7 @@ public class AdminBirimTuruController : Controller
         var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
 
-        var kod = model.Kod.ToSafeCode();
-        if (await _repo.KodExistsAsync(kod, id))
-        {
-            ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
-            model.BorcTipiAdaylari = await _borcTipiRepo.GetRezervasyonAdaylariAsync();
-            return View(model);
-        }
-
         entity.Ad = model.Ad;
-        entity.Kod = kod;
         entity.Sira = model.Sira;
         entity.KiralanabilirMi = model.KiralanabilirMi;
         entity.RezervasyonYapilabilirMi = model.RezervasyonYapilabilirMi;
@@ -186,7 +177,6 @@ public class AdminBirimTuruController : Controller
     {
         Id = e.Id,
         Ad = e.Ad,
-        Kod = e.Kod,
         Sira = e.Sira,
         KiralanabilirMi = e.KiralanabilirMi,
         RezervasyonYapilabilirMi = e.RezervasyonYapilabilirMi,

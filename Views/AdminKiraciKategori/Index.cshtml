@@ -33,7 +33,6 @@
             <thead>
                 <tr>
                     <th class="w-16 text-center">Sıra</th>
-                    <th class="w-32">Kod</th>
                     <th>Ad</th>
                     <th class="w-24">Durum</th>
                     <th class="w-40"></th>
@@ -44,7 +43,6 @@
                 {
                     <tr>
                         <td class="text-center text-muted text-xs">@k.Sira</td>
-                        <td><span class="font-mono font-semibold text-[13px]">@k.Kod</span></td>
                         <td class="font-medium text-slate-700">@k.Ad</td>
                         <td>
                             @if (k.Aktif)
@@ -67,7 +65,7 @@
                 }
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="5" class="text-center py-8 text-muted">Henüz kiracı kategorisi tanımlanmamış.</td></tr>
+                    <tr><td colspan="4" class="text-center py-8 text-muted">Henüz kiracı kategorisi tanımlanmamış.</td></tr>
                 }
             </tbody>
         </table>

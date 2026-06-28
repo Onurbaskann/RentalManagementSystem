@@ -1,11 +1,12 @@
 using KiraTakip.Data;
+using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-public class TahakkukUretimService : ITahakkukUretimService
+public class TahakkukUretimService : ITahakkukUretimService, ITransactionalService
 {
     private readonly ITahakkukRepository _tahakkukRepo;
     private readonly IUnitOfWork _uow;

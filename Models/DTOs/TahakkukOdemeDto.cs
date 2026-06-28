@@ -9,4 +9,5 @@ public class TahakkukOdemeDto
     public OdemeDurumu Durum { get; set; }
     public DateTime GirisTarihi { get; set; }
     public string? Aciklama { get; set; }
+    public string? RedNedeni { get; set; }
 }

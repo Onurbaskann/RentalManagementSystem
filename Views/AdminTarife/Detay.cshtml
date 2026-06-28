@@ -25,7 +25,7 @@
     <input type="hidden" name="Aktif" value="@Model.Aktif.ToString().ToLower()" />
 
     <div class="card p-0 overflow-hidden mb-4">
-        @if (!Model.Satirlar.Any() || !Model.Kolonlar.Any())
+        @if (Model.Satirlar == null || !Model.Satirlar.Any() || Model.Kolonlar == null || !Model.Kolonlar.Any())
         {
             <div class="p-6 text-center text-muted">
                 Aktif kiracı kategorisi veya borç tipi bulunmuyor.
@@ -109,7 +109,7 @@
             <div class="text-[15px] font-bold text-slate-700">Rezervasyon Genel Tarifeleri</div>
         </div>
 
-        @if (!Model.RezervasyonSatirlari.Any())
+        @if (Model.RezervasyonSatirlari == null || !Model.RezervasyonSatirlari.Any())
         {
             <div class="p-6 text-center text-muted">
                 Aktif rezervasyon yapılabilir birim türü bulunmuyor.

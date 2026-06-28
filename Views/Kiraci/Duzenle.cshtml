@@ -81,7 +81,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-3.5 gap-y-4">
                 <div class="form-group">
                     <label class="form-label">Vergi No *</label>
-                    <input asp-for="VergiNo" class="form-control" maxlength="10" inputmode="numeric" pattern="\d{10}" />
+                    <input asp-for="VergiNo" class="form-control" maxlength="10" inputmode="numeric" />
                     <span x-show="errors.vergiNo" x-text="errors.vergiNo" class="form-error"></span>
                 </div>
                 <div class="form-group">
@@ -114,7 +114,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">E-posta *</label>
-                    <input asp-for="Email" type="email" class="form-control" />
+                    <input asp-for="Email" type="text" class="form-control" />
                     <span x-show="errors.email" x-text="errors.email" class="form-error"></span>
                 </div>
             </div>
@@ -157,7 +157,9 @@ function kiraciFormData() {
             else if (!/^\d{10}$/.test(vno)) e.vergiNo = 'Vergi No 10 haneli rakamdan oluşmalıdır.';
             if (!get('VergiDairesi')) e.vergiDairesi = 'Vergi Dairesi zorunludur.';
             if (!get('Telefon')) e.telefon = 'Telefon zorunludur.';
-            if (!get('Email')) e.email = 'E-posta zorunludur.';
+            var mail = get('Email');
+            if (!mail) e.email = 'E-posta zorunludur.';
+            else if (!/^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/.test(mail)) e.email = 'Geçerli bir e-posta adresi giriniz.';
             if (!get('Adres')) e.adres = 'Adres zorunludur.';
 
             this.errors = e;

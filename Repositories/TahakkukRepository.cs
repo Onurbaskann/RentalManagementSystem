@@ -32,9 +32,15 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
                           KiraSozlesmesiId = t.KiraSozlesmesiId,
                           KiraciId = t.KiraciId,
                           KiraciGosterimAdi = t.Kiraci.Ad,
-                          TasinmazId = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.TasinmazId : null,
-                          TasinmazAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Tasinmaz.Ad : null,
-                          BirimAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Ad : null,
+                          TasinmazId = t.KiraSozlesmesi != null
+                              ? t.KiraSozlesmesi.Birim.TasinmazId
+                              : _ctx.Rezervasyonlari.Where(r => r.TahakkukId == t.Id).Select(r => (int?)r.Birim.TasinmazId).FirstOrDefault(),
+                          TasinmazAd = t.KiraSozlesmesi != null
+                              ? t.KiraSozlesmesi.Birim.Tasinmaz.Ad
+                              : _ctx.Rezervasyonlari.Where(r => r.TahakkukId == t.Id).Select(r => r.Birim.Tasinmaz.Ad).FirstOrDefault(),
+                          BirimAd = t.KiraSozlesmesi != null
+                              ? t.KiraSozlesmesi.Birim.Ad
+                              : _ctx.Rezervasyonlari.Where(r => r.TahakkukId == t.Id).Select(r => r.Birim.Ad).FirstOrDefault(),
                           DonemBaslangic = t.DonemBaslangic,
                           VadeTarihi = t.VadeTarihi,
                           ToplamTutar = t.ToplamTutar,
@@ -124,9 +130,15 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
                                    KiraSozlesmesiId = t.KiraSozlesmesiId,
                                    KiraciId = t.KiraciId,
                                    KiraciGosterimAdi = t.Kiraci.Ad,
-                                   TasinmazId = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.TasinmazId : null,
-                                   TasinmazAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Tasinmaz.Ad : null,
-                                   BirimAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Ad : null,
+                                   TasinmazId = t.KiraSozlesmesi != null
+                                       ? t.KiraSozlesmesi.Birim.TasinmazId
+                                       : _ctx.Rezervasyonlari.Where(r => r.TahakkukId == t.Id).Select(r => (int?)r.Birim.TasinmazId).FirstOrDefault(),
+                                   TasinmazAd = t.KiraSozlesmesi != null
+                                       ? t.KiraSozlesmesi.Birim.Tasinmaz.Ad
+                                       : _ctx.Rezervasyonlari.Where(r => r.TahakkukId == t.Id).Select(r => r.Birim.Tasinmaz.Ad).FirstOrDefault(),
+                                   BirimAd = t.KiraSozlesmesi != null
+                                       ? t.KiraSozlesmesi.Birim.Ad
+                                       : _ctx.Rezervasyonlari.Where(r => r.TahakkukId == t.Id).Select(r => r.Birim.Ad).FirstOrDefault(),
                                    DonemBaslangic = t.DonemBaslangic,
                                    VadeTarihi = t.VadeTarihi,
                                    ToplamTutar = t.ToplamTutar,
@@ -171,9 +183,15 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
                                KiraSozlesmesiId = t.KiraSozlesmesiId,
                                KiraciId = t.KiraciId,
                                KiraciGosterimAdi = t.Kiraci.Ad,
-                               TasinmazId = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.TasinmazId : null,
-                               TasinmazAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Tasinmaz.Ad : null,
-                               BirimAd = t.KiraSozlesmesi != null ? t.KiraSozlesmesi.Birim.Ad : null,
+                               TasinmazId = t.KiraSozlesmesi != null
+                                   ? t.KiraSozlesmesi.Birim.TasinmazId
+                                   : _ctx.Rezervasyonlari.Where(r => r.TahakkukId == t.Id).Select(r => (int?)r.Birim.TasinmazId).FirstOrDefault(),
+                               TasinmazAd = t.KiraSozlesmesi != null
+                                   ? t.KiraSozlesmesi.Birim.Tasinmaz.Ad
+                                   : _ctx.Rezervasyonlari.Where(r => r.TahakkukId == t.Id).Select(r => r.Birim.Tasinmaz.Ad).FirstOrDefault(),
+                               BirimAd = t.KiraSozlesmesi != null
+                                   ? t.KiraSozlesmesi.Birim.Ad
+                                   : _ctx.Rezervasyonlari.Where(r => r.TahakkukId == t.Id).Select(r => r.Birim.Ad).FirstOrDefault(),
                                DonemBaslangic = t.DonemBaslangic,
                                DonemBitis = t.DonemBitis,
                                VadeTarihi = t.VadeTarihi,
@@ -207,7 +225,8 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
                                    OdemeKanali = o.OdemeKanali,
                                    Durum = o.Durum,
                                    GirisTarihi = o.GirisTarihi,
-                                   Aciklama = o.Aciklama
+                                   Aciklama = o.Aciklama,
+                                   RedNedeni = o.RedNedeni
                                }).ToList()
                            })
                            .FirstOrDefaultAsync();

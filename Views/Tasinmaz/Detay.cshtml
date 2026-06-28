@@ -788,30 +788,41 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var satir in Model.FiyatMatrisi.Satirlar)
+                    @if (Model.FiyatMatrisi?.Satirlar == null || Model.FiyatMatrisi.Satirlar.Count == 0)
                     {
                         <tr>
-                            <td class="font-semibold align-middle bg-[#fafbfc]">@satir.KiraciKategoriAd</td>
-                            @foreach (var hucre in satir.Hucreler)
-                            {
-                                <td class="p-3 text-center @(hucre.RateVarMi ? "" : "bg-[#f9fafb]")">
-                                    @if (hucre.RateVarMi)
-                                    {
-                                        <div class="font-serif font-bold text-[15px]">
-                                            @hucre.BirimDeger?.ToString("N2") ₺
-                                            <small class="font-sans text-[11px] font-normal text-muted">
-                                                @(hucre.HesaplamaYontemi == HesaplamaYontemi.Sabit ? "/sabit" : "/m²")
-                                            </small>
-                                        </div>
-                                        <div class="text-[11px] text-muted mt-1">KDV: %@hucre.KdvOrani?.ToString("N0")</div>
-                                    }
-                                    else
-                                    {
-                                        <div class="text-[#c8cfd8] text-xs">Tanımsız</div>
-                                    }
-                                </td>
-                            }
+                            <td colspan="@(Model.FiyatMatrisi?.Kolonlar?.Count + 1 ?? 1)" class="text-center py-6 text-slate-400 text-sm">
+                                Tanımlı fiyat parametresi bulunmuyor.
+                            </td>
                         </tr>
+                    }
+                    else
+                    {
+                        @foreach (var satir in Model.FiyatMatrisi.Satirlar)
+                        {
+                            <tr>
+                                <td class="font-semibold align-middle bg-[#fafbfc]">@satir.KiraciKategoriAd</td>
+                                @foreach (var hucre in satir.Hucreler)
+                                {
+                                    <td class="p-3 text-center @(hucre.RateVarMi ? "" : "bg-[#f9fafb]")">
+                                        @if (hucre.RateVarMi)
+                                        {
+                                            <div class="font-serif font-bold text-[15px]">
+                                                @hucre.BirimDeger?.ToString("N2") ₺
+                                                <small class="font-sans text-[11px] font-normal text-muted">
+                                                    @(hucre.HesaplamaYontemi == HesaplamaYontemi.Sabit ? "/sabit" : "/m²")
+                                                </small>
+                                            </div>
+                                            <div class="text-[11px] text-muted mt-1">KDV: %@hucre.KdvOrani?.ToString("N0")</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="text-[#c8cfd8] text-xs">Tanımsız</div>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
                     }
                 </tbody>
             </table>

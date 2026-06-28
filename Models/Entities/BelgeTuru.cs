@@ -11,6 +11,7 @@ public class BelgeTuru : BaseEntity
     public int MaxBoyutMb { get; set; } = 5;
     public int? SablonBelgeId { get; set; }
     public int Sira { get; set; }
+    public bool Sistem { get; set; } = false;
 
     public Belge? SablonBelge { get; set; }
 }

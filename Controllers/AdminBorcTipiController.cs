@@ -1,6 +1,6 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
-using KiraTakip.Extensions;
+using KiraTakip.Helpers;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -44,15 +44,12 @@ public class AdminBorcTipiController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(BorcTipiFormViewModel model)
     {
-        if (!model.Kod.IsValidBorcTipiKod())
-            ModelState.AddModelError(nameof(model.Kod), "Kod yalnızca harf, rakam, alt çizgi ve boşluk içerebilir ve 2-50 karakter uzunluğunda olmalıdır.");
-
         if (!ModelState.IsValid) return View(model);
 
-        var kod = model.Kod.ToSafeCode();
+        var kod = CodeSlugger.ToCode(model.Ad);
         if (await _repo.KodExistsAsync(kod))
         {
-            ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
+            ModelState.AddModelError(nameof(model.Ad), "Bu ad zaten kullanılıyor. Farklı bir ad girin.");
             return View(model);
         }
 
@@ -91,15 +88,9 @@ public class AdminBorcTipiController : Controller
         var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
 
-        // Sistem tiplerinde Kod ve Davranış değiştirilemez
+        // Sistem tiplerinde Davranış değiştirilemez
         if (entity.Sistem)
-        {
-            model.Kod = entity.Kod;
             model.Davranis = entity.Davranis;
-        }
-
-        if (!model.Kod.IsValidBorcTipiKod())
-            ModelState.AddModelError(nameof(model.Kod), "Kod yalnızca harf, rakam, alt çizgi ve boşluk içerebilir ve 2-50 karakter uzunluğunda olmalıdır.");
 
         if (!ModelState.IsValid)
         {
@@ -107,20 +98,11 @@ public class AdminBorcTipiController : Controller
             return View(model);
         }
 
-        var kod = model.Kod.ToSafeCode();
-        if (await _repo.KodExistsAsync(kod, id))
-        {
-            ModelState.AddModelError(nameof(model.Kod), "Bu kod zaten kullanılıyor.");
-            model.Sistem = entity.Sistem;
-            return View(model);
-        }
-
         entity.Ad = model.Ad;
-        entity.Kod = kod;
         entity.Davranis = model.Davranis;
         entity.Sira = model.Sira;
         entity.Aktif = model.Aktif;
-        // entity.Sistem hiç değiştirilmez
+        // entity.Kod ve entity.Sistem hiç değiştirilmez
 
         await _uow.SaveChangesAsync();
         TempData["Success"] = $"'{entity.Ad}' güncellendi.";
@@ -170,7 +152,6 @@ public class AdminBorcTipiController : Controller
     {
         Id = e.Id,
         Ad = e.Ad,
-        Kod = e.Kod,
         Davranis = e.Davranis,
         Sira = e.Sira,
         Aktif = e.Aktif,

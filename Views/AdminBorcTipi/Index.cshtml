@@ -43,7 +43,6 @@
                 <thead>
                     <tr>
                         <th class="w-20 text-center">Sıra</th>
-                        <th class="w-24">Kod</th>
                         <th>Ad</th>
                         <th class="w-40">Davranış</th>
                         <th class="w-24">Durum</th>
@@ -78,7 +77,6 @@
                                     </form>
                                 </div>
                             </td>
-                            <td><span class="font-mono font-semibold text-[13px]">@bt.Kod</span></td>
                             <td class="font-medium text-slate-700">
                                 @bt.Ad
                                 @if (bt.Sistem)
@@ -117,7 +115,7 @@
                     }
                     @if (!Model.Any())
                     {
-                        <tr><td colspan="6" class="text-center py-8 text-muted">Henüz borç tipi tanımlanmamış.</td></tr>
+                        <tr><td colspan="5" class="text-center py-8 text-muted">Henüz borç tipi tanımlanmamış.</td></tr>
                     }
                 </tbody>
             </table>

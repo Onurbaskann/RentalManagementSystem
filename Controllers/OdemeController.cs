@@ -19,7 +19,6 @@ public class OdemeController : Controller
     private readonly IBelgeService _belgeService;
     private readonly IBankaHareketiService _bankaService;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IConfiguration _config;
     private readonly IYetkiKapsamiProvider _provider;
 
     public OdemeController(
@@ -28,7 +27,6 @@ public class OdemeController : Controller
         IBelgeService belgeService,
         IBankaHareketiService bankaService,
         UserManager<ApplicationUser> userManager,
-        IConfiguration config,
         IYetkiKapsamiProvider provider)
     {
         _odemeService = odemeService;
@@ -36,7 +34,6 @@ public class OdemeController : Controller
         _belgeService = belgeService;
         _bankaService = bankaService;
         _userManager = userManager;
-        _config = config;
         _provider = provider;
     }
 
@@ -148,13 +145,6 @@ public class OdemeController : Controller
             return RedirectToAction(nameof(Detay), new { id = odemeId });
         }
 
-        var maxMb = _config.GetValue<int>("MaxDekontFileSizeMb", 5);
-        if (dosya.Length > maxMb * 1024 * 1024)
-        {
-            TempData["Error"] = $"Dosya boyutu {maxMb} MB'ı aşamaz.";
-            return RedirectToAction(nameof(Detay), new { id = odemeId });
-        }
-
         var turleri = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Odeme);
         if (!turleri.Any())
         {
@@ -162,10 +152,17 @@ public class OdemeController : Controller
             return RedirectToAction(nameof(Detay), new { id = odemeId });
         }
 
+        var belgeTuru = turleri.First();
+        if (dosya.Length > belgeTuru.MaxBoyutMb * 1024 * 1024)
+        {
+            TempData["Error"] = $"Dosya boyutu {belgeTuru.MaxBoyutMb} MB'ı aşamaz.";
+            return RedirectToAction(nameof(Detay), new { id = odemeId });
+        }
+
         using var ms = new MemoryStream();
         await dosya.CopyToAsync(ms);
 
-        await _belgeService.UploadAsync(BelgeOwnerTipi.Odeme, odemeId, turleri.First().Id,
+        await _belgeService.UploadAsync(BelgeOwnerTipi.Odeme, odemeId, belgeTuru.Id,
             dosya.FileName, dosya.ContentType, ms.ToArray(), invalidateOld: false);
 
         TempData["Success"] = "Dekont yüklendi.";

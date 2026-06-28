@@ -33,7 +33,6 @@
             <thead>
                 <tr>
                     <th class="w-16 text-center">Sıra</th>
-                    <th class="w-32">Kod</th>
                     <th>Ad</th>
                     <th class="w-24 text-center">Kiralama</th>
                     <th class="w-24 text-center">Rezervasyon</th>
@@ -46,7 +45,6 @@
                 {
                     <tr>
                         <td class="text-center text-muted text-xs">@bt.Sira</td>
-                        <td><span class="font-mono font-semibold text-[13px]">@bt.Kod</span></td>
                         <td class="font-medium text-slate-700">@bt.Ad</td>
                         <td class="text-center">
                             @if (bt.KiralanabilirMi) { <span class="badge badge-kirali">✓</span> }
@@ -75,7 +73,7 @@
                 }
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="7" class="text-center py-8 text-muted">Henüz birim türü tanımlanmamış.</td></tr>
+                    <tr><td colspan="6" class="text-center py-8 text-muted">Henüz birim türü tanımlanmamış.</td></tr>
                 }
             </tbody>
         </table>

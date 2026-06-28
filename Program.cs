@@ -1,5 +1,6 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
+using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models.Settings;
 using KiraTakip.Repositories;
 using KiraTakip.Repositories.Interfaces;
@@ -118,6 +119,7 @@ builder.Services.AddScoped<IRezervasyonTarifeRepository, RezervasyonTarifeReposi
 builder.Services.AddScoped<IBirimTuruRepository, BirimTuruRepository>();
 builder.Services.AddScoped<IBelgeTuruRepository, BelgeTuruRepository>();
 builder.Services.AddScoped<IKategoriRepository, KategoriRepository>();
+builder.Services.AddScoped<ITasinmazTipiRepository, TasinmazTipiRepository>();
 builder.Services.AddScoped<IRezervasyonRepository, RezervasyonRepository>();
 builder.Services.AddScoped<IUserPermissionRepository, UserPermissionRepository>();
 builder.Services.AddScoped<ITahakkukService, TahakkukService>();
@@ -143,6 +145,10 @@ builder.Services.AddScoped<ISifreSifirlamaService, SifreSifirlamaService>();
 builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
 builder.Services.AddScoped<IBelgeService, BelgeService>();
 builder.Services.AddHttpContextAccessor();
+
+// ITransactionalService implement eden tüm servisleri otomatik transaction proxy ile sar.
+// Bu çağrı TÜM AddScoped/AddTransient/AddSingleton register'larından SONRA olmalıdır.
+builder.Services.AddTransactionalProxies();
 
 var app = builder.Build();
 
@@ -177,21 +183,18 @@ using (var scope = app.Services.CreateScope())
     if (app.Environment.IsDevelopment())
     {
         // [ANTIGRAVITY-TRIGGER]: Veri tabanını sıfırlayıp yeni seed verileriyle temiz bir başlangıç yapmak için aşağıdaki satırı aktif edin.
-        // await domainSeed.ClearDomainDataAsync();
-    }
-    // Sistem tanımları — her ortamda idempotent çalışır
-    await domainSeed.SeedEnumDegerleriAsync();
-    await domainSeed.SeedBorcTipleriAsync();
-    await domainSeed.EnsureOdemeBelgeTuruAsync();
-    await domainSeed.SeedTasinmazTipleriAsync();
-    await domainSeed.SeedBirimTurleriAsync();
-    await domainSeed.SeedKiraciKategorileriAsync();
-    await domainSeed.SeedSektorlerAsync();
-    await domainSeed.SeedTarifelerAsync(); // Tarife.Yil oluşur
-    await domainSeed.EnsureVarsayilanRezervasyonTarifeAsync();
+        await domainSeed.ClearDomainDataAsync();
 
-    if (app.Environment.IsDevelopment())
-    {
+        // Sistem tanımları — her ortamda idempotent çalışır
+        await domainSeed.SeedEnumDegerleriAsync();
+        await domainSeed.SeedBorcTipleriAsync();
+        await domainSeed.SeedTasinmazTipleriAsync();
+        await domainSeed.SeedBirimTurleriAsync();
+        await domainSeed.SeedKiraciKategorileriAsync();
+        await domainSeed.SeedSektorlerAsync();
+        await domainSeed.SeedTarifelerAsync(); // Tarife.Yil oluşur
+        await domainSeed.EnsureVarsayilanRezervasyonTarifeAsync();
+
         await domainSeed.SeedTasinmazFiyatlarAsync();
         await domainSeed.SeedDomainDataAsync();
         await domainSeed.SeedTahakkuklarAsync();

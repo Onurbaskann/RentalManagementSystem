@@ -1,4 +1,5 @@
 using KiraTakip.Data;
+using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Entities;
 using KiraTakip.Services.Interfaces;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Services;
 
-public class DavetiyeService : IDavetiyeService
+public class DavetiyeService : IDavetiyeService, ITransactionalService
 {
     private readonly ApplicationDbContext _db;
     private readonly ISecureTokenService _tokenService;

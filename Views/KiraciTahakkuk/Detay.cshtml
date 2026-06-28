@@ -1,0 +1,394 @@
+@model TahakkukDetayDto
+@using KiraTakip.Models
+@{
+    Layout = "_KiraciLayout";
+    ViewData["Title"] = $"Tahakkuk #{Model.Id}";
+
+    var kalan = Model.ToplamTutar - Model.OdenenTutar;
+
+    string durumCls = Model.Durum switch {
+        TahakkukDurumu.TamOdendi    => "badge-kirali",
+        TahakkukDurumu.KismenOdendi => "badge-surek",
+        TahakkukDurumu.Gecikti      => "badge-gecmis",
+        TahakkukDurumu.IptalEdildi  => "badge-bos",
+        _                           => "badge-bos"
+    };
+    string durumLabel = Model.Durum switch {
+        TahakkukDurumu.TamOdendi    => "Tam Ödendi",
+        TahakkukDurumu.KismenOdendi => "Kısmi Ödendi",
+        TahakkukDurumu.Gecikti      => "Gecikti",
+        TahakkukDurumu.IptalEdildi  => "İptal Edildi",
+        _                           => "Bekleniyor"
+    };
+
+    bool iptal = Model.Durum == TahakkukDurumu.IptalEdildi;
+    bool tamOdendi = Model.Durum == TahakkukDurumu.TamOdendi;
+    bool odeyebilir = !iptal && !tamOdendi && kalan > 0;
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 px-4 rounded-lg mb-4 text-[13.5px]">✓ @TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="bg-red-50 border border-red-200 text-red-800 p-3 px-4 rounded-lg mb-4 text-[13.5px]">✕ @TempData["Error"]</div>
+}
+
+<div x-data="{ odemeYapModal: false, odemeDetayModal: null, odemeTab: 'havale' }">
+
+<!-- Breadcrumb -->
+<div class="flex items-center justify-between mb-5">
+    <a href="/Kiraci/Tahakkuklarim" class="text-[12.5px] text-muted no-underline hover:text-primary transition-colors">← Tahakkuklarım</a>
+    <div class="flex gap-2">
+        @if (odeyebilir)
+        {
+            <button type="button" @@click="odemeYapModal = true; odemeTab = 'havale'" class="btn btn-sm btn-primary">Ödeme Yap</button>
+        }
+    </div>
+</div>
+
+<!-- Özet kart -->
+<div class="card mb-4">
+    <div class="flex items-start justify-between flex-wrap gap-5">
+        <div>
+            <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-1.5">Dönem</div>
+            <div class="font-serif text-[28px] font-bold leading-tight">@Model.DonemBaslangic.ToString("MMMM yyyy")</div>
+            <div class="text-[13px] text-muted mt-1">
+                @Model.DonemBaslangic.ToString("dd.MM.yyyy") — @Model.DonemBitis.ToString("dd.MM.yyyy")
+                &nbsp;•&nbsp; Vade: @Model.VadeTarihi.ToString("dd.MM.yyyy")
+            </div>
+            <div class="mt-2"><span class="badge @durumCls text-[12.5px] px-3.5 py-1.5">@durumLabel</span></div>
+        </div>
+        <div class="flex gap-6 flex-wrap">
+            <div class="text-center">
+                <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Beklenen</div>
+                <div class="text-xl font-bold">@Model.ToplamTutar.ToString("N2") ₺</div>
+            </div>
+            <div class="text-center">
+                <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Ödenen</div>
+                <div class="text-xl font-bold text-emerald-800">@Model.OdenenTutar.ToString("N2") ₺</div>
+            </div>
+            <div class="text-center">
+                <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Kalan</div>
+                <div class="text-xl font-bold @(kalan > 0 ? "text-red-500" : "text-emerald-800")">@kalan.ToString("N2") ₺</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 pt-3.5 border-t border-[var(--color-border)] flex gap-8 flex-wrap text-[13px]">
+        <div>
+            <span class="text-muted">Taşınmaz: </span>
+            <span class="font-semibold">@(Model.TasinmazAd ?? "—")</span>
+        </div>
+        <div>
+            <span class="text-muted">Birim: </span>
+            <span class="font-semibold">@(Model.BirimAd ?? "—")</span>
+        </div>
+    </div>
+</div>
+
+<!-- Kalem Dökümü -->
+<div class="card p-0 overflow-hidden mb-4">
+    <div class="p-[14px_20px] border-b border-[var(--color-border)]">
+        <div class="text-sm font-bold">Kalem Dökümü</div>
+    </div>
+    @if (Model.Kalemler.Any())
+    {
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Açıklama</th>
+                        <th class="text-right">Birim Değer</th>
+                        <th class="text-right">Çarpan</th>
+                        <th class="text-right">Tutar</th>
+                        <th class="text-right">KDV (%)</th>
+                        <th class="text-right">KDV Tutarı</th>
+                        <th class="text-right">Toplam</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var k in Model.Kalemler.OrderBy(k => k.BorcTipiSira))
+                    {
+                        <tr>
+                            <td class="font-medium">@k.Aciklama</td>
+                            <td class="text-right text-[13px]">@k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
+                            <td class="text-right text-[13px] text-muted">@k.Carpan.ToString("F2")</td>
+                            <td class="text-right font-semibold">@k.Tutar.ToString("N2") ₺</td>
+                            <td class="text-right text-[13px] text-muted">%@k.KdvOrani.ToString("G")</td>
+                            <td class="text-right text-[13px] text-muted">@k.KdvTutari.ToString("N2") ₺</td>
+                            <td class="text-right font-bold">@k.ToplamTutar.ToString("N2") ₺</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="bg-[#f8fafc] font-bold border-t-2 border-[var(--color-border)]">
+                        <td colspan="3" class="p-[10px_14px] text-[13px]">Toplam</td>
+                        <td class="p-[10px_14px] text-right">@Model.BeklenenTutar.ToString("N2") ₺</td>
+                        <td></td>
+                        <td class="p-[10px_14px] text-right">@Model.KdvTutari.ToString("N2") ₺</td>
+                        <td class="p-[10px_14px] text-right text-sm">@Model.ToplamTutar.ToString("N2") ₺</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="p-8 text-center text-muted">Kalem bilgisi yok.</div>
+    }
+</div>
+
+<!-- Ödeme Geçmişi -->
+<div class="card p-0 overflow-hidden">
+    <div class="p-[14px_20px] border-b border-[var(--color-border)]">
+        <div class="text-sm font-bold">Ödeme Geçmişi</div>
+    </div>
+    @if (Model.Odemeler.Any())
+    {
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ödeme Tarihi</th>
+                        <th class="text-right">Tutar</th>
+                        <th>Kanal</th>
+                        <th>Durum</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var o in Model.Odemeler.OrderByDescending(o => o.OdemeTarihi))
+                    {
+                        string odCls = o.Durum switch {
+                            OdemeDurumu.Onaylandi     => "badge-kirali",
+                            OdemeDurumu.Reddedildi    => "badge-gecmis",
+                            _                         => "badge-bos"
+                        };
+                        string odLabel = o.Durum switch {
+                            OdemeDurumu.Onaylandi  => "Onaylandı",
+                            OdemeDurumu.Reddedildi => "Reddedildi",
+                            _                      => "Onay Bekliyor"
+                        };
+                        string kanalLabel = o.OdemeKanali switch {
+                            OdemeKanali.Havale => "Havale",
+                            OdemeKanali.EFT    => "EFT",
+                            OdemeKanali.Nakit  => "Nakit",
+                            _                  => "Diğer"
+                        };
+                        var odemeJson = System.Text.Json.JsonSerializer.Serialize(new {
+                            id = o.Id,
+                            tarih = o.OdemeTarihi.ToString("dd.MM.yyyy"),
+                            tutar = o.Tutar.ToString("N2") + " ₺",
+                            kanal = kanalLabel,
+                            durum = odLabel,
+                            aciklama = o.Aciklama ?? "—",
+                            redNedeni = o.RedNedeni ?? "—"
+                        });
+                        <tr>
+                            <td class="font-semibold">@o.OdemeTarihi.ToString("dd.MM.yyyy")</td>
+                            <td class="text-right font-bold @(o.Durum == OdemeDurumu.Onaylandi ? "text-emerald-800" : "")">@o.Tutar.ToString("N2") ₺</td>
+                            <td class="text-[13px]">@kanalLabel</td>
+                            <td><span class="badge @odCls">@odLabel</span></td>
+                            <td>
+                                <button type="button" @@click='odemeDetayModal = @Html.Raw(odemeJson)' class="btn btn-sm btn-secondary">Detay</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="p-8 text-center text-muted">Bu dönem için henüz ödeme kaydı yok.</div>
+    }
+</div>
+
+<!-- Ödeme Bildir Modal -->
+<div x-show="odemeYapModal" x-cloak @@keydown.escape.window="odemeYapModal = false"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div @@click.outside="odemeYapModal = false" class="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
+            <div>
+                <div class="text-sm font-bold text-slate-800">Ödeme</div>
+                <div class="text-[12px] text-muted mt-0.5">@Model.DonemBaslangic.ToString("MMMM yyyy") — Kalan: <span class="font-bold text-red-600">@kalan.ToString("N2") ₺</span></div>
+            </div>
+            <button type="button" @@click="odemeYapModal = false" class="text-slate-400 hover:text-slate-700 transition-colors">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex border-b border-slate-200 shrink-0">
+            <button type="button" @@click="odemeTab = 'havale'"
+                    :class="odemeTab === 'havale' ? 'border-blue-600 text-blue-700 bg-blue-50/40' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                    class="flex-1 px-4 py-3 border-b-2 text-[13px] font-bold transition-colors flex items-center justify-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l9 4 9-4M3 18V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                Havale / EFT Bildir
+            </button>
+            <button type="button" @@click="odemeTab = 'pos'"
+                    :class="odemeTab === 'pos' ? 'border-blue-600 text-blue-700 bg-blue-50/40' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                    class="flex-1 px-4 py-3 border-b-2 text-[13px] font-bold transition-colors flex items-center justify-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                Kart ile Öde
+                <span class="text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">YAKINDA</span>
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 overflow-y-auto">
+
+            <!-- HAVALE TAB -->
+            <div x-show="odemeTab === 'havale'">
+                <form method="post" action="/Kiraci/Tahakkuklarim/OdemeBildir" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="tahakkukId" value="@Model.Id" />
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Tutar (₺) *</label>
+                            <input type="number" name="tutar" step="0.01" min="0.01" max="@kalan.ToString(System.Globalization.CultureInfo.InvariantCulture)" value="@kalan.ToString(System.Globalization.CultureInfo.InvariantCulture)" required class="form-control w-full" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Ödeme Tarihi *</label>
+                            <input type="date" name="odemeTarihi" value="@DateTime.Today.ToString("yyyy-MM-dd")" required class="form-control w-full" />
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Ödeme Kanalı *</label>
+                        <div class="grid grid-cols-4 gap-2">
+                            <label class="flex items-center gap-2 cursor-pointer border border-slate-200 rounded-lg px-3 py-2 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/40 transition-colors">
+                                <input type="radio" name="odemeKanali" value="@((int)OdemeKanali.Havale)" checked class="accent-blue-600" />
+                                <span class="text-[13px] font-medium">Havale</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer border border-slate-200 rounded-lg px-3 py-2 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/40 transition-colors">
+                                <input type="radio" name="odemeKanali" value="@((int)OdemeKanali.EFT)" class="accent-blue-600" />
+                                <span class="text-[13px] font-medium">EFT</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer border border-slate-200 rounded-lg px-3 py-2 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/40 transition-colors">
+                                <input type="radio" name="odemeKanali" value="@((int)OdemeKanali.Nakit)" class="accent-blue-600" />
+                                <span class="text-[13px] font-medium">Nakit</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer border border-slate-200 rounded-lg px-3 py-2 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/40 transition-colors">
+                                <input type="radio" name="odemeKanali" value="@((int)OdemeKanali.Diger)" class="accent-blue-600" />
+                                <span class="text-[13px] font-medium">Diğer</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Dekont *</label>
+                        <input type="file" name="dekont" accept=".pdf,.jpg,.jpeg,.png" required class="form-control w-full" />
+                        <div class="text-[11px] text-muted mt-1">PDF, JPG veya PNG (zorunlu)</div>
+                    </div>
+
+                    <div class="mb-5">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Açıklama</label>
+                        <textarea name="aciklama" rows="2" class="form-control w-full" placeholder="Opsiyonel not"></textarea>
+                    </div>
+
+                    <div class="bg-blue-50/60 border border-blue-100 text-blue-800 p-3 rounded-lg text-[12px] mb-5 flex items-start gap-2">
+                        <svg class="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span>Ödemeniz yönetici onayı sonrası tahakkuka işlenecektir.</span>
+                    </div>
+
+                    <div class="flex gap-2 justify-end">
+                        <button type="button" @@click="odemeYapModal = false" class="btn btn-secondary">İptal</button>
+                        <button type="submit" class="btn btn-primary">Ödemeyi Bildir</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- POS TAB (Placeholder) -->
+            <div x-show="odemeTab === 'pos'" x-cloak>
+                <div class="space-y-4 opacity-60 pointer-events-none">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Kart Üzerindeki İsim</label>
+                        <input type="text" disabled class="form-control w-full bg-slate-50 border-slate-200" placeholder="Ad Soyad" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Kart Numarası</label>
+                        <input type="text" disabled maxlength="19" class="form-control w-full bg-slate-50 border-slate-200 font-mono tracking-wider" placeholder="0000 0000 0000 0000" />
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Son Kullanma</label>
+                            <input type="text" disabled maxlength="5" class="form-control w-full bg-slate-50 border-slate-200 font-mono tracking-wider" placeholder="AA/YY" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">CVV</label>
+                            <input type="text" disabled maxlength="4" class="form-control w-full bg-slate-50 border-slate-200 font-mono tracking-wider" placeholder="123" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-xl bg-gradient-to-r from-slate-50 to-blue-50/40 border border-slate-200/70 px-5 py-4 mt-5">
+                    <div class="flex items-end justify-between">
+                        <div class="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Toplam Ödenecek</div>
+                        <div class="text-2xl font-bold text-slate-800">@kalan.ToString("N2") <span class="text-base text-slate-500 font-semibold">₺</span></div>
+                    </div>
+                </div>
+
+                <div title="Online ödeme yakında aktif olacak." class="cursor-not-allowed mt-4">
+                    <button type="button" disabled class="w-full btn py-3 text-sm font-bold text-white rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 disabled:opacity-60 disabled:cursor-not-allowed pointer-events-none flex justify-center items-center gap-2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        Ödemeyi Tamamla
+                    </button>
+                </div>
+
+                <div class="mt-3 bg-amber-50/60 border border-amber-100 text-amber-800 p-3 rounded-lg text-[12px] flex items-start gap-2">
+                    <svg class="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <span>Online kart ödeme altyapısı entegrasyon aşamasındadır. Şimdilik <strong>Havale/EFT</strong> sekmesinden ödeme bildirimi yapabilirsiniz.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ödeme Detayı Modal -->
+<div x-show="odemeDetayModal !== null" x-cloak @@keydown.escape.window="odemeDetayModal = null"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div @@click.outside="odemeDetayModal = null" class="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
+        <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+            <div class="text-sm font-bold text-slate-800">Ödeme Detayı</div>
+            <button type="button" @@click="odemeDetayModal = null" class="text-slate-400 hover:text-slate-700">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="p-5 space-y-3 text-[13px]" x-show="odemeDetayModal">
+            <div class="flex justify-between gap-3">
+                <span class="text-muted">Tarih:</span>
+                <span class="font-semibold" x-text="odemeDetayModal?.tarih"></span>
+            </div>
+            <div class="flex justify-between gap-3">
+                <span class="text-muted">Tutar:</span>
+                <span class="font-bold text-emerald-700" x-text="odemeDetayModal?.tutar"></span>
+            </div>
+            <div class="flex justify-between gap-3">
+                <span class="text-muted">Kanal:</span>
+                <span class="font-semibold" x-text="odemeDetayModal?.kanal"></span>
+            </div>
+            <div class="flex justify-between gap-3">
+                <span class="text-muted">Durum:</span>
+                <span class="font-semibold" x-text="odemeDetayModal?.durum"></span>
+            </div>
+            <div class="flex justify-between gap-3">
+                <span class="text-muted">Açıklama:</span>
+                <span class="font-semibold text-right" x-text="odemeDetayModal?.aciklama"></span>
+            </div>
+            <div class="flex justify-between gap-3" x-show="odemeDetayModal?.redNedeni && odemeDetayModal?.redNedeni !== '—'">
+                <span class="text-muted">Red Nedeni:</span>
+                <span class="font-semibold text-red-600 text-right" x-text="odemeDetayModal?.redNedeni"></span>
+            </div>
+        </div>
+        <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+            <button type="button" @@click="odemeDetayModal = null" class="btn btn-secondary btn-sm">Kapat</button>
+        </div>
+    </div>
+</div>
+
+</div>

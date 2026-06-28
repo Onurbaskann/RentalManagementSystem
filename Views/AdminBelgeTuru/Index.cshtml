@@ -34,7 +34,6 @@
             <thead>
                 <tr>
                     <th class="w-16 text-center">Sıra</th>
-                    <th class="w-32">Kod</th>
                     <th>Ad</th>
                     <th class="w-28">Hedef</th>
                     <th class="w-20 text-center">Zorunlu</th>
@@ -48,16 +47,19 @@
                 {
                     <tr>
                         <td class="text-center text-muted text-xs">@bt.Sira</td>
-                        <td><span class="font-mono font-semibold text-[13px]">@bt.Kod</span></td>
                         <td>
-                            <div class="font-medium text-slate-700">@bt.Ad</div>
+                            <span class="font-medium text-slate-700">@bt.Ad</span>
+                            @if (bt.Sistem)
+                            {
+                                <span class="ml-1.5 text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded align-middle" title="Sistem kaydı: kod ve pasifleştirme kilitli">Sistem</span>
+                            }
                             @if (!string.IsNullOrEmpty(bt.Aciklama))
                             {
                                 <div class="text-xs text-muted mt-0.5">@bt.Aciklama</div>
                             }
                         </td>
                         <td class="text-[13px]">
-                            @(bt.HedefEntite == BelgeOwnerTipi.Kiraci ? "Kiracı" : bt.HedefEntite.ToString())
+                            @(bt.HedefEntite == BelgeOwnerTipi.Kiraci ? "Kiracı" : (bt.HedefEntite == BelgeOwnerTipi.Odeme ? "Ödeme" : bt.HedefEntite.ToString()))
                         </td>
                         <td class="text-center">
                             @if (bt.Zorunlu) { <span class="badge badge-kirali">Zorunlu</span> }
@@ -72,20 +74,27 @@
                         </td>
                         <td class="flex gap-1.5 justify-end">
                             <a href="/Admin/BelgeTuru/Duzenle/@bt.Id" class="btn btn-sm btn-secondary">Düzenle</a>
-                            <form method="post" action="/Admin/BelgeTuru/DurumDegistir/@bt.Id"
-                                  data-confirm="@(bt.IsActive ? $"'{bt.Ad}' pasif yapılsın mı?" : $"'{bt.Ad}' aktif yapılsın mı?")"
-                                  class="inline">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm @(bt.IsActive ? "btn-danger" : "btn-amber")">
-                                    @(bt.IsActive ? "Pasif Yap" : "Aktif Yap")
-                                </button>
-                            </form>
+                            @if (!bt.Sistem)
+                            {
+                                <form method="post" action="/Admin/BelgeTuru/DurumDegistir/@bt.Id"
+                                      data-confirm="@(bt.IsActive ? $"'{bt.Ad}' pasif yapılsın mı?" : $"'{bt.Ad}' aktif yapılsın mı?")"
+                                      class="inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm @(bt.IsActive ? "btn-danger" : "btn-amber")">
+                                        @(bt.IsActive ? "Pasif Yap" : "Aktif Yap")
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <span class="text-xs text-muted px-2 py-1" title="Sistem kayıtları pasifleştirilemez">🔒</span>
+                            }
                         </td>
                     </tr>
                 }
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="8" class="text-center py-8 text-muted">Henüz belge türü tanımlanmamış.</td></tr>
+                    <tr><td colspan="7" class="text-center py-8 text-muted">Henüz belge türü tanımlanmamış.</td></tr>
                 }
             </tbody>
         </table>

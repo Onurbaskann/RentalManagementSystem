@@ -2,6 +2,11 @@ namespace KiraTakip.Models.ViewModels;
 
 public class DashboardViewModel
 {
+    // Hero / kimlik
+    public string KullaniciAd { get; set; } = string.Empty;
+    public string KullaniciRol { get; set; } = string.Empty;
+    public string TarihEtiket { get; set; } = string.Empty;
+
     public int ToplamTasinmaz { get; set; }
     public Dictionary<string, int> TipiDagilim { get; set; } = [];
     public int ToplamBirim { get; set; }
@@ -28,6 +33,40 @@ public class DashboardViewModel
     public decimal BuAyManuelBorcToplami { get; set; }
     public decimal BuAyRezervasyonGeliri { get; set; }
     public int TahakkukaAktarilmamisRezervasyonAdet { get; set; }
+
+    // --- Yeni (Redesign) ---
+    // Trend / grafikler
+    public List<DashboardAylikNakit> AylikNakit { get; set; } = [];      // son 6 ay
+    public List<double> TahsilatOraniSparkline { get; set; } = [];        // son 6 ay yüzde (0..100)
+
+    // Tahsilat oranı (son 30 gün)
+    public decimal TahsilatOrani30Gun { get; set; }                       // 0..100
+
+    // Momentum — aylık gelir
+    public decimal AylikGelirGecenAy { get; set; }
+    public decimal AylikGelirDelta { get; set; }                          // % değişim (-100..+inf)
+
+    // Bugün vade dolan
+    public int BugunVadeDolanAdet { get; set; }
+    public decimal BugunVadeDolanTutar { get; set; }
+
+    // Top 5 gelir getiren taşınmaz (son 12 ay tahsilat)
+    public List<DashboardGelirTasinmaz> TopGelirTasinmaz { get; set; } = [];
+}
+
+public class DashboardAylikNakit
+{
+    public string AyEtiket { get; set; } = string.Empty; // "Oca", "Şub" vb.
+    public decimal Beklenen { get; set; }
+    public decimal Odenen { get; set; }
+}
+
+public class DashboardGelirTasinmaz
+{
+    public int TasinmazId { get; set; }
+    public string TasinmazAd { get; set; } = string.Empty;
+    public decimal ToplamTahsilat { get; set; }      // son 12 ay onaylı ödeme
+    public int BirimSayisi { get; set; }
 }
 
 public class SuresiDolmakUzereSozlesme

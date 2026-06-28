@@ -1,4 +1,5 @@
 using KiraTakip.Data;
+using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Services;
 
-public class RezervasyonService : IRezervasyonService
+public class RezervasyonService : IRezervasyonService, ITransactionalService
 {
     private readonly IRezervasyonRepository _repo;
     private readonly IRezervasyonTarifeRepository _tarifeRepo;
@@ -240,8 +241,8 @@ public class RezervasyonService : IRezervasyonService
         var tahakkuk = new Tahakkuk
         {
             KiraciId = rezervasyon.KiraciId,
-            DonemBaslangic = rezervasyon.BaslangicTarihi.Date,
-            DonemBitis = rezervasyon.BitisTarihi.Date,
+            DonemBaslangic = rezervasyon.BaslangicTarihi,
+            DonemBitis = rezervasyon.BitisTarihi,
             VadeTarihi = rezervasyon.BitisTarihi.Date,
             BeklenenTutar = rezervasyon.UcretTutar,
             KdvTutari = rezervasyon.KdvTutari ?? 0m,

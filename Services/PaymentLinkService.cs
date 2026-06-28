@@ -1,4 +1,5 @@
 using KiraTakip.Data;
+using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.Settings;
@@ -9,7 +10,7 @@ using System.Text;
 
 namespace KiraTakip.Services;
 
-public class PaymentLinkService : IPaymentLinkService
+public class PaymentLinkService : IPaymentLinkService, ITransactionalService
 {
     private readonly ApplicationDbContext _db;
     private readonly ISecureTokenService _tokenService;

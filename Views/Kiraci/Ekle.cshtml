@@ -12,6 +12,15 @@
         k => char.ToLowerInvariant(k[0]) + k.Substring(1),
         k => ViewData.ModelState[k]?.Errors.FirstOrDefault()?.ErrorMessage ?? ""
     );
+    var belgeTurleriForErr = ViewBag.BelgeTurleri as List<KiraTakip.Models.Entities.BelgeTuru>;
+    if (belgeTurleriForErr != null)
+    {
+        foreach (var bt in belgeTurleriForErr)
+        {
+            var key = $"dosya_{bt.Id}";
+            errorsDict[key] = ViewData.ModelState[key]?.Errors.FirstOrDefault()?.ErrorMessage ?? "";
+        }
+    }
     var errorsJson = System.Text.Json.JsonSerializer.Serialize(errorsDict);
 }
 
@@ -80,7 +89,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-3.5 gap-y-4">
                 <div class="form-group">
                     <label class="form-label">Vergi No *</label>
-                    <input asp-for="VergiNo" class="form-control" maxlength="10" inputmode="numeric" pattern="\d{10}" placeholder="10 haneli" />
+                    <input asp-for="VergiNo" class="form-control" maxlength="10" inputmode="numeric" placeholder="10 haneli" />
                     <span x-show="errors.vergiNo" x-text="errors.vergiNo" class="form-error"></span>
                 </div>
                 <div class="form-group">
@@ -113,7 +122,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">E-posta *</label>
-                    <input asp-for="Email" type="email" class="form-control" placeholder="ornek@email.com" />
+                    <input asp-for="Email" type="text" class="form-control" placeholder="ornek@email.com" />
                     <span x-show="errors.email" x-text="errors.email" class="form-error"></span>
                 </div>
             </div>
@@ -137,6 +146,7 @@
             <div class="flex flex-col gap-4">
                 @foreach (var bt in belgeTurleri)
                 {
+                    var errKey = $"dosya_{bt.Id}";
                     <div class="flex flex-col gap-1">
                         <label class="form-label">
                             @bt.Ad
@@ -148,7 +158,9 @@
                             <div class="text-xs text-muted -mt-1 mb-1">@bt.Aciklama</div>
                         }
                         <input type="file" name="dosya_@bt.Id" class="form-control"
+                               data-belge-zorunlu="@(bt.Zorunlu ? "1" : "0")" data-belge-ad="@bt.Ad"
                                accept="@string.Join(",", bt.IzinVerilenUzantilar.Split(',').Select(e => "." + e.Trim()))" />
+                        <span x-show="errors['@errKey']" x-text="errors['@errKey']" class="form-error"></span>
                     </div>
                 }
             </div>
@@ -203,8 +215,16 @@ function kiraciFormData() {
             else if (!/^\d{10}$/.test(vno)) e.vergiNo = 'Vergi No 10 haneli rakamdan oluşmalıdır.';
             if (!get('VergiDairesi')) e.vergiDairesi = 'Vergi Dairesi zorunludur.';
             if (!get('Telefon')) e.telefon = 'Telefon zorunludur.';
-            if (!get('Email')) e.email = 'E-posta zorunludur.';
+            var mail = get('Email');
+            if (!mail) e.email = 'E-posta zorunludur.';
+            else if (!/^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/.test(mail)) e.email = 'Geçerli bir e-posta adresi giriniz.';
             if (!get('Adres')) e.adres = 'Adres zorunludur.';
+
+            form.querySelectorAll('input[type="file"][data-belge-zorunlu="1"]').forEach(function (inp) {
+                if (!inp.files || inp.files.length === 0) {
+                    e[inp.name] = "'" + inp.getAttribute('data-belge-ad') + "' belgesi zorunludur.";
+                }
+            });
 
             this.errors = e;
             return Object.keys(e).length === 0;

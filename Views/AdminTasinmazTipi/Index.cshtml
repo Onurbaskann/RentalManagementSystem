@@ -1,4 +1,4 @@
-@model List<KiraTakip.Models.Dtos.KategoriListItemDto>
+@model List<KiraTakip.Models.Dtos.TasinmazTipiListItemDto>
 @{
     ViewData["Title"] = "Taşınmaz Tipleri";
 }
@@ -33,7 +33,6 @@
             <thead>
                 <tr>
                     <th class="w-16 text-center">Sıra</th>
-                    <th class="w-32">Kod</th>
                     <th>Ad</th>
                     <th class="w-56">Kiralama Şekilleri</th>
                     <th class="w-24">Durum</th>
@@ -45,7 +44,6 @@
                 {
                     <tr>
                         <td class="text-center text-muted text-xs">@tt.Sira</td>
-                        <td><span class="font-mono font-semibold text-[13px]">@tt.Kod</span></td>
                         <td class="font-medium text-slate-700">@tt.Ad</td>
                         <td>
                             @if (!tt.TekParcaDestekli && !tt.BirimBazliDestekli)
@@ -81,7 +79,7 @@
                 }
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="6" class="text-center py-8 text-muted">Henüz taşınmaz tipi tanımlanmamış.</td></tr>
+                    <tr><td colspan="5" class="text-center py-8 text-muted">Henüz taşınmaz tipi tanımlanmamış.</td></tr>
                 }
             </tbody>
         </table>

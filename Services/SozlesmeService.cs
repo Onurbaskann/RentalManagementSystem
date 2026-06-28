@@ -1,4 +1,5 @@
 using KiraTakip.Data;
+using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Services;
 
-public class SozlesmeService : ISozlesmeService
+public class SozlesmeService : ISozlesmeService, ITransactionalService
 {
     private readonly ISozlesmeRepository _repo;
     private readonly IUnitOfWork _uow;

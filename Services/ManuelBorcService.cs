@@ -1,4 +1,5 @@
 using KiraTakip.Data;
+using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
@@ -7,7 +8,7 @@ using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-public class ManuelBorcService : IManuelBorcService
+public class ManuelBorcService : IManuelBorcService, ITransactionalService
 {
     private readonly ITahakkukRepository _tahakkukRepo;
     private readonly ISozlesmeRepository _sozlesmeRepo;
@@ -82,7 +83,7 @@ public class ManuelBorcService : IManuelBorcService
             KiraciId = sozlesme.KiraciId,
             KiraSozlesmesiId = sozlesme.Id,
             DonemBaslangic = model.VadeTarihi,
-            DonemBitis = model.VadeTarihi,
+            DonemBitis = model.VadeTarihi.AddDays(1),
             VadeTarihi = model.VadeTarihi,
             BeklenenTutar = model.Tutar,
             KdvTutari = kdvTutari,

@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Globalization;
 using KiraTakip.Authorization;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
@@ -5,7 +7,6 @@ using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
 
 namespace KiraTakip.Controllers;
 
@@ -51,6 +52,8 @@ public class HomeController : Controller
             return RedirectToAction("Index", "KiraciPanel");
 
         var now = DateTime.Now;
+        var today = DateTime.Today;
+        var trCulture = CultureInfo.GetCultureInfo("tr-TR");
         var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
 
         var tasinmazlar = await _tasinmazService.GetAllAsync(tasinmazIds);
@@ -62,8 +65,17 @@ public class HomeController : Controller
         foreach (var s in aktifSozlesmeler)
             aylikToplamGelir += s.AylikBedel;
 
+        var roller = User.IsInRole(RoleNames.SistemYoneticisi) ? RoleNames.SistemYoneticisi
+            : User.IsInRole(RoleNames.OperasyonMuduru) ? RoleNames.OperasyonMuduru
+            : User.IsInRole(RoleNames.KiraciYoneticisi) ? RoleNames.KiraciYoneticisi
+            : User.IsInRole(RoleNames.KiraciSorumlusu) ? RoleNames.KiraciSorumlusu
+            : "Kullanıcı";
+
         var vm = new DashboardViewModel
         {
+            KullaniciAd = user?.AdSoyad ?? user?.Email ?? "Kullanıcı",
+            KullaniciRol = roller,
+            TarihEtiket = today.ToString("d MMMM yyyy, dddd", trCulture),
             ToplamTasinmaz = tasinmazlar.Count,
             TipiDagilim = tasinmazlar.GroupBy(t => string.IsNullOrEmpty(t.TasinmazTipiAd) ? "Diğer" : t.TasinmazTipiAd).ToDictionary(g => g.Key, g => g.Count()),
             ToplamBirim = tasinmazlar.Sum(t => t.BirimSayisi),
@@ -131,6 +143,74 @@ public class HomeController : Controller
             var rezervasyonlar = await _rezervasyonService.GetAllAsync(tasinmazIds);
             vm.TahakkukaAktarilmamisRezervasyonAdet = rezervasyonlar
                 .Count(r => r.Durum == RezervasyonDurumu.Planlandi && r.ToplamTutar > 0 && r.TahakkukId == null);
+
+            // --- Redesign metrikleri ---
+            // Son 6 ay nakit akışı + tahsilat oranı sparkline
+            var sonAltiAyBaslangic = new DateTime(today.Year, today.Month, 1).AddMonths(-5);
+            var aylikGroup = tahakkuklar
+                .Where(t => t.DonemBaslangic >= sonAltiAyBaslangic && t.Durum != TahakkukDurumu.IptalEdildi)
+                .GroupBy(t => new { t.DonemBaslangic.Year, t.DonemBaslangic.Month })
+                .ToDictionary(
+                    g => (g.Key.Year, g.Key.Month),
+                    g => (Beklenen: g.Sum(t => t.ToplamTutar), Odenen: g.Sum(t => t.OdenenTutar)));
+
+            for (int i = 5; i >= 0; i--)
+            {
+                var ay = new DateTime(today.Year, today.Month, 1).AddMonths(-i);
+                var bucket = aylikGroup.TryGetValue((ay.Year, ay.Month), out var v) ? v : (Beklenen: 0m, Odenen: 0m);
+                vm.AylikNakit.Add(new DashboardAylikNakit
+                {
+                    AyEtiket = trCulture.DateTimeFormat.GetAbbreviatedMonthName(ay.Month),
+                    Beklenen = bucket.Beklenen,
+                    Odenen = bucket.Odenen
+                });
+                var oran = bucket.Beklenen > 0 ? (double)(bucket.Odenen / bucket.Beklenen) * 100 : 0;
+                vm.TahsilatOraniSparkline.Add(Math.Round(oran, 1));
+            }
+
+            // Tahsilat oranı — son 30 gün vade dolan tahakkuklar
+            var otuzGunOnce = today.AddDays(-30);
+            var son30 = tahakkuklar
+                .Where(t => t.VadeTarihi >= otuzGunOnce && t.VadeTarihi <= today && t.Durum != TahakkukDurumu.IptalEdildi)
+                .ToList();
+            var bek30 = son30.Sum(t => t.ToplamTutar);
+            var od30 = son30.Sum(t => t.OdenenTutar);
+            vm.TahsilatOrani30Gun = bek30 > 0 ? Math.Round(od30 / bek30 * 100m, 1) : 0m;
+
+            // Momentum — bu ay vs geçen ay (beklenen tahsilat üzerinden)
+            var gecenAyStart = new DateTime(today.Year, today.Month, 1).AddMonths(-1);
+            var gecenAyEnd = gecenAyStart.AddMonths(1).AddDays(-1);
+            vm.AylikGelirGecenAy = tahakkuklar
+                .Where(t => t.DonemBaslangic >= gecenAyStart && t.DonemBaslangic <= gecenAyEnd && t.Durum != TahakkukDurumu.IptalEdildi)
+                .Sum(t => t.ToplamTutar);
+            vm.AylikGelirDelta = vm.AylikGelirGecenAy > 0
+                ? Math.Round((vm.BuAyBeklenenTahsilat - vm.AylikGelirGecenAy) / vm.AylikGelirGecenAy * 100m, 1)
+                : 0m;
+
+            // Bugün vade dolan
+            var bugun = tahakkuklar.Where(t => t.VadeTarihi.Date == today &&
+                (t.Durum == TahakkukDurumu.Bekleniyor ||
+                 t.Durum == TahakkukDurumu.KismenOdendi ||
+                 t.Durum == TahakkukDurumu.Gecikti)).ToList();
+            vm.BugunVadeDolanAdet = bugun.Count;
+            vm.BugunVadeDolanTutar = bugun.Sum(t => t.ToplamTutar - t.OdenenTutar);
+
+            // Top 5 gelir getiren taşınmaz (son 12 ay tahakkuk dönemleri, ödenen tutara göre)
+            var sonYil = today.AddYears(-1);
+            var birimSayisiByTasinmaz = tasinmazlar.ToDictionary(x => x.Id, x => x.BirimSayisi);
+            vm.TopGelirTasinmaz = tahakkuklar
+                .Where(t => t.DonemBaslangic >= sonYil && t.TasinmazId != null && t.OdenenTutar > 0)
+                .GroupBy(t => new { TasinmazId = t.TasinmazId!.Value, TasinmazAd = t.TasinmazAd ?? "—" })
+                .Select(g => new DashboardGelirTasinmaz
+                {
+                    TasinmazId = g.Key.TasinmazId,
+                    TasinmazAd = g.Key.TasinmazAd,
+                    ToplamTahsilat = g.Sum(t => t.OdenenTutar),
+                    BirimSayisi = birimSayisiByTasinmaz.TryGetValue(g.Key.TasinmazId, out var bs) ? bs : 0
+                })
+                .OrderByDescending(x => x.ToplamTahsilat)
+                .Take(5)
+                .ToList();
         }
 
         return View(vm);

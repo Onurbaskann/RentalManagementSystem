@@ -8,13 +8,10 @@ public class Kategori : BaseEntity
     public bool Aktif { get; set; } = true;
     public int Sira { get; set; }
     public DateTime OlusturmaTarihi { get; set; }
-    public bool TekParcaDestekli { get; set; }
-    public bool BirimBazliDestekli { get; set; }
 }
 
 public enum KategoriTipi
 {
-    Tasinmaz = 1,
-    Kiraci = 2,
-    Sektor = 3
+    Kiraci = 1,
+    Sektor = 2
 }

@@ -11,10 +11,6 @@ public class BirimTuruFormViewModel
     [MaxLength(100)]
     public string Ad { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Kod zorunludur.")]
-    [MaxLength(50)]
-    public string Kod { get; set; } = string.Empty;
-
     public int Sira { get; set; } = 1;
     public bool KiralanabilirMi { get; set; } = true;
     public bool RezervasyonYapilabilirMi { get; set; }

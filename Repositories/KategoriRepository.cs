@@ -21,9 +21,7 @@ public class KategoriRepository : BaseRepository<Kategori>, IKategoriRepository
                 Ad = k.Ad,
                 Kod = k.Kod,
                 Sira = k.Sira,
-                Aktif = k.Aktif,
-                TekParcaDestekli = k.TekParcaDestekli,
-                BirimBazliDestekli = k.BirimBazliDestekli
+                Aktif = k.Aktif
             })
             .ToListAsync();
 

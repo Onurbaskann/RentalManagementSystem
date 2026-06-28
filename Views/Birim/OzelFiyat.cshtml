@@ -50,7 +50,7 @@
         <input type="hidden" name="BirimId" value="@Model.BirimId" />
         <input type="hidden" name="TasinmazId" value="@Model.TasinmazId" />
 
-        @if (!Model.Satirlar.Any())
+        @if (Model.Satirlar == null || !Model.Satirlar.Any())
         {
             <div class="card p-6 text-center text-muted">
                 Aktif kiracı kategorisi veya borç tipi bulunamadı.

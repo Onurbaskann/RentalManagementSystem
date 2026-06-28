@@ -1,4 +1,4 @@
-@model KiraTakip.Models.ViewModels.KategoriFormViewModel
+@model KiraTakip.Models.ViewModels.TasinmazTipiFormViewModel
 @{
     ViewData["Title"] = "Taşınmaz Tipi Düzenle";
 }
@@ -26,13 +26,6 @@
             <label class="form-label">Ad <span class="text-red-500">*</span></label>
             <input asp-for="Ad" class="form-control" />
             <span asp-validation-for="Ad" class="text-red-500 text-xs mt-1"></span>
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">Kod <span class="text-red-500">*</span></label>
-            <input asp-for="Kod" class="form-control font-mono uppercase" maxlength="20" />
-            <div class="text-xs text-muted mt-1">Kısa tanımlayıcı (büyük harf, boşluksuz)</div>
-            <span asp-validation-for="Kod" class="text-red-500 text-xs mt-1"></span>
         </div>
 
         <div class="form-group">

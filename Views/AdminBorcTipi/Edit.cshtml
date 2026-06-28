@@ -24,21 +24,6 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label">Kod @if (!sistemKilidi) { <span class="text-red-500">*</span> }</label>
-            @if (sistemKilidi)
-            {
-                <input asp-for="Kod" class="form-control font-mono font-bold bg-slate-100 text-slate-500" readonly />
-                <div class="text-xs text-muted mt-1">🔒 Sistem kaydı — kod değiştirilemez.</div>
-            }
-            else
-            {
-                <input asp-for="Kod" class="form-control font-mono uppercase" required maxlength="20" />
-                <div class="text-xs text-muted mt-1">Kısa tanımlayıcı (büyük harf, rakam, alt çizgi — 2-20 karakter)</div>
-                <span asp-validation-for="Kod" class="text-red-500 text-xs mt-1"></span>
-            }
-        </div>
-
-        <div class="form-group">
             <label class="form-label">Davranış <span class="text-red-500">*</span></label>
             @if (sistemKilidi)
             {
