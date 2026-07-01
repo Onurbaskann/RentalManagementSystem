@@ -45,7 +45,7 @@
 }
 
 <div class="card">
-    <form method="post" action="/Kiraci/Roller/Duzenle/@Model.Id" asp-form-write-permission="@PermissionCatalog.KiraciPortal.System.Rol.Edit">
+    <form method="post" action="/Kiraci/Roller/Duzenle/@Model.Id.ToHashId()" asp-form-write-permission="@PermissionCatalog.KiraciPortal.System.Rol.Edit">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Id" />
         <input type="hidden" asp-for="IsSystemRole" />
@@ -85,3 +85,4 @@
         </div>
     </form>
 </div>
+

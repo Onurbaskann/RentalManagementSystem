@@ -117,11 +117,11 @@
                         _                           => "Bekleniyor"
                     };
                     <tr class="cursor-pointer hover:bg-slate-50 transition-colors"
-                        onclick="if(!event.target.closest('a,button,[data-stop]'))window.location.href='/Tahakkuk/Detay/@t.Id'">
+                        onclick="if(!event.target.closest('a,button,[data-stop]'))window.location.href='/Tahakkuk/Detay/@t.Id.ToHashId()'">
                         <td>
                             @if (t.KiraciId > 0)
                             {
-                                <a href="/Kiraci/Detay/@t.KiraciId" class="font-semibold text-primary hover:underline">@t.KiraciGosterimAdi</a>
+                                <a href="/Kiraci/Detay/@t.KiraciId.ToHashId()" class="font-semibold text-primary hover:underline">@t.KiraciGosterimAdi</a>
                             }
                             else
                             {
@@ -150,7 +150,7 @@
                         <td>
                             @if (t.KiraSozlesmesiId.HasValue)
                             {
-                                <a href="/Sozlesme/Detay/@t.KiraSozlesmesiId" data-stop class="font-mono text-xs text-primary hover:underline">#@t.KiraSozlesmesiId</a>
+                                <a href="/Sozlesme/Detay/@t.KiraSozlesmesiId.ToHashId()" data-stop class="font-mono text-xs text-primary hover:underline">#@t.KiraSozlesmesiId</a>
                             }
                             else
                             {
@@ -168,14 +168,14 @@
                             <div class="flex gap-1.5 justify-end items-center">
                                 @if (t.Durum != TahakkukDurumu.IptalEdildi && t.Durum != TahakkukDurumu.TamOdendi)
                                 {
-                                    <a href="/Odeme/Ekle?tahakkukId=@t.Id" class="btn btn-sm btn-primary">Ödeme</a>
+                                    <a href="/Odeme/Ekle?tahakkukId=@t.Id.ToHashId()" class="btn btn-sm btn-primary">Ödeme</a>
                                 }
                                 @if (canCancel && t.Durum != TahakkukDurumu.IptalEdildi && t.Durum != TahakkukDurumu.TamOdendi)
                                 {
                                     <button type="button" class="btn btn-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white"
                                         data-confirm="Bu manuel borcu iptal etmek istediğinize emin misiniz?"
                                         data-confirm-title="Manuel Borç İptali"
-                                        data-confirm-action="/ManuelBorc/Iptal/@t.Id"
+                                        data-confirm-action="/ManuelBorc/Iptal/@t.Id.ToHashId()"
                                         data-confirm-method="POST"
                                         data-confirm-needs-reason="true"
                                         data-confirm-reason-label="İptal nedeni">
@@ -249,3 +249,4 @@ document.querySelectorAll('[data-confirm]').forEach(btn => {
 </script>
 @Html.AntiForgeryToken()
 }
+

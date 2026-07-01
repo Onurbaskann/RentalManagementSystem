@@ -108,7 +108,7 @@
                             <td class="text-right">
                                 @if (b.EslesmeDurumu == BankaEslesmeDurumu.Eslestirilmedi)
                                 {
-                                    <a href="/BankaHareketi/EslestirSec/@b.Id" class="btn btn-sm btn-primary">Eşleştir</a>
+                                    <a href="/BankaHareketi/EslestirSec/@b.Id.ToHashId()" class="btn btn-sm btn-primary">Eşleştir</a>
                                 }
                             </td>
                         }
@@ -123,3 +123,4 @@
     </div>
     @await Html.PartialAsync("_Pagination", pagination)
 </div>
+

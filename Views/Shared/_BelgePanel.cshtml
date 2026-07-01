@@ -63,13 +63,13 @@
                     <div class="flex items-center gap-1.5 flex-shrink-0">
                         @if (mevcut != null)
                         {
-                            <a href="/Belge/Indir/@mevcut.Id" target="_blank"
+                            <a href="/Belge/Indir/@mevcut.Id.ToHashId()" target="_blank"
                                class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="İndir">
                                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                             </a>
                             @if (Model.CanEdit && !bt.Zorunlu)
                             {
-                                <form method="post" action="/Belge/Sil/@mevcut.Id" data-confirm="Bu belge silinsin mi?" class="inline">
+                                <form method="post" action="/Belge/Sil/@mevcut.Id.ToHashId()" data-confirm="Bu belge silinsin mi?" class="inline">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="ownerType" value="@((int)Model.OwnerType)" />
                                     <input type="hidden" name="ownerId"   value="@Model.OwnerId" />
@@ -133,3 +133,4 @@
         </div>
     }
 </div>
+

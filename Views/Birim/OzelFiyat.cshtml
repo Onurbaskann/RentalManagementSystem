@@ -23,7 +23,7 @@
 <div class="@(Model.KiralanabilirMi ? "max-w-[1200px]" : "max-w-[600px]") mx-auto">
     <div class="page-header flex items-center justify-between">
         <div>
-            <a href="/Tasinmaz/Detay/@Model.TasinmazId" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
+            <a href="/Tasinmaz/Detay/@Model.TasinmazId.ToHashId()" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
                 ← @Model.TasinmazAd
             </a>
             <div class="page-title">@Model.BirimAd — Özel Fiyatlar</div>
@@ -45,7 +45,7 @@
         </div>
     }
 
-    <form method="post" action="/Birim/@Model.BirimId/OzelFiyat">
+    <form method="post" action="/Birim/@Model.BirimId.ToHashId()/OzelFiyat">
         @Html.AntiForgeryToken()
         <input type="hidden" name="BirimId" value="@Model.BirimId" />
         <input type="hidden" name="TasinmazId" value="@Model.TasinmazId" />
@@ -183,7 +183,7 @@
 
             <div class="flex gap-2 mt-1">
                 <button type="submit" class="btn btn-primary">Kaydet</button>
-                <a href="/Tasinmaz/Detay/@Model.TasinmazId" class="btn btn-secondary">İptal</a>
+                <a href="/Tasinmaz/Detay/@Model.TasinmazId.ToHashId()" class="btn btn-secondary">İptal</a>
             </div>
         }
     </form>
@@ -210,7 +210,7 @@ else if (Model.RezervasyonYapilabilirMi)
 
     @if (Model.OzelRezervasyonKural == null)
     {
-        <form method="post" action="/Birim/@Model.BirimId/RezKuralKaydet" class="mt-4">
+        <form method="post" action="/Birim/@Model.BirimId.ToHashId()/RezKuralKaydet" class="mt-4">
             @Html.AntiForgeryToken()
             <input type="hidden" name="Id" value="0" />
             @{
@@ -256,14 +256,14 @@ else if (Model.RezervasyonYapilabilirMi)
 
                 <div class="flex items-center gap-3 mt-8">
                     <button type="submit" class="btn btn-primary px-6">Kaydet</button>
-                    <a href="/Tasinmaz/Detay/@Model.TasinmazId" class="btn btn-secondary px-6">İptal</a>
+                    <a href="/Tasinmaz/Detay/@Model.TasinmazId.ToHashId()" class="btn btn-secondary px-6">İptal</a>
                 </div>
             </div>
         </form>
     }
     else
     {
-        <form method="post" action="/Birim/@Model.BirimId/RezKuralKaydet">
+        <form method="post" action="/Birim/@Model.BirimId.ToHashId()/RezKuralKaydet">
             @Html.AntiForgeryToken()
             <input type="hidden" name="Id" value="@Model.OzelRezervasyonKural.Id" />
             <div class="card p-6">
@@ -305,12 +305,12 @@ else if (Model.RezervasyonYapilabilirMi)
 
                 <div class="flex items-center gap-3 mt-8">
                     <button type="submit" class="btn btn-primary px-6">Kaydet</button>
-                    <a href="/Tasinmaz/Detay/@Model.TasinmazId" class="btn btn-secondary px-6">İptal</a>
+                    <a href="/Tasinmaz/Detay/@Model.TasinmazId.ToHashId()" class="btn btn-secondary px-6">İptal</a>
                 </div>
             </div>
         </form>
 
-        <form method="post" action="/Birim/@Model.BirimId/RezKuralSifirla" class="mt-4">
+        <form method="post" action="/Birim/@Model.BirimId.ToHashId()/RezKuralSifirla" class="mt-4">
             @Html.AntiForgeryToken()
             <button type="submit" class="text-xs font-bold text-red-500 bg-red-50 border border-red-100 rounded-lg px-4 py-2 hover:bg-red-100 transition-all flex items-center gap-2"
                     data-confirm="Özel kural silinecek. Genel tarife devreye girecek. Onaylıyor musunuz?">
@@ -331,7 +331,8 @@ else
         <p class="text-sm text-red-700/70 leading-relaxed max-w-sm mb-6">
             Bu birim türünde hem <b>Kiralanabilir</b> hem de <b>Rezervasyon</b> yapılabilir işaretli değil veya her ikisi de işaretli. Lütfen yöneticiye bildirin.
         </p>
-        <a href="/Tasinmaz/Detay/@Model.TasinmazId" class="btn btn-secondary px-8">Geri Dön</a>
+        <a href="/Tasinmaz/Detay/@Model.TasinmazId.ToHashId()" class="btn btn-secondary px-8">Geri Dön</a>
     </div>
 }
 </div>
+

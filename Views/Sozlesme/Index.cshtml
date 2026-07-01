@@ -98,19 +98,19 @@
                     string dayBadgeClass = kalanGun <= 10 ? "bg-red-50 text-red-700 border-red-200" : kalanGun <= 30 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200";
                     var search = $"{s.Id} {s.KiraciGosterimAdi} {s.TasinmazAd} {s.BirimAd}".ToLower();
 
-                    <tr data-row data-search="@search" data-href="/Sozlesme/Detay/@s.Id"
+                    <tr data-row data-search="@search" data-href="/Sozlesme/Detay/@s.Id.ToHashId()"
                         class="cursor-pointer hover:bg-slate-50 transition-colors"
                         @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
                         <td class="text-xs text-muted font-mono">@s.Id</td>
                         <td>
-                            <a href="/Kiraci/Detay/@s.KiraciId" class="font-semibold text-primary hover:underline">@s.KiraciGosterimAdi</a>
+                            <a href="/Kiraci/Detay/@s.KiraciId.ToHashId()" class="font-semibold text-primary hover:underline">@s.KiraciGosterimAdi</a>
                             @if (!string.IsNullOrEmpty(s.KiraciKategoriAd))
                             {
                                 <div class="cell-sub">@s.KiraciKategoriAd</div>
                             }
                         </td>
                         <td>
-                            <a href="/Tasinmaz/Detay/@s.TasinmazId" class="font-medium hover:text-primary transition-colors">@s.TasinmazAd</a>
+                            <a href="/Tasinmaz/Detay/@s.TasinmazId.ToHashId()" class="font-medium hover:text-primary transition-colors">@s.TasinmazAd</a>
                             <span class="cell-sub">@s.BirimAd</span>
                         </td>
                         <td class="cell-center">@s.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
@@ -151,3 +151,4 @@
         <div class="text-slate-400 font-medium">Aramaya uyan kayıt bulunamadı.</div>
     </div>
 </div>
+

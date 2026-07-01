@@ -222,7 +222,7 @@
                         <td>
                             @if (t.BekleyenOdemeSayisi > 0)
                             {
-                                <a href="/Odeme?tahakkukId=@t.Id&durum=onaybekliyor" class="badge badge-surek hover:opacity-80 transition-opacity">Ödeme Onayı Bekleniyor</a>
+                                <a href="/Odeme?tahakkukId=@t.Id.ToHashId()&durum=onaybekliyor" class="badge badge-surek hover:opacity-80 transition-opacity">Ödeme Onayı Bekleniyor</a>
                             }
                             else
                             {
@@ -232,10 +232,10 @@
                         <td><span class="badge @tahakkukKaynakCls">@tahakkukKaynakLabel</span></td>
                         <td @@click.stop="" class="num">
                             <div class="flex gap-1 justify-end">
-                                <a href="/Tahakkuk/Detay/@t.Id" class="btn btn-sm btn-secondary p-1" title="Detay"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a>
+                                <a href="/Tahakkuk/Detay/@t.Id.ToHashId()" class="btn btn-sm btn-secondary p-1" title="Detay"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a>
                                 @if (canCreate && t.Durum != TahakkukDurumu.TamOdendi && t.Durum != TahakkukDurumu.IptalEdildi)
                                 {
-                                    <a href="/Odeme/Ekle?tahakkukId=@t.Id" class="btn btn-sm btn-primary">Ödeme</a>
+                                    <a href="/Odeme/Ekle?tahakkukId=@t.Id.ToHashId()" class="btn btn-sm btn-primary">Ödeme</a>
                                 }
                             </div>
                         </td>
@@ -309,3 +309,4 @@
     </div>
     @await Html.PartialAsync("_Pagination", pagination)
 </div>
+

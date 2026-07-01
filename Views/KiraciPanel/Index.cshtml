@@ -242,7 +242,7 @@ BÖLÜM 4 — YAKLAŞAN TAHAKKUKLAR + SON ÖDEMELER (spec §3.4)
                         </div>
                         <div class="text-right shrink-0">
                             <div class="text-sm font-bold text-slate-800">@t.Kalan.ToString("N2") ₺</div>
-                            <a href="/Kiraci/Tahakkuklarim/Detay/@t.TahakkukId" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-0.5 block">Ödeme Yap →</a>
+                            <a href="/Kiraci/Tahakkuklarim/Detay/@t.TahakkukId.ToHashId()" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-0.5 block">Ödeme Yap →</a>
                         </div>
                     </div>
                 }
@@ -428,3 +428,4 @@ SCRIPTS — Sayfaya özel JS (spec §4)
         });
     </script>
 }
+

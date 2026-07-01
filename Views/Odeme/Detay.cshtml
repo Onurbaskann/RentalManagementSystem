@@ -129,7 +129,7 @@
                 <div class="flex gap-3 flex-wrap">
                     @if (canApprove)
                     {
-                        <form method="post" action="/Odeme/Onayla/@Model.Id"
+                        <form method="post" action="/Odeme/Onayla/@Model.Id.ToHashId()"
                               data-confirm="Bu ödemeyi onaylamak istediğinize emin misiniz?">
                             @Html.AntiForgeryToken()
                             <button type="submit" class="btn btn-primary px-8">✓ Onayla</button>
@@ -180,7 +180,7 @@
                 </div>
                 @if (canMatch)
                 {
-                    <a href="/Odeme/HareketSec/@Model.Id" class="text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:underline transition-all">+ Yeni Eşleşme</a>
+                    <a href="/Odeme/HareketSec/@Model.Id.ToHashId()" class="text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:underline transition-all">+ Yeni Eşleşme</a>
                 }
             </div>
             @if (Model.BankaEslesmeleri.Any())
@@ -219,3 +219,4 @@
         </div>
     </div>
 </div>
+

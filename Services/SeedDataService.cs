@@ -338,6 +338,7 @@ public class SeedDataService
         var birim101 = teknokent.Birimler.First(b => b.BirimNo == "101");
         var birim102 = teknokent.Birimler.First(b => b.BirimNo == "102");
         var birim103 = teknokent.Birimler.First(b => b.BirimNo == "103");
+        var birim104 = teknokent.Birimler.First(b => b.BirimNo == "104");
 
         // Birim Tarifesi Örneği (Hiyerarşide Matrisin Üstündedir)
         // Ofis 101 için Akademik kategorisinde özel birim fiyatı tanımlayalım
@@ -611,6 +612,7 @@ public class SeedDataService
         var rate101 = await ResolveKiraM2Rate(birim101, yzCozum);
         var rate102 = await ResolveKiraM2Rate(birim102, megaFinans);
         var rate103 = await ResolveKiraM2Rate(birim103, biotech);
+        var rate104 = await ResolveKiraM2Rate(birim104, yzCozum);
 
         var sozlesmeler = new List<Sozlesme>
         {
@@ -619,7 +621,9 @@ public class SeedDataService
             MakeSozlesme(birim102, megaFinans, startYearMinus1.AddMonths(3), startYearMinus1.AddMonths(24).AddDays(-1), true,
                 vadeKuraliTipi: VadeKuraliTipi.SabitAyGunu, vadeGunu: 10),
             MakeSozlesme(birim103, biotech, startYearMinus1.AddMonths(6), startYearMinus1.AddMonths(18).AddDays(-1), true,
-                vadeKuraliTipi: VadeKuraliTipi.SabitAyGunu, vadeGunu: 15)
+                vadeKuraliTipi: VadeKuraliTipi.SabitAyGunu, vadeGunu: 15),
+            MakeSozlesme(birim104, yzCozum, startYearMinus1.AddMonths(1), startYearMinus1.AddYears(2).AddDays(-1), true,
+                vadeKuraliTipi: VadeKuraliTipi.SabitAyGunu, vadeGunu: 5)
         };
 
         _ctx.Sozlesmeler.AddRange(sozlesmeler);
@@ -666,6 +670,18 @@ public class SeedDataService
             },
             new Belge
             {
+                BelgeTuruId = btImzaliSozlesme.Id,
+                OwnerType = BelgeOwnerTipi.Sozlesme,
+                OwnerId = sozlesmeler[3].Id,
+                DosyaAdi = "imzali_sozlesme_104.pdf",
+                MimeType = "application/pdf",
+                BoyutByte = 4096,
+                Aciklama = "Ofis 104 İmzalı Kira Sözleşmesi",
+                Gecersiz = false,
+                Icerik = new BelgeIcerik { Icerik = new byte[] { 22, 23, 24, 25 } }
+            },
+            new Belge
+            {
                 BelgeTuruId = btTeslim.Id,
                 OwnerType = BelgeOwnerTipi.Sozlesme,
                 OwnerId = sozlesmeler[0].Id,
@@ -696,7 +712,8 @@ public class SeedDataService
         _ctx.SozlesmeTarifeler.AddRange(
             new SozlesmeTarife { KiraSozlesmesiId = sozlesmeler[0].Id, BorcTipiId = btKiraId, BirimDeger = rate101, HesaplamaYontemi = HesaplamaYontemi.M2, KdvOrani = 20 },
             new SozlesmeTarife { KiraSozlesmesiId = sozlesmeler[1].Id, BorcTipiId = btKiraId, BirimDeger = rate102, HesaplamaYontemi = HesaplamaYontemi.M2, KdvOrani = 20 },
-            new SozlesmeTarife { KiraSozlesmesiId = sozlesmeler[2].Id, BorcTipiId = btKiraId, BirimDeger = rate103, HesaplamaYontemi = HesaplamaYontemi.M2, KdvOrani = 20 }
+            new SozlesmeTarife { KiraSozlesmesiId = sozlesmeler[2].Id, BorcTipiId = btKiraId, BirimDeger = rate103, HesaplamaYontemi = HesaplamaYontemi.M2, KdvOrani = 20 },
+            new SozlesmeTarife { KiraSozlesmesiId = sozlesmeler[3].Id, BorcTipiId = btKiraId, BirimDeger = rate104, HesaplamaYontemi = HesaplamaYontemi.M2, KdvOrani = 20 }
         );
         await _ctx.SaveChangesAsync();
 
@@ -726,6 +743,38 @@ public class SeedDataService
                 };
                 
                 await EnsureKiraciUserAsync(userEmail, password, adSoyad, k.Id);
+            }
+        }
+
+        // yzCozum kiracısının Id'sini bulalım
+        var yzCozumEntity = seededKiraciler.FirstOrDefault(k => k.Email == "info@yz.com");
+        if (yzCozumEntity != null)
+        {
+            var yzCozumId = yzCozumEntity.Id;
+
+            // İkinci kullanıcıyı ekleyelim: mehmet.yildiz@yz.com
+            await EnsureKiraciUserAsync("mehmet.yildiz@yz.com", "Mehmet123!", "Mehmet Yıldız", yzCozumId);
+
+            // mehmet.yildiz@yz.com kullanıcısını bulalım
+            var mehmetUser = await _userManager.FindByEmailAsync("mehmet.yildiz@yz.com");
+            if (mehmetUser != null)
+            {
+                // Ofis 101'i bulup kapsam ekleyelim
+                var ofis101 = await _ctx.Birimler.FirstOrDefaultAsync(b => b.BirimNo == "101");
+                if (ofis101 != null)
+                {
+                    var hasScope = await _ctx.KullaniciYetkiKapsamlari.AnyAsync(s => s.UserId == mehmetUser.Id);
+                    if (!hasScope)
+                    {
+                        _ctx.KullaniciYetkiKapsamlari.Add(new KullaniciYetkiKapsami
+                        {
+                            UserId = mehmetUser.Id,
+                            KapsamTipi = KapsamTipi.Birim,
+                            KapsamId = ofis101.Id
+                        });
+                        await _ctx.SaveChangesAsync();
+                    }
+                }
             }
         }
     }

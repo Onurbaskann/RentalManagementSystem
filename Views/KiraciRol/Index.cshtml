@@ -67,11 +67,11 @@
                             }
                             else
                             {
-                                <a href="/Kiraci/Roller/Duzenle/@r.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                                <a href="/Kiraci/Roller/Duzenle/@r.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
                             }
                             @if (canDelete && !r.IsSystemRole)
                             {
-                                <form method="post" action="/Kiraci/Roller/Sil/@r.Id"
+                                <form method="post" action="/Kiraci/Roller/Sil/@r.Id.ToHashId()"
                                       data-confirm="'@r.Ad' rolünü silmek istediğinizden emin misiniz?" class="inline">
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="btn btn-sm btn-danger">Sil</button>
@@ -84,3 +84,4 @@
         </table>
     </div>
 </div>
+

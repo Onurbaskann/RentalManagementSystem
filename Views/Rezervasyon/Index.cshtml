@@ -97,7 +97,7 @@
                             <div class="flex gap-1.5 justify-end items-center">
                                 @if (canTransfer && r.Durum == RezervasyonDurumu.Planlandi && r.ToplamTutar > 0 && r.TahakkukId == null)
                                 {
-                                    <form method="post" action="/Rezervasyon/TahakkukaAktar/@r.Id" class="inline"
+                                    <form method="post" action="/Rezervasyon/TahakkukaAktar/@r.Id.ToHashId()" class="inline"
                                           data-confirm="Bu rezervasyonu tahakkuka aktarmak istediğinize emin misiniz?">
                                         @Html.AntiForgeryToken()
                                         <button type="submit" class="btn btn-sm btn-primary">Aktar</button>
@@ -108,7 +108,7 @@
                                     <button type="button" class="btn btn-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white"
                                         data-confirm="Bu rezervasyonu iptal etmek istediğinize emin misiniz?"
                                         data-confirm-title="Rezervasyon İptali"
-                                        data-confirm-action="/Rezervasyon/Iptal/@r.Id"
+                                        data-confirm-action="/Rezervasyon/Iptal/@r.Id.ToHashId()"
                                         data-confirm-method="POST"
                                         data-confirm-needs-reason="true"
                                         data-confirm-reason-label="İptal nedeni">
@@ -182,3 +182,4 @@ document.querySelectorAll('[data-confirm]').forEach(btn => {
 </script>
 @Html.AntiForgeryToken()
 }
+

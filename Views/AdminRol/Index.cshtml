@@ -56,10 +56,10 @@
                             { <span class="badge badge-bos">Özel</span> }
                         </td>
                         <td class="flex gap-1.5 justify-end">
-                            <a href="/Admin/Roller/Duzenle/@r.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                            <a href="/Admin/Roller/Duzenle/@r.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
                             @if (!r.IsSystemRole)
                             {
-                                <form method="post" action="/Admin/Roller/Sil/@r.Id"
+                                <form method="post" action="/Admin/Roller/Sil/@r.Id.ToHashId()"
                                       data-confirm="'@r.Ad' rolünü silmek istediğinizden emin misiniz?" class="inline">
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="btn btn-sm btn-danger">Sil</button>
@@ -72,3 +72,4 @@
         </table>
     </div>
 </div>
+

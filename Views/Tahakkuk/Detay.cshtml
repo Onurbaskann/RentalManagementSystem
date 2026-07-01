@@ -40,11 +40,11 @@
     <div class="flex gap-2">
         @if (Model.KiraSozlesmesiId != null)
         {
-            <a href="/Sozlesme/Detay/@Model.KiraSozlesmesiId" class="btn btn-sm btn-secondary">Sözleşme Detayı</a>
+            <a href="/Sozlesme/Detay/@Model.KiraSozlesmesiId.ToHashId()" class="btn btn-sm btn-secondary">Sözleşme Detayı</a>
         }
         @if (canCreate && !iptal && !tamOdendi)
         {
-            <a href="/Odeme/Ekle?tahakkukId=@Model.Id" class="btn btn-sm btn-primary">Ödeme Ekle</a>
+            <a href="/Odeme/Ekle?tahakkukId=@Model.Id.ToHashId()" class="btn btn-sm btn-primary">Ödeme Ekle</a>
         }
     </div>
 </div>
@@ -81,7 +81,7 @@
         <div>
             <span class="text-muted">Kiracı: </span>
             @if (Model.KiraciId != null) {
-                <a href="/Kiraci/Detay/@Model.KiraciId" class="font-semibold no-underline hover:underline">@Model.KiraciGosterimAdi</a>
+                <a href="/Kiraci/Detay/@Model.KiraciId.ToHashId()" class="font-semibold no-underline hover:underline">@Model.KiraciGosterimAdi</a>
             } else {
                 <span class="font-semibold">Rezervasyon Sahibi</span>
             }
@@ -89,7 +89,7 @@
         <div>
             <span class="text-muted">Taşınmaz: </span>
             @if (Model.TasinmazId != null) {
-                <a href="/Tasinmaz/Detay/@Model.TasinmazId" class="font-semibold no-underline hover:underline">@Model.TasinmazAd</a>
+                <a href="/Tasinmaz/Detay/@Model.TasinmazId.ToHashId()" class="font-semibold no-underline hover:underline">@Model.TasinmazAd</a>
             } else {
                 <span class="font-semibold">Toplantı Salonu</span>
             }
@@ -101,7 +101,7 @@
         @if (Model.KiraSozlesmesiId != null) {
             <div>
                 <span class="text-muted">Sözleşme: </span>
-                <a href="/Sozlesme/Detay/@Model.KiraSozlesmesiId" class="font-semibold no-underline hover:underline">#@Model.KiraSozlesmesiId</a>
+                <a href="/Sozlesme/Detay/@Model.KiraSozlesmesiId.ToHashId()" class="font-semibold no-underline hover:underline">#@Model.KiraSozlesmesiId</a>
             </div>
         }
     </div>
@@ -239,7 +239,7 @@
                             <td><span class="badge @odCls">@odLabel</span></td>
                             <td class="text-[12px] text-muted">@o.GirisTarihi.ToString("dd.MM.yyyy HH:mm")</td>
                             <td class="text-[13px] text-muted">@o.Aciklama</td>
-                            <td><a href="/Odeme/Detay/@o.Id" class="btn btn-sm btn-secondary">Detay</a></td>
+                            <td><a href="/Odeme/Detay/@o.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
                         </tr>
                     }
                 </tbody>
@@ -252,8 +252,9 @@
             <div class="mb-3">Bu dönem için henüz ödeme kaydı yok.</div>
             @if (canCreate && !iptal && !tamOdendi)
             {
-                <a href="/Odeme/Ekle?tahakkukId=@Model.Id" class="btn btn-primary btn-sm">Ödeme Ekle</a>
+                <a href="/Odeme/Ekle?tahakkukId=@Model.Id.ToHashId()" class="btn btn-primary btn-sm">Ödeme Ekle</a>
             }
         </div>
     }
 </div>
+

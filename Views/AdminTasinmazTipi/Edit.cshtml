@@ -18,7 +18,7 @@
 }
 
 <div class="card">
-    <form method="post" action="/Admin/TasinmazTipi/Duzenle/@Model.Id" asp-form-write-permission="@PermissionCatalog.TasinmazTipi.Edit">
+    <form method="post" action="/Admin/TasinmazTipi/Duzenle/@Model.Id.ToHashId()" asp-form-write-permission="@PermissionCatalog.TasinmazTipi.Edit">
         @Html.AntiForgeryToken()
         <input asp-for="Id" type="hidden" />
 
@@ -66,3 +66,4 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+

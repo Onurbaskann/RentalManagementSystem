@@ -64,13 +64,13 @@
                         <tr x-show="filtre==='' || filtre==='@davranisKey'" x-cloak>
                             <td class="text-center">
                                 <div class="flex items-center justify-center gap-1">
-                                    <form method="post" action="/Admin/BorcTipi/SiraDegistir/@bt.Id" class="inline">
+                                    <form method="post" action="/Admin/BorcTipi/SiraDegistir/@bt.Id.ToHashId()" class="inline">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="yeniSira" value="@(bt.Sira - 1)" />
                                         <button type="submit" class="btn btn-sm btn-secondary px-1.5 py-0.5 text-[10px] leading-tight" title="Yukarı taşı" @(bt.Sira <= 1 ? "disabled" : "")>▲</button>
                                     </form>
                                     <span class="text-muted text-xs min-w-[1.25rem] text-center">@bt.Sira</span>
-                                    <form method="post" action="/Admin/BorcTipi/SiraDegistir/@bt.Id" class="inline">
+                                    <form method="post" action="/Admin/BorcTipi/SiraDegistir/@bt.Id.ToHashId()" class="inline">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="yeniSira" value="@(bt.Sira + 1)" />
                                         <button type="submit" class="btn btn-sm btn-secondary px-1.5 py-0.5 text-[10px] leading-tight" title="Aşağı taşı">▼</button>
@@ -94,10 +94,10 @@
                                 { <span class="badge badge-gecmis">Pasif</span> }
                             </td>
                             <td class="flex gap-1.5 justify-end">
-                                <a href="/Admin/BorcTipi/Duzenle/@bt.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                                <a href="/Admin/BorcTipi/Duzenle/@bt.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
                                 @if (!bt.Sistem)
                                 {
-                                    <form method="post" action="/Admin/BorcTipi/DurumDegistir/@bt.Id"
+                                    <form method="post" action="/Admin/BorcTipi/DurumDegistir/@bt.Id.ToHashId()"
                                           data-confirm="@(bt.Aktif ? $"'{bt.Ad}' pasif yapılsın mı?" : $"'{bt.Ad}' aktif yapılsın mı?")"
                                           class="inline">
                                         @Html.AntiForgeryToken()
@@ -130,3 +130,4 @@
         }
     </script>
 }
+

@@ -328,7 +328,7 @@
                         </div>
                         <div class="ml-3 shrink-0 text-right">
                             <span class="px-2 py-1 rounded text-[11px] font-bold @rozetCls">@s.KalanGun gün</span>
-                            <a href="/Sozlesme/Detay/@s.SozlesmeId" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-0.5 block">Detay →</a>
+                            <a href="/Sozlesme/Detay/@s.SozlesmeId.ToHashId()" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-0.5 block">Detay →</a>
                         </div>
                     </div>
                 }
@@ -361,7 +361,7 @@
                         </div>
                         <div class="ml-3 shrink-0 text-right">
                             <span class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[11px] font-bold">@b.Yuzolcumu.ToString("F0") m²</span>
-                            <a href="/Sozlesme/Ekle?birimId=@b.BirimId" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-0.5 block">Kiraya Ver →</a>
+                            <a href="/Sozlesme/Ekle?birimId=@b.BirimId.ToHashId()" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-0.5 block">Kiraya Ver →</a>
                         </div>
                     </div>
                 }
@@ -404,7 +404,7 @@
                 {
                     rankK++;
                     var pct = maxKiraci > 0 ? (double)(g.ToplamTahsilat / maxKiraci) * 100 : 0;
-                    <a href="/Kiraci/Detay/@g.KiraciId" class="block p-2 rounded-lg hover:bg-slate-50 transition-colors no-underline">
+                    <a href="/Kiraci/Detay/@g.KiraciId.ToHashId()" class="block p-2 rounded-lg hover:bg-slate-50 transition-colors no-underline">
                         <div class="flex items-center justify-between mb-1.5">
                             <div class="flex items-center gap-2 min-w-0">
                                 <span class="w-5 h-5 rounded-md bg-[#f0faf7] text-[#1a6b5c] text-[10px] font-bold flex items-center justify-center shrink-0">@rankK</span>
@@ -438,7 +438,7 @@
                 {
                     rank++;
                     var pct = maxGelir > 0 ? (double)(g.ToplamTahsilat / maxGelir) * 100 : 0;
-                    <a href="/Tasinmaz/Detay/@g.TasinmazId" class="block p-2 rounded-lg hover:bg-slate-50 transition-colors no-underline">
+                    <a href="/Tasinmaz/Detay/@g.TasinmazId.ToHashId()" class="block p-2 rounded-lg hover:bg-slate-50 transition-colors no-underline">
                         <div class="flex items-center justify-between mb-1.5">
                             <div class="flex items-center gap-2 min-w-0">
                                 <span class="w-5 h-5 rounded-md bg-[#f0faf7] text-[#1a6b5c] text-[10px] font-bold flex items-center justify-center shrink-0">@rank</span>
@@ -661,3 +661,4 @@
         });
     </script>
 }
+

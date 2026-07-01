@@ -59,8 +59,8 @@
                             { <span class="badge badge-gecmis">Pasif</span> }
                         </td>
                         <td class="flex gap-1.5 justify-end">
-                            <a href="/Admin/BirimTuru/Duzenle/@bt.Id" class="btn btn-sm btn-secondary">Düzenle</a>
-                            <form method="post" action="/Admin/BirimTuru/DurumDegistir/@bt.Id"
+                            <a href="/Admin/BirimTuru/Duzenle/@bt.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
+                            <form method="post" action="/Admin/BirimTuru/DurumDegistir/@bt.Id.ToHashId()"
                                   data-confirm="@(bt.Aktif ? $"'{bt.Ad}' pasif yapılsın mı?" : $"'{bt.Ad}' aktif yapılsın mı?")"
                                   class="inline">
                                 @Html.AntiForgeryToken()
@@ -79,3 +79,4 @@
         </table>
     </div>
 </div>
+

@@ -66,8 +66,8 @@
                             else { <span class="badge badge-gecmis">Pasif</span> }
                         </td>
                         <td style="display:flex;gap:6px;justify-content:flex-end;">
-                            <a href="/Admin/RezervasyonTarifeKural/Duzenle/@k.Id" class="btn btn-sm btn-secondary">Düzenle</a>
-                            <form method="post" action="/Admin/RezervasyonTarifeKural/DurumDegistir/@k.Id" style="display:inline;">
+                            <a href="/Admin/RezervasyonTarifeKural/Duzenle/@k.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
+                            <form method="post" action="/Admin/RezervasyonTarifeKural/DurumDegistir/@k.Id.ToHashId()" style="display:inline;">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-sm @(k.IsActive ? "btn-danger" : "btn-amber")">
                                     @(k.IsActive ? "Pasif Yap" : "Aktif Yap")
@@ -84,3 +84,4 @@
         </table>
     </div>
 </div>
+

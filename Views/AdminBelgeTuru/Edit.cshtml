@@ -10,7 +10,7 @@
         <div class="page-title">Belge Türü Düzenle</div>
     </div>
 
-    <form asp-action="Edit" asp-route-id="@Model.Id" method="post" asp-form-write-permission="@PermissionCatalog.BelgeTuru.Edit">
+    <form asp-action="Edit" asp-hashid="@Model.Id" method="post" asp-form-write-permission="@PermissionCatalog.BelgeTuru.Edit">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Id" />
         <input type="hidden" asp-for="Sistem" />
@@ -118,3 +118,5 @@
         </div>
     </form>
 </div>
+
+

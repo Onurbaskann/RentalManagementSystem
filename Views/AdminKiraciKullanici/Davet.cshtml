@@ -7,7 +7,7 @@
 
 <div class="page-header">
     <div>
-        <a href="/Admin/Kiracilar/@kiraciId/Kullanicilar" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
+        <a href="/Admin/Kiracilar/@kiraciId.ToHashId()/Kullanicilar" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
             ← @kiraciAd — Kullanıcılar
         </a>
         <div class="page-title">Kullanıcı Davet Et</div>
@@ -16,7 +16,7 @@
 </div>
 
 <div class="card">
-    <form method="post" action="/Admin/Kiracilar/@kiraciId/Kullanicilar/Davet">
+    <form method="post" action="/Admin/Kiracilar/@kiraciId.ToHashId()/Kullanicilar/Davet">
         @Html.AntiForgeryToken()
 
         @if (!ViewData.ModelState.IsValid)
@@ -67,7 +67,8 @@
 
         <div class="flex gap-2.5 mt-6">
             <button type="submit" class="btn btn-primary px-6">Davet Gönder</button>
-            <a href="/Admin/Kiracilar/@kiraciId/Kullanicilar" class="btn btn-secondary px-6">İptal</a>
+            <a href="/Admin/Kiracilar/@kiraciId.ToHashId()/Kullanicilar" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>
 </div>
+

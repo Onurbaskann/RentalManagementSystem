@@ -34,11 +34,11 @@
     <div class="flex gap-2">
         @if (User.HasModuleAccess("System.Kullanici"))
         {
-            <a href="/Admin/Kiracilar/@k.Id/Kullanicilar" class="btn btn-secondary">Kullanıcılar</a>
+            <a href="/Admin/Kiracilar/@k.Id.ToHashId()/Kullanicilar" class="btn btn-secondary">Kullanıcılar</a>
         }
         @if (canEdit)
         {
-            <a href="/Kiraci/Duzenle/@k.Id" class="btn btn-secondary">Düzenle</a>
+            <a href="/Kiraci/Duzenle/@k.Id.ToHashId()" class="btn btn-secondary">Düzenle</a>
         }
         @if (hasSozlesme && User.HasPermission(PermissionCatalog.Sozlesme.Create))
         {
@@ -203,7 +203,7 @@
                                 else if (aktif) { <span class="badge badge-kirali">Aktif</span> }
                                 else { <span class="badge badge-gecmis">Geçmiş</span> }
                             </td>
-                            <td><a href="/Sozlesme/Detay/@s.Id" class="btn btn-sm btn-secondary">Detay</a></td>
+                            <td><a href="/Sozlesme/Detay/@s.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
                         </tr>
                     }
                 </tbody>
@@ -212,3 +212,4 @@
     }
 </div>
 }
+

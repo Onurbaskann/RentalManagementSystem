@@ -10,7 +10,7 @@
 </div>
 
 <div class="card" x-data="{ tur: '@(Model.RezervasyonYapilabilirMi ? "rez" : "kira")' }">
-    <form method="post" action="/Admin/BirimTuru/Duzenle/@Model.Id" asp-form-write-permission="@PermissionCatalog.BirimTuru.Edit">
+    <form method="post" action="/Admin/BirimTuru/Duzenle/@Model.Id.ToHashId()" asp-form-write-permission="@PermissionCatalog.BirimTuru.Edit">
         @Html.AntiForgeryToken()
         <input asp-for="Id" type="hidden" />
 
@@ -76,3 +76,4 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+

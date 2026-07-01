@@ -116,7 +116,7 @@
                         <td class="cell-center">@kanalLabel</td>
                         <td class="text-muted truncate max-w-[120px]">@(o.GirenUserGosterimAdi ?? "—")</td>
                         <td><span class="badge @durumCls">@durumLabel</span></td>
-                        <td class="text-right"><a href="/Odeme/Detay/@o.Id" class="btn btn-sm btn-secondary">Detay</a></td>
+                        <td class="text-right"><a href="/Odeme/Detay/@o.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
                     </tr>
                 }
                 @if (Model.Total == 0)
@@ -128,3 +128,4 @@
     </div>
     @await Html.PartialAsync("_Pagination", pagination)
 </div>
+
