@@ -38,7 +38,7 @@
 
     <div>
     <div class="card">
-        <form method="post" action="/Odeme/Ekle">
+        <form method="post" action="/Odeme/Ekle" asp-form-write-permission="@PermissionCatalog.Odeme.Create">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="TahakkukId" />
             <input type="hidden" asp-for="KiraSozlesmesiId" />
@@ -85,7 +85,7 @@
             </div>
 
             <div class="flex gap-2.5">
-                <button type="submit" class="btn btn-primary">Kaydet</button>
+                <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Odeme.Create">Kaydet</button>
                 <a href="/Tahakkuk" class="btn btn-secondary">İptal</a>
             </div>
         </form>

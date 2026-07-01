@@ -42,9 +42,7 @@ public class BirimTuruRepository : BaseRepository<BirimTuru>, IBirimTuruReposito
         => await _ctx.Tahakkuklar.AsNoTracking()
             .AnyAsync(t => t.Durum != TahakkukDurumu.TamOdendi
                         && t.Durum != TahakkukDurumu.IptalEdildi
-                        && _ctx.Birimler.Any(b => b.BirimTuruId == birimTuruId
-                            && (_ctx.Sozlesmeler.Any(s => s.BirimId == b.Id && s.Id == t.KiraSozlesmesiId)
-                                || _ctx.Rezervasyonlari.Any(r => r.BirimId == b.Id && r.TahakkukId == t.Id))));
+                        && t.Birim.BirimTuruId == birimTuruId);
 
     public async Task<bool> HasPlanlanmisRezervasyonForBirimTuruAsync(int birimTuruId)
         => await _ctx.Rezervasyonlari.AsNoTracking()

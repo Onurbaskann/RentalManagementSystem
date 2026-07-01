@@ -1,5 +1,6 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
+using KiraTakip.Extensions;
 using KiraTakip.Models;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.ViewModels;
@@ -12,7 +13,7 @@ namespace KiraTakip.Controllers;
 
 [Authorize(Policy = "KiraciKullanici")]
 [RequireKiraciId]
-[Authorize(Policy = PermissionCatalog.KiraciPortal.Sozlesme.View)]
+[Authorize(Policy = PermissionCatalog.KiraciPortal.Sozlesme.Module)]
 [Route("Kiraci/Sozlesmeler")]
 public class KiraciSozlesmeController : Controller
 {
@@ -21,19 +22,22 @@ public class KiraciSozlesmeController : Controller
     private readonly ISozlesmeService _sozlesmeService;
     private readonly IIstatistikService _istatistik;
     private readonly ITahakkukService _tahakkukService;
+    private readonly IBelgeService _belgeService;
 
     public KiraciSozlesmeController(
         ApplicationDbContext db,
         ICurrentUserContext currentUser,
         ISozlesmeService sozlesmeService,
         IIstatistikService istatistik,
-        ITahakkukService tahakkukService)
+        ITahakkukService tahakkukService,
+        IBelgeService belgeService)
     {
         _db = db;
         _currentUser = currentUser;
         _sozlesmeService = sozlesmeService;
         _istatistik = istatistik;
         _tahakkukService = tahakkukService;
+        _belgeService = belgeService;
     }
 
     [HttpGet("")]
@@ -101,6 +105,9 @@ public class KiraciSozlesmeController : Controller
 
         var depozitoTutarlari = await _sozlesmeService.GetDepozitoTutarlariAsync(new[] { id });
         vm.DepozitoTutari = depozitoTutarlari.TryGetValue(id, out var dep) ? dep : null;
+
+        vm.BelgeTurleri = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Sozlesme);
+        vm.Belgeler     = await _belgeService.GetListAsync(BelgeOwnerTipi.Sozlesme, id);
 
         return View(vm);
     }

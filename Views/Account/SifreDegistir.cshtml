@@ -1,0 +1,55 @@
+@model SifreDegistirViewModel
+@{
+    ViewData["Title"] = "Şifre Değiştir";
+}
+
+<div class="page-header">
+    <div class="page-title">Şifre Değiştir</div>
+    <div class="page-subtitle">Hesap güvenliğiniz için güçlü bir şifre belirleyin</div>
+</div>
+
+<div class="max-w-md">
+    @if (TempData["Success"] != null)
+    {
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 px-4 rounded-lg mb-4 text-[13.5px]">✓ @TempData["Success"]</div>
+    }
+
+    <div class="card">
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm mb-5">
+                @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                {
+                    <div>@error.ErrorMessage</div>
+                }
+            </div>
+        }
+
+        <form method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="form-group">
+                <label class="form-label">Mevcut Şifre <span class="text-red-500">*</span></label>
+                <input asp-for="MevcutSifre" type="password" autocomplete="current-password" class="form-input" placeholder="••••••••" />
+                <span asp-validation-for="MevcutSifre" class="text-red-500 text-xs mt-1 block"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Yeni Şifre <span class="text-red-500">*</span></label>
+                <input asp-for="YeniSifre" type="password" autocomplete="new-password" class="form-input" placeholder="En az 6 karakter" />
+                <span asp-validation-for="YeniSifre" class="text-red-500 text-xs mt-1 block"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Yeni Şifre Tekrar <span class="text-red-500">*</span></label>
+                <input asp-for="YeniSifreTekrar" type="password" autocomplete="new-password" class="form-input" placeholder="••••••••" />
+                <span asp-validation-for="YeniSifreTekrar" class="text-red-500 text-xs mt-1 block"></span>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button type="submit" class="btn btn-primary">Şifremi Güncelle</button>
+                <a href="javascript:history.back()" class="btn btn-secondary">İptal</a>
+            </div>
+        </form>
+    </div>
+</div>

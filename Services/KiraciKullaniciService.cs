@@ -19,12 +19,11 @@ public class KiraciKullaniciService : IKiraciKullaniciService
         var query = from u in _db.Users
                     join ur in _db.UserRoller on u.Id equals ur.UserId
                     join r in _db.Roller on ur.RolId equals r.Id
-                    join rp in _db.RolPermissions on r.Id equals rp.RolId
                     where u.KiraciId == kiraciId
                           && u.IsActive
                           && r.IsActive
                           && !r.IsDeleted
-                          && rp.Permission == PermissionCatalog.KiraciPortal.Kullanici.Manage
+                          && r.Ad == RoleNames.KiraciYoneticisi
                     select new { UserId = u.Id, RolId = r.Id };
 
         if (excludeUserId != null)

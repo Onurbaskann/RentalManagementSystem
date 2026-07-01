@@ -16,18 +16,21 @@ public class RezervasyonService : IRezervasyonService, ITransactionalService
     private readonly IBirimRepository _birimRepo;
     private readonly IKiraciRepository _kiraciRepo;
     private readonly IUnitOfWork _uow;
+    private readonly ApplicationDbContext _ctx;
     public RezervasyonService(
         IRezervasyonRepository repo,
         IRezervasyonTarifeRepository tarifeRepo,
         IBirimRepository birimRepo,
         IKiraciRepository kiraciRepo,
-        IUnitOfWork uow)
+        IUnitOfWork uow,
+        ApplicationDbContext ctx)
     {
         _repo = repo;
         _tarifeRepo = tarifeRepo;
         _birimRepo = birimRepo;
         _kiraciRepo = kiraciRepo;
         _uow = uow;
+        _ctx = ctx;
     }
 
     // ── Listeleme ──────────────────────────────────────────────────────────────
@@ -35,6 +38,11 @@ public class RezervasyonService : IRezervasyonService, ITransactionalService
     public async Task<List<RezervasyonListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null)
     {
         return await _repo.GetListAsync(tasinmazIds?.ToList());
+    }
+
+    public async Task<RezervasyonListItemDto?> GetByIdAsync(int id)
+    {
+        return await _repo.GetByIdAsync(id);
     }
 
     // ── Ücret Hesaplama (precedence: birime özel → birim türü genel tarife → hata) ─
@@ -163,9 +171,7 @@ public class RezervasyonService : IRezervasyonService, ITransactionalService
 
     public async Task<(bool Basarili, string? Hata)> CancelAsync(int id, string userId, string neden)
     {
-        var rezervasyon = await _repo.GetByIdAsync(id, q => q
-            .Include(r => r.Tahakkuk!)
-                .ThenInclude(t => t!.Odemeler));
+        var rezervasyon = await _repo.GetByIdAsync(id, (Func<IQueryable<Rezervasyon>, IQueryable<Rezervasyon>>?)(q => q));
 
         if (rezervasyon == null)
             return (false, "Rezervasyon bulunamadı.");
@@ -175,15 +181,18 @@ public class RezervasyonService : IRezervasyonService, ITransactionalService
 
         if (rezervasyon.Durum == RezervasyonDurumu.TahakkukaAktarildi)
         {
-            var odemeVar = rezervasyon.Tahakkuk?.Odemeler
-                .Any(o => o.Durum == OdemeDurumu.Onaylandi) ?? false;
+            var tahakkuk = await _ctx.Tahakkuklar
+                .Include(t => t.Odemeler)
+                .FirstOrDefaultAsync(t => t.RezervasyonId == rezervasyon.Id);
+
+            var odemeVar = tahakkuk?.Odemeler.Any(o => o.Durum == OdemeDurumu.Onaylandi) ?? false;
             if (odemeVar)
                 return (false, "Ödemesi alınmış tahakkuka bağlı rezervasyon iptal edilemez.");
 
-            if (rezervasyon.Tahakkuk != null)
+            if (tahakkuk != null)
             {
-                rezervasyon.Tahakkuk.Durum = TahakkukDurumu.IptalEdildi;
-                rezervasyon.Tahakkuk.IptalNotu = $"Rezervasyon iptal edildi: {neden}";
+                tahakkuk.Durum = TahakkukDurumu.IptalEdildi;
+                tahakkuk.IptalNotu = $"Rezervasyon iptal edildi: {neden}";
             }
         }
 
@@ -209,7 +218,7 @@ public class RezervasyonService : IRezervasyonService, ITransactionalService
         if (rezervasyon.Durum != RezervasyonDurumu.Planlandi)
             return (false, "Sadece 'Planlandı' durumundaki rezervasyonlar tahakkuka aktarılabilir.", null);
 
-        if (rezervasyon.TahakkukId != null)
+        if (await _ctx.Tahakkuklar.AnyAsync(t => t.RezervasyonId == rezervasyon.Id))
             return (false, "Bu rezervasyon zaten tahakkuka aktarılmış.", null);
 
         if (rezervasyon.ToplamTutar <= 0)
@@ -241,6 +250,8 @@ public class RezervasyonService : IRezervasyonService, ITransactionalService
         var tahakkuk = new Tahakkuk
         {
             KiraciId = rezervasyon.KiraciId,
+            BirimId = rezervasyon.BirimId,
+            RezervasyonId = rezervasyon.Id,
             DonemBaslangic = rezervasyon.BaslangicTarihi,
             DonemBitis = rezervasyon.BitisTarihi,
             VadeTarihi = rezervasyon.BitisTarihi.Date,
@@ -254,9 +265,6 @@ public class RezervasyonService : IRezervasyonService, ITransactionalService
         };
 
         await _repo.AddTahakkukAsync(tahakkuk);
-        await _uow.SaveChangesAsync();
-
-        rezervasyon.TahakkukId = tahakkuk.Id;
         rezervasyon.Durum = RezervasyonDurumu.TahakkukaAktarildi;
         await _uow.SaveChangesAsync();
 

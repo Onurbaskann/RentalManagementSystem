@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Policy = PermissionCatalog.BorcTipi.Manage)]
+[Authorize]
 [Route("Admin/BorcTipi")]
 public class AdminBorcTipiController : Controller
 {
@@ -27,6 +27,7 @@ public class AdminBorcTipiController : Controller
     }
 
     [HttpGet("")]
+    [Authorize(Policy = PermissionCatalog.BorcTipi.Module)]
     public async Task<IActionResult> Index()
     {
         var list = await _repo.GetListAsync();
@@ -34,6 +35,7 @@ public class AdminBorcTipiController : Controller
     }
 
     [HttpGet("Ekle")]
+    [Authorize(Policy = PermissionCatalog.BorcTipi.Module)]
     public async Task<IActionResult> Create()
     {
         var nextSira = (await _repo.GetMaxSiraAsync()) + 1;
@@ -42,6 +44,7 @@ public class AdminBorcTipiController : Controller
 
     [HttpPost("Ekle")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.BorcTipi.Create)]
     public async Task<IActionResult> Create(BorcTipiFormViewModel model)
     {
         if (!ModelState.IsValid) return View(model);
@@ -70,6 +73,7 @@ public class AdminBorcTipiController : Controller
     }
 
     [HttpGet("Duzenle/{id:int}")]
+    [Authorize(Policy = PermissionCatalog.BorcTipi.Module)]
     public async Task<IActionResult> Edit(int id)
     {
         var entity = await _repo.GetByIdAsync(id);
@@ -81,6 +85,7 @@ public class AdminBorcTipiController : Controller
 
     [HttpPost("Duzenle/{id:int}")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.BorcTipi.Edit)]
     public async Task<IActionResult> Edit(int id, BorcTipiFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
@@ -111,6 +116,7 @@ public class AdminBorcTipiController : Controller
 
     [HttpPost("DurumDegistir/{id:int}")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.BorcTipi.Edit)]
     public async Task<IActionResult> DurumDegistir(int id)
     {
         var entity = await _repo.GetByIdAsync(id);
@@ -139,6 +145,7 @@ public class AdminBorcTipiController : Controller
 
     [HttpPost("SiraDegistir/{id:int}")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.BorcTipi.Edit)]
     public async Task<IActionResult> SiraDegistir(int id, int yeniSira)
     {
         var entity = await _repo.GetByIdAsync(id);

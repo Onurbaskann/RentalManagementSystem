@@ -4,7 +4,7 @@
 @inject IIstatistikService Istatistik
 @{
     ViewData["Title"] = "Kiracılar";
-    bool canEdit = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Kiraci.Create) || User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Kiraci.Edit);
+    bool canEdit = User.HasPermission(PermissionCatalog.Kiraci.Create) || User.HasPermission(PermissionCatalog.Kiraci.Edit);
 }
 
 <div class="page-header flex items-center justify-between">
@@ -46,7 +46,9 @@
                 {
                     var aktifSozlesmeCount = ((Dictionary<int,int>)ViewBag.AktifSozlesme).GetValueOrDefault(k.Id, 0);
                     var search = $"{k.KiraciNo} {k.GosterimAdi} {k.VergiNo} {k.Telefon} {k.Email}".ToLower();
-                    <tr data-row data-search="@search">
+                    <tr data-row data-search="@search" data-href="/Kiraci/Detay/@k.Id"
+                        class="cursor-pointer hover:bg-slate-50 transition-colors"
+                        @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
                         <td class="font-mono text-xs text-muted">@k.KiraciNo</td>
                         <td>
                             <div class="font-semibold">@k.GosterimAdi</div>
@@ -80,13 +82,16 @@
                             }
                         </td>
                         <td class="cell-center whitespace-nowrap">@k.KayitTarihi.ToString("dd.MM.yyyy")</td>
-                        <td class="flex gap-1.5 justify-end">
-                            <a href="/Kiraci/Detay/@k.Id" class="btn btn-sm btn-secondary">Detay</a>
-                            @if (canEdit)
-                            {
+                        @if (canEdit)
+                        {
+                            <td class="text-right">
                                 <a href="/Kiraci/Duzenle/@k.Id" class="btn btn-sm btn-secondary">Düzenle</a>
-                            }
-                        </td>
+                            </td>
+                        }
+                        else
+                        {
+                            <td></td>
+                        }
                     </tr>
                 }
             </tbody>

@@ -1,6 +1,8 @@
 using KiraTakip.Authorization;
+using KiraTakip.Extensions;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Entities;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Settings;
 using KiraTakip.Models.ViewModels;
@@ -30,6 +32,7 @@ public class SozlesmeController : Controller
     private readonly IRazorViewToStringRenderer _razorRenderer;
     private readonly IOptions<PaymentLinkSettings> _paymentLinkOptions;
     private readonly ILogger<SozlesmeController> _logger;
+    private readonly IBelgeService _belgeService;
 
     public SozlesmeController(
         ISozlesmeService sozlesmeService,
@@ -45,7 +48,8 @@ public class SozlesmeController : Controller
         IRazorViewToStringRenderer razorRenderer,
         IOptions<PaymentLinkSettings> paymentLinkOptions,
         ILogger<SozlesmeController> logger,
-        IYetkiKapsamiProvider provider)
+        IYetkiKapsamiProvider provider,
+        IBelgeService belgeService)
     {
         _sozlesmeService = sozlesmeService;
         _tasinmazService = tasinmazService;
@@ -61,9 +65,10 @@ public class SozlesmeController : Controller
         _paymentLinkOptions = paymentLinkOptions;
         _logger = logger;
         _provider = provider;
+        _belgeService = belgeService;
     }
 
-    [Authorize(Policy = PermissionCatalog.Sozlesme.View)]
+    [Authorize(Policy = PermissionCatalog.Sozlesme.Module)]
     public async Task<IActionResult> Index(string? filtre)
     {
         var sozlesmeler = await _sozlesmeService.GetAllAsync(filtre, _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
@@ -84,7 +89,7 @@ public class SozlesmeController : Controller
         return View(sozlesmeler);
     }
 
-    [Authorize(Policy = PermissionCatalog.Sozlesme.View)]
+    [Authorize(Policy = PermissionCatalog.Sozlesme.Module)]
     public async Task<IActionResult> Detay(int id)
     {
         var s = await _sozlesmeService.GetByIdAsync(id);
@@ -128,10 +133,10 @@ public class SozlesmeController : Controller
                 .FirstOrDefault(r => r.BorcTipiDavranis == BorcTipiDavranisi.AylikSabit)?.KdvOrani ?? 20m
         };
 
-        var hasRegeneratePermission = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Tahakkuk.Regenerate);
-        if (User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.View) || hasRegeneratePermission)
+        var hasRegeneratePermission = User.HasPermission(PermissionCatalog.Tahakkuk.Regenerate);
+        if (User.HasPermission(PermissionCatalog.Odeme.Module) || hasRegeneratePermission)
         {
-            vm.HasOdemeAccess = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.View);
+            vm.HasOdemeAccess = User.HasPermission(PermissionCatalog.Odeme.Module);
             await _tahakkukService.GecikmeleriGuncelleAsync();
             vm.Tahakkuklar = await _tahakkukService.GetListAsync(sozlesmeId: id);
         }
@@ -196,6 +201,21 @@ public class SozlesmeController : Controller
         var depozitoTutarlari = await _sozlesmeService.GetDepozitoTutarlariAsync(new[] { id });
         vm.DepozitoTutari = depozitoTutarlari.TryGetValue(id, out var dep) ? dep : null;
 
+        vm.Belgeler    = await _belgeService.GetListAsync(BelgeOwnerTipi.Sozlesme, id);
+        vm.BelgeTurleri = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Sozlesme);
+
+        var manuelBorclar = await _ctx.Tahakkuklar
+            .Where(t => t.KiraSozlesmesiId == id
+                     && t.KaynakTipi == TahakkukKaynakTipi.Manuel
+                     && t.Durum != TahakkukDurumu.IptalEdildi)
+            .Select(t => new { Kalan = t.ToplamTutar - t.OdenenTutar })
+            .ToListAsync();
+        if (manuelBorclar.Count > 0)
+        {
+            ViewBag.ManuelBorcSayisi = manuelBorclar.Count;
+            ViewBag.ManuelBorcKalan  = manuelBorclar.Sum(x => x.Kalan);
+        }
+
         return View(vm);
     }
 
@@ -211,7 +231,8 @@ public class SozlesmeController : Controller
         {
             BirimId = birimId,
             MevcutBirimler = bosBirimler,
-            Kiraciler = kiraciler
+            Kiraciler = kiraciler,
+            BelgeTurleri = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Sozlesme)
         };
         return View(vm);
     }
@@ -222,6 +243,7 @@ public class SozlesmeController : Controller
     {
         vm.MevcutBirimler = await _tasinmazService.GetBosBirimlerAsync();
         vm.Kiraciler = await _kiraciService.GetAllAsync();
+        vm.BelgeTurleri = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Sozlesme);
 
         if (vm.BirimId == null || vm.BirimId == 0)
             ModelState.AddModelError("BirimId", "Lütfen bir birim seçin.");
@@ -231,6 +253,13 @@ public class SozlesmeController : Controller
 
         if (vm.VadeGunu < 1 || vm.VadeGunu > 31)
             ModelState.AddModelError("VadeGunu", "Vade günü 1-31 arasında olmalıdır.");
+
+        foreach (var bt in vm.BelgeTurleri.Where(bt => bt.Zorunlu))
+        {
+            var f = Request.Form.Files.GetFile($"dosya_{bt.Id}");
+            if (f == null || f.Length == 0)
+                ModelState.AddModelError($"dosya_{bt.Id}", $"'{bt.Ad}' belgesi zorunludur.");
+        }
 
         if (!ModelState.IsValid) return View(vm);
 
@@ -277,6 +306,18 @@ public class SozlesmeController : Controller
         }
 
         await _tahakkukUretim.UretSozlesmeIcinAsync(s.Id);
+
+        foreach (var bt in vm.BelgeTurleri)
+        {
+            var file = Request.Form.Files.GetFile($"dosya_{bt.Id}");
+            if (file == null || file.Length == 0) continue;
+            using var ms = new MemoryStream();
+            await file.CopyToAsync(ms);
+            await _belgeService.UploadAsync(
+                BelgeOwnerTipi.Sozlesme, s.Id, bt.Id,
+                file.FileName, file.ContentType, ms.ToArray());
+        }
+
         TempData["Success"] = "Sözleşme başarıyla oluşturuldu.";
         return RedirectToAction("Detay", new { id = s.Id });
     }
@@ -481,7 +522,7 @@ public class SozlesmeController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.Sozlesme.View)]
+    [Authorize(Policy = PermissionCatalog.Sozlesme.Module)]
     public async Task<IActionResult> BorclularaMailGonder([FromServices] IBorcHatirlatmaService borcHatirlatmaService)
     {
         try

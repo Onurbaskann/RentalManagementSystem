@@ -30,20 +30,13 @@ public class YetkiKapsamiCacheService : IYetkiKapsamiCache
 
         var user = await db.Users.AsNoTracking()
             .Where(u => u.Id == userId)
-            .Select(u => new { u.TumTasinmazlaraErisim })
+            .Select(u => new { u.TumTasinmazlaraErisim, u.IsSuperAdmin })
             .FirstOrDefaultAsync();
 
         if (user == null)
             return new KullaniciKapsamDto { GlobalErisim = false };
 
-        bool isGlobal = user.TumTasinmazlaraErisim;
-        if (!isGlobal)
-        {
-            isGlobal = await db.UserRoller
-                .Where(ur => ur.UserId == userId)
-                .Join(db.Roller, ur => ur.RolId, r => r.Id, (ur, r) => r.Ad)
-                .AnyAsync(ad => ad == RoleNames.SistemYoneticisi);
-        }
+        bool isGlobal = user.TumTasinmazlaraErisim || user.IsSuperAdmin;
 
         KullaniciKapsamDto dto;
         if (isGlobal)
@@ -56,7 +49,11 @@ public class YetkiKapsamiCacheService : IYetkiKapsamiCache
                 .Where(k => k.UserId == userId && k.KapsamTipi == KapsamTipi.Tasinmaz)
                 .Select(k => k.KapsamId)
                 .ToListAsync();
-            dto = new KullaniciKapsamDto { GlobalErisim = false, TasinmazIds = tasinmazIds };
+            var birimIds = await db.KullaniciYetkiKapsamlari
+                .Where(k => k.UserId == userId && k.KapsamTipi == KapsamTipi.Birim)
+                .Select(k => k.KapsamId)
+                .ToListAsync();
+            dto = new KullaniciKapsamDto { GlobalErisim = false, TasinmazIds = tasinmazIds, BirimIds = birimIds };
         }
 
         _cache.Set(CacheKey(userId), dto, Ttl);

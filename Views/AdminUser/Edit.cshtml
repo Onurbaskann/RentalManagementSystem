@@ -94,28 +94,53 @@
                     Kullanıcı sistemdeki tüm taşınmazlara erişebilir.
                 </p>
 
-                <!-- Spesifik taşınmazlar: yalnızca Görüntüleyici + global toggle kapalı -->
-                @if (Model.Tasinmazlar.Any())
+                <!-- Spesifik taşınmaz / birim kapsamı: global toggle kapalıyken -->
+                @if (Model.Tasinmazlar.Any() || Model.Birimler.Any())
                 {
                     <div x-show="seciliRolId !== '@adminRolId' && seciliRolId !== '0' && !globalErisim" x-cloak class="mt-3">
-                        <div class="flex flex-col gap-2.5">
-                            @for (int i = 0; i < Model.Tasinmazlar.Count; i++)
-                            {
-                                <label class="flex items-center gap-2.5 text-[13.5px] cursor-pointer group">
-                                    <input type="checkbox" name="SelectedTasinmazIds"
-                                           value="@Model.Tasinmazlar[i].TasinmazId"
-                                           @(Model.Tasinmazlar[i].Selected ? "checked" : "")
-                                           class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
-                                    <div class="flex flex-col">
-                                        <span class="font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors">@Model.Tasinmazlar[i].Ad</span>
-                                        <span class="text-[11px] text-slate-400">@Model.Tasinmazlar[i].Konum</span>
-                                    </div>
-                                </label>
-                            }
-                        </div>
+                        @if (Model.Tasinmazlar.Any())
+                        {
+                            <div class="text-[11.5px] font-semibold text-slate-500 mb-2">Taşınmaz Bazlı</div>
+                            <div class="flex flex-col gap-2.5">
+                                @for (int i = 0; i < Model.Tasinmazlar.Count; i++)
+                                {
+                                    <label class="flex items-center gap-2.5 text-[13.5px] cursor-pointer group">
+                                        <input type="checkbox" name="SelectedTasinmazIds"
+                                               value="@Model.Tasinmazlar[i].TasinmazId"
+                                               @(Model.Tasinmazlar[i].Selected ? "checked" : "")
+                                               class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                        <div class="flex flex-col">
+                                            <span class="font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors">@Model.Tasinmazlar[i].Ad</span>
+                                            <span class="text-[11px] text-slate-400">@Model.Tasinmazlar[i].Konum</span>
+                                        </div>
+                                    </label>
+                                }
+                            </div>
+                        }
+                        @if (Model.Birimler.Any())
+                        {
+                            <div class="@(Model.Tasinmazlar.Any() ? "mt-4 pt-3 border-t border-slate-200/60" : "")">
+                                <div class="text-[11.5px] font-semibold text-slate-500 mb-2">Birim Bazlı</div>
+                                <div class="flex flex-col gap-2.5">
+                                    @for (int i = 0; i < Model.Birimler.Count; i++)
+                                    {
+                                        <label class="flex items-center gap-2.5 text-[13.5px] cursor-pointer group">
+                                            <input type="checkbox" name="SelectedBirimIds"
+                                                   value="@Model.Birimler[i].BirimId"
+                                                   @(Model.Birimler[i].Selected ? "checked" : "")
+                                                   class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                            <div class="flex flex-col">
+                                                <span class="font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors">@Model.Birimler[i].Ad</span>
+                                                <span class="text-[11px] text-slate-400">@Model.Birimler[i].TasinmazAd</span>
+                                            </div>
+                                        </label>
+                                    }
+                                </div>
+                            </div>
+                        }
                         <div class="text-[11px] text-slate-400 mt-4 pt-3 border-t border-slate-200/60 italic flex items-center gap-1.5">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                            Kullanıcı yalnızca seçilen taşınmazları ve bunlara bağlı bilgileri görebilir.
+                            Kullanıcı yalnızca seçilen taşınmaz/birimlere bağlı bilgileri görebilir.
                         </div>
                     </div>
                 }

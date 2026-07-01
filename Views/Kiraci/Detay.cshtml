@@ -1,10 +1,12 @@
 @model KiraTakip.Models.ViewModels.KiraciDetayViewModel
 @using KiraTakip.Authorization
 @using KiraTakip.Models
+@using KiraTakip.Extensions
 @{
     ViewData["Title"] = Model.Kiraci.GosterimAdi;
     var k = Model.Kiraci;
-    bool canEdit = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Kiraci.Edit);
+    bool canEdit    = User.HasPermission(PermissionCatalog.Kiraci.Edit);
+    bool hasSozlesme = User.HasModuleAccess("Internal.Sozlesme");
 }
 
 @if (TempData["Success"] != null)
@@ -30,13 +32,16 @@
         </div>
     </div>
     <div class="flex gap-2">
-        @if (User.IsInRole(RoleNames.SistemYoneticisi))
+        @if (User.HasModuleAccess("System.Kullanici"))
         {
             <a href="/Admin/Kiracilar/@k.Id/Kullanicilar" class="btn btn-secondary">Kullanıcılar</a>
         }
         @if (canEdit)
         {
             <a href="/Kiraci/Duzenle/@k.Id" class="btn btn-secondary">Düzenle</a>
+        }
+        @if (hasSozlesme && User.HasPermission(PermissionCatalog.Sozlesme.Create))
+        {
             <a href="/Sozlesme/Ekle" class="btn btn-primary">Sözleşme Ekle</a>
         }
     </div>
@@ -115,6 +120,8 @@
     </div>
 
     <!-- Sözleşme Özeti -->
+    @if (hasSozlesme)
+    {
     <div class="card">
         <div class="card-title">Sözleşme Özeti</div>
         @{
@@ -132,141 +139,22 @@
             </div>
         }
     </div>
+    }
 </div>
 
 <!-- Belgeler -->
-@if (canEdit || Model.Belgeler.Any())
+@await Html.PartialAsync("_BelgePanel", new KiraTakip.Models.ViewModels.BelgePanelViewModel
 {
-<div class="card p-0 overflow-hidden mb-5">
-    <div class="p-[18px_20px_14px] border-b border-[var(--color-border)] flex items-center justify-between">
-        <div class="section-title">Belgeler</div>
-        @if (canEdit && Model.BelgeTurleri.Any())
-        {
-            <button type="button" onclick="document.getElementById('belge-yukle-panel').classList.toggle('hidden')"
-                    class="btn btn-sm btn-secondary flex items-center gap-1.5">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Belge Yükle
-            </button>
-        }
-    </div>
-
-    @if (canEdit && Model.BelgeTurleri.Any())
-    {
-        <div id="belge-yukle-panel" class="hidden border-b border-[var(--color-border)] bg-slate-50 p-4">
-            <form action="/Belge/Yukle" method="post" enctype="multipart/form-data">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="kiraciId" value="@k.Id" />
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div class="form-group mb-0">
-                        <label class="form-label">Belge Türü *</label>
-                        <select name="belgeTuruId" class="form-control" required>
-                            <option value="">— Seçiniz —</option>
-                            @foreach (var bt in Model.BelgeTurleri)
-                            {
-                                <option value="@bt.Id">@bt.Ad @(bt.Zorunlu ? "*" : "")</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="form-group mb-0">
-                        <label class="form-label">Dosya *</label>
-                        <input type="file" name="dosya" class="form-control" required
-                               accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" />
-                    </div>
-                    <div class="form-group mb-0">
-                        <label class="form-label">Açıklama</label>
-                        <input type="text" name="aciklama" class="form-control" placeholder="Opsiyonel" />
-                    </div>
-                </div>
-                <div class="mt-3 flex gap-2">
-                    <button type="submit" class="btn btn-primary btn-sm px-4">Yükle</button>
-                    <button type="button" onclick="document.getElementById('belge-yukle-panel').classList.add('hidden')"
-                            class="btn btn-secondary btn-sm px-4">İptal</button>
-                </div>
-            </form>
-        </div>
-    }
-
-    @if (!Model.Belgeler.Any())
-    {
-        <div class="p-8 text-center text-muted text-[13px]">
-            @if (Model.BelgeTurleri.Any(bt => bt.Zorunlu))
-            {
-                <span class="text-amber-600 font-medium">Zorunlu belgeler henüz yüklenmemiş.</span>
-            }
-            else
-            {
-                <span>Henüz belge yüklenmemiş.</span>
-            }
-        </div>
-    }
-    else
-    {
-        <div class="table-wrapper">
-            <table class="w-full">
-                <thead>
-                    <tr>
-                        <th>Belge Türü</th>
-                        <th>Dosya Adı</th>
-                        <th class="w-24 text-right">Boyut</th>
-                        <th class="w-36">Yüklenme</th>
-                        <th class="w-28"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var b in Model.Belgeler)
-                    {
-                        <tr>
-                            <td>
-                                <div class="font-medium text-[13.5px]">@b.BelgeTuru.Ad</div>
-                                @if (!string.IsNullOrEmpty(b.Aciklama))
-                                {
-                                    <div class="text-xs text-muted">@b.Aciklama</div>
-                                }
-                            </td>
-                            <td class="text-[13px] font-mono text-muted">@b.DosyaAdi</td>
-                            <td class="text-right text-[12.5px] text-muted">
-                                @(b.BoyutByte < 1024 * 1024
-                                    ? $"{b.BoyutByte / 1024.0:F1} KB"
-                                    : $"{b.BoyutByte / 1024.0 / 1024.0:F1} MB")
-                            </td>
-                            <td class="text-[12.5px] text-muted">@b.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
-                            <td class="flex gap-1.5 justify-end">
-                                <a href="/Belge/Indir/@b.Id" class="btn btn-sm btn-secondary">İndir</a>
-                                @if (canEdit)
-                                {
-                                    <form method="post" action="/Belge/Sil/@b.Id"
-                                          data-confirm="Bu belge silinsin mi?"
-                                          class="inline">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="kiraciId" value="@k.Id" />
-                                        <button type="submit" class="btn btn-sm btn-danger">Sil</button>
-                                    </form>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    }
-
-    @if (canEdit && Model.BelgeTurleri.Any(bt => bt.Zorunlu))
-    {
-        var eksikZorunlu = Model.BelgeTurleri
-            .Where(bt => bt.Zorunlu && !Model.Belgeler.Any(b => b.BelgeTuruId == bt.Id))
-            .ToList();
-        if (eksikZorunlu.Any())
-        {
-            <div class="p-3 border-t border-amber-100 bg-amber-50 text-amber-700 text-[12.5px]">
-                <span class="font-semibold">Eksik zorunlu belgeler:</span>
-                @string.Join(", ", eksikZorunlu.Select(bt => bt.Ad))
-            </div>
-        }
-    }
-</div>
-}
+    OwnerType   = KiraTakip.Models.Entities.BelgeOwnerTipi.Kiraci,
+    OwnerId     = k.Id,
+    BelgeTurleri = Model.BelgeTurleri,
+    Belgeler    = Model.Belgeler,
+    CanEdit     = canEdit
+})
 
 <!-- Sözleşmeler tablosu -->
+@if (hasSozlesme)
+{
 <div class="card p-0 overflow-hidden">
     <div class="p-[18px_20px_14px] border-b border-[var(--color-border)]">
         <div class="section-title">Sözleşmeler</div>
@@ -323,3 +211,4 @@
         </div>
     }
 </div>
+}

@@ -45,7 +45,7 @@ public class DavetiyeService : IDavetiyeService, ITransactionalService
         _logger = logger;
     }
 
-    public async Task<Davetiye> GonderAsync(string email, string? adSoyad, int rolId, string davetEdenUserId, int? kiraciId = null, CancellationToken ct = default)
+    public async Task<Davetiye> GonderAsync(string email, string? adSoyad, int rolId, string davetEdenUserId, int? kiraciId = null, bool tumTasinmazlaraErisim = false, List<int>? tasinmazIds = null, List<int>? birimIds = null, CancellationToken ct = default)
     {
         var userType = kiraciId.HasValue ? UserType.Kiraci : UserType.Internal;
         var davetiye = new Davetiye
@@ -56,6 +56,13 @@ public class DavetiyeService : IDavetiyeService, ITransactionalService
             DavetEdenUserId = davetEdenUserId,
             UserType = userType,
             KiraciId = kiraciId,
+            TumTasinmazlaraErisim = tumTasinmazlaraErisim,
+            TasinmazIds = (tasinmazIds != null && tasinmazIds.Any())
+                ? System.Text.Json.JsonSerializer.Serialize(tasinmazIds)
+                : null,
+            BirimIds = (birimIds != null && birimIds.Any())
+                ? System.Text.Json.JsonSerializer.Serialize(birimIds)
+                : null,
             ExpiresAt = DateTime.UtcNow.Add(Ttl),
             Durum = DavetiyeDurum.Beklemede,
         };
@@ -113,6 +120,7 @@ public class DavetiyeService : IDavetiyeService, ITransactionalService
             EmailConfirmed = true,
             UserType = davetiye.UserType,
             KiraciId = davetiye.KiraciId,
+            TumTasinmazlaraErisim = davetiye.TumTasinmazlaraErisim,
             IsActive = true,
         };
 
@@ -121,6 +129,37 @@ public class DavetiyeService : IDavetiyeService, ITransactionalService
             throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
 
         await _userRolService.AddRoleByRolIdAsync(user.Id, davetiye.RolId, davetiye.DavetEdenUserId);
+
+        if (!davetiye.TumTasinmazlaraErisim && davetiye.TasinmazIds != null)
+        {
+            var ids = System.Text.Json.JsonSerializer.Deserialize<List<int>>(davetiye.TasinmazIds) ?? [];
+            foreach (var tasinmazId in ids)
+            {
+                _db.KullaniciYetkiKapsamlari.Add(new KullaniciYetkiKapsami
+                {
+                    UserId = user.Id,
+                    KapsamTipi = KapsamTipi.Tasinmaz,
+                    KapsamId = tasinmazId,
+                });
+            }
+        }
+
+        if (davetiye.BirimIds != null)
+        {
+            var birimIds = System.Text.Json.JsonSerializer.Deserialize<List<int>>(davetiye.BirimIds) ?? [];
+            foreach (var birimId in birimIds)
+            {
+                _db.KullaniciYetkiKapsamlari.Add(new KullaniciYetkiKapsami
+                {
+                    UserId = user.Id,
+                    KapsamTipi = KapsamTipi.Birim,
+                    KapsamId = birimId,
+                });
+            }
+        }
+
+        if ((!davetiye.TumTasinmazlaraErisim && davetiye.TasinmazIds != null) || davetiye.BirimIds != null)
+            await _db.SaveChangesAsync(ct);
 
         davetiye.Durum = DavetiyeDurum.KabulEdildi;
         davetiye.KabulTarihi = DateTime.UtcNow;

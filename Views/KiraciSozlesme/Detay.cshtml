@@ -1,5 +1,6 @@
 @model KiraTakip.Models.ViewModels.SozlesmeDetayViewModel
 @using KiraTakip.Models
+@using KiraTakip.Models.Entities
 @using System.Globalization
 @{
     Layout = "_KiraciLayout";
@@ -8,6 +9,7 @@
     var trCulture = new CultureInfo("tr-TR");
 
     bool feshedildi = s.Durum == SozlesmeDurumu.Feshedildi;
+    bool hasBorc    = User.HasModuleAccess("Kiraci.Borc");
 
     string sozlesmeDurumBadgeCls = s.Durum switch {
         SozlesmeDurumu.Feshedildi => "badge-gecmis",
@@ -194,6 +196,8 @@
     </div>
 
     <!-- Tahakkuk Sağlığı -->
+    @if (hasBorc)
+    {
     <div class="card">
         <div class="flex items-center justify-between">
             <div class="card-title">Tahakkuk Sağlığı</div>
@@ -254,10 +258,11 @@
             </div>
         }
     </div>
+    }
 </div>
 
 <!-- Aylık Tahakkuk Kalemleri -->
-@if (Model.GuncelKalemler.Any())
+@if (hasBorc && Model.GuncelKalemler.Any())
 {
     <div class="card mb-4">
         <div class="flex justify-between items-center mb-3.5">
@@ -270,48 +275,42 @@
                 <div class="text-[11.5px] text-muted mt-0.5">İlk/son ay kıst uygulanır</div>
             </div>
         </div>
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Kalem</th>
-                        <th>Yöntem</th>
-                        <th class="text-right">Birim Değer</th>
-                        <th class="text-right">Çarpan</th>
-                        <th class="text-right">Net Tutar</th>
-                        <th class="text-right">KDV</th>
-                        <th class="text-right">Toplam</th>
+        <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
+            <table class="w-full text-xs">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                    <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
+                        <th class="p-2 px-3 text-left">Açıklama</th>
+                        <th class="p-2 px-3 text-left">Hesaplama</th>
+                        <th class="p-2 px-3 text-right">Birim</th>
+                        <th class="p-2 px-3 text-right">Tutar</th>
+                        <th class="p-2 px-3 text-right text-muted">KDV</th>
+                        <th class="p-2 px-3 text-right">Toplam</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var k in Model.GuncelKalemler)
                     {
-                        <tr>
-                            <td>
-                                <span class="font-mono text-[11px] bg-[#f1f5f9] px-[7px] py-[2px] rounded-sm text-[#475569]">@k.BorcTipi.Kod</span>
-                                <span class="font-medium ml-1.5 text-[13.5px]">@k.BorcTipi.Ad</span>
-                            </td>
-                            <td class="text-[12.5px] text-muted">@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m²" : "Sabit")</td>
-                            <td class="text-right text-[13px]">@k.BirimDeger.ToString("N2") ₺</td>
-                            <td class="text-right text-[13px] text-muted">
-                                @if (k.Carpan == 1m) { <span>—</span> }
-                                else { <span>× @k.Carpan.ToString("F2")</span> }
-                            </td>
-                            <td class="text-right font-semibold">@k.Tutar.ToString("N2") ₺</td>
-                            <td class="text-right text-[13px] text-muted">
+                        <tr class="border-t border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
+                            <td class="p-2 px-3 text-slate-600 font-medium">@k.BorcTipi.Ad</td>
+                            <td class="p-2 px-3 text-slate-400">@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m² Bazlı" : "Sabit")</td>
+                            <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
+                            <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Tutar.ToString("N2") ₺</td>
+                            <td class="p-2 px-3 text-right text-slate-400/60">
                                 @if (k.KdvOrani > 0) { <span>%@k.KdvOrani.ToString("G") → @k.KdvTutari.ToString("N2") ₺</span> }
                                 else { <span>—</span> }
                             </td>
-                            <td class="text-right font-bold text-primary">@k.ToplamTutar.ToString("N2") ₺</td>
+                            <td class="p-2 px-3 text-right font-bold text-slate-700">@k.ToplamTutar.ToString("N2") ₺</td>
                         </tr>
                     }
-                    <tr class="bg-[#fafbfc] border-t-2 border-[var(--color-border)]">
-                        <td colspan="4" class="font-semibold text-right text-[13px] pr-4 text-muted">Toplam</td>
-                        <td class="text-right font-bold">@Model.GuncelKalemler.Sum(k => k.Tutar).ToString("N2") ₺</td>
-                        <td class="text-right font-semibold text-[13px]">@Model.GuncelKalemler.Sum(k => k.KdvTutari).ToString("N2") ₺</td>
-                        <td class="text-right font-bold text-primary text-[15px]">@Model.GuncelKalemler.Sum(k => k.ToplamTutar).ToString("N2") ₺</td>
-                    </tr>
                 </tbody>
+                <tfoot class="bg-slate-50 border-t-2 border-slate-200">
+                    <tr class="font-bold text-[9px] uppercase tracking-wider text-slate-500">
+                        <td colspan="3" class="p-2 px-3">Toplam</td>
+                        <td class="p-2 px-3 text-right text-slate-600">@Model.GuncelKalemler.Sum(k => k.Tutar).ToString("N2") ₺</td>
+                        <td class="p-2 px-3 text-right text-slate-400/60">@Model.GuncelKalemler.Sum(k => k.KdvTutari).ToString("N2") ₺</td>
+                        <td class="p-2 px-3 text-right text-slate-700">@Model.GuncelKalemler.Sum(k => k.ToplamTutar).ToString("N2") ₺</td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </div>
@@ -322,7 +321,14 @@
     <div class="tabs">
         <button class="tab">Detaylar</button>
         <button class="tab">Birim Bilgisi</button>
-        <button class="tab" data-tab="odemeler">Ödemeler (@Model.Tahakkuklar.Count)</button>
+        @if (hasBorc)
+        {
+            <button class="tab" data-tab="odemeler">Ödemeler (@Model.Tahakkuklar.Count)</button>
+        }
+        @if (Model.BelgeTurleri.Any())
+        {
+            <button class="tab" data-tab="belgeler">Belgeler (@Model.Belgeler.Count / @Model.BelgeTurleri.Count)</button>
+        }
     </div>
 
     <!-- Tab 1: Detaylar -->
@@ -418,6 +424,8 @@
     </div>
 
     <!-- Tab 3: Ödemeler -->
+    @if (hasBorc)
+    {
     <div class="tab-content">
         @if (!Model.Tahakkuklar.Any())
         {
@@ -434,12 +442,12 @@
             int bekleyenSayisi      = tumTahakkuklar.Count(t => t.Durum == TahakkukDurumu.Bekleniyor || t.Durum == TahakkukDurumu.KismenOdendi);
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 <div class="card text-center">
-                    <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Toplam Beklenen</div>
+                    <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Toplam Borç</div>
                     <div class="text-xl font-bold">@toplamBeklenen.ToString("N0") ₺</div>
                     <div class="text-[11.5px] text-muted">@tumTahakkuklar.Count tahakkuk</div>
                 </div>
                 <div class="card text-center">
-                    <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Tahsil Edilen</div>
+                    <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Ödenen</div>
                     <div class="text-xl font-bold text-[#065f46]">@toplamOdenen.ToString("N0") ₺</div>
                     @{ double pct = toplamBeklenen > 0 ? (double)(toplamOdenen / toplamBeklenen * 100) : 0; }
                     <div class="text-[11.5px] text-muted">%@pct.ToString("F0")</div>
@@ -464,7 +472,7 @@
                                 <th>Dönem</th>
                                 <th>Vade Tarihi</th>
                                 <th class="w-24">Gecikme</th>
-                                <th class="num">Beklenen</th>
+                                <th class="num">Borç</th>
                                 <th class="num">Ödenen</th>
                                 <th class="num">Kalan</th>
                                 <th class="pl-4">Durum</th>
@@ -511,50 +519,51 @@
                                     <td class="num @(tKalan > 0 ? "font-semibold" : "text-muted")" style="@(tKalan > 0 ? "color:#dc2626" : "")">
                                         @(tKalan > 0 ? tKalan.ToString("N0") + " ₺" : "—")
                                     </td>
-                                    <td class="pl-4"><span class="badge @tDurumCls">@tDurumLabel</span></td>
+                                    <td class="pl-4">
+                                        @if (t.BekleyenOdemeSayisi > 0)
+                                        {
+                                            <span class="badge badge-surek">Ödeme Onayı Bekleniyor</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge @tDurumCls">@tDurumLabel</span>
+                                        }
+                                    </td>
                                 </tr>
                                 <tr x-show="open[@t.Id]" x-cloak class="bg-[#f7f8fb]">
                                     <td colspan="7" class="p-5 pb-3 px-5">
                                         @if (t.Kalemler.Any())
                                         {
-                                            <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-2">Kalem Dökümü</div>
-                                            <table class="w-full border-collapse text-[13px]">
-                                                <thead>
-                                                    <tr class="text-muted text-[11.5px] font-semibold uppercase tracking-wider">
-                                                        <th class="px-2 py-1 text-left font-semibold">Kod</th>
-                                                        <th class="px-2 py-1 text-left font-semibold">Açıklama</th>
-                                                        <th class="px-2 py-1 text-right font-semibold">Birim Değer</th>
-                                                        <th class="px-2 py-1 text-right font-semibold">Çarpan</th>
-                                                        <th class="px-2 py-1 text-right font-semibold">Tutar</th>
-                                                        <th class="px-2 py-1 text-right font-semibold">KDV</th>
-                                                        <th class="px-2 py-1 text-right font-semibold">Toplam</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach (var k in t.Kalemler.OrderBy(k => k.BorcTipiSira))
-                                                    {
-                                                        <tr class="border-t border-[var(--color-border)]">
-                                                            <td class="px-2 py-1.5 font-mono font-bold text-xs">@k.BorcTipiKod</td>
-                                                            <td class="px-2 py-1.5">@k.Aciklama</td>
-                                                            <td class="px-2 py-1.5 text-right">@k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
-                                                            <td class="px-2 py-1.5 text-right text-muted">@k.Carpan.ToString("F2")</td>
-                                                            <td class="px-2 py-1.5 text-right font-semibold">@k.Tutar.ToString("N2") ₺</td>
-                                                            <td class="px-2 py-1.5 text-right text-muted">@k.KdvTutari.ToString("N2") ₺</td>
-                                                            <td class="px-2 py-1.5 text-right font-bold">@k.ToplamTutar.ToString("N2") ₺</td>
+                                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Kalem Detayları</div>
+                                            <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                                                <table class="w-full text-xs">
+                                                    <thead class="bg-slate-50 border-b border-slate-200">
+                                                        <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
+                                                            <th class="p-2 px-3 text-left">Açıklama</th>
+                                                            <th class="p-2 px-3 text-right">Birim</th>
+                                                            <th class="p-2 px-3 text-right">Tutar</th>
+                                                            <th class="p-2 px-3 text-right text-muted">KDV</th>
+                                                            <th class="p-2 px-3 text-right">Toplam</th>
                                                         </tr>
-                                                    }
-                                                </tbody>
-                                                <tfoot>
-                                                    <tr class="border-t-2 border-[var(--color-border)] bg-[#eef0f4]">
-                                                        <td colspan="6" class="px-2 py-1.5 font-bold text-xs">Toplam</td>
-                                                        <td class="px-2 py-1.5 text-right font-bold">@t.ToplamTutar.ToString("N2") ₺</td>
-                                                    </tr>
-                                                </tfoot>
-                                            </table>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var k in t.Kalemler.OrderBy(k => k.BorcTipiSira))
+                                                        {
+                                                            <tr class="border-t border-slate-100 last:border-0">
+                                                                <td class="p-2 px-3 text-slate-600">@k.Aciklama</td>
+                                                                <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
+                                                                <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Tutar.ToString("N2") ₺</td>
+                                                                <td class="p-2 px-3 text-right text-slate-400/60">@k.KdvTutari.ToString("N2") ₺</td>
+                                                                <td class="p-2 px-3 text-right font-bold text-slate-700">@k.ToplamTutar.ToString("N2") ₺</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         }
                                         else
                                         {
-                                            <span class="text-sm text-muted">Kalem bilgisi yok (eski tahakkuk).</span>
+                                            <div class="text-xs text-muted italic">Kalem bilgisi bulunmuyor.</div>
                                         }
                                     </td>
                                 </tr>
@@ -565,6 +574,22 @@
             </div>
         }
     </div>
+    }
+
+    <!-- Tab: Belgeler -->
+    @if (Model.BelgeTurleri.Any())
+    {
+    <div class="tab-content" data-tab="belgeler">
+        @await Html.PartialAsync("_BelgePanel", new KiraTakip.Models.ViewModels.BelgePanelViewModel
+        {
+            OwnerType    = BelgeOwnerTipi.Sozlesme,
+            OwnerId      = s.Id,
+            BelgeTurleri = Model.BelgeTurleri,
+            Belgeler     = Model.Belgeler,
+            CanEdit      = false
+        })
+    </div>
+    }
 </div>
 
 @section Scripts {

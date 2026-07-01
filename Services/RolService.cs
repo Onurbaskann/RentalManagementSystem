@@ -137,33 +137,10 @@ public class RolService : IRolService
             _db.Roller.Add(kiraciYonetici);
             await _db.SaveChangesAsync();
         }
-        if (!await _db.RolPermissions.AnyAsync(rp => rp.RolId == kiraciYonetici.Id))
-        {
-            foreach (var perm in PermissionCatalog.KiraciYoneticisiIzinleri)
-                _db.RolPermissions.Add(new RolPermission { RolId = kiraciYonetici.Id, Permission = perm });
-        }
-
-        var kiraciSorumlu = await _db.Roller.FirstOrDefaultAsync(r => r.KiraciId == null && r.Ad == RoleNames.KiraciSorumlusu);
-        if (kiraciSorumlu == null)
-        {
-            kiraciSorumlu = new Rol
-            {
-                Ad = RoleNames.KiraciSorumlusu,
-                Scope = RolScope.Kiraci,
-                KiraciId = null,
-                IsSystemRole = true,
-                IsActive = true,
-                CreatedBy = createdBy,
-                CreatedAt = now
-            };
-            _db.Roller.Add(kiraciSorumlu);
-            await _db.SaveChangesAsync();
-        }
-        if (!await _db.RolPermissions.AnyAsync(rp => rp.RolId == kiraciSorumlu.Id))
-        {
-            foreach (var perm in PermissionCatalog.KiraciSorumlusuIzinleri)
-                _db.RolPermissions.Add(new RolPermission { RolId = kiraciSorumlu.Id, Permission = perm });
-        }
+        var mevcutKY = await _db.RolPermissions.Where(rp => rp.RolId == kiraciYonetici.Id).ToListAsync();
+        _db.RolPermissions.RemoveRange(mevcutKY);
+        foreach (var perm in PermissionCatalog.KiraciAll)
+            _db.RolPermissions.Add(new RolPermission { RolId = kiraciYonetici.Id, Permission = perm });
 
         await _db.SaveChangesAsync();
     }

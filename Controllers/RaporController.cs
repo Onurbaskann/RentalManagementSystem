@@ -9,7 +9,7 @@ using System.Globalization;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Policy = PermissionCatalog.Odeme.View)]
+[Authorize(Policy = PermissionCatalog.Odeme.Module)]
 public class RaporController : Controller
 {
     private readonly ITahakkukService _tahakkukService;

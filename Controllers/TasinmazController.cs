@@ -39,14 +39,14 @@ public class TasinmazController : Controller
         _provider = provider;
     }
 
-    [Authorize(Policy = PermissionCatalog.Tasinmaz.View)]
+    [Authorize(Policy = PermissionCatalog.Tasinmaz.Module)]
     public async Task<IActionResult> Index()
     {
         var tasinmazlar = await _tasinmazService.GetAllAsync(_provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
         return View(tasinmazlar);
     }
 
-    [Authorize(Policy = PermissionCatalog.Tasinmaz.View)]
+    [Authorize(Policy = PermissionCatalog.Tasinmaz.Module)]
     public async Task<IActionResult> Detay(int id)
     {
         if (!_provider.KapsamdaMi(id)) return Forbid();

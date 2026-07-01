@@ -52,6 +52,11 @@ public class DashboardViewModel
 
     // Top 5 gelir getiren taşınmaz (son 12 ay tahsilat)
     public List<DashboardGelirTasinmaz> TopGelirTasinmaz { get; set; } = [];
+
+    // Top 5 gelir getiren kiracı (son 12 ay tahsilat)
+    public List<DashboardGelirKiraci> TopGelirKiraci { get; set; } = [];
+
+    public int AktifKiraciSayisi { get; set; }
 }
 
 public class DashboardAylikNakit
@@ -65,8 +70,16 @@ public class DashboardGelirTasinmaz
 {
     public int TasinmazId { get; set; }
     public string TasinmazAd { get; set; } = string.Empty;
-    public decimal ToplamTahsilat { get; set; }      // son 12 ay onaylı ödeme
+    public decimal ToplamTahsilat { get; set; }
     public int BirimSayisi { get; set; }
+}
+
+public class DashboardGelirKiraci
+{
+    public int KiraciId { get; set; }
+    public string KiraciAd { get; set; } = string.Empty;
+    public decimal ToplamTahsilat { get; set; }
+    public int SozlesmeSayisi { get; set; }
 }
 
 public class SuresiDolmakUzereSozlesme

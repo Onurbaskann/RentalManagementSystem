@@ -58,8 +58,16 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddAuthorization(options =>
 {
-    foreach (var perm in PermissionCatalog.All.Concat(PermissionCatalog.KiraciAll))
-        options.AddPolicy(perm, policy => policy.RequireClaim(AppClaimTypes.Permission, perm));
+    foreach (var m in PermissionCatalog.AllModules)
+    {
+        var modulePath = m.Path;
+        options.AddPolicy(modulePath, policy => policy.RequireClaim(AppClaimTypes.Permission, modulePath));
+        foreach (var action in m.Actions)
+        {
+            var actionPath = action;
+            options.AddPolicy(actionPath, policy => policy.RequireClaim(AppClaimTypes.Permission, actionPath));
+        }
+    }
 
     options.AddPolicy("KiraciKullanici", policy =>
         policy.RequireClaim(AppClaimTypes.UserType, ((int)KiraTakip.Models.UserType.Kiraci).ToString()));

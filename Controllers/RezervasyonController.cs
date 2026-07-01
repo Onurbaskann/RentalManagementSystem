@@ -31,11 +31,25 @@ public class RezervasyonController : Controller
         _provider = provider;
     }
 
-    [Authorize(Policy = PermissionCatalog.Rezervasyon.View)]
+    [Authorize(Policy = PermissionCatalog.Rezervasyon.Module)]
     public async Task<IActionResult> Index()
     {
         var liste = await _service.GetAllAsync(_provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
         return View(liste);
+    }
+
+    [HttpGet("Rezervasyon/Detay/{id:int}")]
+    [Authorize(Policy = PermissionCatalog.Rezervasyon.Module)]
+    public async Task<IActionResult> Detay(int id)
+    {
+        var rezervasyon = await _service.GetByIdAsync(id);
+        if (rezervasyon == null) return NotFound();
+
+        if (!_provider.GlobalErisim &&
+            !_provider.ErisilebilirTasinmazIds.Contains(rezervasyon.TasinmazId))
+            return Forbid();
+
+        return View(rezervasyon);
     }
 
     [HttpGet]

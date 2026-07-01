@@ -10,7 +10,7 @@
 </div>
 
 <div class="card" x-data="{ tur: '@(Model.RezervasyonYapilabilirMi ? "rez" : "kira")' }">
-    <form method="post" action="/Admin/BirimTuru/Ekle">
+    <form method="post" action="/Admin/BirimTuru/Ekle" asp-form-write-permission="@PermissionCatalog.BirimTuru.Create">
         @Html.AntiForgeryToken()
 
         <div class="form-group">
@@ -65,7 +65,7 @@
         </div>
 
         <div class="flex gap-2 mt-4">
-            <button type="submit" class="btn btn-primary px-6">Kaydet</button>
+            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.BirimTuru.Create">Kaydet</button>
             <a href="/Admin/BirimTuru" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>

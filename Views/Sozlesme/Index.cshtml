@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Sözleşmeler";
     string filtre = ViewBag.Filtre ?? "tum";
-    bool canEdit = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Sozlesme.Create);
+    bool canEdit = User.HasPermission(PermissionCatalog.Sozlesme.Create);
 }
 
 @if (TempData["Success"] != null)
@@ -28,7 +28,7 @@
         @{
             int borcluSayisi = ViewBag.BorcluSayisi ?? 0;
         }
-        @if (borcluSayisi > 0 && User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Bildirim.BorcHatirlatma))
+        @if (borcluSayisi > 0 && User.HasPermission(PermissionCatalog.Bildirim.BorcHatirlatma))
         {
             <form asp-controller="Sozlesme" asp-action="BorclularaMailGonder" method="post"
                   data-confirm="@borcluSayisi kiracıya borç hatırlatma maili gönderilsin mi?">
@@ -86,7 +86,6 @@
                     <th class="w-28 cell-center">Bitiş</th>
                     <th class="w-32 num">Aylık Bedel</th>
                     <th class="w-24 cell-center">Kalan</th>
-                    <th class="w-24"></th>
                 </tr>
             </thead>
             <tbody>
@@ -99,7 +98,9 @@
                     string dayBadgeClass = kalanGun <= 10 ? "bg-red-50 text-red-700 border-red-200" : kalanGun <= 30 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200";
                     var search = $"{s.Id} {s.KiraciGosterimAdi} {s.TasinmazAd} {s.BirimAd}".ToLower();
 
-                    <tr data-row data-search="@search">
+                    <tr data-row data-search="@search" data-href="/Sozlesme/Detay/@s.Id"
+                        class="cursor-pointer hover:bg-slate-50 transition-colors"
+                        @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
                         <td class="text-xs text-muted font-mono">@s.Id</td>
                         <td>
                             <a href="/Kiraci/Detay/@s.KiraciId" class="font-semibold text-primary hover:underline">@s.KiraciGosterimAdi</a>
@@ -122,9 +123,6 @@
                             { <span class="px-2 py-0.5 rounded text-[10px] font-bold border @dayBadgeClass" title="Durum: @(surek ? "Doluyor" : "Aktif")">@kalanGun GÜN</span> }
                             else
                             { <span class="text-muted text-[11px] italic" title="Durum: Sona Erdi">Sona erdi</span> }
-                        </td>
-                        <td class="text-right">
-                            <a href="/Sozlesme/Detay/@s.Id" class="btn btn-sm btn-secondary">Detay</a>
                         </td>
                     </tr>
                 }

@@ -37,7 +37,7 @@ public class KiraciRolController : Controller
     }
 
     [HttpGet("")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.Rol.View)]
+    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Rol.Module)]
     public async Task<IActionResult> Index()
     {
         var kiraciId = _currentUser.KiraciId!.Value;
@@ -46,7 +46,9 @@ public class KiraciRolController : Controller
         var model = new List<RolListeViewModel>();
         foreach (var r in roller)
         {
-            var kullaniciSayisi = await _db.UserRoller.CountAsync(ur => ur.RolId == r.Id);
+            var kullaniciSayisi = await _db.UserRoller
+                .CountAsync(ur => ur.RolId == r.Id &&
+                                  _db.Users.Any(u => u.Id == ur.UserId && u.KiraciId == kiraciId));
             var perms = await _rolService.GetRolPermissionsAsync(r.Id);
             model.Add(new RolListeViewModel
             {
@@ -64,7 +66,7 @@ public class KiraciRolController : Controller
     }
 
     [HttpGet("Ekle")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.Rol.Create)]
+    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Rol.Create)]
     public IActionResult Create()
     {
         var model = new RolOlusturViewModel();
@@ -73,7 +75,7 @@ public class KiraciRolController : Controller
     }
 
     [HttpPost("Ekle")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.Rol.Create)]
+    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Rol.Create)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(RolOlusturViewModel model)
     {
@@ -128,7 +130,7 @@ public class KiraciRolController : Controller
     }
 
     [HttpGet("Duzenle/{id:int}")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.Rol.Edit)]
+    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Rol.Edit)]
     public async Task<IActionResult> Edit(int id)
     {
         var kiraciId = _currentUser.KiraciId!.Value;
@@ -150,7 +152,7 @@ public class KiraciRolController : Controller
     }
 
     [HttpPost("Duzenle/{id:int}")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.Rol.Edit)]
+    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Rol.Edit)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, RolDuzenleViewModel model)
     {
@@ -165,7 +167,7 @@ public class KiraciRolController : Controller
             return View(model);
         }
 
-        var removingManage = !model.SelectedPermissions.Contains(PermissionCatalog.KiraciPortal.Kullanici.Manage);
+        var removingManage = !model.SelectedPermissions.Contains(PermissionCatalog.KiraciPortal.System.Kullanici.Invite);
         if (removingManage)
         {
             try
@@ -199,7 +201,7 @@ public class KiraciRolController : Controller
     }
 
     [HttpPost("Sil/{id:int}")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.Rol.Delete)]
+    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Rol.Delete)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
@@ -241,42 +243,31 @@ public class KiraciRolController : Controller
     {
         target.Clear();
         target.AddRange(
-            PermissionCatalog.KiraciAll
-                .GroupBy(p => p.Split('.')[1])
-                .Select(g => new PermissionGrupViewModel
+            PermissionCatalog.AllModules
+                .Where(m => m.Path.StartsWith("Kiraci."))
+                .Select(m =>
                 {
-                    GrupAdi = GetModuleLabel(g.Key),
-                    Permissions = g.Select(p => new PermissionCheckboxViewModel
+                    var items = new List<PermissionCheckboxViewModel>
                     {
-                        Value = p,
-                        Etiket = GetActionLabel(p.Split('.')[2]),
-                        Selected = selected.Contains(p)
-                    }).ToList()
+                        new() { Value = m.Path, Etiket = "Görüntüle", Selected = selected.Contains(m.Path) }
+                    };
+                    items.AddRange(m.Actions.Select(a => new PermissionCheckboxViewModel
+                    {
+                        Value = a,
+                        Etiket = GetActionLabel(a.Split('.').Last()),
+                        Selected = selected.Contains(a)
+                    }));
+                    return new PermissionGrupViewModel { GrupAdi = m.DisplayName, Permissions = items };
                 })
         );
     }
 
-    private static string GetModuleLabel(string module) => module switch
-    {
-        "Sozlesme"   => "Sözleşme",
-        "Borc"       => "Borç",
-        "Odeme"      => "Ödeme",
-        "Cari"       => "Cari",
-        "Mutabakat"  => "Mutabakat",
-        "Rezervasyon" => "Rezervasyon",
-        "Kullanici"  => "Kullanıcı",
-        "Rol"        => "Rol",
-        _            => module
-    };
-
     private static string GetActionLabel(string action) => action switch
     {
-        "View"       => "Görüntüle",
         "Create"     => "Ekle",
         "Edit"       => "Düzenle",
         "Delete"     => "Sil",
         "Cancel"     => "İptal Et",
-        "Manage"     => "Yönet",
         "Invite"     => "Davet Et",
         "Deactivate" => "Pasifleştir",
         _            => action

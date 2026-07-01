@@ -4,6 +4,7 @@ using KiraTakip.Authorization;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
+using KiraTakip.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -65,11 +66,9 @@ public class HomeController : Controller
         foreach (var s in aktifSozlesmeler)
             aylikToplamGelir += s.AylikBedel;
 
-        var roller = User.IsInRole(RoleNames.SistemYoneticisi) ? RoleNames.SistemYoneticisi
-            : User.IsInRole(RoleNames.OperasyonMuduru) ? RoleNames.OperasyonMuduru
-            : User.IsInRole(RoleNames.KiraciYoneticisi) ? RoleNames.KiraciYoneticisi
-            : User.IsInRole(RoleNames.KiraciSorumlusu) ? RoleNames.KiraciSorumlusu
-            : "Kullanıcı";
+        var roller = user?.IsSuperAdmin == true ? RoleNames.SistemYoneticisi
+            : User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value 
+            ?? "Kullanıcı";
 
         var vm = new DashboardViewModel
         {
@@ -83,6 +82,7 @@ public class HomeController : Controller
             BosBirim = tasinmazlar.Sum(t => t.BosBirimSayisi),
             SuresiDolmakUzereBirim = tasinmazlar.Sum(t => t.SuresiDolmakUzereBirimSayisi),
             AktifSozlesme = aktifSozlesmeler.Count,
+            AktifKiraciSayisi = aktifSozlesmeler.Select(s => s.KiraciId).Distinct().Count(),
             AylikToplamGelir = aylikToplamGelir,
             YillikProj = aylikToplamGelir * 12,
         };
@@ -115,7 +115,7 @@ public class HomeController : Controller
                 Yuzolcumu = b.Yuzolcumu
             }).ToList();
 
-        if (User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.View))
+        if (User.HasModuleAccess("Internal.Odeme"))
         {
             vm.HasOdemeAccess = true;
             await _tahakkukService.GecikmeleriGuncelleAsync();
@@ -207,6 +207,20 @@ public class HomeController : Controller
                     TasinmazAd = g.Key.TasinmazAd,
                     ToplamTahsilat = g.Sum(t => t.OdenenTutar),
                     BirimSayisi = birimSayisiByTasinmaz.TryGetValue(g.Key.TasinmazId, out var bs) ? bs : 0
+                })
+                .OrderByDescending(x => x.ToplamTahsilat)
+                .Take(5)
+                .ToList();
+
+            vm.TopGelirKiraci = tahakkuklar
+                .Where(t => t.DonemBaslangic >= sonYil && t.OdenenTutar > 0)
+                .GroupBy(t => new { t.KiraciId, KiraciAd = t.KiraciGosterimAdi ?? "—" })
+                .Select(g => new DashboardGelirKiraci
+                {
+                    KiraciId = g.Key.KiraciId,
+                    KiraciAd = g.Key.KiraciAd,
+                    ToplamTahsilat = g.Sum(t => t.OdenenTutar),
+                    SozlesmeSayisi = g.Select(t => t.KiraSozlesmesiId).Distinct().Count()
                 })
                 .OrderByDescending(x => x.ToplamTahsilat)
                 .Take(5)

@@ -3,12 +3,13 @@
 @using KiraTakip.Models.Entities
 @{
     ViewData["Title"] = $"Ödeme #{Model.Id}";
-    bool canApprove    = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.Approve);
-    bool canReject     = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.Reject);
-    bool canUpload     = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.UploadDekont);
-    bool canMatch      = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.MatchBankTransaction);
+    bool canApprove    = User.HasPermission(PermissionCatalog.Odeme.Approve);
+    bool canReject     = User.HasPermission(PermissionCatalog.Odeme.Reject);
+    bool canUpload     = User.HasPermission(PermissionCatalog.Odeme.UploadDekont);
+    bool canMatch      = User.HasPermission(PermissionCatalog.Odeme.MatchBankTransaction);
     bool bekliyor      = Model.Durum == OdemeDurumu.OnayBekliyor;
-    var belgeler       = (ViewBag.Belgeler as List<Belge>) ?? [];
+    var belgeler        = (ViewBag.Belgeler    as List<Belge>)    ?? [];
+    var belgeTurleri    = (ViewBag.BelgeTurleri as List<BelgeTuru>) ?? [];
 
     string durumCls = Model.Durum switch {
         OdemeDurumu.Onaylandi  => "badge-kirali",
@@ -157,73 +158,17 @@
         }
     </div>
 
-    <!-- Sağ: Dekontlar -->
+    <!-- Sağ: Belgeler -->
     <div class="flex flex-col gap-4">
-        <div class="card p-5">
-            <div class="flex items-center justify-between mb-5">
-                <div class="text-[15px] font-bold text-slate-800 flex items-center gap-2">
-                    <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
-                    Dekontlar (@belgeler.Count)
-                </div>
-            </div>
-
-            @if (belgeler.Any())
-            {
-                <div class="flex flex-col gap-2.5 mb-6">
-                    @foreach (var b in belgeler)
-                    {
-                        <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl group transition-all hover:bg-white hover:border-indigo-200 hover:shadow-sm">
-                            <div class="min-w-0 flex items-center gap-3">
-                                <div class="w-9 h-9 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-colors">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                </div>
-                                <div class="min-w-0">
-                                    <div class="text-[13px] font-bold text-slate-700 truncate" title="@b.DosyaAdi">@b.DosyaAdi</div>
-                                    <div class="text-[11px] text-slate-400 font-medium">@((b.BoyutByte / 1024.0).ToString("N0")) KB · @b.CreatedAt.ToString("dd.MM.yyyy")</div>
-                                </div>
-                            </div>
-                            <div class="flex gap-1.5 ml-2">
-                                <a href="/Odeme/DekontIndir/@b.Id" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="İndir" target="_blank">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                </a>
-                                @if (canUpload)
-                                {
-                                    <form method="post" action="/Odeme/DekontSil/@b.Id" data-confirm="Dekont kalıcı olarak silinsin mi?">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="odemeId" value="@Model.Id" />
-                                        <button type="submit" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Sil">
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-                                        </button>
-                                    </form>
-                                }
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-            else
-            {
-                <div class="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 text-xs font-medium mb-6">
-                    Henüz dekont yüklenmemiş.
-                </div>
-            }
-
-            @if (canUpload)
-            {
-                <form method="post" action="/Odeme/DekontYukle" enctype="multipart/form-data" class="pt-5 border-t border-slate-100">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="odemeId" value="@Model.Id" />
-                    <div class="form-group mb-3">
-                        <label class="form-label">Dekont Yükle</label>
-                        <input type="file" name="dosya" class="form-control text-xs file:mr-4 file:py-1.5 file:px-4 file:rounded-md file:border-0 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" accept=".pdf,.jpg,.jpeg,.png" required />
-                        <div class="text-[10px] text-slate-400 mt-2 flex items-center gap-1">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                            PDF, JPG veya PNG (Maks. 5 MB)
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-secondary w-full text-xs font-bold py-2">Dekontu Sisteme Kaydet</button>
-                </form>
-            }
+        <div>
+        @await Html.PartialAsync("_BelgePanel", new KiraTakip.Models.ViewModels.BelgePanelViewModel
+        {
+            OwnerType    = KiraTakip.Models.Entities.BelgeOwnerTipi.Odeme,
+            OwnerId      = Model.Id,
+            BelgeTurleri = belgeTurleri,
+            Belgeler     = belgeler,
+            CanEdit      = canUpload
+        })
         </div>
 
         <!-- Banka eşleşmeleri -->

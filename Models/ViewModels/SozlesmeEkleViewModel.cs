@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Models.ViewModels;
 
@@ -16,4 +17,5 @@ public class SozlesmeEkleViewModel
     public List<BirimLookupDto> MevcutBirimler { get; set; } = [];
     public List<KiraciListItemDto> Kiraciler { get; set; } = [];
     public List<SozlesmeKalemInputDto> SozlesmeKalemleri { get; set; } = [];
+    public List<BelgeTuru> BelgeTurleri { get; set; } = [];
 }

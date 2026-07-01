@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Roles = RoleNames.SistemYoneticisi)]
+[Authorize(Policy = "System.Kullanici")]
 [Route("Admin/Kullanicilar")]
 public class AdminUserController : Controller
 {
@@ -48,7 +48,7 @@ public class AdminUserController : Controller
     public async Task<IActionResult> Index()
     {
         var icKullanicilar = await _userManager.Users
-            .Where(u => u.KiraciId == null)
+            .Where(u => u.KiraciId == null && !u.IsSuperAdmin)
             .OrderBy(u => u.AdSoyad)
             .ToListAsync();
 
@@ -108,11 +108,15 @@ public class AdminUserController : Controller
     public async Task<IActionResult> Edit(string id)
     {
         var user = await _userManager.FindByIdAsync(id);
-        if (user == null) return NotFound();
+        if (user == null || user.IsSuperAdmin) return NotFound();
 
         var currentUserId = _userManager.GetUserId(User);
-        var yetkiliIds = await _db.KullaniciYetkiKapsamlari
+        var yetkiliTasinmazIds = await _db.KullaniciYetkiKapsamlari
             .Where(k => k.UserId == user.Id && k.KapsamTipi == KapsamTipi.Tasinmaz && !k.IsDeleted)
+            .Select(k => k.KapsamId)
+            .ToListAsync();
+        var yetkililBirimIds = await _db.KullaniciYetkiKapsamlari
+            .Where(k => k.UserId == user.Id && k.KapsamTipi == KapsamTipi.Birim && !k.IsDeleted)
             .Select(k => k.KapsamId)
             .ToListAsync();
         var mevcutRolId = await _db.UserRoller
@@ -129,11 +133,13 @@ public class AdminUserController : Controller
             IsActive = user.IsActive,
             IsCurrentUser = user.Id == currentUserId,
             TumTasinmazlaraErisim = user.TumTasinmazlaraErisim,
-            SelectedTasinmazIds = yetkiliIds
+            SelectedTasinmazIds = yetkiliTasinmazIds,
+            SelectedBirimIds = yetkililBirimIds
         };
 
         await PopulateRollerAsync(model.Roller);
-        await PopulateTasinmazlarAsync(model.Tasinmazlar, yetkiliIds);
+        await PopulateTasinmazlarAsync(model.Tasinmazlar, yetkiliTasinmazIds);
+        await PopulateBirimlerAsync(model.Birimler, yetkililBirimIds);
         return View(model);
     }
 
@@ -142,7 +148,7 @@ public class AdminUserController : Controller
     public async Task<IActionResult> Edit(string id, KullaniciDuzenleViewModel model)
     {
         var user = await _userManager.FindByIdAsync(id);
-        if (user == null) return NotFound();
+        if (user == null || user.IsSuperAdmin) return NotFound();
 
         var currentUserId = _userManager.GetUserId(User);
         model.IsCurrentUser = user.Id == currentUserId;
@@ -154,6 +160,7 @@ public class AdminUserController : Controller
         {
             await PopulateRollerAsync(model.Roller);
             await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
+            await PopulateBirimlerAsync(model.Birimler, model.SelectedBirimIds);
             return View(model);
         }
 
@@ -163,6 +170,7 @@ public class AdminUserController : Controller
             ModelState.AddModelError("RolId", "Geçersiz rol seçildi.");
             await PopulateRollerAsync(model.Roller);
             await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
+            await PopulateBirimlerAsync(model.Birimler, model.SelectedBirimIds);
             return View(model);
         }
 
@@ -177,19 +185,11 @@ public class AdminUserController : Controller
             ModelState.AddModelError("RolId", "Kendi rolünüzü değiştiremezsiniz.");
             await PopulateRollerAsync(model.Roller);
             await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
+            await PopulateBirimlerAsync(model.Birimler, model.SelectedBirimIds);
             return View(model);
         }
 
-        if (existingRoleNames.Contains(RoleNames.SistemYoneticisi) && yeniRol.Ad != RoleNames.SistemYoneticisi)
-        {
-            if (await AktifAdminSayisi() <= 1)
-            {
-                ModelState.AddModelError("RolId", "Sistemde en az bir aktif Admin bulunmalıdır.");
-                await PopulateRollerAsync(model.Roller);
-                await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
-                return View(model);
-            }
-        }
+        // Skip admin count validation since Super Admin cannot be modified via UI
 
         await _userRolService.RemoveAllRolesAsync(user.Id);
         await _userRolService.AddRoleByRolIdAsync(user.Id, model.RolId, currentUserId);
@@ -198,13 +198,12 @@ public class AdminUserController : Controller
         await _permissionService.SetUserPermissionsAsync(user.Id, Array.Empty<string>());
 
         user.AdSoyad = model.AdSoyad;
-        user.TumTasinmazlaraErisim = yeniRol.Ad != RoleNames.SistemYoneticisi && model.TumTasinmazlaraErisim;
+        user.TumTasinmazlaraErisim = model.TumTasinmazlaraErisim;
         await _userManager.UpdateAsync(user);
 
-        var scopeIds = (yeniRol.Ad == RoleNames.OperasyonMuduru && !model.TumTasinmazlaraErisim)
-            ? model.SelectedTasinmazIds
-            : new List<int>();
-        await SetKapsamAsync(user.Id, scopeIds, currentUserId ?? "system");
+        var tasinmazScopeIds = !model.TumTasinmazlaraErisim ? model.SelectedTasinmazIds : new List<int>();
+        var birimScopeIds = !model.TumTasinmazlaraErisim ? model.SelectedBirimIds : new List<int>();
+        await SetKapsamAsync(user.Id, tasinmazScopeIds, birimScopeIds, currentUserId ?? "system");
 
         TempData["Success"] = $"{user.AdSoyad ?? user.Email} kullanıcısı güncellendi.";
         return RedirectToAction(nameof(Index));
@@ -215,7 +214,7 @@ public class AdminUserController : Controller
     public async Task<IActionResult> ToggleActive(string id)
     {
         var user = await _userManager.FindByIdAsync(id);
-        if (user == null) return NotFound();
+        if (user == null || user.IsSuperAdmin) return NotFound();
 
         var currentUserId = _userManager.GetUserId(User);
 
@@ -223,16 +222,6 @@ public class AdminUserController : Controller
         {
             TempData["Error"] = "Kendi hesabınızı pasif hale getiremezsiniz.";
             return RedirectToAction(nameof(Index));
-        }
-
-        if (user.IsActive)
-        {
-            var roles = await _userRolService.GetUserRolesAsync(user.Id);
-            if (roles.Contains(RoleNames.SistemYoneticisi) && await AktifAdminSayisi() <= 1)
-            {
-                TempData["Error"] = "Sistemde en az bir aktif Admin bulunmalıdır.";
-                return RedirectToAction(nameof(Index));
-            }
         }
 
         user.IsActive = !user.IsActive;
@@ -252,6 +241,7 @@ public class AdminUserController : Controller
         var model = new DavetGonderViewModel();
         await PopulateDavetRollerAsync(model);
         await PopulateTasinmazlarAsync(model.Tasinmazlar, new List<int>());
+        await PopulateBirimlerAsync(model.Birimler, new List<int>());
         return View(model);
     }
 
@@ -263,21 +253,29 @@ public class AdminUserController : Controller
         {
             await PopulateDavetRollerAsync(model);
             await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
+            await PopulateBirimlerAsync(model.Birimler, model.SelectedBirimIds);
+            return View(model);
+        }
+
+        var existingUser = await _userManager.FindByEmailAsync(model.Email);
+        if (existingUser != null)
+        {
+            ModelState.AddModelError("Email", "Bu e-posta adresi sistemde kayıtlı bir kullanıcıya ait.");
+            await PopulateDavetRollerAsync(model);
+            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
+            await PopulateBirimlerAsync(model.Birimler, model.SelectedBirimIds);
             return View(model);
         }
 
         var currentUserId = _userManager.GetUserId(User)!;
         try
         {
-            await _davetiyeService.GonderAsync(model.Email, model.AdSoyad, model.RolId, currentUserId);
-
-            var rol = await _db.Roller.FindAsync(model.RolId);
-            if (rol?.Ad == RoleNames.OperasyonMuduru && model.SelectedTasinmazIds.Any())
-            {
-                var invitedUser = await _userManager.FindByEmailAsync(model.Email);
-                if (invitedUser != null)
-                    await SetKapsamAsync(invitedUser.Id, model.SelectedTasinmazIds, currentUserId);
-            }
+            var tasinmazIds = model.TumTasinmazlaraErisim ? null : model.SelectedTasinmazIds;
+            var birimIds = model.TumTasinmazlaraErisim ? null : model.SelectedBirimIds;
+            await _davetiyeService.GonderAsync(model.Email, model.AdSoyad, model.RolId, currentUserId,
+                tumTasinmazlaraErisim: model.TumTasinmazlaraErisim,
+                tasinmazIds: tasinmazIds,
+                birimIds: birimIds);
 
             TempData["Success"] = $"{model.Email} adresine davet gönderildi.";
             return RedirectToAction(nameof(Index));
@@ -287,6 +285,7 @@ public class AdminUserController : Controller
             ModelState.AddModelError(string.Empty, ex.Message);
             await PopulateDavetRollerAsync(model);
             await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
+            await PopulateBirimlerAsync(model.Birimler, model.SelectedBirimIds);
             return View(model);
         }
     }
@@ -324,10 +323,10 @@ public class AdminUserController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task SetKapsamAsync(string userId, List<int> tasinmazIds, string atayan)
+    private async Task SetKapsamAsync(string userId, List<int> tasinmazIds, List<int> birimIds, string atayan)
     {
         var mevcutlar = await _db.KullaniciYetkiKapsamlari
-            .Where(k => k.UserId == userId && k.KapsamTipi == KapsamTipi.Tasinmaz)
+            .Where(k => k.UserId == userId && (k.KapsamTipi == KapsamTipi.Tasinmaz || k.KapsamTipi == KapsamTipi.Birim))
             .ToListAsync();
         _db.KullaniciYetkiKapsamlari.RemoveRange(mevcutlar);
 
@@ -341,18 +340,27 @@ public class AdminUserController : Controller
             });
         }
 
+        foreach (var birimId in birimIds)
+        {
+            _db.KullaniciYetkiKapsamlari.Add(new KullaniciYetkiKapsami
+            {
+                UserId = userId,
+                KapsamTipi = KapsamTipi.Birim,
+                KapsamId = birimId,
+            });
+        }
+
         await _db.SaveChangesAsync();
         _kapsamCache.Invalidate(userId);
 
-        var detail = tasinmazIds.Count == 0 ? "Kapsam temizlendi" : $"Kapsam: {tasinmazIds.Count} taşınmaz";
+        var parts = new List<string>();
+        if (tasinmazIds.Count > 0) parts.Add($"{tasinmazIds.Count} taşınmaz");
+        if (birimIds.Count > 0) parts.Add($"{birimIds.Count} birim");
+        var detail = parts.Count > 0 ? $"Kapsam: {string.Join(", ", parts)}" : "Kapsam temizlendi";
         await _auditService.LogAsync("User.ScopeChanged", "ApplicationUser", userId, detail);
     }
 
-    private async Task<int> AktifAdminSayisi()
-    {
-        var admins = await _userRolService.GetUsersInRoleAsync(RoleNames.SistemYoneticisi);
-        return admins.Count(u => u.IsActive);
-    }
+        // Deleted AktifAdminSayisi method
 
     private async Task PopulateRollerAsync(List<RolSecenekViewModel> liste)
     {
@@ -385,6 +393,25 @@ public class AdminUserController : Controller
                 Ad = t.Ad,
                 Konum = $"{t.Il} / {t.Ilce}",
                 Selected = selectedIds?.Contains(t.Id) ?? false
+            });
+        }
+    }
+
+    private async Task PopulateBirimlerAsync(List<BirimYetkiCheckboxViewModel> liste, List<int> selectedIds)
+    {
+        liste.Clear();
+        var birimler = await _db.Birimler.AsNoTracking()
+            .OrderBy(b => b.Tasinmaz.Ad).ThenBy(b => b.Ad)
+            .Select(b => new { b.Id, b.Ad, TasinmazAd = b.Tasinmaz.Ad })
+            .ToListAsync();
+        foreach (var b in birimler)
+        {
+            liste.Add(new BirimYetkiCheckboxViewModel
+            {
+                BirimId = b.Id,
+                Ad = b.Ad,
+                TasinmazAd = b.TasinmazAd,
+                Selected = selectedIds?.Contains(b.Id) ?? false
             });
         }
     }

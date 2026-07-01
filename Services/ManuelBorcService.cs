@@ -13,25 +13,29 @@ public class ManuelBorcService : IManuelBorcService, ITransactionalService
     private readonly ITahakkukRepository _tahakkukRepo;
     private readonly ISozlesmeRepository _sozlesmeRepo;
     private readonly IBorcTipiRepository _borcTipiRepo;
+    private readonly ITasinmazRepository _tasinmazRepo;
     private readonly IUnitOfWork _uow;
 
     public ManuelBorcService(
         ITahakkukRepository tahakkukRepo,
         ISozlesmeRepository sozlesmeRepo,
         IBorcTipiRepository borcTipiRepo,
+        ITasinmazRepository tasinmazRepo,
         IUnitOfWork uow)
     {
         _tahakkukRepo = tahakkukRepo;
         _sozlesmeRepo = sozlesmeRepo;
         _borcTipiRepo = borcTipiRepo;
+        _tasinmazRepo = tasinmazRepo;
         _uow = uow;
     }
 
     // ── Listeleme (DTO) ───────────────────────────────────────────────────
-    public async Task<List<ManuelBorcListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null)
-    {
-        return await _tahakkukRepo.GetManuelBorcListAsync(tasinmazIds?.ToList());
-    }
+    public async Task<List<ManuelBorcListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null, string? durum = null, string? baglanti = null, int? sozlesmeId = null, IReadOnlyList<int>? birimIds = null)
+        => await _tahakkukRepo.GetManuelBorcListAsync(tasinmazIds?.ToList(), durum, baglanti, sozlesmeId, birimIds?.ToList());
+
+    public async Task<int> GetIptalSayisiAsync(IReadOnlyList<int>? tasinmazIds = null, IReadOnlyList<int>? birimIds = null)
+        => await _tahakkukRepo.GetManuelBorcIptalSayisiAsync(tasinmazIds?.ToList(), birimIds?.ToList());
 
     // ── Dropdown verileri ────────────────────────────────────────────────
     public Task<List<SozlesmeDropdownDto>> GetAktifSozlesmelerAsync()
@@ -40,16 +44,30 @@ public class ManuelBorcService : IManuelBorcService, ITransactionalService
     public Task<List<BorcTipiLookupDto>> GetManuelBorcTipleriAsync()
         => _borcTipiRepo.GetManuelBorcTipleriAsync();
 
+    public Task<List<BirimLookupDto>> GetTumBirimlerAsync(IReadOnlyList<int>? tasinmazIds = null)
+        => _tasinmazRepo.GetTumBirimlerAsync(tasinmazIds?.ToList());
+
     // ── Create ────────────────────────────────────────────────────────────
     public async Task<(bool Basarili, string? Hata, int TahakkukId)> CreateAsync(
         ManuelBorcCreateViewModel model, string userId)
     {
-        var sozlesme = await _sozlesmeRepo.GetByIdAsync(model.SozlesmeId);
-        if (sozlesme == null)
-            return (false, "Sözleşme bulunamadı.", 0);
+        if (model.KiraciId <= 0)
+            return (false, "Kiracı seçilmelidir.", 0);
+        if (model.BirimId <= 0)
+            return (false, "Birim seçilmelidir.", 0);
 
-        if (sozlesme.Durum == SozlesmeDurumu.Feshedildi)
-            return (false, "Feshedilmiş sözleşme için manuel borç oluşturulamaz.", 0);
+        int? kiraSozlesmesiId = null;
+        if (model.SozlesmeId.HasValue && model.SozlesmeId.Value > 0)
+        {
+            var sozlesme = await _sozlesmeRepo.GetByIdAsync(model.SozlesmeId.Value);
+            if (sozlesme == null)
+                return (false, "Sözleşme bulunamadı.", 0);
+            if (sozlesme.Durum == SozlesmeDurumu.Feshedildi)
+                return (false, "Feshedilmiş sözleşme için manuel borç oluşturulamaz.", 0);
+            if (sozlesme.KiraciId != model.KiraciId)
+                return (false, "Seçilen kiracı, sözleşmenin kiracısıyla eşleşmiyor.", 0);
+            kiraSozlesmesiId = sozlesme.Id;
+        }
 
         var borcTipi = await _borcTipiRepo.GetActiveManuelByIdAsync(model.BorcTipiId);
         if (borcTipi == null)
@@ -80,8 +98,9 @@ public class ManuelBorcService : IManuelBorcService, ITransactionalService
 
         var tahakkuk = new Tahakkuk
         {
-            KiraciId = sozlesme.KiraciId,
-            KiraSozlesmesiId = sozlesme.Id,
+            KiraciId = model.KiraciId,
+            BirimId = model.BirimId,
+            KiraSozlesmesiId = kiraSozlesmesiId,
             DonemBaslangic = model.VadeTarihi,
             DonemBitis = model.VadeTarihi.AddDays(1),
             VadeTarihi = model.VadeTarihi,

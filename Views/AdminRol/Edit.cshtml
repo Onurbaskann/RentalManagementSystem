@@ -1,6 +1,29 @@
 @model KiraTakip.Models.ViewModels.RolDuzenleViewModel
+@using System.Text.Json
 @{
     ViewData["Title"] = "Rol Düzenle";
+
+    var riskSegments = new HashSet<string> { "Delete", "Cancel", "Terminate", "OverrideRate", "Approve", "Reject" };
+
+    var treeData = Model.Permissions.Select(g =>
+    {
+        var moduleItem = g.Permissions.FirstOrDefault();
+        return new
+        {
+            path = moduleItem?.Value ?? "",
+            name = g.GrupAdi,
+            @checked = moduleItem?.Selected ?? false,
+            actions = g.Permissions.Skip(1).Select(p => new
+            {
+                value = p.Value,
+                label = p.Etiket,
+                @checked = p.Selected,
+                danger = riskSegments.Contains(p.Value.Split('.').LastOrDefault() ?? "")
+            }).ToList()
+        };
+    }).ToList();
+
+    var treeJson = JsonSerializer.Serialize(treeData);
 }
 
 <div class="page-header">
@@ -21,7 +44,7 @@
 }
 
 <div class="card">
-    <form method="post" action="/Admin/Roller/Duzenle/@Model.Id">
+    <form method="post" action="/Admin/Roller/Duzenle/@Model.Id" asp-form-write-permission="@PermissionCatalog.Rol.Edit">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Id" />
         <input type="hidden" asp-for="IsSystemRole" />
@@ -50,43 +73,13 @@
             <input asp-for="Aciklama" class="form-control" placeholder="Opsiyonel" />
         </div>
 
-        @if (Model.Ad != "Admin")
-        {
-            <div class="mt-5">
-                <label class="form-label mb-3">İzinler</label>
-                <div class="flex flex-col gap-4">
-                    @foreach (var grup in Model.Permissions)
-                    {
-                        <div class="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full"></span>
-                                @grup.GrupAdi
-                            </div>
-                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2.5">
-                                @foreach (var p in grup.Permissions)
-                                {
-                                    <label class="flex items-center gap-2 text-[13px] font-medium text-slate-600 cursor-pointer hover:text-indigo-600 transition-colors">
-                                        <input type="checkbox" name="SelectedPermissions" value="@p.Value"
-                                               @(p.Selected ? "checked" : "")
-                                               class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
-                                        @p.Etiket
-                                    </label>
-                                }
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
-        }
-        else
-        {
-            <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mt-4 text-[13.5px]">
-                Admin rolü tüm izinlere otomatik olarak sahiptir. İzin düzenleme uygulanmaz.
-            </div>
-        }
+        <div class="mt-5">
+            <label class="form-label mb-2">İzinler</label>
+            @await Html.PartialAsync("_PermissionTreePicker", new ViewDataDictionary(ViewData) { { "TreeJson", treeJson } })
+        </div>
 
         <div class="flex gap-2 mt-6">
-            <button type="submit" class="btn btn-primary">Kaydet</button>
+            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Rol.Edit">Kaydet</button>
             <a href="/Admin/Roller" class="btn btn-secondary">İptal</a>
         </div>
     </form>

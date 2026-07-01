@@ -3,6 +3,11 @@
     Layout = "_KiraciLayout";
     ViewData["Title"] = "Panel";
 
+    bool hasSozlesme   = User.HasModuleAccess("Kiraci.Sozlesme");
+    bool hasBorc       = User.HasModuleAccess("Kiraci.Borc");
+    bool hasOdeme      = User.HasModuleAccess("Kiraci.Odeme");
+    bool hasRezervasy  = User.HasModuleAccess("Kiraci.Rezervasyon");
+
     var avatarParts = Model.KiraciAd.Split(' ', StringSplitOptions.RemoveEmptyEntries);
     var avatarHarf = avatarParts.Length >= 2
         ? $"{avatarParts[0][0]}{avatarParts[1][0]}"
@@ -35,6 +40,8 @@ BÖLÜM 1 — HERO WELCOME BANNER (spec §3.1)
         <div>
             <h1 class="text-2xl font-bold">Hoş geldiniz, @Model.KullaniciAd</h1>
             <p class="text-sm text-white/80 mt-1">@Model.TarihEtiket</p>
+            @if (hasBorc)
+            {
             <p class="text-xs text-white/70 mt-2">
                 @if (Model.GecikmisAdet > 0)
                 {
@@ -49,6 +56,7 @@ BÖLÜM 1 — HERO WELCOME BANNER (spec §3.1)
                     <span>Bugün tüm ödemeleriniz güncel.</span>
                 }
             </p>
+            }
         </div>
 
         <div class="flex items-center gap-3 shrink-0">
@@ -72,6 +80,8 @@ BÖLÜM 2 — KPI KARTLARI (spec §3.2)
 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
 
     @* A — Aktif Sözleşme (primary teal) *@
+    @if (hasSozlesme)
+    {
     <div class="bg-white rounded-2xl border border-slate-200 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
         <div class="flex items-start justify-between mb-4">
             <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#1a6b5c] to-[#155549] flex items-center justify-center text-white shadow-sm">
@@ -82,8 +92,11 @@ BÖLÜM 2 — KPI KARTLARI (spec §3.2)
         <div class="text-3xl font-bold text-slate-800" data-countup="@Model.AktifSozlesmeAdedi" data-decimals="0">0</div>
         <div class="text-[12px] text-slate-500 mt-1">Aktif Sözleşme</div>
     </div>
+    }
 
     @* B — Toplam Açık Borç (slate) + sparkline *@
+    @if (hasBorc)
+    {
     <div class="bg-white rounded-2xl border border-slate-200 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
         <div class="flex items-start justify-between mb-4">
             <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center text-white shadow-sm">
@@ -95,8 +108,11 @@ BÖLÜM 2 — KPI KARTLARI (spec §3.2)
         <div class="text-[12px] text-slate-500 mt-1">Toplam Açık Borç</div>
         <div id="sparkline-borc" class="h-10 mt-3 -mx-2"></div>
     </div>
+    }
 
     @* C — Yaklaşan (7 gün) (amber) *@
+    @if (hasBorc)
+    {
     <div class="bg-white rounded-2xl border border-slate-200 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
         <div class="flex items-start justify-between mb-4">
             <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-sm">
@@ -107,6 +123,7 @@ BÖLÜM 2 — KPI KARTLARI (spec §3.2)
         <div class="text-3xl font-bold text-slate-800" data-countup="@Model.YaklasanOdemeAdet" data-decimals="0">0</div>
         <div class="text-[12px] text-slate-500 mt-1">Yaklaşan Vade (7 gün)</div>
     </div>
+    }
 
     @* D — Gecikmiş (red) *@
     @{
@@ -114,6 +131,8 @@ BÖLÜM 2 — KPI KARTLARI (spec §3.2)
             ? "bg-white rounded-2xl border border-red-200 bg-red-50/40 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all"
             : "bg-white rounded-2xl border border-slate-200 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all";
     }
+    @if (hasBorc)
+    {
     <div class="@gecikmisKartCls">
         <div class="flex items-start justify-between mb-4">
             <div class="relative">
@@ -129,7 +148,9 @@ BÖLÜM 2 — KPI KARTLARI (spec §3.2)
         </div>
         <div class="text-3xl font-bold text-slate-800" data-countup="@Model.GecikmisAdet" data-decimals="0">0</div>
         <div class="text-[12px] text-slate-500 mt-1">Gecikmiş Tahakkuk</div>
+        <a href="/Kiraci/Tahakkuklarim?durum=gecikti" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-1 block">Görüntüle →</a>
     </div>
+    }
 
 </div>
 
@@ -139,9 +160,13 @@ BÖLÜM 2 — KPI KARTLARI (spec §3.2)
 BÖLÜM 3 — GRAFİK PANELİ (spec §3.3)
 ─────────────────────────────────────────────────────────────────────────────
 *@
+@if (hasOdeme || hasBorc)
+{
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
 
     @* §3.3.A Sol — Aylık Nakit Akışı *@
+    @if (hasOdeme)
+    {
     <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5">
         <div class="flex items-center justify-between mb-4">
             <div>
@@ -155,11 +180,14 @@ BÖLÜM 3 — GRAFİK PANELİ (spec §3.3)
         </div>
         <div id="chart-nakit"></div>
     </div>
+    }
 
     @* §3.3.B Sağ — Borç Tipi Dağılımı *@
+    @if (hasBorc)
+    {
     <div class="bg-white rounded-2xl border border-slate-200 p-5">
         <div class="text-sm font-bold text-slate-800 mb-1">Borç Tipi Dağılımı</div>
-        <div class="text-xs text-slate-500 mb-4">Açık tahakkukların kalem dağılımı</div>
+        <div class="text-xs text-slate-500 mb-4">Açık tahakkukların brüt kalem dağılımı</div>
         @if (Model.BorcTipiDagilimi.Any())
         {
             <div id="chart-donut"></div>
@@ -169,8 +197,10 @@ BÖLÜM 3 — GRAFİK PANELİ (spec §3.3)
             <div class="text-center py-10 text-slate-400 text-sm">Açık borç yok</div>
         }
     </div>
+    }
 
 </div>
+}
 
 
 @*
@@ -178,9 +208,13 @@ BÖLÜM 3 — GRAFİK PANELİ (spec §3.3)
 BÖLÜM 4 — YAKLAŞAN TAHAKKUKLAR + SON ÖDEMELER (spec §3.4)
 ─────────────────────────────────────────────────────────────────────────────
 *@
+@if (hasBorc || hasOdeme)
+{
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
 
     @* §3.4.A Sol — Yaklaşan Tahakkuklar *@
+    @if (hasBorc)
+    {
     <div class="bg-white rounded-2xl border border-slate-200 p-5">
         <div class="flex items-center justify-between mb-4">
             <div class="text-sm font-bold text-slate-800">Yaklaşan Tahakkuklar</div>
@@ -215,8 +249,11 @@ BÖLÜM 4 — YAKLAŞAN TAHAKKUKLAR + SON ÖDEMELER (spec §3.4)
             </div>
         }
     </div>
+    }
 
     @* §3.4.B Sağ — Son Ödemeler (Timeline) *@
+    @if (hasOdeme)
+    {
     <div class="bg-white rounded-2xl border border-slate-200 p-5">
         <div class="flex items-center justify-between mb-4">
             <div class="text-sm font-bold text-slate-800">Son Ödemeler</div>
@@ -249,8 +286,10 @@ BÖLÜM 4 — YAKLAŞAN TAHAKKUKLAR + SON ÖDEMELER (spec §3.4)
             </div>
         }
     </div>
+    }
 
 </div>
+}
 
 
 @*
@@ -260,6 +299,8 @@ BÖLÜM 5 — HIZLI EYLEMLER (spec §3.5)
 *@
 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
 
+    @if (hasBorc)
+    {
     <a href="/Kiraci/Tahakkuklarim"
        class="block p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-sm">
@@ -268,7 +309,10 @@ BÖLÜM 5 — HIZLI EYLEMLER (spec §3.5)
         <div class="text-sm font-bold text-slate-800 mt-3">Tahakkuklarım</div>
         <div class="text-xs text-slate-600 mt-0.5">Borç ve ödeme akışı</div>
     </a>
+    }
 
+    @if (hasSozlesme)
+    {
     <a href="/Kiraci/Sozlesmeler"
        class="block p-5 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-sm">
@@ -277,7 +321,10 @@ BÖLÜM 5 — HIZLI EYLEMLER (spec §3.5)
         <div class="text-sm font-bold text-slate-800 mt-3">Sözleşmelerim</div>
         <div class="text-xs text-slate-600 mt-0.5">Aktif sözleşme listesi</div>
     </a>
+    }
 
+    @if (hasRezervasy)
+    {
     <a href="/Kiraci/Rezervasyonum"
        class="block p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-sm">
@@ -286,6 +333,7 @@ BÖLÜM 5 — HIZLI EYLEMLER (spec §3.5)
         <div class="text-sm font-bold text-slate-800 mt-3">Rezervasyonlarım</div>
         <div class="text-xs text-slate-600 mt-0.5">Salon rezervasyonu</div>
     </a>
+    }
 
     <a href="/Kiraci/Profil"
        class="block p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
@@ -324,56 +372,59 @@ SCRIPTS — Sayfaya özel JS (spec §4)
                 if (!c.error) c.start();
             });
 
+            var _hasOdeme = @(hasOdeme ? "true" : "false");
+            var _hasBorc  = @(hasBorc  ? "true" : "false");
+
             // §4.A — Aylık Nakit Akışı (Bar)
-            const beklenenSeri = [@Html.Raw(string.Join(",", Model.AylikNakit.Select(x => x.Beklenen.ToString(System.Globalization.CultureInfo.InvariantCulture))))];
-            const odenenSeri   = [@Html.Raw(string.Join(",", Model.AylikNakit.Select(x => x.Odenen.ToString(System.Globalization.CultureInfo.InvariantCulture))))];
-            const aylar        = [@Html.Raw(string.Join(",", Model.AylikNakit.Select(x => $"'{x.AyEtiket}'")))];
-
-            new ApexCharts(document.querySelector('#chart-nakit'), {
-                chart: { type: 'bar', height: 260, toolbar: { show: false }, animations: { enabled: true, easing: 'easeinout', speed: 600 } },
-                series: [
-                    { name: 'Beklenen', data: beklenenSeri },
-                    { name: 'Ödenen',   data: odenenSeri }
-                ],
-                colors: ['#94a3b8', '#10b981'],
-                plotOptions: { bar: { columnWidth: '55%', borderRadius: 4 } },
-                dataLabels: { enabled: false },
-                legend: { show: false },
-                grid: { borderColor: '#e2e8f0', strokeDashArray: 4, yaxis: { lines: { show: true } }, xaxis: { lines: { show: false } } },
-                xaxis: { categories: aylar, labels: { style: { fontSize: '11px', colors: '#64748b' } }, axisBorder: { show: false }, axisTicks: { show: false } },
-                yaxis: { labels: { style: { fontSize: '11px', colors: '#94a3b8' }, formatter: v => v.toLocaleString('tr-TR') + ' ₺' } },
-                tooltip: { y: { formatter: v => v.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₺' } }
-            }).render();
-
-            // §4.B — Borç Tipi Dağılımı (Donut)
-            const donutData   = [@Html.Raw(string.Join(",", Model.BorcTipiDagilimi.Select(x => x.Tutar.ToString(System.Globalization.CultureInfo.InvariantCulture))))];
-            const donutLabels = [@Html.Raw(string.Join(",", Model.BorcTipiDagilimi.Select(x => $"'{x.Ad.Replace("'", "\\'")}'")))];
-
-            if (donutData.length > 0) {
-                new ApexCharts(document.querySelector('#chart-donut'), {
-                    chart: { type: 'donut', height: 240, animations: { enabled: true, speed: 600 } },
-                    series: donutData,
-                    labels: donutLabels,
-                    colors: ['#1a6b5c', '#3b82f6', '#f59e0b', '#64748b', '#10b981', '#ef4444'],
-                    plotOptions: { pie: { donut: { size: '68%', labels: { show: true, total: { show: true, label: 'Toplam', formatter: w => w.globals.seriesTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR', {minimumFractionDigits: 2}) + ' ₺' } } } } },
+            if (_hasOdeme) {
+                const beklenenSeri = [@Html.Raw(string.Join(",", Model.AylikNakit.Select(x => x.Beklenen.ToString(System.Globalization.CultureInfo.InvariantCulture))))];
+                const odenenSeri   = [@Html.Raw(string.Join(",", Model.AylikNakit.Select(x => x.Odenen.ToString(System.Globalization.CultureInfo.InvariantCulture))))];
+                const aylar        = [@Html.Raw(string.Join(",", Model.AylikNakit.Select(x => $"'{x.AyEtiket}'")))];
+                new ApexCharts(document.querySelector('#chart-nakit'), {
+                    chart: { type: 'bar', height: 260, toolbar: { show: false }, animations: { enabled: true, easing: 'easeinout', speed: 600 } },
+                    series: [
+                        { name: 'Beklenen', data: beklenenSeri },
+                        { name: 'Ödenen',   data: odenenSeri }
+                    ],
+                    colors: ['#94a3b8', '#10b981'],
+                    plotOptions: { bar: { columnWidth: '55%', borderRadius: 4 } },
                     dataLabels: { enabled: false },
-                    legend: { position: 'bottom', fontSize: '11px', markers: { width: 8, height: 8 } },
-                    stroke: { width: 2, colors: ['#fff'] },
-                    tooltip: { y: { formatter: v => v.toLocaleString('tr-TR', {minimumFractionDigits: 2}) + ' ₺' } }
+                    legend: { show: false },
+                    grid: { borderColor: '#e2e8f0', strokeDashArray: 4, yaxis: { lines: { show: true } }, xaxis: { lines: { show: false } } },
+                    xaxis: { categories: aylar, labels: { style: { fontSize: '11px', colors: '#64748b' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+                    yaxis: { labels: { style: { fontSize: '11px', colors: '#94a3b8' }, formatter: v => v.toLocaleString('tr-TR') + ' ₺' } },
+                    tooltip: { y: { formatter: v => v.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₺' } }
                 }).render();
             }
 
-            // §4.C — Sparkline (Borç Bakiyesi)
-            const sparkData = [@Html.Raw(string.Join(",", Model.BorcBakiyesiSparkline.Select(x => x.ToString(System.Globalization.CultureInfo.InvariantCulture))))];
+            // §4.B — Borç Tipi Dağılımı (Donut) + §4.C — Sparkline
+            if (_hasBorc) {
+                const donutData   = [@Html.Raw(string.Join(",", Model.BorcTipiDagilimi.Select(x => x.Tutar.ToString(System.Globalization.CultureInfo.InvariantCulture))))];
+                const donutLabels = [@Html.Raw(string.Join(",", Model.BorcTipiDagilimi.Select(x => $"'{x.Ad.Replace("'", "\\'")}'")))];
+                if (donutData.length > 0) {
+                    new ApexCharts(document.querySelector('#chart-donut'), {
+                        chart: { type: 'donut', height: 240, animations: { enabled: true, speed: 600 } },
+                        series: donutData,
+                        labels: donutLabels,
+                        colors: ['#1a6b5c', '#3b82f6', '#f59e0b', '#64748b', '#10b981', '#ef4444'],
+                        plotOptions: { pie: { donut: { size: '68%', labels: { show: true, value: { fontSize: '13px', fontWeight: 600, formatter: v => parseFloat(v).toLocaleString('tr-TR', {minimumFractionDigits: 2}) + ' ₺' }, total: { show: true, label: 'Toplam', fontSize: '11px', fontWeight: 700, formatter: w => w.globals.seriesTotals.reduce((a,b)=>a+b,0).toLocaleString('tr-TR', {minimumFractionDigits: 2}) + ' ₺' } } } } },
+                        dataLabels: { enabled: false },
+                        legend: { position: 'bottom', fontSize: '11px', markers: { width: 8, height: 8 } },
+                        stroke: { width: 2, colors: ['#fff'] },
+                        tooltip: { y: { formatter: v => v.toLocaleString('tr-TR', {minimumFractionDigits: 2}) + ' ₺' } }
+                    }).render();
+                }
 
-            new ApexCharts(document.querySelector('#sparkline-borc'), {
-                chart: { type: 'area', height: 40, sparkline: { enabled: true }, animations: { enabled: true } },
-                series: [{ name: 'Bakiye', data: sparkData }],
-                stroke: { curve: 'smooth', width: 2 },
-                colors: ['#1a6b5c'],
-                fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0 } },
-                tooltip: { fixed: { enabled: false }, x: { show: false }, y: { formatter: v => v.toLocaleString('tr-TR', {minimumFractionDigits: 2}) + ' ₺', title: { formatter: () => '' } }, marker: { show: false } }
-            }).render();
+                const sparkData = [@Html.Raw(string.Join(",", Model.BorcBakiyesiSparkline.Select(x => x.ToString(System.Globalization.CultureInfo.InvariantCulture))))];
+                new ApexCharts(document.querySelector('#sparkline-borc'), {
+                    chart: { type: 'area', height: 40, sparkline: { enabled: true }, animations: { enabled: true } },
+                    series: [{ name: 'Bakiye', data: sparkData }],
+                    stroke: { curve: 'smooth', width: 2 },
+                    colors: ['#1a6b5c'],
+                    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0 } },
+                    tooltip: { fixed: { enabled: false }, x: { show: false }, y: { formatter: v => v.toLocaleString('tr-TR', {minimumFractionDigits: 2}) + ' ₺', title: { formatter: () => '' } }, marker: { show: false } }
+                }).render();
+            }
         });
     </script>
 }

@@ -18,14 +18,14 @@ public class TahakkukService : ITahakkukService
     }
 
     // ── Listeleme ────────────────────────────────────────────────────────
-    public async Task<List<TahakkukListItemDto>> GetListAsync(int? sozlesmeId = null, IReadOnlyList<int>? tasinmazIds = null)
+    public async Task<List<TahakkukListItemDto>> GetListAsync(int? sozlesmeId = null, IReadOnlyList<int>? tasinmazIds = null, IReadOnlyList<int>? birimIds = null)
     {
-        return await _repo.GetListAsync(sozlesmeId, tasinmazIds?.ToList());
+        return await _repo.GetListAsync(sozlesmeId, tasinmazIds?.ToList(), birimIds?.ToList());
     }
 
-    public async Task<PagedResult<TahakkukListItemDto>> GetPagedAsync(TableQuery q, int? sozlesmeId = null, IReadOnlyList<int>? tasinmazIds = null)
+    public async Task<PagedResult<TahakkukListItemDto>> GetPagedAsync(TableQuery q, int? sozlesmeId = null, IReadOnlyList<int>? tasinmazIds = null, IReadOnlyList<int>? birimIds = null)
     {
-        return await _repo.GetPagedListAsync(q, sozlesmeId, tasinmazIds?.ToList());
+        return await _repo.GetPagedListAsync(q, sozlesmeId, tasinmazIds?.ToList(), birimIds?.ToList());
     }
 
     public Task<TahakkukDetayDto?> GetDetayAsync(int id) => _repo.GetDetayAsync(id);

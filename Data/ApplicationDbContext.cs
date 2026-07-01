@@ -42,6 +42,15 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             }
         }
 
+        foreach (var entry in ChangeTracker.Entries<ApplicationUser>())
+        {
+            if ((entry.State == EntityState.Added || entry.State == EntityState.Modified) &&
+                entry.Entity.IsSuperAdmin && entry.Entity.KiraciId != null)
+            {
+                throw new InvalidOperationException("Bir Süper Admin aynı zamanda bir kiracıya ait olamaz!");
+            }
+        }
+
         return await base.SaveChangesAsync(cancellationToken);
     }
 
@@ -331,8 +340,16 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .WithMany()
                   .HasForeignKey(t => t.KiraciId)
                   .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(t => t.Birim)
+                  .WithMany()
+                  .HasForeignKey(t => t.BirimId)
+                  .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(t => t.KiraSozlesmesi)
                   .WithMany()
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(t => t.Rezervasyon)
+                  .WithMany()
+                  .HasForeignKey(t => t.RezervasyonId)
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(t => new { t.KiraSozlesmesiId, t.DonemBaslangic })
                   .IsUnique()
@@ -341,6 +358,13 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.HasIndex(t => t.KiraciId)
                   .HasDatabaseName("IX_Tahakkuklar_KiraciId_Active")
                   .HasFilter("[IsDeleted] = 0");
+            entity.HasIndex(t => t.BirimId)
+                  .HasDatabaseName("IX_Tahakkuklar_BirimId_Active")
+                  .HasFilter("[IsDeleted] = 0");
+            entity.HasIndex(t => t.RezervasyonId)
+                  .IsUnique()
+                  .HasDatabaseName("UX_Tahakkuklar_RezervasyonId_TekTahakkuk")
+                  .HasFilter("[RezervasyonId] IS NOT NULL AND [IsDeleted] = 0");
             entity.ToTable(t =>
             {
                 t.HasCheckConstraint("CK_Tahakkuklar_TarihSirasi", "[DonemBitis] > [DonemBaslangic]");
@@ -474,9 +498,6 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.HasOne(r => r.Kiraci)
                   .WithMany()
                   .OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne(r => r.Tahakkuk)
-                  .WithMany()
-                  .OnDelete(DeleteBehavior.SetNull);
             entity.HasIndex(r => new { r.BirimId, r.BaslangicTarihi });
             entity.HasIndex(r => r.KiraciId)
                   .HasDatabaseName("IX_Rezervasyonlari_KiraciId_Active")
@@ -495,6 +516,11 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .WithMany()
                   .HasForeignKey(u => u.KiraciId)
                   .OnDelete(DeleteBehavior.Restrict);
+
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_ApplicationUser_SuperAdmin_NoTenant", "[IsSuperAdmin] = 0 OR [KiraciId] IS NULL");
+            });
         });
 
         builder.Entity<Rol>(entity =>

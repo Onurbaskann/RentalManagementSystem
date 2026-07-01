@@ -15,7 +15,7 @@ public class AdminTarifeController : Controller
 
     public AdminTarifeController(ApplicationDbContext ctx) => _ctx = ctx;
 
-    [Authorize(Policy = PermissionCatalog.Tarife.View)]
+    [Authorize(Policy = PermissionCatalog.Tarife.Module)]
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
@@ -33,7 +33,7 @@ public class AdminTarifeController : Controller
         return View(ozet);
     }
 
-    [Authorize(Policy = PermissionCatalog.Tarife.View)]
+    [Authorize(Policy = PermissionCatalog.Tarife.Module)]
     [HttpGet("Yil/{yil:int}")]
     public async Task<IActionResult> Detay(int yil)
     {
@@ -111,7 +111,7 @@ public class AdminTarifeController : Controller
         return View(vm);
     }
 
-    [Authorize(Policy = PermissionCatalog.Tarife.Manage)]
+    [Authorize(Policy = PermissionCatalog.Tarife.Edit)]
     [HttpPost("Yil/{yil:int}/KalemGuncelle")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> KalemGuncelle(int yil, TarifeMatrisPostViewModel vm)
@@ -175,7 +175,7 @@ public class AdminTarifeController : Controller
         return RedirectToAction(nameof(Detay), new { yil });
     }
 
-    [Authorize(Policy = PermissionCatalog.Tarife.Manage)]
+    [Authorize(Policy = PermissionCatalog.Tarife.Edit)]
     [HttpGet("YilEkle")]
     public async Task<IActionResult> YilEkle()
     {
@@ -189,7 +189,7 @@ public class AdminTarifeController : Controller
         return View(new TarifeYilEkleViewModel { Yil = DateTime.Now.Year });
     }
 
-    [Authorize(Policy = PermissionCatalog.Tarife.Manage)]
+    [Authorize(Policy = PermissionCatalog.Tarife.Create)]
     [HttpPost("YilEkle")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> YilEkle(TarifeYilEkleViewModel vm)
@@ -291,7 +291,7 @@ public class AdminTarifeController : Controller
         return RedirectToAction(nameof(Detay), new { yil = vm.Yil });
     }
 
-    [Authorize(Policy = PermissionCatalog.Tarife.Manage)]
+    [Authorize(Policy = PermissionCatalog.Tarife.Edit)]
     [HttpPost("DurumDegistir/{yil:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DurumDegistir(int yil)

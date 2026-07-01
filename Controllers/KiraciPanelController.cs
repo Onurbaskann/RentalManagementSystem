@@ -39,9 +39,9 @@ public class KiraciPanelController : Controller
 
         var user = await _userManager.GetUserAsync(User);
 
-        var rol = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.KiraciPortal.Kullanici.Manage)
+        var rol = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.KiraciPortal.System.Kullanici.Invite)
             ? "Firma Yetkilisi"
-            : User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.KiraciPortal.Odeme.View)
+            : User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.KiraciPortal.Odeme.Module)
                 ? "Finans Yetkilisi"
                 : "Kiracı";
 
@@ -141,12 +141,8 @@ public class KiraciPanelController : Controller
                 t.DonemBaslangic,
                 t.VadeTarihi,
                 Kalan = t.ToplamTutar - t.OdenenTutar,
-                TasinmazAd = t.KiraSozlesmesi != null
-                    ? t.KiraSozlesmesi.Birim.Tasinmaz.Ad
-                    : _db.Rezervasyonlari.Where(r => r.TahakkukId == t.Id).Select(r => r.Birim.Tasinmaz.Ad).FirstOrDefault(),
-                BirimAd = t.KiraSozlesmesi != null
-                    ? t.KiraSozlesmesi.Birim.Ad
-                    : _db.Rezervasyonlari.Where(r => r.TahakkukId == t.Id).Select(r => r.Birim.Ad).FirstOrDefault()
+                TasinmazAd = t.Birim.Tasinmaz.Ad,
+                BirimAd = t.Birim.Ad
             })
             .ToListAsync();
         var yaklasanTahakkuklar = yaklasanTahakkukRaw.Select(t =>

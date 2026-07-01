@@ -1,0 +1,127 @@
+@{
+    var treeJson = ViewData["TreeJson"] as string ?? "[]";
+}
+
+<div x-data='permTree(@Html.Raw(treeJson))' class="relative">
+
+    <button type="button" @@click.prevent="open = !open"
+            class="w-full flex items-center justify-between gap-3 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 hover:border-[#1a6b5c] focus:outline-none focus:ring-2 focus:ring-[#1a6b5c]/30 transition-all">
+        <span class="text-left" x-text="summary"></span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             class="flex-shrink-0 text-slate-400 transition-transform" :class="open ? 'rotate-180' : ''">
+            <polyline points="6 9 12 15 18 9"/>
+        </svg>
+    </button>
+
+    <div x-show="open" @@click.outside="open = false" x-cloak
+         class="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+
+        <div class="px-3 py-2.5 border-b border-slate-100">
+            <input x-model="q" type="text" placeholder="İzin ara..."
+                   class="w-full text-[13px] px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#1a6b5c]/40 placeholder-slate-400" />
+        </div>
+
+        <div class="overflow-y-auto p-2" style="max-height: 250px;">
+            <template x-for="m in filtered" :key="m.path">
+                <div class="mb-1">
+                    <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                        <input type="checkbox"
+                               :checked="m.checked"
+                               :indeterminate.prop="isIndeterminate(m)"
+                               @@change="toggleModule(m)"
+                               class="w-4 h-4 rounded border-slate-300 accent-[#1a6b5c] cursor-pointer" />
+                        <span class="text-[13px] font-semibold text-slate-700" x-text="m.name"></span>
+                        <span x-show="m.actions.length === 0"
+                              class="ml-auto text-[11px] text-slate-400 font-normal italic">yalnızca görüntüleme</span>
+                    </label>
+
+                    <template x-if="m.actions.length > 0">
+                        <div class="ml-4 border-l border-slate-100 pl-2 mt-0.5">
+                            <template x-for="a in m.actions" :key="a.value">
+                                <label x-show="actionVisible(m, a)"
+                                       class="flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                                    <input type="checkbox"
+                                           :checked="a.checked"
+                                           @@change="toggleAction(m, a)"
+                                           class="w-3.5 h-3.5 rounded border-slate-300 accent-[#1a6b5c] cursor-pointer" />
+                                    <span class="text-[12.5px] text-slate-600" x-text="a.label"></span>
+                                    <span x-show="a.danger"
+                                          class="ml-0.5 w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"
+                                          title="Yıkıcı işlem"></span>
+                                </label>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <div x-show="filtered.length === 0" class="text-center text-[13px] text-slate-400 py-6">
+                Eşleşen izin bulunamadı.
+            </div>
+        </div>
+    </div>
+
+    <template x-for="m in modules" :key="'mod_' + m.path">
+        <template x-if="m.checked">
+            <input type="hidden" name="SelectedPermissions" :value="m.path" />
+        </template>
+    </template>
+    <template x-for="m in modules" :key="'act_' + m.path">
+        <template x-for="a in m.actions" :key="a.value">
+            <template x-if="a.checked">
+                <input type="hidden" name="SelectedPermissions" :value="a.value" />
+            </template>
+        </template>
+    </template>
+</div>
+
+<script>
+function permTree(initialData) {
+    return {
+        open: false,
+        q: '',
+        modules: initialData,
+
+        get filtered() {
+            if (!this.q.trim()) return this.modules;
+            const q = this.q.toLowerCase();
+            return this.modules.filter(m =>
+                m.name.toLowerCase().includes(q) ||
+                m.actions.some(a => a.label.toLowerCase().includes(q))
+            );
+        },
+
+        get summary() {
+            const checkedModules = this.modules.filter(m => m.checked).length;
+            const checkedActions = this.modules.flatMap(m => m.actions).filter(a => a.checked).length;
+            if (checkedModules === 0) return 'İzin seçilmedi';
+            const actionText = checkedActions > 0 ? `, ${checkedActions} eylem` : '';
+            return `${checkedModules} modül${actionText} atanmış`;
+        },
+
+        isIndeterminate(m) {
+            if (!m.checked || m.actions.length === 0) return false;
+            const cnt = m.actions.filter(a => a.checked).length;
+            return cnt > 0 && cnt < m.actions.length;
+        },
+
+        actionVisible(m, a) {
+            if (!this.q.trim()) return true;
+            const q = this.q.toLowerCase();
+            return a.label.toLowerCase().includes(q) || m.name.toLowerCase().includes(q);
+        },
+
+        toggleModule(m) {
+            m.checked = !m.checked;
+            m.actions.forEach(a => a.checked = m.checked);
+        },
+
+        toggleAction(m, a) {
+            a.checked = !a.checked;
+            if (a.checked && !m.checked) {
+                m.checked = true;
+            }
+        }
+    };
+}
+</script>

@@ -195,10 +195,34 @@ public class TasinmazRepository : BaseRepository<Tasinmaz>, ITasinmazRepository
         }
 
         return await query
+            .Where(b => b.BirimTuru != null && b.BirimTuru.KiralanabilirMi)
             .Where(b => !b.Sozlesmeler.Any(s =>
                 s.Durum == SozlesmeDurumu.Aktif &&
                 s.BaslangicTarihi <= now &&
                 s.BitisTarihi >= now))
+            .OrderBy(b => b.Tasinmaz.Ad)
+            .ThenBy(b => b.Ad)
+            .Select(b => new BirimLookupDto
+            {
+                Id = b.Id,
+                Ad = b.Ad,
+                TasinmazAd = b.Tasinmaz.Ad,
+                Ilce = b.Tasinmaz.Ilce,
+                Il = b.Tasinmaz.Il,
+                Yuzolcumu = b.Yuzolcumu,
+                BirimTipi = b.BirimTipi,
+                BirimNo = b.BirimNo,
+                KatNo = b.KatNo
+            })
+            .ToListAsync();
+    }
+
+    public async Task<List<BirimLookupDto>> GetTumBirimlerAsync(List<int>? yetkiliTasinmazIds)
+    {
+        var query = _ctx.Birimler.AsNoTracking().AsQueryable();
+        if (yetkiliTasinmazIds != null)
+            query = query.Where(b => yetkiliTasinmazIds.Contains(b.TasinmazId));
+        return await query
             .OrderBy(b => b.Tasinmaz.Ad)
             .ThenBy(b => b.Ad)
             .Select(b => new BirimLookupDto

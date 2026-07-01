@@ -12,7 +12,7 @@
 </div>
 
 <div class="card">
-    <form asp-action="Create" method="post">
+    <form asp-action="Create" method="post" asp-form-write-permission="@PermissionCatalog.RezervasyonTarifeKural.Create">
         @Html.AntiForgeryToken()
 
         <div asp-validation-summary="ModelOnly" class="form-error" style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:20px;"></div>
@@ -67,7 +67,7 @@
         </div>
 
         <div style="display:flex;gap:8px;margin-top:8px;">
-            <button type="submit" class="btn btn-primary">Kaydet</button>
+            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.RezervasyonTarifeKural.Create">Kaydet</button>
             <a href="/Admin/RezervasyonTarifeKural" class="btn btn-secondary">İptal</a>
         </div>
     </form>

@@ -1,6 +1,7 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
@@ -11,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Roles = RoleNames.SistemYoneticisi)]
+[Authorize(Policy = "System.Kullanici")]
 [Route("Admin/Kiracilar/{kiraciId:int}/Kullanicilar")]
 public class AdminKiraciKullaniciController : Controller
 {
@@ -41,7 +42,7 @@ public class AdminKiraciKullaniciController : Controller
     private async Task PopulateRollerAsync(List<RolSecenekViewModel> liste, int kiraciId)
     {
         var roller = await _db.Roller.IgnoreQueryFilters()
-            .Where(r => (r.KiraciId == null || r.KiraciId == kiraciId) && r.IsActive && !r.IsDeleted)
+            .Where(r => r.Scope == RolScope.Kiraci && (r.KiraciId == null || r.KiraciId == kiraciId) && r.IsActive && !r.IsDeleted)
             .OrderBy(r => r.Ad)
             .ToListAsync();
         liste.AddRange(roller.Select(r => new RolSecenekViewModel { Id = r.Id, Ad = r.Ad }));
@@ -174,6 +175,7 @@ public class AdminKiraciKullaniciController : Controller
 
         var model = new KiraciDavetViewModel();
         await PopulateRollerAsync(model.Roller, kiraciId);
+        model.Birimler = await GetKiraciBirimleriAsync(kiraciId);
 
         ViewBag.KiraciId = kiraciId;
         ViewBag.KiraciAd = kiraci.GosterimAdi;
@@ -187,6 +189,7 @@ public class AdminKiraciKullaniciController : Controller
         if (!ModelState.IsValid)
         {
             await PopulateRollerAsync(model.Roller, kiraciId);
+            model.Birimler = await GetKiraciBirimleriAsync(kiraciId);
             ViewBag.KiraciId = kiraciId;
             return View(model);
         }
@@ -197,6 +200,7 @@ public class AdminKiraciKullaniciController : Controller
         {
             ModelState.AddModelError("RolId", "Geçersiz rol seçildi.");
             await PopulateRollerAsync(model.Roller, kiraciId);
+            model.Birimler = await GetKiraciBirimleriAsync(kiraciId);
             ViewBag.KiraciId = kiraciId;
             return View(model);
         }
@@ -204,7 +208,8 @@ public class AdminKiraciKullaniciController : Controller
         try
         {
             var currentUserId = _userManager.GetUserId(User)!;
-            await _davetiyeService.GonderAsync(model.Email, model.AdSoyad, model.RolId, currentUserId, kiraciId);
+            var birimIds = model.BirimIds.Count > 0 ? model.BirimIds : null;
+            await _davetiyeService.GonderAsync(model.Email, model.AdSoyad, model.RolId, currentUserId, kiraciId, birimIds: birimIds);
             TempData["Success"] = $"{model.Email} adresine davet gönderildi.";
             return RedirectToAction(nameof(Index), new { kiraciId });
         }
@@ -212,9 +217,27 @@ public class AdminKiraciKullaniciController : Controller
         {
             ModelState.AddModelError(string.Empty, ex.Message);
             await PopulateRollerAsync(model.Roller, kiraciId);
+            model.Birimler = await GetKiraciBirimleriAsync(kiraciId);
             ViewBag.KiraciId = kiraciId;
             return View(model);
         }
+    }
+
+    private async Task<List<BirimLookupDto>> GetKiraciBirimleriAsync(int kiraciId)
+    {
+        return await _db.Sozlesmeler
+            .AsNoTracking()
+            .Where(s => s.KiraciId == kiraciId && s.Durum == SozlesmeDurumu.Aktif)
+            .Select(s => new BirimLookupDto
+            {
+                Id = s.BirimId,
+                Ad = s.Birim.Ad,
+                TasinmazAd = s.Birim.Tasinmaz.Ad,
+                BirimNo = s.Birim.BirimNo,
+            })
+            .Distinct()
+            .OrderBy(b => b.TasinmazAd).ThenBy(b => b.Ad)
+            .ToListAsync();
     }
 
     [HttpPost("OdemeLink/Iptal/{id:int}")]

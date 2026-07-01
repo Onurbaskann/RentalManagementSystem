@@ -1,18 +1,27 @@
 @model KiraTakip.Models.ViewModels.ManuelBorcCreateViewModel
 @using KiraTakip.Models
+@using System.Text.Json
 @{
     ViewData["Title"] = "Manuel Borç Ekle";
+
+    var sozlesmeJson = JsonSerializer.Serialize(Model.AktifSozlesmeler.Select(s => new {
+        id = s.Id,
+        kiraciId = s.KiraciId,
+        birimId = s.BirimId,
+        kiraciAdi = s.KiraciGosterimAdi,
+        birimAdi = s.TasinmazAd + " / " + s.BirimAd
+    }));
 }
 
 <div class="max-w-[1000px] mx-auto">
     <div class="page-header">
         <a href="/ManuelBorc" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Manuel Borçlar</a>
         <div class="page-title">Manuel Borç Ekle</div>
-        <div class="page-subtitle">Aktif sözleşmeye tek seferlik borç kalemi ekleyin</div>
+        <div class="page-subtitle">Kiracı için tek seferlik borç kalemi oluşturun</div>
     </div>
 
     <div x-data="manuelBorcForm()">
-    <form asp-action="Ekle" method="post">
+    <form asp-action="Ekle" method="post" asp-form-write-permission="@PermissionCatalog.ManuelBorc.Create">
         @Html.AntiForgeryToken()
 
         <div asp-validation-summary="ModelOnly" class="form-error bg-red-50 border border-red-200 rounded-lg p-3 mb-5"></div>
@@ -20,31 +29,62 @@
         <div class="card mb-4">
             <div class="text-lg font-bold mb-5 flex items-center gap-2">
                 <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
-                <span>Sözleşme Seçimi</span>
+                <span>Kiracı ve Sözleşme</span>
             </div>
 
-            <div class="form-group mb-5">
-                <label asp-for="SozlesmeId" class="form-label">Sözleşme <span class="text-red-500">*</span></label>
-                <select asp-for="SozlesmeId" class="form-control" x-on:change="sozlesmeSecildi($event)">
-                    <option value="">— Sözleşme seçin —</option>
-                    @foreach (var s in Model.AktifSozlesmeler)
-                    {
-                        <option value="@s.Id"
-                            data-kiraci="@s.KiraciGosterimAdi"
-                            data-birim="@(s.TasinmazAd) — @s.BirimAd">
-                            @s.KiraciGosterimAdi — @s.TasinmazAd / @s.BirimAd
-                        </option>
-                    }
-                </select>
-                <span asp-validation-for="SozlesmeId" class="form-error"></span>
+            <input type="hidden" name="KiraciId" :value="kiraciId" />
+            <input type="hidden" name="SozlesmeId" :value="sozlesmeId || ''" />
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="form-group mb-0">
+                    <label class="form-label">Kiracı <span class="text-red-500">*</span></label>
+                    <select class="form-control" x-model="kiraciId" @@change="kiraciDegisti()">
+                        <option value="0">— Kiracı seçin —</option>
+                        <template x-for="k in benzersizKiraciler" :key="k.id">
+                            <option :value="k.id" x-text="k.kiraciAdi"></option>
+                        </template>
+                    </select>
+                    <span class="form-error" x-show="@(ViewData.ModelState["KiraciId"]?.Errors.Count > 0 ? "true" : "false")">
+                        @(ViewData.ModelState["KiraciId"]?.Errors.FirstOrDefault()?.ErrorMessage)
+                    </span>
+                </div>
+
+                <div class="form-group mb-0">
+                    <label class="form-label">Sözleşme <span class="text-muted font-normal">(opsiyonel)</span></label>
+                    <select class="form-control" x-model.number="sozlesmeId" @@change="sozlesmeDegisti()">
+                        <option value="0">— Sözleşme seçmeyin —</option>
+                        <template x-for="s in filtreliSozlesmeler" :key="s.id">
+                            <option :value="s.id" x-text="s.birimAdi"></option>
+                        </template>
+                    </select>
+                </div>
             </div>
 
-            <template x-if="sozlesme.kiraci">
-                <div class="bg-primary/5 border border-primary/10 rounded-lg p-3.5 text-sm flex gap-6">
-                    <div><span class="text-[11px] font-bold text-muted uppercase tracking-wider block mb-0.5">Kiracı</span><strong x-text="sozlesme.kiraci"></strong></div>
-                    <div><span class="text-[11px] font-bold text-muted uppercase tracking-wider block mb-0.5">Taşınmaz / Birim</span><strong x-text="sozlesme.birim"></strong></div>
+            <template x-if="sozlesmeId > 0 && birimId > 0 && birimId != sozlesmeBirimId">
+                <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-[13px] text-amber-800 mb-1">
+                    <svg class="w-4 h-4 mt-0.5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                    <span>Seçilen birim, sözleşmenin birim'inden farklı. Bu doğruysa devam edebilirsiniz.</span>
                 </div>
             </template>
+        </div>
+
+        <div class="card mb-4">
+            <div class="text-lg font-bold mb-5 flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                <span>Birim</span>
+            </div>
+
+            <div class="form-group mb-0">
+                <label class="form-label">Birim <span class="text-red-500">*</span></label>
+                <select class="form-control" name="BirimId" x-model.number="birimId">
+                    <option value="0">— Birim seçin —</option>
+                    @foreach (var b in Model.Birimler)
+                    {
+                        <option value="@b.Id">@b.TasinmazAd — @b.Ad@(b.BirimNo != null ? " (" + b.BirimNo + ")" : "")</option>
+                    }
+                </select>
+                <span asp-validation-for="BirimId" class="form-error"></span>
+            </div>
         </div>
 
         <div class="card mb-4">
@@ -138,7 +178,7 @@
 
         <div class="flex justify-end gap-3 mt-6">
             <a href="/ManuelBorc" class="btn btn-secondary px-6">İptal</a>
-            <button type="submit" class="btn btn-primary px-6">Manuel Borç Oluştur</button>
+            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.ManuelBorc.Create">Manuel Borç Oluştur</button>
         </div>
     </form>
 </div>
@@ -146,40 +186,73 @@
 
 @section Scripts {
 <script>
-function manuelBorcForm() {
-    return {
-        sozlesme: { kiraci: '', birim: '' },
-        tutar: @(Model.Tutar > 0 ? Model.Tutar.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "0"),
-        kdvAktif: @(Model.KdvUygulanacakMi ? "true" : "false"),
-        kdvOrani: @Model.KdvOrani.ToString("F0", System.Globalization.CultureInfo.InvariantCulture),
-        kdvTutari: 0,
-        toplamTutar: 0,
+(function() {
+    const sozlesmeler = @Html.Raw(sozlesmeJson);
 
-        init() {
-            this.hesapla();
-            const sel = document.querySelector('select[name="SozlesmeId"]');
-            if (sel && sel.value) this.sozlesmeSecildi({ target: sel });
-        },
+    function manuelBorcForm() {
+        return {
+            kiraciId: @Model.KiraciId,
+            sozlesmeId: @(Model.SozlesmeId.HasValue ? Model.SozlesmeId.Value.ToString() : "0"),
+            birimId: @Model.BirimId,
+            tutar: @(Model.Tutar > 0 ? Model.Tutar.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "0"),
+            kdvAktif: @(Model.KdvUygulanacakMi ? "true" : "false"),
+            kdvOrani: @Model.KdvOrani.ToString("F0", System.Globalization.CultureInfo.InvariantCulture),
+            kdvTutari: 0,
+            toplamTutar: 0,
 
-        sozlesmeSecildi(e) {
-            const opt = e.target.selectedOptions[0];
-            if (!opt || !opt.value) {
-                this.sozlesme = { kiraci: '', birim: '' };
-                return;
+            get benzersizKiraciler() {
+                const seen = new Set();
+                return sozlesmeler.filter(s => {
+                    if (seen.has(s.kiraciId)) return false;
+                    seen.add(s.kiraciId);
+                    return true;
+                });
+            },
+
+            get filtreliSozlesmeler() {
+                if (!this.kiraciId || this.kiraciId == 0) return sozlesmeler;
+                return sozlesmeler.filter(s => s.kiraciId == this.kiraciId);
+            },
+
+            get sozlesmeBirimId() {
+                if (!this.sozlesmeId || this.sozlesmeId == 0) return 0;
+                const s = sozlesmeler.find(x => x.id == this.sozlesmeId);
+                return s ? s.birimId : 0;
+            },
+
+            init() {
+                this.hesapla();
+            },
+
+            kiraciDegisti() {
+                if (this.sozlesmeId > 0) {
+                    const s = sozlesmeler.find(x => x.id == this.sozlesmeId);
+                    if (s && s.kiraciId != this.kiraciId) {
+                        this.sozlesmeId = 0;
+                    }
+                }
+            },
+
+            sozlesmeDegisti() {
+                if (this.sozlesmeId > 0) {
+                    const s = sozlesmeler.find(x => x.id == this.sozlesmeId);
+                    if (s) {
+                        this.kiraciId = s.kiraciId;
+                        this.birimId = s.birimId;
+                    }
+                }
+            },
+
+            hesapla() {
+                const t = parseFloat(this.tutar) || 0;
+                const oran = parseFloat(this.kdvOrani) || 0;
+                this.kdvTutari = this.kdvAktif ? Math.round(t * oran / 100 * 100) / 100 : 0;
+                this.toplamTutar = t + this.kdvTutari;
             }
-            this.sozlesme = {
-                kiraci: opt.dataset.kiraci,
-                birim: opt.dataset.birim
-            };
-        },
+        };
+    }
 
-        hesapla() {
-            const t = parseFloat(this.tutar) || 0;
-            const oran = parseFloat(this.kdvOrani) || 0;
-            this.kdvTutari = this.kdvAktif ? Math.round(t * oran / 100 * 100) / 100 : 0;
-            this.toplamTutar = t + this.kdvTutari;
-        }
-    };
-}
+    window.manuelBorcForm = manuelBorcForm;
+})();
 </script>
 }

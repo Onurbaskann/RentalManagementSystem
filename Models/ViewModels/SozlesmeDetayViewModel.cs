@@ -1,4 +1,5 @@
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Models.ViewModels;
 
@@ -23,4 +24,6 @@ public class SozlesmeDetayViewModel
     public DateTime DefaultYenidenUretBaslangicTarihi { get; set; } = DateTime.Today;
     public DateTime? SonOdenenDonem { get; set; }
     public int OdenmemisTahakkukSayisi { get; set; }
+    public List<Belge> Belgeler { get; set; } = [];
+    public List<BelgeTuru> BelgeTurleri { get; set; } = [];
 }

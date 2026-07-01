@@ -1,4 +1,5 @@
 using KiraTakip.Authorization;
+using KiraTakip.Extensions;
 using KiraTakip.Models.Entities;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -35,37 +36,66 @@ public class BelgeController : Controller
 
     [HttpPost("Yukle")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.Kiraci.Edit)]
-    public async Task<IActionResult> Yukle(int kiraciId, int belgeTuruId, IFormFile dosya, string? aciklama)
+    public async Task<IActionResult> Yukle(BelgeOwnerTipi ownerType, int ownerId, int belgeTuruId, IFormFile dosya, string? aciklama)
     {
+        if (!User.HasPermission(GetRequiredPermission(ownerType)))
+            return Forbid();
+
         if (dosya == null || dosya.Length == 0)
-            return BadRequest("Dosya seçilmedi.");
+        {
+            TempData["Error"] = "Dosya seçilmedi.";
+            return RedirectToEntity(ownerType, ownerId);
+        }
 
         var ext = Path.GetExtension(dosya.FileName).TrimStart('.').ToLowerInvariant();
         if (!AllowedExtensions.Contains(ext))
-            return BadRequest("Desteklenmeyen dosya türü.");
+        {
+            TempData["Error"] = "Desteklenmeyen dosya türü.";
+            return RedirectToEntity(ownerType, ownerId);
+        }
 
         if (dosya.Length > 20 * 1024 * 1024)
-            return BadRequest("Dosya boyutu 20 MB sınırını aşıyor.");
+        {
+            TempData["Error"] = "Dosya boyutu 20 MB sınırını aşıyor.";
+            return RedirectToEntity(ownerType, ownerId);
+        }
 
         using var ms = new MemoryStream();
         await dosya.CopyToAsync(ms);
 
         await _belgeService.UploadAsync(
-            BelgeOwnerTipi.Kiraci, kiraciId, belgeTuruId,
-            dosya.FileName, dosya.ContentType, ms.ToArray(), aciklama);
+            ownerType, ownerId, belgeTuruId,
+            dosya.FileName, dosya.ContentType, ms.ToArray(), aciklama, invalidateOld: true);
 
         TempData["Success"] = "Belge yüklendi.";
-        return RedirectToAction("Detay", "Kiraci", new { id = kiraciId });
+        return RedirectToEntity(ownerType, ownerId);
     }
 
     [HttpPost("Sil/{id:int}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.Kiraci.Edit)]
-    public async Task<IActionResult> Sil(int id, int kiraciId)
+    public async Task<IActionResult> Sil(int id, BelgeOwnerTipi ownerType, int ownerId)
     {
+        if (!User.HasPermission(GetRequiredPermission(ownerType)))
+            return Forbid();
+
         await _belgeService.DeleteAsync(id);
         TempData["Success"] = "Belge silindi.";
-        return RedirectToAction("Detay", "Kiraci", new { id = kiraciId });
+        return RedirectToEntity(ownerType, ownerId);
     }
+
+    private static string GetRequiredPermission(BelgeOwnerTipi ownerType) => ownerType switch
+    {
+        BelgeOwnerTipi.Kiraci   => PermissionCatalog.Kiraci.Edit,
+        BelgeOwnerTipi.Sozlesme => PermissionCatalog.Sozlesme.Edit,
+        BelgeOwnerTipi.Odeme    => PermissionCatalog.Odeme.UploadDekont,
+        _ => throw new ArgumentOutOfRangeException(nameof(ownerType))
+    };
+
+    private IActionResult RedirectToEntity(BelgeOwnerTipi ownerType, int ownerId) => ownerType switch
+    {
+        BelgeOwnerTipi.Kiraci   => RedirectToAction("Detay", "Kiraci",   new { id = ownerId }),
+        BelgeOwnerTipi.Sozlesme => RedirectToAction("Detay", "Sozlesme", new { id = ownerId }),
+        BelgeOwnerTipi.Odeme    => RedirectToAction("Detay", "Odeme",    new { id = ownerId }),
+        _ => RedirectToAction("Index", "Home")
+    };
 }

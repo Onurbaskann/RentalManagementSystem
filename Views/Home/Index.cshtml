@@ -14,6 +14,11 @@
         : Model.AylikGelirDelta < 0 ? $"↓ %{Math.Abs(Model.AylikGelirDelta):F1}"
         : "=";
 
+    bool hasTasinmaz = User.HasModuleAccess("Internal.Tasinmaz");
+    bool hasSozlesme = User.HasModuleAccess("Internal.Sozlesme");
+    bool hasOdeme    = User.HasModuleAccess("Internal.Odeme");
+    bool hasTahakkuk = User.HasModuleAccess("Internal.Tahakkuk");
+
     var nameParts = (Model.KullaniciAd ?? "").Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
     var trTR = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
     string initials = nameParts.Length >= 2
@@ -35,15 +40,15 @@
         <h1 class="text-2xl font-bold">Hoş geldiniz, @Model.KullaniciAd</h1>
         <div class="text-sm text-white/80 mt-1">@Model.TarihEtiket</div>
         <div class="text-xs text-white/70 mt-2">
-            @if (Model.GecikmisTahakkukAdet > 0)
+            @if (hasTahakkuk && Model.GecikmisTahakkukAdet > 0)
             {
                 <span>⚠ @Model.GecikmisTahakkukAdet gecikmiş tahakkuk var (@Model.GecikmisTutarToplam.ToString("N2") ₺)</span>
             }
-            else if (Model.OnayBekleyenOdemeAdet > 0)
+            else if (hasOdeme && Model.OnayBekleyenOdemeAdet > 0)
             {
                 <span>@Model.OnayBekleyenOdemeAdet ödeme onay bekliyor</span>
             }
-            else if (Model.BuAyYenilenecek > 0)
+            else if (hasSozlesme && Model.BuAyYenilenecek > 0)
             {
                 <span>Bu ay @Model.BuAyYenilenecek sözleşme yenilenmeli</span>
             }
@@ -70,6 +75,8 @@
 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
 
     <!-- A: Toplam Taşınmaz -->
+    @if (hasTasinmaz)
+    {
     <div class="bg-white rounded-2xl border border-slate-200 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
         <div class="flex items-start justify-between mb-4">
             <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#1a6b5c] to-[#155549] flex items-center justify-center text-white shadow-sm">
@@ -83,8 +90,11 @@
             @string.Join(" · ", Model.TipiDagilim.Select(kv => $"{kv.Value} {kv.Key}"))
         </div>
     </div>
+    }
 
     <!-- B: Aktif Sözleşme -->
+    @if (hasSozlesme)
+    {
     <div class="bg-white rounded-2xl border border-slate-200 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
         <div class="flex items-start justify-between mb-4">
             <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-sm">
@@ -99,8 +109,11 @@
         <div class="text-[12px] text-slate-500 mt-1">Aktif Sözleşme</div>
         <a href="/Sozlesme?filtre=aktif" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-1 block">Görüntüle →</a>
     </div>
+    }
 
     <!-- C: Aylık Kira Geliri -->
+    @if (hasOdeme)
+    {
     <div class="bg-white rounded-2xl border border-slate-200 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
         <div class="flex items-start justify-between mb-4">
             <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-sm">
@@ -113,30 +126,27 @@
              data-decimals="2" data-suffix=" ₺">0</div>
         <div class="text-[12px] text-slate-500 mt-1">Aylık Kira Geliri</div>
     </div>
+    }
 
-    <!-- D: Doluluk Oranı -->
+    <!-- D: Aktif Kiracı -->
+    @if (hasSozlesme)
+    {
     <div class="bg-white rounded-2xl border border-slate-200 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
         <div class="flex items-start justify-between mb-4">
-            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center text-white shadow-sm">
-                <i data-lucide="pie-chart" class="w-5 h-5"></i>
+            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white shadow-sm">
+                <i data-lucide="users" class="w-5 h-5"></i>
             </div>
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-md">@Model.KiraliBirim/@toplamBirim</span>
         </div>
-        <div class="text-3xl font-bold text-slate-800"
-             data-countup="@kiraliPct.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-             data-decimals="0" data-suffix="%">0</div>
-        <div class="text-[12px] text-slate-500 mt-1">Doluluk Oranı</div>
-        <div class="h-1.5 mt-2 rounded-full overflow-hidden flex bg-slate-100">
-            <div class="bg-emerald-500" style="width:@kiraliPct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
-            <div class="bg-amber-500"   style="width:@surekPct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
-            <div class="bg-slate-300"   style="width:@bosPct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
-        </div>
+        <div class="text-3xl font-bold text-slate-800" data-countup="@Model.AktifKiraciSayisi" data-decimals="0">0</div>
+        <div class="text-[12px] text-slate-500 mt-1">Aktif Kiracı</div>
+        <div class="text-[11px] text-slate-400 mt-1">@Model.AktifSozlesme aktif sözleşme</div>
     </div>
+    }
 </div>
 
 
 <!-- ─── §3.3 BUGÜN VADE DOLAN UYARI BANDI ─── -->
-@if (Model.HasOdemeAccess && Model.BugunVadeDolanAdet > 0)
+@if (hasOdeme && Model.BugunVadeDolanAdet > 0)
 {
     <div class="mb-6 flex items-center justify-between p-4 rounded-2xl border border-amber-200 bg-amber-50">
         <div class="flex items-center gap-3">
@@ -154,7 +164,7 @@
 
 
 <!-- ─── §3.4 ÖDEME KPI KARTLARI ─── -->
-@if (Model.HasOdemeAccess)
+@if (hasOdeme)
 {
     <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Ödeme Durumu</div>
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
@@ -231,9 +241,13 @@
 
 
 <!-- ─── §3.5 GRAFİK PANELİ ─── -->
+@if (hasOdeme || hasTasinmaz)
+{
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
 
     <!-- Sol: Son 6 Ay Nakit Akışı (col-span-2) -->
+    @if (hasOdeme)
+    {
     <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5">
         <div class="flex items-center justify-between mb-4">
             <div>
@@ -247,27 +261,50 @@
         </div>
         <div id="chart-nakit"></div>
     </div>
+    }
 
     <!-- Sağ: Doluluk Donut -->
+    @if (hasTasinmaz)
+    {
     <div class="bg-white rounded-2xl border border-slate-200 p-5">
         <div class="text-sm font-bold text-slate-800 mb-1">Doluluk Dağılımı</div>
         <div class="text-xs text-slate-500 mb-4">Birim bazında (Kiralı / Dolmak Üzere / Boş)</div>
         @if (Model.ToplamBirim > 0)
         {
             <div id="chart-doluluk"></div>
+            <div class="flex justify-around mt-3 text-[11px]">
+                <div class="text-center">
+                    <div class="font-bold text-emerald-600">@kiraliPct.ToString("F0")%</div>
+                    <div class="text-slate-400">Kiralı</div>
+                </div>
+                <div class="text-center">
+                    <div class="font-bold text-amber-500">@surekPct.ToString("F0")%</div>
+                    <div class="text-slate-400">Dolmak Üzere</div>
+                </div>
+                <div class="text-center">
+                    <div class="font-bold text-slate-500">@bosPct.ToString("F0")%</div>
+                    <div class="text-slate-400">Boş</div>
+                </div>
+            </div>
         }
         else
         {
             <div class="text-center py-10 text-slate-400 text-sm">Henüz birim yok</div>
         }
     </div>
+    }
 </div>
+}
 
 
 <!-- ─── §3.6 LİSTE PANELİ ─── -->
+@if (hasSozlesme || hasTasinmaz || hasOdeme)
+{
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
 
     <!-- A: Süresi Dolmak Üzere -->
+    @if (hasSozlesme)
+    {
     <div class="bg-white rounded-2xl border border-slate-200 p-5">
         <div class="flex items-center justify-between mb-4">
             <div class="text-sm font-bold text-slate-800">Süresi Dolmak Üzere</div>
@@ -298,8 +335,11 @@
             </div>
         }
     </div>
+    }
 
     <!-- B: Boş Birimler -->
+    @if (hasTasinmaz)
+    {
     <div class="bg-white rounded-2xl border border-slate-200 p-5">
         <div class="flex items-center justify-between mb-4">
             <div class="text-sm font-bold text-slate-800">Boş Birimler</div>
@@ -328,16 +368,63 @@
             </div>
         }
     </div>
+    }
 
     <!-- C: Top 5 Gelir Şampiyonları -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-5">
-        <div class="flex items-center justify-between mb-4">
+    @if (hasOdeme)
+    {
+    <div class="bg-white rounded-2xl border border-slate-200 p-5" x-data="{ gelirSekme: 'kiraci' }">
+        <div class="flex items-center justify-between mb-3">
             <div>
                 <div class="text-sm font-bold text-slate-800">Gelir Şampiyonları</div>
                 <div class="text-[11px] text-slate-500 mt-0.5">Son 12 ay tahsilat</div>
             </div>
-            <a href="/Tasinmaz" class="text-xs font-semibold text-[#1a6b5c] hover:underline">Tümü →</a>
+            <div class="flex gap-1 bg-slate-100 rounded-lg p-0.5">
+                <button type="button" @@click="gelirSekme = 'kiraci'"
+                        :class="gelirSekme === 'kiraci' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'"
+                        class="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all">Kiracı</button>
+                <button type="button" @@click="gelirSekme = 'tasinmaz'"
+                        :class="gelirSekme === 'tasinmaz' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'"
+                        class="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all">Taşınmaz</button>
+            </div>
         </div>
+
+        <!-- Kiracı sekmesi -->
+        <div x-show="gelirSekme === 'kiraci'">
+        @if (!Model.TopGelirKiraci.Any())
+        {
+            <div class="text-center py-8 text-slate-400 text-sm">Henüz tahsilat verisi yok</div>
+        }
+        else
+        {
+            var maxKiraci = Model.TopGelirKiraci.Max(x => x.ToplamTahsilat);
+            <div class="space-y-2.5">
+                @{ int rankK = 0; }
+                @foreach (var g in Model.TopGelirKiraci)
+                {
+                    rankK++;
+                    var pct = maxKiraci > 0 ? (double)(g.ToplamTahsilat / maxKiraci) * 100 : 0;
+                    <a href="/Kiraci/Detay/@g.KiraciId" class="block p-2 rounded-lg hover:bg-slate-50 transition-colors no-underline">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="w-5 h-5 rounded-md bg-[#f0faf7] text-[#1a6b5c] text-[10px] font-bold flex items-center justify-center shrink-0">@rankK</span>
+                                <span class="text-[13px] font-semibold text-slate-800 truncate">@g.KiraciAd</span>
+                            </div>
+                            <span class="text-[12px] font-bold text-slate-800 shrink-0">@g.ToplamTahsilat.ToString("N0") ₺</span>
+                        </div>
+                        <div class="h-1 rounded-full overflow-hidden bg-slate-100">
+                            <div class="h-full bg-gradient-to-r from-[#1a6b5c] to-emerald-500"
+                                 style="width:@pct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                        </div>
+                        <div class="text-[10px] text-slate-500 mt-1">@g.SozlesmeSayisi sözleşme</div>
+                    </a>
+                }
+            </div>
+        }
+        </div>
+
+        <!-- Taşınmaz sekmesi -->
+        <div x-show="gelirSekme === 'tasinmaz'" x-cloak>
         @if (!Model.TopGelirTasinmaz.Any())
         {
             <div class="text-center py-8 text-slate-400 text-sm">Henüz tahsilat verisi yok</div>
@@ -368,12 +455,15 @@
                 }
             </div>
         }
+        </div>
     </div>
+    }
 </div>
+}
 
 
 <!-- ─── §3.7 REZERVASYON & MANUEL BORÇ İNCE SATIR ─── -->
-@if (Model.HasOdemeAccess && (Model.BuAyManuelBorcToplami > 0 || Model.BuAyRezervasyonGeliri > 0 || Model.TahakkukaAktarilmamisRezervasyonAdet > 0))
+@if (hasOdeme && (Model.BuAyManuelBorcToplami > 0 || Model.BuAyRezervasyonGeliri > 0 || Model.TahakkukaAktarilmamisRezervasyonAdet > 0))
 {
     <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Rezervasyon & Manuel Borç</div>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -424,7 +514,7 @@
 <!-- ─── §3.8 HIZLI EYLEMLER ─── -->
 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
 
-    @if (User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Sozlesme.Create))
+    @if (User.HasPermission(PermissionCatalog.Sozlesme.Create))
     {
         <a href="/Sozlesme/Ekle"
            class="block p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
@@ -436,7 +526,7 @@
         </a>
     }
 
-    @if (User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Rezervasyon.Create))
+    @if (User.HasPermission(PermissionCatalog.Rezervasyon.Create))
     {
         <a href="/Rezervasyon/Ekle"
            class="block p-5 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
@@ -448,7 +538,7 @@
         </a>
     }
 
-    @if (User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.ManuelBorc.Create))
+    @if (User.HasPermission(PermissionCatalog.ManuelBorc.Create))
     {
         <a href="/ManuelBorc/Ekle"
            class="block p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
@@ -460,7 +550,7 @@
         </a>
     }
 
-    @if (User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.ImportBankStatement))
+    @if (User.HasPermission(PermissionCatalog.Odeme.ImportBankStatement))
     {
         <a href="/BankaHareketi"
            class="block p-5 rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
@@ -542,7 +632,7 @@
                         chart: { type: 'donut', height: 240, animations: { enabled: true, speed: 600 } },
                         series: dolulukData,
                         labels: dolulukLabels,
-                        colors: ['#10b981', '#f59e0b', '#cbd5e1'],
+                        colors: ['#10b981', '#f59e0b', '#94a3b8'],
                         plotOptions: {
                             pie: {
                                 donut: {

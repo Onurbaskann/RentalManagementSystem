@@ -6,12 +6,13 @@ namespace KiraTakip.Repositories.Interfaces;
 public interface ITahakkukRepository : IBaseRepository<Tahakkuk>
 {
     // Okuma — DTO döner
-    Task<List<TahakkukListItemDto>> GetListAsync(int? sozlesmeId, List<int>? yetkiliTasinmazIds);
-    Task<PagedResult<TahakkukListItemDto>> GetPagedListAsync(TableQuery q, int? sozlesmeId, List<int>? yetkiliTasinmazIds);
+    Task<List<TahakkukListItemDto>> GetListAsync(int? sozlesmeId, List<int>? yetkiliTasinmazIds, List<int>? yetkiliBirimIds = null);
+    Task<PagedResult<TahakkukListItemDto>> GetPagedListAsync(TableQuery q, int? sozlesmeId, List<int>? yetkiliTasinmazIds, List<int>? yetkiliBirimIds = null);
     Task<TahakkukDetayDto?> GetDetayAsync(int id);
 
     // Manuel Borç — DTO döner
-    Task<List<ManuelBorcListItemDto>> GetManuelBorcListAsync(List<int>? yetkiliTasinmazIds);
+    Task<List<ManuelBorcListItemDto>> GetManuelBorcListAsync(List<int>? yetkiliTasinmazIds, string? durum = null, string? baglanti = null, int? sozlesmeId = null, List<int>? yetkiliBirimIds = null);
+    Task<int> GetManuelBorcIptalSayisiAsync(List<int>? yetkiliTasinmazIds, List<int>? yetkiliBirimIds = null);
 
     // Business logic — entity döner (tracked)
     Task<List<Tahakkuk>> GetGeciktirileceklerAsync(DateTime bugun);

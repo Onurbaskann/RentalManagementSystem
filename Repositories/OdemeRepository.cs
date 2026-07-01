@@ -19,10 +19,7 @@ public class OdemeRepository : BaseRepository<TahakkukOdeme>, IOdemeRepository
             query = query.Where(o => o.TahakkukId == tahakkukId.Value);
 
         if (yetkiliTasinmazIds != null)
-            query = query.Where(o =>
-                (o.Tahakkuk.KiraSozlesmesiId != null && yetkiliTasinmazIds.Contains(o.Tahakkuk.KiraSozlesmesi!.Birim.TasinmazId)) ||
-                (o.Tahakkuk.KaynakTipi == TahakkukKaynakTipi.Rezervasyon &&
-                 _ctx.Rezervasyonlari.Any(r => r.TahakkukId == o.TahakkukId && yetkiliTasinmazIds.Contains(r.Birim.TasinmazId))));
+            query = query.Where(o => yetkiliTasinmazIds.Contains(o.Tahakkuk.Birim.TasinmazId));
 
         return await query
             .OrderByDescending(o => o.GirisTarihi)
@@ -53,10 +50,7 @@ public class OdemeRepository : BaseRepository<TahakkukOdeme>, IOdemeRepository
             query = query.Where(o => o.TahakkukId == tahakkukId.Value);
 
         if (yetkiliTasinmazIds != null)
-            query = query.Where(o =>
-                (o.Tahakkuk.KiraSozlesmesiId != null && yetkiliTasinmazIds.Contains(o.Tahakkuk.KiraSozlesmesi!.Birim.TasinmazId)) ||
-                (o.Tahakkuk.KaynakTipi == TahakkukKaynakTipi.Rezervasyon &&
-                 _ctx.Rezervasyonlari.Any(r => r.TahakkukId == o.TahakkukId && yetkiliTasinmazIds.Contains(r.Birim.TasinmazId))));
+            query = query.Where(o => yetkiliTasinmazIds.Contains(o.Tahakkuk.Birim.TasinmazId));
 
         if (!string.IsNullOrWhiteSpace(q.Q))
         {

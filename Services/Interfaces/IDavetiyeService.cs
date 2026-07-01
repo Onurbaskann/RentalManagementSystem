@@ -4,7 +4,7 @@ namespace KiraTakip.Services.Interfaces;
 
 public interface IDavetiyeService
 {
-    Task<Davetiye> GonderAsync(string email, string? adSoyad, int rolId, string davetEdenUserId, int? kiraciId = null, CancellationToken ct = default);
+    Task<Davetiye> GonderAsync(string email, string? adSoyad, int rolId, string davetEdenUserId, int? kiraciId = null, bool tumTasinmazlaraErisim = false, List<int>? tasinmazIds = null, List<int>? birimIds = null, CancellationToken ct = default);
     Task<(bool Success, string? Error, Davetiye? Davetiye)> DogrulaAsync(string rawToken, CancellationToken ct = default);
     Task<ApplicationUser> KabulEtAsync(Davetiye davetiye, string adSoyad, string password, CancellationToken ct = default);
     Task IptalEtAsync(int davetiyeId, CancellationToken ct = default);

@@ -8,6 +8,7 @@ public class TahakkukListItemDto
     public string KiraciGosterimAdi { get; set; } = string.Empty;
     public int? TasinmazId { get; set; }
     public string? TasinmazAd { get; set; }
+    public int? BirimId { get; set; }
     public string? BirimAd { get; set; }
     public DateTime DonemBaslangic { get; set; }
     public DateTime VadeTarihi { get; set; }
@@ -15,5 +16,6 @@ public class TahakkukListItemDto
     public decimal OdenenTutar { get; set; }
     public TahakkukDurumu Durum { get; set; }
     public TahakkukKaynakTipi KaynakTipi { get; set; }
+    public int BekleyenOdemeSayisi { get; set; }
     public List<TahakkukKalemDto> Kalemler { get; set; } = [];
 }

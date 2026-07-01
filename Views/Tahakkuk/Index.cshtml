@@ -3,9 +3,10 @@
 @using KiraTakip.Models.Common
 @{
     ViewData["Title"] = "Tahakkuklar";
-    bool canCreate = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.Create);
+    bool canCreate = User.HasPermission(PermissionCatalog.Odeme.Create);
     string durum = ViewBag.Durum ?? "tum";
     var q = (TableQuery)ViewBag.Query;
+    int iptalEdildiSayisi = ViewBag.IptalEdildiSayisi ?? 0;
     var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/Tahakkuk", Extra = q.ToQueryDict() };
 }
 
@@ -26,9 +27,16 @@
 }
 
 <!-- Filtreler -->
-<div class="flex gap-1.5 mb-5 flex-wrap">
+<div class="flex gap-1.5 mb-4 flex-wrap items-center">
     @{
-        var filters = new[] { ("tum","Tümü"), ("bekliyor","Bekliyor"), ("kismi","Kısmi"), ("tamodendi","Tam Ödendi"), ("gecikti","Gecikti") };
+        var filters = new[] {
+            ("tum","Tümü"),
+            ("bekliyor","Bekliyor"),
+            ("kismi","Kısmi"),
+            ("tamodendi","Tam Ödendi"),
+            ("gecikti","Gecikti"),
+            ("odeme_onay","Ödeme Onayı Bekleyen")
+        };
     }
     @foreach (var (key, label) in filters)
     {
@@ -37,6 +45,13 @@
         <a href="@url" class="btn btn-sm @(isActive ? "btn-primary" : "btn-secondary text-slate-600 bg-white border-slate-200")">@label</a>
     }
 </div>
+@if (iptalEdildiSayisi > 0 && (durum == "tum" || string.IsNullOrEmpty(durum)))
+{
+    <div class="text-[12px] text-slate-400 mb-4 -mt-2">
+        @iptalEdildiSayisi iptal edilmiş kayıt varsayılan görünümde gizleniyor.
+        <a href="/Tahakkuk?durum=iptal" class="text-slate-500 hover:text-primary underline ml-1">Görüntüle →</a>
+    </div>
+}
 
 <script>
     window._tahakkukBirimler = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
@@ -45,7 +60,7 @@
     ));
 </script>
 <div class="card p-0 overflow-hidden">
-    <form method="get" class="flex flex-wrap items-center gap-3 p-3 bg-slate-50/50 border-b border-slate-200" action="/Tahakkuk"
+    <form method="get" class="flex flex-col gap-2.5 p-3 bg-slate-50/50 border-b border-slate-200" action="/Tahakkuk"
           x-data="{
               tasinmazId: '@(q.TasinmazId?.ToString() ?? "")',
               birimId: '@(q.BirimId?.ToString() ?? "")',
@@ -57,6 +72,7 @@
           }">
         <input type="search" name="q" value="@q.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: kiracı, taşınmaz…" />
 
+        <div class="flex flex-wrap items-center gap-2.5">
         <select name="tasinmazId" x-model="tasinmazId" @@change="birimId = ''"
                 class="form-control w-44 text-xs font-medium">
             <option value="">— Tüm Taşınmazlar —</option>
@@ -111,8 +127,10 @@
         </div>
         
         <div class="flex items-center gap-1.5">
-            <input type="number" name="min" value="@q.Min?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-20 text-xs font-medium" placeholder="Min ₺" />
-            <input type="number" name="max" value="@q.Max?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-20 text-xs font-medium" placeholder="Max ₺" />
+            <span class="text-xs font-medium" style="color:var(--color-muted)">Borç:</span>
+            <input type="number" name="min" value="@q.Min?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-24 text-xs font-medium" placeholder="Min ₺" />
+            <span class="text-muted">–</span>
+            <input type="number" name="max" value="@q.Max?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-24 text-xs font-medium" placeholder="Max ₺" />
         </div>
 
         @if (durum != "tum") { <input type="hidden" name="durum" value="@durum" /> }
@@ -137,6 +155,7 @@
         {
             <a href="/Tahakkuk@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
         }
+        </div>
     </form>
     <div class="table-wrapper">
         <table class="w-full">
@@ -146,7 +165,7 @@
                     <th>Kiracı</th>
                     <th>Taşınmaz / Birim</th>
                     <th class="w-28 cell-center">Vade</th>
-                    <th class="w-32 num">Beklenen</th>
+                    <th class="w-32 num">Borç</th>
                     <th class="w-32 num">Ödenen</th>
                     <th class="w-32 num">Kalan</th>
                     <th class="w-32">Durum</th>
@@ -200,7 +219,16 @@
                         <td class="num">@t.ToplamTutar.ToString("N2") ₺</td>
                         <td class="num num-positive">@t.OdenenTutar.ToString("N2") ₺</td>
                         <td class="num @(kalan > 0 ? "num-negative" : "num-positive")">@kalan.ToString("N2") ₺</td>
-                        <td><span class="badge @durumCls">@durumLabel</span></td>
+                        <td>
+                            @if (t.BekleyenOdemeSayisi > 0)
+                            {
+                                <a href="/Odeme?tahakkukId=@t.Id&durum=onaybekliyor" class="badge badge-surek hover:opacity-80 transition-opacity">Ödeme Onayı Bekleniyor</a>
+                            }
+                            else
+                            {
+                                <span class="badge @durumCls">@durumLabel</span>
+                            }
+                        </td>
                         <td><span class="badge @tahakkukKaynakCls">@tahakkukKaynakLabel</span></td>
                         <td @@click.stop="" class="num">
                             <div class="flex gap-1 justify-end">
@@ -221,10 +249,8 @@
                                             <table class="w-full text-xs">
                                                 <thead class="bg-slate-50 border-b border-slate-200">
                                                     <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
-                                                        <th class="p-2 px-3 text-left">Kod</th>
                                                         <th class="p-2 px-3 text-left">Açıklama</th>
                                                         <th class="p-2 px-3 text-right">Birim</th>
-                                                        <th class="p-2 px-3 text-right">Miktar</th>
                                                         <th class="p-2 px-3 text-right">Tutar</th>
                                                         <th class="p-2 px-3 text-right text-muted">KDV</th>
                                                         <th class="p-2 px-3 text-right">Toplam</th>
@@ -255,10 +281,8 @@
                                                             _                                 => "Bilinmiyor"
                                                         };
                                                         <tr class="border-t border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
-                                                            <td class="p-2 px-3 font-mono font-bold text-slate-500">@k.BorcTipiKod</td>
                                                             <td class="p-2 px-3 text-slate-600">@k.Aciklama</td>
-                                                            <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺</td>
-                                                            <td class="p-2 px-3 text-right text-slate-400 font-medium">@k.Carpan.ToString("F2") @(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m²" : "Adet")</td>
+                                                            <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
                                                             <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Tutar.ToString("N2") ₺</td>
                                                             <td class="p-2 px-3 text-right text-slate-400/60">@k.KdvTutari.ToString("N2") ₺</td>
                                                             <td class="p-2 px-3 text-right font-bold text-slate-700">@k.ToplamTutar.ToString("N2") ₺</td>

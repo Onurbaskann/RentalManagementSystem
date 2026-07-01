@@ -4,7 +4,6 @@ public class Rezervasyon : BaseEntity
 {
     public int BirimId { get; set; }
     public int KiraciId { get; set; }
-    public int? TahakkukId { get; set; }
     public DateTime BaslangicTarihi { get; set; }
     public DateTime BitisTarihi { get; set; }
     public int ToplamSureDakika { get; set; }
@@ -20,5 +19,4 @@ public class Rezervasyon : BaseEntity
 
     public Birim Birim { get; set; } = null!;
     public Kiraci Kiraci { get; set; } = null!;
-    public Tahakkuk? Tahakkuk { get; set; }
 }

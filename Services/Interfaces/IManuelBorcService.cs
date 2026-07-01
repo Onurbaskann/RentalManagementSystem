@@ -6,7 +6,8 @@ namespace KiraTakip.Services.Interfaces;
 public interface IManuelBorcService
 {
     // Listeleme — DTO döner (N+1 yok)
-    Task<List<ManuelBorcListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null);
+    Task<List<ManuelBorcListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null, string? durum = null, string? baglanti = null, int? sozlesmeId = null, IReadOnlyList<int>? birimIds = null);
+    Task<int> GetIptalSayisiAsync(IReadOnlyList<int>? tasinmazIds = null, IReadOnlyList<int>? birimIds = null);
 
     // Create / Cancel — entity döner (business logic)
     Task<(bool Basarili, string? Hata, int TahakkukId)> CreateAsync(ManuelBorcCreateViewModel model, string userId);
@@ -15,4 +16,5 @@ public interface IManuelBorcService
     // Dropdown verileri — DTO döner
     Task<List<SozlesmeDropdownDto>> GetAktifSozlesmelerAsync();
     Task<List<BorcTipiLookupDto>> GetManuelBorcTipleriAsync();
+    Task<List<BirimLookupDto>> GetTumBirimlerAsync(IReadOnlyList<int>? tasinmazIds = null);
 }

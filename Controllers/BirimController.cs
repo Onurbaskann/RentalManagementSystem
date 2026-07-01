@@ -28,7 +28,7 @@ public class BirimController : Controller
         _provider = provider;
     }
 
-    [Authorize(Policy = PermissionCatalog.Birim.ManageRate)]
+    [Authorize(Policy = PermissionCatalog.Birim.OverrideRate)]
     [HttpGet("{id:int}/OzelFiyat")]
     public async Task<IActionResult> OzelFiyat(int id)
     {
@@ -193,7 +193,7 @@ public class BirimController : Controller
         return View(vm);
     }
 
-    [Authorize(Policy = PermissionCatalog.Birim.ManageRate)]
+    [Authorize(Policy = PermissionCatalog.Birim.OverrideRate)]
     [HttpPost("{id:int}/OzelFiyat")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> OzelFiyat(int id, BirimOzelFiyatViewModel vm)
@@ -243,7 +243,7 @@ public class BirimController : Controller
         return RedirectToAction(nameof(OzelFiyat), new { id });
     }
 
-    [Authorize(Policy = PermissionCatalog.Birim.ManageRate)]
+    [Authorize(Policy = PermissionCatalog.Birim.OverrideRate)]
     [HttpPost("{id:int}/RezKuralKaydet")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RezKuralKaydet(int id, RezervasyonTarifeKuralViewModel vm)
@@ -261,7 +261,7 @@ public class BirimController : Controller
         return RedirectToAction(nameof(OzelFiyat), new { id });
     }
 
-    [Authorize(Policy = PermissionCatalog.Birim.ManageRate)]
+    [Authorize(Policy = PermissionCatalog.Birim.OverrideRate)]
     [HttpPost("{id:int}/RezKuralSifirla")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RezKuralSifirla(int id)

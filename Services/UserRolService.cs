@@ -57,8 +57,9 @@ public class UserRolService : IUserRolService
 
     public async Task RemoveAllRolesAsync(string userId)
     {
-        var userRoller = await _db.UserRoller.Where(ur => ur.UserId == userId).ToListAsync();
-        foreach (var ur in userRoller) ur.IsDeleted = true;
+        var userRoller = await _db.UserRoller.IgnoreQueryFilters()
+            .Where(ur => ur.UserId == userId).ToListAsync();
+        _db.UserRoller.RemoveRange(userRoller);
         await _db.SaveChangesAsync();
     }
 
@@ -81,7 +82,8 @@ public class UserRolService : IUserRolService
 
     public async Task AddRoleByRolIdAsync(string userId, int rolId, string? atayanUserId = null)
     {
-        var mevcutMu = await _db.UserRoller.AnyAsync(ur => ur.UserId == userId && ur.RolId == rolId);
+        var mevcutMu = await _db.UserRoller.IgnoreQueryFilters()
+            .AnyAsync(ur => ur.UserId == userId && ur.RolId == rolId);
         if (mevcutMu) return;
 
         _db.UserRoller.Add(new UserRol

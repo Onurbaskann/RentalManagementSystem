@@ -37,7 +37,7 @@ public class OdemeController : Controller
         _provider = provider;
     }
 
-    [Authorize(Policy = PermissionCatalog.Odeme.View)]
+    [Authorize(Policy = PermissionCatalog.Odeme.Module)]
     public async Task<IActionResult> Index([FromQuery] TableQuery query, int? tahakkukId = null)
     {
         var paged = await _odemeService.GetPagedAsync(query, tahakkukId, _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
@@ -48,7 +48,7 @@ public class OdemeController : Controller
         return View(paged);
     }
 
-    [Authorize(Policy = PermissionCatalog.Odeme.View)]
+    [Authorize(Policy = PermissionCatalog.Odeme.Module)]
     public async Task<IActionResult> Detay(int id)
     {
         var odeme = await _odemeService.GetByIdAsync(id);
@@ -57,7 +57,8 @@ public class OdemeController : Controller
         if (odeme.TasinmazId != null && !_provider.KapsamdaMi(odeme.TasinmazId.Value))
             return Forbid();
 
-        ViewBag.Belgeler = await _belgeService.GetListAsync(BelgeOwnerTipi.Odeme, id);
+        ViewBag.Belgeler    = await _belgeService.GetListAsync(BelgeOwnerTipi.Odeme, id);
+        ViewBag.BelgeTurleri = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Odeme);
         return View(odeme);
     }
 
@@ -134,72 +135,6 @@ public class OdemeController : Controller
         return RedirectToAction(nameof(Detay), new { id = vm.OdemeId });
     }
 
-    [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Odeme.UploadDekont)]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DekontYukle(int odemeId, IFormFile? dosya)
-    {
-        if (dosya == null || dosya.Length == 0)
-        {
-            TempData["Error"] = "Dosya seçiniz.";
-            return RedirectToAction(nameof(Detay), new { id = odemeId });
-        }
-
-        var turleri = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Odeme);
-        if (!turleri.Any())
-        {
-            TempData["Error"] = "Ödeme belgesi türü tanımlanmamış.";
-            return RedirectToAction(nameof(Detay), new { id = odemeId });
-        }
-
-        var belgeTuru = turleri.First();
-        if (dosya.Length > belgeTuru.MaxBoyutMb * 1024 * 1024)
-        {
-            TempData["Error"] = $"Dosya boyutu {belgeTuru.MaxBoyutMb} MB'ı aşamaz.";
-            return RedirectToAction(nameof(Detay), new { id = odemeId });
-        }
-
-        using var ms = new MemoryStream();
-        await dosya.CopyToAsync(ms);
-
-        await _belgeService.UploadAsync(BelgeOwnerTipi.Odeme, odemeId, belgeTuru.Id,
-            dosya.FileName, dosya.ContentType, ms.ToArray(), invalidateOld: false);
-
-        TempData["Success"] = "Dekont yüklendi.";
-        return RedirectToAction(nameof(Detay), new { id = odemeId });
-    }
-
-    [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Odeme.UploadDekont)]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DekontSil(int id, int odemeId)
-    {
-        await _belgeService.DeleteAsync(id);
-        TempData["Success"] = "Dekont silindi.";
-        return RedirectToAction(nameof(Detay), new { id = odemeId });
-    }
-
-    [Authorize(Policy = PermissionCatalog.Odeme.View)]
-    public async Task<IActionResult> DekontIndir(int id)
-    {
-        try
-        {
-            var (meta, icerik) = await _belgeService.DownloadAsync(id);
-
-            if (!_provider.GlobalErisim)
-            {
-                var odeme = await _odemeService.GetByIdAsync(meta.OwnerId);
-                if (odeme?.TasinmazId == null || !_provider.KapsamdaMi(odeme.TasinmazId.Value))
-                    return Forbid();
-            }
-
-            return File(icerik, meta.MimeType, meta.DosyaAdi);
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-    }
 
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.Odeme.MatchBankTransaction)]

@@ -59,7 +59,7 @@
                             }
                         </td>
                         <td class="text-[13px]">
-                            @(bt.HedefEntite == BelgeOwnerTipi.Kiraci ? "Kiracı" : (bt.HedefEntite == BelgeOwnerTipi.Odeme ? "Ödeme" : bt.HedefEntite.ToString()))
+                            @(bt.HedefEntite == BelgeOwnerTipi.Kiraci ? "Kiracı" : bt.HedefEntite == BelgeOwnerTipi.Sozlesme ? "Sözleşme" : bt.HedefEntite == BelgeOwnerTipi.Odeme ? "Ödeme" : bt.HedefEntite.ToString())
                         </td>
                         <td class="text-center">
                             @if (bt.Zorunlu) { <span class="badge badge-kirali">Zorunlu</span> }

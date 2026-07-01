@@ -28,7 +28,7 @@ public class BankaHareketiController : Controller
         _provider = provider;
     }
 
-    [Authorize(Policy = PermissionCatalog.Odeme.View)]
+    [Authorize(Policy = PermissionCatalog.Odeme.Module)]
     public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
         var paged = await _bankaService.GetPagedAsync(query);

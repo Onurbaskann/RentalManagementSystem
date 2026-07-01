@@ -240,7 +240,7 @@ public class SeedDataService
                         BorcTipiConsts.Depozito => kat.Kod == "AKADEMIK" ? 8000m : 15000m,
                         _ => 0m
                     },
-                    KdvOrani = bt.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik ? 0m : 20m
+                    KdvOrani = 20m
                 });
             }
         }
@@ -390,12 +390,29 @@ public class SeedDataService
             Aciklama = "Toplantı Salonu Z01 için özel fiyatlandırma kuralı"
         });
 
-        // 1 adet kullanıcı tanımlı Belge Türü ekle
-        var belgeTuru = new BelgeTuru
+        // Kullanıcı tanımlı Belge Türlerini ekle
+        var btKimlik = new BelgeTuru
+        {
+            Kod = "KIMLIK_FOTOKOPISI",
+            Ad = "Kimlik Fotokopisi",
+            HedefEntite = BelgeOwnerTipi.Kiraci,
+            Zorunlu = true,
+            IzinVerilenUzantilar = "pdf,jpg,png",
+            MaxBoyutMb = 5,
+            Sira = 1,
+            Sistem = false,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "System",
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        var btSozlesmeEvrak = new BelgeTuru
         {
             Kod = "SOZLESME_EVRAK",
             Ad = "Sözleşme Evrakı",
             HedefEntite = BelgeOwnerTipi.Kiraci,
+            Zorunlu = false,
             IzinVerilenUzantilar = "pdf,jpg,png",
             MaxBoyutMb = 5,
             Sira = 2,
@@ -405,59 +422,201 @@ public class SeedDataService
             IsActive = true,
             IsDeleted = false
         };
-        _ctx.BelgeTurleri.Add(belgeTuru);
+
+        var btImzaliSozlesme = new BelgeTuru
+        {
+            Kod = "IMZALI_SOZLESME",
+            Ad = "İmzalı Sözleşme Metni",
+            HedefEntite = BelgeOwnerTipi.Sozlesme,
+            Zorunlu = true,
+            IzinVerilenUzantilar = "pdf,jpg,png",
+            MaxBoyutMb = 10,
+            Sira = 3,
+            Sistem = false,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "System",
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        var btKvkk = new BelgeTuru
+        {
+            Kod = "KVKK_BELGESI",
+            Ad = "KVKK Onay Belgesi",
+            HedefEntite = BelgeOwnerTipi.Kiraci,
+            Zorunlu = true,
+            IzinVerilenUzantilar = "pdf,jpg,png",
+            MaxBoyutMb = 5,
+            Sira = 4,
+            Sistem = false,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "System",
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        var btTeslim = new BelgeTuru
+        {
+            Kod = "TESLIM_TESELLUM",
+            Ad = "Teslim Tesellüm Tutanağı",
+            HedefEntite = BelgeOwnerTipi.Sozlesme,
+            Zorunlu = false,
+            IzinVerilenUzantilar = "pdf,jpg,png",
+            MaxBoyutMb = 5,
+            Sira = 5,
+            Sistem = false,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "System",
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        var btTeminat = new BelgeTuru
+        {
+            Kod = "TEMINAT_MEKTUBU",
+            Ad = "Teminat Mektubu",
+            HedefEntite = BelgeOwnerTipi.Sozlesme,
+            Zorunlu = false,
+            IzinVerilenUzantilar = "pdf,jpg,png",
+            MaxBoyutMb = 5,
+            Sira = 6,
+            Sistem = false,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "System",
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        _ctx.BelgeTurleri.AddRange(btKimlik, btSozlesmeEvrak, btImzaliSozlesme, btKvkk, btTeslim, btTeminat);
         await _ctx.SaveChangesAsync();
 
-        // 2 adet Belge ekle (Kiracı 1 ve Kiracı 2 için)
-        var belge1 = new Belge
+        // Kiracılar için belgeleri ekle
+        var belgeler = new List<Belge>
         {
-            BelgeTuruId = belgeTuru.Id,
-            OwnerType = BelgeOwnerTipi.Kiraci,
-            OwnerId = yzCozum.Id,
-            DosyaAdi = "sozlesme_yz.pdf",
-            MimeType = "application/pdf",
-            BoyutByte = 1024,
-            Aciklama = "YZ Çözüm Sözleşme Evrakı",
-            Gecersiz = false,
-            Icerik = new BelgeIcerik { Icerik = new byte[] { 1, 2, 3, 4 } }
+            // Kimlik Fotokopisi belgeleri
+            new Belge
+            {
+                BelgeTuruId = btKimlik.Id,
+                OwnerType = BelgeOwnerTipi.Kiraci,
+                OwnerId = yzCozum.Id,
+                DosyaAdi = "kimlik_yz.pdf",
+                MimeType = "application/pdf",
+                BoyutByte = 1024,
+                Aciklama = "YZ Çözüm Yetkili Kimlik Fotokopisi",
+                Gecersiz = false,
+                Icerik = new BelgeIcerik { Icerik = new byte[] { 1, 2, 3, 4 } }
+            },
+            new Belge
+            {
+                BelgeTuruId = btKimlik.Id,
+                OwnerType = BelgeOwnerTipi.Kiraci,
+                OwnerId = megaFinans.Id,
+                DosyaAdi = "kimlik_mega.pdf",
+                MimeType = "application/pdf",
+                BoyutByte = 1024,
+                Aciklama = "Mega Finans Yetkili Kimlik Fotokopisi",
+                Gecersiz = false,
+                Icerik = new BelgeIcerik { Icerik = new byte[] { 1, 2, 3, 4 } }
+            },
+            new Belge
+            {
+                BelgeTuruId = btKimlik.Id,
+                OwnerType = BelgeOwnerTipi.Kiraci,
+                OwnerId = biotech.Id,
+                DosyaAdi = "kimlik_biotech.pdf",
+                MimeType = "application/pdf",
+                BoyutByte = 1024,
+                Aciklama = "BiyoTek Yetkili Kimlik Fotokopisi",
+                Gecersiz = false,
+                Icerik = new BelgeIcerik { Icerik = new byte[] { 1, 2, 3, 4 } }
+            },
+
+            // KVKK Onay Belgesi belgeleri
+            new Belge
+            {
+                BelgeTuruId = btKvkk.Id,
+                OwnerType = BelgeOwnerTipi.Kiraci,
+                OwnerId = yzCozum.Id,
+                DosyaAdi = "kvkk_yz.pdf",
+                MimeType = "application/pdf",
+                BoyutByte = 1024,
+                Aciklama = "YZ Çözüm Yetkili KVKK Belgesi",
+                Gecersiz = false,
+                Icerik = new BelgeIcerik { Icerik = new byte[] { 1, 2, 3, 4 } }
+            },
+            new Belge
+            {
+                BelgeTuruId = btKvkk.Id,
+                OwnerType = BelgeOwnerTipi.Kiraci,
+                OwnerId = megaFinans.Id,
+                DosyaAdi = "kvkk_mega.pdf",
+                MimeType = "application/pdf",
+                BoyutByte = 1024,
+                Aciklama = "Mega Finans Yetkili KVKK Belgesi",
+                Gecersiz = false,
+                Icerik = new BelgeIcerik { Icerik = new byte[] { 1, 2, 3, 4 } }
+            },
+            new Belge
+            {
+                BelgeTuruId = btKvkk.Id,
+                OwnerType = BelgeOwnerTipi.Kiraci,
+                OwnerId = biotech.Id,
+                DosyaAdi = "kvkk_biotech.pdf",
+                MimeType = "application/pdf",
+                BoyutByte = 1024,
+                Aciklama = "BiyoTek Yetkili KVKK Belgesi",
+                Gecersiz = false,
+                Icerik = new BelgeIcerik { Icerik = new byte[] { 1, 2, 3, 4 } }
+            },
+
+            // Sözleşme Evrakı belgeleri
+            new Belge
+            {
+                BelgeTuruId = btSozlesmeEvrak.Id,
+                OwnerType = BelgeOwnerTipi.Kiraci,
+                OwnerId = yzCozum.Id,
+                DosyaAdi = "sozlesme_yz.pdf",
+                MimeType = "application/pdf",
+                BoyutByte = 1024,
+                Aciklama = "YZ Çözüm Sözleşme Evrakı",
+                Gecersiz = false,
+                Icerik = new BelgeIcerik { Icerik = new byte[] { 1, 2, 3, 4 } }
+            },
+            new Belge
+            {
+                BelgeTuruId = btSozlesmeEvrak.Id,
+                OwnerType = BelgeOwnerTipi.Kiraci,
+                OwnerId = megaFinans.Id,
+                DosyaAdi = "sozlesme_mega.pdf",
+                MimeType = "application/pdf",
+                BoyutByte = 2048,
+                Aciklama = "Mega Finans Sözleşme Evrakı",
+                Gecersiz = false,
+                Icerik = new BelgeIcerik { Icerik = new byte[] { 5, 6, 7, 8 } }
+            }
         };
-        var belge2 = new Belge
-        {
-            BelgeTuruId = belgeTuru.Id,
-            OwnerType = BelgeOwnerTipi.Kiraci,
-            OwnerId = megaFinans.Id,
-            DosyaAdi = "sozlesme_mega.pdf",
-            MimeType = "application/pdf",
-            BoyutByte = 2048,
-            Aciklama = "Mega Finans Sözleşme Evrakı",
-            Gecersiz = false,
-            Icerik = new BelgeIcerik { Icerik = new byte[] { 5, 6, 7, 8 } }
-        };
-        _ctx.Belgeler.AddRange(belge1, belge2);
+        _ctx.Belgeler.AddRange(belgeler);
         await _ctx.SaveChangesAsync();
 
-        // Yardımcı fonksiyon: Dinamik bedel çözünürlüğü
-        async Task<decimal> ResolveKiraBedeli(Birim b, Kiraci k)
+        // Yardımcı fonksiyon: Dinamik m2 birim bedeli çözünürlüğü
+        async Task<decimal> ResolveKiraM2Rate(Birim b, Kiraci k)
         {
             var res = await _rateResolver.ResolveAsync(null, k.Id, b.Id, btKiraId, now);
-            if (res == null) return 0;
-            return res.HesaplamaYontemi == HesaplamaYontemi.M2
-                ? Math.Round(res.BirimDeger * b.Yuzolcumu, 2)
-                : res.BirimDeger;
+            return res?.BirimDeger ?? 0;
         }
 
         // --- 5. Sözleşmelerin Oluşturulması ---
         var startYearMinus1 = new DateTime(now.Year - 1, 1, 1);
 
-        var bedel101 = await ResolveKiraBedeli(birim101, yzCozum);
-        var bedel102 = await ResolveKiraBedeli(birim102, megaFinans);
-        var bedel103 = await ResolveKiraBedeli(birim103, biotech);
+        var rate101 = await ResolveKiraM2Rate(birim101, yzCozum);
+        var rate102 = await ResolveKiraM2Rate(birim102, megaFinans);
+        var rate103 = await ResolveKiraM2Rate(birim103, biotech);
 
         var sozlesmeler = new List<Sozlesme>
         {
             MakeSozlesme(birim101, yzCozum, startYearMinus1, startYearMinus1.AddYears(2).AddDays(-1), true,
                 vadeKuraliTipi: VadeKuraliTipi.SabitAyGunu, vadeGunu: 5),
-            MakeSozlesme(birim102, megaFinans, startYearMinus1.AddMonths(3), startYearMinus1.AddMonths(24).AddDays(-1), false,
+            MakeSozlesme(birim102, megaFinans, startYearMinus1.AddMonths(3), startYearMinus1.AddMonths(24).AddDays(-1), true,
                 vadeKuraliTipi: VadeKuraliTipi.SabitAyGunu, vadeGunu: 10),
             MakeSozlesme(birim103, biotech, startYearMinus1.AddMonths(6), startYearMinus1.AddMonths(18).AddDays(-1), true,
                 vadeKuraliTipi: VadeKuraliTipi.SabitAyGunu, vadeGunu: 15)
@@ -466,11 +625,78 @@ public class SeedDataService
         _ctx.Sozlesmeler.AddRange(sozlesmeler);
         await _ctx.SaveChangesAsync();
 
+        // Sözleşmeler için İmzalı Sözleşme Metni belgelerini ekle
+        var sozlesmeBelgeleri = new List<Belge>
+        {
+            new Belge
+            {
+                BelgeTuruId = btImzaliSozlesme.Id,
+                OwnerType = BelgeOwnerTipi.Sozlesme,
+                OwnerId = sozlesmeler[0].Id,
+                DosyaAdi = "imzali_sozlesme_101.pdf",
+                MimeType = "application/pdf",
+                BoyutByte = 4096,
+                Aciklama = "Ofis 101 İmzalı Kira Sözleşmesi",
+                Gecersiz = false,
+                Icerik = new BelgeIcerik { Icerik = new byte[] { 10, 11, 12, 13 } }
+            },
+            new Belge
+            {
+                BelgeTuruId = btImzaliSozlesme.Id,
+                OwnerType = BelgeOwnerTipi.Sozlesme,
+                OwnerId = sozlesmeler[1].Id,
+                DosyaAdi = "imzali_sozlesme_102.pdf",
+                MimeType = "application/pdf",
+                BoyutByte = 4096,
+                Aciklama = "Ofis 102 İmzalı Kira Sözleşmesi",
+                Gecersiz = false,
+                Icerik = new BelgeIcerik { Icerik = new byte[] { 14, 15, 16, 17 } }
+            },
+            new Belge
+            {
+                BelgeTuruId = btImzaliSozlesme.Id,
+                OwnerType = BelgeOwnerTipi.Sozlesme,
+                OwnerId = sozlesmeler[2].Id,
+                DosyaAdi = "imzali_sozlesme_103.pdf",
+                MimeType = "application/pdf",
+                BoyutByte = 4096,
+                Aciklama = "Ofis 103 İmzalı Kira Sözleşmesi",
+                Gecersiz = false,
+                Icerik = new BelgeIcerik { Icerik = new byte[] { 18, 19, 20, 21 } }
+            },
+            new Belge
+            {
+                BelgeTuruId = btTeslim.Id,
+                OwnerType = BelgeOwnerTipi.Sozlesme,
+                OwnerId = sozlesmeler[0].Id,
+                DosyaAdi = "teslim_tutanagi_101.pdf",
+                MimeType = "application/pdf",
+                BoyutByte = 2048,
+                Aciklama = "Ofis 101 Teslim Tesellüm Tutanağı",
+                Gecersiz = false,
+                Icerik = new BelgeIcerik { Icerik = new byte[] { 30, 31, 32, 33 } }
+            },
+            new Belge
+            {
+                BelgeTuruId = btTeminat.Id,
+                OwnerType = BelgeOwnerTipi.Sozlesme,
+                OwnerId = sozlesmeler[0].Id,
+                DosyaAdi = "teminat_mektubu_101.pdf",
+                MimeType = "application/pdf",
+                BoyutByte = 8192,
+                Aciklama = "Ofis 101 Teminat Mektubu",
+                Gecersiz = false,
+                Icerik = new BelgeIcerik { Icerik = new byte[] { 40, 41, 42, 43 } }
+            }
+        };
+        _ctx.Belgeler.AddRange(sozlesmeBelgeleri);
+        await _ctx.SaveChangesAsync();
+
         // --- 6. Sözleşme Tarifesi (Özel Oran) Uygulaması ---
         _ctx.SozlesmeTarifeler.AddRange(
-            new SozlesmeTarife { KiraSozlesmesiId = sozlesmeler[0].Id, BorcTipiId = btKiraId, BirimDeger = bedel101, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 20 },
-            new SozlesmeTarife { KiraSozlesmesiId = sozlesmeler[1].Id, BorcTipiId = btKiraId, BirimDeger = bedel102, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 0 },
-            new SozlesmeTarife { KiraSozlesmesiId = sozlesmeler[2].Id, BorcTipiId = btKiraId, BirimDeger = bedel103, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 20 }
+            new SozlesmeTarife { KiraSozlesmesiId = sozlesmeler[0].Id, BorcTipiId = btKiraId, BirimDeger = rate101, HesaplamaYontemi = HesaplamaYontemi.M2, KdvOrani = 20 },
+            new SozlesmeTarife { KiraSozlesmesiId = sozlesmeler[1].Id, BorcTipiId = btKiraId, BirimDeger = rate102, HesaplamaYontemi = HesaplamaYontemi.M2, KdvOrani = 20 },
+            new SozlesmeTarife { KiraSozlesmesiId = sozlesmeler[2].Id, BorcTipiId = btKiraId, BirimDeger = rate103, HesaplamaYontemi = HesaplamaYontemi.M2, KdvOrani = 20 }
         );
         await _ctx.SaveChangesAsync();
 
@@ -522,13 +748,13 @@ public class SeedDataService
                 new TasinmazTarife { TasinmazId = teknokent.Id, KiraciKategoriId = katAkademik.Id, BorcTipiId = btKira.Id, BirimDeger = 320, HesaplamaYontemi = HesaplamaYontemi.M2, KdvOrani = 20 },
                 new TasinmazTarife { TasinmazId = teknokent.Id, KiraciKategoriId = katAkademik.Id, BorcTipiId = btOrtak.Id, BirimDeger = 95, HesaplamaYontemi = HesaplamaYontemi.M2, KdvOrani = 20 },
                 new TasinmazTarife { TasinmazId = teknokent.Id, KiraciKategoriId = katAkademik.Id, BorcTipiId = btPortal.Id, BirimDeger = 480, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 20 },
-                new TasinmazTarife { TasinmazId = teknokent.Id, KiraciKategoriId = katAkademik.Id, BorcTipiId = btDepozito.Id, BirimDeger = 9000, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 0 },
+                new TasinmazTarife { TasinmazId = teknokent.Id, KiraciKategoriId = katAkademik.Id, BorcTipiId = btDepozito.Id, BirimDeger = 9000, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 20 },
 
                 // Akademik Olmayan için - Taşınmaz Tarifesi
                 new TasinmazTarife { TasinmazId = teknokent.Id, KiraciKategoriId = katAkadOlmayan.Id, BorcTipiId = btKira.Id, BirimDeger = 430, HesaplamaYontemi = HesaplamaYontemi.M2, KdvOrani = 20 },
                 new TasinmazTarife { TasinmazId = teknokent.Id, KiraciKategoriId = katAkadOlmayan.Id, BorcTipiId = btOrtak.Id, BirimDeger = 140, HesaplamaYontemi = HesaplamaYontemi.M2, KdvOrani = 20 },
                 new TasinmazTarife { TasinmazId = teknokent.Id, KiraciKategoriId = katAkadOlmayan.Id, BorcTipiId = btPortal.Id, BirimDeger = 700, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 20 },
-                new TasinmazTarife { TasinmazId = teknokent.Id, KiraciKategoriId = katAkadOlmayan.Id, BorcTipiId = btDepozito.Id, BirimDeger = 22000, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 0 }
+                new TasinmazTarife { TasinmazId = teknokent.Id, KiraciKategoriId = katAkadOlmayan.Id, BorcTipiId = btDepozito.Id, BirimDeger = 22000, HesaplamaYontemi = HesaplamaYontemi.Sabit, KdvOrani = 20 }
             );
 
             await _ctx.SaveChangesAsync();
@@ -557,8 +783,9 @@ public class SeedDataService
                 var targetSozlesme = sozlesmeler.First();
                 _ctx.Tahakkuklar.Add(new Tahakkuk
                 {
-                    KiraSozlesmesiId = targetSozlesme.Id,
                     KiraciId = targetSozlesme.KiraciId,
+                    BirimId = targetSozlesme.BirimId,
+                    KiraSozlesmesiId = targetSozlesme.Id,
                     DonemBaslangic = DateTime.Today.AddDays(-5),
                     DonemBitis = DateTime.Today,
                     VadeTarihi = DateTime.Today.AddDays(15),
@@ -574,8 +801,9 @@ public class SeedDataService
                 // İptal Edilen Kayıt
                 _ctx.Tahakkuklar.Add(new Tahakkuk
                 {
-                    KiraSozlesmesiId = targetSozlesme.Id,
                     KiraciId = targetSozlesme.KiraciId,
+                    BirimId = targetSozlesme.BirimId,
+                    KiraSozlesmesiId = targetSozlesme.Id,
                     DonemBaslangic = DateTime.Today.AddMonths(-1),
                     DonemBitis = DateTime.Today.AddMonths(-1).AddDays(1),
                     VadeTarihi = DateTime.Today.AddMonths(-1),
@@ -723,6 +951,8 @@ public class SeedDataService
             var tahakkuk = new Tahakkuk
             {
                 KiraciId = kiraci.Id,
+                BirimId = salon.Id,
+                RezervasyonId = rezervasyon1.Id,
                 DonemBaslangic = rezervasyon1.BaslangicTarihi,
                 DonemBitis = rezervasyon1.BitisTarihi,
                 VadeTarihi = rezervasyon1.BitisTarihi.Date,
@@ -750,9 +980,6 @@ public class SeedDataService
                 }
             };
             _ctx.Tahakkuklar.Add(tahakkuk);
-            await _ctx.SaveChangesAsync();
-
-            rezervasyon1.TahakkukId = tahakkuk.Id;
             await _ctx.SaveChangesAsync();
         }
 
@@ -868,9 +1095,39 @@ public class SeedDataService
     public async Task ClearDomainDataAsync()
     {
         // Yetki kapsamlarını temizle (FK kısıtlaması nedeniyle)
-        _ctx.KullaniciYetkiKapsamlari.RemoveRange(_ctx.KullaniciYetkiKapsamlari);
+        _ctx.KullaniciYetkiKapsamlari.RemoveRange(_ctx.KullaniciYetkiKapsamlari.IgnoreQueryFilters());
+        _ctx.Davetiyeler.RemoveRange(_ctx.Davetiyeler.IgnoreQueryFilters());
+        _ctx.SifreSifirlamaTalepleri.RemoveRange(_ctx.SifreSifirlamaTalepleri.IgnoreQueryFilters());
+        _ctx.OdemeLinkKayitlari.RemoveRange(_ctx.OdemeLinkKayitlari.IgnoreQueryFilters());
 
-        // Kiracı kullanıcılarını ve rollerini temizle (FK kısıtlaması nedeniyle kiracılardan önce silinmelidir)
+        // Temizlik sırası önemlidir (FK kısıtlamaları nedeniyle)
+        _ctx.OdemeBankaEslesmeleri.RemoveRange(_ctx.OdemeBankaEslesmeleri.IgnoreQueryFilters());
+        _ctx.TahakkukOdemeler.RemoveRange(_ctx.TahakkukOdemeler.IgnoreQueryFilters());
+        _ctx.BankaHareketleri.RemoveRange(_ctx.BankaHareketleri.IgnoreQueryFilters());
+
+        _ctx.Rezervasyonlari.RemoveRange(_ctx.Rezervasyonlari.IgnoreQueryFilters());
+        _ctx.RezervasyonTarifeler.RemoveRange(_ctx.RezervasyonTarifeler.IgnoreQueryFilters());
+
+        _ctx.TahakkukKalemleri.RemoveRange(_ctx.TahakkukKalemleri.IgnoreQueryFilters());
+        _ctx.Tahakkuklar.RemoveRange(_ctx.Tahakkuklar.IgnoreQueryFilters());
+
+        _ctx.SozlesmeTarifeler.RemoveRange(_ctx.SozlesmeTarifeler.IgnoreQueryFilters());
+        _ctx.SozlesmeIslemGecmisleri.RemoveRange(_ctx.SozlesmeIslemGecmisleri.IgnoreQueryFilters());
+        _ctx.Sozlesmeler.RemoveRange(_ctx.Sozlesmeler.IgnoreQueryFilters());
+
+        _ctx.BirimTarifeler.RemoveRange(_ctx.BirimTarifeler.IgnoreQueryFilters());
+        _ctx.Birimler.RemoveRange(_ctx.Birimler.IgnoreQueryFilters());
+
+        _ctx.TasinmazTarifeler.RemoveRange(_ctx.TasinmazTarifeler.IgnoreQueryFilters());
+        _ctx.Tasinmazlar.RemoveRange(_ctx.Tasinmazlar.IgnoreQueryFilters());
+
+        _ctx.GenelTarifeler.RemoveRange(_ctx.GenelTarifeler.IgnoreQueryFilters());
+
+        // Belgeleri sil (BelgeTurleri temizlenmeden önce silinmelidir)
+        _ctx.Belgeler.RemoveRange(_ctx.Belgeler.IgnoreQueryFilters());
+        await _ctx.SaveChangesAsync();
+
+        // Kiracı kullanıcılarını ve rollerini temizle (Referans veren tüm tahakkuk ödemeleri silindikten sonra güvenle silinebilir)
         var kiraciUsers = await _userManager.Users.Where(u => u.UserType == UserType.Kiraci).ToListAsync();
         foreach (var ku in kiraciUsers)
         {
@@ -878,45 +1135,19 @@ public class SeedDataService
             await _userManager.DeleteAsync(ku);
         }
 
-        var kiraciRoller = await _ctx.Roller.Where(r => r.Scope == RolScope.Kiraci && r.KiraciId != null).ToListAsync();
+        var kiraciRoller = await _ctx.Roller.IgnoreQueryFilters().Where(r => r.Scope == RolScope.Kiraci && r.KiraciId != null).ToListAsync();
         _ctx.Roller.RemoveRange(kiraciRoller);
+        await _ctx.SaveChangesAsync();
 
-        _ctx.Davetiyeler.RemoveRange(_ctx.Davetiyeler);
-        _ctx.SifreSifirlamaTalepleri.RemoveRange(_ctx.SifreSifirlamaTalepleri);
-        _ctx.OdemeLinkKayitlari.RemoveRange(_ctx.OdemeLinkKayitlari);
-
-        // Temizlik sırası önemlidir (FK kısıtlamaları nedeniyle)
-        _ctx.OdemeBankaEslesmeleri.RemoveRange(_ctx.OdemeBankaEslesmeleri);
-        _ctx.TahakkukOdemeler.RemoveRange(_ctx.TahakkukOdemeler);
-        _ctx.BankaHareketleri.RemoveRange(_ctx.BankaHareketleri);
-
-        _ctx.Rezervasyonlari.RemoveRange(_ctx.Rezervasyonlari);
-        _ctx.RezervasyonTarifeler.RemoveRange(_ctx.RezervasyonTarifeler);
-
-        _ctx.TahakkukKalemleri.RemoveRange(_ctx.TahakkukKalemleri);
-        _ctx.Tahakkuklar.RemoveRange(_ctx.Tahakkuklar);
-
-        _ctx.SozlesmeTarifeler.RemoveRange(_ctx.SozlesmeTarifeler);
-        _ctx.SozlesmeIslemGecmisleri.RemoveRange(_ctx.SozlesmeIslemGecmisleri);
-        _ctx.Sozlesmeler.RemoveRange(_ctx.Sozlesmeler);
-        _ctx.Kiraciler.RemoveRange(_ctx.Kiraciler);
-
-        _ctx.BirimTarifeler.RemoveRange(_ctx.BirimTarifeler);
-        _ctx.Birimler.RemoveRange(_ctx.Birimler);
-
-        _ctx.TasinmazTarifeler.RemoveRange(_ctx.TasinmazTarifeler);
-        _ctx.Tasinmazlar.RemoveRange(_ctx.Tasinmazlar);
-
-        _ctx.GenelTarifeler.RemoveRange(_ctx.GenelTarifeler);
-
-        // Belgeleri sil (BelgeTurleri temizlenmeden önce silinmelidir)
-        _ctx.Belgeler.RemoveRange(_ctx.Belgeler);
+        // Artık üzerinde hiçbir referans kalmayan Kiraciler tablosunu silebiliriz
+        _ctx.Kiraciler.RemoveRange(_ctx.Kiraciler.IgnoreQueryFilters());
+        await _ctx.SaveChangesAsync();
 
         // Sistem Tanımları (Baştan seed edileceği için temizlenebilir)
-        _ctx.Kategoriler.RemoveRange(_ctx.Kategoriler);
-        _ctx.BirimTurleri.RemoveRange(_ctx.BirimTurleri);
-        _ctx.BorcTipleri.RemoveRange(_ctx.BorcTipleri.Where(b => !b.Sistem));
-        _ctx.BelgeTurleri.RemoveRange(_ctx.BelgeTurleri.Where(b => !b.Sistem));
+        _ctx.Kategoriler.RemoveRange(_ctx.Kategoriler.IgnoreQueryFilters());
+        _ctx.BirimTurleri.RemoveRange(_ctx.BirimTurleri.IgnoreQueryFilters());
+        _ctx.BorcTipleri.RemoveRange(_ctx.BorcTipleri.IgnoreQueryFilters().Where(b => !b.Sistem));
+        _ctx.BelgeTurleri.RemoveRange(_ctx.BelgeTurleri.IgnoreQueryFilters().Where(b => !b.Sistem));
 
         await _ctx.SaveChangesAsync();
     }

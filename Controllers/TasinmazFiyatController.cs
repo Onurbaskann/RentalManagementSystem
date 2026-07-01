@@ -21,7 +21,7 @@ namespace KiraTakip.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = PermissionCatalog.Tasinmaz.View)]
+        [Authorize(Policy = PermissionCatalog.Tasinmaz.Module)]
         public async Task<IActionResult> Index(int tasinmazId, int page = 1, int pageSize = 10)
         {
             var vm = await _fiyatService.GetMatrisiAsync(tasinmazId, page, pageSize);

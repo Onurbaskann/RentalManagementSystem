@@ -1,6 +1,7 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -42,7 +43,7 @@ public class KiraciKullaniciController : Controller
     }
 
     [HttpGet("")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.Kullanici.View)]
+    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Kullanici.Module)]
     public async Task<IActionResult> Index()
     {
         var kiraciId = _currentUser.KiraciId!.Value;
@@ -91,8 +92,8 @@ public class KiraciKullaniciController : Controller
             ExpiresAt = d.ExpiresAt
         }).ToList();
 
-        var canInvite = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.KiraciPortal.Kullanici.Invite);
-        var canManage = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.KiraciPortal.Kullanici.Manage);
+        var canInvite = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.KiraciPortal.System.Kullanici.Invite);
+        var canManage = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.KiraciPortal.System.Kullanici.Invite);
 
         return View(new KiraciKullaniciListeViewModel
         {
@@ -104,39 +105,45 @@ public class KiraciKullaniciController : Controller
     }
 
     [HttpGet("Davet")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.Kullanici.Invite)]
+    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Kullanici.Invite)]
     public async Task<IActionResult> Davet()
     {
+        var kiraciId = _currentUser.KiraciId!.Value;
         var model = new KiraciDavetViewModel();
         await PopulateRollerAsync(model.Roller);
+        model.Birimler = await GetKiraciBirimleriAsync(kiraciId);
         return View(model);
     }
 
     [HttpPost("Davet")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.Kullanici.Invite)]
+    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Kullanici.Invite)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Davet(KiraciDavetViewModel model)
     {
+        var kiraciId = _currentUser.KiraciId!.Value;
+
         if (!ModelState.IsValid)
         {
             await PopulateRollerAsync(model.Roller);
+            model.Birimler = await GetKiraciBirimleriAsync(kiraciId);
             return View(model);
         }
 
-        var kiraciId = _currentUser.KiraciId!.Value;
         var currentUserId = _userManager.GetUserId(User)!;
 
-        var rol = await _db.Roller.FirstOrDefaultAsync(r => r.Id == model.RolId && (r.KiraciId == null || r.KiraciId == kiraciId));
+        var rol = await _db.Roller.FirstOrDefaultAsync(r => r.Id == model.RolId && r.KiraciId == kiraciId && !r.IsSystemRole);
         if (rol == null)
         {
             ModelState.AddModelError("RolId", "Geçersiz rol seçildi.");
             await PopulateRollerAsync(model.Roller);
+            model.Birimler = await GetKiraciBirimleriAsync(kiraciId);
             return View(model);
         }
 
         try
         {
-            await _davetiyeService.GonderAsync(model.Email, model.AdSoyad, model.RolId, currentUserId, kiraciId);
+            var birimIds = model.BirimIds.Count > 0 ? model.BirimIds : null;
+            await _davetiyeService.GonderAsync(model.Email, model.AdSoyad, model.RolId, currentUserId, kiraciId, birimIds: birimIds);
             TempData["Success"] = $"{model.Email} adresine davet gönderildi.";
             return RedirectToAction(nameof(Index));
         }
@@ -144,12 +151,30 @@ public class KiraciKullaniciController : Controller
         {
             ModelState.AddModelError(string.Empty, ex.Message);
             await PopulateRollerAsync(model.Roller);
+            model.Birimler = await GetKiraciBirimleriAsync(kiraciId);
             return View(model);
         }
     }
 
+    private async Task<List<BirimLookupDto>> GetKiraciBirimleriAsync(int kiraciId)
+    {
+        return await _db.Sozlesmeler
+            .AsNoTracking()
+            .Where(s => s.KiraciId == kiraciId && s.Durum == SozlesmeDurumu.Aktif)
+            .Select(s => new BirimLookupDto
+            {
+                Id = s.BirimId,
+                Ad = s.Birim.Ad,
+                TasinmazAd = s.Birim.Tasinmaz.Ad,
+                BirimNo = s.Birim.BirimNo,
+            })
+            .Distinct()
+            .OrderBy(b => b.TasinmazAd).ThenBy(b => b.Ad)
+            .ToListAsync();
+    }
+
     [HttpPost("Davet/Iptal/{id:int}")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.Kullanici.Invite)]
+    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Kullanici.Invite)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DavetIptal(int id)
     {
@@ -172,7 +197,7 @@ public class KiraciKullaniciController : Controller
     }
 
     [HttpPost("Davet/YenidenGonder/{id:int}")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.Kullanici.Invite)]
+    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Kullanici.Invite)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DavetYenidenGonder(int id)
     {
@@ -196,7 +221,7 @@ public class KiraciKullaniciController : Controller
     }
 
     [HttpGet("Duzenle/{id}")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.Kullanici.Edit)]
+    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Kullanici.Edit)]
     public async Task<IActionResult> Duzenle(string id)
     {
         var kiraciId = _currentUser.KiraciId!.Value;
@@ -225,7 +250,7 @@ public class KiraciKullaniciController : Controller
     }
 
     [HttpPost("Duzenle/{id}")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.Kullanici.Edit)]
+    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Kullanici.Edit)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Duzenle(string id, KiraciKullaniciDuzenleViewModel model)
     {
@@ -251,7 +276,7 @@ public class KiraciKullaniciController : Controller
         }
 
         var yeniRol = await _db.Roller
-            .FirstOrDefaultAsync(r => r.Id == model.RolId && (r.KiraciId == null || r.KiraciId == kiraciId));
+            .FirstOrDefaultAsync(r => r.Id == model.RolId && r.KiraciId == kiraciId && !r.IsSystemRole);
         if (yeniRol == null)
         {
             ModelState.AddModelError("RolId", "Geçersiz rol seçildi.");
@@ -282,7 +307,7 @@ public class KiraciKullaniciController : Controller
     }
 
     [HttpPost("DurumDegistir/{id}")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.Kullanici.Deactivate)]
+    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Kullanici.Deactivate)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleActive(string id)
     {
@@ -326,7 +351,7 @@ public class KiraciKullaniciController : Controller
     {
         var kiraciId = _currentUser.KiraciId!.Value;
         var roller = await _db.Roller
-            .Where(r => (r.KiraciId == null || r.KiraciId == kiraciId) && r.IsActive && !r.IsDeleted)
+            .Where(r => r.KiraciId == kiraciId && !r.IsSystemRole && r.IsActive && !r.IsDeleted)
             .OrderBy(r => r.Ad)
             .ToListAsync();
 

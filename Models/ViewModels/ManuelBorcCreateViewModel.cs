@@ -5,7 +5,9 @@ namespace KiraTakip.Models.ViewModels;
 
 public class ManuelBorcCreateViewModel
 {
-    public int SozlesmeId { get; set; }
+    public int KiraciId { get; set; }
+    public int? SozlesmeId { get; set; }
+    public int BirimId { get; set; }
     public int BorcTipiId { get; set; }
 
     [MaxLength(200, ErrorMessage = "Açıklama en fazla 200 karakter olabilir.")]
@@ -23,4 +25,5 @@ public class ManuelBorcCreateViewModel
     public string? Not { get; set; }
     public List<SozlesmeDropdownDto> AktifSozlesmeler { get; set; } = [];
     public List<BorcTipiLookupDto> BorcTipleri { get; set; } = [];
+    public List<BirimLookupDto> Birimler { get; set; } = [];
 }

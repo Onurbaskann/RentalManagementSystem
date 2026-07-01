@@ -6,6 +6,7 @@ public interface IRezervasyonRepository : IBaseRepository<Rezervasyon>
 {
     // Listeleme (DTO)
     Task<List<RezervasyonListItemDto>> GetListAsync(List<int>? yetkiliTasinmazIds);
+    Task<RezervasyonListItemDto?> GetByIdAsync(int id);
 
     // Çakışma kontrolü
     Task<bool> IsConflictAsync(int birimId, DateTime baslangic, DateTime bitis);

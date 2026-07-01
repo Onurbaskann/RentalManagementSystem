@@ -6,8 +6,8 @@
     ViewData["Title"] = "Banka Hareketleri";
     string durum = ViewBag.Durum ?? "tum";
     var q = (TableQuery)ViewBag.Query;
-    bool canImport = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.ImportBankStatement);
-    bool canMatch  = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Odeme.MatchBankTransaction);
+    bool canImport = User.HasPermission(PermissionCatalog.Odeme.ImportBankStatement);
+    bool canMatch  = User.HasPermission(PermissionCatalog.Odeme.MatchBankTransaction);
     var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/BankaHareketi", Extra = q.ToQueryDict() };
 }
 

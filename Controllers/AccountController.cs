@@ -118,6 +118,34 @@ public class AccountController : Controller
         return RedirectToAction("Login");
     }
 
+    [HttpGet]
+    [Authorize]
+    public IActionResult SifreDegistir() => View(new SifreDegistirViewModel());
+
+    [HttpPost]
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SifreDegistir(SifreDegistirViewModel model)
+    {
+        if (!ModelState.IsValid) return View(model);
+
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null) return RedirectToAction("Login");
+
+        var result = await _userManager.ChangePasswordAsync(user, model.MevcutSifre, model.YeniSifre);
+        if (!result.Succeeded)
+        {
+            foreach (var e in result.Errors)
+                ModelState.AddModelError(string.Empty, e.Description);
+            return View(model);
+        }
+
+        await _signInManager.RefreshSignInAsync(user);
+        await _auditService.LogAsync("User.PasswordChanged", "ApplicationUser", user.Id);
+        TempData["Success"] = "Şifreniz başarıyla güncellendi.";
+        return RedirectToAction(nameof(SifreDegistir));
+    }
+
     [AllowAnonymous]
     public IActionResult AccessDenied()
     {

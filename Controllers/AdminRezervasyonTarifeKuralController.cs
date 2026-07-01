@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Policy = PermissionCatalog.RezervasyonTarifeKural.Manage)]
+[Authorize]
 [Route("Admin/RezervasyonTarifeKural")]
 public class AdminRezervasyonTarifeKuralController : Controller
 {
@@ -21,6 +21,7 @@ public class AdminRezervasyonTarifeKuralController : Controller
     }
 
     [HttpGet("")]
+    [Authorize(Policy = PermissionCatalog.RezervasyonTarifeKural.Module)]
     public async Task<IActionResult> Index()
     {
         var liste = await _service.GetUcretKurallariAsync();
@@ -28,6 +29,7 @@ public class AdminRezervasyonTarifeKuralController : Controller
     }
 
     [HttpGet("Ekle")]
+    [Authorize(Policy = PermissionCatalog.RezervasyonTarifeKural.Module)]
     public async Task<IActionResult> Create()
     {
         var vm = new RezervasyonTarifeKuralViewModel
@@ -43,6 +45,7 @@ public class AdminRezervasyonTarifeKuralController : Controller
 
     [HttpPost("Ekle")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.RezervasyonTarifeKural.Create)]
     public async Task<IActionResult> Create(RezervasyonTarifeKuralViewModel vm)
     {
         if (!ModelState.IsValid)
@@ -64,6 +67,7 @@ public class AdminRezervasyonTarifeKuralController : Controller
     }
 
     [HttpGet("Duzenle/{id:int}")]
+    [Authorize(Policy = PermissionCatalog.RezervasyonTarifeKural.Module)]
     public async Task<IActionResult> Edit(int id)
     {
         var kural = await _service.GetUcretKuralByIdAsync(id);
@@ -86,6 +90,7 @@ public class AdminRezervasyonTarifeKuralController : Controller
 
     [HttpPost("Duzenle/{id:int}")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.RezervasyonTarifeKural.Edit)]
     public async Task<IActionResult> Edit(int id, RezervasyonTarifeKuralViewModel vm)
     {
         vm.Id = id;
@@ -109,6 +114,7 @@ public class AdminRezervasyonTarifeKuralController : Controller
 
     [HttpPost("DurumDegistir/{id:int}")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.RezervasyonTarifeKural.Edit)]
     public async Task<IActionResult> DurumDegistir(int id)
     {
         await _service.ToggleUcretKuralAktifAsync(id);

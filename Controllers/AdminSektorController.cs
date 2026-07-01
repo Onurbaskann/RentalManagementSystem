@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Policy = PermissionCatalog.Sektor.Manage)]
+[Authorize]
 [Route("Admin/Sektor")]
 public class AdminSektorController : Controller
 {
@@ -24,6 +24,7 @@ public class AdminSektorController : Controller
     }
 
     [HttpGet("")]
+    [Authorize(Policy = PermissionCatalog.Sektor.Module)]
     public async Task<IActionResult> Index()
     {
         var list = await _repo.GetListByTipiAsync(Tipi);
@@ -31,6 +32,7 @@ public class AdminSektorController : Controller
     }
 
     [HttpGet("Ekle")]
+    [Authorize(Policy = PermissionCatalog.Sektor.Module)]
     public async Task<IActionResult> Create()
     {
         var nextSira = (await _repo.GetMaxSiraByTipiAsync(Tipi)) + 1;
@@ -39,6 +41,7 @@ public class AdminSektorController : Controller
 
     [HttpPost("Ekle")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.Sektor.Create)]
     public async Task<IActionResult> Create(KategoriFormViewModel model)
     {
         model.Tipi = Tipi;
@@ -68,6 +71,7 @@ public class AdminSektorController : Controller
     }
 
     [HttpGet("Duzenle/{id:int}")]
+    [Authorize(Policy = PermissionCatalog.Sektor.Module)]
     public async Task<IActionResult> Edit(int id)
     {
         var entity = await _repo.GetByIdAndTipiAsync(id, Tipi);
@@ -77,6 +81,7 @@ public class AdminSektorController : Controller
 
     [HttpPost("Duzenle/{id:int}")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.Sektor.Edit)]
     public async Task<IActionResult> Edit(int id, KategoriFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
@@ -97,6 +102,7 @@ public class AdminSektorController : Controller
 
     [HttpPost("DurumDegistir/{id:int}")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.Sektor.Edit)]
     public async Task<IActionResult> DurumDegistir(int id)
     {
         var entity = await _repo.GetByIdAndTipiAsync(id, Tipi);

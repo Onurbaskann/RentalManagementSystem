@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Policy = PermissionCatalog.Audit.View)]
+[Authorize(Policy = PermissionCatalog.Audit.Module)]
 [Route("Admin/HareketGecmisi")]
 public class AdminHareketGecmisiController : Controller
 {

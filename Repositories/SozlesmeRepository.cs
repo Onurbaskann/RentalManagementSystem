@@ -214,6 +214,8 @@ public class SozlesmeRepository : BaseRepository<Sozlesme>, ISozlesmeRepository
             .Select(s => new SozlesmeDropdownDto
             {
                 Id = s.Id,
+                BirimId = s.BirimId,
+                KiraciId = s.KiraciId,
                 KiraciGosterimAdi = s.Kiraci.GosterimAdi,
                 BirimAd = s.Birim.Ad,
                 TasinmazAd = s.Birim.Tasinmaz.Ad

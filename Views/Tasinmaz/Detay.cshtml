@@ -3,10 +3,10 @@
 @inject KiraTakip.Services.Interfaces.IIstatistikService Istatistik
 @{
     ViewData["Title"] = Model.Tasinmaz.Ad;
-    bool canEdit = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Sozlesme.Create) || User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Rezervasyon.Create);
-    bool canDuzenle = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Tasinmaz.Edit);
-    bool canManageRate = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.Birim.ManageRate);
-    bool canManageCarpan = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.TasinmazCarpan.Manage);
+    bool canEdit = User.HasPermission(PermissionCatalog.Sozlesme.Create) || User.HasPermission(PermissionCatalog.Rezervasyon.Create);
+    bool canDuzenle = User.HasPermission(PermissionCatalog.Tasinmaz.Edit);
+    bool canManageRate = User.HasPermission(PermissionCatalog.Birim.OverrideRate);
+    bool canManageCarpan = User.HasPermission(PermissionCatalog.TasinmazCarpan.Edit);
 
     string DurumBadge(KiraDurumu d) => d switch
     {

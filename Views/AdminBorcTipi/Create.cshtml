@@ -11,7 +11,7 @@
 </div>
 
 <div class="card">
-    <form method="post" action="/Admin/BorcTipi/Ekle">
+    <form method="post" action="/Admin/BorcTipi/Ekle" asp-form-write-permission="@PermissionCatalog.BorcTipi.Create">
         @Html.AntiForgeryToken()
 
         <div class="form-group">
@@ -46,7 +46,7 @@
         </div>
 
         <div class="flex gap-2 mt-4">
-            <button type="submit" class="btn btn-primary px-6">Kaydet</button>
+            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.BorcTipi.Create">Kaydet</button>
             <a href="/Admin/BorcTipi" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>

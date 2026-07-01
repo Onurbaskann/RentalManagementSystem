@@ -6,7 +6,7 @@ public class AdminBypassHandler : IAuthorizationHandler
 {
     public Task HandleAsync(AuthorizationHandlerContext context)
     {
-        if (context.User.IsInRole(RoleNames.SistemYoneticisi))
+        if (context.User.HasClaim(c => c.Type == "IsSuperAdmin" && c.Value == "true"))
         {
             foreach (var req in context.PendingRequirements.ToList())
                 context.Succeed(req);

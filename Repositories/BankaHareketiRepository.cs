@@ -128,10 +128,7 @@ public class BankaHareketiRepository : BaseRepository<BankaHareketi>, IBankaHare
         if (tasinmazIds != null)
         {
             var ids = tasinmazIds.ToList();
-            query = query.Where(o =>
-                (o.Tahakkuk.KiraSozlesmesiId != null && ids.Contains(o.Tahakkuk.KiraSozlesmesi!.Birim.TasinmazId)) ||
-                (o.Tahakkuk.KaynakTipi == TahakkukKaynakTipi.Rezervasyon &&
-                 _ctx.Rezervasyonlari.Any(r => r.TahakkukId == o.TahakkukId && ids.Contains(r.Birim.TasinmazId))));
+            query = query.Where(o => ids.Contains(o.Tahakkuk.Birim.TasinmazId));
         }
 
         var liste = await query.Select(o => new OdemeAdayDto

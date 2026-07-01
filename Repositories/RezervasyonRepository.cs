@@ -24,10 +24,11 @@ public class RezervasyonRepository : BaseRepository<Rezervasyon>, IRezervasyonRe
                 Id = r.Id,
                 BirimId = r.BirimId,
                 BirimAd = r.Birim.Ad,
+                TasinmazId = r.Birim.TasinmazId,
                 TasinmazAd = r.Birim.Tasinmaz.Ad,
                 KiraciId = r.KiraciId,
                 KiraciGosterimAdi = r.Kiraci.GosterimAdi,
-                TahakkukId = r.TahakkukId,
+                TahakkukId = _ctx.Tahakkuklar.Where(t => t.RezervasyonId == r.Id).Select(t => (int?)t.Id).FirstOrDefault(),
                 BaslangicTarihi = r.BaslangicTarihi,
                 BitisTarihi = r.BitisTarihi,
                 ToplamSureDakika = r.ToplamSureDakika,
@@ -38,6 +39,32 @@ public class RezervasyonRepository : BaseRepository<Rezervasyon>, IRezervasyonRe
                 Aciklama = r.Aciklama
             })
             .ToListAsync();
+    }
+
+    public async Task<RezervasyonListItemDto?> GetByIdAsync(int id)
+    {
+        return await _dbSet.AsNoTracking()
+            .Where(r => r.Id == id)
+            .Select(r => new RezervasyonListItemDto
+            {
+                Id = r.Id,
+                BirimId = r.BirimId,
+                BirimAd = r.Birim.Ad,
+                TasinmazId = r.Birim.TasinmazId,
+                TasinmazAd = r.Birim.Tasinmaz.Ad,
+                KiraciId = r.KiraciId,
+                KiraciGosterimAdi = r.Kiraci.GosterimAdi,
+                TahakkukId = _ctx.Tahakkuklar.Where(t => t.RezervasyonId == r.Id).Select(t => (int?)t.Id).FirstOrDefault(),
+                BaslangicTarihi = r.BaslangicTarihi,
+                BitisTarihi = r.BitisTarihi,
+                ToplamSureDakika = r.ToplamSureDakika,
+                UcretsizSureDakika = r.UcretsizSureDakika,
+                UcretliSureDakika = r.UcretliSureDakika,
+                ToplamTutar = r.ToplamTutar,
+                Durum = r.Durum,
+                Aciklama = r.Aciklama
+            })
+            .FirstOrDefaultAsync();
     }
 
     public async Task<bool> IsConflictAsync(int birimId, DateTime baslangic, DateTime bitis)

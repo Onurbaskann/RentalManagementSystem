@@ -9,9 +9,10 @@
     var q = (TableQuery)ViewBag.Query;
     var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/Kiraci/Tahakkuklarim", Extra = q.ToQueryDict() };
 
-    decimal toplamBorc = ViewBag.ToplamBorc ?? 0m;
-    decimal toplamOdeme = ViewBag.ToplamOdeme ?? 0m;
-    decimal bakiye = ViewBag.Bakiye ?? 0m;
+    decimal toplamTahakkuk = ViewBag.ToplamTahakkuk ?? 0m;
+    decimal tahsilEdilen = ViewBag.TahsilEdilen ?? 0m;
+    decimal kalanBorc = ViewBag.KalanBorc ?? 0m;
+    decimal gecikmisKalan = ViewBag.GecikmisKalan ?? 0m;
 }
 
 @if (TempData["Success"] != null)
@@ -25,32 +26,44 @@
 
 <div class="page-header">
     <div class="page-title">Tahakkuklarım</div>
-    <div class="page-subtitle">Dönem borçları, ödemeler ve net bakiye</div>
+    <div class="page-subtitle">Toplam yükümlülük, tahsilat ve gecikmiş bakiye özeti</div>
 </div>
 
 <!-- Mutabakat Özeti -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 mb-5">
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 mb-5">
     <div class="card bg-gradient-to-br from-slate-50 to-white border-slate-200">
-        <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-2">Toplam Açık Borç</div>
-        <div class="text-2xl font-bold text-slate-800">@toplamBorc.ToString("N2") ₺</div>
-        <div class="text-[11px] text-muted mt-1">Bekliyor + Kısmi + Gecikti tahakkuklar</div>
+        <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-2">Toplam Tahakkuk</div>
+        <div class="text-2xl font-bold text-slate-800">@toplamTahakkuk.ToString("N2") ₺</div>
+        <div class="text-[11px] text-muted mt-1">Tüm dönemlerin brüt yükümlülüğü</div>
     </div>
     <div class="card bg-gradient-to-br from-emerald-50/60 to-white border-emerald-100">
-        <div class="text-[11.5px] font-bold text-emerald-700 uppercase tracking-wider mb-2">Toplam Onaylı Ödeme</div>
-        <div class="text-2xl font-bold text-emerald-700">@toplamOdeme.ToString("N2") ₺</div>
-        <div class="text-[11px] text-muted mt-1">Tüm zamanlardaki onaylı ödemeler</div>
+        <div class="text-[11.5px] font-bold text-emerald-700 uppercase tracking-wider mb-2">Ödenen</div>
+        <div class="text-2xl font-bold text-emerald-700">@tahsilEdilen.ToString("N2") ₺</div>
+        <div class="text-[11px] text-muted mt-1">Onaylanmış toplam ödeme</div>
     </div>
-    <div class="card bg-gradient-to-br @(bakiye > 0 ? "from-red-50/60 to-white border-red-100" : "from-emerald-50/60 to-white border-emerald-100")">
-        <div class="text-[11.5px] font-bold uppercase tracking-wider mb-2 @(bakiye > 0 ? "text-red-700" : "text-emerald-700")">Net Bakiye</div>
-        <div class="text-2xl font-bold @(bakiye > 0 ? "text-red-700" : "text-emerald-700")">@bakiye.ToString("N2") ₺</div>
-        <div class="text-[11px] text-muted mt-1">@(bakiye > 0 ? "Ödenecek tutar" : "Borç yok")</div>
+    <div class="card bg-gradient-to-br @(kalanBorc > 0 ? "from-slate-50 to-white border-slate-200" : "from-emerald-50/60 to-white border-emerald-100")">
+        <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-2">Kalan Borç</div>
+        <div class="text-2xl font-bold @(kalanBorc > 0 ? "text-slate-800" : "text-emerald-700")">@kalanBorc.ToString("N2") ₺</div>
+        <div class="text-[11px] text-muted mt-1">@(kalanBorc > 0 ? "Toplam tahakkuk − tahsil edilen" : "Tüm tahakkuklar karşılandı")</div>
+    </div>
+    <div class="card bg-gradient-to-br @(gecikmisKalan > 0 ? "from-red-50/60 to-white border-red-100" : "from-emerald-50/60 to-white border-emerald-100")">
+        <div class="text-[11.5px] font-bold uppercase tracking-wider mb-2 @(gecikmisKalan > 0 ? "text-red-700" : "text-emerald-700")">Gecikmiş Bakiye</div>
+        <div class="text-2xl font-bold @(gecikmisKalan > 0 ? "text-red-700" : "text-emerald-700")">@gecikmisKalan.ToString("N2") ₺</div>
+        <div class="text-[11px] text-muted mt-1">@(gecikmisKalan > 0 ? "Vadesi geçmiş ödenmemiş tutar" : "Gecikmiş borç yok")</div>
     </div>
 </div>
 
 <!-- Durum Sekmeleri -->
-<div class="flex gap-1.5 mb-5 flex-wrap">
+<div class="flex gap-1.5 mb-4 flex-wrap">
     @{
-        var filters = new[] { ("tum","Tümü"), ("bekliyor","Bekliyor"), ("kismi","Kısmi"), ("tamodendi","Tam Ödendi"), ("gecikti","Gecikti") };
+        var filters = new[] {
+            ("tum","Tümü"),
+            ("bekliyor","Bekliyor"),
+            ("kismi","Kısmi"),
+            ("tamodendi","Tam Ödendi"),
+            ("gecikti","Gecikti"),
+            ("odeme_onay","Ödeme Onayı Bekleyen")
+        };
     }
     @foreach (var (key, label) in filters)
     {
@@ -63,9 +76,10 @@
 <div x-data="{ open: {}, odemeYapModal: false, modalCtx: null, odemeTab: 'havale' }">
 
 <div class="card p-0 overflow-hidden">
-    <form method="get" class="flex flex-wrap items-center gap-3 p-3 bg-slate-50/50 border-b border-slate-200" action="/Kiraci/Tahakkuklarim">
+    <form method="get" class="flex flex-col gap-2.5 p-3 bg-slate-50/50 border-b border-slate-200" action="/Kiraci/Tahakkuklarim">
         <input type="search" name="q" value="@q.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: dönem, taşınmaz…" />
 
+        <div class="flex flex-wrap items-center gap-2.5">
         <select name="birimId" class="form-control w-44 text-xs font-medium">
             <option value="">— Tüm Birimler —</option>
             @foreach (var b in (List<Birim>)ViewBag.Birimler)
@@ -92,6 +106,7 @@
         @if (durum != "tum") { <input type="hidden" name="durum" value="@durum" /> }
         <button type="submit" class="btn btn-primary btn-sm px-4">Filtrele</button>
         <a href="/Kiraci/Tahakkuklarim@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
+        </div>
     </form>
 
     <div class="table-wrapper">
@@ -101,7 +116,7 @@
                     <th class="w-36">Dönem</th>
                     <th>Birim</th>
                     <th class="w-28 cell-center">Vade</th>
-                    <th class="w-32 num">Beklenen</th>
+                    <th class="w-32 num">Borç</th>
                     <th class="w-32 num">Ödenen</th>
                     <th class="w-32 num">Kalan</th>
                     <th class="w-32">Durum</th>
@@ -158,7 +173,16 @@
                         <td class="num">@t.ToplamTutar.ToString("N2") ₺</td>
                         <td class="num num-positive">@t.OdenenTutar.ToString("N2") ₺</td>
                         <td class="num @(kalan > 0 ? "num-negative" : "num-positive")">@kalan.ToString("N2") ₺</td>
-                        <td><span class="badge @durumCls">@durumLabel</span></td>
+                        <td>
+                            @if (t.BekleyenOdemeSayisi > 0)
+                            {
+                                <span class="badge badge-surek">Ödeme Onayı Bekleniyor</span>
+                            }
+                            else
+                            {
+                                <span class="badge @durumCls">@durumLabel</span>
+                            }
+                        </td>
                         <td><span class="badge @kaynakCls">@kaynakLabel</span></td>
                         <td @@click.stop="" class="num">
                             <div class="flex gap-1 justify-end">
@@ -185,7 +209,6 @@
                                             <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
                                                 <th class="p-2 px-3 text-left">Açıklama</th>
                                                 <th class="p-2 px-3 text-right">Birim</th>
-                                                <th class="p-2 px-3 text-right">Miktar</th>
                                                 <th class="p-2 px-3 text-right">Tutar</th>
                                                 <th class="p-2 px-3 text-right text-muted">KDV</th>
                                                 <th class="p-2 px-3 text-right">Toplam</th>
@@ -197,7 +220,6 @@
                                                 <tr class="border-t border-slate-100 last:border-0">
                                                     <td class="p-2 px-3 text-slate-600">@k.Aciklama</td>
                                                     <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺</td>
-                                                    <td class="p-2 px-3 text-right text-slate-400 font-medium">@k.Carpan.ToString("F2") @(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m²" : "Adet")</td>
                                                     <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Tutar.ToString("N2") ₺</td>
                                                     <td class="p-2 px-3 text-right text-slate-400/60">@k.KdvTutari.ToString("N2") ₺</td>
                                                     <td class="p-2 px-3 text-right font-bold text-slate-700">@k.ToplamTutar.ToString("N2") ₺</td>

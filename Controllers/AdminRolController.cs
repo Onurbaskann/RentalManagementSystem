@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Roles = RoleNames.SistemYoneticisi)]
+[Authorize(Policy = "System.Rol")]
 [Route("Admin/Roller")]
 public class AdminRolController : Controller
 {
@@ -149,46 +149,27 @@ public class AdminRolController : Controller
     {
         target.Clear();
         target.AddRange(
-            PermissionCatalog.All
-                .GroupBy(p => p.Split('.')[1])
-                .Select(g => new PermissionGrupViewModel
+            PermissionCatalog.AllModules
+                .Where(m => !m.Path.StartsWith("Kiraci."))
+                .Select(m =>
                 {
-                    GrupAdi = GetModuleLabel(g.Key),
-                    Permissions = g.Select(p => new PermissionCheckboxViewModel
+                    var items = new List<PermissionCheckboxViewModel>
                     {
-                        Value = p,
-                        Etiket = GetActionLabel(p.Split('.')[2]),
-                        Selected = selected.Contains(p)
-                    }).ToList()
+                        new() { Value = m.Path, Etiket = "Görüntüle", Selected = selected.Contains(m.Path) }
+                    };
+                    items.AddRange(m.Actions.Select(a => new PermissionCheckboxViewModel
+                    {
+                        Value = a,
+                        Etiket = GetActionLabel(a.Split('.').Last()),
+                        Selected = selected.Contains(a)
+                    }));
+                    return new PermissionGrupViewModel { GrupAdi = m.DisplayName, Permissions = items };
                 })
         );
     }
 
-    private static string GetModuleLabel(string module) => module switch
-    {
-        "Tasinmaz"      => "Taşınmaz",
-        "Birim"         => "Birim / Ofis",
-        "Kiraci"        => "Kiracı",
-        "Sozlesme"      => "Sözleşme",
-        "Odeme"         => "Ödeme",
-        "Kullanici"     => "Kullanıcı",
-        "Rol"           => "Rol",
-        "Davetiye"      => "Davetiye",
-        "Audit"         => "Denetim",
-        "BorcTipi"      => "Borç Tipi",
-        "ManuelBorc"    => "Manuel Borç",
-        "Rezervasyon"   => "Rezervasyon",
-        "TasinmazCarpan" => "Taşınmaz Çarpan",
-        "Bildirim"      => "Bildirim",
-        "Tarife"        => "Tarife",
-        "Tahakkuk"      => "Tahakkuk",
-        "Parametre"     => "Parametreler",
-        _               => module
-    };
-
     private static string GetActionLabel(string action) => action switch
     {
-        "View"                 => "Görüntüle",
         "Create"               => "Ekle",
         "Edit"                 => "Düzenle",
         "Delete"               => "Sil",
@@ -202,9 +183,7 @@ public class AdminRolController : Controller
         "ImportBankStatement"  => "Banka Hareketleri İçe Aktar",
         "MatchBankTransaction" => "Banka Hareketi Eşleştir",
         "AssignPermission"     => "Yetki Ata",
-        "ManageRate"           => "Tarife Yönet",
         "TransferToTahakkuk"   => "Tahakkuka Aktar",
-        "Manage"               => "Yönet",
         "Regenerate"           => "Yeniden Üret",
         "Resend"               => "Yeniden Gönder",
         "BorcHatirlatma"       => "Borç Hatırlatma",

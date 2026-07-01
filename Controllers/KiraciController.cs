@@ -46,7 +46,7 @@ public class KiraciController : Controller
         _belgeService = belgeService;
     }
 
-    [Authorize(Policy = PermissionCatalog.Kiraci.View)]
+    [Authorize(Policy = PermissionCatalog.Kiraci.Module)]
     public async Task<IActionResult> Index()
     {
         var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
@@ -59,7 +59,7 @@ public class KiraciController : Controller
         return View(kiraciler);
     }
 
-    [Authorize(Policy = PermissionCatalog.Kiraci.View)]
+    [Authorize(Policy = PermissionCatalog.Kiraci.Module)]
     public async Task<IActionResult> Detay(int id)
     {
         var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;

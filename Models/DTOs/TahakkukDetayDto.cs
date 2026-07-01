@@ -8,6 +8,7 @@ public class TahakkukDetayDto
     public string KiraciGosterimAdi { get; set; } = string.Empty;
     public int? TasinmazId { get; set; }
     public string? TasinmazAd { get; set; }
+    public int? BirimId { get; set; }
     public string? BirimAd { get; set; }
     public DateTime DonemBaslangic { get; set; }
     public DateTime DonemBitis { get; set; }

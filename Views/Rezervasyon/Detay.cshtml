@@ -1,0 +1,123 @@
+@model KiraTakip.Models.Dtos.RezervasyonListItemDto
+@using KiraTakip.Models
+@{
+    ViewData["Title"] = "Rezervasyon Detayı";
+    bool canCancel   = User.HasPermission(PermissionCatalog.Rezervasyon.Cancel);
+    bool canTransfer = User.HasPermission(PermissionCatalog.Rezervasyon.TransferToTahakkuk);
+
+    string durumCls = Model.Durum switch {
+        RezervasyonDurumu.Tamamlandi         => "badge-kirali",
+        RezervasyonDurumu.TahakkukaAktarildi => "badge-surek",
+        RezervasyonDurumu.IptalEdildi        => "badge-gecmis",
+        _                                    => "badge-bos"
+    };
+    string durumLabel = Model.Durum switch {
+        RezervasyonDurumu.Planlandi          => "Planlandı",
+        RezervasyonDurumu.Tamamlandi         => "Tamamlandı",
+        RezervasyonDurumu.IptalEdildi        => "İptal Edildi",
+        RezervasyonDurumu.TahakkukaAktarildi => "Tahakkuka Aktarıldı",
+        _                                    => Model.Durum.ToString()
+    };
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 px-4 rounded-lg mb-4 text-[13.5px] font-medium">✓ @TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="bg-red-50 border border-red-200 text-red-800 p-3 px-4 rounded-lg mb-4 text-[13.5px]">@TempData["Error"]</div>
+}
+
+<div class="page-header flex flex-wrap items-start justify-between mb-2.5 gap-4">
+    <div>
+        <a href="/Rezervasyon" class="text-[12.5px] text-muted no-underline mb-2 inline-block hover:text-primary transition-colors">← Rezervasyonlar</a>
+        <div class="page-title">Rezervasyon #@Model.Id</div>
+        <div class="mt-1.5"><span class="badge @durumCls">@durumLabel</span></div>
+    </div>
+    <div class="flex gap-2">
+        @if (canTransfer && Model.Durum == RezervasyonDurumu.Planlandi && Model.ToplamTutar > 0 && Model.TahakkukId == null)
+        {
+            <form method="post" action="/Rezervasyon/TahakkukaAktar/@Model.Id"
+                  data-confirm="Bu rezervasyon tahakkuka aktarılsın mı?">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary">Tahakkuka Aktar</button>
+            </form>
+        }
+        @if (canCancel && Model.Durum == RezervasyonDurumu.Planlandi)
+        {
+            <button type="button" class="btn btn-danger"
+                    data-confirm-prompt="İptal nedeni"
+                    data-confirm-action="/Rezervasyon/Iptal/@Model.Id"
+                    data-confirm-field="neden">
+                İptal Et
+            </button>
+        }
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+    <!-- Genel Bilgiler -->
+    <div class="card">
+        <div class="card-title mb-3">Rezervasyon Bilgileri</div>
+        <div class="flex flex-col gap-2.5 text-[13.5px]">
+            <div class="flex justify-between">
+                <span class="text-muted">Kiracı</span>
+                <a href="/Kiraci/Detay/@Model.KiraciId" class="font-medium text-primary no-underline hover:underline">@Model.KiraciGosterimAdi</a>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-muted">Taşınmaz</span>
+                <span class="font-medium">@Model.TasinmazAd</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-muted">Birim</span>
+                <span class="font-medium">@Model.BirimAd</span>
+            </div>
+            <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
+                <span class="text-muted">Başlangıç</span>
+                <span class="font-mono text-[13px]">@Model.BaslangicTarihi.ToString("dd.MM.yyyy HH:mm")</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-muted">Bitiş</span>
+                <span class="font-mono text-[13px]">@Model.BitisTarihi.ToString("dd.MM.yyyy HH:mm")</span>
+            </div>
+            @if (!string.IsNullOrEmpty(Model.Aciklama))
+            {
+                <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
+                    <span class="text-muted">Açıklama</span>
+                    <span class="text-right max-w-[60%]">@Model.Aciklama</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Ücret Detayı -->
+    <div class="card">
+        <div class="card-title mb-3">Ücret Detayı</div>
+        <div class="flex flex-col gap-2.5 text-[13.5px]">
+            <div class="flex justify-between">
+                <span class="text-muted">Toplam Süre</span>
+                <span>@(Model.ToplamSureDakika / 60) sa @(Model.ToplamSureDakika % 60) dk</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-muted">Ücretsiz Süre</span>
+                <span>@(Model.UcretsizSureDakika / 60) sa @(Model.UcretsizSureDakika % 60) dk</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-muted">Ücretli Süre</span>
+                <span>@(Model.UcretliSureDakika / 60) sa @(Model.UcretliSureDakika % 60) dk</span>
+            </div>
+            <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
+                <span class="text-muted font-semibold">Toplam Tutar</span>
+                <span class="font-bold text-primary text-base">@Model.ToplamTutar.ToString("N2") ₺</span>
+            </div>
+            @if (Model.TahakkukId.HasValue)
+            {
+                <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
+                    <span class="text-muted">Tahakkuk</span>
+                    <a href="/Tahakkuk/Detay/@Model.TahakkukId" class="text-primary no-underline hover:underline font-medium">#@Model.TahakkukId</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>

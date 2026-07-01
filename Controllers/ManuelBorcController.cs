@@ -21,11 +21,17 @@ public class ManuelBorcController : Controller
         _provider = provider;
     }
 
-    [Authorize(Policy = PermissionCatalog.ManuelBorc.View)]
-    public async Task<IActionResult> Index()
+    [Authorize(Policy = PermissionCatalog.ManuelBorc.Module)]
+    public async Task<IActionResult> Index(string? durum, string? baglanti, int? sozlesmeId)
     {
         var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
-        var liste = await _service.GetAllAsync(tasinmazIds);
+        var birimIds = (!_provider.GlobalErisim && _provider.ErisilebilirBirimIds.Count > 0)
+            ? _provider.ErisilebilirBirimIds : null;
+        var liste = await _service.GetAllAsync(tasinmazIds, durum, baglanti, sozlesmeId, birimIds);
+        ViewBag.IptalSayisi = await _service.GetIptalSayisiAsync(tasinmazIds, birimIds);
+        ViewBag.Durum = durum ?? "tum";
+        ViewBag.Baglanti = baglanti ?? "";
+        ViewBag.SozlesmeId = sozlesmeId;
         return View(liste);
     }
 
@@ -33,13 +39,18 @@ public class ManuelBorcController : Controller
     [Authorize(Policy = PermissionCatalog.ManuelBorc.Create)]
     public async Task<IActionResult> Ekle(int? sozlesmeId)
     {
-        var vm = new ManuelBorcCreateViewModel
-        {
-            VadeTarihi = DateTime.Today
-        };
-        if (sozlesmeId.HasValue)
-            vm.SozlesmeId = sozlesmeId.Value;
+        var vm = new ManuelBorcCreateViewModel { VadeTarihi = DateTime.Today };
         await PopulateDropdownsAsync(vm);
+        if (sozlesmeId.HasValue)
+        {
+            vm.SozlesmeId = sozlesmeId.Value;
+            var s = vm.AktifSozlesmeler.FirstOrDefault(x => x.Id == sozlesmeId.Value);
+            if (s != null)
+            {
+                vm.KiraciId = s.KiraciId;
+                vm.BirimId = s.BirimId;
+            }
+        }
         return View(vm);
     }
 
@@ -48,8 +59,10 @@ public class ManuelBorcController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Ekle(ManuelBorcCreateViewModel vm)
     {
-        if (vm.SozlesmeId <= 0)
-            ModelState.AddModelError("SozlesmeId", "Sözleşme seçilmelidir.");
+        if (vm.KiraciId <= 0)
+            ModelState.AddModelError("KiraciId", "Kiracı seçilmelidir.");
+        if (vm.BirimId <= 0)
+            ModelState.AddModelError("BirimId", "Birim seçilmelidir.");
         if (vm.BorcTipiId <= 0)
             ModelState.AddModelError("BorcTipiId", "Borç tipi seçilmelidir.");
         if (string.IsNullOrWhiteSpace(vm.Aciklama))
@@ -99,7 +112,9 @@ public class ManuelBorcController : Controller
 
     private async Task PopulateDropdownsAsync(ManuelBorcCreateViewModel vm)
     {
+        var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
         vm.AktifSozlesmeler = await _service.GetAktifSozlesmelerAsync();
         vm.BorcTipleri = await _service.GetManuelBorcTipleriAsync();
+        vm.Birimler = await _service.GetTumBirimlerAsync(tasinmazIds);
     }
 }

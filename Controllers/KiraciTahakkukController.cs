@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 namespace KiraTakip.Controllers;
 
 [Authorize(Policy = "KiraciKullanici")]
-[Authorize(Policy = PermissionCatalog.KiraciPortal.Borc.View)]
+[Authorize(Policy = PermissionCatalog.KiraciPortal.Borc.Module)]
 [Route("Kiraci/Tahakkuklarim")]
 public class KiraciTahakkukController : Controller
 {
@@ -44,20 +44,29 @@ public class KiraciTahakkukController : Controller
         // Query filter (DbContext) kiracı bazlı filtrelemeyi otomatik uygular.
         var paged = await _tahakkukService.GetPagedAsync(query);
 
-        // Mutabakat özeti
-        var toplamBorc = await _ctx.Tahakkuklar
+        // Özet kartlar
+        var toplamTahakkuk = await _ctx.Tahakkuklar
+            .Where(t => t.Durum != TahakkukDurumu.IptalEdildi)
+            .SumAsync(t => (decimal?)t.ToplamTutar) ?? 0m;
+
+        var tahsilEdilen = await _ctx.TahakkukOdemeler
+            .Where(o => o.Durum == OdemeDurumu.Onaylandi)
+            .SumAsync(o => (decimal?)o.Tutar) ?? 0m;
+
+        var kalanBorc = await _ctx.Tahakkuklar
             .Where(t => t.Durum == TahakkukDurumu.Bekleniyor
                      || t.Durum == TahakkukDurumu.KismenOdendi
                      || t.Durum == TahakkukDurumu.Gecikti)
             .SumAsync(t => (decimal?)(t.ToplamTutar - t.OdenenTutar)) ?? 0m;
 
-        var toplamOdeme = await _ctx.TahakkukOdemeler
-            .Where(o => o.Durum == OdemeDurumu.Onaylandi)
-            .SumAsync(o => (decimal?)o.Tutar) ?? 0m;
+        var gecikmisKalan = await _ctx.Tahakkuklar
+            .Where(t => t.Durum == TahakkukDurumu.Gecikti)
+            .SumAsync(t => (decimal?)(t.ToplamTutar - t.OdenenTutar)) ?? 0m;
 
-        ViewBag.ToplamBorc = toplamBorc;
-        ViewBag.ToplamOdeme = toplamOdeme;
-        ViewBag.Bakiye = toplamBorc;
+        ViewBag.ToplamTahakkuk = toplamTahakkuk;
+        ViewBag.TahsilEdilen = tahsilEdilen;
+        ViewBag.KalanBorc = kalanBorc;
+        ViewBag.GecikmisKalan = gecikmisKalan;
 
         ViewBag.Birimler = await _ctx.Birimler
             .Where(b => _ctx.Sozlesmeler.Any(s => s.BirimId == b.Id))
@@ -77,6 +86,16 @@ public class KiraciTahakkukController : Controller
     {
         var tahakkuk = await _tahakkukService.GetDetayAsync(id);
         if (tahakkuk == null) return NotFound();
+
+        var belgeTurleri = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Odeme);
+        var odemeIdleri = tahakkuk.Odemeler.Select(o => o.Id).ToList();
+        var tumBelgeler = new Dictionary<int, List<Belge>>();
+        foreach (var oid in odemeIdleri)
+            tumBelgeler[oid] = await _belgeService.GetListAsync(BelgeOwnerTipi.Odeme, oid);
+
+        ViewBag.BelgeTurleri = belgeTurleri;
+        ViewBag.OdemeBelgeleri = tumBelgeler;
+
         return View(tahakkuk);
     }
 

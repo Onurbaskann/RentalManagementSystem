@@ -33,58 +33,15 @@ public class IdentitySeedService
 
     public async Task SeedAsync()
     {
-        string[] roleNames = [RoleNames.SistemYoneticisi, RoleNames.OperasyonMuduru];
+        // Süper Admin her ortamda seed'lenir — sisteme giriş noktası
+        await EnsureUser("admin@kiratakip.local", "Admin123!", null, "Sistem Yöneticisi", tumTasinmazlaraErisim: true, isSuperAdmin: true);
 
-        await EnsureRollerAsync(roleNames);
+        // Global Kiracı Yöneticisi rolünü seed et
         await _rolService.EnsureGlobalKiraciRolleriAsync("system");
-
-        // Sistem Yöneticisi her ortamda seed'lenir — sisteme giriş noktası
-        await EnsureUser("admin@kiratakip.local", "Admin123!", RoleNames.SistemYoneticisi, "Sistem Yöneticisi");
-
-    }
-
-    private async Task EnsureRollerAsync(string[] roleNames)
-    {
-        foreach (var roleName in roleNames)
-        {
-            var isSystemRole = true;
-            var existing = await _db.Roller.FirstOrDefaultAsync(r => r.Ad == roleName && r.Scope == RolScope.Internal);
-            if (existing == null)
-            {
-                _db.Roller.Add(new Rol
-                {
-                    Ad = roleName,
-                    Scope = RolScope.Internal,
-                    IsSystemRole = isSystemRole,
-                    IsActive = true,
-                    CreatedBy = "system",
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
-            else if (existing.IsSystemRole != isSystemRole)
-            {
-                existing.IsSystemRole = isSystemRole;
-            }
-        }
-        await _db.SaveChangesAsync();
-
-        await EnsureRolPermissionsAsync();
-    }
-
-    private async Task EnsureRolPermissionsAsync()
-    {
-        var operasyonMuduru = await _db.Roller.FirstOrDefaultAsync(r => r.Ad == RoleNames.OperasyonMuduru && r.Scope == RolScope.Internal);
-        if (operasyonMuduru != null && !await _db.RolPermissions.AnyAsync(rp => rp.RolId == operasyonMuduru.Id))
-        {
-            foreach (var perm in PermissionCatalog.OperasyonMuduruIzinleri)
-                _db.RolPermissions.Add(new RolPermission { RolId = operasyonMuduru.Id, Permission = perm });
-        }
-
-        await _db.SaveChangesAsync();
     }
 
 
-    private async Task EnsureUser(string email, string password, string roleName, string adSoyad, bool tumTasinmazlaraErisim = false)
+    private async Task EnsureUser(string email, string password, string? roleName, string adSoyad, bool tumTasinmazlaraErisim = false, bool isSuperAdmin = false)
     {
         var user = await _userManager.FindByEmailAsync(email);
         if (user == null)
@@ -97,7 +54,8 @@ public class IdentitySeedService
                 EmailConfirmed = true,
                 IsActive = true,
                 UserType = UserType.Internal,
-                TumTasinmazlaraErisim = tumTasinmazlaraErisim
+                TumTasinmazlaraErisim = tumTasinmazlaraErisim,
+                IsSuperAdmin = isSuperAdmin
             };
             await _userManager.CreateAsync(user, password);
         }
@@ -106,10 +64,11 @@ public class IdentitySeedService
             var dirty = false;
             if (!user.IsActive) { user.IsActive = true; dirty = true; }
             if (user.TumTasinmazlaraErisim != tumTasinmazlaraErisim) { user.TumTasinmazlaraErisim = tumTasinmazlaraErisim; dirty = true; }
+            if (user.IsSuperAdmin != isSuperAdmin) { user.IsSuperAdmin = isSuperAdmin; dirty = true; }
             if (dirty) await _userManager.UpdateAsync(user);
         }
 
-        if (!await _userRolService.IsInRoleAsync(user.Id, roleName))
+        if (roleName != null && !await _userRolService.IsInRoleAsync(user.Id, roleName))
             await _userRolService.AddRoleByNameAsync(user.Id, roleName, "system");
     }
 }

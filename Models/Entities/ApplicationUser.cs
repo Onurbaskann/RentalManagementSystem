@@ -4,10 +4,11 @@ namespace KiraTakip.Models.Entities;
 
 public class ApplicationUser : IdentityUser, IAuditable
 {
-    public string? AdSoyad { get; set; }
+    public string? AdSoyad { get; set; }    
     public UserType UserType { get; set; } = UserType.Internal;
     public int? KiraciId { get; set; }
     public bool TumTasinmazlaraErisim { get; set; } = false;
+    public bool IsSuperAdmin { get; set; } = false;
     public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public DateTime? UpdatedAt { get; set; }

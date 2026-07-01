@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Policy = PermissionCatalog.BirimTuru.Manage)]
+[Authorize]
 [Route("Admin/BirimTuru")]
 public class AdminBirimTuruController : Controller
 {
@@ -27,6 +27,7 @@ public class AdminBirimTuruController : Controller
     }
 
     [HttpGet("")]
+    [Authorize(Policy = PermissionCatalog.BirimTuru.Module)]
     public async Task<IActionResult> Index()
     {
         var list = await _repo.GetListAsync();
@@ -34,6 +35,7 @@ public class AdminBirimTuruController : Controller
     }
 
     [HttpGet("Ekle")]
+    [Authorize(Policy = PermissionCatalog.BirimTuru.Module)]
     public async Task<IActionResult> Create()
     {
         var nextSira = (await _repo.GetMaxSiraAsync()) + 1;
@@ -48,6 +50,7 @@ public class AdminBirimTuruController : Controller
 
     [HttpPost("Ekle")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.BirimTuru.Create)]
     public async Task<IActionResult> Create(BirimTuruFormViewModel model)
     {
         if (model.RezervasyonYapilabilirMi && (!model.BorcTipiId.HasValue || model.BorcTipiId <= 0))
@@ -90,6 +93,7 @@ public class AdminBirimTuruController : Controller
     }
 
     [HttpGet("Duzenle/{id:int}")]
+    [Authorize(Policy = PermissionCatalog.BirimTuru.Module)]
     public async Task<IActionResult> Edit(int id)
     {
         var entity = await _repo.GetByIdAsync(id);
@@ -102,6 +106,7 @@ public class AdminBirimTuruController : Controller
 
     [HttpPost("Duzenle/{id:int}")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.BirimTuru.Edit)]
     public async Task<IActionResult> Edit(int id, BirimTuruFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
@@ -136,6 +141,7 @@ public class AdminBirimTuruController : Controller
 
     [HttpPost("DurumDegistir/{id:int}")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.BirimTuru.Edit)]
     public async Task<IActionResult> DurumDegistir(int id)
     {
         var entity = await _repo.GetByIdAsync(id);

@@ -71,6 +71,7 @@ public class TahakkukUretimService : ITahakkukUretimService, ITransactionalServi
             var tahakkuk = new Tahakkuk
             {
                 KiraciId = sozlesme.KiraciId,
+                BirimId = sozlesme.BirimId,
                 KiraSozlesmesiId = sozlesmeId,
                 DonemBaslangic = donemIlkGunu,
                 DonemBitis = donemBitis,
