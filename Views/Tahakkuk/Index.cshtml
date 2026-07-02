@@ -3,7 +3,7 @@
 @using KiraTakip.Models.Common
 @{
     ViewData["Title"] = "Tahakkuklar";
-    bool canCreate = User.HasPermission(PermissionCatalog.Odeme.Create);
+    bool canCreate = User.HasPermission(PermissionCatalog.Payment.Create);
     string durum = ViewBag.Durum ?? "tum";
     var q = (TableQuery)ViewBag.Query;
     int iptalEdildiSayisi = ViewBag.IptalEdildiSayisi ?? 0;
@@ -178,27 +178,27 @@
                 {
                     var kalan = t.ToplamTutar - t.OdenenTutar;
                     string durumCls = t.Durum switch {
-                        TahakkukDurumu.TamOdendi    => "badge-kirali",
-                        TahakkukDurumu.KismenOdendi => "badge-surek",
-                        TahakkukDurumu.Gecikti      => "badge-gecmis",
-                        TahakkukDurumu.IptalEdildi  => "badge-bos",
+                        ChargeStatus.Paid    => "badge-kirali",
+                        ChargeStatus.PartiallyPaid => "badge-surek",
+                        ChargeStatus.Overdue      => "badge-gecmis",
+                        ChargeStatus.Cancelled  => "badge-bos",
                         _                           => "badge-bos"
                     };
                     string durumLabel = t.Durum switch {
-                        TahakkukDurumu.TamOdendi    => "Tam Ödendi",
-                        TahakkukDurumu.KismenOdendi => "Kısmi Ödendi",
-                        TahakkukDurumu.Gecikti      => "Gecikti",
-                        TahakkukDurumu.IptalEdildi  => "İptal Edildi",
+                        ChargeStatus.Paid    => "Tam Ödendi",
+                        ChargeStatus.PartiallyPaid => "Kısmi Ödendi",
+                        ChargeStatus.Overdue      => "Gecikti",
+                        ChargeStatus.Cancelled  => "İptal Edildi",
                         _                           => "Bekleniyor"
                     };
                     string tahakkukKaynakCls = t.KaynakTipi switch {
-                        TahakkukKaynakTipi.Manuel      => "badge-surek",
-                        TahakkukKaynakTipi.Rezervasyon => "badge-bireysel",
+                        ChargeSourceType.Manual      => "badge-surek",
+                        ChargeSourceType.Reservation => "badge-bireysel",
                         _                              => "badge-bos"
                     };
                     string tahakkukKaynakLabel = t.KaynakTipi switch {
-                        TahakkukKaynakTipi.Manuel      => "Manuel",
-                        TahakkukKaynakTipi.Rezervasyon => "Rezervasyon",
+                        ChargeSourceType.Manual      => "Manuel",
+                        ChargeSourceType.Reservation => "Rezervasyon",
                         _                              => "Sözleşme"
                     };
                     <tr @@click="open[@t.Id] = !open[@t.Id]" class="cursor-pointer transition-colors hover:bg-slate-50">
@@ -233,7 +233,7 @@
                         <td @@click.stop="" class="num">
                             <div class="flex gap-1 justify-end">
                                 <a href="/Tahakkuk/Detay/@t.Id.ToHashId()" class="btn btn-sm btn-secondary p-1" title="Detay"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a>
-                                @if (canCreate && t.Durum != TahakkukDurumu.TamOdendi && t.Durum != TahakkukDurumu.IptalEdildi)
+                                @if (canCreate && t.Durum != ChargeStatus.Paid && t.Durum != ChargeStatus.Cancelled)
                                 {
                                     <a href="/Odeme/Ekle?tahakkukId=@t.Id.ToHashId()" class="btn btn-sm btn-primary">Ödeme</a>
                                 }
@@ -261,28 +261,28 @@
                                                     @foreach (var k in t.Kalemler.OrderBy(k => k.BorcTipiSira))
                                                     {
                                                         string kaynakCls = k.KaynakTipi switch {
-                                                            KalemKaynakTipi.TanimsizTarife    => "badge-bos",
-                                                            KalemKaynakTipi.SozlesmeTarifesi  => "badge-surek",
-                                                            KalemKaynakTipi.BirimTarifesi     => "badge-kirali",
-                                                            KalemKaynakTipi.TasinmazTarifesi  => "badge-bireysel",
-                                                            KalemKaynakTipi.GenelTarife       => "badge-bos",
-                                                            KalemKaynakTipi.ManuelGiris       => "badge-surek",
-                                                            KalemKaynakTipi.RezervasyonKurali => "badge-bireysel",
+                                                            LineItemSourceType.UndefinedRate    => "badge-bos",
+                                                            LineItemSourceType.LeaseRateOverride  => "badge-surek",
+                                                            LineItemSourceType.UnitRateOverride     => "badge-kirali",
+                                                            LineItemSourceType.PropertyRateOverride  => "badge-bireysel",
+                                                            LineItemSourceType.RateSchedule       => "badge-bos",
+                                                            LineItemSourceType.ManualInput       => "badge-surek",
+                                                            LineItemSourceType.ReservationRule => "badge-bireysel",
                                                             _                                 => "badge-bos"
                                                         };
                                                         string kaynakLabel = k.KaynakTipi switch {
-                                                            KalemKaynakTipi.TanimsizTarife    => "Tarife Yok",
-                                                            KalemKaynakTipi.SozlesmeTarifesi  => "Sözleşme",
-                                                            KalemKaynakTipi.BirimTarifesi     => "Birim",
-                                                            KalemKaynakTipi.TasinmazTarifesi  => "Taşınmaz",
-                                                            KalemKaynakTipi.GenelTarife       => "Genel",
-                                                            KalemKaynakTipi.ManuelGiris       => "Manuel",
-                                                            KalemKaynakTipi.RezervasyonKurali => "Rezervasyon",
+                                                            LineItemSourceType.UndefinedRate    => "Tarife Yok",
+                                                            LineItemSourceType.LeaseRateOverride  => "Sözleşme",
+                                                            LineItemSourceType.UnitRateOverride     => "Birim",
+                                                            LineItemSourceType.PropertyRateOverride  => "Taşınmaz",
+                                                            LineItemSourceType.RateSchedule       => "Genel",
+                                                            LineItemSourceType.ManualInput       => "Manuel",
+                                                            LineItemSourceType.ReservationRule => "Rezervasyon",
                                                             _                                 => "Bilinmiyor"
                                                         };
                                                         <tr class="border-t border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
                                                             <td class="p-2 px-3 text-slate-600">@k.Aciklama</td>
-                                                            <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
+                                                            <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺@(k.CalculationMethod == CalculationMethod.M2 ? "/m²" : "")</td>
                                                             <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Tutar.ToString("N2") ₺</td>
                                                             <td class="p-2 px-3 text-right text-slate-400/60">@k.KdvTutari.ToString("N2") ₺</td>
                                                             <td class="p-2 px-3 text-right font-bold text-slate-700">@k.ToplamTutar.ToString("N2") ₺</td>

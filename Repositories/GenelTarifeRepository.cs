@@ -18,7 +18,7 @@ public class GenelTarifeRepository : BaseRepository<GenelTarife>, IGenelTarifeRe
             .ThenByDescending(k => k.Yil)
             .Select(k => new RateValueDto
             {
-                HesaplamaYontemi = k.HesaplamaYontemi,
+                CalculationMethod = k.CalculationMethod,
                 BirimDeger = k.BirimDeger,
                 KdvOrani = k.KdvOrani
             })
@@ -28,8 +28,8 @@ public class GenelTarifeRepository : BaseRepository<GenelTarife>, IGenelTarifeRe
     {
         var q = _dbSet.AsNoTracking()
             .Where(k => k.Yil == yil && k.IsActive
-                     && k.BorcTipi.Davranis != BorcTipiDavranisi.KullaniciManuel
-                     && k.BorcTipi.Davranis != BorcTipiDavranisi.RezervasyonOzel);
+                     && k.BorcTipi.Davranis != ChargeTypeBehavior.UserManual
+                     && k.BorcTipi.Davranis != ChargeTypeBehavior.ReservationSpecific);
         if (kategoriId.HasValue)
             q = q.Where(k => k.KiraciKategoriId == kategoriId.Value);
 
@@ -40,7 +40,7 @@ public class GenelTarifeRepository : BaseRepository<GenelTarife>, IGenelTarifeRe
             {
                 KategoriAd = k.KiraciKategori.Ad,
                 BorcTipiAd = k.BorcTipi.Ad,
-                HesaplamaYontemi = k.HesaplamaYontemi,
+                CalculationMethod = k.CalculationMethod,
                 BirimDeger = k.BirimDeger,
                 KdvOrani = k.KdvOrani
             })

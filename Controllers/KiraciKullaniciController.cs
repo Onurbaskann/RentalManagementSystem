@@ -43,7 +43,7 @@ public class KiraciKullaniciController : Controller
     }
 
     [HttpGet("")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Kullanici.Module)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Module)]
     public async Task<IActionResult> Index()
     {
         var kiraciId = _currentUser.KiraciId!.Value;
@@ -77,7 +77,7 @@ public class KiraciKullaniciController : Controller
 
         var bekleyen = await _db.Davetiyeler
             .IgnoreQueryFilters()
-            .Where(d => d.KiraciId == kiraciId && d.Durum == DavetiyeDurum.Beklemede)
+            .Where(d => d.KiraciId == kiraciId && d.Durum == InvitationStatus.Pending)
             .Include(d => d.Rol)
             .OrderByDescending(d => d.CreatedAt)
             .ToListAsync();
@@ -92,8 +92,8 @@ public class KiraciKullaniciController : Controller
             ExpiresAt = d.ExpiresAt
         }).ToList();
 
-        var canInvite = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.KiraciPortal.System.Kullanici.Invite);
-        var canManage = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.KiraciPortal.System.Kullanici.Invite);
+        var canInvite = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.TenantPortal.System.User.Invite);
+        var canManage = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.TenantPortal.System.User.Invite);
 
         return View(new KiraciKullaniciListeViewModel
         {
@@ -105,7 +105,7 @@ public class KiraciKullaniciController : Controller
     }
 
     [HttpGet("Davet")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Kullanici.Invite)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Invite)]
     public async Task<IActionResult> Davet()
     {
         var kiraciId = _currentUser.KiraciId!.Value;
@@ -116,7 +116,7 @@ public class KiraciKullaniciController : Controller
     }
 
     [HttpPost("Davet")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Kullanici.Invite)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Invite)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Davet(KiraciDavetViewModel model)
     {
@@ -160,7 +160,7 @@ public class KiraciKullaniciController : Controller
     {
         return await _db.Sozlesmeler
             .AsNoTracking()
-            .Where(s => s.KiraciId == kiraciId && s.Durum == SozlesmeDurumu.Aktif)
+            .Where(s => s.KiraciId == kiraciId && s.Durum == LeaseStatus.Active)
             .Select(s => new BirimLookupDto
             {
                 Id = s.BirimId,
@@ -174,7 +174,7 @@ public class KiraciKullaniciController : Controller
     }
 
     [HttpPost("Davet/Iptal/{id:int}")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Kullanici.Invite)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Invite)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DavetIptal(int id)
     {
@@ -197,7 +197,7 @@ public class KiraciKullaniciController : Controller
     }
 
     [HttpPost("Davet/YenidenGonder/{id:int}")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Kullanici.Invite)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Invite)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DavetYenidenGonder(int id)
     {
@@ -221,7 +221,7 @@ public class KiraciKullaniciController : Controller
     }
 
     [HttpGet("Duzenle/{id}")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Kullanici.Edit)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Edit)]
     public async Task<IActionResult> Duzenle(string id)
     {
         var kiraciId = _currentUser.KiraciId!.Value;
@@ -250,7 +250,7 @@ public class KiraciKullaniciController : Controller
     }
 
     [HttpPost("Duzenle/{id}")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Kullanici.Edit)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Edit)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Duzenle(string id, KiraciKullaniciDuzenleViewModel model)
     {
@@ -307,7 +307,7 @@ public class KiraciKullaniciController : Controller
     }
 
     [HttpPost("DurumDegistir/{id}")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Kullanici.Deactivate)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Deactivate)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleActive(string id)
     {

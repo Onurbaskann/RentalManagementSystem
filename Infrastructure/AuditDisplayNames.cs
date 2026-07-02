@@ -69,7 +69,7 @@ public static class AuditDisplayNames
         ["RezervasyonTarife"]       = "Rezervasyon tarifesi",
         ["TasinmazFiyat"]           = "Taşınmaz fiyatı",
         ["BorcTipi"]                = "Borç tipi",
-        ["BirimTuru"]               = "Birim türü",
+        ["UnitType"]               = "Birim türü",
         ["Kategori"]                = "Kategori",
         ["Sektor"]                  = "Sektör",
     };

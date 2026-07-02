@@ -7,7 +7,7 @@ namespace KiraTakip.Services.Interfaces;
 public interface IBankaHareketiService
 {
     Task<int> ImportAsync(Stream dosya, string bankaKodu);
-    Task<List<BankaHareketiListItemDto>> GetAllAsync(BankaEslesmeDurumu? durum = null);
+    Task<List<BankaHareketiListItemDto>> GetAllAsync(BankMatchStatus? durum = null);
     Task<PagedResult<BankaHareketiListItemDto>> GetPagedAsync(TableQuery q);
     Task<BankaHareketiDetayDto?> GetByIdAsync(int id);
     Task EslestirAsync(int odemeId, int bankaHareketiId);

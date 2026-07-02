@@ -18,7 +18,7 @@ public class ParentTarifeSatir
 {
     public string KategoriAd { get; set; } = string.Empty;
     public string BorcTipiAd { get; set; } = string.Empty;
-    public HesaplamaYontemi HesaplamaYontemi { get; set; }
+    public CalculationMethod CalculationMethod { get; set; }
     public decimal BirimDeger { get; set; }
     public decimal KdvOrani { get; set; }
     public string? Kaynak { get; set; }

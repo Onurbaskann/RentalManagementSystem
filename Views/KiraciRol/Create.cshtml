@@ -38,7 +38,7 @@
 </div>
 
 <div class="card">
-    <form method="post" action="/Kiraci/Roller/Ekle" asp-form-write-permission="@PermissionCatalog.KiraciPortal.System.Rol.Create">
+    <form method="post" action="/Kiraci/Roller/Ekle" asp-form-write-permission="@PermissionCatalog.TenantPortal.System.Role.Create">
         @Html.AntiForgeryToken()
 
         @if (!ViewData.ModelState.IsValid)
@@ -63,7 +63,7 @@
         </div>
 
         <div class="flex gap-2 mt-6">
-            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.KiraciPortal.System.Rol.Create">Oluştur</button>
+            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.TenantPortal.System.Role.Create">Oluştur</button>
             <a href="/Kiraci/Roller" class="btn btn-secondary">İptal</a>
         </div>
     </form>

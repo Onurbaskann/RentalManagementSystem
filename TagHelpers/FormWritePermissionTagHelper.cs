@@ -6,7 +6,7 @@ namespace KiraTakip.TagHelpers;
 /// <summary>
 /// When the current user lacks the specified write permission, wraps the form body
 /// in a disabled fieldset and prepends a read-only warning banner.
-/// Usage: &lt;form asp-form-write-permission="@PermissionCatalog.Sozlesme.Create"&gt;
+/// Usage: &lt;form asp-form-write-permission="@PermissionCatalog.Lease.Create"&gt;
 /// SistemYoneticisi (IsSuperAdmin claim) bypasses the check.
 /// </summary>
 [HtmlTargetElement("form", Attributes = "asp-form-write-permission")]

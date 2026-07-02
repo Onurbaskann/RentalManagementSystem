@@ -44,7 +44,7 @@
 }
 
 <div class="card">
-    <form method="post" action="/Admin/Roller/Duzenle/@Model.Id.ToHashId()" asp-form-write-permission="@PermissionCatalog.Rol.Edit">
+    <form method="post" action="/Admin/Roller/Duzenle/@Model.Id.ToHashId()" asp-form-write-permission="@PermissionCatalog.Role.Edit">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Id" />
         <input type="hidden" asp-for="IsSystemRole" />
@@ -79,7 +79,7 @@
         </div>
 
         <div class="flex gap-2 mt-6">
-            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Rol.Edit">Kaydet</button>
+            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Role.Edit">Kaydet</button>
             <a href="/Admin/Roller" class="btn btn-secondary">İptal</a>
         </div>
     </form>

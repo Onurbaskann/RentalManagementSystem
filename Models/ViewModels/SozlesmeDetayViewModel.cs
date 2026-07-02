@@ -11,7 +11,7 @@ public class SozlesmeDetayViewModel
     public decimal YillikBedel { get; set; }
     public bool Aktif { get; set; }
     public double SureYuzdesi { get; set; }
-    public KiraDurumu Durum { get; set; }
+    public OccupancyStatus Durum { get; set; }
     public List<SozlesmeListItemDto> GecmisSozlesmeler { get; set; } = [];
     public List<SozlesmeListItemDto> KiraciSozlesmeleri { get; set; } = [];
     public List<TahakkukListItemDto> Tahakkuklar { get; set; } = [];

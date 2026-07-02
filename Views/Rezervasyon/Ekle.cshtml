@@ -12,7 +12,7 @@
     </div>
 
     <div x-data="rezervasyonForm()" @@datechanged="onPickerChanged($event)">
-    <form asp-action="Ekle" method="post" asp-form-write-permission="@PermissionCatalog.Rezervasyon.Create">
+    <form asp-action="Ekle" method="post" asp-form-write-permission="@PermissionCatalog.Reservation.Create">
         @Html.AntiForgeryToken()
 
         <div asp-validation-summary="ModelOnly" class="form-error bg-red-50 border border-red-200 rounded-lg p-3 mb-5"></div>
@@ -31,9 +31,9 @@
                     {
                         <option value="@b.Id"
                             data-tasinmaz="@b.TasinmazAd"
-                            data-tur="@b.BirimTuruAd">
+                            data-tur="@b.UnitTypeAd">
                             @b.TasinmazAd — @b.Ad
-                            @if (!string.IsNullOrEmpty(b.BirimTuruAd)) { <text>(@b.BirimTuruAd)</text> }
+                            @if (!string.IsNullOrEmpty(b.UnitTypeAd)) { <text>(@b.UnitTypeAd)</text> }
                         </option>
                     }
                 </select>
@@ -139,7 +139,7 @@
 
         <div class="flex justify-end gap-3 mt-6">
             <a href="/Rezervasyon" class="btn btn-secondary px-6">İptal</a>
-            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.Rezervasyon.Create">Rezervasyon Oluştur</button>
+            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.Reservation.Create">Rezervasyon Oluştur</button>
         </div>
     </form>
 </div>

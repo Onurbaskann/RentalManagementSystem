@@ -10,7 +10,7 @@ public interface IRezervasyonService
     Task<RezervasyonHesapSonucu> HesaplaAsync(int birimId, DateTime baslangic, DateTime bitis);
     Task<(bool Basarili, string? Hata, int RezervasyonId)> CreateAsync(RezervasyonCreateViewModel model, string userId);
     Task<(bool Basarili, string? Hata)> CancelAsync(int id, string userId, string neden);
-    Task<(bool Basarili, string? Hata, int? TahakkukId)> TransferToTahakkukAsync(int id, string userId);
+    Task<(bool Basarili, string? Hata, int? TahakkukId)> TransferToChargeAsync(int id, string userId);
 
     // Ücret kuralları (birime özel)
     Task<List<RezervasyonTarifeKuralListItemDto>> GetUcretKurallariAsync();

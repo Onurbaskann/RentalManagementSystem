@@ -23,7 +23,7 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<IBirimTarifeRepository, BirimTarifeRepository>();
             services.AddScoped<IGenelTarifeRepository, GenelTarifeRepository>();
             services.AddScoped<IRezervasyonTarifeRepository, RezervasyonTarifeRepository>();
-            services.AddScoped<IBirimTuruRepository, BirimTuruRepository>();
+            services.AddScoped<IUnitTypeRepository, UnitTypeRepository>();
             services.AddScoped<IBelgeTuruRepository, BelgeTuruRepository>();
             services.AddScoped<IKategoriRepository, KategoriRepository>();
             services.AddScoped<ITasinmazTipiRepository, TasinmazTipiRepository>();

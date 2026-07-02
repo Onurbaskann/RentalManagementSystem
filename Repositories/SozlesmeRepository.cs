@@ -23,10 +23,10 @@ public class SozlesmeRepository : BaseRepository<Sozlesme>, ISozlesmeRepository
 
         query = filtre switch
         {
-            "aktif" => query.Where(s => s.Durum == SozlesmeDurumu.Aktif && s.BaslangicTarihi <= now && s.BitisTarihi >= now),
-            "surek" => query.Where(s => s.Durum == SozlesmeDurumu.Aktif && s.BaslangicTarihi <= now && s.BitisTarihi >= now && s.BitisTarihi <= now.AddDays(30)),
-            "gecmis" => query.Where(s => s.Durum == SozlesmeDurumu.SonaErdi),
-            "feshedildi" => query.Where(s => s.Durum == SozlesmeDurumu.Feshedildi),
+            "aktif" => query.Where(s => s.Durum == LeaseStatus.Active && s.BaslangicTarihi <= now && s.BitisTarihi >= now),
+            "surek" => query.Where(s => s.Durum == LeaseStatus.Active && s.BaslangicTarihi <= now && s.BitisTarihi >= now && s.BitisTarihi <= now.AddDays(30)),
+            "gecmis" => query.Where(s => s.Durum == LeaseStatus.Ended),
+            "feshedildi" => query.Where(s => s.Durum == LeaseStatus.Terminated),
             _ => query
         };
 
@@ -69,7 +69,7 @@ public class SozlesmeRepository : BaseRepository<Sozlesme>, ISozlesmeRepository
                 BirimNo = s.Birim.BirimNo,
                 BirimKatNo = s.Birim.KatNo,
                 BirimYuzolcumu = s.Birim.Yuzolcumu,
-                BirimTipi = s.Birim.BirimTipi,
+                UnitKind = s.Birim.UnitKind,
                 TasinmazId = s.Birim.TasinmazId,
                 TasinmazAd = s.Birim.Tasinmaz.Ad,
                 TasinmazIl = s.Birim.Tasinmaz.Il,
@@ -83,7 +83,7 @@ public class SozlesmeRepository : BaseRepository<Sozlesme>, ISozlesmeRepository
                 FesihTarihi = s.FesihTarihi,
                 FesihNedeni = s.FesihNedeni,
                 KdvUygulanacakMi = s.KdvUygulanacakMi,
-                VadeKuraliTipi = s.VadeKuraliTipi,
+                DueDateRuleType = s.DueDateRuleType,
                 VadeGunu = s.VadeGunu,
                 IslemGecmisi = s.IslemGecmisi
                     .OrderByDescending(ig => ig.IslemTarihi)
@@ -112,7 +112,7 @@ public class SozlesmeRepository : BaseRepository<Sozlesme>, ISozlesmeRepository
                         BorcTipiAd = st.BorcTipi.Ad,
                         BorcTipiDavranis = st.BorcTipi.Davranis,
                         BirimDeger = st.BirimDeger,
-                        HesaplamaYontemi = st.HesaplamaYontemi,
+                        CalculationMethod = st.CalculationMethod,
                         KdvOrani = st.KdvOrani
                     }).ToList()
             })
@@ -176,7 +176,7 @@ public class SozlesmeRepository : BaseRepository<Sozlesme>, ISozlesmeRepository
             .Where(k => k.Tahakkuk.KiraSozlesmesiId.HasValue
                 && ids.Contains(k.Tahakkuk.KiraSozlesmesiId.Value)
                 && k.BorcTipi.Kod == BorcTipiConsts.Depozito
-                && k.Tahakkuk.Durum != TahakkukDurumu.IptalEdildi)
+                && k.Tahakkuk.Durum != ChargeStatus.Cancelled)
             .Select(k => new
             {
                 SozlesmeId = k.Tahakkuk.KiraSozlesmesiId!.Value,
@@ -194,7 +194,7 @@ public class SozlesmeRepository : BaseRepository<Sozlesme>, ISozlesmeRepository
         => await _dbSet
             .Include(s => s.Kiraci)
             .Include(s => s.Birim).ThenInclude(b => b.Tasinmaz)
-            .Where(s => s.Durum == SozlesmeDurumu.Aktif)
+            .Where(s => s.Durum == LeaseStatus.Active)
             .OrderBy(s => s.Kiraci.Ad)
             .ToListAsync();
 
@@ -209,7 +209,7 @@ public class SozlesmeRepository : BaseRepository<Sozlesme>, ISozlesmeRepository
 
     public async Task<List<SozlesmeDropdownDto>> GetAktifDropdownAsync()
         => await _dbSet.AsNoTracking()
-            .Where(s => s.Durum == SozlesmeDurumu.Aktif)
+            .Where(s => s.Durum == LeaseStatus.Active)
             .OrderBy(s => s.Kiraci.Ad)
             .Select(s => new SozlesmeDropdownDto
             {

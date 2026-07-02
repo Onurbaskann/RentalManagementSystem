@@ -1,9 +1,13 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace KiraTakip.Models.Entities;
 
 public class RezervasyonTarife : BaseEntity
 {
     public int? BirimId { get; set; }
-    public int? BirimTuruId { get; set; }
+
+    [Column("BirimTuruId")]
+    public int? UnitTypeId { get; set; }
     public int? Yil { get; set; }
     public int UcretsizSureDakika { get; set; }
     public int UcretlendirmePeriyoduDakika { get; set; }
@@ -12,5 +16,5 @@ public class RezervasyonTarife : BaseEntity
     public string? Aciklama { get; set; }
 
     public Birim? Birim { get; set; }
-    public BirimTuru? BirimTuru { get; set; }
+    public UnitType? UnitType { get; set; }
 }

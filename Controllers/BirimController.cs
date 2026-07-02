@@ -28,7 +28,7 @@ public class BirimController : Controller
         _provider = provider;
     }
 
-    [Authorize(Policy = PermissionCatalog.Birim.OverrideRate)]
+    [Authorize(Policy = PermissionCatalog.Unit.OverrideRate)]
     [HttpGet("{id:int}/OzelFiyat")]
     public async Task<IActionResult> OzelFiyat(int id)
     {
@@ -46,13 +46,13 @@ public class BirimController : Controller
             TasinmazAd = birim.TasinmazAd,
             KiralanabilirMi = birim.KiralanabilirMi,
             RezervasyonYapilabilirMi = birim.RezervasyonYapilabilirMi,
-            BirimTuruAd = birim.BirimTuruAd
+            UnitTypeAd = birim.UnitTypeAd
         };
 
         if (vm.KiralanabilirMi)
         {
             var aktifBorcTipleri = await _ctx.BorcTipleri
-                .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.KullaniciManuel && b.Davranis != BorcTipiDavranisi.RezervasyonOzel)
+                .Where(b => b.Aktif && b.Davranis != ChargeTypeBehavior.UserManual && b.Davranis != ChargeTypeBehavior.ReservationSpecific)
                 .OrderBy(b => b.Sira)
                 .ToListAsync();
 
@@ -84,21 +84,21 @@ public class BirimController : Controller
 
                     decimal deger = 0;
                     decimal kdv = 0;
-                    HesaplamaYontemi yontem = (bt.Kod == Models.Entities.BorcTipiConsts.Kira ? HesaplamaYontemi.M2 : HesaplamaYontemi.Sabit);
+                    CalculationMethod yontem = (bt.Kod == Models.Entities.BorcTipiConsts.Kira ? CalculationMethod.M2 : CalculationMethod.Fixed);
                     string kaynak = "Tanımsız";
 
                     if (tasinmazRate != null)
                     {
                         deger = tasinmazRate.BirimDeger;
                         kdv = tasinmazRate.KdvOrani;
-                        yontem = tasinmazRate.HesaplamaYontemi;
+                        yontem = tasinmazRate.CalculationMethod;
                         kaynak = "Taşınmaz Tarifesi";
                     }
                     else if (genelRate != null)
                     {
                         deger = genelRate.BirimDeger;
                         kdv = genelRate.KdvOrani;
-                        yontem = genelRate.HesaplamaYontemi;
+                        yontem = genelRate.CalculationMethod;
                         kaynak = "Genel Tarife";
                     }
                     else
@@ -110,7 +110,7 @@ public class BirimController : Controller
                     {
                         KategoriAd = kat.Ad,
                         BorcTipiAd = bt.Ad,
-                        HesaplamaYontemi = yontem,
+                        CalculationMethod = yontem,
                         BirimDeger = deger,
                         KdvOrani = kdv,
                         Kaynak = kaynak
@@ -130,7 +130,7 @@ public class BirimController : Controller
                 BorcTipiId = bt.Id,
                 BorcTipiAd = bt.Ad,
                 BorcTipiKod = bt.Kod,
-                BorcTipiDavranisi = bt.Davranis
+                ChargeTypeBehavior = bt.Davranis
             }).ToList();
 
             vm.Satirlar = kategoriler.Select(kat => new BirimTarifeKategoriSatiri
@@ -147,21 +147,21 @@ public class BirimController : Controller
 
                     decimal varsayilanDeger = 0;
                     decimal varsayilanKdv = 0;
-                    HesaplamaYontemi varsayilanYontem = (bt.Kod == Models.Entities.BorcTipiConsts.Kira ? HesaplamaYontemi.M2 : HesaplamaYontemi.Sabit);
+                    CalculationMethod varsayilanYontem = (bt.Kod == Models.Entities.BorcTipiConsts.Kira ? CalculationMethod.M2 : CalculationMethod.Fixed);
                     string kaynak = "Tanımsız";
 
                     if (tasinmazRate != null)
                     {
                         varsayilanDeger = tasinmazRate.BirimDeger;
                         varsayilanKdv = tasinmazRate.KdvOrani;
-                        varsayilanYontem = tasinmazRate.HesaplamaYontemi;
+                        varsayilanYontem = tasinmazRate.CalculationMethod;
                         kaynak = "Taşınmaz Tarifesi";
                     }
                     else if (genelRate != null)
                     {
                         varsayilanDeger = genelRate.BirimDeger;
                         varsayilanKdv = genelRate.KdvOrani;
-                        varsayilanYontem = genelRate.HesaplamaYontemi;
+                        varsayilanYontem = genelRate.CalculationMethod;
                         kaynak = "Genel Tarife";
                     }
 
@@ -171,12 +171,12 @@ public class BirimController : Controller
                         KiraciKategoriId = kat.Id,
                         BorcTipiId = bt.Id,
                         OzelFiyatAktif = rate != null,
-                        HesaplamaYontemi = rate?.HesaplamaYontemi ?? (bt.Kod == Models.Entities.BorcTipiConsts.Kira ? HesaplamaYontemi.M2 : HesaplamaYontemi.Sabit),
+                        CalculationMethod = rate?.CalculationMethod ?? (bt.Kod == Models.Entities.BorcTipiConsts.Kira ? CalculationMethod.M2 : CalculationMethod.Fixed),
                         BirimDeger = rate?.BirimDeger ?? 0,
                         KdvOrani = rate?.KdvOrani ?? 0,
                         VarsayilanBirimDeger = varsayilanDeger,
                         VarsayilanKdvOrani = varsayilanKdv,
-                        VarsayilanHesaplamaYontemi = varsayilanYontem,
+                        VarsayilanCalculationMethod = varsayilanYontem,
                         VarsayilanKaynak = kaynak
                     };
                 }).ToList()
@@ -193,7 +193,7 @@ public class BirimController : Controller
         return View(vm);
     }
 
-    [Authorize(Policy = PermissionCatalog.Birim.OverrideRate)]
+    [Authorize(Policy = PermissionCatalog.Unit.OverrideRate)]
     [HttpPost("{id:int}/OzelFiyat")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> OzelFiyat(int id, BirimOzelFiyatViewModel vm)
@@ -219,14 +219,14 @@ public class BirimController : Controller
                             BirimId = id,
                             KiraciKategoriId = hucre.KiraciKategoriId,
                             BorcTipiId = hucre.BorcTipiId,
-                            HesaplamaYontemi = hucre.HesaplamaYontemi,
+                            CalculationMethod = hucre.CalculationMethod,
                             BirimDeger = hucre.BirimDeger,
                             KdvOrani = hucre.KdvOrani
                         });
                     }
                     else
                     {
-                        mevcut.HesaplamaYontemi = hucre.HesaplamaYontemi;
+                        mevcut.CalculationMethod = hucre.CalculationMethod;
                         mevcut.BirimDeger = hucre.BirimDeger;
                         mevcut.KdvOrani = hucre.KdvOrani;
                     }
@@ -243,7 +243,7 @@ public class BirimController : Controller
         return RedirectToAction(nameof(OzelFiyat), new { id });
     }
 
-    [Authorize(Policy = PermissionCatalog.Birim.OverrideRate)]
+    [Authorize(Policy = PermissionCatalog.Unit.OverrideRate)]
     [HttpPost("{id:int}/RezKuralKaydet")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RezKuralKaydet(int id, RezervasyonTarifeKuralViewModel vm)
@@ -261,7 +261,7 @@ public class BirimController : Controller
         return RedirectToAction(nameof(OzelFiyat), new { id });
     }
 
-    [Authorize(Policy = PermissionCatalog.Birim.OverrideRate)]
+    [Authorize(Policy = PermissionCatalog.Unit.OverrideRate)]
     [HttpPost("{id:int}/RezKuralSifirla")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RezKuralSifirla(int id)

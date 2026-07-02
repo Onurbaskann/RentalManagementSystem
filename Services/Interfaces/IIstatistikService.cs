@@ -5,7 +5,7 @@ namespace KiraTakip.Services.Interfaces;
 
 public interface IIstatistikService
 {
-    KiraDurumu GetBirimDurumu(Birim birim);
+    OccupancyStatus GetBirimDurumu(Birim birim);
     Sozlesme? GetAktifSozlesme(Birim birim);
     bool Aktif(Sozlesme s);
     Task<decimal> AylikBedelAsync(Sozlesme s);

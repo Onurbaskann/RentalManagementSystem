@@ -60,7 +60,7 @@ public class TarifeHiyerarsiService : ITarifeHiyerarsiService
                     {
                         KategoriAd = f.KiraciKategori.Ad,
                         BorcTipiAd = f.BorcTipi.Ad,
-                        HesaplamaYontemi = f.HesaplamaYontemi,
+                        CalculationMethod = f.CalculationMethod,
                         BirimDeger = f.BirimDeger,
                         KdvOrani = f.KdvOrani
                     }).ToList()

@@ -55,10 +55,10 @@
                         var davranisKey = bt.Davranis.ToString();
                         var (davranisLabel, davranisColorClass) = bt.Davranis switch
                         {
-                            BorcTipiDavranisi.AylikSabit        => ("Aylık Sabit",         "text-blue-700"),
-                            BorcTipiDavranisi.IlkAyTekSeferlik  => ("İlk Ay Tek Seferlik", "text-purple-700"),
-                            BorcTipiDavranisi.KullaniciManuel   => ("Kullanıcı Manuel",    "text-amber-700"),
-                            BorcTipiDavranisi.RezervasyonOzel   => ("Rezervasyon Özel",    "text-teal-700"),
+                            ChargeTypeBehavior.MonthlyFixed        => ("Aylık Sabit",         "text-blue-700"),
+                            ChargeTypeBehavior.FirstMonthOneTime  => ("İlk Ay Tek Seferlik", "text-purple-700"),
+                            ChargeTypeBehavior.UserManual   => ("Kullanıcı Manuel",    "text-amber-700"),
+                            ChargeTypeBehavior.ReservationSpecific   => ("Rezervasyon Özel",    "text-teal-700"),
                             _                                   => (bt.Davranis.ToString(), "text-slate-700")
                         };
                         <tr x-show="filtre==='' || filtre==='@davranisKey'" x-cloak>

@@ -22,7 +22,7 @@
 }
 
 <div class="card">
-    <form method="post" action="/Kiraci/Kullanicilar/Duzenle/@Model.Id" asp-form-write-permission="@PermissionCatalog.KiraciPortal.System.Kullanici.Edit">
+    <form method="post" action="/Kiraci/Kullanicilar/Duzenle/@Model.Id" asp-form-write-permission="@PermissionCatalog.TenantPortal.System.User.Edit">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Id" />
         <input type="hidden" asp-for="IsCurrentUser" />
@@ -68,11 +68,11 @@
         <div class="flex gap-2.5 mt-6">
             @if (Model.IsCurrentUser)
             {
-                <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.KiraciPortal.System.Kullanici.Edit" disabled>Kaydet</button>
+                <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.TenantPortal.System.User.Edit" disabled>Kaydet</button>
             }
             else
             {
-                <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.KiraciPortal.System.Kullanici.Edit">Kaydet</button>
+                <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.TenantPortal.System.User.Edit">Kaydet</button>
             }
             <a href="/Kiraci/Kullanicilar" class="btn btn-secondary px-6">İptal</a>
         </div>

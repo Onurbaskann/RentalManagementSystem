@@ -3,10 +3,10 @@
     Layout = "_KiraciLayout";
     ViewData["Title"] = "Panel";
 
-    bool hasSozlesme   = User.HasModuleAccess("Kiraci.Sozlesme");
-    bool hasBorc       = User.HasModuleAccess("Kiraci.Borc");
-    bool hasOdeme      = User.HasModuleAccess("Kiraci.Odeme");
-    bool hasRezervasy  = User.HasModuleAccess("Kiraci.Rezervasyon");
+    bool hasSozlesme   = User.HasModuleAccess("Tenant.Lease");
+    bool hasBorc       = User.HasModuleAccess("Tenant.Charge");
+    bool hasOdeme      = User.HasModuleAccess("Tenant.Payment");
+    bool hasRezervasy  = User.HasModuleAccess("Tenant.Reservation");
 
     var avatarParts = Model.KiraciAd.Split(' ', StringSplitOptions.RemoveEmptyEntries);
     var avatarHarf = avatarParts.Length >= 2

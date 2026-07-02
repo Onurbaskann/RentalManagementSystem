@@ -2,14 +2,14 @@ using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IBirimTuruRepository : IBaseRepository<BirimTuru>
+public interface IUnitTypeRepository : IBaseRepository<UnitType>
 {
-    Task<List<BirimTuruListItemDto>> GetListAsync();
+    Task<List<UnitTypeListItemDto>> GetListAsync();
     Task<int> GetMaxSiraAsync();
     Task<bool> KodExistsAsync(string kod, int? excludeId = null);
 
-    // Cross-aggregate kontroller (BorcTipi DurumDegistir + BirimTuru DurumDegistir için)
+    // Cross-aggregate kontroller (BorcTipi DurumDegistir + UnitType DurumDegistir için)
     Task<bool> AnyAktifByBorcTipiIdAsync(int borcTipiId, int? excludeId = null);
-    Task<bool> HasAktifTahakkukForBirimTuruAsync(int birimTuruId);
-    Task<bool> HasPlanlanmisRezervasyonForBirimTuruAsync(int birimTuruId);
+    Task<bool> HasAktifTahakkukForUnitTypeAsync(int birimTuruId);
+    Task<bool> HasPlanlanmisRezervasyonForUnitTypeAsync(int birimTuruId);
 }

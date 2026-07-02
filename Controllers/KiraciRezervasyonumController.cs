@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace KiraTakip.Controllers;
 
 [Authorize(Policy = "KiraciKullanici")]
-[Authorize(Policy = PermissionCatalog.KiraciPortal.Rezervasyon.Module)]
+[Authorize(Policy = PermissionCatalog.TenantPortal.Reservation.Module)]
 [Route("Kiraci/Rezervasyonum")]
 public class KiraciRezervasyonumController : Controller
 {

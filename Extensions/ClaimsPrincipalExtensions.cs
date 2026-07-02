@@ -13,7 +13,7 @@ public static class ClaimsPrincipalExtensions
             return true;
             
         // 2. Kullanıcının claim'leri arasında bu prefix ile başlayan bir Permission var mı?
-        // Örn: "Internal.Tasinmaz" prefix'i verildiğinde, "Internal.Tasinmaz.Create" varsa true döner.
+        // Örn: "Internal.Property" prefix'i verildiğinde, "Internal.Tasinmaz.Create" varsa true döner.
         return user.Claims.Any(c => 
             c.Type == KiraTakip.Authorization.AppClaimTypes.Permission && 
             c.Value.StartsWith(modulePrefix, StringComparison.OrdinalIgnoreCase));

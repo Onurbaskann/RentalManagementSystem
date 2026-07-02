@@ -12,7 +12,7 @@ public class BorcTipiRepository : BaseRepository<BorcTipi>, IBorcTipiRepository
 
     public async Task<List<BorcTipiLookupDto>> GetManuelBorcTipleriAsync()
         => await _dbSet.AsNoTracking()
-            .Where(b => b.Aktif && b.Davranis == BorcTipiDavranisi.KullaniciManuel)
+            .Where(b => b.Aktif && b.Davranis == ChargeTypeBehavior.UserManual)
             .OrderBy(b => b.Sira)
             .Select(b => new BorcTipiLookupDto
             {
@@ -25,7 +25,7 @@ public class BorcTipiRepository : BaseRepository<BorcTipi>, IBorcTipiRepository
 
     public async Task<BorcTipi?> GetActiveManuelByIdAsync(int id)
         => await _dbSet
-            .FirstOrDefaultAsync(b => b.Id == id && b.Aktif && b.Davranis == BorcTipiDavranisi.KullaniciManuel);
+            .FirstOrDefaultAsync(b => b.Id == id && b.Aktif && b.Davranis == ChargeTypeBehavior.UserManual);
 
     public async Task<List<BorcTipiListItemDto>> GetListAsync()
         => await _dbSet.AsNoTracking()
@@ -52,7 +52,7 @@ public class BorcTipiRepository : BaseRepository<BorcTipi>, IBorcTipiRepository
 
     public async Task<List<BorcTipiLookupDto>> GetRezervasyonAdaylariAsync()
         => await _dbSet.AsNoTracking()
-            .Where(b => b.Davranis == BorcTipiDavranisi.RezervasyonOzel && b.Aktif)
+            .Where(b => b.Davranis == ChargeTypeBehavior.ReservationSpecific && b.Aktif)
             .OrderBy(b => b.Sira).ThenBy(b => b.Ad)
             .Select(b => new BorcTipiLookupDto
             {

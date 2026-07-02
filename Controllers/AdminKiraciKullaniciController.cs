@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Policy = "System.Kullanici")]
+[Authorize(Policy = "System.User")]
 [Route("Admin/Kiracilar/{kiraciId:int}/Kullanicilar")]
 public class AdminKiraciKullaniciController : Controller
 {
@@ -42,7 +42,7 @@ public class AdminKiraciKullaniciController : Controller
     private async Task PopulateRollerAsync(List<RolSecenekViewModel> liste, int kiraciId)
     {
         var roller = await _db.Roller.IgnoreQueryFilters()
-            .Where(r => r.Scope == RolScope.Kiraci && (r.KiraciId == null || r.KiraciId == kiraciId) && r.IsActive && !r.IsDeleted)
+            .Where(r => r.Scope == RoleScope.Tenant && (r.KiraciId == null || r.KiraciId == kiraciId) && r.IsActive && !r.IsDeleted)
             .OrderBy(r => r.Ad)
             .ToListAsync();
         liste.AddRange(roller.Select(r => new RolSecenekViewModel { Id = r.Id, Ad = r.Ad }));
@@ -81,7 +81,7 @@ public class AdminKiraciKullaniciController : Controller
 
         var bekleyen = await _db.Davetiyeler
             .IgnoreQueryFilters()
-            .Where(d => d.KiraciId == kiraciId && d.Durum == DavetiyeDurum.Beklemede)
+            .Where(d => d.KiraciId == kiraciId && d.Durum == InvitationStatus.Pending)
             .Include(d => d.Rol)
             .OrderByDescending(d => d.CreatedAt)
             .ToListAsync();
@@ -227,7 +227,7 @@ public class AdminKiraciKullaniciController : Controller
     {
         return await _db.Sozlesmeler
             .AsNoTracking()
-            .Where(s => s.KiraciId == kiraciId && s.Durum == SozlesmeDurumu.Aktif)
+            .Where(s => s.KiraciId == kiraciId && s.Durum == LeaseStatus.Active)
             .Select(s => new BirimLookupDto
             {
                 Id = s.BirimId,

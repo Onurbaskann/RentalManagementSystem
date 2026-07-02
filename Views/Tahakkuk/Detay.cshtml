@@ -6,23 +6,23 @@
     var kalan = Model.ToplamTutar - Model.OdenenTutar;
 
     string durumCls = Model.Durum switch {
-        TahakkukDurumu.TamOdendi    => "badge-kirali",
-        TahakkukDurumu.KismenOdendi => "badge-surek",
-        TahakkukDurumu.Gecikti      => "badge-gecmis",
-        TahakkukDurumu.IptalEdildi  => "badge-bos",
+        ChargeStatus.Paid    => "badge-kirali",
+        ChargeStatus.PartiallyPaid => "badge-surek",
+        ChargeStatus.Overdue      => "badge-gecmis",
+        ChargeStatus.Cancelled  => "badge-bos",
         _                           => "badge-bos"
     };
     string durumLabel = Model.Durum switch {
-        TahakkukDurumu.TamOdendi    => "Tam Ödendi",
-        TahakkukDurumu.KismenOdendi => "Kısmi Ödendi",
-        TahakkukDurumu.Gecikti      => "Gecikti",
-        TahakkukDurumu.IptalEdildi  => "İptal Edildi",
+        ChargeStatus.Paid    => "Tam Ödendi",
+        ChargeStatus.PartiallyPaid => "Kısmi Ödendi",
+        ChargeStatus.Overdue      => "Gecikti",
+        ChargeStatus.Cancelled  => "İptal Edildi",
         _                           => "Bekleniyor"
     };
 
-    bool canCreate = User.HasPermission(PermissionCatalog.Odeme.Create);
-    bool iptal = Model.Durum == TahakkukDurumu.IptalEdildi;
-    bool tamOdendi = Model.Durum == TahakkukDurumu.TamOdendi;
+    bool canCreate = User.HasPermission(PermissionCatalog.Payment.Create);
+    bool iptal = Model.Durum == ChargeStatus.Cancelled;
+    bool tamOdendi = Model.Durum == ChargeStatus.Paid;
 }
 
 @if (TempData["Success"] != null)
@@ -133,39 +133,39 @@
                     @foreach (var k in Model.Kalemler.OrderBy(k => k.BorcTipiSira))
                     {
                         string kaynakCls = k.KaynakTipi switch {
-                            KalemKaynakTipi.TanimsizTarife    => "badge-bos",
-                            KalemKaynakTipi.SozlesmeTarifesi  => "badge-surek",
-                            KalemKaynakTipi.BirimTarifesi     => "badge-kirali",
-                            KalemKaynakTipi.TasinmazTarifesi  => "badge-bireysel",
-                            KalemKaynakTipi.GenelTarife       => "badge-bos",
-                            KalemKaynakTipi.ManuelGiris       => "badge-surek",
-                            KalemKaynakTipi.RezervasyonKurali => "badge-bireysel",
+                            LineItemSourceType.UndefinedRate    => "badge-bos",
+                            LineItemSourceType.LeaseRateOverride  => "badge-surek",
+                            LineItemSourceType.UnitRateOverride     => "badge-kirali",
+                            LineItemSourceType.PropertyRateOverride  => "badge-bireysel",
+                            LineItemSourceType.RateSchedule       => "badge-bos",
+                            LineItemSourceType.ManualInput       => "badge-surek",
+                            LineItemSourceType.ReservationRule => "badge-bireysel",
                             _                                 => "badge-bos"
                         };
                         string kaynakLabel = k.KaynakTipi switch {
-                            KalemKaynakTipi.TanimsizTarife    => "Tanımsız Tarife",
-                            KalemKaynakTipi.SozlesmeTarifesi  => "Sözleşme Tarifesi",
-                            KalemKaynakTipi.BirimTarifesi     => "Birim Tarifesi",
-                            KalemKaynakTipi.TasinmazTarifesi  => "Taşınmaz Tarifesi",
-                            KalemKaynakTipi.GenelTarife       => "Genel Tarife",
-                            KalemKaynakTipi.ManuelGiris       => "Manuel Giriş",
-                            KalemKaynakTipi.RezervasyonKurali => "Rezervasyon Kuralı",
+                            LineItemSourceType.UndefinedRate    => "Tanımsız Tarife",
+                            LineItemSourceType.LeaseRateOverride  => "Sözleşme Tarifesi",
+                            LineItemSourceType.UnitRateOverride     => "Birim Tarifesi",
+                            LineItemSourceType.PropertyRateOverride  => "Taşınmaz Tarifesi",
+                            LineItemSourceType.RateSchedule       => "Genel Tarife",
+                            LineItemSourceType.ManualInput       => "Manuel Giriş",
+                            LineItemSourceType.ReservationRule => "Rezervasyon Kuralı",
                             _                                 => "Bilinmiyor"
                         };
                         string kaynakTip = k.KaynakTipi switch {
-                            KalemKaynakTipi.TanimsizTarife    => "Fiyat tanımı bulunamadığı için 0₺ olarak üretildi.",
-                            KalemKaynakTipi.SozlesmeTarifesi  => "Sözleşmeye özel tarife fiyatı kullanıldı.",
-                            KalemKaynakTipi.BirimTarifesi     => "Birim düzeyinde özel fiyat kullanıldı.",
-                            KalemKaynakTipi.TasinmazTarifesi  => "Taşınmaz ve kiracı kategorisine özel matris fiyatı kullanıldı.",
-                            KalemKaynakTipi.GenelTarife       => "Genel tarife fiyatı uygulandı.",
-                            KalemKaynakTipi.ManuelGiris       => "Kullanıcı tarafından manuel olarak girildi.",
-                            KalemKaynakTipi.RezervasyonKurali => "Rezervasyon kuralından aktarıldı.",
+                            LineItemSourceType.UndefinedRate    => "Fiyat tanımı bulunamadığı için 0₺ olarak üretildi.",
+                            LineItemSourceType.LeaseRateOverride  => "Sözleşmeye özel tarife fiyatı kullanıldı.",
+                            LineItemSourceType.UnitRateOverride     => "Birim düzeyinde özel fiyat kullanıldı.",
+                            LineItemSourceType.PropertyRateOverride  => "Taşınmaz ve kiracı kategorisine özel matris fiyatı kullanıldı.",
+                            LineItemSourceType.RateSchedule       => "Genel tarife fiyatı uygulandı.",
+                            LineItemSourceType.ManualInput       => "Kullanıcı tarafından manuel olarak girildi.",
+                            LineItemSourceType.ReservationRule => "Rezervasyon kuralından aktarıldı.",
                             _                                 => ""
                         };
                         <tr class="border-t border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
                             <td class="p-2 px-3 text-slate-600 font-medium">@k.Aciklama</td>
-                            <td class="p-2 px-3 text-slate-400">@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m² Bazlı" : "Sabit")</td>
-                            <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
+                            <td class="p-2 px-3 text-slate-400">@(k.CalculationMethod == CalculationMethod.M2 ? "m² Bazlı" : "Sabit")</td>
+                            <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺@(k.CalculationMethod == CalculationMethod.M2 ? "/m²" : "")</td>
                             <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Tutar.ToString("N2") ₺</td>
                             <td class="p-2 px-3 text-right text-slate-400/60">%@k.KdvOrani.ToString("G")</td>
                             <td class="p-2 px-3 text-right text-slate-400/60">@k.KdvTutari.ToString("N2") ₺</td>
@@ -217,24 +217,24 @@
                     @foreach (var o in Model.Odemeler.OrderByDescending(o => o.OdemeTarihi))
                     {
                         string odCls = o.Durum switch {
-                            OdemeDurumu.Onaylandi     => "badge-kirali",
-                            OdemeDurumu.Reddedildi    => "badge-gecmis",
+                            PaymentStatus.Approved     => "badge-kirali",
+                            PaymentStatus.Rejected    => "badge-gecmis",
                             _                         => "badge-bos"
                         };
                         string odLabel = o.Durum switch {
-                            OdemeDurumu.Onaylandi  => "Onaylandı",
-                            OdemeDurumu.Reddedildi => "Reddedildi",
+                            PaymentStatus.Approved  => "Onaylandı",
+                            PaymentStatus.Rejected => "Reddedildi",
                             _                      => "Onay Bekliyor"
                         };
-                        string kanalLabel = o.OdemeKanali switch {
-                            OdemeKanali.Havale => "Havale",
-                            OdemeKanali.EFT    => "EFT",
-                            OdemeKanali.Nakit  => "Nakit",
+                        string kanalLabel = o.PaymentChannel switch {
+                            PaymentChannel.BankTransfer => "Havale",
+                            PaymentChannel.Eft    => "EFT",
+                            PaymentChannel.Cash  => "Nakit",
                             _                  => "Diğer"
                         };
                         <tr>
                             <td class="font-semibold">@o.OdemeTarihi.ToString("dd.MM.yyyy")</td>
-                            <td class="text-right font-bold @(o.Durum == OdemeDurumu.Onaylandi ? "text-emerald-800" : "")">@o.Tutar.ToString("N2") ₺</td>
+                            <td class="text-right font-bold @(o.Durum == PaymentStatus.Approved ? "text-emerald-800" : "")">@o.Tutar.ToString("N2") ₺</td>
                             <td class="text-[13px]">@kanalLabel</td>
                             <td><span class="badge @odCls">@odLabel</span></td>
                             <td class="text-[12px] text-muted">@o.GirisTarihi.ToString("dd.MM.yyyy HH:mm")</td>

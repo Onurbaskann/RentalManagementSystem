@@ -2,8 +2,8 @@
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Manuel Borçlar";
-    bool canCreate = User.HasPermission(PermissionCatalog.ManuelBorc.Create);
-    bool canCancel = User.HasPermission(PermissionCatalog.ManuelBorc.Cancel);
+    bool canCreate = User.HasPermission(PermissionCatalog.ManualCharge.Create);
+    bool canCancel = User.HasPermission(PermissionCatalog.ManualCharge.Cancel);
     string aktifDurum = ViewBag.Durum ?? "tum";
     string aktifBaglanti = ViewBag.Baglanti ?? "";
     int iptalSayisi = ViewBag.IptalSayisi ?? 0;
@@ -103,17 +103,17 @@
                 {
                     var kalan = t.ToplamTutar - t.OdenenTutar;
                     string durumCls = t.Durum switch {
-                        TahakkukDurumu.TamOdendi    => "badge-kirali",
-                        TahakkukDurumu.KismenOdendi => "badge-surek",
-                        TahakkukDurumu.Gecikti      => "badge-gecmis",
-                        TahakkukDurumu.IptalEdildi  => "badge-bos",
+                        ChargeStatus.Paid    => "badge-kirali",
+                        ChargeStatus.PartiallyPaid => "badge-surek",
+                        ChargeStatus.Overdue      => "badge-gecmis",
+                        ChargeStatus.Cancelled  => "badge-bos",
                         _                           => "badge-bos"
                     };
                     string durumLabel = t.Durum switch {
-                        TahakkukDurumu.TamOdendi    => "Tam Ödendi",
-                        TahakkukDurumu.KismenOdendi => "Kısmi Ödendi",
-                        TahakkukDurumu.Gecikti      => "Gecikti",
-                        TahakkukDurumu.IptalEdildi  => "İptal Edildi",
+                        ChargeStatus.Paid    => "Tam Ödendi",
+                        ChargeStatus.PartiallyPaid => "Kısmi Ödendi",
+                        ChargeStatus.Overdue      => "Gecikti",
+                        ChargeStatus.Cancelled  => "İptal Edildi",
                         _                           => "Bekleniyor"
                     };
                     <tr class="cursor-pointer hover:bg-slate-50 transition-colors"
@@ -166,11 +166,11 @@
                         </td>
                         <td class="text-right">
                             <div class="flex gap-1.5 justify-end items-center">
-                                @if (t.Durum != TahakkukDurumu.IptalEdildi && t.Durum != TahakkukDurumu.TamOdendi)
+                                @if (t.Durum != ChargeStatus.Cancelled && t.Durum != ChargeStatus.Paid)
                                 {
                                     <a href="/Odeme/Ekle?tahakkukId=@t.Id.ToHashId()" class="btn btn-sm btn-primary">Ödeme</a>
                                 }
-                                @if (canCancel && t.Durum != TahakkukDurumu.IptalEdildi && t.Durum != TahakkukDurumu.TamOdendi)
+                                @if (canCancel && t.Durum != ChargeStatus.Cancelled && t.Durum != ChargeStatus.Paid)
                                 {
                                     <button type="button" class="btn btn-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white"
                                         data-confirm="Bu manuel borcu iptal etmek istediğinize emin misiniz?"

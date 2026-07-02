@@ -42,14 +42,14 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
                           Durum = t.Durum,
                           KaynakTipi = t.KaynakTipi,
                           BekleyenOdemeSayisi = _ctx.TahakkukOdemeler.IgnoreQueryFilters()
-                              .Count(o => o.TahakkukId == t.Id && !o.IsDeleted && o.Durum == OdemeDurumu.OnayBekliyor),
+                              .Count(o => o.TahakkukId == t.Id && !o.IsDeleted && o.Durum == PaymentStatus.PendingApproval),
                           Kalemler = t.Kalemler.Select(k => new TahakkukKalemDto
                           {
                               BorcTipiKod = k.BorcTipi.Kod,
                               BorcTipiSira = k.BorcTipi.Sira,
                               BorcTipiAd = k.BorcTipi.Ad,
                               Aciklama = k.Aciklama,
-                              HesaplamaYontemi = k.HesaplamaYontemi,
+                              CalculationMethod = k.CalculationMethod,
                               BirimDeger = k.BirimDeger,
                               Carpan = k.Carpan,
                               Tutar = k.Tutar,
@@ -93,11 +93,11 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
 
         if (!string.IsNullOrWhiteSpace(q.Kaynak))
         {
-            TahakkukKaynakTipi? kt = q.Kaynak.ToLower() switch
+            ChargeSourceType? kt = q.Kaynak.ToLower() switch
             {
-                "manuel" => TahakkukKaynakTipi.Manuel,
-                "sozlesme" => TahakkukKaynakTipi.Sozlesme,
-                "rezervasyon" => TahakkukKaynakTipi.Rezervasyon,
+                "manuel" => ChargeSourceType.Manual,
+                "sozlesme" => ChargeSourceType.Lease,
+                "rezervasyon" => ChargeSourceType.Reservation,
                 _ => null
             };
             if (kt.HasValue) query = query.Where(t => t.KaynakTipi == kt.Value);
@@ -108,21 +108,21 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
             if (q.Durum == "odeme_onay")
             {
                 query = query.Where(t => t.Odemeler.Any(o =>
-                    o.Durum == OdemeDurumu.OnayBekliyor &&
-                    o.OdemeKaynakTipi != OdemeKaynakTipi.SanalPos));
+                    o.Durum == PaymentStatus.PendingApproval &&
+                    o.PaymentSourceType != PaymentSourceType.VirtualPos));
             }
             else if (q.Durum == "iptal")
             {
-                query = query.Where(t => t.Durum == TahakkukDurumu.IptalEdildi);
+                query = query.Where(t => t.Durum == ChargeStatus.Cancelled);
             }
             else
             {
-                TahakkukDurumu? d = q.Durum.ToLower() switch
+                ChargeStatus? d = q.Durum.ToLower() switch
                 {
-                    "bekliyor" => TahakkukDurumu.Bekleniyor,
-                    "kismi" => TahakkukDurumu.KismenOdendi,
-                    "tamodendi" => TahakkukDurumu.TamOdendi,
-                    "gecikti" => TahakkukDurumu.Gecikti,
+                    "bekliyor" => ChargeStatus.Pending,
+                    "kismi" => ChargeStatus.PartiallyPaid,
+                    "tamodendi" => ChargeStatus.Paid,
+                    "gecikti" => ChargeStatus.Overdue,
                     _ => null
                 };
                 if (d.HasValue) query = query.Where(t => t.Durum == d.Value);
@@ -130,7 +130,7 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
         }
         else
         {
-            query = query.Where(t => t.Durum != TahakkukDurumu.IptalEdildi);
+            query = query.Where(t => t.Durum != ChargeStatus.Cancelled);
         }
 
         var total = await query.CountAsync();
@@ -152,14 +152,14 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
                                    OdenenTutar = t.OdenenTutar,
                                    Durum = t.Durum,
                                    KaynakTipi = t.KaynakTipi,
-                                   BekleyenOdemeSayisi = t.Odemeler.Count(o => o.Durum == OdemeDurumu.OnayBekliyor),
+                                   BekleyenOdemeSayisi = t.Odemeler.Count(o => o.Durum == PaymentStatus.PendingApproval),
                                    Kalemler = t.Kalemler.Select(k => new TahakkukKalemDto
                                    {
                                        BorcTipiKod = k.BorcTipi.Kod,
                                        BorcTipiSira = k.BorcTipi.Sira,
                                        BorcTipiAd = k.BorcTipi.Ad,
                                        Aciklama = k.Aciklama,
-                                       HesaplamaYontemi = k.HesaplamaYontemi,
+                                       CalculationMethod = k.CalculationMethod,
                                        BirimDeger = k.BirimDeger,
                                        Carpan = k.Carpan,
                                        Tutar = k.Tutar,
@@ -211,7 +211,7 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
                                    BorcTipiSira = k.BorcTipi.Sira,
                                    BorcTipiAd = k.BorcTipi.Ad,
                                    Aciklama = k.Aciklama,
-                                   HesaplamaYontemi = k.HesaplamaYontemi,
+                                   CalculationMethod = k.CalculationMethod,
                                    BirimDeger = k.BirimDeger,
                                    Carpan = k.Carpan,
                                    Tutar = k.Tutar,
@@ -225,7 +225,7 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
                                    Id = o.Id,
                                    OdemeTarihi = o.OdemeTarihi,
                                    Tutar = o.Tutar,
-                                   OdemeKanali = o.OdemeKanali,
+                                   PaymentChannel = o.PaymentChannel,
                                    Durum = o.Durum,
                                    GirisTarihi = o.GirisTarihi,
                                    Aciklama = o.Aciklama,
@@ -239,7 +239,7 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
     public async Task<List<ManuelBorcListItemDto>> GetManuelBorcListAsync(List<int>? yetkiliTasinmazIds, string? durum = null, string? baglanti = null, int? sozlesmeId = null, List<int>? yetkiliBirimIds = null)
     {
         IQueryable<Tahakkuk> q = _dbSet.AsNoTracking()
-            .Where(t => t.KaynakTipi == TahakkukKaynakTipi.Manuel);
+            .Where(t => t.KaynakTipi == ChargeSourceType.Manual);
 
         if (yetkiliBirimIds != null)
             q = q.Where(t => yetkiliBirimIds.Contains(t.BirimId));
@@ -258,16 +258,16 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
         if (!string.IsNullOrWhiteSpace(durum) && durum != "tum")
         {
             if (durum == "iptal")
-                q = q.Where(t => t.Durum == TahakkukDurumu.IptalEdildi);
+                q = q.Where(t => t.Durum == ChargeStatus.Cancelled);
             else
             {
-                q = q.Where(t => t.Durum != TahakkukDurumu.IptalEdildi);
-                TahakkukDurumu? d = durum switch
+                q = q.Where(t => t.Durum != ChargeStatus.Cancelled);
+                ChargeStatus? d = durum switch
                 {
-                    "bekliyor"  => TahakkukDurumu.Bekleniyor,
-                    "kismi"     => TahakkukDurumu.KismenOdendi,
-                    "tamodendi" => TahakkukDurumu.TamOdendi,
-                    "gecikti"   => TahakkukDurumu.Gecikti,
+                    "bekliyor"  => ChargeStatus.Pending,
+                    "kismi"     => ChargeStatus.PartiallyPaid,
+                    "tamodendi" => ChargeStatus.Paid,
+                    "gecikti"   => ChargeStatus.Overdue,
                     _           => null
                 };
                 if (d.HasValue) q = q.Where(t => t.Durum == d.Value);
@@ -275,7 +275,7 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
         }
         else
         {
-            q = q.Where(t => t.Durum != TahakkukDurumu.IptalEdildi);
+            q = q.Where(t => t.Durum != ChargeStatus.Cancelled);
         }
 
         return await q.OrderByDescending(t => t.CreatedAt)
@@ -310,7 +310,7 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
     public async Task<int> GetManuelBorcIptalSayisiAsync(List<int>? yetkiliTasinmazIds, List<int>? yetkiliBirimIds = null)
     {
         IQueryable<Tahakkuk> q = _dbSet.AsNoTracking()
-            .Where(t => t.KaynakTipi == TahakkukKaynakTipi.Manuel && t.Durum == TahakkukDurumu.IptalEdildi);
+            .Where(t => t.KaynakTipi == ChargeSourceType.Manual && t.Durum == ChargeStatus.Cancelled);
         if (yetkiliBirimIds != null)
             q = q.Where(t => yetkiliBirimIds.Contains(t.BirimId));
         else if (yetkiliTasinmazIds != null)
@@ -323,13 +323,13 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
     {
         return await _dbSet
             .Include(t => t.Odemeler)
-            .FirstOrDefaultAsync(t => t.Id == id && t.KaynakTipi == TahakkukKaynakTipi.Manuel);
+            .FirstOrDefaultAsync(t => t.Id == id && t.KaynakTipi == ChargeSourceType.Manual);
     }
 
     public async Task<List<Tahakkuk>> GetGeciktirileceklerAsync(DateTime bugun)
     {
-        return await _dbSet.Where(t => t.Durum != TahakkukDurumu.TamOdendi &&
-                                       t.Durum != TahakkukDurumu.IptalEdildi &&
+        return await _dbSet.Where(t => t.Durum != ChargeStatus.Paid &&
+                                       t.Durum != ChargeStatus.Cancelled &&
                                        t.VadeTarihi < bugun)
                            .ToListAsync();
     }
@@ -339,8 +339,8 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
             .Include(t => t.Kiraci)
             .Include(t => t.KiraSozlesmesi!).ThenInclude(s => s!.Birim).ThenInclude(b => b.Tasinmaz)
             .Include(t => t.Odemeler)
-            .Where(t => t.Durum != TahakkukDurumu.TamOdendi
-                     && t.Durum != TahakkukDurumu.IptalEdildi
+            .Where(t => t.Durum != ChargeStatus.Paid
+                     && t.Durum != ChargeStatus.Cancelled
                      && t.VadeTarihi <= limitVade)
             .ToListAsync(ct);
 
@@ -348,22 +348,22 @@ public class TahakkukRepository : BaseRepository<Tahakkuk>, ITahakkukRepository
     public async Task<decimal> GetOdenenTutarAsync(int tahakkukId)
     {
         return await _ctx.TahakkukOdemeler.AsNoTracking()
-                                      .Where(o => o.TahakkukId == tahakkukId && o.Durum == OdemeDurumu.Onaylandi)
+                                      .Where(o => o.TahakkukId == tahakkukId && o.Durum == PaymentStatus.Approved)
                                       .SumAsync(o => (decimal?)o.Tutar) ?? 0m;
     }
 
     // ── Üretim yardımcıları ───────────────────────────────────────────────
     public async Task<List<BorcTipi>> GetAktifUretimBorcTipleriAsync()
         => await _ctx.BorcTipleri.AsNoTracking()
-                                 .Where(b => b.Aktif && (b.Davranis == BorcTipiDavranisi.AylikSabit || b.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik))
+                                 .Where(b => b.Aktif && (b.Davranis == ChargeTypeBehavior.MonthlyFixed || b.Davranis == ChargeTypeBehavior.FirstMonthOneTime))
                                  .OrderBy(b => b.Sira)
                                  .ToListAsync();
 
     public async Task<List<Tahakkuk>> GetSilineceklerAsync(int sozlesmeId, DateTime ilkGun)
         => await _dbSet.Where(t => t.KiraSozlesmesiId == sozlesmeId
                                 && t.DonemBaslangic >= ilkGun
-                                && t.Durum != TahakkukDurumu.TamOdendi
-                                && t.KaynakTipi == TahakkukKaynakTipi.Sozlesme
+                                && t.Durum != ChargeStatus.Paid
+                                && t.KaynakTipi == ChargeSourceType.Lease
                                 && !_ctx.TahakkukOdemeler.Any(o => o.TahakkukId == t.Id))
                        .ToListAsync();
 

@@ -26,8 +26,8 @@ public class TasinmazTarifeRepository : BaseRepository<TasinmazTarife>, ITasinma
     public async Task<List<BorcTipi>> GetBorcTipleriMatrisIcinAsync()
         => await _ctx.BorcTipleri
             .AsNoTracking()
-            .Where(b => b.Davranis != BorcTipiDavranisi.KullaniciManuel
-                     && b.Davranis != BorcTipiDavranisi.RezervasyonOzel)
+            .Where(b => b.Davranis != ChargeTypeBehavior.UserManual
+                     && b.Davranis != ChargeTypeBehavior.ReservationSpecific)
             .OrderBy(b => b.Sira)
             .ToListAsync();
 
@@ -56,7 +56,7 @@ public class TasinmazTarifeRepository : BaseRepository<TasinmazTarife>, ITasinma
                      && f.IsActive)
             .Select(f => new RateValueDto
             {
-                HesaplamaYontemi = f.HesaplamaYontemi,
+                CalculationMethod = f.CalculationMethod,
                 BirimDeger = f.BirimDeger,
                 KdvOrani = f.KdvOrani
             })

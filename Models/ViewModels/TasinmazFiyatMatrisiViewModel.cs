@@ -25,7 +25,7 @@ namespace KiraTakip.Models.ViewModels
         public int BorcTipiId { get; set; }
         public string BorcTipiAd { get; set; } = string.Empty;
         public string BorcTipiKod { get; set; } = string.Empty;
-        public BorcTipiDavranisi BorcTipiDavranisi { get; set; }
+        public ChargeTypeBehavior ChargeTypeBehavior { get; set; }
     }
 
     public class TasinmazFiyatHucreViewModel
@@ -35,7 +35,7 @@ namespace KiraTakip.Models.ViewModels
         public int KiraciKategoriId { get; set; }
         public int BorcTipiId { get; set; }
         public decimal? BirimDeger { get; set; }
-        public HesaplamaYontemi HesaplamaYontemi { get; set; } = HesaplamaYontemi.Sabit;
+        public CalculationMethod CalculationMethod { get; set; } = CalculationMethod.Fixed;
         public decimal? KdvOrani { get; set; }
         public bool RateVarMi { get; set; }
     }

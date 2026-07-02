@@ -8,7 +8,7 @@ public class BirimLookupDto
     public string Ilce { get; set; } = string.Empty;
     public string Il { get; set; } = string.Empty;
     public decimal Yuzolcumu { get; set; }
-    public BirimTipi BirimTipi { get; set; }
+    public UnitKind UnitKind { get; set; }
     public string? BirimNo { get; set; }
     public int? KatNo { get; set; }
 }

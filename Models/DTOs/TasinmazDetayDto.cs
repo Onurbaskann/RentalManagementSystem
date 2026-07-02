@@ -11,7 +11,7 @@ public class TasinmazDetayDto
     public string TasinmazTipiAd { get; set; } = string.Empty;
     public decimal KapaliYuzolcumu { get; set; }
     public decimal AcikYuzolcumu { get; set; }
-    public KiralamaSekli KiralamaSekli { get; set; }
+    public RentalMode RentalMode { get; set; }
     public string? Aciklama { get; set; }
     public List<BirimDetayDto> Birimler { get; set; } = [];
     public List<TasinmazRezervasyonDto> Rezervasyonlar { get; set; } = [];

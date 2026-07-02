@@ -18,7 +18,7 @@
 }
 
 <div class="card">
-    <form method="post" action="/Admin/TasinmazTipi/Ekle" asp-form-write-permission="@PermissionCatalog.TasinmazTipi.Create">
+    <form method="post" action="/Admin/TasinmazTipi/Ekle" asp-form-write-permission="@PermissionCatalog.PropertyType.Create">
         @Html.AntiForgeryToken()
 
         <div class="form-group">
@@ -55,7 +55,7 @@
         </div>
 
         <div class="flex gap-2 mt-4">
-            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.TasinmazTipi.Create">Kaydet</button>
+            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.PropertyType.Create">Kaydet</button>
             <a href="/Admin/TasinmazTipi" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>

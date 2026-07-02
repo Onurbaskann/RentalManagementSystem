@@ -71,8 +71,8 @@
                                         </div>
                                         <div class="mb-2">
                                             <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">Yöntem</label>
-                                            <select name="Hucreler[@idx].HesaplamaYontemi" class="form-control form-control-sm text-xs">
-                                                @if (hucre.HesaplamaYontemi == KiraTakip.Models.HesaplamaYontemi.Sabit)
+                                            <select name="Hucreler[@idx].CalculationMethod" class="form-control form-control-sm text-xs">
+                                                @if (hucre.CalculationMethod == KiraTakip.Models.CalculationMethod.Fixed)
                                                 {
                                                     <option value="1" selected>Sabit</option>
                                                     <option value="2">m²</option>
@@ -135,8 +135,8 @@
                             <tr>
                                 <td class="p-[12px_16px] border-b border-[var(--color-border)] font-semibold text-[13.5px] text-slate-700">
                                     <input type="hidden" name="RezervasyonHucreler[@i].RezervasyonTarifeId" value="@rez.RezervasyonTarifeId" />
-                                    <input type="hidden" name="RezervasyonHucreler[@i].BirimTuruId" value="@rez.BirimTuruId" />
-                                    @rez.BirimTuruAd
+                                    <input type="hidden" name="RezervasyonHucreler[@i].UnitTypeId" value="@rez.UnitTypeId" />
+                                    @rez.UnitTypeAd
                                 </td>
                                 <td class="p-[10px_16px] border-b border-[var(--color-border)]">
                                     <input type="number" name="RezervasyonHucreler[@i].UcretsizSureDakika" value="@rez.UcretsizSureDakika" class="form-control form-control-sm text-center" min="0" />

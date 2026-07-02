@@ -12,7 +12,7 @@ public class BankaHareketiRepository : BaseRepository<BankaHareketi>, IBankaHare
     public BankaHareketiRepository(ApplicationDbContext ctx) : base(ctx) { }
 
     // ── Listeleme (DTO) ───────────────────────────────────────────────────
-    public async Task<List<BankaHareketiListItemDto>> GetListAsync(BankaEslesmeDurumu? durum = null)
+    public async Task<List<BankaHareketiListItemDto>> GetListAsync(BankMatchStatus? durum = null)
     {
         IQueryable<BankaHareketi> q = _dbSet.AsNoTracking();
         if (durum.HasValue) q = q.Where(b => b.EslesmeDurumu == durum.Value);
@@ -49,11 +49,11 @@ public class BankaHareketiRepository : BaseRepository<BankaHareketi>, IBankaHare
         if (q.Max.HasValue) query = query.Where(b => b.IslemTutari <= q.Max.Value);
         if (!string.IsNullOrWhiteSpace(q.Durum) && q.Durum != "tum")
         {
-            BankaEslesmeDurumu? d = q.Durum switch
+            BankMatchStatus? d = q.Durum switch
             {
-                "eslestirilmedi" => BankaEslesmeDurumu.Eslestirilmedi,
-                "eslesti" => BankaEslesmeDurumu.Eslesti,
-                "manuel" => BankaEslesmeDurumu.ManuelEslesti,
+                "eslestirilmedi" => BankMatchStatus.Unmatched,
+                "eslesti" => BankMatchStatus.Matched,
+                "manuel" => BankMatchStatus.ManuallyMatched,
                 _ => null
             };
             if (d.HasValue) query = query.Where(b => b.EslesmeDurumu == d.Value);
@@ -100,7 +100,7 @@ public class BankaHareketiRepository : BaseRepository<BankaHareketi>, IBankaHare
                            Eslesmeleri = b.OdemeEslesmeleri.Select(e => new OdemeBankaEslesmeDto
                            {
                                Id = e.Id,
-                               EslesmeTipi = e.EslesmeTipi,
+                               MatchType = e.MatchType,
                                BankaHareketiTutar = b.IslemTutari,
                                BankaHareketiTarih = b.IslemTarihi,
                                BankaHareketiAciklama = b.Aciklama
@@ -122,7 +122,7 @@ public class BankaHareketiRepository : BaseRepository<BankaHareketi>, IBankaHare
         decimal tolerans = tutar * 0.02m;
 
         IQueryable<TahakkukOdeme> query = _ctx.TahakkukOdemeler.AsNoTracking()
-            .Where(o => o.Durum == OdemeDurumu.OnayBekliyor || o.Durum == OdemeDurumu.Onaylandi)
+            .Where(o => o.Durum == PaymentStatus.PendingApproval || o.Durum == PaymentStatus.Approved)
             .Where(o => !_ctx.OdemeBankaEslesmeleri.Any(e => e.TahakkukOdemeId == o.Id && e.BankaHareketiId == bankaHareketiId));
 
         if (tasinmazIds != null)
@@ -169,7 +169,7 @@ public class BankaHareketiRepository : BaseRepository<BankaHareketi>, IBankaHare
         decimal tolerans = tutar * 0.02m;
 
         var liste = await _dbSet.AsNoTracking()
-            .Where(b => b.EslesmeDurumu == BankaEslesmeDurumu.Eslestirilmedi)
+            .Where(b => b.EslesmeDurumu == BankMatchStatus.Unmatched)
             .Where(b => !_ctx.OdemeBankaEslesmeleri.Any(e => e.BankaHareketiId == b.Id && e.TahakkukOdemeId == odemeId))
             .Select(b => new BankaHareketiListItemDto
             {

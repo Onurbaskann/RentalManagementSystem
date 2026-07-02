@@ -3,15 +3,15 @@
 @inject KiraTakip.Services.Interfaces.IIstatistikService Istatistik
 @{
     ViewData["Title"] = Model.Tasinmaz.Ad;
-    bool canEdit = User.HasPermission(PermissionCatalog.Sozlesme.Create) || User.HasPermission(PermissionCatalog.Rezervasyon.Create);
-    bool canDuzenle = User.HasPermission(PermissionCatalog.Tasinmaz.Edit);
-    bool canManageRate = User.HasPermission(PermissionCatalog.Birim.OverrideRate);
-    bool canManageCarpan = User.HasPermission(PermissionCatalog.TasinmazCarpan.Edit);
+    bool canEdit = User.HasPermission(PermissionCatalog.Lease.Create) || User.HasPermission(PermissionCatalog.Reservation.Create);
+    bool canDuzenle = User.HasPermission(PermissionCatalog.Property.Edit);
+    bool canManageRate = User.HasPermission(PermissionCatalog.Unit.OverrideRate);
+    bool canManageCarpan = User.HasPermission(PermissionCatalog.PropertyMultiplier.Edit);
 
-    string DurumBadge(KiraDurumu d) => d switch
+    string DurumBadge(OccupancyStatus d) => d switch
     {
-        KiraDurumu.Kirali => "<span class='badge badge-kirali'>Kiralı</span>",
-        KiraDurumu.SuresiDolmakUzere => "<span class='badge badge-surek'>Süresi Dolmak Üzere</span>",
+        OccupancyStatus.Leased => "<span class='badge badge-kirali'>Kiralı</span>",
+        OccupancyStatus.ExpiringSoon => "<span class='badge badge-surek'>Süresi Dolmak Üzere</span>",
         _ => "<span class='badge badge-bos'>Boş</span>"
     };
 }
@@ -75,7 +75,7 @@
                 <div class="card-title">Taşınmaz Tipi</div>
                 <div class="text-[18px] font-bold mb-1.5">@(Model.Tasinmaz.TasinmazTipiAd)</div>
                 <div class="text-[13px] text-muted">
-                    @(Model.Tasinmaz.KiralamaSekli == KiralamaSekli.BirimBazli ? "Birim bazlı kiralama" : "Tek parça kiralama")
+                    @(Model.Tasinmaz.RentalMode == RentalMode.UnitBased ? "Birim bazlı kiralama" : "Tek parça kiralama")
                 </div>
             </div>
             <div class="card">
@@ -89,9 +89,9 @@
                     <div class="text-base font-bold mt-1">@Model.Tasinmaz.AcikYuzolcumu.ToString("N0") m² <span class="text-[13px] font-normal text-muted">açık</span></div>
                 }
             </div>
-            @if (Model.Tasinmaz.KiralamaSekli == KiralamaSekli.BirimBazli)
+            @if (Model.Tasinmaz.RentalMode == RentalMode.UnitBased)
             {
-                var kiraliSayisi = Model.Tasinmaz.Birimler.Count(b => b.Durum == KiraDurumu.Kirali || b.Durum == KiraDurumu.SuresiDolmakUzere);
+                var kiraliSayisi = Model.Tasinmaz.Birimler.Count(b => b.Durum == OccupancyStatus.Leased || b.Durum == OccupancyStatus.ExpiringSoon);
                 var toplamSayisi = Model.Tasinmaz.Birimler.Count;
                 var bosSayisi = toplamSayisi - kiraliSayisi;
                 <div class="card">
@@ -108,14 +108,14 @@
             {
                 var komple = Model.Tasinmaz.Birimler.FirstOrDefault();
                 var hasAktifSozlesme = komple?.AktifSozlesmeId.HasValue == true;
-                var durum = komple?.Durum ?? KiraDurumu.Bos;
+                var durum = komple?.Durum ?? OccupancyStatus.Vacant;
                 <div class="card">
                     <div class="card-title">Kira Durumu</div>
                     @if (hasAktifSozlesme)
                     {
                         <div class="mt-1.5">
                             <span class="inline-block bg-[#ecfdf5] text-[#065f46] text-xs font-bold px-2.5 py-0.5 rounded-[10px]">
-                                @(durum == KiraDurumu.SuresiDolmakUzere ? "Süresi Dolmak Üzere" : "Kiralı")
+                                @(durum == OccupancyStatus.ExpiringSoon ? "Süresi Dolmak Üzere" : "Kiralı")
                             </span>
                         </div>
                         <div class="text-sm font-semibold mt-2">@(komple.AktifSozlesmeKiraciGosterimAdi ?? "—")</div>
@@ -167,9 +167,9 @@
     <!-- Tab 2: Birimler -->
     <div class="tab-content">
         @{
-            bool isBirimBazli = Model.Tasinmaz.KiralamaSekli == KiralamaSekli.BirimBazli;
+            bool isBirimBazli = Model.Tasinmaz.RentalMode == RentalMode.UnitBased;
             int totalBirim = Model.Tasinmaz.Birimler.Count;
-            int kirali = Model.Tasinmaz.Birimler.Count(b => b.Durum == KiraDurumu.Kirali || b.Durum == KiraDurumu.SuresiDolmakUzere);
+            int kirali = Model.Tasinmaz.Birimler.Count(b => b.Durum == OccupancyStatus.Leased || b.Durum == OccupancyStatus.ExpiringSoon);
             int bos = totalBirim - kirali;
         }
 
@@ -477,8 +477,8 @@
                                     ? $"/Sozlesme/Detay/{b.AktifSozlesmeId}"
                                     : (canEdit ? (b.RezervasyonYapilabilirMi ? $"/Rezervasyon/Ekle?birimId={b.Id}" : $"/Sozlesme/Ekle?birimId={b.Id}") : "");
                                 var cardBg = b.Durum switch {
-                                    KiraDurumu.Kirali => "border-l-[var(--color-primary)] bg-[#f0faf7]",
-                                    KiraDurumu.SuresiDolmakUzere => "border-l-amber-400 bg-[#fffbeb]",
+                                    OccupancyStatus.Leased => "border-l-[var(--color-primary)] bg-[#f0faf7]",
+                                    OccupancyStatus.ExpiringSoon => "border-l-amber-400 bg-[#fffbeb]",
                                     _ => "border-l-[#d1d9e0] bg-white"
                                 };
                                 <div @Html.Raw(cardHref != "" ? $"data-href=\"{cardHref}\"" : "")
@@ -731,10 +731,10 @@
                         {
                             var rezDurumBadge = r.Durum switch
                             {
-                                RezervasyonDurumu.Planlandi => "<span class='badge bg-blue-100 text-blue-800'>Planlandı</span>",
-                                RezervasyonDurumu.Tamamlandi => "<span class='badge badge-kirali'>Tamamlandı</span>",
-                                RezervasyonDurumu.IptalEdildi => "<span class='badge badge-gecmis'>İptal</span>",
-                                RezervasyonDurumu.TahakkukaAktarildi => "<span class='badge badge-surek'>Aktarıldı</span>",
+                                ReservationStatus.Planned => "<span class='badge bg-blue-100 text-blue-800'>Planlandı</span>",
+                                ReservationStatus.Completed => "<span class='badge badge-kirali'>Tamamlandı</span>",
+                                ReservationStatus.Cancelled => "<span class='badge badge-gecmis'>İptal</span>",
+                                ReservationStatus.TransferredToCharge => "<span class='badge badge-surek'>Aktarıldı</span>",
                                 _ => "<span class='badge'>—</span>"
                             };
                             <tr>
@@ -810,7 +810,7 @@
                                             <div class="font-serif font-bold text-[15px]">
                                                 @hucre.BirimDeger?.ToString("N2") ₺
                                                 <small class="font-sans text-[11px] font-normal text-muted">
-                                                    @(hucre.HesaplamaYontemi == HesaplamaYontemi.Sabit ? "/sabit" : "/m²")
+                                                    @(hucre.CalculationMethod == CalculationMethod.Fixed ? "/sabit" : "/m²")
                                                 </small>
                                             </div>
                                             <div class="text-[11px] text-muted mt-1">KDV: %@hucre.KdvOrani?.ToString("N0")</div>
@@ -873,7 +873,7 @@
                                         <tr>
                                             <td class="font-semibold">@r.KiraciKategoriAd</td>
                                             <td>@r.BorcTipiAd</td>
-                                            <td class="text-xs text-muted">@(r.HesaplamaYontemi == HesaplamaYontemi.Sabit ? "Sabit" : "m² bazlı")</td>
+                                            <td class="text-xs text-muted">@(r.CalculationMethod == CalculationMethod.Fixed ? "Sabit" : "m² bazlı")</td>
                                             <td class="font-serif font-bold">@r.BirimDeger.ToString("N2") ₺</td>
                                             <td class="text-[12.5px] text-muted">%@r.KdvOrani.ToString("N0")</td>
                                         </tr>

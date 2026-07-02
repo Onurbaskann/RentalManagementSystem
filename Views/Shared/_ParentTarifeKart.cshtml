@@ -46,7 +46,7 @@
                         @foreach (var satir in grup)
                         {
                             <span class="text-slate-700 font-medium">@satir.BorcTipiAd</span>
-                            <span class="text-slate-400">@(satir.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m²" : "Adet")</span>
+                            <span class="text-slate-400">@(satir.CalculationMethod == CalculationMethod.M2 ? "m²" : "Adet")</span>
                             <span class="text-right font-bold text-slate-600 font-mono">@satir.BirimDeger.ToString("N2") ₺</span>
                             <span class="text-right text-slate-400 text-[10px] font-bold">%@satir.KdvOrani.ToString("N0") KDV</span>
                             <span class="text-right">

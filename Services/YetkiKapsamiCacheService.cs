@@ -46,11 +46,11 @@ public class YetkiKapsamiCacheService : IYetkiKapsamiCache
         else
         {
             var tasinmazIds = await db.KullaniciYetkiKapsamlari
-                .Where(k => k.UserId == userId && k.KapsamTipi == KapsamTipi.Tasinmaz)
+                .Where(k => k.UserId == userId && k.ScopeType == ScopeType.Property)
                 .Select(k => k.KapsamId)
                 .ToListAsync();
             var birimIds = await db.KullaniciYetkiKapsamlari
-                .Where(k => k.UserId == userId && k.KapsamTipi == KapsamTipi.Birim)
+                .Where(k => k.UserId == userId && k.ScopeType == ScopeType.Unit)
                 .Select(k => k.KapsamId)
                 .ToListAsync();
             dto = new KullaniciKapsamDto { GlobalErisim = false, TasinmazIds = tasinmazIds, BirimIds = birimIds };

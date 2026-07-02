@@ -3,7 +3,7 @@ using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Models.ViewModels;
 
-public class BirimTuruFormViewModel
+public class UnitTypeFormViewModel
 {
     public int Id { get; set; }
 

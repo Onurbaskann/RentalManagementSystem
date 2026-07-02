@@ -96,7 +96,7 @@
                                      {
                                          var hucre = satir.Hucreler[j];
                                          var kolon = Model.Kolonlar[j];
-                                         var isIlkAy = kolon.BorcTipiDavranisi == BorcTipiDavranisi.IlkAyTekSeferlik;
+                                         var isIlkAy = kolon.ChargeTypeBehavior == ChargeTypeBehavior.FirstMonthOneTime;
                                          var isDepozito = isIlkAy;
                                          <tr data-depozito="@(isDepozito ? "true" : "false")"
                                              x-data="{ aktif: @hucre.OzelFiyatAktif.ToString().ToLower() }"
@@ -145,7 +145,7 @@
                                              <td class="py-2.5 pr-2">
                                                  @if (isDepozito)
                                                  {
-                                                     <input type="hidden" name="Satirlar[@i].Hucreler[@j].HesaplamaYontemi" value="@((int)HesaplamaYontemi.Sabit)" />
+                                                     <input type="hidden" name="Satirlar[@i].Hucreler[@j].CalculationMethod" value="@((int)CalculationMethod.Fixed)" />
                                                      <select class="form-control form-control-sm w-full opacity-30 cursor-not-allowed text-[11px] font-bold uppercase tracking-tighter" disabled>
                                                          <option>Sabit</option>
                                                      </select>
@@ -153,10 +153,10 @@
                                                  else
                                                  {
                                                      <select class="form-control form-control-sm w-full text-[11px] font-bold uppercase tracking-tighter transition-all"
-                                                             name="Satirlar[@i].Hucreler[@j].HesaplamaYontemi"
+                                                             name="Satirlar[@i].Hucreler[@j].CalculationMethod"
                                                              :disabled="!aktif" :class="!aktif ? 'opacity-30 grayscale pointer-events-none' : ''">
-                                                         <option value="@((int)HesaplamaYontemi.Sabit)" selected="@(hucre.HesaplamaYontemi == HesaplamaYontemi.Sabit)">Sabit</option>
-                                                         <option value="@((int)HesaplamaYontemi.M2)" selected="@(hucre.HesaplamaYontemi == HesaplamaYontemi.M2)">m²</option>
+                                                         <option value="@((int)CalculationMethod.Fixed)" selected="@(hucre.CalculationMethod == CalculationMethod.Fixed)">Sabit</option>
+                                                         <option value="@((int)CalculationMethod.M2)" selected="@(hucre.CalculationMethod == CalculationMethod.M2)">m²</option>
                                                      </select>
                                                  }
                                              </td>
@@ -215,7 +215,7 @@ else if (Model.RezervasyonYapilabilirMi)
             <input type="hidden" name="Id" value="0" />
             @{
                 var parentSatir = Model.ParentRezervasyonTarife?.Satirlar
-                    .FirstOrDefault(s => s.BirimTuruAd == Model.BirimTuruAd);
+                    .FirstOrDefault(s => s.UnitTypeAd == Model.UnitTypeAd);
                 
                 int defPeriyot = parentSatir?.UcretlendirmePeriyoduDakika ?? 60;
                 int defUcretsiz = parentSatir?.UcretsizSureDakika ?? 0;

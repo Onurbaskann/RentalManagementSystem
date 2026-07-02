@@ -13,14 +13,14 @@ public class RezervasyonTarifeRepository : BaseRepository<RezervasyonTarife>, IR
     public async Task<List<ParentRezervasyonTarifeSatir>> GetGenelForKartAsync(int yil)
         => await _dbSet.AsNoTracking()
             .Where(r => r.BirimId == null
-                     && r.BirimTuruId != null
+                     && r.UnitTypeId != null
                      && r.Yil == yil
                      && r.IsActive
-                     && r.BirimTuru!.Aktif)
-            .OrderBy(r => r.BirimTuru!.Sira)
+                     && r.UnitType!.Aktif)
+            .OrderBy(r => r.UnitType!.Sira)
             .Select(r => new ParentRezervasyonTarifeSatir
             {
-                BirimTuruAd = r.BirimTuru!.Ad,
+                UnitTypeAd = r.UnitType!.Ad,
                 UcretsizSureDakika = r.UcretsizSureDakika,
                 UcretlendirmePeriyoduDakika = r.UcretlendirmePeriyoduDakika,
                 PeriyotUcreti = r.PeriyotUcreti,

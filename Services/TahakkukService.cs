@@ -38,7 +38,7 @@ public class TahakkukService : ITahakkukService
 
         foreach (var t in gecikmisBekleyenler)
         {
-            t.Durum = TahakkukDurumu.Gecikti;
+            t.Durum = ChargeStatus.Overdue;
             await _repo.UpdateAsync(t);
         }
 
@@ -55,12 +55,12 @@ public class TahakkukService : ITahakkukService
         tahakkuk.OdenenTutar = odenenTutar;
 
         tahakkuk.Durum = odenenTutar >= tahakkuk.ToplamTutar
-            ? TahakkukDurumu.TamOdendi
+            ? ChargeStatus.Paid
             : odenenTutar > 0
-                ? TahakkukDurumu.KismenOdendi
+                ? ChargeStatus.PartiallyPaid
                 : DateTime.Today > tahakkuk.VadeTarihi
-                    ? TahakkukDurumu.Gecikti
-                    : TahakkukDurumu.Bekleniyor;
+                    ? ChargeStatus.Overdue
+                    : ChargeStatus.Pending;
 
         await _repo.UpdateAsync(tahakkuk);
         await _uow.SaveChangesAsync();

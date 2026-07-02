@@ -7,10 +7,10 @@ public class BirimDetayDto
     public string Ad { get; set; } = string.Empty;
     public int? KatNo { get; set; }
     public decimal Yuzolcumu { get; set; }
-    public string BirimTuruAd { get; set; } = string.Empty;
+    public string UnitTypeAd { get; set; } = string.Empty;
     public bool RezervasyonYapilabilirMi { get; set; }
     public bool KiralanabilirMi { get; set; }
-    public KiraDurumu Durum { get; set; }
+    public OccupancyStatus Durum { get; set; }
     public int? AktifSozlesmeId { get; set; }
     public int? AktifSozlesmeKiraciId { get; set; }
     public string? AktifSozlesmeKiraciGosterimAdi { get; set; }

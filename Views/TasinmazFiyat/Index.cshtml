@@ -54,7 +54,7 @@
                                         <div class="text-base font-bold text-slate-800 flex items-baseline justify-center gap-1">
                                             @hucre.BirimDeger?.ToString("N2") <span class="text-xs font-normal">₺</span>
                                             <span class="text-[10px] font-medium text-slate-400 uppercase ml-0.5">
-                                                @(hucre.HesaplamaYontemi == KiraTakip.Models.HesaplamaYontemi.Sabit ? "Sbt" : "m²")
+                                                @(hucre.CalculationMethod == KiraTakip.Models.CalculationMethod.Fixed ? "Sbt" : "m²")
                                             </span>
                                         </div>
                                         <div class="text-[10px] font-bold text-indigo-500 uppercase tracking-tighter mt-1">

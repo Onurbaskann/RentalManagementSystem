@@ -26,7 +26,7 @@
 
     <div x-data="tasinmazFormData()" x-cloak>
 
-        <form asp-action="Ekle" method="post" @@submit.prevent="handleSubmit($event)" asp-form-write-permission="@PermissionCatalog.Tasinmaz.Create">
+        <form asp-action="Ekle" method="post" @@submit.prevent="handleSubmit($event)" asp-form-write-permission="@PermissionCatalog.Property.Create">
         <div class="card">
             <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex items-center gap-2">
                 <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
@@ -55,18 +55,18 @@
                 <label class="form-label">Kiralama Şekli *</label>
                 <div class="radio-group">
                     <label class="radio-option" :class="!izinli(1) ? 'opacity-40 cursor-not-allowed' : ''">
-                        <input type="radio" asp-for="KiralamaSekli" value="1" x-model="sekli" :disabled="!izinli(1)" />
+                        <input type="radio" asp-for="RentalMode" value="1" x-model="sekli" :disabled="!izinli(1)" />
                         <span>Tek Parça</span>
                     </label>
                     <label class="radio-option" :class="!izinli(2) ? 'opacity-40 cursor-not-allowed' : ''">
-                        <input type="radio" asp-for="KiralamaSekli" value="2" x-model="sekli" :disabled="!izinli(2)" />
+                        <input type="radio" asp-for="RentalMode" value="2" x-model="sekli" :disabled="!izinli(2)" />
                         <span>Birim Bazlı</span>
                     </label>
                 </div>
                 <div class="form-hint" x-show="!tasinmazTipiId">Önce taşınmaz tipi seçiniz.</div>
                 <div class="form-hint text-red-800" x-show="tasinmazTipiId && izinliSet().length === 0">Bu taşınmaz tipi için kiralama şekli tanımlanmamış. Lütfen yöneticiye bildiriniz.</div>
                 <div class="form-hint" x-show="sekli == '2' && izinli(2)">Taşınmaz içindeki birimler ayrı ayrı kiralanabilir. Birimleri aşağıda tanımlayın.</div>
-                <span asp-validation-for="KiralamaSekli" class="form-error"></span>
+                <span asp-validation-for="RentalMode" class="form-error"></span>
             </div>
 
             <div class="grid grid-cols-2 gap-3.5 mb-3">
@@ -124,9 +124,9 @@
                             </div>
                             <div>
                                 <div class="form-label mb-1">Birim Türü *</div>
-                                <select class="form-control" :name="'Birimler['+i+'].BirimTuruId'" x-model="birim.birimTuruId">
+                                <select class="form-control" :name="'Birimler['+i+'].UnitTypeId'" x-model="birim.birimTuruId">
                                     <option value="">— Seçiniz —</option>
-                                    @foreach (var bt in (IEnumerable<BirimTuru>)ViewBag.BirimTurleri)
+                                    @foreach (var bt in (IEnumerable<UnitType>)ViewBag.BirimTurleri)
                                     {
                                         <option value="@bt.Id">@bt.Ad</option>
                                     }
@@ -242,7 +242,7 @@
                                 {
                                     var hucre = satir.Hucreler[j];
                                     var kolon = Model.FiyatMatrisi.Kolonlar[j];
-                                    var isIlkAy = kolon.BorcTipiDavranisi == BorcTipiDavranisi.IlkAyTekSeferlik;
+                                    var isIlkAy = kolon.ChargeTypeBehavior == ChargeTypeBehavior.FirstMonthOneTime;
                                     var isDepozito = isIlkAy;
                                     var parentSatir = Model.ParentTarife?.Satirlar?.FirstOrDefault(p => p.KategoriAd == satir.KiraciKategoriAd && p.BorcTipiAd == kolon.BorcTipiAd);
                                     decimal? parentDeger = parentSatir?.BirimDeger;
@@ -287,7 +287,7 @@
                                         <td class="p-1.5 px-3 align-middle">
                                             @if (isDepozito)
                                             {
-                                                <input type="hidden" name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].HesaplamaYontemi" value="@((int)HesaplamaYontemi.Sabit)" />
+                                                <input type="hidden" name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].CalculationMethod" value="@((int)CalculationMethod.Fixed)" />
                                                 <select class="form-control form-control-sm w-[90px] opacity-50 cursor-not-allowed" disabled>
                                                     <option>Sabit</option>
                                                 </select>
@@ -295,9 +295,9 @@
                                             else
                                             {
                                                 <select class="form-control form-control-sm w-[90px]"
-                                                        name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].HesaplamaYontemi">
-                                                    <option value="@((int)HesaplamaYontemi.Sabit)" selected="@(hucre.HesaplamaYontemi == HesaplamaYontemi.Sabit)">Sabit</option>
-                                                    <option value="@((int)HesaplamaYontemi.M2)" selected="@(hucre.HesaplamaYontemi == HesaplamaYontemi.M2)">m²</option>
+                                                        name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].CalculationMethod">
+                                                    <option value="@((int)CalculationMethod.Fixed)" selected="@(hucre.CalculationMethod == CalculationMethod.Fixed)">Sabit</option>
+                                                    <option value="@((int)CalculationMethod.M2)" selected="@(hucre.CalculationMethod == CalculationMethod.M2)">m²</option>
                                                 </select>
                                             }
                                         </td>
@@ -385,9 +385,9 @@
                         </div>
                         <div>
                             <div class="form-label mb-1">Alan Türü *</div>
-                            <select class="form-control" :name="'RezervasyonAlanlari['+i+'].BirimTuruId'" x-model="alan.birimTuruId">
+                            <select class="form-control" :name="'RezervasyonAlanlari['+i+'].UnitTypeId'" x-model="alan.birimTuruId">
                                 <option value="">— Seçiniz —</option>
-                                @foreach (var bt in (IEnumerable<BirimTuru>)ViewBag.RezervasyonBirimTurleri)
+                                @foreach (var bt in (IEnumerable<UnitType>)ViewBag.RezervasyonBirimTurleri)
                                 {
                                     <option value="@bt.Id">@bt.Ad</option>
                                 }
@@ -458,7 +458,7 @@
         </div>
 
         <div class="flex gap-3 mt-5">
-            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Tasinmaz.Create">
+            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Property.Create">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>
                 Kaydet
             </button>
@@ -479,7 +479,7 @@
                     ad = b.Ad ?? "",
                     yuzolcumu = b.Yuzolcumu.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     aciklama = b.Aciklama ?? "",
-                    birimTuruId = b.BirimTuruId?.ToString() ?? ""
+                    birimTuruId = b.UnitTypeId?.ToString() ?? ""
                 })
                 : (IEnumerable<object>)Array.Empty<object>()
         );
@@ -490,7 +490,7 @@
                     birimNo = r.BirimNo ?? "",
                     ad = r.Ad ?? "",
                     yuzolcumu = r.Yuzolcumu.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    birimTuruId = r.BirimTuruId?.ToString() ?? "",
+                    birimTuruId = r.UnitTypeId?.ToString() ?? "",
                     aciklama = r.Aciklama ?? "",
                     ucretsizSureDakika = r.UcretsizSureDakika,
                     saatlikUcret = r.SaatlikUcret.ToString(System.Globalization.CultureInfo.InvariantCulture),
@@ -503,7 +503,7 @@
             {
                 birimNo = ViewData.ModelState[$"Birimler[{i}].BirimNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 katNo = ViewData.ModelState[$"Birimler[{i}].KatNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
-                birimTuruId = ViewData.ModelState[$"Birimler[{i}].BirimTuruId"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                birimTuruId = ViewData.ModelState[$"Birimler[{i}].UnitTypeId"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 ad = ViewData.ModelState[$"Birimler[{i}].Ad"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 yuzolcumu = ViewData.ModelState[$"Birimler[{i}].Yuzolcumu"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
             }).ToList()
@@ -514,10 +514,10 @@
                 birimNo = ViewData.ModelState[$"RezervasyonAlanlari[{i}].BirimNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 ad = ViewData.ModelState[$"RezervasyonAlanlari[{i}].Ad"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 yuzolcumu = ViewData.ModelState[$"RezervasyonAlanlari[{i}].Yuzolcumu"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
-                birimTuruId = ViewData.ModelState[$"RezervasyonAlanlari[{i}].BirimTuruId"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                birimTuruId = ViewData.ModelState[$"RezervasyonAlanlari[{i}].UnitTypeId"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
             }).ToList()
         );
-        var initSekli = (int)Model.KiralamaSekli;
+        var initSekli = (int)Model.RentalMode;
         var initTasinmazTipiId = Model.TasinmazTipiId?.ToString() ?? "";
         var tipKiralamaJson = System.Text.Json.JsonSerializer.Serialize(
             (Dictionary<int, int[]>)(ViewBag.TasinmazTipiKiralamaSekilleri ?? new Dictionary<int, int[]>())

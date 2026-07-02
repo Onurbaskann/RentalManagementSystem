@@ -5,8 +5,8 @@
 @{
     ViewData["Title"] = Model.Kiraci.GosterimAdi;
     var k = Model.Kiraci;
-    bool canEdit    = User.HasPermission(PermissionCatalog.Kiraci.Edit);
-    bool hasSozlesme = User.HasModuleAccess("Internal.Sozlesme");
+    bool canEdit    = User.HasPermission(PermissionCatalog.Tenant.Edit);
+    bool hasSozlesme = User.HasModuleAccess("Internal.Lease");
 }
 
 @if (TempData["Success"] != null)
@@ -32,7 +32,7 @@
         </div>
     </div>
     <div class="flex gap-2">
-        @if (User.HasModuleAccess("System.Kullanici"))
+        @if (User.HasModuleAccess("System.User"))
         {
             <a href="/Admin/Kiracilar/@k.Id.ToHashId()/Kullanicilar" class="btn btn-secondary">Kullanıcılar</a>
         }
@@ -40,7 +40,7 @@
         {
             <a href="/Kiraci/Duzenle/@k.Id.ToHashId()" class="btn btn-secondary">Düzenle</a>
         }
-        @if (hasSozlesme && User.HasPermission(PermissionCatalog.Sozlesme.Create))
+        @if (hasSozlesme && User.HasPermission(PermissionCatalog.Lease.Create))
         {
             <a href="/Sozlesme/Ekle" class="btn btn-primary">Sözleşme Ekle</a>
         }
@@ -184,7 +184,7 @@
                         bool aktif = s.Aktif;
                         int kalanGun = s.KalanGun;
                         bool surek = aktif && kalanGun <= 30;
-                        bool feshedildi = s.Durum == SozlesmeDurumu.Feshedildi;
+                        bool feshedildi = s.Durum == LeaseStatus.Terminated;
                         <tr>
                             <td>
                                 <div class="font-semibold">@s.TasinmazAd</div>

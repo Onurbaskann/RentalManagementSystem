@@ -85,9 +85,9 @@ public class BelgeController : Controller
 
     private static string GetRequiredPermission(BelgeOwnerTipi ownerType) => ownerType switch
     {
-        BelgeOwnerTipi.Kiraci   => PermissionCatalog.Kiraci.Edit,
-        BelgeOwnerTipi.Sozlesme => PermissionCatalog.Sozlesme.Edit,
-        BelgeOwnerTipi.Odeme    => PermissionCatalog.Odeme.UploadDekont,
+        BelgeOwnerTipi.Kiraci   => PermissionCatalog.Tenant.Edit,
+        BelgeOwnerTipi.Sozlesme => PermissionCatalog.Lease.Edit,
+        BelgeOwnerTipi.Odeme    => PermissionCatalog.Payment.UploadReceipt,
         _ => throw new ArgumentOutOfRangeException(nameof(ownerType))
     };
 

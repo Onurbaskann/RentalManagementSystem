@@ -17,8 +17,8 @@ public class TahakkukDetayDto
     public decimal KdvTutari { get; set; }
     public decimal ToplamTutar { get; set; }
     public decimal OdenenTutar { get; set; }
-    public TahakkukDurumu Durum { get; set; }
-    public TahakkukKaynakTipi KaynakTipi { get; set; }
+    public ChargeStatus Durum { get; set; }
+    public ChargeSourceType KaynakTipi { get; set; }
     public DateTime OlusturmaTarihi { get; set; }
     public List<TahakkukKalemDto> Kalemler { get; set; } = [];
     public List<TahakkukOdemeDto> Odemeler { get; set; } = [];

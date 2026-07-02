@@ -10,7 +10,7 @@
 </div>
 
 <div class="card">
-    <form method="post" action="/Admin/KiraciKategori/Duzenle/@Model.Id.ToHashId()" asp-form-write-permission="@PermissionCatalog.KiraciKategori.Edit">
+    <form method="post" action="/Admin/KiraciKategori/Duzenle/@Model.Id.ToHashId()" asp-form-write-permission="@PermissionCatalog.TenantCategory.Edit">
         @Html.AntiForgeryToken()
         <input asp-for="Id" type="hidden" />
 
@@ -33,7 +33,7 @@
         </div>
 
         <div class="flex gap-2 mt-4">
-            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.KiraciKategori.Edit">Kaydet</button>
+            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.TenantCategory.Edit">Kaydet</button>
             <a href="/Admin/KiraciKategori" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>

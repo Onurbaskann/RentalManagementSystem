@@ -72,20 +72,20 @@ public class TasinmazService : ITasinmazService
 
     public async Task<Tasinmaz> CreateAsync(Tasinmaz t, List<BirimInputViewModel>? birimler = null, List<RezervasyonAlaniInputViewModel>? rezervasyonAlanlari = null)
     {
-        if (t.KiralamaSekli == KiralamaSekli.BirimBazli && birimler != null && birimler.Count > 0)
+        if (t.RentalMode == RentalMode.UnitBased && birimler != null && birimler.Count > 0)
         {
             foreach (var b in birimler)
             {
                 var ad = string.IsNullOrWhiteSpace(b.Ad) ? $"Birim {b.BirimNo}" : b.Ad;
                 t.Birimler.Add(new Birim
                 {
-                    BirimTipi = BirimTipi.Birim,
+                    UnitKind = UnitKind.Unit,
                     BirimNo = b.BirimNo,
                     KatNo = b.KatNo,
                     Ad = ad,
                     Yuzolcumu = b.Yuzolcumu,
                     Aciklama = b.Aciklama,
-                    BirimTuruId = b.BirimTuruId
+                    UnitTypeId = b.UnitTypeId
                 });
             }
         }
@@ -93,7 +93,7 @@ public class TasinmazService : ITasinmazService
         {
             t.Birimler.Add(new Birim
             {
-                BirimTipi = BirimTipi.Komple,
+                UnitKind = UnitKind.Whole,
                 Ad = "Komple",
                 Yuzolcumu = t.KapaliYuzolcumu > 0 ? t.KapaliYuzolcumu : t.AcikYuzolcumu
             });
@@ -105,12 +105,12 @@ public class TasinmazService : ITasinmazService
             {
                 var birim = new Birim
                 {
-                    BirimTipi = BirimTipi.Birim,
+                    UnitKind = UnitKind.Unit,
                     BirimNo = r.BirimNo,
                     Ad = string.IsNullOrWhiteSpace(r.Ad) ? "Rezervasyon Alanı" : r.Ad,
                     Yuzolcumu = r.Yuzolcumu,
                     Aciklama = r.Aciklama,
-                    BirimTuruId = r.BirimTuruId
+                    UnitTypeId = r.UnitTypeId
                 };
                 t.Birimler.Add(birim);
 
@@ -153,7 +153,7 @@ public class TasinmazService : ITasinmazService
 
         var aktifRezBirimIds = await _ctx.Rezervasyonlari
             .Where(r => birimIds.Contains(r.BirimId)
-                        && r.Durum == RezervasyonDurumu.Planlandi
+                        && r.Durum == ReservationStatus.Planned
                         && r.BitisTarihi >= now)
             .Select(r => r.BirimId)
             .Distinct()
@@ -164,11 +164,11 @@ public class TasinmazService : ITasinmazService
 
         foreach (var b in t.Birimler)
         {
-            if (b.BirimTipi == BirimTipi.Komple) continue;
+            if (b.UnitKind == UnitKind.Whole) continue;
 
             var hasRezTarife = rezTarifeByBirimId.ContainsKey(b.Id);
             var aktifSoz = b.Sozlesmeler.Any(s =>
-                s.Durum == SozlesmeDurumu.Aktif && s.BaslangicTarihi <= now && s.BitisTarihi >= now);
+                s.Durum == LeaseStatus.Active && s.BaslangicTarihi <= now && s.BitisTarihi >= now);
 
             if (hasRezTarife)
             {
@@ -179,7 +179,7 @@ public class TasinmazService : ITasinmazService
                     BirimNo = b.BirimNo ?? string.Empty,
                     Ad = b.Ad,
                     Yuzolcumu = b.Yuzolcumu,
-                    BirimTuruId = b.BirimTuruId,
+                    UnitTypeId = b.UnitTypeId,
                     Aciklama = b.Aciklama,
                     UcretsizSureDakika = rt.UcretsizSureDakika,
                     SaatlikUcret = rt.PeriyotUcreti,
@@ -197,7 +197,7 @@ public class TasinmazService : ITasinmazService
                     Ad = b.Ad,
                     Yuzolcumu = b.Yuzolcumu,
                     Aciklama = b.Aciklama,
-                    BirimTuruId = b.BirimTuruId,
+                    UnitTypeId = b.UnitTypeId,
                     AktifSozlesmesiVar = aktifSoz
                 });
             }
@@ -208,7 +208,7 @@ public class TasinmazService : ITasinmazService
             Id = t.Id,
             Ad = t.Ad,
             TasinmazTipiId = t.TasinmazTipiId,
-            KiralamaSekli = t.KiralamaSekli,
+            RentalMode = t.RentalMode,
             Il = t.Il,
             Ilce = t.Ilce,
             Mahalle = t.Mahalle,
@@ -247,12 +247,12 @@ public class TasinmazService : ITasinmazService
 
         // ---- Birim diff ----
         var gelenBirimIds = vm.Birimler.Where(b => b.Id.HasValue).Select(b => b.Id!.Value).ToHashSet();
-        foreach (var mevcut in t.Birimler.Where(b => b.BirimTipi == BirimTipi.Birim && !rezTarifeByBirimId.ContainsKey(b.Id)).ToList())
+        foreach (var mevcut in t.Birimler.Where(b => b.UnitKind == UnitKind.Unit && !rezTarifeByBirimId.ContainsKey(b.Id)).ToList())
         {
             if (!gelenBirimIds.Contains(mevcut.Id))
             {
                 var aktifSoz = mevcut.Sozlesmeler.Any(s =>
-                    s.Durum == SozlesmeDurumu.Aktif && s.BaslangicTarihi <= now && s.BitisTarihi >= now);
+                    s.Durum == LeaseStatus.Active && s.BaslangicTarihi <= now && s.BitisTarihi >= now);
                 if (!aktifSoz)
                     _ctx.Birimler.Remove(mevcut);
             }
@@ -273,28 +273,28 @@ public class TasinmazService : ITasinmazService
                     mevcut.Ad = ad;
                     mevcut.Yuzolcumu = b.Yuzolcumu;
                     mevcut.Aciklama = b.Aciklama;
-                    mevcut.BirimTuruId = b.BirimTuruId;
+                    mevcut.UnitTypeId = b.UnitTypeId;
                 }
             }
             else
             {
                 t.Birimler.Add(new Birim
                 {
-                    BirimTipi = BirimTipi.Birim,
+                    UnitKind = UnitKind.Unit,
                     BirimNo = b.BirimNo,
                     KatNo = b.KatNo,
                     Ad = ad,
                     Yuzolcumu = b.Yuzolcumu,
                     Aciklama = b.Aciklama,
-                    BirimTuruId = b.BirimTuruId
+                    UnitTypeId = b.UnitTypeId
                 });
             }
         }
 
         // ---- Komple birim m² senkronu ----
-        if (t.KiralamaSekli == KiralamaSekli.TekParca)
+        if (t.RentalMode == RentalMode.WholeProperty)
         {
-            var komple = t.Birimler.FirstOrDefault(b => b.BirimTipi == BirimTipi.Komple);
+            var komple = t.Birimler.FirstOrDefault(b => b.UnitKind == UnitKind.Whole);
             if (komple != null)
                 komple.Yuzolcumu = vm.KapaliYuzolcumu > 0 ? vm.KapaliYuzolcumu : vm.AcikYuzolcumu;
         }
@@ -303,7 +303,7 @@ public class TasinmazService : ITasinmazService
         var gelenRezIds = vm.RezervasyonAlanlari.Where(r => r.Id.HasValue).Select(r => r.Id!.Value).ToHashSet();
         var aktifRezBirimIds = await _ctx.Rezervasyonlari
             .Where(r => birimIds.Contains(r.BirimId)
-                        && r.Durum == RezervasyonDurumu.Planlandi
+                        && r.Durum == ReservationStatus.Planned
                         && r.BitisTarihi >= now)
             .Select(r => r.BirimId)
             .Distinct()
@@ -330,7 +330,7 @@ public class TasinmazService : ITasinmazService
                     mevcut.Ad = r.Ad ?? string.Empty;
                     mevcut.Yuzolcumu = r.Yuzolcumu;
                     mevcut.Aciklama = r.Aciklama;
-                    mevcut.BirimTuruId = r.BirimTuruId;
+                    mevcut.UnitTypeId = r.UnitTypeId;
  
                     if (rezTarifeByBirimId.TryGetValue(mevcut.Id, out var tarife))
                     {
@@ -344,12 +344,12 @@ public class TasinmazService : ITasinmazService
             {
                 var yeniBirim = new Birim
                 {
-                    BirimTipi = BirimTipi.Birim,
+                    UnitKind = UnitKind.Unit,
                     BirimNo = r.BirimNo,
                     Ad = r.Ad ?? "Rezervasyon Alanı",
                     Yuzolcumu = r.Yuzolcumu,
                     Aciklama = r.Aciklama,
-                    BirimTuruId = r.BirimTuruId
+                    UnitTypeId = r.UnitTypeId
                 };
                 t.Birimler.Add(yeniBirim);
                 await _ctx.RezervasyonTarifeler.AddAsync(new RezervasyonTarife

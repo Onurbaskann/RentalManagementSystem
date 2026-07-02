@@ -6,7 +6,7 @@
     int? tahakkukId = ViewBag.TahakkukId;
     string durum = ViewBag.Durum ?? "tum";
     var q = (TableQuery)ViewBag.Query;
-    bool canApprove = User.HasPermission(PermissionCatalog.Odeme.Approve);
+    bool canApprove = User.HasPermission(PermissionCatalog.Payment.Approve);
 
     var extra = q.ToQueryDict();
     if (tahakkukId.HasValue) extra["tahakkukId"] = tahakkukId.Value.ToString();
@@ -93,19 +93,19 @@
                 @foreach (var o in Model.Items)
                 {
                     string durumCls = o.Durum switch {
-                        OdemeDurumu.Onaylandi    => "badge-kirali",
-                        OdemeDurumu.Reddedildi   => "badge-gecmis",
+                        PaymentStatus.Approved    => "badge-kirali",
+                        PaymentStatus.Rejected   => "badge-gecmis",
                         _                        => "badge-surek"
                     };
                     string durumLabel = o.Durum switch {
-                        OdemeDurumu.Onaylandi    => "Onaylandı",
-                        OdemeDurumu.Reddedildi   => "Reddedildi",
+                        PaymentStatus.Approved    => "Onaylandı",
+                        PaymentStatus.Rejected   => "Reddedildi",
                         _                        => "Onay Bekliyor"
                     };
-                    string kanalLabel = o.OdemeKanali switch {
-                        OdemeKanali.Havale => "Havale",
-                        OdemeKanali.EFT    => "EFT",
-                        OdemeKanali.Nakit  => "Nakit",
+                    string kanalLabel = o.PaymentChannel switch {
+                        PaymentChannel.BankTransfer => "Havale",
+                        PaymentChannel.Eft    => "EFT",
+                        PaymentChannel.Cash  => "Nakit",
                         _                  => "Diğer"
                     };
                     <tr>

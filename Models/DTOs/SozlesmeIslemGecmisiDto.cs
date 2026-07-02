@@ -4,7 +4,7 @@ public class SozlesmeIslemGecmisiDto
 {
     public int Id { get; set; }
     public DateTime IslemTarihi { get; set; }
-    public SozlesmeIslemTipi IslemTipi { get; set; }
+    public LeaseActivityType IslemTipi { get; set; }
     public string? Aciklama { get; set; }
     public decimal? EskiKiraBedeli { get; set; }
     public decimal? YeniKiraBedeli { get; set; }

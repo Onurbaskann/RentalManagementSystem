@@ -1,10 +1,14 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace KiraTakip.Models.Entities;
 
 public class Tasinmaz : BaseEntity
 {
     public int? TasinmazTipiId { get; set; }
     public string Ad { get; set; } = string.Empty;
-    public KiralamaSekli KiralamaSekli { get; set; }
+
+    [Column("KiralamaSekli")]
+    public RentalMode RentalMode { get; set; }
     public decimal AcikYuzolcumu { get; set; }
     public decimal KapaliYuzolcumu { get; set; }
     public int? KatSayisi { get; set; }

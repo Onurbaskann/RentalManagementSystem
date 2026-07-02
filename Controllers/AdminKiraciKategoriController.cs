@@ -24,7 +24,7 @@ public class AdminKiraciKategoriController : Controller
     }
 
     [HttpGet("")]
-    [Authorize(Policy = PermissionCatalog.KiraciKategori.Module)]
+    [Authorize(Policy = PermissionCatalog.TenantCategory.Module)]
     public async Task<IActionResult> Index()
     {
         var list = await _repo.GetListByTipiAsync(Tipi);
@@ -32,7 +32,7 @@ public class AdminKiraciKategoriController : Controller
     }
 
     [HttpGet("Ekle")]
-    [Authorize(Policy = PermissionCatalog.KiraciKategori.Module)]
+    [Authorize(Policy = PermissionCatalog.TenantCategory.Module)]
     public async Task<IActionResult> Create()
     {
         var nextSira = (await _repo.GetMaxSiraByTipiAsync(Tipi)) + 1;
@@ -41,7 +41,7 @@ public class AdminKiraciKategoriController : Controller
 
     [HttpPost("Ekle")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.KiraciKategori.Create)]
+    [Authorize(Policy = PermissionCatalog.TenantCategory.Create)]
     public async Task<IActionResult> Create(KategoriFormViewModel model)
     {
         model.Tipi = Tipi;
@@ -71,7 +71,7 @@ public class AdminKiraciKategoriController : Controller
     }
 
     [HttpGet("Duzenle/{id:int}")]
-    [Authorize(Policy = PermissionCatalog.KiraciKategori.Module)]
+    [Authorize(Policy = PermissionCatalog.TenantCategory.Module)]
     public async Task<IActionResult> Edit(int id)
     {
         var entity = await _repo.GetByIdAndTipiAsync(id, Tipi);
@@ -81,7 +81,7 @@ public class AdminKiraciKategoriController : Controller
 
     [HttpPost("Duzenle/{id:int}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.KiraciKategori.Edit)]
+    [Authorize(Policy = PermissionCatalog.TenantCategory.Edit)]
     public async Task<IActionResult> Edit(int id, KategoriFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
@@ -102,7 +102,7 @@ public class AdminKiraciKategoriController : Controller
 
     [HttpPost("DurumDegistir/{id:int}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.KiraciKategori.Edit)]
+    [Authorize(Policy = PermissionCatalog.TenantCategory.Edit)]
     public async Task<IActionResult> DurumDegistir(int id)
     {
         var entity = await _repo.GetByIdAndTipiAsync(id, Tipi);

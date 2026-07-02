@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 namespace KiraTakip.Controllers;
 
 [Authorize(Policy = "KiraciKullanici")]
-[Authorize(Policy = PermissionCatalog.KiraciPortal.Borc.Module)]
+[Authorize(Policy = PermissionCatalog.TenantPortal.Charge.Module)]
 [Route("Kiraci/Tahakkuklarim")]
 public class KiraciTahakkukController : Controller
 {
@@ -46,21 +46,21 @@ public class KiraciTahakkukController : Controller
 
         // Özet kartlar
         var toplamTahakkuk = await _ctx.Tahakkuklar
-            .Where(t => t.Durum != TahakkukDurumu.IptalEdildi)
+            .Where(t => t.Durum != ChargeStatus.Cancelled)
             .SumAsync(t => (decimal?)t.ToplamTutar) ?? 0m;
 
         var tahsilEdilen = await _ctx.TahakkukOdemeler
-            .Where(o => o.Durum == OdemeDurumu.Onaylandi)
+            .Where(o => o.Durum == PaymentStatus.Approved)
             .SumAsync(o => (decimal?)o.Tutar) ?? 0m;
 
         var kalanBorc = await _ctx.Tahakkuklar
-            .Where(t => t.Durum == TahakkukDurumu.Bekleniyor
-                     || t.Durum == TahakkukDurumu.KismenOdendi
-                     || t.Durum == TahakkukDurumu.Gecikti)
+            .Where(t => t.Durum == ChargeStatus.Pending
+                     || t.Durum == ChargeStatus.PartiallyPaid
+                     || t.Durum == ChargeStatus.Overdue)
             .SumAsync(t => (decimal?)(t.ToplamTutar - t.OdenenTutar)) ?? 0m;
 
         var gecikmisKalan = await _ctx.Tahakkuklar
-            .Where(t => t.Durum == TahakkukDurumu.Gecikti)
+            .Where(t => t.Durum == ChargeStatus.Overdue)
             .SumAsync(t => (decimal?)(t.ToplamTutar - t.OdenenTutar)) ?? 0m;
 
         ViewBag.ToplamTahakkuk = toplamTahakkuk;
@@ -105,7 +105,7 @@ public class KiraciTahakkukController : Controller
         int tahakkukId,
         decimal tutar,
         DateTime odemeTarihi,
-        OdemeKanali odemeKanali,
+        PaymentChannel odemeKanali,
         string? aciklama,
         IFormFile? dekont)
     {
@@ -131,8 +131,8 @@ public class KiraciTahakkukController : Controller
             KiraSozlesmesiId = tahakkuk.KiraSozlesmesiId,
             OdemeTarihi = odemeTarihi,
             Tutar = tutar,
-            OdemeKanali = odemeKanali,
-            OdemeKaynakTipi = OdemeKaynakTipi.Manuel,
+            PaymentChannel = odemeKanali,
+            PaymentSourceType = PaymentSourceType.Manual,
             Aciklama = aciklama,
             GirenUserId = userId
         };

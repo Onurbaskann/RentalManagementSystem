@@ -16,6 +16,6 @@ public class RezervasyonListItemDto
     public int UcretsizSureDakika { get; set; }
     public int UcretliSureDakika { get; set; }
     public decimal ToplamTutar { get; set; }
-    public RezervasyonDurumu Durum { get; set; }
+    public ReservationStatus Durum { get; set; }
     public string? Aciklama { get; set; }
 }

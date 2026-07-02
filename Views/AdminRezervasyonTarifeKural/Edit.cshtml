@@ -11,7 +11,7 @@
 </div>
 
 <div class="card">
-    <form asp-action="Edit" asp-hashid="@Model.Id" method="post" asp-form-write-permission="@PermissionCatalog.RezervasyonTarifeKural.Edit">
+    <form asp-action="Edit" asp-hashid="@Model.Id" method="post" asp-form-write-permission="@PermissionCatalog.ReservationRateRule.Edit">
         @Html.AntiForgeryToken()
 
         <div asp-validation-summary="ModelOnly" class="form-error" style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:20px;"></div>
@@ -68,7 +68,7 @@
         </div>
 
         <div style="display:flex;gap:8px;margin-top:8px;">
-            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.RezervasyonTarifeKural.Edit">Güncelle</button>
+            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.ReservationRateRule.Edit">Güncelle</button>
             <a href="/Admin/RezervasyonTarifeKural" class="btn btn-secondary">İptal</a>
         </div>
     </form>

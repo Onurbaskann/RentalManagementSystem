@@ -47,7 +47,7 @@ public class DavetiyeService : IDavetiyeService, ITransactionalService
 
     public async Task<Davetiye> GonderAsync(string email, string? adSoyad, int rolId, string davetEdenUserId, int? kiraciId = null, bool tumTasinmazlaraErisim = false, List<int>? tasinmazIds = null, List<int>? birimIds = null, CancellationToken ct = default)
     {
-        var userType = kiraciId.HasValue ? UserType.Kiraci : UserType.Internal;
+        var userType = kiraciId.HasValue ? UserType.Tenant : UserType.Internal;
         var davetiye = new Davetiye
         {
             Email = email.Trim().ToLowerInvariant(),
@@ -64,7 +64,7 @@ public class DavetiyeService : IDavetiyeService, ITransactionalService
                 ? System.Text.Json.JsonSerializer.Serialize(birimIds)
                 : null,
             ExpiresAt = DateTime.UtcNow.Add(Ttl),
-            Durum = DavetiyeDurum.Beklemede,
+            Durum = InvitationStatus.Pending,
         };
 
         _db.Davetiyeler.Add(davetiye);
@@ -91,15 +91,15 @@ public class DavetiyeService : IDavetiyeService, ITransactionalService
         if (davetiye is null)
             return (false, "Davet linki geçersiz.", null);
 
-        if (davetiye.Durum == DavetiyeDurum.IptalEdildi)
+        if (davetiye.Durum == InvitationStatus.Cancelled)
             return (false, "Bu davet iptal edilmiş.", null);
 
-        if (davetiye.Durum == DavetiyeDurum.KabulEdildi)
+        if (davetiye.Durum == InvitationStatus.Accepted)
             return (false, "Bu davet daha önce kullanılmış.", null);
 
         if (davetiye.ExpiresAt < DateTime.UtcNow)
         {
-            davetiye.Durum = DavetiyeDurum.SuresiDolmus;
+            davetiye.Durum = InvitationStatus.Expired;
             await _db.SaveChangesAsync(ct);
             return (false, "Davet linkinin süresi dolmuş. Yeni davet talep edin.", null);
         }
@@ -138,7 +138,7 @@ public class DavetiyeService : IDavetiyeService, ITransactionalService
                 _db.KullaniciYetkiKapsamlari.Add(new KullaniciYetkiKapsami
                 {
                     UserId = user.Id,
-                    KapsamTipi = KapsamTipi.Tasinmaz,
+                    ScopeType = ScopeType.Property,
                     KapsamId = tasinmazId,
                 });
             }
@@ -152,7 +152,7 @@ public class DavetiyeService : IDavetiyeService, ITransactionalService
                 _db.KullaniciYetkiKapsamlari.Add(new KullaniciYetkiKapsami
                 {
                     UserId = user.Id,
-                    KapsamTipi = KapsamTipi.Birim,
+                    ScopeType = ScopeType.Unit,
                     KapsamId = birimId,
                 });
             }
@@ -161,7 +161,7 @@ public class DavetiyeService : IDavetiyeService, ITransactionalService
         if ((!davetiye.TumTasinmazlaraErisim && davetiye.TasinmazIds != null) || davetiye.BirimIds != null)
             await _db.SaveChangesAsync(ct);
 
-        davetiye.Durum = DavetiyeDurum.KabulEdildi;
+        davetiye.Durum = InvitationStatus.Accepted;
         davetiye.KabulTarihi = DateTime.UtcNow;
         davetiye.OlusanUserId = user.Id;
         await _db.SaveChangesAsync(ct);
@@ -175,10 +175,10 @@ public class DavetiyeService : IDavetiyeService, ITransactionalService
         var davetiye = await _db.Davetiyeler.FindAsync([davetiyeId], ct)
             ?? throw new InvalidOperationException("Davetiye bulunamadı.");
 
-        if (davetiye.Durum != DavetiyeDurum.Beklemede)
+        if (davetiye.Durum != InvitationStatus.Pending)
             throw new InvalidOperationException("Yalnızca beklemedeki davetler iptal edilebilir.");
 
-        davetiye.Durum = DavetiyeDurum.IptalEdildi;
+        davetiye.Durum = InvitationStatus.Cancelled;
         await _db.SaveChangesAsync(ct);
         await _auditService.LogAsync("Invite.Cancelled", "Davetiye", davetiyeId.ToString());
     }
@@ -190,10 +190,10 @@ public class DavetiyeService : IDavetiyeService, ITransactionalService
         var davetiye = await _db.Davetiyeler.FindAsync([davetiyeId], ct)
             ?? throw new InvalidOperationException("Davetiye bulunamadı.");
 
-        if (davetiye.Durum == DavetiyeDurum.KabulEdildi)
+        if (davetiye.Durum == InvitationStatus.Accepted)
             throw new InvalidOperationException("Kabul edilmiş davetler yeniden gönderilemez.");
 
-        if (davetiye.Durum == DavetiyeDurum.IptalEdildi)
+        if (davetiye.Durum == InvitationStatus.Cancelled)
             throw new InvalidOperationException("İptal edilmiş davetler yeniden gönderilemez.");
 
         var sonGonderim = davetiye.UpdatedAt ?? davetiye.CreatedAt;
@@ -204,7 +204,7 @@ public class DavetiyeService : IDavetiyeService, ITransactionalService
         var tokenResult = _tokenService.Generate(davetiye.Id.ToString(), Purpose, Ttl);
         davetiye.TokenHash = tokenResult.TokenHash;
         davetiye.ExpiresAt = tokenResult.ExpiresAt;
-        davetiye.Durum = DavetiyeDurum.Beklemede;
+        davetiye.Durum = InvitationStatus.Pending;
         davetiye.DavetEdenUserId = davetEdenUserId;
         await _db.SaveChangesAsync(ct);
 
@@ -214,7 +214,7 @@ public class DavetiyeService : IDavetiyeService, ITransactionalService
 
     public async Task<List<Davetiye>> GetBekleyenlerAsync(CancellationToken ct = default)
         => await _db.Davetiyeler
-            .Where(d => d.Durum == DavetiyeDurum.Beklemede)
+            .Where(d => d.Durum == InvitationStatus.Pending)
             .Include(d => d.Rol)
             .OrderByDescending(d => d.CreatedAt)
             .ToListAsync(ct);
@@ -223,8 +223,8 @@ public class DavetiyeService : IDavetiyeService, ITransactionalService
     {
         var now = DateTime.UtcNow;
         await _db.Davetiyeler
-            .Where(d => d.Durum == DavetiyeDurum.Beklemede && d.ExpiresAt < now)
-            .ExecuteUpdateAsync(s => s.SetProperty(d => d.Durum, DavetiyeDurum.SuresiDolmus), ct);
+            .Where(d => d.Durum == InvitationStatus.Pending && d.ExpiresAt < now)
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.Durum, InvitationStatus.Expired), ct);
     }
 
     private async Task MailGonderAsync(Davetiye davetiye, string rawToken, CancellationToken ct)

@@ -13,9 +13,9 @@ public class SozlesmeListItemDto
     public DateTime BaslangicTarihi { get; set; }
     public DateTime BitisTarihi { get; set; }
     public decimal AylikBedel { get; set; }
-    public SozlesmeDurumu Durum { get; set; }
+    public LeaseStatus Durum { get; set; }
     public decimal BirimYuzolcumu { get; set; }
 
     public int KalanGun => (int)(BitisTarihi - DateTime.Now).TotalDays;
-    public bool Aktif => Durum == SozlesmeDurumu.Aktif && BaslangicTarihi <= DateTime.Now && BitisTarihi >= DateTime.Now;
+    public bool Aktif => Durum == LeaseStatus.Active && BaslangicTarihi <= DateTime.Now && BitisTarihi >= DateTime.Now;
 }

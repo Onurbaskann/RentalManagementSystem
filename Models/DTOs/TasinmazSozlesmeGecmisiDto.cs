@@ -10,5 +10,5 @@ public class TasinmazSozlesmeGecmisiDto
     public DateTime BaslangicTarihi { get; set; }
     public DateTime BitisTarihi { get; set; }
     public decimal AylikBedel { get; set; }
-    public SozlesmeDurumu Durum { get; set; }
+    public LeaseStatus Durum { get; set; }
 }

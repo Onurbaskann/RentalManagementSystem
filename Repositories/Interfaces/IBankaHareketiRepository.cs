@@ -7,7 +7,7 @@ namespace KiraTakip.Repositories.Interfaces;
 public interface IBankaHareketiRepository : IBaseRepository<BankaHareketi>
 {
     // Listeleme (DTO)
-    Task<List<BankaHareketiListItemDto>> GetListAsync(BankaEslesmeDurumu? durum = null);
+    Task<List<BankaHareketiListItemDto>> GetListAsync(BankMatchStatus? durum = null);
     Task<PagedResult<BankaHareketiListItemDto>> GetPagedListAsync(TableQuery q);
     Task<BankaHareketiDetayDto?> GetDetayAsync(int id);
 

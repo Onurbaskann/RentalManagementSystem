@@ -13,8 +13,8 @@ public class Tahakkuk : BaseEntity
     public decimal KdvTutari { get; set; }
     public decimal ToplamTutar { get; set; }
     public decimal OdenenTutar { get; set; }
-    public TahakkukDurumu Durum { get; set; } = TahakkukDurumu.Bekleniyor;
-    public TahakkukKaynakTipi KaynakTipi { get; set; } = TahakkukKaynakTipi.Sozlesme;
+    public ChargeStatus Durum { get; set; } = ChargeStatus.Pending;
+    public ChargeSourceType KaynakTipi { get; set; } = ChargeSourceType.Lease;
     public string? IptalNotu { get; set; }
     public DateTime? SonHatirlatmaTarihi { get; set; }
 

@@ -14,8 +14,8 @@ public class TahakkukListItemDto
     public DateTime VadeTarihi { get; set; }
     public decimal ToplamTutar { get; set; }
     public decimal OdenenTutar { get; set; }
-    public TahakkukDurumu Durum { get; set; }
-    public TahakkukKaynakTipi KaynakTipi { get; set; }
+    public ChargeStatus Durum { get; set; }
+    public ChargeSourceType KaynakTipi { get; set; }
     public int BekleyenOdemeSayisi { get; set; }
     public List<TahakkukKalemDto> Kalemler { get; set; } = [];
 }

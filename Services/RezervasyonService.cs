@@ -76,9 +76,9 @@ public class RezervasyonService : IRezervasyonService, ITransactionalService
         else
         {
             // 2) Birim Türü bazlı Yıllık Genel Tarife
-            var birim = await _birimRepo.GetByIdAsync(birimId, q => q.Include(b => b.BirimTuru));
+            var birim = await _birimRepo.GetByIdAsync(birimId, q => q.Include(b => b.UnitType));
 
-            if (birim?.BirimTuruId is not int btId)
+            if (birim?.UnitTypeId is not int btId)
             {
                 sonuc.HataMessaji = "Birim türü tanımlanmamış.";
                 return sonuc;
@@ -89,7 +89,7 @@ public class RezervasyonService : IRezervasyonService, ITransactionalService
 
             if (genel == null)
             {
-                sonuc.HataMessaji = $"{cariYil} yılı için '{birim.BirimTuru?.Ad}' türünde genel rezervasyon tarifesi tanımlı değil.";
+                sonuc.HataMessaji = $"{cariYil} yılı için '{birim.UnitType?.Ad}' türünde genel rezervasyon tarifesi tanımlı değil.";
                 return sonuc;
             }
 
@@ -135,10 +135,10 @@ public class RezervasyonService : IRezervasyonService, ITransactionalService
         if (kiraci == null)
             return (false, "Kiracı bulunamadı.", 0);
 
-        var birim = await _birimRepo.GetByIdAsync(model.BirimId.Value, q => q.Include(b => b.BirimTuru));
+        var birim = await _birimRepo.GetByIdAsync(model.BirimId.Value, q => q.Include(b => b.UnitType));
         if (birim == null)
             return (false, "Birim bulunamadı.", 0);
-        if (birim.BirimTuru == null || !birim.BirimTuru.RezervasyonYapilabilirMi)
+        if (birim.UnitType == null || !birim.UnitType.RezervasyonYapilabilirMi)
             return (false, "Seçilen birim rezervasyon yapılabilir türde değil.", 0);
 
         var hesap = await HesaplaAsync(model.BirimId.Value, model.BaslangicTarihi, model.BitisTarihi);
@@ -157,7 +157,7 @@ public class RezervasyonService : IRezervasyonService, ITransactionalService
             KdvOrani = hesap.KdvOrani > 0 ? hesap.KdvOrani : null,
             KdvTutari = hesap.KdvTutari > 0 ? hesap.KdvTutari : null,
             ToplamTutar = hesap.ToplamTutar,
-            Durum = RezervasyonDurumu.Planlandi,
+            Durum = ReservationStatus.Planned,
             Aciklama = model.Aciklama,
         };
 
@@ -176,27 +176,27 @@ public class RezervasyonService : IRezervasyonService, ITransactionalService
         if (rezervasyon == null)
             return (false, "Rezervasyon bulunamadı.");
 
-        if (rezervasyon.Durum == RezervasyonDurumu.IptalEdildi)
+        if (rezervasyon.Durum == ReservationStatus.Cancelled)
             return (false, "Bu rezervasyon zaten iptal edilmiş.");
 
-        if (rezervasyon.Durum == RezervasyonDurumu.TahakkukaAktarildi)
+        if (rezervasyon.Durum == ReservationStatus.TransferredToCharge)
         {
             var tahakkuk = await _ctx.Tahakkuklar
                 .Include(t => t.Odemeler)
                 .FirstOrDefaultAsync(t => t.RezervasyonId == rezervasyon.Id);
 
-            var odemeVar = tahakkuk?.Odemeler.Any(o => o.Durum == OdemeDurumu.Onaylandi) ?? false;
+            var odemeVar = tahakkuk?.Odemeler.Any(o => o.Durum == PaymentStatus.Approved) ?? false;
             if (odemeVar)
                 return (false, "Ödemesi alınmış tahakkuka bağlı rezervasyon iptal edilemez.");
 
             if (tahakkuk != null)
             {
-                tahakkuk.Durum = TahakkukDurumu.IptalEdildi;
+                tahakkuk.Durum = ChargeStatus.Cancelled;
                 tahakkuk.IptalNotu = $"Rezervasyon iptal edildi: {neden}";
             }
         }
 
-        rezervasyon.Durum = RezervasyonDurumu.IptalEdildi;
+        rezervasyon.Durum = ReservationStatus.Cancelled;
         rezervasyon.Aciklama = string.IsNullOrWhiteSpace(rezervasyon.Aciklama)
             ? $"İptal: {neden}"
             : $"{rezervasyon.Aciklama} | İptal: {neden}";
@@ -207,15 +207,15 @@ public class RezervasyonService : IRezervasyonService, ITransactionalService
 
     // ── Tahakkuka Aktar (8.6.2) ──────────────────────────────────────────────
 
-    public async Task<(bool Basarili, string? Hata, int? TahakkukId)> TransferToTahakkukAsync(int id, string userId)
+    public async Task<(bool Basarili, string? Hata, int? TahakkukId)> TransferToChargeAsync(int id, string userId)
     {
         var rezervasyon = await _repo.GetByIdAsync(id, q => q
-            .Include(r => r.Birim).ThenInclude(b => b.BirimTuru));
+            .Include(r => r.Birim).ThenInclude(b => b.UnitType));
 
         if (rezervasyon == null)
             return (false, "Rezervasyon bulunamadı.", null);
 
-        if (rezervasyon.Durum != RezervasyonDurumu.Planlandi)
+        if (rezervasyon.Durum != ReservationStatus.Planned)
             return (false, "Sadece 'Planlandı' durumundaki rezervasyonlar tahakkuka aktarılabilir.", null);
 
         if (await _ctx.Tahakkuklar.AnyAsync(t => t.RezervasyonId == rezervasyon.Id))
@@ -224,7 +224,7 @@ public class RezervasyonService : IRezervasyonService, ITransactionalService
         if (rezervasyon.ToplamTutar <= 0)
             return (false, "Ücretsiz rezervasyonlar için tahakkuk oluşturulamaz.", null);
 
-        var birimTuru = rezervasyon.Birim.BirimTuru;
+        var birimTuru = rezervasyon.Birim.UnitType;
         var borcTipi = await _repo.ResolveRezervasyonBorcTipiAsync(birimTuru?.BorcTipiId);
 
         if (borcTipi == null)
@@ -237,14 +237,14 @@ public class RezervasyonService : IRezervasyonService, ITransactionalService
         {
             BorcTipiId = borcTipi.Id,
             Aciklama = aciklama,
-            HesaplamaYontemi = HesaplamaYontemi.Sabit,
+            CalculationMethod = CalculationMethod.Fixed,
             BirimDeger = rezervasyon.UcretTutar,
             Carpan = 1m,
             Tutar = rezervasyon.UcretTutar,
             KdvOrani = rezervasyon.KdvOrani ?? 0m,
             KdvTutari = rezervasyon.KdvTutari ?? 0m,
             ToplamTutar = rezervasyon.ToplamTutar,
-            KaynakTipi = KalemKaynakTipi.RezervasyonKurali
+            KaynakTipi = LineItemSourceType.ReservationRule
         };
 
         var tahakkuk = new Tahakkuk
@@ -259,13 +259,13 @@ public class RezervasyonService : IRezervasyonService, ITransactionalService
             KdvTutari = rezervasyon.KdvTutari ?? 0m,
             ToplamTutar = rezervasyon.ToplamTutar,
             OdenenTutar = 0,
-            Durum = TahakkukDurumu.Bekleniyor,
-            KaynakTipi = TahakkukKaynakTipi.Rezervasyon,
+            Durum = ChargeStatus.Pending,
+            KaynakTipi = ChargeSourceType.Reservation,
             Kalemler = new List<TahakkukKalemi> { kalem }
         };
 
         await _repo.AddTahakkukAsync(tahakkuk);
-        rezervasyon.Durum = RezervasyonDurumu.TahakkukaAktarildi;
+        rezervasyon.Durum = ReservationStatus.TransferredToCharge;
         await _uow.SaveChangesAsync();
 
         return (true, null, tahakkuk.Id);

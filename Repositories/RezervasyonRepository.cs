@@ -71,7 +71,7 @@ public class RezervasyonRepository : BaseRepository<Rezervasyon>, IRezervasyonRe
     {
         return await _dbSet.AnyAsync(r =>
             r.BirimId == birimId &&
-            r.Durum != RezervasyonDurumu.IptalEdildi &&
+            r.Durum != ReservationStatus.Cancelled &&
             r.BaslangicTarihi < bitis &&
             r.BitisTarihi > baslangic);
     }
@@ -86,7 +86,7 @@ public class RezervasyonRepository : BaseRepository<Rezervasyon>, IRezervasyonRe
     public async Task<RezervasyonTarife?> GetGenelTarifeAsync(int birimTuruId, int yil)
     {
         return await _ctx.RezervasyonTarifeler
-            .Where(g => g.BirimId == null && g.BirimTuruId == birimTuruId && g.IsActive && g.Yil == yil)
+            .Where(g => g.BirimId == null && g.UnitTypeId == birimTuruId && g.IsActive && g.Yil == yil)
             .FirstOrDefaultAsync();
     }
 
@@ -126,6 +126,6 @@ public class RezervasyonRepository : BaseRepository<Rezervasyon>, IRezervasyonRe
         }
 
         return await _ctx.BorcTipleri
-            .FirstOrDefaultAsync(b => b.Davranis == BorcTipiDavranisi.RezervasyonOzel && b.Aktif);
+            .FirstOrDefaultAsync(b => b.Davranis == ChargeTypeBehavior.ReservationSpecific && b.Aktif);
     }
 }

@@ -138,7 +138,7 @@ namespace KiraTakip.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
-                    KapsamTipi = table.Column<int>(type: "int", nullable: false),
+                    ScopeType = table.Column<int>(type: "int", nullable: false),
                     KapsamId = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -262,7 +262,7 @@ namespace KiraTakip.Migrations
                     KiraciKategoriId = table.Column<int>(type: "int", nullable: false),
                     Yil = table.Column<int>(type: "int", nullable: false),
                     BorcTipiId = table.Column<int>(type: "int", nullable: false),
-                    HesaplamaYontemi = table.Column<int>(type: "int", nullable: false, comment: "Sabit=1, M2=2"),
+                    CalculationMethod = table.Column<int>(type: "int", nullable: false, comment: "Sabit=1, M2=2"),
                     BirimDeger = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     KdvOrani = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -339,7 +339,7 @@ namespace KiraTakip.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     TasinmazTipiId = table.Column<int>(type: "int", nullable: true),
                     Ad = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    KiralamaSekli = table.Column<int>(type: "int", nullable: false, comment: "TekParca=1, BirimBazli=2"),
+                    RentalMode = table.Column<int>(type: "int", nullable: false, comment: "TekParca=1, BirimBazli=2"),
                     AcikYuzolcumu = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     KapaliYuzolcumu = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     KatSayisi = table.Column<int>(type: "int", nullable: true),
@@ -473,8 +473,8 @@ namespace KiraTakip.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     TasinmazId = table.Column<int>(type: "int", nullable: false),
-                    BirimTuruId = table.Column<int>(type: "int", nullable: true),
-                    BirimTipi = table.Column<int>(type: "int", nullable: false, comment: "Komple=1, Birim=2"),
+                    UnitTypeId = table.Column<int>(type: "int", nullable: true),
+                    UnitKind = table.Column<int>(type: "int", nullable: false, comment: "Komple=1, Birim=2"),
                     KatNo = table.Column<int>(type: "int", nullable: true),
                     BirimNo = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     Ad = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
@@ -491,8 +491,8 @@ namespace KiraTakip.Migrations
                 {
                     table.PrimaryKey("PK_Birimler", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Birimler_BirimTurleri_BirimTuruId",
-                        column: x => x.BirimTuruId,
+                        name: "FK_Birimler_BirimTurleri_UnitTypeId",
+                        column: x => x.UnitTypeId,
                         principalTable: "BirimTurleri",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
@@ -513,7 +513,7 @@ namespace KiraTakip.Migrations
                     TasinmazId = table.Column<int>(type: "int", nullable: false),
                     KiraciKategoriId = table.Column<int>(type: "int", nullable: false),
                     BorcTipiId = table.Column<int>(type: "int", nullable: false),
-                    HesaplamaYontemi = table.Column<int>(type: "int", nullable: false),
+                    CalculationMethod = table.Column<int>(type: "int", nullable: false),
                     BirimDeger = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     KdvOrani = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -698,7 +698,7 @@ namespace KiraTakip.Migrations
                     BirimId = table.Column<int>(type: "int", nullable: false),
                     KiraciKategoriId = table.Column<int>(type: "int", nullable: false),
                     BorcTipiId = table.Column<int>(type: "int", nullable: false),
-                    HesaplamaYontemi = table.Column<int>(type: "int", nullable: false),
+                    CalculationMethod = table.Column<int>(type: "int", nullable: false),
                     BirimDeger = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     KdvOrani = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -739,7 +739,7 @@ namespace KiraTakip.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     BirimId = table.Column<int>(type: "int", nullable: true),
-                    BirimTuruId = table.Column<int>(type: "int", nullable: true),
+                    UnitTypeId = table.Column<int>(type: "int", nullable: true),
                     Yil = table.Column<int>(type: "int", nullable: true),
                     UcretsizSureDakika = table.Column<int>(type: "int", nullable: false),
                     UcretlendirmePeriyoduDakika = table.Column<int>(type: "int", nullable: false),
@@ -756,11 +756,11 @@ namespace KiraTakip.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_RezervasyonTarifeler", x => x.Id);
-                    table.CheckConstraint("CK_RezervasyonTarife_BirimOrYilTuru", "[BirimId] IS NOT NULL OR ([BirimTuruId] IS NOT NULL AND [Yil] IS NOT NULL)");
+                    table.CheckConstraint("CK_RezervasyonTarife_BirimOrYilTuru", "[BirimId] IS NOT NULL OR ([UnitTypeId] IS NOT NULL AND [Yil] IS NOT NULL)");
                     table.CheckConstraint("CK_RezervasyonTarifeler_Degerler_Pozitif", "[PeriyotUcreti] >= 0 AND [UcretsizSureDakika] >= 0 AND [UcretlendirmePeriyoduDakika] > 0 AND [KdvOrani] BETWEEN 0 AND 100");
                     table.ForeignKey(
-                        name: "FK_RezervasyonTarifeler_BirimTurleri_BirimTuruId",
-                        column: x => x.BirimTuruId,
+                        name: "FK_RezervasyonTarifeler_BirimTurleri_UnitTypeId",
+                        column: x => x.UnitTypeId,
                         principalTable: "BirimTurleri",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -782,7 +782,7 @@ namespace KiraTakip.Migrations
                     KiraciId = table.Column<int>(type: "int", nullable: false),
                     Durum = table.Column<int>(type: "int", nullable: false, comment: "Aktif=1, SonaErdi=2, Feshedildi=3"),
                     KdvUygulanacakMi = table.Column<bool>(type: "bit", nullable: false),
-                    VadeKuraliTipi = table.Column<int>(type: "int", nullable: false),
+                    DueDateRuleType = table.Column<int>(type: "int", nullable: false),
                     VadeGunu = table.Column<int>(type: "int", nullable: false),
                     BaslangicTarihi = table.Column<DateTime>(type: "datetime2", nullable: false),
                     BitisTarihi = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -860,7 +860,7 @@ namespace KiraTakip.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     KiraSozlesmesiId = table.Column<int>(type: "int", nullable: false),
                     BorcTipiId = table.Column<int>(type: "int", nullable: false),
-                    HesaplamaYontemi = table.Column<int>(type: "int", nullable: false),
+                    CalculationMethod = table.Column<int>(type: "int", nullable: false),
                     BirimDeger = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     KdvOrani = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -997,7 +997,7 @@ namespace KiraTakip.Migrations
                     TahakkukId = table.Column<int>(type: "int", nullable: false),
                     BorcTipiId = table.Column<int>(type: "int", nullable: false),
                     Aciklama = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    HesaplamaYontemi = table.Column<int>(type: "int", nullable: false, comment: "Sabit=1, M2=2"),
+                    CalculationMethod = table.Column<int>(type: "int", nullable: false, comment: "Sabit=1, M2=2"),
                     BirimDeger = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     Carpan = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false),
                     Tutar = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
@@ -1043,8 +1043,8 @@ namespace KiraTakip.Migrations
                     OnaylayanUserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     OdemeTarihi = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Tutar = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    OdemeKanali = table.Column<int>(type: "int", nullable: false, comment: "Havale=1, EFT=2, Nakit=3, Diger=4"),
-                    OdemeKaynakTipi = table.Column<int>(type: "int", nullable: false, comment: "Manuel=1, BankaEslesme=2, SanalPos=3"),
+                    PaymentChannel = table.Column<int>(type: "int", nullable: false, comment: "Havale=1, EFT=2, Nakit=3, Diger=4"),
+                    PaymentSourceType = table.Column<int>(type: "int", nullable: false, comment: "Manuel=1, BankaEslesme=2, SanalPos=3"),
                     PosReferansNo = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     Aciklama = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Durum = table.Column<int>(type: "int", nullable: false, comment: "OnayBekliyor=1, Onaylandi=2, Reddedildi=3"),
@@ -1094,7 +1094,7 @@ namespace KiraTakip.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     TahakkukOdemeId = table.Column<int>(type: "int", nullable: false),
                     BankaHareketiId = table.Column<int>(type: "int", nullable: false),
-                    EslesmeTipi = table.Column<int>(type: "int", nullable: false, comment: "Otomatik=1, Manuel=2"),
+                    MatchType = table.Column<int>(type: "int", nullable: false, comment: "Otomatik=1, Manuel=2"),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -1283,9 +1283,9 @@ namespace KiraTakip.Migrations
                 column: "SablonBelgeId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Birimler_BirimTuruId",
+                name: "IX_Birimler_UnitTypeId",
                 table: "Birimler",
-                column: "BirimTuruId");
+                column: "UnitTypeId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Birimler_TasinmazId",
@@ -1395,9 +1395,9 @@ namespace KiraTakip.Migrations
                 filter: "[VergiNo] IS NOT NULL AND [VergiNo] <> ''");
 
             migrationBuilder.CreateIndex(
-                name: "IX_KullaniciYetkiKapsamlari_UserId_KapsamTipi_KapsamId",
+                name: "IX_KullaniciYetkiKapsamlari_UserId_ScopeType_KapsamId",
                 table: "KullaniciYetkiKapsamlari",
-                columns: new[] { "UserId", "KapsamTipi", "KapsamId" },
+                columns: new[] { "UserId", "ScopeType", "KapsamId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -1441,9 +1441,9 @@ namespace KiraTakip.Migrations
                 column: "BirimId");
 
             migrationBuilder.CreateIndex(
-                name: "UX_RezervasyonTarifeler_BirimTuruYil_GenelKural",
+                name: "UX_RezervasyonTarifeler_UnitTypeYil_GenelKural",
                 table: "RezervasyonTarifeler",
-                columns: new[] { "BirimTuruId", "Yil" },
+                columns: new[] { "UnitTypeId", "Yil" },
                 unique: true,
                 filter: "[BirimId] IS NULL");
 

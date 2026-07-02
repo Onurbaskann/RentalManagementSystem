@@ -34,17 +34,17 @@
                 {
                     var search = $"{r.BirimAd} {r.TasinmazAd}".ToLower();
                     var durumClass = r.Durum switch {
-                        RezervasyonDurumu.Planlandi => "badge-bos",
-                        RezervasyonDurumu.Tamamlandi => "badge-kirali",
-                        RezervasyonDurumu.IptalEdildi => "badge-gecmis",
-                        RezervasyonDurumu.TahakkukaAktarildi => "badge-kurumsal",
+                        ReservationStatus.Planned => "badge-bos",
+                        ReservationStatus.Completed => "badge-kirali",
+                        ReservationStatus.Cancelled => "badge-gecmis",
+                        ReservationStatus.TransferredToCharge => "badge-kurumsal",
                         _ => "badge-bos"
                     };
                     var durumLabel = r.Durum switch {
-                        RezervasyonDurumu.Planlandi => "Planlandı",
-                        RezervasyonDurumu.Tamamlandi => "Tamamlandı",
-                        RezervasyonDurumu.IptalEdildi => "İptal",
-                        RezervasyonDurumu.TahakkukaAktarildi => "Faturalandı",
+                        ReservationStatus.Planned => "Planlandı",
+                        ReservationStatus.Completed => "Tamamlandı",
+                        ReservationStatus.Cancelled => "İptal",
+                        ReservationStatus.TransferredToCharge => "Faturalandı",
                         _ => r.Durum.ToString()
                     };
                     <tr data-row data-search="@search">

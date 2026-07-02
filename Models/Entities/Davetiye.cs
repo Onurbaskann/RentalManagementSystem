@@ -11,7 +11,7 @@ public class Davetiye : BaseEntity
     public int RolId { get; set; }
     public string TokenHash { get; set; } = string.Empty;
     public DateTime ExpiresAt { get; set; }
-    public DavetiyeDurum Durum { get; set; } = DavetiyeDurum.Beklemede;
+    public InvitationStatus Durum { get; set; } = InvitationStatus.Pending;
     public string DavetEdenUserId { get; set; } = string.Empty;
     public DateTime? KabulTarihi { get; set; }
     public string? OlusanUserId { get; set; }

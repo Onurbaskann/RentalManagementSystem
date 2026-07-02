@@ -42,7 +42,7 @@ public class OdemeService : IOdemeService, ITransactionalService
     public async Task<TahakkukOdeme> EkleAsync(TahakkukOdeme odeme)
     {
         odeme.GirisTarihi = DateTime.Now;
-        odeme.Durum = OdemeDurumu.OnayBekliyor;
+        odeme.Durum = PaymentStatus.PendingApproval;
         await _repo.AddAsync(odeme);
         await _uow.SaveChangesAsync();
         return odeme;
@@ -51,9 +51,9 @@ public class OdemeService : IOdemeService, ITransactionalService
     public async Task<bool> OnaylaAsync(int id, string onaylayanUserId)
     {
         var odeme = await _repo.GetByIdAsync(id);
-        if (odeme == null || odeme.Durum != OdemeDurumu.OnayBekliyor) return false;
+        if (odeme == null || odeme.Durum != PaymentStatus.PendingApproval) return false;
 
-        odeme.Durum = OdemeDurumu.Onaylandi;
+        odeme.Durum = PaymentStatus.Approved;
         odeme.OnaylayanUserId = onaylayanUserId;
         odeme.OnayTarihi = DateTime.Now;
         await _repo.UpdateAsync(odeme);
@@ -66,9 +66,9 @@ public class OdemeService : IOdemeService, ITransactionalService
     public async Task<bool> ReddetAsync(int id, string neden)
     {
         var odeme = await _repo.GetByIdAsync(id);
-        if (odeme == null || odeme.Durum != OdemeDurumu.OnayBekliyor) return false;
+        if (odeme == null || odeme.Durum != PaymentStatus.PendingApproval) return false;
 
-        odeme.Durum = OdemeDurumu.Reddedildi;
+        odeme.Durum = PaymentStatus.Rejected;
         odeme.RedNedeni = neden;
         await _repo.UpdateAsync(odeme);
         await _uow.SaveChangesAsync();

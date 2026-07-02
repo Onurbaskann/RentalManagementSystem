@@ -2,9 +2,9 @@
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Rezervasyonlar";
-    bool canCreate   = User.HasPermission(PermissionCatalog.Rezervasyon.Create);
-    bool canCancel   = User.HasPermission(PermissionCatalog.Rezervasyon.Cancel);
-    bool canTransfer = User.HasPermission(PermissionCatalog.Rezervasyon.TransferToTahakkuk);
+    bool canCreate   = User.HasPermission(PermissionCatalog.Reservation.Create);
+    bool canCancel   = User.HasPermission(PermissionCatalog.Reservation.Cancel);
+    bool canTransfer = User.HasPermission(PermissionCatalog.Reservation.TransferToCharge);
 }
 
 <div class="page-header flex items-center justify-between">
@@ -53,16 +53,16 @@
                      @foreach (var r in Model)
                 {
                     string durumCls = r.Durum switch {
-                        RezervasyonDurumu.Tamamlandi         => "badge-kirali",
-                        RezervasyonDurumu.TahakkukaAktarildi => "badge-surek",
-                        RezervasyonDurumu.IptalEdildi        => "badge-gecmis",
+                        ReservationStatus.Completed         => "badge-kirali",
+                        ReservationStatus.TransferredToCharge => "badge-surek",
+                        ReservationStatus.Cancelled        => "badge-gecmis",
                         _                                    => "badge-bos"
                     };
                     string durumLabel = r.Durum switch {
-                        RezervasyonDurumu.Planlandi          => "Planlandı",
-                        RezervasyonDurumu.Tamamlandi         => "Tamamlandı",
-                        RezervasyonDurumu.IptalEdildi        => "İptal Edildi",
-                        RezervasyonDurumu.TahakkukaAktarildi => "Tahakkuka Aktarıldı",
+                        ReservationStatus.Planned          => "Planlandı",
+                        ReservationStatus.Completed         => "Tamamlandı",
+                        ReservationStatus.Cancelled        => "İptal Edildi",
+                        ReservationStatus.TransferredToCharge => "Tahakkuka Aktarıldı",
                         _                                    => r.Durum.ToString()
                     };
 
@@ -87,7 +87,7 @@
                         </td>
                         <td>
                             <span class="badge @durumCls">@durumLabel</span>
-                            @if (r.Durum == RezervasyonDurumu.IptalEdildi && !string.IsNullOrEmpty(r.Aciklama))
+                            @if (r.Durum == ReservationStatus.Cancelled && !string.IsNullOrEmpty(r.Aciklama))
                             {
                                 var displayNeden = r.Aciklama.StartsWith("İptal:") ? r.Aciklama.Substring(6).Trim() : r.Aciklama;
                                 <div class="text-[10px] text-muted mt-1 italic truncate max-w-[100px]" title="@displayNeden">⤵ @displayNeden</div>
@@ -95,7 +95,7 @@
                         </td>
                         <td class="text-right">
                             <div class="flex gap-1.5 justify-end items-center">
-                                @if (canTransfer && r.Durum == RezervasyonDurumu.Planlandi && r.ToplamTutar > 0 && r.TahakkukId == null)
+                                @if (canTransfer && r.Durum == ReservationStatus.Planned && r.ToplamTutar > 0 && r.TahakkukId == null)
                                 {
                                     <form method="post" action="/Rezervasyon/TahakkukaAktar/@r.Id.ToHashId()" class="inline"
                                           data-confirm="Bu rezervasyonu tahakkuka aktarmak istediğinize emin misiniz?">
@@ -103,7 +103,7 @@
                                         <button type="submit" class="btn btn-sm btn-primary">Aktar</button>
                                     </form>
                                 }
-                                @if (canCancel && r.Durum == RezervasyonDurumu.Planlandi)
+                                @if (canCancel && r.Durum == ReservationStatus.Planned)
                                 {
                                     <button type="button" class="btn btn-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white"
                                         data-confirm="Bu rezervasyonu iptal etmek istediğinize emin misiniz?"

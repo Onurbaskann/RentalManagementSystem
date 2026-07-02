@@ -31,7 +31,7 @@ public class RezervasyonController : Controller
         _provider = provider;
     }
 
-    [Authorize(Policy = PermissionCatalog.Rezervasyon.Module)]
+    [Authorize(Policy = PermissionCatalog.Reservation.Module)]
     public async Task<IActionResult> Index()
     {
         var liste = await _service.GetAllAsync(_provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
@@ -39,7 +39,7 @@ public class RezervasyonController : Controller
     }
 
     [HttpGet("Rezervasyon/Detay/{id:int}")]
-    [Authorize(Policy = PermissionCatalog.Rezervasyon.Module)]
+    [Authorize(Policy = PermissionCatalog.Reservation.Module)]
     public async Task<IActionResult> Detay(int id)
     {
         var rezervasyon = await _service.GetByIdAsync(id);
@@ -53,7 +53,7 @@ public class RezervasyonController : Controller
     }
 
     [HttpGet]
-    [Authorize(Policy = PermissionCatalog.Rezervasyon.Create)]
+    [Authorize(Policy = PermissionCatalog.Reservation.Create)]
     public async Task<IActionResult> Ekle(int? birimId)
     {
         var vm = new RezervasyonCreateViewModel
@@ -67,7 +67,7 @@ public class RezervasyonController : Controller
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Rezervasyon.Create)]
+    [Authorize(Policy = PermissionCatalog.Reservation.Create)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Ekle(RezervasyonCreateViewModel vm)
     {
@@ -103,7 +103,7 @@ public class RezervasyonController : Controller
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Rezervasyon.Cancel)]
+    [Authorize(Policy = PermissionCatalog.Reservation.Cancel)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Iptal(int id, string neden)
     {
@@ -125,12 +125,12 @@ public class RezervasyonController : Controller
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Rezervasyon.TransferToTahakkuk)]
+    [Authorize(Policy = PermissionCatalog.Reservation.TransferToCharge)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> TahakkukaAktar(int id)
     {
         var userId = _userManager.GetUserId(User)!;
-        var (basarili, hata, _) = await _service.TransferToTahakkukAsync(id, userId);
+        var (basarili, hata, _) = await _service.TransferToChargeAsync(id, userId);
 
         if (!basarili)
             TempData["Error"] = hata;

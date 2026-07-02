@@ -44,8 +44,8 @@ public class OdemePortalController : Controller
             .Include(x => x.KiraSozlesmesi!).ThenInclude(s => s!.Birim).ThenInclude(b => b.Tasinmaz)
             .Include(x => x.Odemeler)
             .Where(x => x.KiraSozlesmesi!.KiraciId == kiraciId
-                     && x.Durum != TahakkukDurumu.TamOdendi
-                     && x.Durum != TahakkukDurumu.IptalEdildi
+                     && x.Durum != ChargeStatus.Paid
+                     && x.Durum != ChargeStatus.Cancelled
                      && x.VadeTarihi <= vadeEsigi)
             .OrderBy(x => x.VadeTarihi)
             .ToListAsync();
@@ -76,7 +76,7 @@ public class OdemePortalController : Controller
                 DonemBaslangic = b.DonemBaslangic,
                 VadeTarihi = b.VadeTarihi,
                 ToplamTutar = b.ToplamTutar,
-                OdenenTutar = b.Odemeler.Where(o => o.Durum == OdemeDurumu.Onaylandi).Sum(o => o.Tutar)
+                OdenenTutar = b.Odemeler.Where(o => o.Durum == PaymentStatus.Approved).Sum(o => o.Tutar)
             }).ToList(),
             DefaultSelectedId = borclar.First().Id
         };

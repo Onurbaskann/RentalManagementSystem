@@ -37,7 +37,7 @@
                     bool aktif = s.Aktif;
                     int kalanGun = s.KalanGun;
                     bool surek = aktif && kalanGun <= 30;
-                    bool feshedildi = s.Durum == SozlesmeDurumu.Feshedildi;
+                    bool feshedildi = s.Durum == LeaseStatus.Terminated;
                     string dayBadgeClass = kalanGun <= 10 ? "bg-red-50 text-red-700 border-red-200" : kalanGun <= 30 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200";
                     var search = $"{s.BirimAd} {s.TasinmazAd}".ToLower();
                     var detayHref = $"/Kiraci/Sozlesmeler/{s.Id}";

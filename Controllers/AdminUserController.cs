@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Policy = "System.Kullanici")]
+[Authorize(Policy = "System.User")]
 [Route("Admin/Kullanicilar")]
 public class AdminUserController : Controller
 {
@@ -112,11 +112,11 @@ public class AdminUserController : Controller
 
         var currentUserId = _userManager.GetUserId(User);
         var yetkiliTasinmazIds = await _db.KullaniciYetkiKapsamlari
-            .Where(k => k.UserId == user.Id && k.KapsamTipi == KapsamTipi.Tasinmaz && !k.IsDeleted)
+            .Where(k => k.UserId == user.Id && k.ScopeType == ScopeType.Property && !k.IsDeleted)
             .Select(k => k.KapsamId)
             .ToListAsync();
         var yetkililBirimIds = await _db.KullaniciYetkiKapsamlari
-            .Where(k => k.UserId == user.Id && k.KapsamTipi == KapsamTipi.Birim && !k.IsDeleted)
+            .Where(k => k.UserId == user.Id && k.ScopeType == ScopeType.Unit && !k.IsDeleted)
             .Select(k => k.KapsamId)
             .ToListAsync();
         var mevcutRolId = await _db.UserRoller
@@ -326,7 +326,7 @@ public class AdminUserController : Controller
     private async Task SetKapsamAsync(string userId, List<int> tasinmazIds, List<int> birimIds, string atayan)
     {
         var mevcutlar = await _db.KullaniciYetkiKapsamlari
-            .Where(k => k.UserId == userId && (k.KapsamTipi == KapsamTipi.Tasinmaz || k.KapsamTipi == KapsamTipi.Birim))
+            .Where(k => k.UserId == userId && (k.ScopeType == ScopeType.Property || k.ScopeType == ScopeType.Unit))
             .ToListAsync();
         _db.KullaniciYetkiKapsamlari.RemoveRange(mevcutlar);
 
@@ -335,7 +335,7 @@ public class AdminUserController : Controller
             _db.KullaniciYetkiKapsamlari.Add(new KullaniciYetkiKapsami
             {
                 UserId = userId,
-                KapsamTipi = KapsamTipi.Tasinmaz,
+                ScopeType = ScopeType.Property,
                 KapsamId = tasinmazId,
             });
         }
@@ -345,7 +345,7 @@ public class AdminUserController : Controller
             _db.KullaniciYetkiKapsamlari.Add(new KullaniciYetkiKapsami
             {
                 UserId = userId,
-                KapsamTipi = KapsamTipi.Birim,
+                ScopeType = ScopeType.Unit,
                 KapsamId = birimId,
             });
         }
@@ -366,7 +366,7 @@ public class AdminUserController : Controller
     {
         liste.Clear();
         var roller = await _db.Roller
-            .Where(r => r.Scope == RolScope.Internal && r.IsActive && !r.IsDeleted)
+            .Where(r => r.Scope == RoleScope.Internal && r.IsActive && !r.IsDeleted)
             .OrderBy(r => r.IsSystemRole ? 0 : 1).ThenBy(r => r.Ad)
             .ToListAsync();
         liste.AddRange(roller.Select(r => new RolSecenekViewModel { Id = r.Id, Ad = r.Ad }));
@@ -375,7 +375,7 @@ public class AdminUserController : Controller
     private async Task PopulateDavetRollerAsync(DavetGonderViewModel model)
     {
         model.Roller = await _db.Roller
-            .Where(r => r.Scope == RolScope.Internal && r.IsActive && !r.IsDeleted)
+            .Where(r => r.Scope == RoleScope.Internal && r.IsActive && !r.IsDeleted)
             .OrderBy(r => r.IsSystemRole ? 0 : 1).ThenBy(r => r.Ad)
             .Select(r => new RolSecenekViewModel { Id = r.Id, Ad = r.Ad })
             .ToListAsync();

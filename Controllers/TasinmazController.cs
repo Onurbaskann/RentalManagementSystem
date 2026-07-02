@@ -39,14 +39,14 @@ public class TasinmazController : Controller
         _provider = provider;
     }
 
-    [Authorize(Policy = PermissionCatalog.Tasinmaz.Module)]
+    [Authorize(Policy = PermissionCatalog.Property.Module)]
     public async Task<IActionResult> Index()
     {
         var tasinmazlar = await _tasinmazService.GetAllAsync(_provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
         return View(tasinmazlar);
     }
 
-    [Authorize(Policy = PermissionCatalog.Tasinmaz.Module)]
+    [Authorize(Policy = PermissionCatalog.Property.Module)]
     public async Task<IActionResult> Detay(int id)
     {
         if (!_provider.KapsamdaMi(id)) return Forbid();
@@ -74,14 +74,14 @@ public class TasinmazController : Controller
             t =>
             {
                 var list = new List<int>();
-                if (t.TekParcaDestekli) list.Add((int)KiralamaSekli.TekParca);
-                if (t.BirimBazliDestekli) list.Add((int)KiralamaSekli.BirimBazli);
+                if (t.TekParcaDestekli) list.Add((int)RentalMode.WholeProperty);
+                if (t.BirimBazliDestekli) list.Add((int)RentalMode.UnitBased);
                 return list.ToArray();
             });
     }
 
     [HttpGet]
-    [Authorize(Policy = PermissionCatalog.Tasinmaz.Create)]
+    [Authorize(Policy = PermissionCatalog.Property.Create)]
     public async Task<IActionResult> Ekle()
     {
         await PopulateViewBagAsync();
@@ -95,7 +95,7 @@ public class TasinmazController : Controller
     }
 
     [HttpGet]
-    [Authorize(Policy = PermissionCatalog.Tasinmaz.Edit)]
+    [Authorize(Policy = PermissionCatalog.Property.Edit)]
     public async Task<IActionResult> Duzenle(int id)
     {
         if (!_provider.KapsamdaMi(id)) return Forbid();
@@ -112,7 +112,7 @@ public class TasinmazController : Controller
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Tasinmaz.Edit)]
+    [Authorize(Policy = PermissionCatalog.Property.Edit)]
     public async Task<IActionResult> Duzenle(TasinmazDuzenleViewModel vm)
     {
         _provider.TasinmazGuard(vm.Id);
@@ -130,7 +130,7 @@ public class TasinmazController : Controller
         if (string.IsNullOrWhiteSpace(vm.AcikAdres))
             ModelState.AddModelError("AcikAdres", "Açık adres zorunludur.");
 
-        if (vm.KiralamaSekli == KiralamaSekli.BirimBazli)
+        if (vm.RentalMode == RentalMode.UnitBased)
         {
             if (vm.Birimler == null || vm.Birimler.Count == 0)
             {
@@ -145,8 +145,8 @@ public class TasinmazController : Controller
                         ModelState.AddModelError($"Birimler[{i}].BirimNo", "Birim No zorunludur.");
                     if (birim.KatNo == null)
                         ModelState.AddModelError($"Birimler[{i}].KatNo", "Kat No zorunludur.");
-                    if (birim.BirimTuruId == null || birim.BirimTuruId <= 0)
-                        ModelState.AddModelError($"Birimler[{i}].BirimTuruId", "Birim Türü zorunludur.");
+                    if (birim.UnitTypeId == null || birim.UnitTypeId <= 0)
+                        ModelState.AddModelError($"Birimler[{i}].UnitTypeId", "Birim Türü zorunludur.");
                     if (string.IsNullOrWhiteSpace(birim.Ad) && !string.IsNullOrWhiteSpace(birim.BirimNo))
                         birim.Ad = "Birim " + birim.BirimNo;
                     if (string.IsNullOrWhiteSpace(birim.Ad))
@@ -176,8 +176,8 @@ public class TasinmazController : Controller
                 ModelState.AddModelError($"RezervasyonAlanlari[{i}].Ad", "Alan Adı zorunludur.");
             if (alan.Yuzolcumu <= 0)
                 ModelState.AddModelError($"RezervasyonAlanlari[{i}].Yuzolcumu", "Yüzölçümü 0'dan büyük olmalıdır.");
-            if (alan.BirimTuruId == null || alan.BirimTuruId <= 0)
-                ModelState.AddModelError($"RezervasyonAlanlari[{i}].BirimTuruId", "Alan Türü zorunludur.");
+            if (alan.UnitTypeId == null || alan.UnitTypeId <= 0)
+                ModelState.AddModelError($"RezervasyonAlanlari[{i}].UnitTypeId", "Alan Türü zorunludur.");
         }
 
         if (!ModelState.IsValid)
@@ -197,7 +197,7 @@ public class TasinmazController : Controller
                             if (userHucre != null)
                             {
                                 freshHucre.BirimDeger = userHucre.BirimDeger;
-                                freshHucre.HesaplamaYontemi = userHucre.HesaplamaYontemi;
+                                freshHucre.CalculationMethod = userHucre.CalculationMethod;
                                 freshHucre.KdvOrani = userHucre.KdvOrani;
                             }
                         }
@@ -231,7 +231,7 @@ public class TasinmazController : Controller
         {
             b.AktifSozlesmesiVar = await _ctx.Sozlesmeler
                 .AnyAsync(s => s.BirimId == b.Id!.Value
-                               && s.Durum == SozlesmeDurumu.Aktif
+                               && s.Durum == LeaseStatus.Active
                                && s.BaslangicTarihi <= now
                                && s.BitisTarihi >= now);
         }
@@ -239,7 +239,7 @@ public class TasinmazController : Controller
         var rezIds = vm.RezervasyonAlanlari.Where(a => a.Id.HasValue).Select(a => a.Id!.Value).ToList();
         var aktifRezBirimIds = await _ctx.Rezervasyonlari
             .Where(r => rezIds.Contains(r.BirimId)
-                        && r.Durum == RezervasyonDurumu.Planlandi
+                        && r.Durum == ReservationStatus.Planned
                         && r.BitisTarihi >= now)
             .Select(r => r.BirimId)
             .Distinct()
@@ -250,7 +250,7 @@ public class TasinmazController : Controller
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Tasinmaz.Create)]
+    [Authorize(Policy = PermissionCatalog.Property.Create)]
     public async Task<IActionResult> Ekle(TasinmazEkleViewModel vm)
     {
         if (string.IsNullOrWhiteSpace(vm.Ad))
@@ -271,13 +271,13 @@ public class TasinmazController : Controller
             var tip = await _ctx.TasinmazTipleri.FirstOrDefaultAsync(k => k.Id == vm.TasinmazTipiId.Value);
             if (tip != null)
             {
-                var secimIzinli = vm.KiralamaSekli == KiralamaSekli.TekParca ? tip.TekParcaDestekli : tip.BirimBazliDestekli;
+                var secimIzinli = vm.RentalMode == RentalMode.WholeProperty ? tip.TekParcaDestekli : tip.BirimBazliDestekli;
                 if (!secimIzinli)
-                    ModelState.AddModelError("KiralamaSekli", "Seçilen taşınmaz tipi bu kiralama şekline izin vermiyor.");
+                    ModelState.AddModelError("RentalMode", "Seçilen taşınmaz tipi bu kiralama şekline izin vermiyor.");
             }
         }
 
-        if (vm.KiralamaSekli == KiralamaSekli.BirimBazli)
+        if (vm.RentalMode == RentalMode.UnitBased)
         {
             if (vm.Birimler == null || vm.Birimler.Count == 0)
             {
@@ -295,8 +295,8 @@ public class TasinmazController : Controller
                     if (birim.KatNo == null)
                         ModelState.AddModelError($"Birimler[{i}].KatNo", "Kat No zorunludur.");
 
-                    if (birim.BirimTuruId == null || birim.BirimTuruId <= 0)
-                        ModelState.AddModelError($"Birimler[{i}].BirimTuruId", "Birim Türü zorunludur.");
+                    if (birim.UnitTypeId == null || birim.UnitTypeId <= 0)
+                        ModelState.AddModelError($"Birimler[{i}].UnitTypeId", "Birim Türü zorunludur.");
 
                     if (string.IsNullOrWhiteSpace(birim.Ad) && !string.IsNullOrWhiteSpace(birim.BirimNo))
                         birim.Ad = "Birim " + birim.BirimNo;
@@ -332,8 +332,8 @@ public class TasinmazController : Controller
                 ModelState.AddModelError($"RezervasyonAlanlari[{i}].Ad", "Alan Adı zorunludur.");
             if (alan.Yuzolcumu <= 0)
                 ModelState.AddModelError($"RezervasyonAlanlari[{i}].Yuzolcumu", "Yüzölçümü 0'dan büyük olmalıdır.");
-            if (alan.BirimTuruId == null || alan.BirimTuruId <= 0)
-                ModelState.AddModelError($"RezervasyonAlanlari[{i}].BirimTuruId", "Alan Türü zorunludur.");
+            if (alan.UnitTypeId == null || alan.UnitTypeId <= 0)
+                ModelState.AddModelError($"RezervasyonAlanlari[{i}].UnitTypeId", "Alan Türü zorunludur.");
         }
 
         if (!ModelState.IsValid)
@@ -354,7 +354,7 @@ public class TasinmazController : Controller
                             if (userHucre != null)
                             {
                                 freshHucre.BirimDeger = userHucre.BirimDeger;
-                                freshHucre.HesaplamaYontemi = userHucre.HesaplamaYontemi;
+                                freshHucre.CalculationMethod = userHucre.CalculationMethod;
                                 freshHucre.KdvOrani = userHucre.KdvOrani;
                             }
                         }
@@ -373,7 +373,7 @@ public class TasinmazController : Controller
         {
             Ad = vm.Ad,
             TasinmazTipiId = vm.TasinmazTipiId,
-            KiralamaSekli = vm.KiralamaSekli,
+            RentalMode = vm.RentalMode,
             Il = vm.Il,
             Ilce = vm.Ilce,
             Mahalle = vm.Mahalle,

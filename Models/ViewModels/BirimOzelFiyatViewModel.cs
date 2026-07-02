@@ -8,7 +8,7 @@ public class BirimOzelFiyatViewModel
     public string TasinmazAd { get; set; } = string.Empty;
     public bool KiralanabilirMi { get; set; }
     public bool RezervasyonYapilabilirMi { get; set; }
-    public string? BirimTuruAd { get; set; }
+    public string? UnitTypeAd { get; set; }
 
     // Senaryo A — kira: KiraciKategori × BorcTipi matrisi
     public List<BirimTarifeKategoriSatiri> Satirlar { get; set; } = [];

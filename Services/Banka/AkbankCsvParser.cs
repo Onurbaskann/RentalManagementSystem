@@ -50,7 +50,7 @@ public class AkbankCsvParser : IBankaHareketiParser
                 GonderenIban    = Get(cols, idxGonderenIban) is { Length: > 0 } gi ? gi : null,
                 GonderenBilgisi = Get(cols, idxGonderenBilgi) is { Length: > 0 } gb ? gb : null,
                 BankaKodu       = BankaKodu,
-                EslesmeDurumu   = BankaEslesmeDurumu.Eslestirilmedi,
+                EslesmeDurumu   = BankMatchStatus.Unmatched,
             };
         }
     }

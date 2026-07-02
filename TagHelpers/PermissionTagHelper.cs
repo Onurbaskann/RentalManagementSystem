@@ -6,7 +6,7 @@ namespace KiraTakip.TagHelpers;
 
 /// <summary>
 /// Renders the element only when the current user has the specified permission claim.
-/// Usage: &lt;button asp-permission="@PermissionCatalog.Sozlesme.Create"&gt;Kaydet&lt;/button&gt;
+/// Usage: &lt;button asp-permission="@PermissionCatalog.Lease.Create"&gt;Kaydet&lt;/button&gt;
 /// </summary>
 [HtmlTargetElement("*", Attributes = "asp-permission")]
 public class PermissionTagHelper : TagHelper

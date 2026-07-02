@@ -34,7 +34,7 @@ public class BankaHareketiService : IBankaHareketiService, ITransactionalService
         return hareketler.Count;
     }
 
-    public Task<List<BankaHareketiListItemDto>> GetAllAsync(BankaEslesmeDurumu? durum = null)
+    public Task<List<BankaHareketiListItemDto>> GetAllAsync(BankMatchStatus? durum = null)
         => _repo.GetListAsync(durum);
 
     public Task<PagedResult<BankaHareketiListItemDto>> GetPagedAsync(TableQuery q)
@@ -54,10 +54,10 @@ public class BankaHareketiService : IBankaHareketiService, ITransactionalService
         {
             TahakkukOdemeId = odemeId,
             BankaHareketiId = bankaHareketiId,
-            EslesmeTipi = EslesmeTipi.Manuel,
+            MatchType = KiraTakip.Models.MatchType.Manual,
         };
 
-        hareketi.EslesmeDurumu = BankaEslesmeDurumu.ManuelEslesti;
+        hareketi.EslesmeDurumu = BankMatchStatus.ManuallyMatched;
         await _repo.AddEslesmeAsync(eslesme);
         await _uow.SaveChangesAsync();
     }
@@ -70,7 +70,7 @@ public class BankaHareketiService : IBankaHareketiService, ITransactionalService
         await _repo.RemoveEslesmeAsync(eslesme);
 
         if (!await _repo.KalanEslesmeVarMiAsync(eslesme.BankaHareketiId, eslesmeId))
-            eslesme.BankaHareketi.EslesmeDurumu = BankaEslesmeDurumu.Eslestirilmedi;
+            eslesme.BankaHareketi.EslesmeDurumu = BankMatchStatus.Unmatched;
 
         await _uow.SaveChangesAsync();
     }

@@ -29,7 +29,7 @@ public class UserRolService : IUserRolService
     public async Task AddRoleByNameAsync(string userId, string roleName, string? atayanUserId = null)
     {
         var rol = await _db.Roller
-            .FirstOrDefaultAsync(r => r.Ad == roleName && r.Scope == RolScope.Internal && r.IsActive && !r.IsDeleted);
+            .FirstOrDefaultAsync(r => r.Ad == roleName && r.Scope == RoleScope.Internal && r.IsActive && !r.IsDeleted);
         if (rol == null)
             throw new InvalidOperationException($"Rol bulunamadı: {roleName}");
 

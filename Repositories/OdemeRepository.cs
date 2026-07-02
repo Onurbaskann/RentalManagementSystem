@@ -30,8 +30,8 @@ public class OdemeRepository : BaseRepository<TahakkukOdeme>, IOdemeRepository
                 KiraSozlesmesiId = o.KiraSozlesmesiId,
                 OdemeTarihi = o.OdemeTarihi,
                 Tutar = o.Tutar,
-                OdemeKanali = o.OdemeKanali,
-                OdemeKaynakTipi = o.OdemeKaynakTipi,
+                PaymentChannel = o.PaymentChannel,
+                PaymentSourceType = o.PaymentSourceType,
                 Durum = o.Durum,
                 GirisTarihi = o.GirisTarihi,
                 Aciklama = o.Aciklama,
@@ -67,11 +67,11 @@ public class OdemeRepository : BaseRepository<TahakkukOdeme>, IOdemeRepository
 
         if (!string.IsNullOrWhiteSpace(q.Durum) && q.Durum != "tum")
         {
-            OdemeDurumu? d = q.Durum switch
+            PaymentStatus? d = q.Durum switch
             {
-                "onaybekliyor" => OdemeDurumu.OnayBekliyor,
-                "onaylandi" => OdemeDurumu.Onaylandi,
-                "reddedildi" => OdemeDurumu.Reddedildi,
+                "onaybekliyor" => PaymentStatus.PendingApproval,
+                "onaylandi" => PaymentStatus.Approved,
+                "reddedildi" => PaymentStatus.Rejected,
                 _ => null
             };
             if (d.HasValue) query = query.Where(o => o.Durum == d.Value);
@@ -88,8 +88,8 @@ public class OdemeRepository : BaseRepository<TahakkukOdeme>, IOdemeRepository
                 KiraSozlesmesiId = o.KiraSozlesmesiId,
                 OdemeTarihi = o.OdemeTarihi,
                 Tutar = o.Tutar,
-                OdemeKanali = o.OdemeKanali,
-                OdemeKaynakTipi = o.OdemeKaynakTipi,
+                PaymentChannel = o.PaymentChannel,
+                PaymentSourceType = o.PaymentSourceType,
                 Durum = o.Durum,
                 GirisTarihi = o.GirisTarihi,
                 Aciklama = o.Aciklama,
@@ -119,8 +119,8 @@ public class OdemeRepository : BaseRepository<TahakkukOdeme>, IOdemeRepository
                 KiraSozlesmesiId = o.KiraSozlesmesiId,
                 OdemeTarihi = o.OdemeTarihi,
                 Tutar = o.Tutar,
-                OdemeKanali = o.OdemeKanali,
-                OdemeKaynakTipi = o.OdemeKaynakTipi,
+                PaymentChannel = o.PaymentChannel,
+                PaymentSourceType = o.PaymentSourceType,
                 PosReferansNo = o.PosReferansNo,
                 Aciklama = o.Aciklama,
                 Durum = o.Durum,
@@ -135,7 +135,7 @@ public class OdemeRepository : BaseRepository<TahakkukOdeme>, IOdemeRepository
                 BankaEslesmeleri = o.BankaEslesmeleri.Select(e => new OdemeBankaEslesmeDto
                 {
                     Id = e.Id,
-                    EslesmeTipi = e.EslesmeTipi,
+                    MatchType = e.MatchType,
                     BankaHareketiTutar = e.BankaHareketi.IslemTutari,
                     BankaHareketiTarih = e.BankaHareketi.IslemTarihi,
                     BankaHareketiAciklama = e.BankaHareketi.Aciklama ?? string.Empty

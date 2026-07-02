@@ -77,8 +77,8 @@
                             else if (tutarClose && gunFark <= 15)  { uyumLabel = "Zayıf";  uyumCls = "badge-bos";    uyumTip = $"Tutar %2 toleransta • Tarih farkı {gunFark} gün"; }
                             else                                   { uyumLabel = "Düşük";  uyumCls = "badge-gecmis"; uyumTip = $"Tutar farkı %2'den fazla veya tarih uzak ({gunFark} gün)"; }
 
-                            string durumCls   = o.Durum == OdemeDurumu.Onaylandi ? "badge-kirali" : "badge-surek";
-                            string durumLabel = o.Durum == OdemeDurumu.Onaylandi ? "Onaylandı" : "Onay Bekliyor";
+                            string durumCls   = o.Durum == PaymentStatus.Approved ? "badge-kirali" : "badge-surek";
+                            string durumLabel = o.Durum == PaymentStatus.Approved ? "Onaylandı" : "Onay Bekliyor";
                             sira++;
                         <tr style="@(sira == 1 ? "background:#f0fdf4;" : "")">
                             <td style="color:var(--color-muted);font-size:12.5px;">#@o.Id</td>

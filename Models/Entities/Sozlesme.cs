@@ -1,12 +1,16 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace KiraTakip.Models.Entities;
 
 public class Sozlesme : BaseEntity
 {
     public int BirimId { get; set; }
     public int KiraciId { get; set; }
-    public SozlesmeDurumu Durum { get; set; } = SozlesmeDurumu.Aktif;
+    public LeaseStatus Durum { get; set; } = LeaseStatus.Active;
     public bool KdvUygulanacakMi { get; set; }
-    public VadeKuraliTipi VadeKuraliTipi { get; set; } = VadeKuraliTipi.SabitAyGunu;
+
+    [Column("VadeKuraliTipi")]
+    public DueDateRuleType DueDateRuleType { get; set; } = DueDateRuleType.FixedDayOfMonth;
     public int VadeGunu { get; set; } = 1;
     public DateTime BaslangicTarihi { get; set; }
     public DateTime BitisTarihi { get; set; }

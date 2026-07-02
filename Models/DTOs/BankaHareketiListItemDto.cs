@@ -9,5 +9,5 @@ public class BankaHareketiListItemDto
     public string? GonderenIban { get; set; }
     public string? GonderenBilgisi { get; set; }
     public string BankaKodu { get; set; } = string.Empty;
-    public BankaEslesmeDurumu EslesmeDurumu { get; set; }
+    public BankMatchStatus EslesmeDurumu { get; set; }
 }

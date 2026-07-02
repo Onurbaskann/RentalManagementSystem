@@ -6,7 +6,7 @@ public class BorcTipi : BaseEntity
     public string Kod { get; set; } = string.Empty;
     public bool Aktif { get; set; } = true;
     public int Sira { get; set; }
-    public BorcTipiDavranisi Davranis { get; set; } = BorcTipiDavranisi.AylikSabit;
+    public ChargeTypeBehavior Davranis { get; set; } = ChargeTypeBehavior.MonthlyFixed;
 
     /// <summary>
     /// Seed edilen sistem kodu — Kod/Aktif değişikliğine kapalı.

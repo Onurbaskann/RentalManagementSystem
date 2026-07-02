@@ -62,7 +62,7 @@ public class ManuelBorcService : IManuelBorcService, ITransactionalService
             var sozlesme = await _sozlesmeRepo.GetByIdAsync(model.SozlesmeId.Value);
             if (sozlesme == null)
                 return (false, "Sözleşme bulunamadı.", 0);
-            if (sozlesme.Durum == SozlesmeDurumu.Feshedildi)
+            if (sozlesme.Durum == LeaseStatus.Terminated)
                 return (false, "Feshedilmiş sözleşme için manuel borç oluşturulamaz.", 0);
             if (sozlesme.KiraciId != model.KiraciId)
                 return (false, "Seçilen kiracı, sözleşmenin kiracısıyla eşleşmiyor.", 0);
@@ -86,14 +86,14 @@ public class ManuelBorcService : IManuelBorcService, ITransactionalService
         {
             BorcTipiId = borcTipi.Id,
             Aciklama = model.Aciklama,
-            HesaplamaYontemi = HesaplamaYontemi.Sabit,
+            CalculationMethod = CalculationMethod.Fixed,
             BirimDeger = model.Tutar,
             Carpan = 1m,
             Tutar = model.Tutar,
             KdvOrani = kdvOrani,
             KdvTutari = kdvTutari,
             ToplamTutar = toplamTutar,
-            KaynakTipi = KalemKaynakTipi.ManuelGiris
+            KaynakTipi = LineItemSourceType.ManualInput
         };
 
         var tahakkuk = new Tahakkuk
@@ -108,8 +108,8 @@ public class ManuelBorcService : IManuelBorcService, ITransactionalService
             KdvTutari = kdvTutari,
             ToplamTutar = toplamTutar,
             OdenenTutar = 0,
-            Durum = TahakkukDurumu.Bekleniyor,
-            KaynakTipi = TahakkukKaynakTipi.Manuel,
+            Durum = ChargeStatus.Pending,
+            KaynakTipi = ChargeSourceType.Manual,
             IptalNotu = model.Not,
             Kalemler = new List<TahakkukKalemi> { kalem }
         };
@@ -128,14 +128,14 @@ public class ManuelBorcService : IManuelBorcService, ITransactionalService
         if (tahakkuk == null)
             return (false, "Manuel borç kaydı bulunamadı.");
 
-        if (tahakkuk.Durum == TahakkukDurumu.IptalEdildi)
+        if (tahakkuk.Durum == ChargeStatus.Cancelled)
             return (false, "Bu kayıt zaten iptal edilmiş.");
 
-        var odemeVar = tahakkuk.Odemeler.Any(o => o.Durum == OdemeDurumu.Onaylandi);
+        var odemeVar = tahakkuk.Odemeler.Any(o => o.Durum == PaymentStatus.Approved);
         if (odemeVar)
             return (false, "Ödemesi alınmış manuel borç iptal edilemez.");
 
-        tahakkuk.Durum = TahakkukDurumu.IptalEdildi;
+        tahakkuk.Durum = ChargeStatus.Cancelled;
         tahakkuk.IptalNotu = string.IsNullOrEmpty(tahakkuk.IptalNotu)
             ? neden
             : $"{tahakkuk.IptalNotu} | İptal: {neden}";

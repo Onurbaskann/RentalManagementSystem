@@ -18,27 +18,27 @@ public class IstatistikService : IIstatistikService
         _rateResolver = rateResolver;
     }
 
-    public KiraDurumu GetBirimDurumu(Birim birim)
+    public OccupancyStatus GetBirimDurumu(Birim birim)
     {
         var aktif = birim.Sozlesmeler
             .Where(s =>
-                s.Durum == SozlesmeDurumu.Aktif &&
+                s.Durum == LeaseStatus.Active &&
                 s.BaslangicTarihi <= DateTime.Now &&
                 s.BitisTarihi >= DateTime.Now)
             .OrderByDescending(s => s.BitisTarihi)
             .FirstOrDefault();
 
-        if (aktif == null) return KiraDurumu.Bos;
+        if (aktif == null) return OccupancyStatus.Vacant;
 
         var kalanGun = (aktif.BitisTarihi - DateTime.Now).Days;
-        return kalanGun <= 30 ? KiraDurumu.SuresiDolmakUzere : KiraDurumu.Kirali;
+        return kalanGun <= 30 ? OccupancyStatus.ExpiringSoon : OccupancyStatus.Leased;
     }
 
     public Sozlesme? GetAktifSozlesme(Birim birim)
     {
         return birim.Sozlesmeler
             .Where(s =>
-                s.Durum == SozlesmeDurumu.Aktif &&
+                s.Durum == LeaseStatus.Active &&
                 s.BaslangicTarihi <= DateTime.Now &&
                 s.BitisTarihi >= DateTime.Now)
             .OrderByDescending(s => s.BitisTarihi)
@@ -46,7 +46,7 @@ public class IstatistikService : IIstatistikService
     }
 
     public bool Aktif(Sozlesme s) =>
-        s.Durum == SozlesmeDurumu.Aktif &&
+        s.Durum == LeaseStatus.Active &&
         s.BaslangicTarihi <= DateTime.Now &&
         s.BitisTarihi >= DateTime.Now;
 
@@ -54,7 +54,7 @@ public class IstatistikService : IIstatistikService
     {
         var yuzolcumu = s.Birim?.Yuzolcumu ?? 0m;
         var tumBorcTipleri = await _tahakkukRepo.GetAktifUretimBorcTipleriAsync();
-        var borcTipleri = tumBorcTipleri.Where(b => b.Davranis == BorcTipiDavranisi.AylikSabit).ToList();
+        var borcTipleri = tumBorcTipleri.Where(b => b.Davranis == ChargeTypeBehavior.MonthlyFixed).ToList();
 
         decimal toplam = 0m;
         var donem = DateTime.Today;
@@ -62,7 +62,7 @@ public class IstatistikService : IIstatistikService
         {
             var snap = await _rateResolver.ResolveAsync(s.Id, s.KiraciId, s.BirimId, bt.Id, donem);
             if (snap == null) continue;
-            toplam += snap.HesaplamaYontemi == HesaplamaYontemi.M2
+            toplam += snap.CalculationMethod == CalculationMethod.M2
                 ? snap.BirimDeger * yuzolcumu
                 : snap.BirimDeger;
         }

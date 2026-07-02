@@ -28,7 +28,7 @@ public class BankaHareketiController : Controller
         _provider = provider;
     }
 
-    [Authorize(Policy = PermissionCatalog.Odeme.Module)]
+    [Authorize(Policy = PermissionCatalog.Payment.Module)]
     public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
         var paged = await _bankaService.GetPagedAsync(query);
@@ -38,14 +38,14 @@ public class BankaHareketiController : Controller
     }
 
     [HttpGet]
-    [Authorize(Policy = PermissionCatalog.Odeme.ImportBankStatement)]
+    [Authorize(Policy = PermissionCatalog.Payment.ImportBankStatement)]
     public IActionResult Import()
     {
         return View(new BankaImportViewModel());
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Odeme.ImportBankStatement)]
+    [Authorize(Policy = PermissionCatalog.Payment.ImportBankStatement)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Import(BankaImportViewModel vm)
     {
@@ -73,7 +73,7 @@ public class BankaHareketiController : Controller
     }
 
     [HttpGet]
-    [Authorize(Policy = PermissionCatalog.Odeme.MatchBankTransaction)]
+    [Authorize(Policy = PermissionCatalog.Payment.MatchBankTransaction)]
     public async Task<IActionResult> EslestirSec(int id)
     {
         var hareketi = await _bankaService.GetByIdAsync(id);
@@ -86,7 +86,7 @@ public class BankaHareketiController : Controller
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Odeme.MatchBankTransaction)]
+    [Authorize(Policy = PermissionCatalog.Payment.MatchBankTransaction)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Eslestir(EslesmeViewModel vm)
     {
@@ -96,7 +96,7 @@ public class BankaHareketiController : Controller
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Odeme.MatchBankTransaction)]
+    [Authorize(Policy = PermissionCatalog.Payment.MatchBankTransaction)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EslesmeCoz(int eslesmeId)
     {

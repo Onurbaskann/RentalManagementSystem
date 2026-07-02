@@ -21,7 +21,7 @@
     </div>
 
     <div x-data="manuelBorcForm()">
-    <form asp-action="Ekle" method="post" asp-form-write-permission="@PermissionCatalog.ManuelBorc.Create">
+    <form asp-action="Ekle" method="post" asp-form-write-permission="@PermissionCatalog.ManualCharge.Create">
         @Html.AntiForgeryToken()
 
         <div asp-validation-summary="ModelOnly" class="form-error bg-red-50 border border-red-200 rounded-lg p-3 mb-5"></div>
@@ -178,7 +178,7 @@
 
         <div class="flex justify-end gap-3 mt-6">
             <a href="/ManuelBorc" class="btn btn-secondary px-6">İptal</a>
-            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.ManuelBorc.Create">Manuel Borç Oluştur</button>
+            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.ManualCharge.Create">Manuel Borç Oluştur</button>
         </div>
     </form>
 </div>

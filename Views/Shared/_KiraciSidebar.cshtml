@@ -21,9 +21,9 @@
         }
     }
 
-    if (User.HasPermission(PermissionCatalog.KiraciPortal.System.Kullanici.Invite))
+    if (User.HasPermission(PermissionCatalog.TenantPortal.System.User.Invite))
         userRole = "Firma Yetkilisi";
-    else if (User.HasPermission(PermissionCatalog.KiraciPortal.Odeme.Module))
+    else if (User.HasPermission(PermissionCatalog.TenantPortal.Payment.Module))
         userRole = "Finans Yetkilisi";
 }
 
@@ -48,7 +48,7 @@
             Ana Sayfa
         </a>
 
-        @if (User.HasPermission(PermissionCatalog.KiraciPortal.Sozlesme.Module))
+        @if (User.HasPermission(PermissionCatalog.TenantPortal.Lease.Module))
         {
             <a asp-controller="KiraciSozlesme" asp-action="Index"
                class="nav-item @(currentController == "KiraciSozlesme" ? "nav-item-active" : "")">
@@ -57,7 +57,7 @@
             </a>
         }
 
-        @if (User.HasPermission(PermissionCatalog.KiraciPortal.Borc.Module))
+        @if (User.HasPermission(PermissionCatalog.TenantPortal.Charge.Module))
         {
             <a asp-controller="KiraciTahakkuk" asp-action="Index"
                class="nav-item @(currentController == "KiraciTahakkuk" ? "nav-item-active" : "")">
@@ -66,7 +66,7 @@
             </a>
         }
 
-        @if (User.HasPermission(PermissionCatalog.KiraciPortal.Rezervasyon.Module))
+        @if (User.HasPermission(PermissionCatalog.TenantPortal.Reservation.Module))
         {
             <div class="nav-separator"></div>
             <a asp-controller="KiraciRezervasyonum" asp-action="Index"
@@ -83,12 +83,12 @@
             Firma Profili
         </a>
 
-        @if (User.HasPermission(PermissionCatalog.KiraciPortal.System.Kullanici.Module)
-          || User.HasPermission(PermissionCatalog.KiraciPortal.System.Rol.Module))
+        @if (User.HasPermission(PermissionCatalog.TenantPortal.System.User.Module)
+          || User.HasPermission(PermissionCatalog.TenantPortal.System.Role.Module))
         {
             <div class="nav-separator"></div>
             <div class="nav-group-label">Yönetim</div>
-            @if (User.HasPermission(PermissionCatalog.KiraciPortal.System.Kullanici.Module))
+            @if (User.HasPermission(PermissionCatalog.TenantPortal.System.User.Module))
             {
                 <a asp-controller="KiraciKullanici" asp-action="Index"
                    class="nav-item @(currentController == "KiraciKullanici" ? "nav-item-active" : "")">
@@ -96,7 +96,7 @@
                     Kullanıcılar
                 </a>
             }
-            @if (User.HasPermission(PermissionCatalog.KiraciPortal.System.Rol.Module))
+            @if (User.HasPermission(PermissionCatalog.TenantPortal.System.Role.Module))
             {
                 <a asp-controller="KiraciRol" asp-action="Index"
                    class="nav-item @(currentController == "KiraciRol" ? "nav-item-active" : "")">

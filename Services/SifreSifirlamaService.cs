@@ -53,7 +53,7 @@ public class SifreSifirlamaService : ISifreSifirlamaService
         var rateLimitCutoff = DateTime.UtcNow.Subtract(RateLimitWindow);
         var recentCount = await _db.SifreSifirlamaTalepleri
             .CountAsync(t => t.UserId == user.Id
-                          && t.Durum == SifreSifirlamaDurum.Beklemede
+                          && t.Durum == PasswordResetStatus.Pending
                           && t.CreatedAt >= rateLimitCutoff, ct);
 
         if (recentCount >= RateLimitMaxRequests)
@@ -67,7 +67,7 @@ public class SifreSifirlamaService : ISifreSifirlamaService
             UserId = user.Id,
             TalepEdenIp = ipAddress,
             ExpiresAt = DateTime.UtcNow.Add(Ttl),
-            Durum = SifreSifirlamaDurum.Beklemede,
+            Durum = PasswordResetStatus.Pending,
         };
 
         _db.SifreSifirlamaTalepleri.Add(talep);
@@ -93,15 +93,15 @@ public class SifreSifirlamaService : ISifreSifirlamaService
         if (talep is null)
             return (false, "Şifre sıfırlama linki geçersiz.", null);
 
-        if (talep.Durum == SifreSifirlamaDurum.Kullanildi)
+        if (talep.Durum == PasswordResetStatus.Used)
             return (false, "Bu link daha önce kullanılmış.", null);
 
-        if (talep.Durum == SifreSifirlamaDurum.IptalEdildi)
+        if (talep.Durum == PasswordResetStatus.Cancelled)
             return (false, "Bu link iptal edilmiş.", null);
 
         if (talep.ExpiresAt < DateTime.UtcNow)
         {
-            talep.Durum = SifreSifirlamaDurum.SuresiDolmus;
+            talep.Durum = PasswordResetStatus.Expired;
             await _db.SaveChangesAsync(ct);
             return (false, "Şifre sıfırlama linkinin süresi dolmuş. Yeni talep oluşturun.", null);
         }
@@ -121,7 +121,7 @@ public class SifreSifirlamaService : ISifreSifirlamaService
         var result = await _userManager.ResetPasswordAsync(user, identityToken, yeniSifre);
         if (!result.Succeeded) return false;
 
-        talep.Durum = SifreSifirlamaDurum.Kullanildi;
+        talep.Durum = PasswordResetStatus.Used;
         talep.KullanmaTarihi = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
 

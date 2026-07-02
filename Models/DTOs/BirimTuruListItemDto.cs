@@ -1,6 +1,6 @@
 namespace KiraTakip.Models.Dtos;
 
-public class BirimTuruListItemDto
+public class UnitTypeListItemDto
 {
     public int Id { get; set; }
     public string Ad { get; set; } = string.Empty;

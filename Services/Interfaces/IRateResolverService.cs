@@ -4,10 +4,10 @@ namespace KiraTakip.Services.Interfaces;
 
 public class RateSnapshot
 {
-    public HesaplamaYontemi HesaplamaYontemi { get; set; }
+    public CalculationMethod CalculationMethod { get; set; }
     public decimal BirimDeger { get; set; }
     public decimal KdvOrani { get; set; }
-    public KalemKaynakTipi KaynakTipi { get; set; }
+    public LineItemSourceType KaynakTipi { get; set; }
 }
 
 public interface IRateResolverService

@@ -4,7 +4,7 @@
 @inject IIstatistikService Istatistik
 @{
     ViewData["Title"] = "Kiracılar";
-    bool canEdit = User.HasPermission(PermissionCatalog.Kiraci.Create) || User.HasPermission(PermissionCatalog.Kiraci.Edit);
+    bool canEdit = User.HasPermission(PermissionCatalog.Tenant.Create) || User.HasPermission(PermissionCatalog.Tenant.Edit);
 }
 
 <div class="page-header flex items-center justify-between">

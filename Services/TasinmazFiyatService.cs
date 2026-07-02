@@ -44,7 +44,7 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
                 BorcTipiId = b.Id,
                 BorcTipiAd = b.Ad,
                 BorcTipiKod = b.Kod,
-                BorcTipiDavranisi = b.Davranis
+                ChargeTypeBehavior = b.Davranis
             }).ToList()
         };
 
@@ -69,7 +69,7 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
                         KiraciKategoriId = kk.Id,
                         BorcTipiId = bt.Id,
                         BirimDeger = fiyat.BirimDeger,
-                        HesaplamaYontemi = fiyat.HesaplamaYontemi,
+                        CalculationMethod = fiyat.CalculationMethod,
                         KdvOrani = fiyat.KdvOrani,
                         RateVarMi = true
                     });
@@ -83,7 +83,7 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
                         KiraciKategoriId = kk.Id,
                         BorcTipiId = bt.Id,
                         BirimDeger = null,
-                        HesaplamaYontemi = (bt.Kod == BorcTipiConsts.Kira) ? HesaplamaYontemi.M2 : HesaplamaYontemi.Sabit,
+                        CalculationMethod = (bt.Kod == BorcTipiConsts.Kira) ? CalculationMethod.M2 : CalculationMethod.Fixed,
                         KdvOrani = null,
                         RateVarMi = false
                     });
@@ -116,7 +116,7 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
                         if (hucre.BirimDeger.HasValue)
                         {
                             entity.BirimDeger = hucre.BirimDeger.Value;
-                            entity.HesaplamaYontemi = hucre.HesaplamaYontemi;
+                            entity.CalculationMethod = hucre.CalculationMethod;
                             entity.KdvOrani = hucre.KdvOrani ?? 0m;
                         }
                         else
@@ -135,7 +135,7 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
                             KiraciKategoriId = hucre.KiraciKategoriId,
                             BorcTipiId = hucre.BorcTipiId,
                             BirimDeger = hucre.BirimDeger.Value,
-                            HesaplamaYontemi = hucre.HesaplamaYontemi,
+                            CalculationMethod = hucre.CalculationMethod,
                             KdvOrani = hucre.KdvOrani ?? 0m
                         };
                         await _tarifeRepo.AddAsync(newEntity);

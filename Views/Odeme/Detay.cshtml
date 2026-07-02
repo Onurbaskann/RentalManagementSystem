@@ -3,33 +3,33 @@
 @using KiraTakip.Models.Entities
 @{
     ViewData["Title"] = $"Ödeme #{Model.Id}";
-    bool canApprove    = User.HasPermission(PermissionCatalog.Odeme.Approve);
-    bool canReject     = User.HasPermission(PermissionCatalog.Odeme.Reject);
-    bool canUpload     = User.HasPermission(PermissionCatalog.Odeme.UploadDekont);
-    bool canMatch      = User.HasPermission(PermissionCatalog.Odeme.MatchBankTransaction);
-    bool bekliyor      = Model.Durum == OdemeDurumu.OnayBekliyor;
+    bool canApprove    = User.HasPermission(PermissionCatalog.Payment.Approve);
+    bool canReject     = User.HasPermission(PermissionCatalog.Payment.Reject);
+    bool canUpload     = User.HasPermission(PermissionCatalog.Payment.UploadReceipt);
+    bool canMatch      = User.HasPermission(PermissionCatalog.Payment.MatchBankTransaction);
+    bool bekliyor      = Model.Durum == PaymentStatus.PendingApproval;
     var belgeler        = (ViewBag.Belgeler    as List<Belge>)    ?? [];
     var belgeTurleri    = (ViewBag.BelgeTurleri as List<BelgeTuru>) ?? [];
 
     string durumCls = Model.Durum switch {
-        OdemeDurumu.Onaylandi  => "badge-kirali",
-        OdemeDurumu.Reddedildi => "badge-gecmis",
+        PaymentStatus.Approved  => "badge-kirali",
+        PaymentStatus.Rejected => "badge-gecmis",
         _                      => "badge-surek"
     };
     string durumLabel = Model.Durum switch {
-        OdemeDurumu.Onaylandi  => "Onaylandı",
-        OdemeDurumu.Reddedildi => "Reddedildi",
+        PaymentStatus.Approved  => "Onaylandı",
+        PaymentStatus.Rejected => "Reddedildi",
         _                      => "Onay Bekliyor"
     };
     string durumTip = Model.Durum switch {
-        OdemeDurumu.Onaylandi  => "Ödeme onaylandı; tahakkuk kapandı.",
-        OdemeDurumu.Reddedildi => "Ödeme reddedildi; tahakkuk açık kalır.",
+        PaymentStatus.Approved  => "Ödeme onaylandı; tahakkuk kapandı.",
+        PaymentStatus.Rejected => "Ödeme reddedildi; tahakkuk açık kalır.",
         _                      => "Onay yetkisi olan kullanıcı bekleniyor."
     };
-    string kanalLabel = Model.OdemeKanali switch {
-        OdemeKanali.Havale => "Havale",
-        OdemeKanali.EFT    => "EFT",
-        OdemeKanali.Nakit  => "Nakit",
+    string kanalLabel = Model.PaymentChannel switch {
+        PaymentChannel.BankTransfer => "Havale",
+        PaymentChannel.Eft    => "EFT",
+        PaymentChannel.Cash  => "Nakit",
         _                  => "Diğer"
     };
 }
@@ -45,8 +45,8 @@
     </div>
     @{
         string bgCls = Model.Durum switch {
-            OdemeDurumu.Onaylandi  => "bg-emerald-50 text-emerald-700 border-emerald-100",
-            OdemeDurumu.Reddedildi => "bg-red-50 text-red-700 border-red-100",
+            PaymentStatus.Approved  => "bg-emerald-50 text-emerald-700 border-emerald-100",
+            PaymentStatus.Rejected => "bg-red-50 text-red-700 border-red-100",
             _                      => "bg-amber-50 text-amber-700 border-amber-100"
         };
     }
@@ -91,7 +91,7 @@
                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Giriş Yapan</div>
                     <div class="text-[14px] font-medium text-slate-600">@(Model.GirenUserGosterimAdi ?? "—")</div>
                 </div>
-                @if (Model.Durum == OdemeDurumu.Onaylandi)
+                @if (Model.Durum == PaymentStatus.Approved)
                 {
                     <div>
                         <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Onaylayan</div>
@@ -106,7 +106,7 @@
                     <div class="text-[13.5px] text-slate-600 leading-relaxed bg-slate-50/50 p-3 rounded-lg border border-slate-100 italic">"@Model.Aciklama"</div>
                 </div>
             }
-            @if (Model.Durum == OdemeDurumu.Reddedildi && !string.IsNullOrEmpty(Model.RedNedeni))
+            @if (Model.Durum == PaymentStatus.Rejected && !string.IsNullOrEmpty(Model.RedNedeni))
             {
                 <div class="mt-5 p-4 bg-red-50 rounded-xl border border-red-100">
                     <div class="text-[10px] text-red-400 font-bold mb-2 uppercase tracking-widest flex items-center gap-1.5">
@@ -195,7 +195,7 @@
                             </div>
                             <div class="text-slate-500 text-[11.5px] leading-relaxed truncate mb-2" title="@e.BankaHareketiAciklama">@e.BankaHareketiAciklama</div>
                             <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-200/60">
-                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">@(e.EslesmeTipi == EslesmeTipi.Manuel ? "Manuel Eşleşme" : "Otomatik")</span>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">@(e.MatchType == MatchType.Manual ? "Manuel Eşleşme" : "Otomatik")</span>
                                 @if (canMatch)
                                 {
                                     <form method="post" action="/Odeme/BankaEslesmeKaldir" data-confirm="Banka eşleşmesi kaldırılsın mı?" class="shrink-0">

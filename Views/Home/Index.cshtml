@@ -14,10 +14,10 @@
         : Model.AylikGelirDelta < 0 ? $"↓ %{Math.Abs(Model.AylikGelirDelta):F1}"
         : "=";
 
-    bool hasTasinmaz = User.HasModuleAccess("Internal.Tasinmaz");
-    bool hasSozlesme = User.HasModuleAccess("Internal.Sozlesme");
-    bool hasOdeme    = User.HasModuleAccess("Internal.Odeme");
-    bool hasTahakkuk = User.HasModuleAccess("Internal.Tahakkuk");
+    bool hasTasinmaz = User.HasModuleAccess("Internal.Property");
+    bool hasSozlesme = User.HasModuleAccess("Internal.Lease");
+    bool hasOdeme    = User.HasModuleAccess("Internal.Payment");
+    bool hasTahakkuk = User.HasModuleAccess("Internal.Charge");
 
     var nameParts = (Model.KullaniciAd ?? "").Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
     var trTR = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
@@ -514,7 +514,7 @@
 <!-- ─── §3.8 HIZLI EYLEMLER ─── -->
 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
 
-    @if (User.HasPermission(PermissionCatalog.Sozlesme.Create))
+    @if (User.HasPermission(PermissionCatalog.Lease.Create))
     {
         <a href="/Sozlesme/Ekle"
            class="block p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
@@ -526,7 +526,7 @@
         </a>
     }
 
-    @if (User.HasPermission(PermissionCatalog.Rezervasyon.Create))
+    @if (User.HasPermission(PermissionCatalog.Reservation.Create))
     {
         <a href="/Rezervasyon/Ekle"
            class="block p-5 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
@@ -538,7 +538,7 @@
         </a>
     }
 
-    @if (User.HasPermission(PermissionCatalog.ManuelBorc.Create))
+    @if (User.HasPermission(PermissionCatalog.ManualCharge.Create))
     {
         <a href="/ManuelBorc/Ekle"
            class="block p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
@@ -550,7 +550,7 @@
         </a>
     }
 
-    @if (User.HasPermission(PermissionCatalog.Odeme.ImportBankStatement))
+    @if (User.HasPermission(PermissionCatalog.Payment.ImportBankStatement))
     {
         <a href="/BankaHareketi"
            class="block p-5 rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">

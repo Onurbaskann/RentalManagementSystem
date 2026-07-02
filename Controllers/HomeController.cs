@@ -49,7 +49,7 @@ public class HomeController : Controller
     public async Task<IActionResult> Index()
     {
         var user = await _userManager.GetUserAsync(User);
-        if (user?.UserType == UserType.Kiraci)
+        if (user?.UserType == UserType.Tenant)
             return RedirectToAction("Index", "KiraciPanel");
 
         var now = DateTime.Now;
@@ -115,7 +115,7 @@ public class HomeController : Controller
                 Yuzolcumu = b.Yuzolcumu
             }).ToList();
 
-        if (User.HasModuleAccess("Internal.Odeme"))
+        if (User.HasModuleAccess("Internal.Payment"))
         {
             vm.HasOdemeAccess = true;
             await _tahakkukService.GecikmeleriGuncelleAsync();
@@ -124,31 +124,31 @@ public class HomeController : Controller
 
             vm.BuAyBeklenenTahsilat = buAyTahakkuklar.Sum(t => t.ToplamTutar);
             vm.BuAyTahsilEdilen = buAyTahakkuklar.Sum(t => t.OdenenTutar);
-            vm.GecikmisTahakkukAdet = tahakkuklar.Count(t => t.Durum == TahakkukDurumu.Gecikti);
-            vm.GecikmisTutarToplam = tahakkuklar.Where(t => t.Durum == TahakkukDurumu.Gecikti).Sum(t => t.ToplamTutar - t.OdenenTutar);
+            vm.GecikmisTahakkukAdet = tahakkuklar.Count(t => t.Durum == ChargeStatus.Overdue);
+            vm.GecikmisTutarToplam = tahakkuklar.Where(t => t.Durum == ChargeStatus.Overdue).Sum(t => t.ToplamTutar - t.OdenenTutar);
 
             var odemeler = await _odemeService.GetAllAsync(tasinmazIds: tasinmazIds);
-            vm.OnayBekleyenOdemeAdet = odemeler.Count(o => o.Durum == OdemeDurumu.OnayBekliyor);
+            vm.OnayBekleyenOdemeAdet = odemeler.Count(o => o.Durum == PaymentStatus.PendingApproval);
 
-            var eslesmemisler = await _bankaHareketiService.GetAllAsync(BankaEslesmeDurumu.Eslestirilmedi);
+            var eslesmemisler = await _bankaHareketiService.GetAllAsync(BankMatchStatus.Unmatched);
             vm.EslesmemisHareketAdet = eslesmemisler.Count;
 
             vm.BuAyManuelBorcToplami = buAyTahakkuklar
-                .Where(t => t.KaynakTipi == TahakkukKaynakTipi.Manuel && t.Durum != TahakkukDurumu.IptalEdildi)
+                .Where(t => t.KaynakTipi == ChargeSourceType.Manual && t.Durum != ChargeStatus.Cancelled)
                 .Sum(t => t.ToplamTutar);
             vm.BuAyRezervasyonGeliri = buAyTahakkuklar
-                .Where(t => t.KaynakTipi == TahakkukKaynakTipi.Rezervasyon && t.Durum != TahakkukDurumu.IptalEdildi)
+                .Where(t => t.KaynakTipi == ChargeSourceType.Reservation && t.Durum != ChargeStatus.Cancelled)
                 .Sum(t => t.ToplamTutar);
 
             var rezervasyonlar = await _rezervasyonService.GetAllAsync(tasinmazIds);
             vm.TahakkukaAktarilmamisRezervasyonAdet = rezervasyonlar
-                .Count(r => r.Durum == RezervasyonDurumu.Planlandi && r.ToplamTutar > 0 && r.TahakkukId == null);
+                .Count(r => r.Durum == ReservationStatus.Planned && r.ToplamTutar > 0 && r.TahakkukId == null);
 
             // --- Redesign metrikleri ---
             // Son 6 ay nakit akışı + tahsilat oranı sparkline
             var sonAltiAyBaslangic = new DateTime(today.Year, today.Month, 1).AddMonths(-5);
             var aylikGroup = tahakkuklar
-                .Where(t => t.DonemBaslangic >= sonAltiAyBaslangic && t.Durum != TahakkukDurumu.IptalEdildi)
+                .Where(t => t.DonemBaslangic >= sonAltiAyBaslangic && t.Durum != ChargeStatus.Cancelled)
                 .GroupBy(t => new { t.DonemBaslangic.Year, t.DonemBaslangic.Month })
                 .ToDictionary(
                     g => (g.Key.Year, g.Key.Month),
@@ -171,7 +171,7 @@ public class HomeController : Controller
             // Tahsilat oranı — son 30 gün vade dolan tahakkuklar
             var otuzGunOnce = today.AddDays(-30);
             var son30 = tahakkuklar
-                .Where(t => t.VadeTarihi >= otuzGunOnce && t.VadeTarihi <= today && t.Durum != TahakkukDurumu.IptalEdildi)
+                .Where(t => t.VadeTarihi >= otuzGunOnce && t.VadeTarihi <= today && t.Durum != ChargeStatus.Cancelled)
                 .ToList();
             var bek30 = son30.Sum(t => t.ToplamTutar);
             var od30 = son30.Sum(t => t.OdenenTutar);
@@ -181,7 +181,7 @@ public class HomeController : Controller
             var gecenAyStart = new DateTime(today.Year, today.Month, 1).AddMonths(-1);
             var gecenAyEnd = gecenAyStart.AddMonths(1).AddDays(-1);
             vm.AylikGelirGecenAy = tahakkuklar
-                .Where(t => t.DonemBaslangic >= gecenAyStart && t.DonemBaslangic <= gecenAyEnd && t.Durum != TahakkukDurumu.IptalEdildi)
+                .Where(t => t.DonemBaslangic >= gecenAyStart && t.DonemBaslangic <= gecenAyEnd && t.Durum != ChargeStatus.Cancelled)
                 .Sum(t => t.ToplamTutar);
             vm.AylikGelirDelta = vm.AylikGelirGecenAy > 0
                 ? Math.Round((vm.BuAyBeklenenTahsilat - vm.AylikGelirGecenAy) / vm.AylikGelirGecenAy * 100m, 1)
@@ -189,9 +189,9 @@ public class HomeController : Controller
 
             // Bugün vade dolan
             var bugun = tahakkuklar.Where(t => t.VadeTarihi.Date == today &&
-                (t.Durum == TahakkukDurumu.Bekleniyor ||
-                 t.Durum == TahakkukDurumu.KismenOdendi ||
-                 t.Durum == TahakkukDurumu.Gecikti)).ToList();
+                (t.Durum == ChargeStatus.Pending ||
+                 t.Durum == ChargeStatus.PartiallyPaid ||
+                 t.Durum == ChargeStatus.Overdue)).ToList();
             vm.BugunVadeDolanAdet = bugun.Count;
             vm.BugunVadeDolanTutar = bugun.Sum(t => t.ToplamTutar - t.OdenenTutar);
 

@@ -24,7 +24,7 @@ public class TahakkukController : Controller
         _provider = provider;
     }
 
-    [Authorize(Policy = PermissionCatalog.Odeme.Module)]
+    [Authorize(Policy = PermissionCatalog.Payment.Module)]
     public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
         await _tahakkukService.GecikmeleriGuncelleAsync();
@@ -75,7 +75,7 @@ public class TahakkukController : Controller
 
         if (string.IsNullOrWhiteSpace(query.Durum) || query.Durum == "tum")
         {
-            var iptalQuery = _ctx.Tahakkuklar.Where(t => t.Durum == TahakkukDurumu.IptalEdildi);
+            var iptalQuery = _ctx.Tahakkuklar.Where(t => t.Durum == ChargeStatus.Cancelled);
             if (tasinmazIds != null)
                 iptalQuery = iptalQuery.Where(t => tasinmazIds.Contains(t.Birim.TasinmazId));
             ViewBag.IptalEdildiSayisi = await iptalQuery.CountAsync();
@@ -90,7 +90,7 @@ public class TahakkukController : Controller
         return View(pagedResult);
     }
 
-    [Authorize(Policy = PermissionCatalog.Odeme.Module)]
+    [Authorize(Policy = PermissionCatalog.Payment.Module)]
     public async Task<IActionResult> Detay(int id)
     {
         var tahakkuk = await _tahakkukService.GetDetayAsync(id);

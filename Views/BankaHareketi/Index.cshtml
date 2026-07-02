@@ -6,8 +6,8 @@
     ViewData["Title"] = "Banka Hareketleri";
     string durum = ViewBag.Durum ?? "tum";
     var q = (TableQuery)ViewBag.Query;
-    bool canImport = User.HasPermission(PermissionCatalog.Odeme.ImportBankStatement);
-    bool canMatch  = User.HasPermission(PermissionCatalog.Odeme.MatchBankTransaction);
+    bool canImport = User.HasPermission(PermissionCatalog.Payment.ImportBankStatement);
+    bool canMatch  = User.HasPermission(PermissionCatalog.Payment.MatchBankTransaction);
     var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/BankaHareketi", Extra = q.ToQueryDict() };
 }
 
@@ -87,13 +87,13 @@
                 @foreach (var b in Model.Items)
                 {
                     string eslesmeCls = b.EslesmeDurumu switch {
-                        BankaEslesmeDurumu.Eslesti        => "badge-kirali",
-                        BankaEslesmeDurumu.ManuelEslesti  => "badge-kirali",
+                        BankMatchStatus.Matched        => "badge-kirali",
+                        BankMatchStatus.ManuallyMatched  => "badge-kirali",
                         _                                 => "badge-bos"
                     };
                     string eslesmeLabel = b.EslesmeDurumu switch {
-                        BankaEslesmeDurumu.Eslesti        => "Eşleşti",
-                        BankaEslesmeDurumu.ManuelEslesti  => "Manuel",
+                        BankMatchStatus.Matched        => "Eşleşti",
+                        BankMatchStatus.ManuallyMatched  => "Manuel",
                         _                                 => "Bekliyor"
                     };
                     <tr>
@@ -106,7 +106,7 @@
                         @if (canMatch)
                         {
                             <td class="text-right">
-                                @if (b.EslesmeDurumu == BankaEslesmeDurumu.Eslestirilmedi)
+                                @if (b.EslesmeDurumu == BankMatchStatus.Unmatched)
                                 {
                                     <a href="/BankaHareketi/EslestirSec/@b.Id.ToHashId()" class="btn btn-sm btn-primary">Eşleştir</a>
                                 }

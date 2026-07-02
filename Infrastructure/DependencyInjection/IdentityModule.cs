@@ -59,7 +59,7 @@ namespace KiraTakip.Infrastructure.DependencyInjection
                 }
 
                 options.AddPolicy("KiraciKullanici", policy =>
-                    policy.RequireClaim(AppClaimTypes.UserType, ((int)UserType.Kiraci).ToString()));
+                    policy.RequireClaim(AppClaimTypes.UserType, ((int)UserType.Tenant).ToString()));
             });
 
             services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, PermissionClaimsTransformer>();

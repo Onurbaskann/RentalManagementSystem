@@ -37,7 +37,7 @@ public class OdemeController : Controller
         _provider = provider;
     }
 
-    [Authorize(Policy = PermissionCatalog.Odeme.Module)]
+    [Authorize(Policy = PermissionCatalog.Payment.Module)]
     public async Task<IActionResult> Index([FromQuery] TableQuery query, int? tahakkukId = null)
     {
         var paged = await _odemeService.GetPagedAsync(query, tahakkukId, _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
@@ -48,7 +48,7 @@ public class OdemeController : Controller
         return View(paged);
     }
 
-    [Authorize(Policy = PermissionCatalog.Odeme.Module)]
+    [Authorize(Policy = PermissionCatalog.Payment.Module)]
     public async Task<IActionResult> Detay(int id)
     {
         var odeme = await _odemeService.GetByIdAsync(id);
@@ -63,7 +63,7 @@ public class OdemeController : Controller
     }
 
     [HttpGet]
-    [Authorize(Policy = PermissionCatalog.Odeme.Create)]
+    [Authorize(Policy = PermissionCatalog.Payment.Create)]
     public async Task<IActionResult> Ekle(int tahakkukId)
     {
         var tahakkuk = await _tahakkukService.GetDetayAsync(tahakkukId);
@@ -80,7 +80,7 @@ public class OdemeController : Controller
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Odeme.Create)]
+    [Authorize(Policy = PermissionCatalog.Payment.Create)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Ekle(OdemeEkleViewModel vm)
     {
@@ -97,8 +97,8 @@ public class OdemeController : Controller
             KiraSozlesmesiId = vm.KiraSozlesmesiId,
             OdemeTarihi = vm.OdemeTarihi,
             Tutar = vm.Tutar,
-            OdemeKanali = vm.OdemeKanali,
-            OdemeKaynakTipi = OdemeKaynakTipi.Manuel,
+            PaymentChannel = vm.PaymentChannel,
+            PaymentSourceType = PaymentSourceType.Manual,
             Aciklama = vm.Aciklama,
             GirenUserId = userId
         };
@@ -109,7 +109,7 @@ public class OdemeController : Controller
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Odeme.Approve)]
+    [Authorize(Policy = PermissionCatalog.Payment.Approve)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Onayla(int id)
     {
@@ -120,7 +120,7 @@ public class OdemeController : Controller
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Odeme.Reject)]
+    [Authorize(Policy = PermissionCatalog.Payment.Reject)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Reddet(OdemeRedViewModel vm)
     {
@@ -137,7 +137,7 @@ public class OdemeController : Controller
 
 
     [HttpGet]
-    [Authorize(Policy = PermissionCatalog.Odeme.MatchBankTransaction)]
+    [Authorize(Policy = PermissionCatalog.Payment.MatchBankTransaction)]
     public async Task<IActionResult> HareketSec(int id)
     {
         var odeme = await _odemeService.GetByIdAsync(id);
@@ -151,7 +151,7 @@ public class OdemeController : Controller
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Odeme.MatchBankTransaction)]
+    [Authorize(Policy = PermissionCatalog.Payment.MatchBankTransaction)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> BankaEslesmeKaldir(int eslesmeId, int odemeId)
     {

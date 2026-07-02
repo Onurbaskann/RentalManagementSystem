@@ -4,193 +4,193 @@ public record PermissionModuleInfo(string Path, string DisplayName, IReadOnlyLis
 
 public static class PermissionCatalog
 {
-    // ─── İç Ekip Operasyonel (Internal.*) ────────────────────────────────────
+    // ─── Internal Operations (Internal.*) ────────────────────────────────────
 
-    public static class Tasinmaz
+    public static class Property
     {
-        public const string Module = "Internal.Tasinmaz";
-        public const string Create = "Internal.Tasinmaz.Create";
-        public const string Edit   = "Internal.Tasinmaz.Edit";
+        public const string Module = "Internal.Property";
+        public const string Create = "Internal.Property.Create";
+        public const string Edit   = "Internal.Property.Edit";
         public static readonly IReadOnlyList<string> Actions = [Create, Edit];
     }
 
-    public static class Birim
+    public static class Unit
     {
-        public const string Module      = "Internal.Birim";
-        public const string Create      = "Internal.Birim.Create";
-        public const string Edit        = "Internal.Birim.Edit";
-        public const string OverrideRate = "Internal.Birim.OverrideRate";
+        public const string Module      = "Internal.Unit";
+        public const string Create      = "Internal.Unit.Create";
+        public const string Edit        = "Internal.Unit.Edit";
+        public const string OverrideRate = "Internal.Unit.OverrideRate";
         public static readonly IReadOnlyList<string> Actions = [Create, Edit, OverrideRate];
     }
 
-    public static class Kiraci
+    public static class Tenant
     {
-        public const string Module = "Internal.Kiraci";
-        public const string Create = "Internal.Kiraci.Create";
-        public const string Edit   = "Internal.Kiraci.Edit";
+        public const string Module = "Internal.Tenant";
+        public const string Create = "Internal.Tenant.Create";
+        public const string Edit   = "Internal.Tenant.Edit";
         public static readonly IReadOnlyList<string> Actions = [Create, Edit];
     }
 
-    public static class Sozlesme
+    public static class Lease
     {
-        public const string Module       = "Internal.Sozlesme";
-        public const string Create       = "Internal.Sozlesme.Create";
-        public const string Edit         = "Internal.Sozlesme.Edit";
-        public const string Extend       = "Internal.Sozlesme.Extend";
-        public const string Terminate    = "Internal.Sozlesme.Terminate";
-        public const string OverrideRate = "Internal.Sozlesme.OverrideRate";
+        public const string Module       = "Internal.Lease";
+        public const string Create       = "Internal.Lease.Create";
+        public const string Edit         = "Internal.Lease.Edit";
+        public const string Extend       = "Internal.Lease.Extend";
+        public const string Terminate    = "Internal.Lease.Terminate";
+        public const string OverrideRate = "Internal.Lease.OverrideRate";
         public static readonly IReadOnlyList<string> Actions = [Create, Edit, Extend, Terminate, OverrideRate];
     }
 
-    public static class Odeme
+    public static class Payment
     {
-        public const string Module               = "Internal.Odeme";
-        public const string Create               = "Internal.Odeme.Create";
-        public const string UploadDekont         = "Internal.Odeme.UploadDekont";
-        public const string Approve              = "Internal.Odeme.Approve";
-        public const string Reject               = "Internal.Odeme.Reject";
-        public const string ImportBankStatement  = "Internal.Odeme.ImportBankStatement";
-        public const string MatchBankTransaction = "Internal.Odeme.MatchBankTransaction";
-        public static readonly IReadOnlyList<string> Actions = [Create, UploadDekont, Approve, Reject, ImportBankStatement, MatchBankTransaction];
+        public const string Module               = "Internal.Payment";
+        public const string Create               = "Internal.Payment.Create";
+        public const string UploadReceipt        = "Internal.Payment.UploadReceipt";
+        public const string Approve              = "Internal.Payment.Approve";
+        public const string Reject               = "Internal.Payment.Reject";
+        public const string ImportBankStatement  = "Internal.Payment.ImportBankStatement";
+        public const string MatchBankTransaction = "Internal.Payment.MatchBankTransaction";
+        public static readonly IReadOnlyList<string> Actions = [Create, UploadReceipt, Approve, Reject, ImportBankStatement, MatchBankTransaction];
     }
 
-    public static class BorcTipi
+    public static class ChargeType
     {
-        public const string Module = "Internal.BorcTipi";
-        public const string Create = "Internal.BorcTipi.Create";
-        public const string Edit   = "Internal.BorcTipi.Edit";
+        public const string Module = "Internal.ChargeType";
+        public const string Create = "Internal.ChargeType.Create";
+        public const string Edit   = "Internal.ChargeType.Edit";
         public static readonly IReadOnlyList<string> Actions = [Create, Edit];
     }
 
-    public static class Parametre
+    public static class Parameter
     {
-        public const string Module = "Internal.Parametre";
-        public const string Edit   = "Internal.Parametre.Edit";
+        public const string Module = "Internal.Parameter";
+        public const string Edit   = "Internal.Parameter.Edit";
         public static readonly IReadOnlyList<string> Actions = [Edit];
     }
 
-    public static class TasinmazTipi
+    public static class PropertyType
     {
-        public const string Module = "Internal.TasinmazTipi";
-        public const string Create = "Internal.TasinmazTipi.Create";
-        public const string Edit   = "Internal.TasinmazTipi.Edit";
+        public const string Module = "Internal.PropertyType";
+        public const string Create = "Internal.PropertyType.Create";
+        public const string Edit   = "Internal.PropertyType.Edit";
         public static readonly IReadOnlyList<string> Actions = [Create, Edit];
     }
 
-    public static class BirimTuru
+    public static class UnitType
     {
-        public const string Module = "Internal.BirimTuru";
-        public const string Create = "Internal.BirimTuru.Create";
-        public const string Edit   = "Internal.BirimTuru.Edit";
+        public const string Module = "Internal.UnitType";
+        public const string Create = "Internal.UnitType.Create";
+        public const string Edit   = "Internal.UnitType.Edit";
         public static readonly IReadOnlyList<string> Actions = [Create, Edit];
     }
 
-    public static class KiraciKategori
+    public static class TenantCategory
     {
-        public const string Module = "Internal.KiraciKategori";
-        public const string Create = "Internal.KiraciKategori.Create";
-        public const string Edit   = "Internal.KiraciKategori.Edit";
+        public const string Module = "Internal.TenantCategory";
+        public const string Create = "Internal.TenantCategory.Create";
+        public const string Edit   = "Internal.TenantCategory.Edit";
         public static readonly IReadOnlyList<string> Actions = [Create, Edit];
     }
 
-    public static class Sektor
+    public static class Sector
     {
-        public const string Module = "Internal.Sektor";
-        public const string Create = "Internal.Sektor.Create";
-        public const string Edit   = "Internal.Sektor.Edit";
+        public const string Module = "Internal.Sector";
+        public const string Create = "Internal.Sector.Create";
+        public const string Edit   = "Internal.Sector.Edit";
         public static readonly IReadOnlyList<string> Actions = [Create, Edit];
     }
 
-    public static class BelgeTuru
+    public static class DocumentType
     {
-        public const string Module = "Internal.BelgeTuru";
-        public const string Create = "Internal.BelgeTuru.Create";
-        public const string Edit   = "Internal.BelgeTuru.Edit";
-        public const string Delete = "Internal.BelgeTuru.Delete";
+        public const string Module = "Internal.DocumentType";
+        public const string Create = "Internal.DocumentType.Create";
+        public const string Edit   = "Internal.DocumentType.Edit";
+        public const string Delete = "Internal.DocumentType.Delete";
         public static readonly IReadOnlyList<string> Actions = [Create, Edit, Delete];
     }
 
-    public static class Tarife
+    public static class RateSchedule
     {
-        public const string Module = "Internal.Tarife";
-        public const string Create = "Internal.Tarife.Create";
-        public const string Edit   = "Internal.Tarife.Edit";
+        public const string Module = "Internal.RateSchedule";
+        public const string Create = "Internal.RateSchedule.Create";
+        public const string Edit   = "Internal.RateSchedule.Edit";
         public static readonly IReadOnlyList<string> Actions = [Create, Edit];
     }
 
-    public static class Tahakkuk
+    public static class Charge
     {
-        public const string Module     = "Internal.Tahakkuk";
-        public const string Regenerate = "Internal.Tahakkuk.Regenerate";
+        public const string Module     = "Internal.Charge";
+        public const string Regenerate = "Internal.Charge.Regenerate";
         public static readonly IReadOnlyList<string> Actions = [Regenerate];
     }
 
-    public static class ManuelBorc
+    public static class ManualCharge
     {
-        public const string Module = "Internal.ManuelBorc";
-        public const string Create = "Internal.ManuelBorc.Create";
-        public const string Cancel = "Internal.ManuelBorc.Cancel";
+        public const string Module = "Internal.ManualCharge";
+        public const string Create = "Internal.ManualCharge.Create";
+        public const string Cancel = "Internal.ManualCharge.Cancel";
         public static readonly IReadOnlyList<string> Actions = [Create, Cancel];
     }
 
-    public static class Rezervasyon
+    public static class Reservation
     {
-        public const string Module             = "Internal.Rezervasyon";
-        public const string Create             = "Internal.Rezervasyon.Create";
-        public const string Edit               = "Internal.Rezervasyon.Edit";
-        public const string Cancel             = "Internal.Rezervasyon.Cancel";
-        public const string TransferToTahakkuk = "Internal.Rezervasyon.TransferToTahakkuk";
-        public static readonly IReadOnlyList<string> Actions = [Create, Edit, Cancel, TransferToTahakkuk];
+        public const string Module             = "Internal.Reservation";
+        public const string Create             = "Internal.Reservation.Create";
+        public const string Edit               = "Internal.Reservation.Edit";
+        public const string Cancel             = "Internal.Reservation.Cancel";
+        public const string TransferToCharge = "Internal.Reservation.TransferToCharge";
+        public static readonly IReadOnlyList<string> Actions = [Create, Edit, Cancel, TransferToCharge];
     }
 
-    public static class TasinmazCarpan
+    public static class PropertyMultiplier
     {
-        public const string Module = "Internal.TasinmazCarpan";
-        public const string Edit   = "Internal.TasinmazCarpan.Edit";
+        public const string Module = "Internal.PropertyMultiplier";
+        public const string Edit   = "Internal.PropertyMultiplier.Edit";
         public static readonly IReadOnlyList<string> Actions = [Edit];
     }
 
-    public static class RezervasyonTarifeKural
+    public static class ReservationRateRule
     {
-        public const string Module = "Internal.RezervasyonTarifeKural";
-        public const string Create = "Internal.RezervasyonTarifeKural.Create";
-        public const string Edit   = "Internal.RezervasyonTarifeKural.Edit";
+        public const string Module = "Internal.ReservationRateRule";
+        public const string Create = "Internal.ReservationRateRule.Create";
+        public const string Edit   = "Internal.ReservationRateRule.Edit";
         public static readonly IReadOnlyList<string> Actions = [Create, Edit];
     }
 
-    public static class Bildirim
+    public static class Notification
     {
-        public const string Module         = "Internal.Bildirim";
-        public const string BorcHatirlatma = "Internal.Bildirim.BorcHatirlatma";
+        public const string Module         = "Internal.Notification";
+        public const string BorcHatirlatma = "Internal.Notification.BorcHatirlatma";
         public static readonly IReadOnlyList<string> Actions = [BorcHatirlatma];
     }
 
-    // ─── Sistem Yönetimi (System.*) ───────────────────────────────────────────
+    // ─── System Administration (System.*) ───────────────────────────────────────────
 
-    public static class Kullanici
+    public static class User
     {
-        public const string Module           = "System.Kullanici";
-        public const string Create           = "System.Kullanici.Create";
-        public const string Edit             = "System.Kullanici.Edit";
-        public const string AssignPermission = "System.Kullanici.AssignPermission";
+        public const string Module           = "System.User";
+        public const string Create           = "System.User.Create";
+        public const string Edit             = "System.User.Edit";
+        public const string AssignPermission = "System.User.AssignPermission";
         public static readonly IReadOnlyList<string> Actions = [Create, Edit, AssignPermission];
     }
 
-    public static class Rol
+    public static class Role
     {
-        public const string Module = "System.Rol";
-        public const string Create = "System.Rol.Create";
-        public const string Edit   = "System.Rol.Edit";
-        public const string Delete = "System.Rol.Delete";
+        public const string Module = "System.Role";
+        public const string Create = "System.Role.Create";
+        public const string Edit   = "System.Role.Edit";
+        public const string Delete = "System.Role.Delete";
         public static readonly IReadOnlyList<string> Actions = [Create, Edit, Delete];
     }
 
-    public static class Davetiye
+    public static class Invitation
     {
-        public const string Module = "System.Davetiye";
-        public const string Create = "System.Davetiye.Create";
-        public const string Cancel = "System.Davetiye.Cancel";
-        public const string Resend = "System.Davetiye.Resend";
+        public const string Module = "System.Invitation";
+        public const string Create = "System.Invitation.Create";
+        public const string Cancel = "System.Invitation.Cancel";
+        public const string Resend = "System.Invitation.Resend";
         public static readonly IReadOnlyList<string> Actions = [Create, Cancel, Resend];
     }
 
@@ -200,65 +200,65 @@ public static class PermissionCatalog
         public static readonly IReadOnlyList<string> Actions = [];
     }
 
-    // ─── Kiracı Portal (Kiraci.*) ─────────────────────────────────────────────
+    // ─── Tenant Portal (Tenant.*) ─────────────────────────────────────────────
 
-    public static class KiraciPortal
+    public static class TenantPortal
     {
-        public static class Sozlesme
+        public static class Lease
         {
-            public const string Module = "Kiraci.Sozlesme";
+            public const string Module = "Tenant.Lease";
             public static readonly IReadOnlyList<string> Actions = [];
         }
 
-        public static class Borc
+        public static class Charge
         {
-            public const string Module = "Kiraci.Borc";
+            public const string Module = "Tenant.Charge";
             public static readonly IReadOnlyList<string> Actions = [];
         }
 
-        public static class Odeme
+        public static class Payment
         {
-            public const string Module = "Kiraci.Odeme";
+            public const string Module = "Tenant.Payment";
             public static readonly IReadOnlyList<string> Actions = [];
         }
 
-        public static class Cari
+        public static class Statement
         {
-            public const string Module = "Kiraci.Cari";
+            public const string Module = "Tenant.Statement";
             public static readonly IReadOnlyList<string> Actions = [];
         }
 
-        public static class Mutabakat
+        public static class Reconciliation
         {
-            public const string Module = "Kiraci.Mutabakat";
+            public const string Module = "Tenant.Reconciliation";
             public static readonly IReadOnlyList<string> Actions = [];
         }
 
-        public static class Rezervasyon
+        public static class Reservation
         {
-            public const string Module = "Kiraci.Rezervasyon";
-            public const string Create = "Kiraci.Rezervasyon.Create";
-            public const string Cancel = "Kiraci.Rezervasyon.Cancel";
+            public const string Module = "Tenant.Reservation";
+            public const string Create = "Tenant.Reservation.Create";
+            public const string Cancel = "Tenant.Reservation.Cancel";
             public static readonly IReadOnlyList<string> Actions = [Create, Cancel];
         }
 
         public static class System
         {
-            public static class Kullanici
+            public static class User
             {
-                public const string Module     = "Kiraci.System.Kullanici";
-                public const string Invite     = "Kiraci.System.Kullanici.Invite";
-                public const string Edit       = "Kiraci.System.Kullanici.Edit";
-                public const string Deactivate = "Kiraci.System.Kullanici.Deactivate";
+                public const string Module     = "Tenant.System.User";
+                public const string Invite     = "Tenant.System.User.Invite";
+                public const string Edit       = "Tenant.System.User.Edit";
+                public const string Deactivate = "Tenant.System.User.Deactivate";
                 public static readonly IReadOnlyList<string> Actions = [Invite, Edit, Deactivate];
             }
 
-            public static class Rol
+            public static class Role
             {
-                public const string Module = "Kiraci.System.Rol";
-                public const string Create = "Kiraci.System.Rol.Create";
-                public const string Edit   = "Kiraci.System.Rol.Edit";
-                public const string Delete = "Kiraci.System.Rol.Delete";
+                public const string Module = "Tenant.System.Role";
+                public const string Create = "Tenant.System.Role.Create";
+                public const string Edit   = "Tenant.System.Role.Edit";
+                public const string Delete = "Tenant.System.Role.Delete";
                 public static readonly IReadOnlyList<string> Actions = [Create, Edit, Delete];
             }
         }
@@ -269,132 +269,132 @@ public static class PermissionCatalog
     public static readonly IReadOnlyList<PermissionModuleInfo> AllModules =
     [
         // Internal
-        new(Tasinmaz.Module,               "Taşınmaz",                   Tasinmaz.Actions),
-        new(Birim.Module,                  "Birim",                      Birim.Actions),
-        new(Kiraci.Module,                 "Kiracı",                     Kiraci.Actions),
-        new(Sozlesme.Module,               "Sözleşme",                   Sozlesme.Actions),
-        new(Odeme.Module,                  "Ödeme",                      Odeme.Actions),
-        new(ManuelBorc.Module,             "Manuel Borç",                ManuelBorc.Actions),
-        new(Rezervasyon.Module,            "Rezervasyon",                Rezervasyon.Actions),
-        new(Tahakkuk.Module,               "Tahakkuk",                   Tahakkuk.Actions),
-        new(BorcTipi.Module,               "Borç Tipi",                  BorcTipi.Actions),
-        new(Parametre.Module,              "Parametre",                  Parametre.Actions),
-        new(TasinmazTipi.Module,           "Taşınmaz Tipi",              TasinmazTipi.Actions),
-        new(BirimTuru.Module,              "Birim Türü",                 BirimTuru.Actions),
-        new(KiraciKategori.Module,         "Kiracı Kategorisi",          KiraciKategori.Actions),
-        new(Sektor.Module,                 "Sektör",                     Sektor.Actions),
-        new(BelgeTuru.Module,              "Belge Türü",                 BelgeTuru.Actions),
-        new(Tarife.Module,                 "Tarife",                     Tarife.Actions),
-        new(TasinmazCarpan.Module,         "Taşınmaz Çarpanı",           TasinmazCarpan.Actions),
-        new(RezervasyonTarifeKural.Module, "Rezervasyon Tarife Kuralı",  RezervasyonTarifeKural.Actions),
-        new(Bildirim.Module,               "Bildirim",                   Bildirim.Actions),
+        new(Property.Module,               "Property",                   Property.Actions),
+        new(Unit.Module,                  "Unit",                      Unit.Actions),
+        new(Tenant.Module,                 "Tenant",                     Tenant.Actions),
+        new(Lease.Module,               "Lease",                   Lease.Actions),
+        new(Payment.Module,                  "Payment",                      Payment.Actions),
+        new(ManualCharge.Module,             "Manual Charge",                ManualCharge.Actions),
+        new(Reservation.Module,            "Reservation",                Reservation.Actions),
+        new(Charge.Module,               "Charge",                   Charge.Actions),
+        new(ChargeType.Module,               "Charge Type",                  ChargeType.Actions),
+        new(Parameter.Module,              "Parameter",                  Parameter.Actions),
+        new(PropertyType.Module,           "Property Type",              PropertyType.Actions),
+        new(UnitType.Module,              "Unit Type",                 UnitType.Actions),
+        new(TenantCategory.Module,         "Tenant Category",          TenantCategory.Actions),
+        new(Sector.Module,                 "Sector",                     Sector.Actions),
+        new(DocumentType.Module,              "Document Type",              DocumentType.Actions),
+        new(RateSchedule.Module,                 "Rate Schedule",                     RateSchedule.Actions),
+        new(PropertyMultiplier.Module,         "Property Multiplier",           PropertyMultiplier.Actions),
+        new(ReservationRateRule.Module, "Reservation Rate Rule",  ReservationRateRule.Actions),
+        new(Notification.Module,               "Notification",                   Notification.Actions),
         // System
-        new(Kullanici.Module,              "Kullanıcı",                  Kullanici.Actions),
-        new(Rol.Module,                    "Rol",                        Rol.Actions),
-        new(Davetiye.Module,               "Davetiye",                   Davetiye.Actions),
-        new(Audit.Module,                  "Hareket Geçmişi",            Audit.Actions),
-        // Kiraci Portal
-        new(KiraciPortal.Sozlesme.Module,           "Kiracı — Sözleşme",          KiraciPortal.Sozlesme.Actions),
-        new(KiraciPortal.Borc.Module,               "Kiracı — Borç",              KiraciPortal.Borc.Actions),
-        new(KiraciPortal.Odeme.Module,              "Kiracı — Ödeme",             KiraciPortal.Odeme.Actions),
-        new(KiraciPortal.Rezervasyon.Module,        "Kiracı — Rezervasyon",       KiraciPortal.Rezervasyon.Actions),
-        new(KiraciPortal.System.Kullanici.Module,   "Kiracı Yönetim — Kullanıcı", KiraciPortal.System.Kullanici.Actions),
-        new(KiraciPortal.System.Rol.Module,         "Kiracı Yönetim — Rol",       KiraciPortal.System.Rol.Actions),
+        new(User.Module,              "User",                  User.Actions),
+        new(Role.Module,                    "Role",                        Role.Actions),
+        new(Invitation.Module,               "Invitation",                  Invitation.Actions),
+        new(Audit.Module,                  "Audit Log",            Audit.Actions),
+        // Tenant Portal
+        new(TenantPortal.Lease.Module,           "Tenant — Lease",          TenantPortal.Lease.Actions),
+        new(TenantPortal.Charge.Module,               "Tenant — Charge",              TenantPortal.Charge.Actions),
+        new(TenantPortal.Payment.Module,              "Tenant — Payment",             TenantPortal.Payment.Actions),
+        new(TenantPortal.Reservation.Module,        "Tenant — Reservation",       TenantPortal.Reservation.Actions),
+        new(TenantPortal.System.User.Module,   "Tenant Management — User", TenantPortal.System.User.Actions),
+        new(TenantPortal.System.Role.Module,         "Tenant Management — Role",       TenantPortal.System.Role.Actions),
     ];
 
-    // ─── Kapsam Farkındalığı (row-level scope) ───────────────────────────────
+    // ─── Scope Awareness (row-level scope) ───────────────────────────────
 
     public static readonly IReadOnlyList<string> ScopeAware =
     [
-        Tasinmaz.Module, Tasinmaz.Create, Tasinmaz.Edit,
-        Birim.Module, Birim.Create, Birim.Edit, Birim.OverrideRate,
-        Kiraci.Module, Kiraci.Create, Kiraci.Edit,
-        Sozlesme.Module, Sozlesme.Create, Sozlesme.Edit, Sozlesme.Extend, Sozlesme.Terminate, Sozlesme.OverrideRate,
-        Odeme.Module, Odeme.Create, Odeme.UploadDekont, Odeme.Approve, Odeme.Reject, Odeme.MatchBankTransaction,
-        ManuelBorc.Module, ManuelBorc.Create, ManuelBorc.Cancel,
-        Rezervasyon.Module, Rezervasyon.Create, Rezervasyon.Edit, Rezervasyon.Cancel, Rezervasyon.TransferToTahakkuk,
-        Tahakkuk.Module, Tahakkuk.Regenerate,
-        TasinmazCarpan.Module, TasinmazCarpan.Edit,
-        RezervasyonTarifeKural.Module, RezervasyonTarifeKural.Create, RezervasyonTarifeKural.Edit,
+        Property.Module, Property.Create, Property.Edit,
+        Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate,
+        Tenant.Module, Tenant.Create, Tenant.Edit,
+        Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
+        Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject, Payment.MatchBankTransaction,
+        ManualCharge.Module, ManualCharge.Create, ManualCharge.Cancel,
+        Reservation.Module, Reservation.Create, Reservation.Edit, Reservation.Cancel, Reservation.TransferToCharge,
+        Charge.Module, Charge.Regenerate,
+        PropertyMultiplier.Module, PropertyMultiplier.Edit,
+        ReservationRateRule.Module, ReservationRateRule.Create, ReservationRateRule.Edit,
     ];
 
     public static bool IsScopeAware(string permission) => ScopeAware.Contains(permission);
 
-    // ─── Preset Listeler ──────────────────────────────────────────────────────
+    // ─── Preset Lists ──────────────────────────────────────────────────────
 
     public static readonly IReadOnlyList<string> OperasyonMuduruIzinleri =
     [
-        Tasinmaz.Module, Tasinmaz.Create, Tasinmaz.Edit,
-        Birim.Module, Birim.Create, Birim.Edit, Birim.OverrideRate,
-        Kiraci.Module, Kiraci.Create, Kiraci.Edit,
-        Sozlesme.Module, Sozlesme.Create, Sozlesme.Edit, Sozlesme.Extend, Sozlesme.Terminate, Sozlesme.OverrideRate,
-        Odeme.Module, Odeme.Create, Odeme.UploadDekont, Odeme.Approve, Odeme.Reject,
-        Odeme.ImportBankStatement, Odeme.MatchBankTransaction,
-        BorcTipi.Module, BorcTipi.Create, BorcTipi.Edit,
-        Tarife.Module, Tarife.Create, Tarife.Edit,
-        Tahakkuk.Module, Tahakkuk.Regenerate,
-        Parametre.Module, Parametre.Edit,
-        TasinmazTipi.Module, TasinmazTipi.Create, TasinmazTipi.Edit,
-        BirimTuru.Module, BirimTuru.Create, BirimTuru.Edit,
-        KiraciKategori.Module, KiraciKategori.Create, KiraciKategori.Edit,
-        Sektor.Module, Sektor.Create, Sektor.Edit,
-        BelgeTuru.Module, BelgeTuru.Create, BelgeTuru.Edit, BelgeTuru.Delete,
-        ManuelBorc.Module, ManuelBorc.Create, ManuelBorc.Cancel,
-        Rezervasyon.Module, Rezervasyon.Create, Rezervasyon.Edit, Rezervasyon.Cancel, Rezervasyon.TransferToTahakkuk,
-        TasinmazCarpan.Module, TasinmazCarpan.Edit,
-        RezervasyonTarifeKural.Module, RezervasyonTarifeKural.Create, RezervasyonTarifeKural.Edit,
-        Bildirim.Module, Bildirim.BorcHatirlatma,
+        Property.Module, Property.Create, Property.Edit,
+        Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate,
+        Tenant.Module, Tenant.Create, Tenant.Edit,
+        Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
+        Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject,
+        Payment.ImportBankStatement, Payment.MatchBankTransaction,
+        ChargeType.Module, ChargeType.Create, ChargeType.Edit,
+        RateSchedule.Module, RateSchedule.Create, RateSchedule.Edit,
+        Charge.Module, Charge.Regenerate,
+        Parameter.Module, Parameter.Edit,
+        PropertyType.Module, PropertyType.Create, PropertyType.Edit,
+        UnitType.Module, UnitType.Create, UnitType.Edit,
+        TenantCategory.Module, TenantCategory.Create, TenantCategory.Edit,
+        Sector.Module, Sector.Create, Sector.Edit,
+        DocumentType.Module, DocumentType.Create, DocumentType.Edit, DocumentType.Delete,
+        ManualCharge.Module, ManualCharge.Create, ManualCharge.Cancel,
+        Reservation.Module, Reservation.Create, Reservation.Edit, Reservation.Cancel, Reservation.TransferToCharge,
+        PropertyMultiplier.Module, PropertyMultiplier.Edit,
+        ReservationRateRule.Module, ReservationRateRule.Create, ReservationRateRule.Edit,
+        Notification.Module, Notification.BorcHatirlatma,
     ];
 
     public static readonly IReadOnlyList<string> KiraciYoneticisiIzinleri =
     [
-        KiraciPortal.Sozlesme.Module,
-        KiraciPortal.Borc.Module,
-        KiraciPortal.Odeme.Module,
-        KiraciPortal.Rezervasyon.Module, KiraciPortal.Rezervasyon.Create, KiraciPortal.Rezervasyon.Cancel,
-        KiraciPortal.System.Kullanici.Module, KiraciPortal.System.Kullanici.Invite,
-        KiraciPortal.System.Kullanici.Edit, KiraciPortal.System.Kullanici.Deactivate,
-        KiraciPortal.System.Rol.Module, KiraciPortal.System.Rol.Create,
-        KiraciPortal.System.Rol.Edit, KiraciPortal.System.Rol.Delete,
+        TenantPortal.Lease.Module,
+        TenantPortal.Charge.Module,
+        TenantPortal.Payment.Module,
+        TenantPortal.Reservation.Module, TenantPortal.Reservation.Create, TenantPortal.Reservation.Cancel,
+        TenantPortal.System.User.Module, TenantPortal.System.User.Invite,
+        TenantPortal.System.User.Edit, TenantPortal.System.User.Deactivate,
+        TenantPortal.System.Role.Module, TenantPortal.System.Role.Create,
+        TenantPortal.System.Role.Edit, TenantPortal.System.Role.Delete,
     ];
 
     public static readonly IReadOnlyList<string> KiraciSorumlusuIzinleri =
     [
-        KiraciPortal.Sozlesme.Module,
-        KiraciPortal.Borc.Module,
-        KiraciPortal.Odeme.Module,
-        KiraciPortal.Rezervasyon.Module, KiraciPortal.Rezervasyon.Create, KiraciPortal.Rezervasyon.Cancel,
+        TenantPortal.Lease.Module,
+        TenantPortal.Charge.Module,
+        TenantPortal.Payment.Module,
+        TenantPortal.Reservation.Module, TenantPortal.Reservation.Create, TenantPortal.Reservation.Cancel,
     ];
 
-    public static readonly IReadOnlyList<string> KiraciAll = KiraciYoneticisiIzinleri;
+    public static readonly IReadOnlyList<string> TenantAll = KiraciYoneticisiIzinleri;
 
     public static readonly IReadOnlyList<string> All =
     [
         // Internal.*
-        Tasinmaz.Module, Tasinmaz.Create, Tasinmaz.Edit,
-        Birim.Module, Birim.Create, Birim.Edit, Birim.OverrideRate,
-        Kiraci.Module, Kiraci.Create, Kiraci.Edit,
-        Sozlesme.Module, Sozlesme.Create, Sozlesme.Edit, Sozlesme.Extend, Sozlesme.Terminate, Sozlesme.OverrideRate,
-        Odeme.Module, Odeme.Create, Odeme.UploadDekont, Odeme.Approve, Odeme.Reject,
-        Odeme.ImportBankStatement, Odeme.MatchBankTransaction,
-        BorcTipi.Module, BorcTipi.Create, BorcTipi.Edit,
-        Parametre.Module, Parametre.Edit,
-        TasinmazTipi.Module, TasinmazTipi.Create, TasinmazTipi.Edit,
-        BirimTuru.Module, BirimTuru.Create, BirimTuru.Edit,
-        KiraciKategori.Module, KiraciKategori.Create, KiraciKategori.Edit,
-        Sektor.Module, Sektor.Create, Sektor.Edit,
-        BelgeTuru.Module, BelgeTuru.Create, BelgeTuru.Edit, BelgeTuru.Delete,
-        Tarife.Module, Tarife.Create, Tarife.Edit,
-        Tahakkuk.Module, Tahakkuk.Regenerate,
-        ManuelBorc.Module, ManuelBorc.Create, ManuelBorc.Cancel,
-        Rezervasyon.Module, Rezervasyon.Create, Rezervasyon.Edit, Rezervasyon.Cancel, Rezervasyon.TransferToTahakkuk,
-        TasinmazCarpan.Module, TasinmazCarpan.Edit,
-        RezervasyonTarifeKural.Module, RezervasyonTarifeKural.Create, RezervasyonTarifeKural.Edit,
-        Bildirim.Module, Bildirim.BorcHatirlatma,
+        Property.Module, Property.Create, Property.Edit,
+        Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate,
+        Tenant.Module, Tenant.Create, Tenant.Edit,
+        Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
+        Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject,
+        Payment.ImportBankStatement, Payment.MatchBankTransaction,
+        ChargeType.Module, ChargeType.Create, ChargeType.Edit,
+        Parameter.Module, Parameter.Edit,
+        PropertyType.Module, PropertyType.Create, PropertyType.Edit,
+        UnitType.Module, UnitType.Create, UnitType.Edit,
+        TenantCategory.Module, TenantCategory.Create, TenantCategory.Edit,
+        Sector.Module, Sector.Create, Sector.Edit,
+        DocumentType.Module, DocumentType.Create, DocumentType.Edit, DocumentType.Delete,
+        RateSchedule.Module, RateSchedule.Create, RateSchedule.Edit,
+        Charge.Module, Charge.Regenerate,
+        ManualCharge.Module, ManualCharge.Create, ManualCharge.Cancel,
+        Reservation.Module, Reservation.Create, Reservation.Edit, Reservation.Cancel, Reservation.TransferToCharge,
+        PropertyMultiplier.Module, PropertyMultiplier.Edit,
+        ReservationRateRule.Module, ReservationRateRule.Create, ReservationRateRule.Edit,
+        Notification.Module, Notification.BorcHatirlatma,
         // System.*
-        Kullanici.Module, Kullanici.Create, Kullanici.Edit, Kullanici.AssignPermission,
-        Rol.Module, Rol.Create, Rol.Edit, Rol.Delete,
-        Davetiye.Module, Davetiye.Create, Davetiye.Cancel, Davetiye.Resend,
+        User.Module, User.Create, User.Edit, User.AssignPermission,
+        Role.Module, Role.Create, Role.Edit, Role.Delete,
+        Invitation.Module, Invitation.Create, Invitation.Cancel, Invitation.Resend,
         Audit.Module,
     ];
 }

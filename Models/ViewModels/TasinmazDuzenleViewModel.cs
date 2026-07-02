@@ -5,7 +5,7 @@ public class TasinmazDuzenleViewModel
     public int Id { get; set; }
     public string Ad { get; set; } = string.Empty;
     public int? TasinmazTipiId { get; set; }
-    public KiralamaSekli KiralamaSekli { get; set; }
+    public RentalMode RentalMode { get; set; }
     public string Il { get; set; } = string.Empty;
     public string Ilce { get; set; } = string.Empty;
     public string Mahalle { get; set; } = string.Empty;

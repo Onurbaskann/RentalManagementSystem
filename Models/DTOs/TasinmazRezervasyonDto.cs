@@ -12,5 +12,5 @@ public class TasinmazRezervasyonDto
     public int ToplamSureDakika { get; set; }
     public int UcretsizSureDakika { get; set; }
     public decimal ToplamTutar { get; set; }
-    public RezervasyonDurumu Durum { get; set; }
+    public ReservationStatus Durum { get; set; }
 }

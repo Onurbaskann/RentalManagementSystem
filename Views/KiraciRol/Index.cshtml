@@ -3,8 +3,8 @@
 @{
     Layout = "_KiraciLayout";
     ViewData["Title"] = "Rol Yönetimi";
-    var canCreate = User.HasPermission(PermissionCatalog.KiraciPortal.System.Rol.Create);
-    var canDelete = User.HasPermission(PermissionCatalog.KiraciPortal.System.Rol.Delete);
+    var canCreate = User.HasPermission(PermissionCatalog.TenantPortal.System.Role.Create);
+    var canDelete = User.HasPermission(PermissionCatalog.TenantPortal.System.Role.Delete);
 }
 
 @if (TempData["Success"] != null)

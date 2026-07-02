@@ -6,7 +6,7 @@ public class Rol : BaseEntity
 {
     public string Ad { get; set; } = string.Empty;
     public string? Aciklama { get; set; }
-    public RolScope Scope { get; set; }
+    public RoleScope Scope { get; set; }
     public int? KiraciId { get; set; }
     public bool IsSystemRole { get; set; }
 

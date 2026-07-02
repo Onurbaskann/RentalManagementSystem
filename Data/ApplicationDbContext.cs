@@ -62,7 +62,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
     public DbSet<KullaniciYetkiKapsami> KullaniciYetkiKapsamlari { get; set; }
     public DbSet<UserPermission> UserPermissions { get; set; }
 
-    public DbSet<BirimTuru> BirimTurleri { get; set; }
+    public DbSet<UnitType> BirimTurleri { get; set; }
     public DbSet<TasinmazTipi> TasinmazTipleri { get; set; }
     public DbSet<Kategori> Kategoriler { get; set; }
 
@@ -115,7 +115,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.Property(t => t.AcikAdres).HasMaxLength(500);
             entity.Property(t => t.AcikYuzolcumu).HasPrecision(18, 2);
             entity.Property(t => t.KapaliYuzolcumu).HasPrecision(18, 2);
-            entity.Property(t => t.KiralamaSekli).HasComment(EC<KiralamaSekli>());
+            entity.Property(t => t.RentalMode).HasComment(EC<RentalMode>());
             entity.HasOne(t => t.TasinmazTipi)
                   .WithMany()
                   .OnDelete(DeleteBehavior.SetNull);
@@ -126,11 +126,11 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.Property(b => b.Ad).HasMaxLength(200);
             entity.Property(b => b.BirimNo).HasMaxLength(50);
             entity.Property(b => b.Yuzolcumu).HasPrecision(18, 2);
-            entity.Property(b => b.BirimTipi).HasComment(EC<BirimTipi>());
+            entity.Property(b => b.UnitKind).HasComment(EC<UnitKind>());
             entity.HasOne(b => b.Tasinmaz)
                   .WithMany(t => t.Birimler)
                   .OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(b => b.BirimTuru)
+            entity.HasOne(b => b.UnitType)
                   .WithMany()
                   .OnDelete(DeleteBehavior.SetNull);
         });
@@ -157,7 +157,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
 
         builder.Entity<Sozlesme>(entity =>
         {
-            entity.Property(s => s.Durum).HasComment(EC<SozlesmeDurumu>());
+            entity.Property(s => s.Durum).HasComment(EC<LeaseStatus>());
             entity.HasOne(s => s.Birim)
                   .WithMany(b => b.Sozlesmeler)
                   .OnDelete(DeleteBehavior.Restrict);
@@ -181,7 +181,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
         builder.Entity<SozlesmeIslemGecmisi>(entity =>
         {
             entity.Property(g => g.Aciklama).HasMaxLength(1000);
-            entity.Property(g => g.IslemTipi).HasComment(EC<SozlesmeIslemTipi>());
+            entity.Property(g => g.IslemTipi).HasComment(EC<LeaseActivityType>());
             entity.Property(g => g.EskiKiraBedeli).HasPrecision(18, 2);
             entity.Property(g => g.YeniKiraBedeli).HasPrecision(18, 2);
             entity.Property(g => g.TufeOrani).HasPrecision(5, 2);
@@ -204,7 +204,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
         builder.Entity<KullaniciYetkiKapsami>(entity =>
         {
             entity.Property(k => k.UserId).IsRequired().HasMaxLength(450);
-            entity.HasIndex(k => new { k.UserId, k.KapsamTipi, k.KapsamId }).IsUnique();
+            entity.HasIndex(k => new { k.UserId, k.ScopeType, k.KapsamId }).IsUnique();
         });
 
         builder.Entity<TasinmazTipi>(entity =>
@@ -221,7 +221,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.HasIndex(k => new { k.Tipi, k.Kod }).IsUnique();
         });
 
-        builder.Entity<BirimTuru>(entity =>
+        builder.Entity<UnitType>(entity =>
         {
             entity.Property(b => b.Ad).IsRequired().HasMaxLength(100);
             entity.Property(b => b.Kod).IsRequired().HasMaxLength(100);
@@ -260,14 +260,14 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.Property(b => b.Ad).IsRequired().HasMaxLength(100);
             entity.Property(b => b.Kod).IsRequired().HasMaxLength(100);
             entity.HasIndex(b => b.Kod).IsUnique();
-            entity.Property(b => b.Davranis).HasComment(EC<BorcTipiDavranisi>());
+            entity.Property(b => b.Davranis).HasComment(EC<ChargeTypeBehavior>());
         });
 
         builder.Entity<GenelTarife>(entity =>
         {
             entity.Property(k => k.BirimDeger).HasPrecision(18, 4);
             entity.Property(k => k.KdvOrani).HasPrecision(5, 2);
-            entity.Property(k => k.HesaplamaYontemi).HasComment(EC<HesaplamaYontemi>());
+            entity.Property(k => k.CalculationMethod).HasComment(EC<CalculationMethod>());
             entity.HasIndex(k => new { k.Yil, k.KiraciKategoriId, k.BorcTipiId })
                   .IsUnique()
                   .HasDatabaseName("UX_GenelTarifeler_YilKategoriBorc")
@@ -330,8 +330,8 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
         builder.Entity<Tahakkuk>(entity =>
         {
             entity.Property(t => t.BeklenenTutar).HasPrecision(18, 2);
-            entity.Property(t => t.Durum).HasComment(EC<TahakkukDurumu>());
-            entity.Property(t => t.KaynakTipi).HasComment(EC<TahakkukKaynakTipi>());
+            entity.Property(t => t.Durum).HasComment(EC<ChargeStatus>());
+            entity.Property(t => t.KaynakTipi).HasComment(EC<ChargeSourceType>());
             entity.Property(t => t.KdvTutari).HasPrecision(18, 2);
             entity.Property(t => t.ToplamTutar).HasPrecision(18, 2);
             entity.Property(t => t.OdenenTutar).HasPrecision(18, 2);
@@ -377,8 +377,8 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
         {
             entity.Property(k => k.Aciklama).HasMaxLength(200);
             entity.Property(k => k.BirimDeger).HasPrecision(18, 4);
-            entity.Property(k => k.HesaplamaYontemi).HasComment(EC<HesaplamaYontemi>());
-            entity.Property(k => k.KaynakTipi).HasComment(EC<KalemKaynakTipi>());
+            entity.Property(k => k.CalculationMethod).HasComment(EC<CalculationMethod>());
+            entity.Property(k => k.KaynakTipi).HasComment(EC<LineItemSourceType>());
             entity.Property(k => k.Carpan).HasPrecision(18, 4);
             entity.Property(k => k.Tutar).HasPrecision(18, 2);
             entity.Property(k => k.KdvOrani).HasPrecision(5, 2);
@@ -402,9 +402,9 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.Property(o => o.Tutar).HasPrecision(18, 2);
             entity.Property(o => o.RedNedeni).HasMaxLength(500);
             entity.Property(o => o.PosReferansNo).HasMaxLength(100);
-            entity.Property(o => o.OdemeKanali).HasComment(EC<OdemeKanali>());
-            entity.Property(o => o.OdemeKaynakTipi).HasComment(EC<OdemeKaynakTipi>());
-            entity.Property(o => o.Durum).HasComment(EC<OdemeDurumu>());
+            entity.Property(o => o.PaymentChannel).HasComment(EC<PaymentChannel>());
+            entity.Property(o => o.PaymentSourceType).HasComment(EC<PaymentSourceType>());
+            entity.Property(o => o.Durum).HasComment(EC<PaymentStatus>());
             entity.HasOne(o => o.Tahakkuk)
                   .WithMany(t => t.Odemeler)
                   .OnDelete(DeleteBehavior.Restrict);
@@ -427,7 +427,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
         {
             entity.Property(b => b.IslemTutari).HasPrecision(18, 2);
             entity.Property(b => b.Aciklama).HasMaxLength(500);
-            entity.Property(b => b.EslesmeDurumu).HasComment(EC<BankaEslesmeDurumu>());
+            entity.Property(b => b.EslesmeDurumu).HasComment(EC<BankMatchStatus>());
             entity.Property(b => b.GonderenIban).HasMaxLength(50);
             entity.Property(b => b.GonderenBilgisi).HasMaxLength(200);
             entity.Property(b => b.BankaReferansNo).HasMaxLength(100);
@@ -440,7 +440,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
 
         builder.Entity<OdemeBankaEslesme>(entity =>
         {
-            entity.Property(e => e.EslesmeTipi).HasComment(EC<EslesmeTipi>());
+            entity.Property(e => e.MatchType).HasComment(EC<KiraTakip.Models.MatchType>());
             entity.HasOne(e => e.TahakkukOdeme)
                   .WithMany(o => o.BankaEslesmeleri)
                   .OnDelete(DeleteBehavior.Restrict);
@@ -465,18 +465,18 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.HasOne(r => r.Birim)
                   .WithMany()
                   .OnDelete(DeleteBehavior.SetNull);
-            entity.HasOne(r => r.BirimTuru)
+            entity.HasOne(r => r.UnitType)
                   .WithMany()
                   .OnDelete(DeleteBehavior.Restrict);
-            entity.HasIndex(r => new { r.BirimTuruId, r.Yil })
+            entity.HasIndex(r => new { r.UnitTypeId, r.Yil })
                   .IsUnique()
-                  .HasDatabaseName("UX_RezervasyonTarifeler_BirimTuruYil_GenelKural")
+                  .HasDatabaseName("UX_RezervasyonTarifeler_UnitTypeYil_GenelKural")
                   .HasFilter("[BirimId] IS NULL");
             entity.ToTable(t =>
             {
                 t.HasCheckConstraint(
                     "CK_RezervasyonTarife_BirimOrYilTuru",
-                    "[BirimId] IS NOT NULL OR ([BirimTuruId] IS NOT NULL AND [Yil] IS NOT NULL)");
+                    "[BirimId] IS NOT NULL OR ([UnitTypeId] IS NOT NULL AND [Yil] IS NOT NULL)");
                 t.HasCheckConstraint(
                     "CK_RezervasyonTarifeler_Degerler_Pozitif",
                     "[PeriyotUcreti] >= 0 AND [UcretsizSureDakika] >= 0 AND [UcretlendirmePeriyoduDakika] > 0 AND [KdvOrani] BETWEEN 0 AND 100");
@@ -486,7 +486,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
         builder.Entity<Rezervasyon>(entity =>
         {
             entity.Property(r => r.BirimUcret).HasPrecision(18, 2);
-            entity.Property(r => r.Durum).HasComment(EC<RezervasyonDurumu>());
+            entity.Property(r => r.Durum).HasComment(EC<ReservationStatus>());
             entity.Property(r => r.UcretTutar).HasPrecision(18, 2);
             entity.Property(r => r.KdvOrani).HasPrecision(5, 2);
             entity.Property(r => r.KdvTutari).HasPrecision(18, 2);
@@ -527,7 +527,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
         {
             entity.Property(r => r.Ad).IsRequired().HasMaxLength(100);
             entity.Property(r => r.Aciklama).HasMaxLength(500);
-            entity.Property(r => r.Scope).HasComment(EC<RolScope>());
+            entity.Property(r => r.Scope).HasComment(EC<RoleScope>());
             entity.HasIndex(r => new { r.Scope, r.KiraciId, r.Ad }).IsUnique();
             entity.HasOne<Kiraci>()
                   .WithMany()
@@ -685,7 +685,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                 Ad = "Kira Bedeli",
                 Aktif = true,
                 Sira = 1,
-                Davranis = BorcTipiDavranisi.AylikSabit,
+                Davranis = ChargeTypeBehavior.MonthlyFixed,
                 Sistem = true,
                 CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 CreatedBy = "System",
@@ -699,7 +699,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                 Ad = "Depozito",
                 Aktif = true,
                 Sira = 99,
-                Davranis = BorcTipiDavranisi.IlkAyTekSeferlik,
+                Davranis = ChargeTypeBehavior.FirstMonthOneTime,
                 Sistem = true,
                 CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 CreatedBy = "System",
@@ -713,7 +713,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                 Ad = "Diğer",
                 Aktif = true,
                 Sira = 100,
-                Davranis = BorcTipiDavranisi.KullaniciManuel,
+                Davranis = ChargeTypeBehavior.UserManual,
                 Sistem = true,
                 CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 CreatedBy = "System",

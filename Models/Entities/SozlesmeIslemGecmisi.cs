@@ -3,7 +3,7 @@ namespace KiraTakip.Models.Entities;
 public class SozlesmeIslemGecmisi : BaseEntity
 {
     public int KiraSozlesmesiId { get; set; }    
-    public SozlesmeIslemTipi IslemTipi { get; set; }
+    public LeaseActivityType IslemTipi { get; set; }
     public DateTime IslemTarihi { get; set; }
     public string Aciklama { get; set; } = string.Empty;
     public DateTime? EskiBitisTarihi { get; set; }

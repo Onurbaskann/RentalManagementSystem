@@ -69,7 +69,7 @@ public class AccountController : Controller
         }
 
         // Kiracı kullanıcısı → bağlı kiracının aktif olup olmadığını kontrol et
-        if (user != null && user.UserType == UserType.Kiraci && user.KiraciId.HasValue)
+        if (user != null && user.UserType == UserType.Tenant && user.KiraciId.HasValue)
         {
             var kiraci = await _db.Kiraciler.IgnoreQueryFilters()
                 .FirstOrDefaultAsync(k => k.Id == user.KiraciId.Value);
@@ -90,7 +90,7 @@ public class AccountController : Controller
             if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                 return Redirect(returnUrl);
             // Kiracı kullanıcıları kendi paneline yönlendirilir
-            if (user?.UserType == UserType.Kiraci)
+            if (user?.UserType == UserType.Tenant)
                 return RedirectToAction("Index", "KiraciPanel");
             return RedirectToAction("Index", "Home");
         }
@@ -195,7 +195,7 @@ public class AccountController : Controller
             var user = await _davetiyeService.KabulEtAsync(davetiye, model.AdSoyad, model.Password);
             await _signInManager.SignInAsync(user, isPersistent: false);
             TempData["Success"] = "Hesabınız başarıyla oluşturuldu. Hoş geldiniz!";
-            if (user.UserType == UserType.Kiraci)
+            if (user.UserType == UserType.Tenant)
                 return RedirectToAction("Index", "KiraciPanel");
             return RedirectToAction("Index", "Home");
         }

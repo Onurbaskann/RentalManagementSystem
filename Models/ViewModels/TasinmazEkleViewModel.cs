@@ -6,7 +6,7 @@ public class TasinmazEkleViewModel
     public ParentTarifeKartViewModel? ParentTarife { get; set; }
     public ParentRezervasyonTarifeKartViewModel? ParentRezervasyonTarife { get; set; }
     public int? TasinmazTipiId { get; set; }
-    public KiralamaSekli KiralamaSekli { get; set; } = KiralamaSekli.TekParca;
+    public RentalMode RentalMode { get; set; } = RentalMode.WholeProperty;
     public string Il { get; set; } = string.Empty;
     public string Ilce { get; set; } = string.Empty;
     public string Mahalle { get; set; } = string.Empty;

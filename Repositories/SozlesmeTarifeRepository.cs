@@ -14,7 +14,7 @@ public class SozlesmeTarifeRepository : BaseRepository<SozlesmeTarife>, ISozlesm
             .Where(r => r.KiraSozlesmesiId == sozlesmeId && r.BorcTipiId == borcTipiId)
             .Select(r => new RateValueDto
             {
-                HesaplamaYontemi = r.HesaplamaYontemi,
+                CalculationMethod = r.CalculationMethod,
                 BirimDeger = r.BirimDeger,
                 KdvOrani = r.KdvOrani
             })

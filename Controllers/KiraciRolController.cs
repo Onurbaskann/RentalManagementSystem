@@ -37,7 +37,7 @@ public class KiraciRolController : Controller
     }
 
     [HttpGet("")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Rol.Module)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Module)]
     public async Task<IActionResult> Index()
     {
         var kiraciId = _currentUser.KiraciId!.Value;
@@ -66,7 +66,7 @@ public class KiraciRolController : Controller
     }
 
     [HttpGet("Ekle")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Rol.Create)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Create)]
     public IActionResult Create()
     {
         var model = new RolOlusturViewModel();
@@ -75,7 +75,7 @@ public class KiraciRolController : Controller
     }
 
     [HttpPost("Ekle")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Rol.Create)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Create)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(RolOlusturViewModel model)
     {
@@ -105,7 +105,7 @@ public class KiraciRolController : Controller
             {
                 Ad = model.Ad,
                 Aciklama = model.Aciklama,
-                Scope = Models.RolScope.Kiraci,
+                Scope = Models.RoleScope.Tenant,
                 KiraciId = kiraciId,
                 IsSystemRole = false,
                 IsActive = true
@@ -114,7 +114,7 @@ public class KiraciRolController : Controller
             await _db.SaveChangesAsync();
 
             var validPerms = model.SelectedPermissions
-                .Where(p => PermissionCatalog.KiraciAll.Contains(p))
+                .Where(p => PermissionCatalog.TenantAll.Contains(p))
                 .ToList();
             await _rolService.SetRolPermissionsAsync(yeniRol.Id, validPerms, currentUserId);
 
@@ -130,7 +130,7 @@ public class KiraciRolController : Controller
     }
 
     [HttpGet("Duzenle/{id:int}")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Rol.Edit)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Edit)]
     public async Task<IActionResult> Edit(int id)
     {
         var kiraciId = _currentUser.KiraciId!.Value;
@@ -152,7 +152,7 @@ public class KiraciRolController : Controller
     }
 
     [HttpPost("Duzenle/{id:int}")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Rol.Edit)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Edit)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, RolDuzenleViewModel model)
     {
@@ -167,7 +167,7 @@ public class KiraciRolController : Controller
             return View(model);
         }
 
-        var removingManage = !model.SelectedPermissions.Contains(PermissionCatalog.KiraciPortal.System.Kullanici.Invite);
+        var removingManage = !model.SelectedPermissions.Contains(PermissionCatalog.TenantPortal.System.User.Invite);
         if (removingManage)
         {
             try
@@ -191,7 +191,7 @@ public class KiraciRolController : Controller
         }
 
         var validPerms = model.SelectedPermissions
-            .Where(p => PermissionCatalog.KiraciAll.Contains(p))
+            .Where(p => PermissionCatalog.TenantAll.Contains(p))
             .ToList();
         await _rolService.SetRolPermissionsAsync(id, validPerms, currentUserId);
         await _db.SaveChangesAsync();
@@ -201,7 +201,7 @@ public class KiraciRolController : Controller
     }
 
     [HttpPost("Sil/{id:int}")]
-    [Authorize(Policy = PermissionCatalog.KiraciPortal.System.Rol.Delete)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Delete)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {

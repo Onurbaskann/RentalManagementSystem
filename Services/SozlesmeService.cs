@@ -51,7 +51,7 @@ public class SozlesmeService : ISozlesmeService, ITransactionalService
     {
         s.IslemGecmisi.Add(new SozlesmeIslemGecmisi
         {
-            IslemTipi = SozlesmeIslemTipi.Olusturma,
+            IslemTipi = LeaseActivityType.Creation,
             IslemTarihi = DateTime.Now,
             Aciklama = "Sözleşme oluşturuldu.",
             YeniKiraBedeli = aylikBedel
@@ -79,7 +79,7 @@ public class SozlesmeService : ISozlesmeService, ITransactionalService
         s.IslemGecmisi.Add(new SozlesmeIslemGecmisi
         {
             KiraSozlesmesiId = id,
-            IslemTipi = SozlesmeIslemTipi.SureUzatma,
+            IslemTipi = LeaseActivityType.Extension,
             IslemTarihi = DateTime.Now,
             Aciklama = aciklama ?? "Sözleşme süresi uzatıldı.",
             EskiBitisTarihi = eskiBitis,
@@ -101,14 +101,14 @@ public class SozlesmeService : ISozlesmeService, ITransactionalService
         var s = await _repo.GetByIdAsync(id, include: q => q.Include(x => x.IslemGecmisi))
             ?? throw new InvalidOperationException($"Sözleşme {id} bulunamadı.");
 
-        s.Durum = SozlesmeDurumu.Feshedildi;
+        s.Durum = LeaseStatus.Terminated;
         s.FesihTarihi = fesihTarihi;
         s.FesihNedeni = fesihNedeni;
 
         s.IslemGecmisi.Add(new SozlesmeIslemGecmisi
         {
             KiraSozlesmesiId = id,
-            IslemTipi = SozlesmeIslemTipi.Fesih,
+            IslemTipi = LeaseActivityType.Termination,
             IslemTarihi = DateTime.Now,
             Aciklama = aciklama ?? fesihNedeni
         });
@@ -116,7 +116,7 @@ public class SozlesmeService : ISozlesmeService, ITransactionalService
         await _uow.SaveChangesAsync();
     }
 
-    public async Task VadeGuncelleAsync(int id, VadeKuraliTipi tip, int gun, string? aciklama)
+    public async Task VadeGuncelleAsync(int id, DueDateRuleType tip, int gun, string? aciklama)
     {
         if (gun < 1 || gun > 31)
             throw new ArgumentOutOfRangeException(nameof(gun), "Vade günü 1-31 arasında olmalıdır.");
@@ -124,18 +124,18 @@ public class SozlesmeService : ISozlesmeService, ITransactionalService
         var s = await _repo.GetByIdAsync(id, include: q => q.Include(x => x.IslemGecmisi))
             ?? throw new InvalidOperationException($"Sözleşme {id} bulunamadı.");
 
-        var eskiTip = s.VadeKuraliTipi;
+        var eskiTip = s.DueDateRuleType;
         var eskiGun = s.VadeGunu;
 
         if (eskiTip == tip && eskiGun == gun) return;
 
-        s.VadeKuraliTipi = tip;
+        s.DueDateRuleType = tip;
         s.VadeGunu = gun;
 
         s.IslemGecmisi.Add(new SozlesmeIslemGecmisi
         {
             KiraSozlesmesiId = id,
-            IslemTipi = SozlesmeIslemTipi.TahakkukYenidenUretim,
+            IslemTipi = LeaseActivityType.ChargeRegeneration,
             IslemTarihi = DateTime.Now,
             Aciklama = aciklama ?? $"Vade kuralı güncellendi: {eskiTip}({eskiGun}) → {tip}({gun})"
         });

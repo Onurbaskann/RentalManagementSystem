@@ -1,12 +1,12 @@
 @using KiraTakip.Models
-@model KiraDurumu
+@model OccupancyStatus
 
 @{
     var (cls, label) = Model switch
     {
-        KiraDurumu.Kirali => ("badge-kirali", "Kiralı"),
-        KiraDurumu.SuresiDolmakUzere => ("badge-surek", "Süresi Dolmak Üzere"),
-        KiraDurumu.Bos => ("badge-bos", "Boş"),
+        OccupancyStatus.Leased => ("badge-kirali", "Kiralı"),
+        OccupancyStatus.ExpiringSoon => ("badge-surek", "Süresi Dolmak Üzere"),
+        OccupancyStatus.Vacant => ("badge-bos", "Boş"),
         _ => ("badge-bos", "Bilinmiyor")
     };
 }

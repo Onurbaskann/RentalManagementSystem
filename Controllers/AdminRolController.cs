@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Policy = "System.Rol")]
+[Authorize(Policy = "System.Role")]
 [Route("Admin/Roller")]
 public class AdminRolController : Controller
 {
@@ -179,11 +179,11 @@ public class AdminRolController : Controller
         "OverrideRate"         => "Elle Müdahale",
         "Approve"              => "Onayla",
         "Reject"               => "Reddet",
-        "UploadDekont"         => "Dekont Yükle",
+        "UploadReceipt"         => "Dekont Yükle",
         "ImportBankStatement"  => "Banka Hareketleri İçe Aktar",
         "MatchBankTransaction" => "Banka Hareketi Eşleştir",
         "AssignPermission"     => "Yetki Ata",
-        "TransferToTahakkuk"   => "Tahakkuka Aktar",
+        "TransferToCharge"   => "Tahakkuka Aktar",
         "Regenerate"           => "Yeniden Üret",
         "Resend"               => "Yeniden Gönder",
         "BorcHatirlatma"       => "Borç Hatırlatma",

@@ -15,7 +15,7 @@ public class AdminTarifeController : Controller
 
     public AdminTarifeController(ApplicationDbContext ctx) => _ctx = ctx;
 
-    [Authorize(Policy = PermissionCatalog.Tarife.Module)]
+    [Authorize(Policy = PermissionCatalog.RateSchedule.Module)]
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
@@ -33,7 +33,7 @@ public class AdminTarifeController : Controller
         return View(ozet);
     }
 
-    [Authorize(Policy = PermissionCatalog.Tarife.Module)]
+    [Authorize(Policy = PermissionCatalog.RateSchedule.Module)]
     [HttpGet("Yil/{yil:int}")]
     public async Task<IActionResult> Detay(int yil)
     {
@@ -49,7 +49,7 @@ public class AdminTarifeController : Controller
             .ToListAsync();
 
         var borcTipleri = await _ctx.BorcTipleri
-            .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.KullaniciManuel && b.Davranis != BorcTipiDavranisi.RezervasyonOzel)
+            .Where(b => b.Aktif && b.Davranis != ChargeTypeBehavior.UserManual && b.Davranis != ChargeTypeBehavior.ReservationSpecific)
             .OrderBy(b => b.Sira)
             .ToListAsync();
 
@@ -76,7 +76,7 @@ public class AdminTarifeController : Controller
                         KalemId          = mevcut?.Id ?? 0,
                         KiraciKategoriId = kat.Id,
                         BorcTipiId       = bt.Id,
-                        HesaplamaYontemi = mevcut?.HesaplamaYontemi ?? HesaplamaYontemi.Sabit,
+                        CalculationMethod = mevcut?.CalculationMethod ?? CalculationMethod.Fixed,
                         BirimDeger       = mevcut?.BirimDeger ?? 0,
                         KdvOrani         = mevcut?.KdvOrani ?? 0
                     };
@@ -95,12 +95,12 @@ public class AdminTarifeController : Controller
 
         vm.RezervasyonSatirlari = rezervasyonBirimTurleri.Select(bt =>
         {
-            var mevcut = mevcutRezervasyonlar.FirstOrDefault(r => r.BirimTuruId == bt.Id);
+            var mevcut = mevcutRezervasyonlar.FirstOrDefault(r => r.UnitTypeId == bt.Id);
             return new TarifeMatrisRezervasyonSatir
             {
                 RezervasyonTarifeId          = mevcut?.Id ?? 0,
-                BirimTuruId                 = bt.Id,
-                BirimTuruAd                 = bt.Ad,
+                UnitTypeId                 = bt.Id,
+                UnitTypeAd                 = bt.Ad,
                 UcretsizSureDakika          = mevcut?.UcretsizSureDakika ?? 0,
                 UcretlendirmePeriyoduDakika = mevcut?.UcretlendirmePeriyoduDakika ?? 60,
                 PeriyotUcreti               = mevcut?.PeriyotUcreti ?? 0,
@@ -111,7 +111,7 @@ public class AdminTarifeController : Controller
         return View(vm);
     }
 
-    [Authorize(Policy = PermissionCatalog.Tarife.Edit)]
+    [Authorize(Policy = PermissionCatalog.RateSchedule.Edit)]
     [HttpPost("Yil/{yil:int}/KalemGuncelle")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> KalemGuncelle(int yil, TarifeMatrisPostViewModel vm)
@@ -131,14 +131,14 @@ public class AdminTarifeController : Controller
                     Yil              = yil,
                     KiraciKategoriId = hucre.KiraciKategoriId,
                     BorcTipiId       = hucre.BorcTipiId,
-                    HesaplamaYontemi = hucre.HesaplamaYontemi,
+                    CalculationMethod = hucre.CalculationMethod,
                     BirimDeger       = hucre.BirimDeger,
                     KdvOrani         = hucre.KdvOrani
                 });
             }
             else
             {
-                mevcut.HesaplamaYontemi = hucre.HesaplamaYontemi;
+                mevcut.CalculationMethod = hucre.CalculationMethod;
                 mevcut.BirimDeger       = hucre.BirimDeger;
                 mevcut.KdvOrani         = hucre.KdvOrani;
             }
@@ -147,14 +147,14 @@ public class AdminTarifeController : Controller
         foreach (var rez in vm.RezervasyonHucreler)
         {
             var mevcut = await _ctx.RezervasyonTarifeler
-                .FirstOrDefaultAsync(r => r.BirimId == null && r.Yil == yil && r.BirimTuruId == rez.BirimTuruId);
+                .FirstOrDefaultAsync(r => r.BirimId == null && r.Yil == yil && r.UnitTypeId == rez.UnitTypeId);
 
             if (mevcut == null)
             {
                 _ctx.RezervasyonTarifeler.Add(new RezervasyonTarife
                 {
                     Yil                         = yil,
-                    BirimTuruId                 = rez.BirimTuruId,
+                    UnitTypeId                 = rez.UnitTypeId,
                     UcretsizSureDakika          = rez.UcretsizSureDakika,
                     UcretlendirmePeriyoduDakika = rez.UcretlendirmePeriyoduDakika,
                     PeriyotUcreti               = rez.PeriyotUcreti,
@@ -175,7 +175,7 @@ public class AdminTarifeController : Controller
         return RedirectToAction(nameof(Detay), new { yil });
     }
 
-    [Authorize(Policy = PermissionCatalog.Tarife.Edit)]
+    [Authorize(Policy = PermissionCatalog.RateSchedule.Edit)]
     [HttpGet("YilEkle")]
     public async Task<IActionResult> YilEkle()
     {
@@ -189,7 +189,7 @@ public class AdminTarifeController : Controller
         return View(new TarifeYilEkleViewModel { Yil = DateTime.Now.Year });
     }
 
-    [Authorize(Policy = PermissionCatalog.Tarife.Create)]
+    [Authorize(Policy = PermissionCatalog.RateSchedule.Create)]
     [HttpPost("YilEkle")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> YilEkle(TarifeYilEkleViewModel vm)
@@ -222,7 +222,7 @@ public class AdminTarifeController : Controller
                     Yil              = vm.Yil,
                     KiraciKategoriId = kalem.KiraciKategoriId,
                     BorcTipiId       = kalem.BorcTipiId,
-                    HesaplamaYontemi = kalem.HesaplamaYontemi,
+                    CalculationMethod = kalem.CalculationMethod,
                     BirimDeger       = kalem.BirimDeger,
                     KdvOrani         = kalem.KdvOrani
                 });
@@ -237,7 +237,7 @@ public class AdminTarifeController : Controller
                 _ctx.RezervasyonTarifeler.Add(new RezervasyonTarife
                 {
                     Yil                         = vm.Yil,
-                    BirimTuruId                 = rez.BirimTuruId,
+                    UnitTypeId                 = rez.UnitTypeId,
                     UcretsizSureDakika          = rez.UcretsizSureDakika,
                     UcretlendirmePeriyoduDakika = rez.UcretlendirmePeriyoduDakika,
                     PeriyotUcreti               = rez.PeriyotUcreti,
@@ -249,7 +249,7 @@ public class AdminTarifeController : Controller
         {
             var kategoriler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Kiraci && k.Aktif).OrderBy(k => k.Sira).ToListAsync();
             var aktifBorcTipleri = await _ctx.BorcTipleri
-                .Where(b => b.Aktif && b.Davranis != BorcTipiDavranisi.KullaniciManuel && b.Davranis != BorcTipiDavranisi.RezervasyonOzel)
+                .Where(b => b.Aktif && b.Davranis != ChargeTypeBehavior.UserManual && b.Davranis != ChargeTypeBehavior.ReservationSpecific)
                 .OrderBy(b => b.Sira).ToListAsync();
 
             foreach (var kat in kategoriler)
@@ -261,7 +261,7 @@ public class AdminTarifeController : Controller
                         Yil              = vm.Yil,
                         KiraciKategoriId = kat.Id,
                         BorcTipiId       = bt.Id,
-                        HesaplamaYontemi = HesaplamaYontemi.Sabit,
+                        CalculationMethod = CalculationMethod.Fixed,
                         BirimDeger       = 0,
                         KdvOrani         = 0
                     });
@@ -277,7 +277,7 @@ public class AdminTarifeController : Controller
                 _ctx.RezervasyonTarifeler.Add(new RezervasyonTarife
                 {
                     Yil                         = vm.Yil,
-                    BirimTuruId                 = bt.Id,
+                    UnitTypeId                 = bt.Id,
                     UcretsizSureDakika          = 0,
                     UcretlendirmePeriyoduDakika = 60,
                     PeriyotUcreti               = 0,
@@ -291,7 +291,7 @@ public class AdminTarifeController : Controller
         return RedirectToAction(nameof(Detay), new { yil = vm.Yil });
     }
 
-    [Authorize(Policy = PermissionCatalog.Tarife.Edit)]
+    [Authorize(Policy = PermissionCatalog.RateSchedule.Edit)]
     [HttpPost("DurumDegistir/{yil:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DurumDegistir(int yil)

@@ -9,15 +9,15 @@ using Microsoft.AspNetCore.Mvc;
 namespace KiraTakip.Controllers;
 
 [Authorize]
-[Route("Admin/BirimTuru")]
-public class AdminBirimTuruController : Controller
+[Route("Admin/UnitType")]
+public class AdminUnitTypeController : Controller
 {
-    private readonly IBirimTuruRepository _repo;
+    private readonly IUnitTypeRepository _repo;
     private readonly IBorcTipiRepository _borcTipiRepo;
     private readonly IUnitOfWork _uow;
 
-    public AdminBirimTuruController(
-        IBirimTuruRepository repo,
+    public AdminUnitTypeController(
+        IUnitTypeRepository repo,
         IBorcTipiRepository borcTipiRepo,
         IUnitOfWork uow)
     {
@@ -27,7 +27,7 @@ public class AdminBirimTuruController : Controller
     }
 
     [HttpGet("")]
-    [Authorize(Policy = PermissionCatalog.BirimTuru.Module)]
+    [Authorize(Policy = PermissionCatalog.UnitType.Module)]
     public async Task<IActionResult> Index()
     {
         var list = await _repo.GetListAsync();
@@ -35,11 +35,11 @@ public class AdminBirimTuruController : Controller
     }
 
     [HttpGet("Ekle")]
-    [Authorize(Policy = PermissionCatalog.BirimTuru.Module)]
+    [Authorize(Policy = PermissionCatalog.UnitType.Module)]
     public async Task<IActionResult> Create()
     {
         var nextSira = (await _repo.GetMaxSiraAsync()) + 1;
-        var vm = new BirimTuruFormViewModel
+        var vm = new UnitTypeFormViewModel
         {
             Sira = nextSira,
             KiralanabilirMi = true,
@@ -50,8 +50,8 @@ public class AdminBirimTuruController : Controller
 
     [HttpPost("Ekle")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.BirimTuru.Create)]
-    public async Task<IActionResult> Create(BirimTuruFormViewModel model)
+    [Authorize(Policy = PermissionCatalog.UnitType.Create)]
+    public async Task<IActionResult> Create(UnitTypeFormViewModel model)
     {
         if (model.RezervasyonYapilabilirMi && (!model.BorcTipiId.HasValue || model.BorcTipiId <= 0))
             ModelState.AddModelError(nameof(model.BorcTipiId), "Rezervasyon birim türü için borç tipi seçilmelidir.");
@@ -74,7 +74,7 @@ public class AdminBirimTuruController : Controller
             return View(model);
         }
 
-        var entity = new BirimTuru
+        var entity = new UnitType
         {
             Ad = model.Ad,
             Kod = kod,
@@ -93,7 +93,7 @@ public class AdminBirimTuruController : Controller
     }
 
     [HttpGet("Duzenle/{id:int}")]
-    [Authorize(Policy = PermissionCatalog.BirimTuru.Module)]
+    [Authorize(Policy = PermissionCatalog.UnitType.Module)]
     public async Task<IActionResult> Edit(int id)
     {
         var entity = await _repo.GetByIdAsync(id);
@@ -106,8 +106,8 @@ public class AdminBirimTuruController : Controller
 
     [HttpPost("Duzenle/{id:int}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.BirimTuru.Edit)]
-    public async Task<IActionResult> Edit(int id, BirimTuruFormViewModel model)
+    [Authorize(Policy = PermissionCatalog.UnitType.Edit)]
+    public async Task<IActionResult> Edit(int id, UnitTypeFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
 
@@ -141,7 +141,7 @@ public class AdminBirimTuruController : Controller
 
     [HttpPost("DurumDegistir/{id:int}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.BirimTuru.Edit)]
+    [Authorize(Policy = PermissionCatalog.UnitType.Edit)]
     public async Task<IActionResult> DurumDegistir(int id)
     {
         var entity = await _repo.GetByIdAsync(id);
@@ -149,19 +149,19 @@ public class AdminBirimTuruController : Controller
 
         if (entity.Aktif) // Pasife çekme
         {
-            if (await _repo.HasAktifTahakkukForBirimTuruAsync(id))
+            if (await _repo.HasAktifTahakkukForUnitTypeAsync(id))
             {
                 TempData["Error"] = "Bu birim türüne bağlı birimlerde aktif tahakkuk bulunduğu için pasif yapılamaz.";
                 return RedirectToAction(nameof(Index));
             }
 
-            if (await _repo.HasPlanlanmisRezervasyonForBirimTuruAsync(id))
+            if (await _repo.HasPlanlanmisRezervasyonForUnitTypeAsync(id))
             {
                 TempData["Error"] = "Bu birim türüne bağlı birimlerde planlanmış rezervasyon bulunduğu için pasif yapılamaz.";
                 return RedirectToAction(nameof(Index));
             }
 
-            // Cascade BorcTipi pasif (başka aktif BirimTuru kullanmıyorsa)
+            // Cascade BorcTipi pasif (başka aktif UnitType kullanmıyorsa)
             if (entity.BorcTipiId.HasValue)
             {
                 var baskaKullananVar = await _repo.AnyAktifByBorcTipiIdAsync(entity.BorcTipiId.Value, id);
@@ -179,7 +179,7 @@ public class AdminBirimTuruController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private static BirimTuruFormViewModel ToFormVm(BirimTuru e) => new()
+    private static UnitTypeFormViewModel ToFormVm(UnitType e) => new()
     {
         Id = e.Id,
         Ad = e.Ad,

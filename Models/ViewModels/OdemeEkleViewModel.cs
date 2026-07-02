@@ -11,7 +11,7 @@ public class OdemeEkleViewModel
 
     [Range(0.01, double.MaxValue, ErrorMessage = "Tutar sıfırdan büyük olmalıdır.")]
     public decimal Tutar { get; set; }
-    public OdemeKanali OdemeKanali { get; set; } = OdemeKanali.EFT;
+    public PaymentChannel PaymentChannel { get; set; } = PaymentChannel.Eft;
     public string? Aciklama { get; set; }
     public TahakkukDetayDto? Tahakkuk { get; set; }
 }

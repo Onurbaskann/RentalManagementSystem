@@ -6,8 +6,8 @@ public class SozlesmeTarifeDto
     public int BorcTipiId { get; set; }
     public string BorcTipiKod { get; set; } = string.Empty;
     public string BorcTipiAd { get; set; } = string.Empty;
-    public BorcTipiDavranisi BorcTipiDavranis { get; set; }
+    public ChargeTypeBehavior BorcTipiDavranis { get; set; }
     public decimal BirimDeger { get; set; }
-    public HesaplamaYontemi HesaplamaYontemi { get; set; }
+    public CalculationMethod CalculationMethod { get; set; }
     public decimal KdvOrani { get; set; }
 }

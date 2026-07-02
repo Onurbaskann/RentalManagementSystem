@@ -22,7 +22,7 @@
         <div class="page-subtitle">@Model.KiraciNo</div>
     </div>
     <form asp-action="Duzenle" asp-hashid="@Model.Id" method="post"
-          asp-form-write-permission="@PermissionCatalog.Kiraci.Edit"
+          asp-form-write-permission="@PermissionCatalog.Tenant.Edit"
           x-data="kiraciFormData()"
           @@submit.prevent="handleSubmit($event)"
           x-cloak>
@@ -127,7 +127,7 @@
         </div>
 
         <div class="flex gap-3 mt-6">
-            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.Kiraci.Edit">
+            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.Tenant.Edit">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="mr-1.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Kaydet
             </button>

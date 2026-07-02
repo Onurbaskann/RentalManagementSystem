@@ -11,7 +11,7 @@
     </div>
 
     <div x-data="sozlesmeForm()" x-init="init()" x-cloak @@datechanged="onPickerChanged($event)">
-    <form asp-action="Ekle" method="post" enctype="multipart/form-data" id="sozlesmeForm" asp-form-write-permission="@PermissionCatalog.Sozlesme.Create">
+    <form asp-action="Ekle" method="post" enctype="multipart/form-data" id="sozlesmeForm" asp-form-write-permission="@PermissionCatalog.Lease.Create">
         <div class="card">
             <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex items-center gap-2">
                 <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
@@ -24,7 +24,7 @@
                     <option value="">— Boş birim seçin —</option>
                     @foreach (var b in Model.MevcutBirimler)
                     {
-                        string birimLabel = b.BirimTipi == KiraTakip.Models.BirimTipi.Birim
+                        string birimLabel = b.UnitKind == KiraTakip.Models.UnitKind.Unit
                             ? $"{b.TasinmazAd} — Birim {b.BirimNo}{(b.KatNo.HasValue ? $" • {b.KatNo}. Kat" : "")} • {b.Yuzolcumu.ToString("N0")} m²"
                             : $"{b.TasinmazAd} — Komple • {b.Yuzolcumu.ToString("N0")} m² • {b.Ilce}";
                         <option value="@b.Id">@birimLabel</option>
@@ -85,7 +85,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-3.5">
                 <div class="form-group mb-0">
                     <label class="form-label">Vade Kuralı</label>
-                    <select asp-for="VadeKuraliTipi" class="form-control" x-model.number="vadeKuraliTipi">
+                    <select asp-for="DueDateRuleType" class="form-control" x-model.number="vadeKuraliTipi">
                         <option value="1">Sabit Ay Günü (ayın N'i)</option>
                         <option value="2">Dönem Başı + N Gün</option>
                     </select>
@@ -216,7 +216,7 @@
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].BorcTipiKod`" :value="k.borcTipiKod">
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].Davranis`" :value="k.davranis">
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].BirimDeger`" :value="k.birimDeger">
-                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].HesaplamaYontemi`" :value="k.hesaplamaYontemi">
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].CalculationMethod`" :value="k.hesaplamaYontemi">
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].Tutar`" :value="hesaplaTutar(k)">
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].VarsayilanTutar`" :value="k.varsayilanTutar">
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].KullaniciDegistirdiMi`" :value="k.kullaniciDegistirdiMi">
@@ -241,7 +241,7 @@
         </div>
 
         <div class="flex gap-3 mt-6">
-            <button type="submit" class="btn btn-primary px-6 flex items-center gap-2" asp-permission="@PermissionCatalog.Sozlesme.Create" :disabled="isSubmitDisabled()">
+            <button type="submit" class="btn btn-primary px-6 flex items-center gap-2" asp-permission="@PermissionCatalog.Lease.Create" :disabled="isSubmitDisabled()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Sözleşme Oluştur
             </button>
@@ -263,7 +263,7 @@
                 if (e.detail.field === 'baslangic') this.baslangicTarihi = e.detail.value;
                 else if (e.detail.field === 'bitis') this.bitisTarihi = e.detail.value;
             },
-            vadeKuraliTipi: @((int)Model.VadeKuraliTipi),
+            vadeKuraliTipi: @((int)Model.DueDateRuleType),
             vadeGunu: @Model.VadeGunu,
             kalemler: [],
             loading: false,
@@ -271,10 +271,10 @@
             birimler: {
                 @foreach (var b in Model.MevcutBirimler)
                 {
-                    string birimAd = b.BirimTipi == KiraTakip.Models.BirimTipi.Birim
+                    string birimAd = b.UnitKind == KiraTakip.Models.UnitKind.Unit
                         ? $"{b.TasinmazAd} — Birim {b.BirimNo}"
                         : $"{b.TasinmazAd} — Komple";
-                    string meta = b.BirimTipi == KiraTakip.Models.BirimTipi.Birim && b.KatNo.HasValue
+                    string meta = b.UnitKind == KiraTakip.Models.UnitKind.Unit && b.KatNo.HasValue
                         ? $"{b.KatNo}. Kat • {b.Yuzolcumu.ToString("N0")} m²"
                         : $"{b.Yuzolcumu.ToString("N0")} m²";
                     @Html.Raw($"{b.Id}: {{ad: '{birimAd.Replace("'", "\\'")}', m2: '{meta.Replace("'", "\\'")}', ilce: '{b.Ilce.Replace("'", "\\'")}', il: '{b.Il.Replace("'", "\\'")}'}},")
@@ -313,7 +313,7 @@
                     console.log('API cevabı:', data);
                     this.kalemler = data.map(k => ({
                         ...k,
-                        varsayilanHesaplamaYontemi: k.hesaplamaYontemi,
+                        varsayilanCalculationMethod: k.hesaplamaYontemi,
                         _error: null
                     }));
                     
@@ -335,7 +335,7 @@
             },
             resetKalem(k) {
                 k.birimDeger = k.varsayilanBirimDeger;
-                k.hesaplamaYontemi = k.varsayilanHesaplamaYontemi;
+                k.hesaplamaYontemi = k.varsayilanCalculationMethod;
                 k.tutar = k.varsayilanTutar;
                 k.kullaniciDegistirdiMi = false;
                 k._error = null;

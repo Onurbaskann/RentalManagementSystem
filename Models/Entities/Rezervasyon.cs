@@ -14,7 +14,7 @@ public class Rezervasyon : BaseEntity
     public decimal? KdvOrani { get; set; }
     public decimal? KdvTutari { get; set; }
     public decimal ToplamTutar { get; set; }
-    public RezervasyonDurumu Durum { get; set; } = RezervasyonDurumu.Planlandi;
+    public ReservationStatus Durum { get; set; } = ReservationStatus.Planned;
     public string? Aciklama { get; set; }
 
     public Birim Birim { get; set; } = null!;

@@ -8,18 +8,18 @@
     ViewData["Title"] = $"Sözleşme #{s.Id}";
     var trCulture = new CultureInfo("tr-TR");
 
-    bool feshedildi = s.Durum == SozlesmeDurumu.Feshedildi;
-    bool hasBorc    = User.HasModuleAccess("Kiraci.Borc");
+    bool feshedildi = s.Durum == LeaseStatus.Terminated;
+    bool hasBorc    = User.HasModuleAccess("Tenant.Charge");
 
     string sozlesmeDurumBadgeCls = s.Durum switch {
-        SozlesmeDurumu.Feshedildi => "badge-gecmis",
-        SozlesmeDurumu.SonaErdi   => "badge-bos",
-        _                          => Model.Durum == KiraDurumu.SuresiDolmakUzere ? "badge-surek" : "badge-kirali"
+        LeaseStatus.Terminated => "badge-gecmis",
+        LeaseStatus.Ended   => "badge-bos",
+        _                          => Model.Durum == OccupancyStatus.ExpiringSoon ? "badge-surek" : "badge-kirali"
     };
     string sozlesmeDurumLabel = s.Durum switch {
-        SozlesmeDurumu.Feshedildi => "Feshedildi",
-        SozlesmeDurumu.SonaErdi   => "Sona Erdi",
-        _                          => Model.Durum == KiraDurumu.SuresiDolmakUzere ? "Süresi Dolmak Üzere" : "Aktif"
+        LeaseStatus.Terminated => "Feshedildi",
+        LeaseStatus.Ended   => "Sona Erdi",
+        _                          => Model.Durum == OccupancyStatus.ExpiringSoon ? "Süresi Dolmak Üzere" : "Aktif"
     };
 
     string TLFormat(decimal v) => v.ToString("N2") + " ₺";
@@ -30,23 +30,23 @@
     decimal aylikKdv = kdvTutari;
 
     var sozlesmeTahakkuklari = Model.Tahakkuklar
-        .Where(t => t.KaynakTipi == TahakkukKaynakTipi.Sozlesme && t.Durum != TahakkukDurumu.IptalEdildi)
+        .Where(t => t.KaynakTipi == ChargeSourceType.Lease && t.Durum != ChargeStatus.Cancelled)
         .ToList();
-    int thkOdenenSayi  = sozlesmeTahakkuklari.Count(t => t.Durum == TahakkukDurumu.TamOdendi);
-    int thkBekleyenSayi = sozlesmeTahakkuklari.Count(t => t.Durum == TahakkukDurumu.Bekleniyor || t.Durum == TahakkukDurumu.KismenOdendi);
-    int thkGecikenSayi = sozlesmeTahakkuklari.Count(t => t.Durum == TahakkukDurumu.Gecikti);
+    int thkOdenenSayi  = sozlesmeTahakkuklari.Count(t => t.Durum == ChargeStatus.Paid);
+    int thkBekleyenSayi = sozlesmeTahakkuklari.Count(t => t.Durum == ChargeStatus.Pending || t.Durum == ChargeStatus.PartiallyPaid);
+    int thkGecikenSayi = sozlesmeTahakkuklari.Count(t => t.Durum == ChargeStatus.Overdue);
     int thkToplamSayi  = sozlesmeTahakkuklari.Count;
     decimal thkToplamTutar = sozlesmeTahakkuklari.Sum(t => t.ToplamTutar);
     decimal thkOdenenTutar = sozlesmeTahakkuklari.Sum(t => t.OdenenTutar);
     decimal thkBekleyenTutar = sozlesmeTahakkuklari
-        .Where(t => t.Durum == TahakkukDurumu.Bekleniyor || t.Durum == TahakkukDurumu.KismenOdendi)
+        .Where(t => t.Durum == ChargeStatus.Pending || t.Durum == ChargeStatus.PartiallyPaid)
         .Sum(t => t.ToplamTutar - t.OdenenTutar);
     decimal thkGecikenTutar = sozlesmeTahakkuklari
-        .Where(t => t.Durum == TahakkukDurumu.Gecikti)
+        .Where(t => t.Durum == ChargeStatus.Overdue)
         .Sum(t => t.ToplamTutar - t.OdenenTutar);
     decimal thkOdemeOrani = thkToplamTutar > 0 ? Math.Round(thkOdenenTutar / thkToplamTutar * 100, 0) : 0;
     DateTime? thkSonrakiVade = sozlesmeTahakkuklari
-        .Where(t => t.Durum == TahakkukDurumu.Bekleniyor || t.Durum == TahakkukDurumu.KismenOdendi)
+        .Where(t => t.Durum == ChargeStatus.Pending || t.Durum == ChargeStatus.PartiallyPaid)
         .OrderBy(t => t.VadeTarihi)
         .Select(t => (DateTime?)t.VadeTarihi)
         .FirstOrDefault();
@@ -112,7 +112,7 @@
         <div class="text-right">
             <div class="text-[11.5px] font-semibold text-muted uppercase tracking-wider mb-2.5">Taşınmaz</div>
             <div class="font-serif text-xl font-bold mb-1">@s.TasinmazAd</div>
-            @if (s.BirimTipi == BirimTipi.Birim)
+            @if (s.UnitKind == UnitKind.Unit)
             {
                 <div class="text-sm text-muted mb-1">Birim @s.BirimNo@(s.BirimKatNo.HasValue ? $" • {s.BirimKatNo}. Kat" : "") • @s.BirimYuzolcumu.ToString("N0") m²</div>
                 <div class="text-[13px] text-muted mb-2.5">@s.TasinmazIlce, @s.TasinmazIl</div>
@@ -183,7 +183,7 @@
         <div class="mt-3 pt-3 border-t border-[var(--color-border)]">
             <div class="text-[11.5px] text-muted">Vade Kuralı</div>
             <div class="text-[13px] font-semibold mt-0.5">
-                @if (s.VadeKuraliTipi == VadeKuraliTipi.SabitAyGunu)
+                @if (s.DueDateRuleType == DueDateRuleType.FixedDayOfMonth)
                 {
                     <span>Her ayın @s.VadeGunu</span><span>'i</span>
                 }
@@ -292,8 +292,8 @@
                     {
                         <tr class="border-t border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
                             <td class="p-2 px-3 text-slate-600 font-medium">@k.BorcTipi.Ad</td>
-                            <td class="p-2 px-3 text-slate-400">@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "m² Bazlı" : "Sabit")</td>
-                            <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
+                            <td class="p-2 px-3 text-slate-400">@(k.CalculationMethod == CalculationMethod.M2 ? "m² Bazlı" : "Sabit")</td>
+                            <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺@(k.CalculationMethod == CalculationMethod.M2 ? "/m²" : "")</td>
                             <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Tutar.ToString("N2") ₺</td>
                             <td class="p-2 px-3 text-right text-slate-400/60">
                                 @if (k.KdvOrani > 0) { <span>%@k.KdvOrani.ToString("G") → @k.KdvTutari.ToString("N2") ₺</span> }
@@ -392,7 +392,7 @@
                         <div>
                             <div class="text-xs text-muted">Tip</div>
                             <div class="text-[15px] font-semibold">
-                                @if (s.BirimTipi == BirimTipi.Birim)
+                                @if (s.UnitKind == UnitKind.Unit)
                                 {
                                     <span>Birim @s.BirimNo</span>
                                     if (s.BirimKatNo.HasValue) { <span class="text-[13px] font-normal text-muted"> • @s.BirimKatNo. Kat</span> }
@@ -433,13 +433,13 @@
         }
         else
         {
-            var tumTahakkuklar      = Model.Tahakkuklar.Where(t => t.Durum != TahakkukDurumu.IptalEdildi).ToList();
+            var tumTahakkuklar      = Model.Tahakkuklar.Where(t => t.Durum != ChargeStatus.Cancelled).ToList();
             decimal toplamBeklenen  = tumTahakkuklar.Sum(t => t.ToplamTutar);
             decimal toplamOdenen    = tumTahakkuklar.Sum(t => t.OdenenTutar);
             decimal toplamKalan     = toplamBeklenen - toplamOdenen;
-            decimal gecikmisTutar   = tumTahakkuklar.Where(t => t.Durum == TahakkukDurumu.Gecikti).Sum(t => t.ToplamTutar - t.OdenenTutar);
-            int gecikmisSayisi      = tumTahakkuklar.Count(t => t.Durum == TahakkukDurumu.Gecikti);
-            int bekleyenSayisi      = tumTahakkuklar.Count(t => t.Durum == TahakkukDurumu.Bekleniyor || t.Durum == TahakkukDurumu.KismenOdendi);
+            decimal gecikmisTutar   = tumTahakkuklar.Where(t => t.Durum == ChargeStatus.Overdue).Sum(t => t.ToplamTutar - t.OdenenTutar);
+            int gecikmisSayisi      = tumTahakkuklar.Count(t => t.Durum == ChargeStatus.Overdue);
+            int bekleyenSayisi      = tumTahakkuklar.Count(t => t.Durum == ChargeStatus.Pending || t.Durum == ChargeStatus.PartiallyPaid);
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 <div class="card text-center">
                     <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Toplam Borç</div>
@@ -482,19 +482,19 @@
                             @foreach (var t in Model.Tahakkuklar.OrderByDescending(x => x.DonemBaslangic))
                             {
                                 string tDurumCls = t.Durum switch {
-                                    TahakkukDurumu.TamOdendi    => "badge-kirali",
-                                    TahakkukDurumu.KismenOdendi => "badge-surek",
-                                    TahakkukDurumu.Gecikti      => "badge-gecmis",
+                                    ChargeStatus.Paid    => "badge-kirali",
+                                    ChargeStatus.PartiallyPaid => "badge-surek",
+                                    ChargeStatus.Overdue      => "badge-gecmis",
                                     _                            => "badge-bos"
                                 };
                                 string tDurumLabel = t.Durum switch {
-                                    TahakkukDurumu.TamOdendi    => "Tam Ödendi",
-                                    TahakkukDurumu.KismenOdendi => "Kısmi",
-                                    TahakkukDurumu.Gecikti      => "Gecikti",
+                                    ChargeStatus.Paid    => "Tam Ödendi",
+                                    ChargeStatus.PartiallyPaid => "Kısmi",
+                                    ChargeStatus.Overdue      => "Gecikti",
                                     _                            => "Bekleniyor"
                                 };
                                 decimal tKalan = t.ToplamTutar - t.OdenenTutar;
-                                int tGecikmeGun = (t.Durum != TahakkukDurumu.TamOdendi && t.VadeTarihi.Date < DateTime.Today)
+                                int tGecikmeGun = (t.Durum != ChargeStatus.Paid && t.VadeTarihi.Date < DateTime.Today)
                                     ? (DateTime.Today - t.VadeTarihi.Date).Days : 0;
                                 string tGecikmeRenk = tGecikmeGun > 7 ? "#dc2626" : tGecikmeGun > 0 ? "#b45309" : "";
                                 <tr @@click="open[@t.Id] = !open[@t.Id]" class="cursor-pointer">
@@ -551,7 +551,7 @@
                                                         {
                                                             <tr class="border-t border-slate-100 last:border-0">
                                                                 <td class="p-2 px-3 text-slate-600">@k.Aciklama</td>
-                                                                <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺@(k.HesaplamaYontemi == HesaplamaYontemi.M2 ? "/m²" : "")</td>
+                                                                <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺@(k.CalculationMethod == CalculationMethod.M2 ? "/m²" : "")</td>
                                                                 <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Tutar.ToString("N2") ₺</td>
                                                                 <td class="p-2 px-3 text-right text-slate-400/60">@k.KdvTutari.ToString("N2") ₺</td>
                                                                 <td class="p-2 px-3 text-right font-bold text-slate-700">@k.ToplamTutar.ToString("N2") ₺</td>

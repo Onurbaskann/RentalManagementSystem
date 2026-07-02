@@ -8,6 +8,6 @@ public class BirimDuzenleViewModel
     public string? Ad { get; set; }
     public decimal Yuzolcumu { get; set; }
     public string? Aciklama { get; set; }
-    public int? BirimTuruId { get; set; }
+    public int? UnitTypeId { get; set; }
     public bool AktifSozlesmesiVar { get; set; }
 }

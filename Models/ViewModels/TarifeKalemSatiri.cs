@@ -6,7 +6,7 @@ public class TarifeKalemSatiri
     public int BorcTipiId { get; set; }
     public string BorcTipiAd { get; set; } = string.Empty;
     public string BorcTipiKod { get; set; } = string.Empty;
-    public HesaplamaYontemi HesaplamaYontemi { get; set; }
+    public CalculationMethod CalculationMethod { get; set; }
     public decimal BirimDeger { get; set; }
     public decimal KdvOrani { get; set; }
 }

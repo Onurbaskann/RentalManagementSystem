@@ -6,14 +6,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class BirimTuruRepository : BaseRepository<BirimTuru>, IBirimTuruRepository
+public class UnitTypeRepository : BaseRepository<UnitType>, IUnitTypeRepository
 {
-    public BirimTuruRepository(ApplicationDbContext ctx) : base(ctx) { }
+    public UnitTypeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<List<BirimTuruListItemDto>> GetListAsync()
+    public async Task<List<UnitTypeListItemDto>> GetListAsync()
         => await _dbSet.AsNoTracking()
             .OrderBy(b => b.Sira).ThenBy(b => b.Ad)
-            .Select(b => new BirimTuruListItemDto
+            .Select(b => new UnitTypeListItemDto
             {
                 Id = b.Id,
                 Ad = b.Ad,
@@ -38,14 +38,14 @@ public class BirimTuruRepository : BaseRepository<BirimTuru>, IBirimTuruReposito
         => await _dbSet.AsNoTracking()
             .AnyAsync(b => b.BorcTipiId == borcTipiId && b.Aktif && (excludeId == null || b.Id != excludeId));
 
-    public async Task<bool> HasAktifTahakkukForBirimTuruAsync(int birimTuruId)
+    public async Task<bool> HasAktifTahakkukForUnitTypeAsync(int birimTuruId)
         => await _ctx.Tahakkuklar.AsNoTracking()
-            .AnyAsync(t => t.Durum != TahakkukDurumu.TamOdendi
-                        && t.Durum != TahakkukDurumu.IptalEdildi
-                        && t.Birim.BirimTuruId == birimTuruId);
+            .AnyAsync(t => t.Durum != ChargeStatus.Paid
+                        && t.Durum != ChargeStatus.Cancelled
+                        && t.Birim.UnitTypeId == birimTuruId);
 
-    public async Task<bool> HasPlanlanmisRezervasyonForBirimTuruAsync(int birimTuruId)
+    public async Task<bool> HasPlanlanmisRezervasyonForUnitTypeAsync(int birimTuruId)
         => await _ctx.Rezervasyonlari.AsNoTracking()
-            .AnyAsync(r => r.Durum == RezervasyonDurumu.Planlandi
-                        && _ctx.Birimler.Any(b => b.BirimTuruId == birimTuruId && b.Id == r.BirimId));
+            .AnyAsync(r => r.Durum == ReservationStatus.Planned
+                        && _ctx.Birimler.Any(b => b.UnitTypeId == birimTuruId && b.Id == r.BirimId));
 }

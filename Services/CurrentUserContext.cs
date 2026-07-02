@@ -32,7 +32,7 @@ public class CurrentUserContext : ICurrentUserContext
         }
     }
 
-    public bool IsKiraciUser => UserType == Models.UserType.Kiraci && KiraciId.HasValue;
+    public bool IsKiraciUser => UserType == Models.UserType.Tenant && KiraciId.HasValue;
 
     public CurrentUserContext(IHttpContextAccessor httpContextAccessor)
     {

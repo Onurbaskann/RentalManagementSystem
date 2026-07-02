@@ -3,163 +3,160 @@ namespace KiraTakip.Models;
 public enum UserType
 {
     Internal = 1,
-    Kiraci = 2
+    Tenant = 2
 }
 
-public enum RolScope
+public enum RoleScope
 {
     Internal = 1,
-    Kiraci = 2
+    Tenant = 2
 }
 
-
-public enum SozlesmeDurumu
+public enum LeaseStatus
 {
-    Aktif = 1,
-    SonaErdi = 2,
-    Feshedildi = 3
+    Active = 1,
+    Ended = 2,
+    Terminated = 3
 }
 
-public enum SozlesmeIslemTipi
+public enum LeaseActivityType
 {
-    Olusturma = 1,
-    SureUzatma = 2,
-    Fesih = 3,
-    TufeArtis = 4,
-    KdvGuncelleme = 5,
-    TahakkukYenidenUretim = 6
+    Creation = 1,
+    Extension = 2,
+    Termination = 3,
+    TufeIncrease = 4,
+    KdvUpdate = 5,
+    ChargeRegeneration = 6
 }
 
-
-public enum KiralamaSekli
+public enum RentalMode
 {
-    TekParca = 1,
-    BirimBazli = 2
+    WholeProperty = 1,
+    UnitBased = 2
 }
 
-public enum KiraDurumu
+public enum OccupancyStatus
 {
-    Bos = 1,
-    Kirali = 2,
-    SuresiDolmakUzere = 3
+    Vacant = 1,
+    Leased = 2,
+    ExpiringSoon = 3
 }
 
-
-public enum BirimTipi
+public enum UnitKind
 {
-    Komple = 1,
-    Birim = 2
+    Whole = 1,
+    Unit = 2
 }
 
-public enum TahakkukDurumu
+public enum ChargeStatus
 {
-    Bekleniyor = 1,
-    KismenOdendi = 2,
-    TamOdendi = 3,
-    Gecikti = 4,
-    IptalEdildi = 5
+    Pending = 1,
+    PartiallyPaid = 2,
+    Paid = 3,
+    Overdue = 4,
+    Cancelled = 5
 }
 
-public enum OdemeDurumu
+public enum PaymentStatus
 {
-    OnayBekliyor = 1,
-    Onaylandi = 2,
-    Reddedildi = 3
+    PendingApproval = 1,
+    Approved = 2,
+    Rejected = 3
 }
 
-public enum OdemeKanali
+public enum PaymentChannel
 {
-    Havale = 1,
-    EFT = 2,
-    Nakit = 3,
-    Diger = 4
+    BankTransfer = 1,
+    Eft = 2,
+    Cash = 3,
+    Other = 4
 }
 
-public enum BankaEslesmeDurumu
+public enum BankMatchStatus
 {
-    Eslestirilmedi = 1,
-    Eslesti = 2,
-    ManuelEslesti = 3
+    Unmatched = 1,
+    Matched = 2,
+    ManuallyMatched = 3
 }
 
-public enum EslesmeTipi
+public enum MatchType
 {
-    Otomatik = 1,
-    Manuel = 2
+    Automatic = 1,
+    Manual = 2
 }
 
-public enum HesaplamaYontemi
+public enum CalculationMethod
 {
-    Sabit = 1,
+    Fixed = 1,
     M2 = 2
 }
 
-public enum KalemKaynakTipi
+public enum LineItemSourceType
 {
-    TanimsizTarife = 0,
-    SozlesmeTarifesi = 1,
-    BirimTarifesi = 2,
-    GenelTarife = 3,
-    TasinmazTarifesi = 4,
-    ManuelGiris = 5,
-    RezervasyonKurali = 6
+    UndefinedRate = 0,
+    LeaseRateOverride = 1,
+    UnitRateOverride = 2,
+    RateSchedule = 3,
+    PropertyRateOverride = 4,
+    ManualInput = 5,
+    ReservationRule = 6
 }
 
-public enum TahakkukKaynakTipi
+public enum ChargeSourceType
 {
-    Sozlesme = 1,
-    Manuel = 2,
-    Rezervasyon = 3
+    Lease = 1,
+    Manual = 2,
+    Reservation = 3
 }
 
-public enum RezervasyonDurumu
+public enum ReservationStatus
 {
-    Planlandi = 1,
-    Tamamlandi = 2,
-    IptalEdildi = 3,
-    TahakkukaAktarildi = 4
+    Planned = 1,
+    Completed = 2,
+    Cancelled = 3,
+    TransferredToCharge = 4
 }
 
-public enum BorcTipiDavranisi
+public enum ChargeTypeBehavior
 {
-    AylikSabit = 1,
-    IlkAyTekSeferlik = 2,
-    KullaniciManuel = 3,
-    RezervasyonOzel = 4
+    MonthlyFixed = 1,
+    FirstMonthOneTime = 2,
+    UserManual = 3,
+    ReservationSpecific = 4
 }
 
-public enum OdemeKaynakTipi
+public enum PaymentSourceType
 {
-    Manuel = 1,
-    BankaEslesme = 2,
-    SanalPos = 3
+    Manual = 1,
+    BankMatch = 2,
+    VirtualPos = 3
 }
 
-public enum VadeKuraliTipi
+public enum DueDateRuleType
 {
-    SabitAyGunu = 1,
-    DonemBasiOfset = 2
+    FixedDayOfMonth = 1,
+    PeriodStartOffset = 2
 }
 
-public enum DavetiyeDurum
+public enum InvitationStatus
 {
-    Beklemede = 1,
-    KabulEdildi = 2,
-    SuresiDolmus = 3,
-    IptalEdildi = 4
+    Pending = 1,
+    Accepted = 2,
+    Expired = 3,
+    Cancelled = 4
 }
 
-public enum SifreSifirlamaDurum
+public enum PasswordResetStatus
 {
-    Beklemede = 1,
-    Kullanildi = 2,
-    SuresiDolmus = 3,
-    IptalEdildi = 4
+    Pending = 1,
+    Used = 2,
+    Expired = 3,
+    Cancelled = 4
 }
 
-public enum OdemeLinkDurum
+public enum PaymentLinkStatus
 {
-    Aktif = 1,
-    IptalEdildi = 2,
-    SuresiDolmus = 3
+    Active = 1,
+    Cancelled = 2,
+    Expired = 3
 }

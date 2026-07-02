@@ -21,7 +21,7 @@ public class ManuelBorcController : Controller
         _provider = provider;
     }
 
-    [Authorize(Policy = PermissionCatalog.ManuelBorc.Module)]
+    [Authorize(Policy = PermissionCatalog.ManualCharge.Module)]
     public async Task<IActionResult> Index(string? durum, string? baglanti, int? sozlesmeId)
     {
         var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
@@ -36,7 +36,7 @@ public class ManuelBorcController : Controller
     }
 
     [HttpGet]
-    [Authorize(Policy = PermissionCatalog.ManuelBorc.Create)]
+    [Authorize(Policy = PermissionCatalog.ManualCharge.Create)]
     public async Task<IActionResult> Ekle(int? sozlesmeId)
     {
         var vm = new ManuelBorcCreateViewModel { VadeTarihi = DateTime.Today };
@@ -55,7 +55,7 @@ public class ManuelBorcController : Controller
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.ManuelBorc.Create)]
+    [Authorize(Policy = PermissionCatalog.ManualCharge.Create)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Ekle(ManuelBorcCreateViewModel vm)
     {
@@ -89,7 +89,7 @@ public class ManuelBorcController : Controller
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.ManuelBorc.Cancel)]
+    [Authorize(Policy = PermissionCatalog.ManualCharge.Cancel)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Iptal(int id, string neden)
     {

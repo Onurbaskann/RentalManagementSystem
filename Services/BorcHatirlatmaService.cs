@@ -94,7 +94,7 @@ public class BorcHatirlatmaService : IBorcHatirlatmaService
                     DonemBaslangic = t.DonemBaslangic,
                     VadeTarihi = t.VadeTarihi,
                     ToplamTutar = t.ToplamTutar,
-                    OdenenTutar = t.Odemeler.Where(o => o.Durum == OdemeDurumu.Onaylandi).Sum(o => o.Tutar)
+                    OdenenTutar = t.Odemeler.Where(o => o.Durum == PaymentStatus.Approved).Sum(o => o.Tutar)
                 }).ToList()
             };
 

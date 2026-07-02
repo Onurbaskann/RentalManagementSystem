@@ -9,7 +9,7 @@ public class ParentRezervasyonTarifeKartViewModel
 
 public class ParentRezervasyonTarifeSatir
 {
-    public string BirimTuruAd { get; set; } = string.Empty;
+    public string UnitTypeAd { get; set; } = string.Empty;
     public int UcretsizSureDakika { get; set; }
     public int UcretlendirmePeriyoduDakika { get; set; }
     public decimal PeriyotUcreti { get; set; }

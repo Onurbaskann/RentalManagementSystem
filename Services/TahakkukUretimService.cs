@@ -37,7 +37,7 @@ public class TahakkukUretimService : ITahakkukUretimService, ITransactionalServi
         {
             var mevcutVar = await _tahakkukRepo.AnyAsync(t => t.KiraSozlesmesiId == sozlesmeId
                 && t.DonemBaslangic == donemIlkGunu
-                && t.KaynakTipi == TahakkukKaynakTipi.Sozlesme);
+                && t.KaynakTipi == ChargeSourceType.Lease);
             if (mevcutVar) continue;
 
             var proRata = HesaplaProRataKatsayi(donemIlkGunu, sozlesme.BaslangicTarihi, sozlesme.BitisTarihi);
@@ -46,7 +46,7 @@ public class TahakkukUretimService : ITahakkukUretimService, ITransactionalServi
 
             foreach (var preview in composedPreviews)
             {
-                var kalemProRata = preview.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik ? 1m : proRata;
+                var kalemProRata = preview.Davranis == ChargeTypeBehavior.FirstMonthOneTime ? 1m : proRata;
                 var tutar = Math.Round(preview.Tutar * kalemProRata, 2);
                 var kdvTutari = Math.Round(tutar * preview.KdvOrani / 100, 2);
 
@@ -54,7 +54,7 @@ public class TahakkukUretimService : ITahakkukUretimService, ITransactionalServi
                 {
                     BorcTipiId = preview.BorcTipiId,
                     Aciklama = preview.Aciklama ?? preview.BorcTipiAd,
-                    HesaplamaYontemi = preview.HesaplamaYontemi,
+                    CalculationMethod = preview.CalculationMethod,
                     BirimDeger = preview.BirimDeger,
                     Carpan = Math.Round(preview.Carpan * kalemProRata, 6),
                     Tutar = tutar,
@@ -75,13 +75,13 @@ public class TahakkukUretimService : ITahakkukUretimService, ITransactionalServi
                 KiraSozlesmesiId = sozlesmeId,
                 DonemBaslangic = donemIlkGunu,
                 DonemBitis = donemBitis,
-                VadeTarihi = HesaplaVadeTarihi(donemIlkGunu, sozlesme.VadeKuraliTipi, sozlesme.VadeGunu),
+                VadeTarihi = HesaplaVadeTarihi(donemIlkGunu, sozlesme.DueDateRuleType, sozlesme.VadeGunu),
                 BeklenenTutar = kalemler.Sum(k => k.Tutar),
                 KdvTutari = kalemler.Sum(k => k.KdvTutari),
                 ToplamTutar = kalemler.Sum(k => k.ToplamTutar),
                 OdenenTutar = 0,
-                Durum = TahakkukDurumu.Bekleniyor,
-                KaynakTipi = TahakkukKaynakTipi.Sozlesme,
+                Durum = ChargeStatus.Pending,
+                KaynakTipi = ChargeSourceType.Lease,
                 Kalemler = kalemler
             };
 
@@ -105,10 +105,10 @@ public class TahakkukUretimService : ITahakkukUretimService, ITransactionalServi
         var sozlesme = await _sozlesmeRepo.GetByIdAsync(sozlesmeId);
         if (sozlesme == null) return;
 
-        var hedefDurumlar = new[] { TahakkukDurumu.Bekleniyor, TahakkukDurumu.KismenOdendi, TahakkukDurumu.Gecikti };
+        var hedefDurumlar = new[] { ChargeStatus.Pending, ChargeStatus.PartiallyPaid, ChargeStatus.Overdue };
         var bekleyenler = await _tahakkukRepo.GetAllAsync(t =>
             t.KiraSozlesmesiId == sozlesmeId
-            && t.KaynakTipi == TahakkukKaynakTipi.Sozlesme
+            && t.KaynakTipi == ChargeSourceType.Lease
             && hedefDurumlar.Contains(t.Durum));
 
         if (bekleyenler.Count == 0) return;
@@ -116,15 +116,15 @@ public class TahakkukUretimService : ITahakkukUretimService, ITransactionalServi
         var bugun = DateTime.Today;
         foreach (var t in bekleyenler)
         {
-            t.VadeTarihi = HesaplaVadeTarihi(t.DonemBaslangic, sozlesme.VadeKuraliTipi, sozlesme.VadeGunu);
+            t.VadeTarihi = HesaplaVadeTarihi(t.DonemBaslangic, sozlesme.DueDateRuleType, sozlesme.VadeGunu);
 
             t.Durum = t.OdenenTutar >= t.ToplamTutar
-                ? TahakkukDurumu.TamOdendi
+                ? ChargeStatus.Paid
                 : t.OdenenTutar > 0
-                    ? TahakkukDurumu.KismenOdendi
+                    ? ChargeStatus.PartiallyPaid
                     : bugun > t.VadeTarihi
-                        ? TahakkukDurumu.Gecikti
-                        : TahakkukDurumu.Bekleniyor;
+                        ? ChargeStatus.Overdue
+                        : ChargeStatus.Pending;
         }
 
         await _uow.SaveChangesAsync();
@@ -136,24 +136,24 @@ public class TahakkukUretimService : ITahakkukUretimService, ITransactionalServi
         var iptalEdilecekler = await _tahakkukRepo.GetAllAsync(t =>
             t.KiraSozlesmesiId == sozlesmeId
             && t.DonemBaslangic >= ilkGun
-            && t.Durum != TahakkukDurumu.TamOdendi
-            && t.KaynakTipi == TahakkukKaynakTipi.Sozlesme);
+            && t.Durum != ChargeStatus.Paid
+            && t.KaynakTipi == ChargeSourceType.Lease);
 
         foreach (var t in iptalEdilecekler)
-            t.Durum = TahakkukDurumu.IptalEdildi;
+            t.Durum = ChargeStatus.Cancelled;
 
         if (iptalEdilecekler.Count > 0)
             await _uow.SaveChangesAsync();
     }
 
-    private static DateTime HesaplaVadeTarihi(DateTime donemIlkGunu, VadeKuraliTipi tip, int vadeGunu)
+    private static DateTime HesaplaVadeTarihi(DateTime donemIlkGunu, DueDateRuleType tip, int vadeGunu)
     {
         return tip switch
         {
-            VadeKuraliTipi.SabitAyGunu =>
+            DueDateRuleType.FixedDayOfMonth =>
                 new DateTime(donemIlkGunu.Year, donemIlkGunu.Month,
                     Math.Min(Math.Max(vadeGunu, 1), DateTime.DaysInMonth(donemIlkGunu.Year, donemIlkGunu.Month))),
-            VadeKuraliTipi.DonemBasiOfset =>
+            DueDateRuleType.PeriodStartOffset =>
                 donemIlkGunu.AddDays(Math.Max(vadeGunu - 1, 0)),
             _ => donemIlkGunu
         };
@@ -193,7 +193,7 @@ public class TahakkukUretimService : ITahakkukUretimService, ITransactionalServi
 
         foreach (var bt in aktifBorcTipleri)
         {
-            if (bt.Davranis == BorcTipiDavranisi.IlkAyTekSeferlik)
+            if (bt.Davranis == ChargeTypeBehavior.FirstMonthOneTime)
             {
                 DateTime? start = null;
                 if (sozlesmeId.HasValue)
@@ -213,7 +213,7 @@ public class TahakkukUretimService : ITahakkukUretimService, ITransactionalServi
 
             if (snapshot != null)
             {
-                var carpanBase = snapshot.HesaplamaYontemi == HesaplamaYontemi.M2 ? birim.Yuzolcumu : 1m;
+                var carpanBase = snapshot.CalculationMethod == CalculationMethod.M2 ? birim.Yuzolcumu : 1m;
                 var tutar = Math.Round(snapshot.BirimDeger * carpanBase, 2);
                 var kdvTutari = Math.Round(tutar * snapshot.KdvOrani / 100, 2);
 
@@ -223,7 +223,7 @@ public class TahakkukUretimService : ITahakkukUretimService, ITransactionalServi
                     BorcTipiAd = bt.Ad,
                     BorcTipiKod = bt.Kod,
                     Davranis = bt.Davranis,
-                    HesaplamaYontemi = snapshot.HesaplamaYontemi,
+                    CalculationMethod = snapshot.CalculationMethod,
                     BirimDeger = snapshot.BirimDeger,
                     Carpan = carpanBase,
                     Tutar = tutar,
@@ -243,14 +243,14 @@ public class TahakkukUretimService : ITahakkukUretimService, ITransactionalServi
                     BorcTipiAd = bt.Ad,
                     BorcTipiKod = bt.Kod,
                     Davranis = bt.Davranis,
-                    HesaplamaYontemi = HesaplamaYontemi.Sabit,
+                    CalculationMethod = CalculationMethod.Fixed,
                     BirimDeger = 0m,
                     Carpan = 0m,
                     Tutar = 0m,
                     KdvOrani = 0m,
                     KdvTutari = 0m,
                     ToplamTutar = 0m,
-                    KaynakTipi = KalemKaynakTipi.TanimsizTarife,
+                    KaynakTipi = LineItemSourceType.UndefinedRate,
                     RateBulundu = false,
                     Aciklama = $"{bt.Ad} (Fiyat Tanımsız)"
                 });

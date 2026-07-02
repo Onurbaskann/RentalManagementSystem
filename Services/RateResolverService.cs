@@ -38,7 +38,7 @@ public class RateResolverService : IRateResolverService
         {
             var sozRate = await _sozlesmeTarifeRepo.GetRateAsync(sozlesmeId.Value, borcTipiId);
             if (sozRate != null)
-                return Wrap(sozRate, KalemKaynakTipi.SozlesmeTarifesi);
+                return Wrap(sozRate, LineItemSourceType.LeaseRateOverride);
         }
 
         int? tasinmazId = null;
@@ -63,14 +63,14 @@ public class RateResolverService : IRateResolverService
         {
             var birimRate = await _birimTarifeRepo.GetRateAsync(birimId, kategoriId.Value, borcTipiId);
             if (birimRate != null)
-                return Wrap(birimRate, KalemKaynakTipi.BirimTarifesi);
+                return Wrap(birimRate, LineItemSourceType.UnitRateOverride);
         }
 
         if (tasinmazId.HasValue && kategoriId.HasValue)
         {
             var fiyatMatrisi = await _tasinmazTarifeRepo.GetRateAsync(tasinmazId.Value, kategoriId.Value, borcTipiId);
             if (fiyatMatrisi != null)
-                return Wrap(fiyatMatrisi, KalemKaynakTipi.TasinmazTarifesi);
+                return Wrap(fiyatMatrisi, LineItemSourceType.PropertyRateOverride);
         }
 
         if (!kategoriId.HasValue) return null;
@@ -78,13 +78,13 @@ public class RateResolverService : IRateResolverService
         var kalem = await _genelTarifeRepo.GetRateAsync(kategoriId.Value, borcTipiId, donem.Year);
         if (kalem == null) return null;
 
-        return Wrap(kalem, KalemKaynakTipi.GenelTarife);
+        return Wrap(kalem, LineItemSourceType.RateSchedule);
     }
 
-    private static RateSnapshot Wrap(Models.Dtos.RateValueDto v, KalemKaynakTipi kaynak)
+    private static RateSnapshot Wrap(Models.Dtos.RateValueDto v, LineItemSourceType kaynak)
         => new RateSnapshot
         {
-            HesaplamaYontemi = v.HesaplamaYontemi,
+            CalculationMethod = v.CalculationMethod,
             BirimDeger = v.BirimDeger,
             KdvOrani = v.KdvOrani,
             KaynakTipi = kaynak

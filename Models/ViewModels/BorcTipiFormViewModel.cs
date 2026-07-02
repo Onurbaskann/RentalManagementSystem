@@ -11,7 +11,7 @@ public class BorcTipiFormViewModel
     [MaxLength(100)]
     public string Ad { get; set; } = string.Empty;
 
-    public BorcTipiDavranisi Davranis { get; set; } = BorcTipiDavranisi.AylikSabit;
+    public ChargeTypeBehavior Davranis { get; set; } = ChargeTypeBehavior.MonthlyFixed;
 
     public int Sira { get; set; } = 1;
 

@@ -1,6 +1,6 @@
 namespace KiraTakip.Models.Entities;
 
-public class BirimTuru : BaseEntity
+public class UnitType : BaseEntity
 {
     public int? BorcTipiId { get; set; }
     public string Ad { get; set; } = string.Empty;

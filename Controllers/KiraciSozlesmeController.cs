@@ -13,7 +13,7 @@ namespace KiraTakip.Controllers;
 
 [Authorize(Policy = "KiraciKullanici")]
 [RequireKiraciId]
-[Authorize(Policy = PermissionCatalog.KiraciPortal.Sozlesme.Module)]
+[Authorize(Policy = PermissionCatalog.TenantPortal.Lease.Module)]
 [Route("Kiraci/Sozlesmeler")]
 public class KiraciSozlesmeController : Controller
 {
@@ -70,7 +70,7 @@ public class KiraciSozlesmeController : Controller
             {
                 Id = s.BirimId,
                 Yuzolcumu = s.BirimYuzolcumu,
-                BirimTipi = s.BirimTipi,
+                UnitKind = s.UnitKind,
                 TasinmazId = s.TasinmazId
             }
         };
@@ -86,7 +86,7 @@ public class KiraciSozlesmeController : Controller
             Durum = _istatistik.GetBirimDurumu(dummySozlesme.Birim),
             HasOdemeAccess = true,
             KdvOraniEtkin = s.SozlesmeTarifeler
-                .FirstOrDefault(r => r.BorcTipiDavranis == BorcTipiDavranisi.AylikSabit)?.KdvOrani ?? 20m
+                .FirstOrDefault(r => r.BorcTipiDavranis == ChargeTypeBehavior.MonthlyFixed)?.KdvOrani ?? 20m
         };
 
         await _tahakkukService.GecikmeleriGuncelleAsync();
@@ -95,11 +95,11 @@ public class KiraciSozlesmeController : Controller
         var bugun = DateTime.Today;
         var guncelTahakkuk = await _db.Tahakkuklar
             .Include(t => t.Kalemler).ThenInclude(k => k.BorcTipi)
-            .Where(t => t.KiraSozlesmesiId == id && t.Durum != TahakkukDurumu.IptalEdildi && t.DonemBaslangic <= bugun)
+            .Where(t => t.KiraSozlesmesiId == id && t.Durum != ChargeStatus.Cancelled && t.DonemBaslangic <= bugun)
             .OrderByDescending(t => t.DonemBaslangic)
             .FirstOrDefaultAsync();
         vm.GuncelKalemler = guncelTahakkuk?.Kalemler
-            .Where(k => k.BorcTipi.Davranis == BorcTipiDavranisi.AylikSabit)
+            .Where(k => k.BorcTipi.Davranis == ChargeTypeBehavior.MonthlyFixed)
             .OrderBy(k => k.BorcTipi.Sira).ToList() ?? new();
         vm.GuncelKalemDonemi = guncelTahakkuk?.DonemBaslangic;
 

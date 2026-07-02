@@ -31,11 +31,11 @@ public class TasinmazRepository : BaseRepository<Tasinmaz>, ITasinmazRepository
                 TasinmazTipiAd = t.TasinmazTipi != null ? t.TasinmazTipi.Ad : string.Empty,
                 KapaliYuzolcumu = t.KapaliYuzolcumu,
                 AcikYuzolcumu = t.AcikYuzolcumu,
-                KiralamaSekli = t.KiralamaSekli,
+                RentalMode = t.RentalMode,
                 BirimSayisi = t.Birimler.Count,
-                KiraliBirimSayisi = t.Birimler.Count(b => b.Sozlesmeler.Any(s => s.Durum == SozlesmeDurumu.Aktif && s.BaslangicTarihi <= now && s.BitisTarihi >= now && s.BitisTarihi > now.AddDays(30))),
-                SuresiDolmakUzereBirimSayisi = t.Birimler.Count(b => b.Sozlesmeler.Any(s => s.Durum == SozlesmeDurumu.Aktif && s.BaslangicTarihi <= now && s.BitisTarihi >= now && s.BitisTarihi <= now.AddDays(30))),
-                BosBirimSayisi = t.Birimler.Count(b => !b.Sozlesmeler.Any(s => s.Durum == SozlesmeDurumu.Aktif && s.BaslangicTarihi <= now && s.BitisTarihi >= now))
+                KiraliBirimSayisi = t.Birimler.Count(b => b.Sozlesmeler.Any(s => s.Durum == LeaseStatus.Active && s.BaslangicTarihi <= now && s.BitisTarihi >= now && s.BitisTarihi > now.AddDays(30))),
+                SuresiDolmakUzereBirimSayisi = t.Birimler.Count(b => b.Sozlesmeler.Any(s => s.Durum == LeaseStatus.Active && s.BaslangicTarihi <= now && s.BitisTarihi >= now && s.BitisTarihi <= now.AddDays(30))),
+                BosBirimSayisi = t.Birimler.Count(b => !b.Sozlesmeler.Any(s => s.Durum == LeaseStatus.Active && s.BaslangicTarihi <= now && s.BitisTarihi >= now))
             })
             .ToListAsync();
     }
@@ -56,7 +56,7 @@ public class TasinmazRepository : BaseRepository<Tasinmaz>, ITasinmazRepository
                 TasinmazTipiAd = t.TasinmazTipi != null ? t.TasinmazTipi.Ad : string.Empty,
                 KapaliYuzolcumu = t.KapaliYuzolcumu,
                 AcikYuzolcumu = t.AcikYuzolcumu,
-                KiralamaSekli = t.KiralamaSekli,
+                RentalMode = t.RentalMode,
                 Aciklama = t.Aciklama,
                 Birimler = t.Birimler.Select(b => new BirimDetayDto
                 {
@@ -65,34 +65,34 @@ public class TasinmazRepository : BaseRepository<Tasinmaz>, ITasinmazRepository
                     Ad = b.Ad,
                     KatNo = b.KatNo,
                     Yuzolcumu = b.Yuzolcumu,
-                    BirimTuruAd = b.BirimTuru != null ? b.BirimTuru.Ad : string.Empty,
-                    RezervasyonYapilabilirMi = b.BirimTuru != null ? b.BirimTuru.RezervasyonYapilabilirMi : false,
-                    KiralanabilirMi = b.BirimTuru != null ? b.BirimTuru.KiralanabilirMi : false,
+                    UnitTypeAd = b.UnitType != null ? b.UnitType.Ad : string.Empty,
+                    RezervasyonYapilabilirMi = b.UnitType != null ? b.UnitType.RezervasyonYapilabilirMi : false,
+                    KiralanabilirMi = b.UnitType != null ? b.UnitType.KiralanabilirMi : false,
                     AktifSozlesmeId = b.Sozlesmeler
-                        .Where(s => s.Durum == SozlesmeDurumu.Aktif && s.BaslangicTarihi <= now && s.BitisTarihi >= now)
+                        .Where(s => s.Durum == LeaseStatus.Active && s.BaslangicTarihi <= now && s.BitisTarihi >= now)
                         .OrderByDescending(s => s.BitisTarihi)
                         .Select(s => (int?)s.Id)
                         .FirstOrDefault(),
                     AktifSozlesmeKiraciId = b.Sozlesmeler
-                        .Where(s => s.Durum == SozlesmeDurumu.Aktif && s.BaslangicTarihi <= now && s.BitisTarihi >= now)
+                        .Where(s => s.Durum == LeaseStatus.Active && s.BaslangicTarihi <= now && s.BitisTarihi >= now)
                         .OrderByDescending(s => s.BitisTarihi)
                         .Select(s => (int?)s.KiraciId)
                         .FirstOrDefault(),
                     AktifSozlesmeKiraciGosterimAdi = b.Sozlesmeler
-                        .Where(s => s.Durum == SozlesmeDurumu.Aktif && s.BaslangicTarihi <= now && s.BitisTarihi >= now)
+                        .Where(s => s.Durum == LeaseStatus.Active && s.BaslangicTarihi <= now && s.BitisTarihi >= now)
                         .OrderByDescending(s => s.BitisTarihi)
                         .Select(s => s.Kiraci.GosterimAdi)
                         .FirstOrDefault(),
                     AktifSozlesmeBitisTarihi = b.Sozlesmeler
-                        .Where(s => s.Durum == SozlesmeDurumu.Aktif && s.BaslangicTarihi <= now && s.BitisTarihi >= now)
+                        .Where(s => s.Durum == LeaseStatus.Active && s.BaslangicTarihi <= now && s.BitisTarihi >= now)
                         .OrderByDescending(s => s.BitisTarihi)
                         .Select(s => (DateTime?)s.BitisTarihi)
                         .FirstOrDefault(),
-                    Durum = b.Sozlesmeler.Any(s => s.Durum == SozlesmeDurumu.Aktif && s.BaslangicTarihi <= now && s.BitisTarihi >= now)
-                        ? (b.Sozlesmeler.Any(s => s.Durum == SozlesmeDurumu.Aktif && s.BaslangicTarihi <= now && s.BitisTarihi >= now && s.BitisTarihi <= now.AddDays(30))
-                            ? KiraDurumu.SuresiDolmakUzere
-                            : KiraDurumu.Kirali)
-                        : KiraDurumu.Bos,
+                    Durum = b.Sozlesmeler.Any(s => s.Durum == LeaseStatus.Active && s.BaslangicTarihi <= now && s.BitisTarihi >= now)
+                        ? (b.Sozlesmeler.Any(s => s.Durum == LeaseStatus.Active && s.BaslangicTarihi <= now && s.BitisTarihi >= now && s.BitisTarihi <= now.AddDays(30))
+                            ? OccupancyStatus.ExpiringSoon
+                            : OccupancyStatus.Leased)
+                        : OccupancyStatus.Vacant,
                     RezKuralId = _ctx.RezervasyonTarifeler
                         .Where(rt => rt.BirimId == b.Id && rt.IsActive)
                         .Select(rt => (int?)rt.Id)
@@ -144,7 +144,7 @@ public class TasinmazRepository : BaseRepository<Tasinmaz>, ITasinmazRepository
                         KdvOrani = rt.KdvOrani
                     }).ToList(),
                 BirimOzelFiyatlari = t.Birimler
-                    .Where(b => b.BirimTuru != null && b.BirimTuru.KiralanabilirMi)
+                    .Where(b => b.UnitType != null && b.UnitType.KiralanabilirMi)
                     .Select(b => new BirimOzelFiyatOzetDto
                     {
                         BirimId = b.Id,
@@ -159,7 +159,7 @@ public class TasinmazRepository : BaseRepository<Tasinmaz>, ITasinmazRepository
                                 Id = r.Id,
                                 KiraciKategoriAd = r.KiraciKategori.Ad,
                                 BorcTipiAd = r.BorcTipi.Ad,
-                                HesaplamaYontemi = r.HesaplamaYontemi,
+                                CalculationMethod = r.CalculationMethod,
                                 BirimDeger = r.BirimDeger,
                                 KdvOrani = r.KdvOrani
                             }).ToList()
@@ -195,9 +195,9 @@ public class TasinmazRepository : BaseRepository<Tasinmaz>, ITasinmazRepository
         }
 
         return await query
-            .Where(b => b.BirimTuru != null && b.BirimTuru.KiralanabilirMi)
+            .Where(b => b.UnitType != null && b.UnitType.KiralanabilirMi)
             .Where(b => !b.Sozlesmeler.Any(s =>
-                s.Durum == SozlesmeDurumu.Aktif &&
+                s.Durum == LeaseStatus.Active &&
                 s.BaslangicTarihi <= now &&
                 s.BitisTarihi >= now))
             .OrderBy(b => b.Tasinmaz.Ad)
@@ -210,7 +210,7 @@ public class TasinmazRepository : BaseRepository<Tasinmaz>, ITasinmazRepository
                 Ilce = b.Tasinmaz.Ilce,
                 Il = b.Tasinmaz.Il,
                 Yuzolcumu = b.Yuzolcumu,
-                BirimTipi = b.BirimTipi,
+                UnitKind = b.UnitKind,
                 BirimNo = b.BirimNo,
                 KatNo = b.KatNo
             })
@@ -233,7 +233,7 @@ public class TasinmazRepository : BaseRepository<Tasinmaz>, ITasinmazRepository
                 Ilce = b.Tasinmaz.Ilce,
                 Il = b.Tasinmaz.Il,
                 Yuzolcumu = b.Yuzolcumu,
-                BirimTipi = b.BirimTipi,
+                UnitKind = b.UnitKind,
                 BirimNo = b.BirimNo,
                 KatNo = b.KatNo
             })
@@ -249,7 +249,7 @@ public class TasinmazRepository : BaseRepository<Tasinmaz>, ITasinmazRepository
     {
         return await _dbSet
             .Include(t => t.Birimler)
-                .ThenInclude(b => b.BirimTuru)
+                .ThenInclude(b => b.UnitType)
             .Include(t => t.Birimler)
                 .ThenInclude(b => b.Sozlesmeler)
             .FirstOrDefaultAsync(t => t.Id == id);

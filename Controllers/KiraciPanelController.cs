@@ -39,21 +39,21 @@ public class KiraciPanelController : Controller
 
         var user = await _userManager.GetUserAsync(User);
 
-        var rol = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.KiraciPortal.System.Kullanici.Invite)
+        var rol = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.TenantPortal.System.User.Invite)
             ? "Firma Yetkilisi"
-            : User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.KiraciPortal.Odeme.Module)
+            : User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.TenantPortal.Payment.Module)
                 ? "Finans Yetkilisi"
                 : "Kiracı";
 
         // Açık (ödenmemiş) tahakkuklar — paylaşılan baz sorgu
         var acikTahakkuklarBase = _db.Tahakkuklar.Where(t =>
-            t.Durum == TahakkukDurumu.Bekleniyor ||
-            t.Durum == TahakkukDurumu.KismenOdendi ||
-            t.Durum == TahakkukDurumu.Gecikti);
+            t.Durum == ChargeStatus.Pending ||
+            t.Durum == ChargeStatus.PartiallyPaid ||
+            t.Durum == ChargeStatus.Overdue);
 
         // KPI hesaplamaları
         var aktifSozlesmeAdedi = await _db.Sozlesmeler
-            .CountAsync(s => s.KiraciId == kiraciId && s.Durum == SozlesmeDurumu.Aktif);
+            .CountAsync(s => s.KiraciId == kiraciId && s.Durum == LeaseStatus.Active);
 
         var toplamAcikBorc = await acikTahakkuklarBase
             .SumAsync(t => (decimal?)(t.ToplamTutar - t.OdenenTutar)) ?? 0m;
@@ -85,7 +85,7 @@ public class KiraciPanelController : Controller
             .ToListAsync();
 
         var odenenAylik = await _db.TahakkukOdemeler
-            .Where(o => o.Durum == OdemeDurumu.Onaylandi && o.OdemeTarihi >= sonAltiAyBaslangic)
+            .Where(o => o.Durum == PaymentStatus.Approved && o.OdemeTarihi >= sonAltiAyBaslangic)
             .GroupBy(o => new { o.OdemeTarihi.Year, o.OdemeTarihi.Month })
             .Select(g => new { g.Key.Year, g.Key.Month, Toplam = g.Sum(o => o.Tutar) })
             .ToListAsync();
@@ -106,9 +106,9 @@ public class KiraciPanelController : Controller
 
         // Borç tipi dağılımı (açık tahakkuk kalemleri)
         var borcDagilimRaw = await _db.TahakkukKalemleri
-            .Where(k => k.Tahakkuk.Durum == TahakkukDurumu.Bekleniyor ||
-                        k.Tahakkuk.Durum == TahakkukDurumu.KismenOdendi ||
-                        k.Tahakkuk.Durum == TahakkukDurumu.Gecikti)
+            .Where(k => k.Tahakkuk.Durum == ChargeStatus.Pending ||
+                        k.Tahakkuk.Durum == ChargeStatus.PartiallyPaid ||
+                        k.Tahakkuk.Durum == ChargeStatus.Overdue)
             .GroupBy(k => k.BorcTipi.Ad)
             .Select(g => new { Ad = g.Key, Tutar = g.Sum(k => k.ToplamTutar) })
             .ToListAsync();
@@ -124,9 +124,9 @@ public class KiraciPanelController : Controller
             var ayBitis = new DateTime(today.Year, today.Month, 1).AddMonths(-i + 1).AddDays(-1);
             var bakiye = await _db.Tahakkuklar
                 .Where(t => t.VadeTarihi <= ayBitis &&
-                            (t.Durum == TahakkukDurumu.Bekleniyor ||
-                             t.Durum == TahakkukDurumu.KismenOdendi ||
-                             t.Durum == TahakkukDurumu.Gecikti))
+                            (t.Durum == ChargeStatus.Pending ||
+                             t.Durum == ChargeStatus.PartiallyPaid ||
+                             t.Durum == ChargeStatus.Overdue))
                 .SumAsync(t => (decimal?)(t.ToplamTutar - t.OdenenTutar)) ?? 0m;
             sparkline.Add(bakiye);
         }
@@ -165,30 +165,30 @@ public class KiraciPanelController : Controller
         var sonOdemelerRaw = await _db.TahakkukOdemeler
             .OrderByDescending(o => o.OdemeTarihi)
             .Take(5)
-            .Select(o => new { o.Id, o.OdemeTarihi, o.Tutar, o.OdemeKanali, o.Durum })
+            .Select(o => new { o.Id, o.OdemeTarihi, o.Tutar, o.PaymentChannel, o.Durum })
             .ToListAsync();
         var sonOdemeler = sonOdemelerRaw.Select(o => new KiraciPanelSonOdemeItem
         {
             OdemeId = o.Id,
             OdemeTarihi = o.OdemeTarihi,
             Tutar = o.Tutar,
-            KanalAd = o.OdemeKanali switch
+            KanalAd = o.PaymentChannel switch
             {
-                OdemeKanali.Havale => "Havale",
-                OdemeKanali.EFT => "EFT",
-                OdemeKanali.Nakit => "Nakit",
+                PaymentChannel.BankTransfer => "Havale",
+                PaymentChannel.Eft => "EFT",
+                PaymentChannel.Cash => "Nakit",
                 _ => "Diğer"
             },
             DurumAd = o.Durum switch
             {
-                OdemeDurumu.Onaylandi => "Onaylandı",
-                OdemeDurumu.Reddedildi => "Reddedildi",
+                PaymentStatus.Approved => "Onaylandı",
+                PaymentStatus.Rejected => "Reddedildi",
                 _ => "Onay Bekliyor"
             },
             DurumDotRenk = o.Durum switch
             {
-                OdemeDurumu.Onaylandi => "emerald",
-                OdemeDurumu.Reddedildi => "red",
+                PaymentStatus.Approved => "emerald",
+                PaymentStatus.Rejected => "red",
                 _ => "amber"
             }
         }).ToList();

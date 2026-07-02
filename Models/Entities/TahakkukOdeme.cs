@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace KiraTakip.Models.Entities;
 
 public class TahakkukOdeme : BaseEntity
@@ -8,11 +10,15 @@ public class TahakkukOdeme : BaseEntity
     public string? OnaylayanUserId { get; set; }
     public DateTime OdemeTarihi { get; set; }
     public decimal Tutar { get; set; }
-    public OdemeKanali OdemeKanali { get; set; }
-    public OdemeKaynakTipi OdemeKaynakTipi { get; set; } = OdemeKaynakTipi.Manuel;
+
+    [Column("OdemeKanali")]
+    public PaymentChannel PaymentChannel { get; set; }
+
+    [Column("OdemeKaynakTipi")]
+    public PaymentSourceType PaymentSourceType { get; set; } = PaymentSourceType.Manual;
     public string? PosReferansNo { get; set; }
     public string? Aciklama { get; set; }
-    public OdemeDurumu Durum { get; set; } = OdemeDurumu.OnayBekliyor;
+    public PaymentStatus Durum { get; set; } = PaymentStatus.PendingApproval;
     public DateTime GirisTarihi { get; set; } = DateTime.Now;
     public DateTime? OnayTarihi { get; set; }
     public string? RedNedeni { get; set; }

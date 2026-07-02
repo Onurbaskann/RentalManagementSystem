@@ -8,7 +8,7 @@ public class BankaHareketi : BaseEntity
     public string? GonderenBilgisi { get; set; }
     public decimal IslemTutari { get; set; }
     public DateTime IslemTarihi { get; set; }
-    public BankaEslesmeDurumu EslesmeDurumu { get; set; } = BankaEslesmeDurumu.Eslestirilmedi;
+    public BankMatchStatus EslesmeDurumu { get; set; } = BankMatchStatus.Unmatched;
     public string Aciklama { get; set; } = string.Empty;
 
     public List<OdemeBankaEslesme> OdemeEslesmeleri { get; set; } = [];

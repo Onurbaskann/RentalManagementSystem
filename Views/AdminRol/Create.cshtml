@@ -36,7 +36,7 @@
 </div>
 
 <div class="card">
-    <form method="post" action="/Admin/Roller/Ekle" asp-form-write-permission="@PermissionCatalog.Rol.Create">
+    <form method="post" action="/Admin/Roller/Ekle" asp-form-write-permission="@PermissionCatalog.Role.Create">
         @Html.AntiForgeryToken()
 
         @if (!ViewData.ModelState.IsValid)
@@ -61,7 +61,7 @@
         </div>
 
         <div class="flex gap-2 mt-6">
-            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Rol.Create">Oluştur</button>
+            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Role.Create">Oluştur</button>
             <a href="/Admin/Roller" class="btn btn-secondary">İptal</a>
         </div>
     </form>

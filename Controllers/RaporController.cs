@@ -9,7 +9,7 @@ using System.Globalization;
 
 namespace KiraTakip.Controllers;
 
-[Authorize(Policy = PermissionCatalog.Odeme.Module)]
+[Authorize(Policy = PermissionCatalog.Payment.Module)]
 public class RaporController : Controller
 {
     private readonly ITahakkukService _tahakkukService;
@@ -34,7 +34,7 @@ public class RaporController : Controller
         var satirlar = Enumerable.Range(1, 12).Select(ay =>
         {
             var ayTahakkuklar = tahakkuklar.Where(t => t.DonemBaslangic.Year == secilenYil && t.DonemBaslangic.Month == ay).ToList();
-            var gecikmisler = ayTahakkuklar.Where(t => t.Durum == TahakkukDurumu.Gecikti).ToList();
+            var gecikmisler = ayTahakkuklar.Where(t => t.Durum == ChargeStatus.Overdue).ToList();
             return new AylikRaporSatir
             {
                 Ay = ay,

@@ -25,7 +25,7 @@ public class RolService : IRolService
 
     public Task<List<Rol>> GetInternalRollerAsync()
         => _db.Roller
-              .Where(r => r.Scope == RolScope.Internal)
+              .Where(r => r.Scope == RoleScope.Internal)
               .OrderBy(r => r.IsSystemRole ? 0 : 1)
               .ThenBy(r => r.Ad)
               .ToListAsync();
@@ -35,14 +35,14 @@ public class RolService : IRolService
 
     public async Task<Rol> CreateAsync(string ad, string? aciklama, string createdBy)
     {
-        if (await _db.Roller.AnyAsync(r => r.Ad == ad && r.Scope == RolScope.Internal && !r.IsDeleted))
+        if (await _db.Roller.AnyAsync(r => r.Ad == ad && r.Scope == RoleScope.Internal && !r.IsDeleted))
             throw new InvalidOperationException($"'{ad}' adında bir rol zaten mevcut.");
 
         var rol = new Rol
         {
             Ad = ad,
             Aciklama = aciklama,
-            Scope = RolScope.Internal,
+            Scope = RoleScope.Internal,
             IsSystemRole = false,
             IsActive = true,
             CreatedBy = createdBy,
@@ -61,7 +61,7 @@ public class RolService : IRolService
 
         if (!rol.IsSystemRole)
         {
-            if (await _db.Roller.AnyAsync(r => r.Ad == ad && r.Id != id && r.Scope == RolScope.Internal && !r.IsDeleted))
+            if (await _db.Roller.AnyAsync(r => r.Ad == ad && r.Id != id && r.Scope == RoleScope.Internal && !r.IsDeleted))
                 throw new InvalidOperationException($"'{ad}' adında bir rol zaten mevcut.");
             rol.Ad = ad;
         }
@@ -112,7 +112,7 @@ public class RolService : IRolService
 
     public Task<List<Rol>> GetKiraciRollerAsync(int kiraciId)
         => _db.Roller
-              .Where(r => r.Scope == RolScope.Kiraci && (r.KiraciId == null || r.KiraciId == kiraciId) && r.IsActive && !r.IsDeleted)
+              .Where(r => r.Scope == RoleScope.Tenant && (r.KiraciId == null || r.KiraciId == kiraciId) && r.IsActive && !r.IsDeleted)
               .OrderBy(r => r.IsSystemRole ? 0 : 1)
               .ThenBy(r => r.Ad)
               .ToListAsync();
@@ -127,7 +127,7 @@ public class RolService : IRolService
             kiraciYonetici = new Rol
             {
                 Ad = RoleNames.KiraciYoneticisi,
-                Scope = RolScope.Kiraci,
+                Scope = RoleScope.Tenant,
                 KiraciId = null,
                 IsSystemRole = true,
                 IsActive = true,
@@ -139,7 +139,7 @@ public class RolService : IRolService
         }
         var mevcutKY = await _db.RolPermissions.Where(rp => rp.RolId == kiraciYonetici.Id).ToListAsync();
         _db.RolPermissions.RemoveRange(mevcutKY);
-        foreach (var perm in PermissionCatalog.KiraciAll)
+        foreach (var perm in PermissionCatalog.TenantAll)
             _db.RolPermissions.Add(new RolPermission { RolId = kiraciYonetici.Id, Permission = perm });
 
         await _db.SaveChangesAsync();

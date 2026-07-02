@@ -46,7 +46,7 @@ public class KiraciController : Controller
         _belgeService = belgeService;
     }
 
-    [Authorize(Policy = PermissionCatalog.Kiraci.Module)]
+    [Authorize(Policy = PermissionCatalog.Tenant.Module)]
     public async Task<IActionResult> Index()
     {
         var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
@@ -59,7 +59,7 @@ public class KiraciController : Controller
         return View(kiraciler);
     }
 
-    [Authorize(Policy = PermissionCatalog.Kiraci.Module)]
+    [Authorize(Policy = PermissionCatalog.Tenant.Module)]
     public async Task<IActionResult> Detay(int id)
     {
         var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
@@ -106,7 +106,7 @@ public class KiraciController : Controller
     }
 
     [HttpGet]
-    [Authorize(Policy = PermissionCatalog.Kiraci.Create)]
+    [Authorize(Policy = PermissionCatalog.Tenant.Create)]
     public async Task<IActionResult> Ekle()
     {
         await PopulateKiraciViewBagAsync();
@@ -118,7 +118,7 @@ public class KiraciController : Controller
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Kiraci.Create)]
+    [Authorize(Policy = PermissionCatalog.Tenant.Create)]
     public async Task<IActionResult> Ekle(KiraciFormViewModel vm)
     {
         await ValidateKiraciAsync(vm);
@@ -180,7 +180,7 @@ public class KiraciController : Controller
     }
 
     [HttpGet]
-    [Authorize(Policy = PermissionCatalog.Kiraci.Edit)]
+    [Authorize(Policy = PermissionCatalog.Tenant.Edit)]
     public async Task<IActionResult> Duzenle(int id)
     {
         var k = await _kiraciService.GetDetayAsync(id);
@@ -206,7 +206,7 @@ public class KiraciController : Controller
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Kiraci.Edit)]
+    [Authorize(Policy = PermissionCatalog.Tenant.Edit)]
     public async Task<IActionResult> Duzenle(int id, KiraciFormViewModel vm)
     {
         if (id != vm.Id) return BadRequest();

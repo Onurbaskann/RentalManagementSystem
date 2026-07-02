@@ -1,4 +1,4 @@
-@model KiraTakip.Models.ViewModels.BirimTuruFormViewModel
+@model KiraTakip.Models.ViewModels.UnitTypeFormViewModel
 @{
     ViewData["Title"] = "Yeni Birim Türü";
 }
@@ -10,7 +10,7 @@
 </div>
 
 <div class="card" x-data="{ tur: '@(Model.RezervasyonYapilabilirMi ? "rez" : "kira")' }">
-    <form method="post" action="/Admin/BirimTuru/Ekle" asp-form-write-permission="@PermissionCatalog.BirimTuru.Create">
+    <form method="post" action="/Admin/UnitType/Ekle" asp-form-write-permission="@PermissionCatalog.UnitType.Create">
         @Html.AntiForgeryToken()
 
         <div class="form-group">
@@ -65,8 +65,8 @@
         </div>
 
         <div class="flex gap-2 mt-4">
-            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.BirimTuru.Create">Kaydet</button>
-            <a href="/Admin/BirimTuru" class="btn btn-secondary px-6">İptal</a>
+            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.UnitType.Create">Kaydet</button>
+            <a href="/Admin/UnitType" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>
 </div>

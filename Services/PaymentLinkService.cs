@@ -73,14 +73,14 @@ public class PaymentLinkService : IPaymentLinkService, ITransactionalService
         if (kayit == null)
             return (false, 0, "Ödeme linki bulunamadı.");
 
-        if (kayit.Durum == OdemeLinkDurum.IptalEdildi)
+        if (kayit.Durum == PaymentLinkStatus.Cancelled)
             return (false, 0, "Bu ödeme linki iptal edilmiştir.");
 
         if (!_tokenService.TryValidate(token, entityId, Purpose, out var reason))
         {
-            if (kayit.Durum == OdemeLinkDurum.Aktif && kayit.ExpiresAt < DateTime.UtcNow)
+            if (kayit.Durum == PaymentLinkStatus.Active && kayit.ExpiresAt < DateTime.UtcNow)
             {
-                kayit.Durum = OdemeLinkDurum.SuresiDolmus;
+                kayit.Durum = PaymentLinkStatus.Expired;
                 await _db.SaveChangesAsync(ct);
             }
             return (false, 0, reason ?? "Geçersiz ödeme linki.");
@@ -96,10 +96,10 @@ public class PaymentLinkService : IPaymentLinkService, ITransactionalService
             .FirstOrDefaultAsync(o => o.Id == kayitId, ct)
             ?? throw new InvalidOperationException("Kayıt bulunamadı.");
 
-        if (kayit.Durum != OdemeLinkDurum.Aktif)
+        if (kayit.Durum != PaymentLinkStatus.Active)
             throw new InvalidOperationException("Yalnızca aktif linkler iptal edilebilir.");
 
-        kayit.Durum = OdemeLinkDurum.IptalEdildi;
+        kayit.Durum = PaymentLinkStatus.Cancelled;
         kayit.IptalEdenUserId = iptalEdenUserId;
         kayit.IptalTarihi = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);

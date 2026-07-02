@@ -17,7 +17,7 @@ public class BirimTarifeRepository : BaseRepository<BirimTarife>, IBirimTarifeRe
                      && r.BorcTipiId == borcTipiId)
             .Select(r => new RateValueDto
             {
-                HesaplamaYontemi = r.HesaplamaYontemi,
+                CalculationMethod = r.CalculationMethod,
                 BirimDeger = r.BirimDeger,
                 KdvOrani = r.KdvOrani
             })
@@ -36,7 +36,7 @@ public class BirimTarifeRepository : BaseRepository<BirimTarife>, IBirimTarifeRe
             {
                 KategoriAd = r.KiraciKategori.Ad,
                 BorcTipiAd = r.BorcTipi.Ad,
-                HesaplamaYontemi = r.HesaplamaYontemi,
+                CalculationMethod = r.CalculationMethod,
                 BirimDeger = r.BirimDeger,
                 KdvOrani = r.KdvOrani
             })

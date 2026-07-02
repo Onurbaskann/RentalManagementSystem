@@ -11,7 +11,7 @@
 </div>
 
 <div class="card">
-    <form method="post" action="/Admin/BorcTipi/Ekle" asp-form-write-permission="@PermissionCatalog.BorcTipi.Create">
+    <form method="post" action="/Admin/BorcTipi/Ekle" asp-form-write-permission="@PermissionCatalog.ChargeType.Create">
         @Html.AntiForgeryToken()
 
         <div class="form-group">
@@ -23,10 +23,10 @@
         <div class="form-group">
             <label class="form-label">Davranış <span class="text-red-500">*</span></label>
             <select asp-for="Davranis" class="form-control">
-                <option value="@((int)BorcTipiDavranisi.AylikSabit)">Aylık Sabit — Her ay tahakkuka eklenir</option>
-                <option value="@((int)BorcTipiDavranisi.IlkAyTekSeferlik)">İlk Ay Tek Seferlik — Sadece sözleşmenin ilk ayında eklenir (ör. depozito)</option>
-                <option value="@((int)BorcTipiDavranisi.KullaniciManuel)">Kullanıcı Manuel — Kullanıcı tarafından manuel eklenir</option>
-                <option value="@((int)BorcTipiDavranisi.RezervasyonOzel)">Rezervasyon Özel — Yalnızca rezervasyon akışı tarafından oluşturulur</option>
+                <option value="@((int)ChargeTypeBehavior.MonthlyFixed)">Aylık Sabit — Her ay tahakkuka eklenir</option>
+                <option value="@((int)ChargeTypeBehavior.FirstMonthOneTime)">İlk Ay Tek Seferlik — Sadece sözleşmenin ilk ayında eklenir (ör. depozito)</option>
+                <option value="@((int)ChargeTypeBehavior.UserManual)">Kullanıcı Manuel — Kullanıcı tarafından manuel eklenir</option>
+                <option value="@((int)ChargeTypeBehavior.ReservationSpecific)">Rezervasyon Özel — Yalnızca rezervasyon akışı tarafından oluşturulur</option>
             </select>
             <div class="text-xs text-muted mt-1">Borç kaleminin tahakkuklarda nasıl oluşturulacağını belirler.</div>
             <span asp-validation-for="Davranis" class="text-red-500 text-xs mt-1"></span>
@@ -46,7 +46,7 @@
         </div>
 
         <div class="flex gap-2 mt-4">
-            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.BorcTipi.Create">Kaydet</button>
+            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.ChargeType.Create">Kaydet</button>
             <a href="/Admin/BorcTipi" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>

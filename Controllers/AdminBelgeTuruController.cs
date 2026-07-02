@@ -23,7 +23,7 @@ public class AdminBelgeTuruController : Controller
     }
 
     [HttpGet("")]
-    [Authorize(Policy = PermissionCatalog.BelgeTuru.Module)]
+    [Authorize(Policy = PermissionCatalog.DocumentType.Module)]
     public async Task<IActionResult> Index()
     {
         var list = await _repo.GetListAsync();
@@ -31,7 +31,7 @@ public class AdminBelgeTuruController : Controller
     }
 
     [HttpGet("Ekle")]
-    [Authorize(Policy = PermissionCatalog.BelgeTuru.Module)]
+    [Authorize(Policy = PermissionCatalog.DocumentType.Module)]
     public async Task<IActionResult> Create()
     {
         var vm = new BelgeTuruFormViewModel
@@ -43,7 +43,7 @@ public class AdminBelgeTuruController : Controller
 
     [HttpPost("Ekle")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.BelgeTuru.Create)]
+    [Authorize(Policy = PermissionCatalog.DocumentType.Create)]
     public async Task<IActionResult> Create(BelgeTuruFormViewModel model)
     {
         if (!ModelState.IsValid) return View(model);
@@ -76,7 +76,7 @@ public class AdminBelgeTuruController : Controller
     }
 
     [HttpGet("Duzenle/{id:int}")]
-    [Authorize(Policy = PermissionCatalog.BelgeTuru.Module)]
+    [Authorize(Policy = PermissionCatalog.DocumentType.Module)]
     public async Task<IActionResult> Edit(int id)
     {
         var entity = await _repo.GetByIdAsync(id);
@@ -86,7 +86,7 @@ public class AdminBelgeTuruController : Controller
 
     [HttpPost("Duzenle/{id:int}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.BelgeTuru.Edit)]
+    [Authorize(Policy = PermissionCatalog.DocumentType.Edit)]
     public async Task<IActionResult> Edit(int id, BelgeTuruFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
@@ -120,7 +120,7 @@ public class AdminBelgeTuruController : Controller
 
     [HttpPost("DurumDegistir/{id:int}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.BelgeTuru.Edit)]
+    [Authorize(Policy = PermissionCatalog.DocumentType.Edit)]
     public async Task<IActionResult> DurumDegistir(int id)
     {
         var entity = await _repo.GetByIdAsync(id);
@@ -140,7 +140,7 @@ public class AdminBelgeTuruController : Controller
 
     [HttpPost("Sil/{id:int}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.BelgeTuru.Delete)]
+    [Authorize(Policy = PermissionCatalog.DocumentType.Delete)]
     public async Task<IActionResult> Delete(int id)
     {
         var entity = await _repo.GetByIdAsync(id);
