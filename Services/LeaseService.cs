@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
@@ -24,9 +24,9 @@ public class LeaseService : ILeaseService, ITransactionalService
         _istatistikService = statisticsService;
     }
 
-    public async Task<List<SozlesmeListItemDto>> GetAllAsync(string? filtre = null, IReadOnlyList<int>? tasinmazIds = null)
+    public async Task<List<SozlesmeListItemDto>> GetAllAsync(string? filtre = null, IReadOnlyList<int>? propertyIds = null)
     {
-        var yetkiliIds = tasinmazIds?.ToList();
+        var yetkiliIds = propertyIds?.ToList();
         var list = await _repo.GetListAsync(filtre, yetkiliIds);
         foreach (var s in list)
         {

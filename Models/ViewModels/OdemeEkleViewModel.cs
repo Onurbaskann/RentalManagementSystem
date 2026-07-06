@@ -13,5 +13,5 @@ public class OdemeEkleViewModel
     public decimal Amount { get; set; }
     public PaymentChannel PaymentChannel { get; set; } = PaymentChannel.Eft;
     public string? Aciklama { get; set; }
-    public TahakkukDetayDto? Charge { get; set; }
+    public ChargeDetailDto? Charge { get; set; }
 }

@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
@@ -47,9 +47,9 @@ public class BankTransactionRepository : BaseRepository<BankTransaction>, IBankT
         if (q.To.HasValue) query = query.Where(b => b.TransactionDate <= q.To.Value);
         if (q.Min.HasValue) query = query.Where(b => b.TransactionAmount >= q.Min.Value);
         if (q.Max.HasValue) query = query.Where(b => b.TransactionAmount <= q.Max.Value);
-        if (!string.IsNullOrWhiteSpace(q.Durum) && q.Durum != "tum")
+        if (!string.IsNullOrWhiteSpace(q.Status) && q.Status != "tum")
         {
-            BankMatchStatus? d = q.Durum switch
+            BankMatchStatus? d = q.Status switch
             {
                 "eslestirilmedi" => BankMatchStatus.Unmatched,
                 "eslesti" => BankMatchStatus.Matched,

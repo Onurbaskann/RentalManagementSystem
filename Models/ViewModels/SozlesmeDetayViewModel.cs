@@ -14,7 +14,7 @@ public class SozlesmeDetayViewModel
     public OccupancyStatus Durum { get; set; }
     public List<SozlesmeListItemDto> GecmisSozlesmeler { get; set; } = [];
     public List<SozlesmeListItemDto> KiraciSozlesmeleri { get; set; } = [];
-    public List<TahakkukListItemDto> Charges { get; set; } = [];
+    public List<ChargeListItemDto> Charges { get; set; } = [];
     public bool HasOdemeAccess { get; set; }
     public ParentTarifeKartViewModel? ParentTarife { get; set; }
     public List<ChargeLineItem> GuncelKalemler { get; set; } = [];

@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
@@ -42,14 +42,14 @@ public class PropertyController : Controller
     [Authorize(Policy = PermissionCatalog.Property.Module)]
     public async Task<IActionResult> Index()
     {
-        var tasinmazlar = await _tasinmazService.GetAllAsync(_provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
+        var tasinmazlar = await _tasinmazService.GetAllAsync(_provider.GlobalAccess ? null : _provider.AccessiblePropertyIds);
         return View(tasinmazlar);
     }
 
     [Authorize(Policy = PermissionCatalog.Property.Module)]
     public async Task<IActionResult> Detay(int id)
     {
-        if (!_provider.KapsamdaMi(id)) return Forbid();
+        if (!_provider.IsInScope(id)) return Forbid();
 
         var t = await _tasinmazService.GetByIdAsync(id);
         if (t == null) return NotFound();
@@ -98,7 +98,7 @@ public class PropertyController : Controller
     [Authorize(Policy = PermissionCatalog.Property.Edit)]
     public async Task<IActionResult> Duzenle(int id)
     {
-        if (!_provider.KapsamdaMi(id)) return Forbid();
+        if (!_provider.IsInScope(id)) return Forbid();
 
         var vm = await _tasinmazService.GetForEditAsync(id);
         if (vm == null) return NotFound();
@@ -115,7 +115,7 @@ public class PropertyController : Controller
     [Authorize(Policy = PermissionCatalog.Property.Edit)]
     public async Task<IActionResult> Duzenle(TasinmazDuzenleViewModel vm)
     {
-        _provider.TasinmazGuard(vm.Id);
+        _provider.PropertyGuard(vm.Id);
 
         if (string.IsNullOrWhiteSpace(vm.Ad))
             ModelState.AddModelError("Ad", "Taşınmaz adı zorunludur.");

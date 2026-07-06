@@ -1,4 +1,4 @@
-﻿@model KiraTakip.Models.ViewModels.SozlesmeDetayViewModel
+@model KiraTakip.Models.ViewModels.SozlesmeDetayViewModel
 @using KiraTakip.Models
 @using KiraTakip.Services.Interfaces
 @using KiraTakip.Authorization
@@ -36,23 +36,23 @@
     decimal aylikKdv = s.KdvUygulanacakMi ? aylikBedel * Model.KdvOraniEtkin / 100 : 0;
 
     var sozlesmeTahakkuklari = Model.Charges
-        .Where(t => t.SourceType == ChargeSourceType.Lease && t.Durum != ChargeStatus.Cancelled)
+        .Where(t => t.SourceType == ChargeSourceType.Lease && t.Status != ChargeStatus.Cancelled)
         .ToList();
-    int thkOdenenSayi  = sozlesmeTahakkuklari.Count(t => t.Durum == ChargeStatus.Paid);
-    int thkBekleyenSayi = sozlesmeTahakkuklari.Count(t => t.Durum == ChargeStatus.Pending || t.Durum == ChargeStatus.PartiallyPaid);
-    int thkGecikenSayi = sozlesmeTahakkuklari.Count(t => t.Durum == ChargeStatus.Overdue);
+    int thkOdenenSayi  = sozlesmeTahakkuklari.Count(t => t.Status == ChargeStatus.Paid);
+    int thkBekleyenSayi = sozlesmeTahakkuklari.Count(t => t.Status == ChargeStatus.Pending || t.Status == ChargeStatus.PartiallyPaid);
+    int thkGecikenSayi = sozlesmeTahakkuklari.Count(t => t.Status == ChargeStatus.Overdue);
     int thkToplamSayi  = sozlesmeTahakkuklari.Count;
-    decimal thkToplamTutar = sozlesmeTahakkuklari.Sum(t => t.ToplamTutar);
+    decimal thkToplamTutar = sozlesmeTahakkuklari.Sum(t => t.TotalAmount);
     decimal thkOdenenTutar = sozlesmeTahakkuklari.Sum(t => t.PaidAmount);
     decimal thkBekleyenTutar = sozlesmeTahakkuklari
-        .Where(t => t.Durum == ChargeStatus.Pending || t.Durum == ChargeStatus.PartiallyPaid)
-        .Sum(t => t.ToplamTutar - t.PaidAmount);
+        .Where(t => t.Status == ChargeStatus.Pending || t.Status == ChargeStatus.PartiallyPaid)
+        .Sum(t => t.TotalAmount - t.PaidAmount);
     decimal thkGecikenTutar = sozlesmeTahakkuklari
-        .Where(t => t.Durum == ChargeStatus.Overdue)
-        .Sum(t => t.ToplamTutar - t.PaidAmount);
+        .Where(t => t.Status == ChargeStatus.Overdue)
+        .Sum(t => t.TotalAmount - t.PaidAmount);
     decimal thkOdemeOrani = thkToplamTutar > 0 ? Math.Round(thkOdenenTutar / thkToplamTutar * 100, 0) : 0;
     DateTime? thkSonrakiVade = sozlesmeTahakkuklari
-        .Where(t => t.Durum == ChargeStatus.Pending || t.Durum == ChargeStatus.PartiallyPaid)
+        .Where(t => t.Status == ChargeStatus.Pending || t.Status == ChargeStatus.PartiallyPaid)
         .OrderBy(t => t.DueDate)
         .Select(t => (DateTime?)t.DueDate)
         .FirstOrDefault();
@@ -77,7 +77,7 @@
 }
 
 <script>
-    window.sozlesmeTahakkuklar = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Charges.Select(t => new { id = t.Id, donemBaslangic = t.PeriodStart.ToString("yyyy-MM-dd"), toplamTutar = t.ToplamTutar, odenenTutar = t.PaidAmount, durum = (int)t.Durum, kaynakTipi = (int)t.SourceType })));
+    window.sozlesmeTahakkuklar = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Charges.Select(t => new { id = t.Id, donemBaslangic = t.PeriodStart.ToString("yyyy-MM-dd"), toplamTutar = t.TotalAmount, odenenTutar = t.PaidAmount, durum = (int)t.Status, kaynakTipi = (int)t.SourceType })));
 </script>
 
 <div x-data="{
@@ -807,13 +807,13 @@
         }
         else
         {
-            var tumTahakkuklar      = Model.Charges.Where(t => t.Durum != ChargeStatus.Cancelled).ToList();
-            decimal toplamBeklenen  = tumTahakkuklar.Sum(t => t.ToplamTutar);
+            var tumTahakkuklar      = Model.Charges.Where(t => t.Status != ChargeStatus.Cancelled).ToList();
+            decimal toplamBeklenen  = tumTahakkuklar.Sum(t => t.TotalAmount);
             decimal toplamOdenen    = tumTahakkuklar.Sum(t => t.PaidAmount);
             decimal toplamKalan     = toplamBeklenen - toplamOdenen;
-            decimal gecikmisTutar   = tumTahakkuklar.Where(t => t.Durum == ChargeStatus.Overdue).Sum(t => t.ToplamTutar - t.PaidAmount);
-            int gecikmisSayisi      = tumTahakkuklar.Count(t => t.Durum == ChargeStatus.Overdue);
-            int bekleyenSayisi      = tumTahakkuklar.Count(t => t.Durum == ChargeStatus.Pending || t.Durum == ChargeStatus.PartiallyPaid);
+            decimal gecikmisTutar   = tumTahakkuklar.Where(t => t.Status == ChargeStatus.Overdue).Sum(t => t.TotalAmount - t.PaidAmount);
+            int gecikmisSayisi      = tumTahakkuklar.Count(t => t.Status == ChargeStatus.Overdue);
+            int bekleyenSayisi      = tumTahakkuklar.Count(t => t.Status == ChargeStatus.Pending || t.Status == ChargeStatus.PartiallyPaid);
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 <div class="card text-center">
                     <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Toplam Beklenen</div>
@@ -856,20 +856,20 @@
                         <tbody x-data="{ open: {} }">
                             @foreach (var t in Model.Charges.OrderByDescending(x => x.PeriodStart))
                             {
-                                string tDurumCls = t.Durum switch {
+                                string tDurumCls = t.Status switch {
                                     KiraTakip.Models.ChargeStatus.Paid    => "badge-kirali",
                                     KiraTakip.Models.ChargeStatus.PartiallyPaid => "badge-surek",
                                     KiraTakip.Models.ChargeStatus.Overdue      => "badge-gecmis",
                                     _                                              => "badge-bos"
                                 };
-                                string tDurumLabel = t.Durum switch {
+                                string tDurumLabel = t.Status switch {
                                     KiraTakip.Models.ChargeStatus.Paid    => "Tam Ödendi",
                                     KiraTakip.Models.ChargeStatus.PartiallyPaid => "Kısmi",
                                     KiraTakip.Models.ChargeStatus.Overdue      => "Gecikti",
                                     _                                              => "Bekleniyor"
                                 };
-                                decimal tKalan = t.ToplamTutar - t.PaidAmount;
-                                int tGecikmeGun = (t.Durum != KiraTakip.Models.ChargeStatus.Paid && t.DueDate.Date < DateTime.Today)
+                                decimal tKalan = t.TotalAmount - t.PaidAmount;
+                                int tGecikmeGun = (t.Status != KiraTakip.Models.ChargeStatus.Paid && t.DueDate.Date < DateTime.Today)
                                     ? (DateTime.Today - t.DueDate.Date).Days : 0;
                                 string tGecikmeRenk = tGecikmeGun > 7 ? "#dc2626" : tGecikmeGun > 0 ? "#b45309" : "";
                                 <tr @@click="open[@t.Id] = !open[@t.Id]" class="cursor-pointer">
@@ -889,15 +889,15 @@
                                             <span class="text-muted">—</span>
                                         }
                                     </td>
-                                    <td class="num">@t.ToplamTutar.ToString("N0") ₺</td>
+                                    <td class="num">@t.TotalAmount.ToString("N0") ₺</td>
                                     <td class="num num-positive">@t.PaidAmount.ToString("N0") ₺</td>
                                     <td class="num @(tKalan > 0 ? "font-semibold" : "text-muted")" style="@(tKalan > 0 ? "color:#dc2626" : "")">
                                         @(tKalan > 0 ? tKalan.ToString("N0") + " ₺" : "—")
                                     </td>
                                     <td class="pl-4">
-                                        @if (t.BekleyenOdemeSayisi > 0)
+                                        @if (t.PendingPaymentCount > 0)
                                         {
-                                            <a href="/Payment?tahakkukId=@t.Id.ToHashId()&durum=onaybekliyor" class="badge badge-surek hover:opacity-80 transition-opacity">Ödeme Onayı Bekleniyor</a>
+                                            <a href="/Payment?chargeId=@t.Id.ToHashId()&durum=onaybekliyor" class="badge badge-surek hover:opacity-80 transition-opacity">Ödeme Onayı Bekleniyor</a>
                                         }
                                         else
                                         {
@@ -905,7 +905,7 @@
                                         }
                                     </td>
                                     <td @@click.stop="">
-                                        <a href="/Payment?tahakkukId=@t.Id.ToHashId()" class="btn btn-sm btn-secondary">Ödemeler</a>
+                                        <a href="/Payment?chargeId=@t.Id.ToHashId()" class="btn btn-sm btn-secondary">Ödemeler</a>
                                     </td>
                                 </tr>
                                 <tr x-show="open[@t.Id]" x-cloak class="bg-[#f7f8fb]">
@@ -926,7 +926,7 @@
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        @foreach (var k in t.LineItems.OrderBy(k => k.BorcTipiSira))
+                                                        @foreach (var k in t.LineItems.OrderBy(k => k.ChargeTypeSortOrder))
                                                         {
                                                             string kaynakCls = k.SourceType switch {
                                                                 LineItemSourceType.UndefinedRate    => "badge-bos",
@@ -949,11 +949,11 @@
                                                                 _                                 => "Bilinmiyor"
                                                             };
                                                             <tr class="border-t border-slate-100 last:border-0">
-                                                                <td class="p-2 px-3 text-slate-600">@k.Aciklama</td>
+                                                                <td class="p-2 px-3 text-slate-600">@k.Description</td>
                                                                 <td class="p-2 px-3 text-right text-slate-500">@k.UnitValue.ToString("N2") ₺@(k.CalculationMethod == CalculationMethod.M2 ? "/m²" : "")</td>
                                                                 <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Amount.ToString("N2") ₺</td>
-                                                                <td class="p-2 px-3 text-right text-slate-400/60">@k.KdvTutari.ToString("N2") ₺</td>
-                                                                <td class="p-2 px-3 text-right font-bold text-slate-700">@k.ToplamTutar.ToString("N2") ₺</td>
+                                                                <td class="p-2 px-3 text-right text-slate-400/60">@k.VatAmount.ToString("N2") ₺</td>
+                                                                <td class="p-2 px-3 text-right font-bold text-slate-700">@k.TotalAmount.ToString("N2") ₺</td>
                                                                 <td class="p-2 px-3 text-center"><span class="badge @kaynakCls text-[11px]">@kaynakLabel</span></td>
                                                             </tr>
                                                         }

@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
@@ -18,20 +18,20 @@ public class ChargeService : IChargeService
     }
 
     // ── Listeleme ────────────────────────────────────────────────────────
-    public async Task<List<TahakkukListItemDto>> GetListAsync(int? leaseId = null, IReadOnlyList<int>? tasinmazIds = null, IReadOnlyList<int>? birimIds = null)
+    public async Task<List<ChargeListItemDto>> GetListAsync(int? leaseId = null, IReadOnlyList<int>? propertyIds = null, IReadOnlyList<int>? unitIds = null)
     {
-        return await _repo.GetListAsync(leaseId, tasinmazIds?.ToList(), birimIds?.ToList());
+        return await _repo.GetListAsync(leaseId, propertyIds?.ToList(), unitIds?.ToList());
     }
 
-    public async Task<PagedResult<TahakkukListItemDto>> GetPagedAsync(TableQuery q, int? leaseId = null, IReadOnlyList<int>? tasinmazIds = null, IReadOnlyList<int>? birimIds = null)
+    public async Task<PagedResult<ChargeListItemDto>> GetPagedAsync(TableQuery q, int? leaseId = null, IReadOnlyList<int>? propertyIds = null, IReadOnlyList<int>? unitIds = null)
     {
-        return await _repo.GetPagedListAsync(q, leaseId, tasinmazIds?.ToList(), birimIds?.ToList());
+        return await _repo.GetPagedListAsync(q, leaseId, propertyIds?.ToList(), unitIds?.ToList());
     }
 
-    public Task<TahakkukDetayDto?> GetDetayAsync(int id) => _repo.GetDetayAsync(id);
+    public Task<ChargeDetailDto?> GetDetailsAsync(int id) => _repo.GetDetailsAsync(id);
 
     // ── Business: Gecikme Güncelleme ─────────────────────────────────────
-    public async Task GecikmeleriGuncelleAsync()
+    public async Task UpdateDelaysAsync()
     {
         var gecikmisBekleyenler = await _repo.GetGeciktirileceklerAsync(DateTime.Today);
         if (gecikmisBekleyenler.Count == 0) return;
@@ -46,12 +46,12 @@ public class ChargeService : IChargeService
     }
 
     // ── Business: Ödenen Amount Güncelleme ────────────────────────────────
-    public async Task OdenenTutarGuncelleAsync(int tahakkukId)
+    public async Task UpdatePaidAmountAsync(int chargeId)
     {
-        var charge = await _repo.GetByIdAsync(tahakkukId);
+        var charge = await _repo.GetByIdAsync(chargeId);
         if (charge == null) return;
 
-        var odenenTutar = await _repo.GetOdenenTutarAsync(tahakkukId);
+        var odenenTutar = await _repo.GetOdenenTutarAsync(chargeId);
         charge.PaidAmount = odenenTutar;
 
         charge.Status = odenenTutar >= charge.TotalAmount

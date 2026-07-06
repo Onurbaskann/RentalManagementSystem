@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
@@ -32,11 +32,11 @@ public class PaymentRepository : BaseRepository<PaymentAllocation>, IPaymentRepo
                 Amount = o.Amount,
                 PaymentChannel = o.PaymentChannel,
                 PaymentSourceType = o.PaymentSourceType,
-                Durum = o.Status,
+                Status = o.Status,
                 EntryDate = o.EntryDate,
-                Aciklama = o.Description,
-                KiraciGosterimAdi = o.Charge.Tenant.Name,
-                TahakkukDonemBaslangic = o.Charge.PeriodStart,
+                Description = o.Description,
+                TenantDisplayName = o.Charge.Tenant.Name,
+                ChargePeriodStart = o.Charge.PeriodStart,
                 GirenUserGosterimAdi = o.GirenUser != null ? (o.GirenUser.AdSoyad ?? o.GirenUser.Email) : null
             })
             .ToListAsync();
@@ -65,9 +65,9 @@ public class PaymentRepository : BaseRepository<PaymentAllocation>, IPaymentRepo
         if (q.Min.HasValue) query = query.Where(o => o.Amount >= q.Min.Value);
         if (q.Max.HasValue) query = query.Where(o => o.Amount <= q.Max.Value);
 
-        if (!string.IsNullOrWhiteSpace(q.Durum) && q.Durum != "tum")
+        if (!string.IsNullOrWhiteSpace(q.Status) && q.Status != "tum")
         {
-            PaymentStatus? d = q.Durum switch
+            PaymentStatus? d = q.Status switch
             {
                 "onaybekliyor" => PaymentStatus.PendingApproval,
                 "onaylandi" => PaymentStatus.Approved,
@@ -90,11 +90,11 @@ public class PaymentRepository : BaseRepository<PaymentAllocation>, IPaymentRepo
                 Amount = o.Amount,
                 PaymentChannel = o.PaymentChannel,
                 PaymentSourceType = o.PaymentSourceType,
-                Durum = o.Status,
+                Status = o.Status,
                 EntryDate = o.EntryDate,
-                Aciklama = o.Description,
-                KiraciGosterimAdi = o.Charge.Tenant.Name,
-                TahakkukDonemBaslangic = o.Charge.PeriodStart,
+                Description = o.Description,
+                TenantDisplayName = o.Charge.Tenant.Name,
+                ChargePeriodStart = o.Charge.PeriodStart,
                 GirenUserGosterimAdi = o.GirenUser != null ? (o.GirenUser.AdSoyad ?? o.GirenUser.Email) : null
             })
             .ToListAsync();

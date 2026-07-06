@@ -1,4 +1,4 @@
-@model TahakkukDetayDto
+@model ChargeDetailDto
 @using KiraTakip.Models
 @using KiraTakip.Models.Entities
 @{
@@ -6,16 +6,16 @@
     var odemeBelgeleri = (ViewBag.OdemeBelgeleri as Dictionary<int, List<Belge>>) ?? new();
     ViewData["Title"] = $"Charge #{Model.Id}";
 
-    var kalan = Model.ToplamTutar - Model.PaidAmount;
+    var kalan = Model.TotalAmount - Model.PaidAmount;
 
-    string durumCls = Model.Durum switch {
+    string durumCls = Model.Status switch {
         ChargeStatus.Paid    => "badge-kirali",
         ChargeStatus.PartiallyPaid => "badge-surek",
         ChargeStatus.Overdue      => "badge-gecmis",
         ChargeStatus.Cancelled  => "badge-bos",
         _                           => "badge-bos"
     };
-    string durumLabel = Model.Durum switch {
+    string durumLabel = Model.Status switch {
         ChargeStatus.Paid    => "Tam Ödendi",
         ChargeStatus.PartiallyPaid => "Kısmi Ödendi",
         ChargeStatus.Overdue      => "Gecikti",
@@ -23,8 +23,8 @@
         _                           => "Bekleniyor"
     };
 
-    bool iptal = Model.Durum == ChargeStatus.Cancelled;
-    bool tamOdendi = Model.Durum == ChargeStatus.Paid;
+    bool iptal = Model.Status == ChargeStatus.Cancelled;
+    bool tamOdendi = Model.Status == ChargeStatus.Paid;
     bool odeyebilir = !iptal && !tamOdendi && kalan > 0;
 }
 
@@ -65,7 +65,7 @@
         <div class="flex gap-6 flex-wrap">
             <div class="text-center">
                 <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Beklenen</div>
-                <div class="text-xl font-bold">@Model.ToplamTutar.ToString("N2") ₺</div>
+                <div class="text-xl font-bold">@Model.TotalAmount.ToString("N2") ₺</div>
             </div>
             <div class="text-center">
                 <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Ödenen</div>
@@ -78,21 +78,21 @@
         </div>
     </div>
 
-    <div class="mt-4 pt-3.5 border-t border-[var(--color-border)] flex gap-8 flex-wrap text-[13px]">
+    <div class="mt-4 pt-3.5 border-t border-slate-200 flex gap-8 flex-wrap text-[13px]">
         <div>
             <span class="text-muted">Taşınmaz: </span>
-            <span class="font-semibold">@(Model.TasinmazAd ?? "—")</span>
+            <span class="font-semibold">@(Model.PropertyName ?? "—")</span>
         </div>
         <div>
             <span class="text-muted">Unit: </span>
-            <span class="font-semibold">@(Model.BirimAd ?? "—")</span>
+            <span class="font-semibold">@(Model.UnitName ?? "—")</span>
         </div>
     </div>
 </div>
 
 <!-- Kalem Dökümü -->
 <div class="card p-0 overflow-hidden mb-4">
-    <div class="p-[14px_20px] border-b border-[var(--color-border)]">
+    <div class="p-[14px_20px] border-b border-slate-200">
         <div class="text-sm font-bold">Kalem Dökümü</div>
     </div>
     @if (Model.LineItems.Any())
@@ -110,15 +110,15 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var k in Model.LineItems.OrderBy(k => k.BorcTipiSira))
+                    @foreach (var k in Model.LineItems.OrderBy(k => k.ChargeTypeSortOrder))
                     {
                         <tr class="border-t border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
-                            <td class="p-2 px-3 text-slate-600 font-medium">@k.Aciklama</td>
+                            <td class="p-2 px-3 text-slate-600 font-medium">@k.Description</td>
                             <td class="p-2 px-3 text-right text-slate-500">@k.UnitValue.ToString("N2") ₺@(k.CalculationMethod == CalculationMethod.M2 ? "/m²" : "")</td>
                             <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Amount.ToString("N2") ₺</td>
                             <td class="p-2 px-3 text-right text-slate-400/60">%@k.KdvRate.ToString("G")</td>
-                            <td class="p-2 px-3 text-right text-slate-400/60">@k.KdvTutari.ToString("N2") ₺</td>
-                            <td class="p-2 px-3 text-right font-bold text-slate-700">@k.ToplamTutar.ToString("N2") ₺</td>
+                            <td class="p-2 px-3 text-right text-slate-400/60">@k.VatAmount.ToString("N2") ₺</td>
+                            <td class="p-2 px-3 text-right font-bold text-slate-700">@k.TotalAmount.ToString("N2") ₺</td>
                         </tr>
                     }
                 </tbody>
@@ -127,8 +127,8 @@
                         <td colspan="2" class="p-2 px-3">Toplam</td>
                         <td class="p-2 px-3 text-right text-slate-600">@Model.ExpectedAmount.ToString("N2") ₺</td>
                         <td></td>
-                        <td class="p-2 px-3 text-right text-slate-400/60">@Model.KdvTutari.ToString("N2") ₺</td>
-                        <td class="p-2 px-3 text-right text-slate-700">@Model.ToplamTutar.ToString("N2") ₺</td>
+                        <td class="p-2 px-3 text-right text-slate-400/60">@Model.VatAmount.ToString("N2") ₺</td>
+                        <td class="p-2 px-3 text-right text-slate-700">@Model.TotalAmount.ToString("N2") ₺</td>
                     </tr>
                 </tfoot>
             </table>
@@ -142,7 +142,7 @@
 
 <!-- Ödeme Geçmişi -->
 <div class="card p-0 overflow-hidden">
-    <div class="p-[14px_20px] border-b border-[var(--color-border)]">
+    <div class="p-[14px_20px] border-b border-slate-200">
         <div class="text-sm font-bold">Ödeme Geçmişi</div>
     </div>
     @if (Model.Allocations.Any())
@@ -162,12 +162,12 @@
                 <tbody>
                     @foreach (var o in Model.Allocations.OrderByDescending(o => o.PaymentDate))
                     {
-                        string odCls = o.Durum switch {
+                        string odCls = o.Status switch {
                             PaymentStatus.Approved     => "badge-kirali",
                             PaymentStatus.Rejected    => "badge-gecmis",
                             _                         => "badge-bos"
                         };
-                        string odLabel = o.Durum switch {
+                        string odLabel = o.Status switch {
                             PaymentStatus.Approved  => "Onaylandı",
                             PaymentStatus.Rejected => "Reddedildi",
                             _                      => "Onay Bekliyor"
@@ -184,12 +184,12 @@
                             tutar = o.Amount.ToString("N2") + " ₺",
                             kanal = kanalLabel,
                             durum = odLabel,
-                            aciklama = o.Aciklama ?? "—",
+                            aciklama = o.Description ?? "—",
                             redNedeni = o.RejectionReason ?? "—"
                         });
                         <tr>
                             <td class="font-semibold">@o.PaymentDate.ToString("dd.MM.yyyy")</td>
-                            <td class="text-right font-bold @(o.Durum == PaymentStatus.Approved ? "text-emerald-800" : "")">@o.Amount.ToString("N2") ₺</td>
+                            <td class="text-right font-bold @(o.Status == PaymentStatus.Approved ? "text-emerald-800" : "")">@o.Amount.ToString("N2") ₺</td>
                             <td class="text-[13px]">@kanalLabel</td>
                             <td><span class="badge @odCls">@odLabel</span></td>
                             <td>
@@ -267,7 +267,7 @@
             <div x-show="odemeTab === 'havale'">
                 <form method="post" action="/Tenant/Tahakkuklarim/OdemeBildir" enctype="multipart/form-data">
                     @Html.AntiForgeryToken()
-                    <input type="hidden" name="tahakkukId" value="@Model.Id" />
+                    <input type="hidden" name="chargeId" value="@Model.Id" />
 
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
@@ -414,4 +414,3 @@
 </div>
 
 </div>
-

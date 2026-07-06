@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
@@ -36,7 +36,7 @@ public class UnitController : Controller
 
         if (unit == null) return NotFound();
 
-        if (!_provider.KapsamdaMi(unit.TasinmazId)) return Forbid();
+        if (!_provider.IsInScope(unit.TasinmazId)) return Forbid();
 
         var vm = new BirimOzelFiyatViewModel
         {

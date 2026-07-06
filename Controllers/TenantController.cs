@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
@@ -49,9 +49,9 @@ public class TenantController : Controller
     [Authorize(Policy = PermissionCatalog.Tenant.Module)]
     public async Task<IActionResult> Index()
     {
-        var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
-        var kiraciler = await _kiraciService.GetAllAsync(tasinmazIds);
-        var sozlesmeler = await _sozlesmeService.GetAllAsync(tasinmazIds: tasinmazIds);
+        var propertyIds = _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds;
+        var kiraciler = await _kiraciService.GetAllAsync(propertyIds);
+        var sozlesmeler = await _sozlesmeService.GetAllAsync(propertyIds: propertyIds);
         ViewBag.AktifSozlesme = sozlesmeler
             .Where(s => s.Aktif)
             .GroupBy(s => s.KiraciId)
@@ -62,10 +62,10 @@ public class TenantController : Controller
     [Authorize(Policy = PermissionCatalog.Tenant.Module)]
     public async Task<IActionResult> Detay(int id)
     {
-        var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
-        if (!_provider.GlobalErisim)
+        var propertyIds = _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds;
+        if (!_provider.GlobalAccess)
         {
-            var kiraciler = await _kiraciService.GetAllAsync(tasinmazIds);
+            var kiraciler = await _kiraciService.GetAllAsync(propertyIds);
             if (!kiraciler.Any(k => k.Id == id)) return Forbid();
         }
 
@@ -73,9 +73,9 @@ public class TenantController : Controller
         if (k == null) return NotFound();
 
         List<SozlesmeListItemDto> sozlesmeler;
-        if (!_provider.GlobalErisim)
+        if (!_provider.GlobalAccess)
         {
-            var all = await _sozlesmeService.GetAllAsync(tasinmazIds: tasinmazIds);
+            var all = await _sozlesmeService.GetAllAsync(propertyIds: propertyIds);
             sozlesmeler = all.Where(s => s.KiraciId == id).ToList();
         }
         else

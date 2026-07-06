@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
@@ -34,7 +34,7 @@ public class ReservationController : Controller
     [Authorize(Policy = PermissionCatalog.Reservation.Module)]
     public async Task<IActionResult> Index()
     {
-        var liste = await _service.GetAllAsync(_provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
+        var liste = await _service.GetAllAsync(_provider.GlobalAccess ? null : _provider.AccessiblePropertyIds);
         return View(liste);
     }
 
@@ -45,8 +45,8 @@ public class ReservationController : Controller
         var reservation = await _service.GetByIdAsync(id);
         if (reservation == null) return NotFound();
 
-        if (!_provider.GlobalErisim &&
-            !_provider.ErisilebilirTasinmazIds.Contains(reservation.TasinmazId))
+        if (!_provider.GlobalAccess &&
+            !_provider.AccessiblePropertyIds.Contains(reservation.TasinmazId))
             return Forbid();
 
         return View(reservation);

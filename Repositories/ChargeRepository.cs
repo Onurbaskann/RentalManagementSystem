@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
@@ -12,50 +12,50 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
     public ChargeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
     // ── Listeleme (DTO) ───────────────────────────────────────────────────
-    public async Task<List<TahakkukListItemDto>> GetListAsync(int? leaseId, List<int>? yetkiliPropertyIds, List<int>? yetkiliBirimIds = null)
+    public async Task<List<ChargeListItemDto>> GetListAsync(int? leaseId, List<int>? authorizedPropertyIds, List<int>? authorizedUnitIds = null)
     {
         IQueryable<Charge> q = _dbSet.AsNoTracking();
 
         if (leaseId.HasValue)
             q = q.Where(t => t.LeaseId == leaseId.Value);
 
-        if (yetkiliBirimIds != null)
-            q = q.Where(t => yetkiliBirimIds.Contains(t.UnitId));
-        else if (yetkiliPropertyIds != null)
-            q = q.Where(t => yetkiliPropertyIds.Contains(t.Unit.PropertyId));
+        if (authorizedUnitIds != null)
+            q = q.Where(t => authorizedUnitIds.Contains(t.UnitId));
+        else if (authorizedPropertyIds != null)
+            q = q.Where(t => authorizedPropertyIds.Contains(t.Unit.PropertyId));
 
         return await q.OrderByDescending(t => t.PeriodStart)
-                      .Select(t => new TahakkukListItemDto
+                      .Select(t => new ChargeListItemDto
                       {
                           Id = t.Id,
                           LeaseId = t.LeaseId,
-                          KiraciId = t.TenantId,
-                          KiraciGosterimAdi = t.Tenant.Name,
-                          TasinmazId = t.Unit.PropertyId,
-                          TasinmazAd = t.Unit.Property.Name,
-                          BirimId = t.UnitId,
-                          BirimAd = t.Unit.Name,
+                          TenantId = t.TenantId,
+                          TenantDisplayName = t.Tenant.Name,
+                          PropertyId = t.Unit.PropertyId,
+                          PropertyName = t.Unit.Property.Name,
+                          UnitId = t.UnitId,
+                          UnitName = t.Unit.Name,
                           PeriodStart = t.PeriodStart,
                           DueDate = t.DueDate,
-                          ToplamTutar = t.TotalAmount,
+                          TotalAmount = t.TotalAmount,
                           PaidAmount = t.PaidAmount,
-                          Durum = t.Status,
+                          Status = t.Status,
                           SourceType = t.SourceType,
-                          BekleyenOdemeSayisi = _ctx.PaymentAllocations.IgnoreQueryFilters()
+                          PendingPaymentCount = _ctx.PaymentAllocations.IgnoreQueryFilters()
                               .Count(o => o.ChargeId == t.Id && !o.IsDeleted && o.Status == PaymentStatus.PendingApproval),
-                          LineItems = t.LineItems.Select(k => new TahakkukKalemDto
+                          LineItems = t.LineItems.Select(k => new ChargeLineItemDto
                           {
                               ChargeTypeCode = k.ChargeType.Code,
-                              BorcTipiSira = k.ChargeType.SortOrder,
+                              ChargeTypeSortOrder = k.ChargeType.SortOrder,
                               ChargeTypeName = k.ChargeType.Name,
-                              Aciklama = k.Description,
+                              Description = k.Description,
                               CalculationMethod = k.CalculationMethod,
                               UnitValue = k.UnitValue,
                               Multiplier = k.Multiplier,
                               Amount = k.Amount,
                               KdvRate = k.KdvRate,
-                              KdvTutari = k.KdvAmount,
-                              ToplamTutar = k.TotalAmount,
+                              VatAmount = k.KdvAmount,
+                              TotalAmount = k.TotalAmount,
                               SourceType = k.SourceType
                           }).ToList()
                       })
@@ -63,17 +63,17 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
     }
 
     // ── Sayfalı listeleme (DTO) ───────────────────────────────────────────
-    public async Task<PagedResult<TahakkukListItemDto>> GetPagedListAsync(TableQuery q, int? leaseId, List<int>? yetkiliPropertyIds, List<int>? yetkiliBirimIds = null)
+    public async Task<PagedResult<ChargeListItemDto>> GetPagedListAsync(TableQuery q, int? leaseId, List<int>? authorizedPropertyIds, List<int>? authorizedUnitIds = null)
     {
         IQueryable<Charge> query = _dbSet.AsNoTracking();
 
         if (leaseId.HasValue)
             query = query.Where(t => t.LeaseId == leaseId.Value);
 
-        if (yetkiliBirimIds != null)
-            query = query.Where(t => yetkiliBirimIds.Contains(t.UnitId));
-        else if (yetkiliPropertyIds != null)
-            query = query.Where(t => yetkiliPropertyIds.Contains(t.Unit.PropertyId));
+        if (authorizedUnitIds != null)
+            query = query.Where(t => authorizedUnitIds.Contains(t.UnitId));
+        else if (authorizedPropertyIds != null)
+            query = query.Where(t => authorizedPropertyIds.Contains(t.Unit.PropertyId));
 
         if (!string.IsNullOrWhiteSpace(q.Q))
         {
@@ -86,14 +86,14 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
         if (q.To.HasValue) query = query.Where(t => t.DueDate <= q.To.Value);
         if (q.Min.HasValue) query = query.Where(t => t.TotalAmount >= q.Min.Value);
         if (q.Max.HasValue) query = query.Where(t => t.TotalAmount <= q.Max.Value);
-        if (q.TasinmazId.HasValue) query = query.Where(t => t.Lease!.Unit.PropertyId == q.TasinmazId.Value);
-        if (q.BirimId.HasValue) query = query.Where(t => t.Lease!.UnitId == q.BirimId.Value);
-        if (q.KiraciId.HasValue) query = query.Where(t => t.TenantId == q.KiraciId.Value);
-        if (q.Yil.HasValue) query = query.Where(t => t.PeriodStart.Year == q.Yil.Value);
+        if (q.PropertyId.HasValue) query = query.Where(t => t.Lease!.Unit.PropertyId == q.PropertyId.Value);
+        if (q.UnitId.HasValue) query = query.Where(t => t.Lease!.UnitId == q.UnitId.Value);
+        if (q.TenantId.HasValue) query = query.Where(t => t.TenantId == q.TenantId.Value);
+        if (q.Year.HasValue) query = query.Where(t => t.PeriodStart.Year == q.Year.Value);
 
-        if (!string.IsNullOrWhiteSpace(q.Kaynak))
+        if (!string.IsNullOrWhiteSpace(q.Source))
         {
-            ChargeSourceType? kt = q.Kaynak.ToLower() switch
+            ChargeSourceType? kt = q.Source.ToLower() switch
             {
                 "manuel" => ChargeSourceType.Manual,
                 "lease" => ChargeSourceType.Lease,
@@ -103,21 +103,21 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
             if (kt.HasValue) query = query.Where(t => t.SourceType == kt.Value);
         }
 
-        if (!string.IsNullOrWhiteSpace(q.Durum) && q.Durum != "tum")
+        if (!string.IsNullOrWhiteSpace(q.Status) && q.Status != "tum")
         {
-            if (q.Durum == "odeme_onay")
+            if (q.Status == "odeme_onay")
             {
                 query = query.Where(t => t.Allocations.Any(o =>
                     o.Status == PaymentStatus.PendingApproval &&
                     o.PaymentSourceType != PaymentSourceType.VirtualPos));
             }
-            else if (q.Durum == "iptal")
+            else if (q.Status == "iptal")
             {
                 query = query.Where(t => t.Status == ChargeStatus.Cancelled);
             }
             else
             {
-                ChargeStatus? d = q.Durum.ToLower() switch
+                ChargeStatus? d = q.Status.ToLower() switch
                 {
                     "bekliyor" => ChargeStatus.Pending,
                     "kismi" => ChargeStatus.PartiallyPaid,
@@ -136,42 +136,42 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
         var total = await query.CountAsync();
         var items = await query.OrderByDescending(t => t.PeriodStart)
                                .Skip(q.Skip).Take(q.Take)
-                               .Select(t => new TahakkukListItemDto
+                               .Select(t => new ChargeListItemDto
                                {
                                    Id = t.Id,
                                    LeaseId = t.LeaseId,
-                                   KiraciId = t.TenantId,
-                                   KiraciGosterimAdi = t.Tenant.Name,
-                                   TasinmazId = t.Unit.PropertyId,
-                                   TasinmazAd = t.Unit.Property.Name,
-                                   BirimId = t.UnitId,
-                                   BirimAd = t.Unit.Name,
+                                   TenantId = t.TenantId,
+                                   TenantDisplayName = t.Tenant.Name,
+                                   PropertyId = t.Unit.PropertyId,
+                                   PropertyName = t.Unit.Property.Name,
+                                   UnitId = t.UnitId,
+                                   UnitName = t.Unit.Name,
                                    PeriodStart = t.PeriodStart,
                                    DueDate = t.DueDate,
-                                   ToplamTutar = t.TotalAmount,
+                                   TotalAmount = t.TotalAmount,
                                    PaidAmount = t.PaidAmount,
-                                   Durum = t.Status,
+                                   Status = t.Status,
                                    SourceType = t.SourceType,
-                                   BekleyenOdemeSayisi = t.Allocations.Count(o => o.Status == PaymentStatus.PendingApproval),
-                                   LineItems = t.LineItems.Select(k => new TahakkukKalemDto
+                                   PendingPaymentCount = t.Allocations.Count(o => o.Status == PaymentStatus.PendingApproval),
+                                   LineItems = t.LineItems.Select(k => new ChargeLineItemDto
                                    {
                                        ChargeTypeCode = k.ChargeType.Code,
-                                       BorcTipiSira = k.ChargeType.SortOrder,
+                                       ChargeTypeSortOrder = k.ChargeType.SortOrder,
                                        ChargeTypeName = k.ChargeType.Name,
-                                       Aciklama = k.Description,
+                                       Description = k.Description,
                                        CalculationMethod = k.CalculationMethod,
                                        UnitValue = k.UnitValue,
                                        Multiplier = k.Multiplier,
                                        Amount = k.Amount,
                                        KdvRate = k.KdvRate,
-                                       KdvTutari = k.KdvAmount,
-                                       ToplamTutar = k.TotalAmount,
+                                       VatAmount = k.KdvAmount,
+                                       TotalAmount = k.TotalAmount,
                                        SourceType = k.SourceType
                                    }).ToList()
                                })
                                .ToListAsync();
 
-        return new PagedResult<TahakkukListItemDto>
+        return new PagedResult<ChargeListItemDto>
         {
             Items = items,
             Total = total,
@@ -181,54 +181,54 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
     }
 
     // ── Detay (DTO) ───────────────────────────────────────────────────────
-    public async Task<TahakkukDetayDto?> GetDetayAsync(int id)
+    public async Task<ChargeDetailDto?> GetDetailsAsync(int id)
     {
         return await _dbSet.AsNoTracking()
                            .Where(t => t.Id == id)
-                           .Select(t => new TahakkukDetayDto
+                           .Select(t => new ChargeDetailDto
                            {
                                Id = t.Id,
                                LeaseId = t.LeaseId,
-                               KiraciId = t.TenantId,
-                               KiraciGosterimAdi = t.Tenant.Name,
-                               TasinmazId = t.Unit.PropertyId,
-                               TasinmazAd = t.Unit.Property.Name,
-                               BirimId = t.UnitId,
-                               BirimAd = t.Unit.Name,
+                               TenantId = t.TenantId,
+                               TenantDisplayName = t.Tenant.Name,
+                               PropertyId = t.Unit.PropertyId,
+                               PropertyName = t.Unit.Property.Name,
+                               UnitId = t.UnitId,
+                               UnitName = t.Unit.Name,
                                PeriodStart = t.PeriodStart,
                                PeriodEnd = t.PeriodEnd,
                                DueDate = t.DueDate,
                                ExpectedAmount = t.ExpectedAmount,
-                               KdvTutari = t.KdvAmount,
-                               ToplamTutar = t.TotalAmount,
+                               VatAmount = t.KdvAmount,
+                               TotalAmount = t.TotalAmount,
                                PaidAmount = t.PaidAmount,
-                               Durum = t.Status,
+                               Status = t.Status,
                                SourceType = t.SourceType,
-                               OlusturmaTarihi = t.CreatedAt,
-                               LineItems = t.LineItems.Select(k => new TahakkukKalemDto
+                               CreatedAt = t.CreatedAt,
+                               LineItems = t.LineItems.Select(k => new ChargeLineItemDto
                                {
                                    ChargeTypeCode = k.ChargeType.Code,
-                                   BorcTipiSira = k.ChargeType.SortOrder,
+                                   ChargeTypeSortOrder = k.ChargeType.SortOrder,
                                    ChargeTypeName = k.ChargeType.Name,
-                                   Aciklama = k.Description,
+                                   Description = k.Description,
                                    CalculationMethod = k.CalculationMethod,
                                    UnitValue = k.UnitValue,
                                    Multiplier = k.Multiplier,
                                    Amount = k.Amount,
                                    KdvRate = k.KdvRate,
-                                   KdvTutari = k.KdvAmount,
-                                   ToplamTutar = k.TotalAmount,
+                                   VatAmount = k.KdvAmount,
+                                   TotalAmount = k.TotalAmount,
                                    SourceType = k.SourceType
                                }).ToList(),
-                               Allocations = t.Allocations.Select(o => new TahakkukOdemeDto
+                               Allocations = t.Allocations.Select(o => new PaymentAllocationDto
                                {
                                    Id = o.Id,
                                    PaymentDate = o.PaymentDate,
                                    Amount = o.Amount,
                                    PaymentChannel = o.PaymentChannel,
-                                   Durum = o.Status,
+                                   Status = o.Status,
                                    EntryDate = o.EntryDate,
-                                   Aciklama = o.Description,
+                                   Description = o.Description,
                                    RejectionReason = o.RejectionReason
                                }).ToList()
                            })
@@ -345,10 +345,10 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
             .ToListAsync(ct);
 
     // ── Hesaplama ─────────────────────────────────────────────────────────
-    public async Task<decimal> GetOdenenTutarAsync(int tahakkukId)
+    public async Task<decimal> GetOdenenTutarAsync(int chargeId)
     {
         return await _ctx.PaymentAllocations.AsNoTracking()
-                                      .Where(o => o.ChargeId == tahakkukId && o.Status == PaymentStatus.Approved)
+                                      .Where(o => o.ChargeId == chargeId && o.Status == PaymentStatus.Approved)
                                       .SumAsync(o => (decimal?)o.Amount) ?? 0m;
     }
 

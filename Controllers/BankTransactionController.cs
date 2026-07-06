@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
@@ -33,7 +33,7 @@ public class BankTransactionController : Controller
     {
         var paged = await _bankaService.GetPagedAsync(query);
         ViewBag.Query = query;
-        ViewBag.Durum = query.Durum ?? "tum";
+        ViewBag.Status = query.Status ?? "tum";
         return View(paged);
     }
 
@@ -79,8 +79,8 @@ public class BankTransactionController : Controller
         var hareketi = await _bankaService.GetByIdAsync(id);
         if (hareketi == null) return NotFound();
 
-        var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
-        var adaylar = await _bankaService.GetOdemeAdaylariAsync(id, tasinmazIds);
+        var propertyIds = _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds;
+        var adaylar = await _bankaService.GetOdemeAdaylariAsync(id, propertyIds);
 
         return View(new BankaEslesmeSecViewModel { BankTransaction = hareketi, OdemeAdaylari = adaylar });
     }

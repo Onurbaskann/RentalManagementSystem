@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
@@ -17,9 +17,9 @@ public class ChargeController : Controller
     private readonly ApplicationDbContext _ctx;
     private readonly IPermissionScopeProvider _provider;
 
-    public ChargeController(IChargeService tahakkukService, ApplicationDbContext ctx, IPermissionScopeProvider provider)
+    public ChargeController(IChargeService chargeService, ApplicationDbContext ctx, IPermissionScopeProvider provider)
     {
-        _chargeService = tahakkukService;
+        _chargeService = chargeService;
         _ctx = ctx;
         _provider = provider;
     }
@@ -27,76 +27,76 @@ public class ChargeController : Controller
     [Authorize(Policy = PermissionCatalog.Payment.Module)]
     public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
-        await _chargeService.GecikmeleriGuncelleAsync();
+        await _chargeService.UpdateDelaysAsync();
 
-        var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
-        var birimIds = (!_provider.GlobalErisim && _provider.ErisilebilirBirimIds.Count > 0)
-            ? _provider.ErisilebilirBirimIds : null;
-        var pagedResult = await _chargeService.GetPagedAsync(query, tasinmazIds: tasinmazIds, birimIds: birimIds);
+        var propertyIds = _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds;
+        var unitIds = (!_provider.GlobalAccess && _provider.AccessibleUnitIds.Count > 0)
+            ? _provider.AccessibleUnitIds : null;
+        var pagedResult = await _chargeService.GetPagedAsync(query, propertyIds: propertyIds, unitIds: unitIds);
 
-        if (!_provider.GlobalErisim)
+        if (!_provider.GlobalAccess)
         {
-            if (birimIds != null)
+            if (unitIds != null)
             {
-                var birimIdList = birimIds.ToList();
+                var unitIdList = unitIds.ToList();
                 ViewBag.Properties = await _ctx.Units
-                    .Where(b => birimIdList.Contains(b.Id))
+                    .Where(b => unitIdList.Contains(b.Id))
                     .Select(b => b.Property).Distinct().OrderBy(t => t.Name).ToListAsync();
                 ViewBag.Units = await _ctx.Units
-                    .Where(b => birimIdList.Contains(b.Id)).OrderBy(b => b.PropertyId).ThenBy(b => b.Name).ToListAsync();
-                var sozKiraciIds2 = await _ctx.Leases
-                    .Where(s => birimIdList.Contains(s.UnitId)).Select(s => s.TenantId).Distinct().ToListAsync();
-                ViewBag.Kiracilar = await _ctx.Tenants
-                    .Where(k => sozKiraciIds2.Contains(k.Id)).OrderBy(k => k.Name).ToListAsync();
+                    .Where(b => unitIdList.Contains(b.Id)).OrderBy(b => b.PropertyId).ThenBy(b => b.Name).ToListAsync();
+                var leaseTenantIdsByUnit = await _ctx.Leases
+                    .Where(s => unitIdList.Contains(s.UnitId)).Select(s => s.TenantId).Distinct().ToListAsync();
+                ViewBag.Tenants = await _ctx.Tenants
+                    .Where(k => leaseTenantIdsByUnit.Contains(k.Id)).OrderBy(k => k.Name).ToListAsync();
             }
             else
             {
                 ViewBag.Properties = await _ctx.Properties
-                    .Where(t => tasinmazIds!.Contains(t.Id)).OrderBy(t => t.Name).ToListAsync();
+                    .Where(t => propertyIds!.Contains(t.Id)).OrderBy(t => t.Name).ToListAsync();
                 ViewBag.Units = await _ctx.Units
-                    .Where(b => tasinmazIds!.Contains(b.PropertyId)).OrderBy(b => b.PropertyId).ThenBy(b => b.Name).ToListAsync();
-                var sozKiraciIds = await _ctx.Leases
-                    .Where(s => tasinmazIds!.Contains(s.Unit.PropertyId)).Select(s => s.TenantId).Distinct().ToListAsync();
-                ViewBag.Kiracilar = await _ctx.Tenants
-                    .Where(k => sozKiraciIds.Contains(k.Id)).OrderBy(k => k.Name).ToListAsync();
+                    .Where(b => propertyIds!.Contains(b.PropertyId)).OrderBy(b => b.PropertyId).ThenBy(b => b.Name).ToListAsync();
+                var leaseTenantIds = await _ctx.Leases
+                    .Where(s => propertyIds!.Contains(s.Unit.PropertyId)).Select(s => s.TenantId).Distinct().ToListAsync();
+                ViewBag.Tenants = await _ctx.Tenants
+                    .Where(k => leaseTenantIds.Contains(k.Id)).OrderBy(k => k.Name).ToListAsync();
             }
         }
         else
         {
             ViewBag.Properties = await _ctx.Properties.OrderBy(t => t.Name).ToListAsync();
             ViewBag.Units = await _ctx.Units.OrderBy(b => b.PropertyId).ThenBy(b => b.Name).ToListAsync();
-            ViewBag.Kiracilar = await _ctx.Tenants.OrderBy(k => k.Name).ToListAsync();
+            ViewBag.Tenants = await _ctx.Tenants.OrderBy(k => k.Name).ToListAsync();
         }
-        ViewBag.MevcutYillar = await _ctx.Charges
+        ViewBag.AvailableYears = await _ctx.Charges
             .Select(t => t.PeriodStart.Year)
             .Distinct()
             .OrderByDescending(y => y)
             .ToListAsync();
 
-        if (string.IsNullOrWhiteSpace(query.Durum) || query.Durum == "tum")
+        if (string.IsNullOrWhiteSpace(query.Status) || query.Status == "tum")
         {
-            var iptalQuery = _ctx.Charges.Where(t => t.Status == ChargeStatus.Cancelled);
-            if (tasinmazIds != null)
-                iptalQuery = iptalQuery.Where(t => tasinmazIds.Contains(t.Unit.PropertyId));
-            ViewBag.IptalEdildiSayisi = await iptalQuery.CountAsync();
+            var cancelledQuery = _ctx.Charges.Where(t => t.Status == ChargeStatus.Cancelled);
+            if (propertyIds != null)
+                cancelledQuery = cancelledQuery.Where(t => propertyIds.Contains(t.Unit.PropertyId));
+            ViewBag.CancelledCount = await cancelledQuery.CountAsync();
         }
         else
         {
-            ViewBag.IptalEdildiSayisi = 0;
+            ViewBag.CancelledCount = 0;
         }
 
         ViewBag.Query = query;
-        ViewBag.Durum = query.Durum ?? "tum";
+        ViewBag.Status = query.Status ?? "tum";
         return View(pagedResult);
     }
 
     [Authorize(Policy = PermissionCatalog.Payment.Module)]
-    public async Task<IActionResult> Detay(int id)
+    public async Task<IActionResult> Details(int id)
     {
-        var charge = await _chargeService.GetDetayAsync(id);
+        var charge = await _chargeService.GetDetailsAsync(id);
         if (charge == null) return NotFound();
 
-        if (charge.TasinmazId != null && !_provider.KapsamdaMi(charge.TasinmazId.Value))
+        if (charge.PropertyId != null && !_provider.IsInScope(charge.PropertyId.Value))
             return Forbid();
 
         return View(charge);

@@ -1,4 +1,4 @@
-﻿@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.OdemeListItemDto>
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.OdemeListItemDto>
 @using KiraTakip.Models
 @using KiraTakip.Models.Common
 @{
@@ -92,12 +92,12 @@
             <tbody>
                 @foreach (var o in Model.Items)
                 {
-                    string durumCls = o.Durum switch {
+                    string durumCls = o.Status switch {
                         PaymentStatus.Approved    => "badge-kirali",
                         PaymentStatus.Rejected   => "badge-gecmis",
                         _                        => "badge-surek"
                     };
-                    string durumLabel = o.Durum switch {
+                    string durumLabel = o.Status switch {
                         PaymentStatus.Approved    => "Onaylandı",
                         PaymentStatus.Rejected   => "Reddedildi",
                         _                        => "Onay Bekliyor"
@@ -110,8 +110,8 @@
                     };
                     <tr>
                         <td>@o.PaymentDate.ToString("dd.MM.yyyy")</td>
-                        <td class="font-semibold">@o.KiraciGosterimAdi</td>
-                        <td class="text-muted">@o.TahakkukDonemBaslangic.ToString("MMMM yyyy")</td>
+                        <td class="font-semibold">@o.TenantDisplayName</td>
+                        <td class="text-muted">@o.ChargePeriodStart.ToString("MMMM yyyy")</td>
                         <td class="num">@o.Amount.ToString("N2") ₺</td>
                         <td class="cell-center">@kanalLabel</td>
                         <td class="text-muted truncate max-w-[120px]">@(o.GirenUserGosterimAdi ?? "—")</td>

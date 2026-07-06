@@ -1,4 +1,4 @@
-﻿namespace KiraTakip.Models.Common;
+namespace KiraTakip.Models.Common;
 
 public class TableQuery
 {
@@ -9,12 +9,12 @@ public class TableQuery
     public DateTime? To { get; set; }
     public decimal? Min { get; set; }
     public decimal? Max { get; set; }
-    public string? Durum { get; set; }
-    public int? TasinmazId { get; set; }
-    public int? BirimId { get; set; }
-    public int? KiraciId { get; set; }
-    public string? Kaynak { get; set; }
-    public int? Yil { get; set; }
+    public string? Status { get; set; }
+    public int? PropertyId { get; set; }
+    public int? UnitId { get; set; }
+    public int? TenantId { get; set; }
+    public string? Source { get; set; }
+    public int? Year { get; set; }
 
     public int Skip => (Math.Max(1, Page) - 1) * SafeSize;
     public int Take => SafeSize;
@@ -29,13 +29,13 @@ public class TableQuery
         if (To.HasValue) d["to"] = To.Value.ToString("yyyy-MM-dd");
         if (Min.HasValue) d["min"] = Min.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
         if (Max.HasValue) d["max"] = Max.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        if (!string.IsNullOrWhiteSpace(Durum) && Durum != "tum") d["durum"] = Durum;
+        if (!string.IsNullOrWhiteSpace(Status) && Status != "tum") d["status"] = Status;
         
-        if (TasinmazId.HasValue) d["propertyId"] = TasinmazId.ToString();
-        if (BirimId.HasValue) d["unitId"] = BirimId.ToString();
-        if (KiraciId.HasValue) d["tenantId"] = KiraciId.ToString();
-        if (!string.IsNullOrWhiteSpace(Kaynak)) d["kaynak"] = Kaynak;
-        if (Yil.HasValue) d["yil"] = Yil.ToString();
+        if (PropertyId.HasValue) d["propertyId"] = PropertyId.ToString();
+        if (UnitId.HasValue) d["unitId"] = UnitId.ToString();
+        if (TenantId.HasValue) d["tenantId"] = TenantId.ToString();
+        if (!string.IsNullOrWhiteSpace(Source)) d["source"] = Source;
+        if (Year.HasValue) d["year"] = Year.ToString();
         
         return d;
     }

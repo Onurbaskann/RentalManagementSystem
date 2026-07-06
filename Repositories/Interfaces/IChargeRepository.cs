@@ -1,4 +1,4 @@
-﻿using KiraTakip.Models.Common;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Repositories.Interfaces;
@@ -6,9 +6,9 @@ namespace KiraTakip.Repositories.Interfaces;
 public interface IChargeRepository : IBaseRepository<Charge>
 {
     // Okuma — DTO döner
-    Task<List<TahakkukListItemDto>> GetListAsync(int? leaseId, List<int>? yetkiliPropertyIds, List<int>? yetkiliBirimIds = null);
-    Task<PagedResult<TahakkukListItemDto>> GetPagedListAsync(TableQuery q, int? leaseId, List<int>? yetkiliPropertyIds, List<int>? yetkiliBirimIds = null);
-    Task<TahakkukDetayDto?> GetDetayAsync(int id);
+    Task<List<ChargeListItemDto>> GetListAsync(int? leaseId, List<int>? authorizedPropertyIds, List<int>? authorizedUnitIds = null);
+    Task<PagedResult<ChargeListItemDto>> GetPagedListAsync(TableQuery q, int? leaseId, List<int>? authorizedPropertyIds, List<int>? authorizedUnitIds = null);
+    Task<ChargeDetailDto?> GetDetailsAsync(int id);
 
     // Manuel Borç — DTO döner
     Task<List<ManuelBorcListItemDto>> GetManuelBorcListAsync(List<int>? yetkiliPropertyIds, string? durum = null, string? baglanti = null, int? leaseId = null, List<int>? yetkiliBirimIds = null);
@@ -20,7 +20,7 @@ public interface IChargeRepository : IBaseRepository<Charge>
     Task<List<Charge>> GetBekleyenBorclarAsync(DateTime limitVade, CancellationToken ct);
 
     // Hesaplama
-    Task<decimal> GetOdenenTutarAsync(int tahakkukId);
+    Task<decimal> GetOdenenTutarAsync(int chargeId);
 
     // Üretim yardımcıları (ChargeGenerationService için)
     Task<List<ChargeType>> GetAktifUretimBorcTipleriAsync();

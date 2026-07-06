@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
@@ -24,14 +24,14 @@ public class PaymentService : IPaymentService, ITransactionalService
         _chargeService = tahakkukService;
     }
 
-    public async Task<List<OdemeListItemDto>> GetAllAsync(int? tahakkukId = null, IReadOnlyList<int>? tasinmazIds = null)
+    public async Task<List<OdemeListItemDto>> GetAllAsync(int? chargeId = null, IReadOnlyList<int>? propertyIds = null)
     {
-        return await _repo.GetListAsync(tahakkukId, tasinmazIds?.ToList());
+        return await _repo.GetListAsync(chargeId, propertyIds?.ToList());
     }
 
-    public async Task<PagedResult<OdemeListItemDto>> GetPagedAsync(TableQuery q, int? tahakkukId = null, IReadOnlyList<int>? tasinmazIds = null)
+    public async Task<PagedResult<OdemeListItemDto>> GetPagedAsync(TableQuery q, int? chargeId = null, IReadOnlyList<int>? propertyIds = null)
     {
-        return await _repo.GetPagedListAsync(q, tahakkukId, tasinmazIds?.ToList());
+        return await _repo.GetPagedListAsync(q, chargeId, propertyIds?.ToList());
     }
 
     public async Task<OdemeDetayDto?> GetByIdAsync(int id)
@@ -59,7 +59,7 @@ public class PaymentService : IPaymentService, ITransactionalService
         await _repo.UpdateAsync(payment);
         await _uow.SaveChangesAsync();
 
-        await _chargeService.OdenenTutarGuncelleAsync(payment.ChargeId);
+        await _chargeService.UpdatePaidAmountAsync(payment.ChargeId);
         return true;
     }
 
@@ -73,7 +73,7 @@ public class PaymentService : IPaymentService, ITransactionalService
         await _repo.UpdateAsync(payment);
         await _uow.SaveChangesAsync();
 
-        await _chargeService.OdenenTutarGuncelleAsync(payment.ChargeId);
+        await _chargeService.UpdatePaidAmountAsync(payment.ChargeId);
         return true;
     }
 }

@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Entities;
@@ -38,13 +38,13 @@ public class PaymentController : Controller
     }
 
     [Authorize(Policy = PermissionCatalog.Payment.Module)]
-    public async Task<IActionResult> Index([FromQuery] TableQuery query, int? tahakkukId = null)
+    public async Task<IActionResult> Index([FromQuery] TableQuery query, int? chargeId = null)
     {
-        var paged = await _paymentService.GetPagedAsync(query, tahakkukId, _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
+        var paged = await _paymentService.GetPagedAsync(query, chargeId, _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds);
 
-        ViewBag.ChargeId = tahakkukId;
+        ViewBag.ChargeId = chargeId;
         ViewBag.Query = query;
-        ViewBag.Durum = query.Durum ?? "tum";
+        ViewBag.Status = query.Status ?? "tum";
         return View(paged);
     }
 
@@ -54,7 +54,7 @@ public class PaymentController : Controller
         var payment = await _paymentService.GetByIdAsync(id);
         if (payment == null) return NotFound();
 
-        if (payment.TasinmazId != null && !_provider.KapsamdaMi(payment.TasinmazId.Value))
+        if (payment.TasinmazId != null && !_provider.IsInScope(payment.TasinmazId.Value))
             return Forbid();
 
         ViewBag.Belgeler    = await _belgeService.GetListAsync(BelgeOwnerTipi.Payment, id);
@@ -64,16 +64,16 @@ public class PaymentController : Controller
 
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.Payment.Create)]
-    public async Task<IActionResult> Ekle(int tahakkukId)
+    public async Task<IActionResult> Ekle(int chargeId)
     {
-        var charge = await _chargeService.GetDetayAsync(tahakkukId);
+        var charge = await _chargeService.GetDetailsAsync(chargeId);
         if (charge == null) return NotFound();
 
         var vm = new OdemeEkleViewModel
         {
-            ChargeId = tahakkukId,
+            ChargeId = chargeId,
             LeaseId = charge.LeaseId,
-            Amount = charge.ToplamTutar - charge.PaidAmount,
+            Amount = charge.TotalAmount - charge.PaidAmount,
             Charge = charge
         };
         return View(vm);
@@ -86,7 +86,7 @@ public class PaymentController : Controller
     {
         if (!ModelState.IsValid)
         {
-            vm.Charge = await _chargeService.GetDetayAsync(vm.ChargeId);
+            vm.Charge = await _chargeService.GetDetailsAsync(vm.ChargeId);
             return View(vm);
         }
 
@@ -143,7 +143,7 @@ public class PaymentController : Controller
         var payment = await _paymentService.GetByIdAsync(id);
         if (payment == null) return NotFound();
 
-        if (payment.TasinmazId != null && !_provider.KapsamdaMi(payment.TasinmazId.Value))
+        if (payment.TasinmazId != null && !_provider.IsInScope(payment.TasinmazId.Value))
             return Forbid();
 
         var adaylar = await _bankaService.GetHareketAdaylariAsync(id);

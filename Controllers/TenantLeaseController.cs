@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Extensions;
 using KiraTakip.Models;
@@ -89,7 +89,7 @@ public class TenantLeaseController : Controller
                 .FirstOrDefault(r => r.BorcTipiDavranis == ChargeTypeBehavior.MonthlyFixed)?.KdvRate ?? 20m
         };
 
-        await _chargeService.GecikmeleriGuncelleAsync();
+        await _chargeService.UpdateDelaysAsync();
         vm.Charges = await _chargeService.GetListAsync(leaseId: id);
 
         var bugun = DateTime.Today;

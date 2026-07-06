@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Extensions;
 using KiraTakip.Data;
 using KiraTakip.Models;
@@ -71,7 +71,7 @@ public class LeaseController : Controller
     [Authorize(Policy = PermissionCatalog.Lease.Module)]
     public async Task<IActionResult> Index(string? filtre)
     {
-        var sozlesmeler = await _sozlesmeService.GetAllAsync(filtre, _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
+        var sozlesmeler = await _sozlesmeService.GetAllAsync(filtre, _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds);
 
         var now = DateTime.Today;
         var esik = now.AddDays(_paymentLinkOptions.Value.ReminderDaysBefore);
@@ -95,7 +95,7 @@ public class LeaseController : Controller
         var s = await _sozlesmeService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
-        if (!_provider.KapsamdaMi(s.TasinmazId)) return Forbid();
+        if (!_provider.IsInScope(s.TasinmazId)) return Forbid();
 
         var gecmis = await _sozlesmeService.GetByUnitIdAsync(s.BirimId);
         var kiraciSozlesmeleri = await _sozlesmeService.GetByTenantIdAsync(s.KiraciId);
@@ -137,7 +137,7 @@ public class LeaseController : Controller
         if (User.HasPermission(PermissionCatalog.Payment.Module) || hasRegeneratePermission)
         {
             vm.HasOdemeAccess = User.HasPermission(PermissionCatalog.Payment.Module);
-            await _chargeService.GecikmeleriGuncelleAsync();
+            await _chargeService.UpdateDelaysAsync();
             vm.Charges = await _chargeService.GetListAsync(leaseId: id);
         }
 
@@ -145,7 +145,7 @@ public class LeaseController : Controller
         {
             var ilkOdenmemis = vm.Charges
                 .Where(t => t.SourceType == ChargeSourceType.Lease 
-                            && t.Durum != ChargeStatus.Paid 
+                            && t.Status != ChargeStatus.Paid 
                             && t.PaidAmount == 0)
                 .OrderBy(t => t.PeriodStart)
                 .FirstOrDefault();
@@ -161,7 +161,7 @@ public class LeaseController : Controller
 
             var sonOdenen = vm.Charges
                 .Where(t => t.SourceType == ChargeSourceType.Lease 
-                            && (t.Durum == ChargeStatus.Paid || t.PaidAmount > 0))
+                            && (t.Status == ChargeStatus.Paid || t.PaidAmount > 0))
                 .OrderByDescending(t => t.PeriodStart)
                 .FirstOrDefault();
 
@@ -172,7 +172,7 @@ public class LeaseController : Controller
 
             vm.OdenmemisTahakkukSayisi = vm.Charges
                 .Count(t => t.SourceType == ChargeSourceType.Lease 
-                            && t.Durum != ChargeStatus.Paid 
+                            && t.Status != ChargeStatus.Paid 
                             && t.PaidAmount == 0);
         }
         else

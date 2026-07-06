@@ -1,4 +1,4 @@
-﻿using KiraTakip.Models;
+using KiraTakip.Models;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.Dtos;
 
@@ -6,7 +6,7 @@ namespace KiraTakip.Services.Interfaces;
 
 public interface ILeaseService
 {
-    Task<List<SozlesmeListItemDto>> GetAllAsync(string? filtre = null, IReadOnlyList<int>? tasinmazIds = null);
+    Task<List<SozlesmeListItemDto>> GetAllAsync(string? filtre = null, IReadOnlyList<int>? propertyIds = null);
     Task<SozlesmeDetayDto?> GetByIdAsync(int id);
     Task<Lease> CreateAsync(Lease s, decimal? aylikBedel = null);
     Task UzatAsync(int id, DateTime yeniBitis, decimal eskiBedel, decimal yeniBedel, bool kdvUygulanacakMi, decimal kdvOrani, decimal? tufeOrani, string? aciklama);

@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
@@ -39,7 +39,7 @@ public class TenantChargeController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
-        await _chargeService.GecikmeleriGuncelleAsync();
+        await _chargeService.UpdateDelaysAsync();
 
         // Query filter (DbContext) kiracı bazlı filtrelemeyi otomatik uygular.
         var paged = await _chargeService.GetPagedAsync(query);
@@ -72,19 +72,19 @@ public class TenantChargeController : Controller
             .Where(b => _ctx.Leases.Any(s => s.UnitId == b.Id))
             .OrderBy(b => b.Name)
             .ToListAsync();
-        ViewBag.MevcutYillar = await _ctx.Charges
+        ViewBag.AvailableYears = await _ctx.Charges
             .Select(t => t.PeriodStart.Year).Distinct()
             .OrderByDescending(y => y).ToListAsync();
 
         ViewBag.Query = query;
-        ViewBag.Durum = query.Durum ?? "tum";
+        ViewBag.Status = query.Status ?? "tum";
         return View(paged);
     }
 
     [HttpGet("Detay/{id:int}")]
-    public async Task<IActionResult> Detay(int id)
+    public async Task<IActionResult> Details(int id)
     {
-        var charge = await _chargeService.GetDetayAsync(id);
+        var charge = await _chargeService.GetDetailsAsync(id);
         if (charge == null) return NotFound();
 
         var belgeTurleri = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Payment);
@@ -102,32 +102,32 @@ public class TenantChargeController : Controller
     [HttpPost("OdemeBildir")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> OdemeBildir(
-        int tahakkukId,
+        int chargeId,
         decimal tutar,
         DateTime odemeTarihi,
         PaymentChannel odemeKanali,
         string? aciklama,
         IFormFile? dekont)
     {
-        var charge = await _ctx.Charges.FirstOrDefaultAsync(t => t.Id == tahakkukId);
+        var charge = await _ctx.Charges.FirstOrDefaultAsync(t => t.Id == chargeId);
         if (charge == null) return NotFound();
 
         var kalan = charge.TotalAmount - charge.PaidAmount;
         if (tutar <= 0 || tutar > kalan)
         {
             TempData["Error"] = $"Amount 0'dan büyük ve kalan borçtan ({kalan:N2} ₺) küçük/eşit olmalıdır.";
-            return RedirectToAction(nameof(Detay), new { id = tahakkukId });
+            return RedirectToAction(nameof(Details), new { id = chargeId });
         }
         if (dekont == null || dekont.Length == 0)
         {
             TempData["Error"] = "Dekont yüklemeniz zorunludur.";
-            return RedirectToAction(nameof(Detay), new { id = tahakkukId });
+            return RedirectToAction(nameof(Details), new { id = chargeId });
         }
 
         var userId = _userManager.GetUserId(User)!;
         var payment = new PaymentAllocation
         {
-            ChargeId = tahakkukId,
+            ChargeId = chargeId,
             LeaseId = charge.LeaseId,
             PaymentDate = odemeTarihi,
             Amount = tutar,
@@ -153,6 +153,6 @@ public class TenantChargeController : Controller
         }
 
         TempData["Success"] = "Ödeme bildiriminiz alındı. Yönetici onayı sonrası tahakkuka işlenecektir.";
-        return RedirectToAction(nameof(Detay), new { id = tahakkukId });
+        return RedirectToAction(nameof(Details), new { id = chargeId });
     }
 }

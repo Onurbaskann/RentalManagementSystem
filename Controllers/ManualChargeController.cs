@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -24,11 +24,11 @@ public class ManualChargeController : Controller
     [Authorize(Policy = PermissionCatalog.ManualCharge.Module)]
     public async Task<IActionResult> Index(string? durum, string? baglanti, int? leaseId)
     {
-        var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
-        var birimIds = (!_provider.GlobalErisim && _provider.ErisilebilirBirimIds.Count > 0)
-            ? _provider.ErisilebilirBirimIds : null;
-        var liste = await _service.GetAllAsync(tasinmazIds, durum, baglanti, leaseId, birimIds);
-        ViewBag.IptalSayisi = await _service.GetIptalSayisiAsync(tasinmazIds, birimIds);
+        var propertyIds = _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds;
+        var unitIds = (!_provider.GlobalAccess && _provider.AccessibleUnitIds.Count > 0)
+            ? _provider.AccessibleUnitIds : null;
+        var liste = await _service.GetAllAsync(propertyIds, durum, baglanti, leaseId, unitIds);
+        ViewBag.IptalSayisi = await _service.GetIptalSayisiAsync(propertyIds, unitIds);
         ViewBag.Durum = durum ?? "tum";
         ViewBag.Baglanti = baglanti ?? "";
         ViewBag.SozlesmeId = leaseId;
@@ -112,9 +112,9 @@ public class ManualChargeController : Controller
 
     private async Task PopulateDropdownsAsync(ManuelBorcCreateViewModel vm)
     {
-        var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
+        var propertyIds = _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds;
         vm.AktifSozlesmeler = await _service.GetAktifSozlesmelerAsync();
         vm.ChargeTypes = await _service.GetManuelBorcTipleriAsync();
-        vm.Units = await _service.GetTumBirimlerAsync(tasinmazIds);
+        vm.Units = await _service.GetTumBirimlerAsync(propertyIds);
     }
 }

@@ -1,11 +1,11 @@
-﻿@model KiraTakip.Models.Common.PagedResult<TahakkukListItemDto>
+@model KiraTakip.Models.Common.PagedResult<ChargeListItemDto>
 @using KiraTakip.Models
 @using KiraTakip.Models.Entities
 @using KiraTakip.Models.Common
 @{
     Layout = "_KiraciLayout";
     ViewData["Title"] = "Chargesım";
-    string durum = ViewBag.Durum ?? "tum";
+    string durum = ViewBag.Status ?? "tum";
     var q = (TableQuery)ViewBag.Query;
     var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/Tenant/Tahakkuklarim", Extra = q.ToQueryDict() };
 
@@ -84,22 +84,22 @@
             <option value="">— Tüm Units —</option>
             @foreach (var b in (List<Unit>)ViewBag.Units)
             {
-                <option value="@b.Id" selected="@(q.BirimId == b.Id ? "selected" : null)">@b.Name</option>
+                <option value="@b.Id" selected="@(q.UnitId == b.Id ? "selected" : null)">@b.Name</option>
             }
         </select>
 
-        <select name="kaynak" class="form-control w-32 text-xs font-medium">
+        <select name="source" class="form-control w-32 text-xs font-medium">
             <option value="">— Kaynak —</option>
-            <option value="lease" selected="@(q.Kaynak == "lease" ? "selected" : null)">Sözleşme</option>
-            <option value="manuel" selected="@(q.Kaynak == "manuel" ? "selected" : null)">Manuel</option>
-            <option value="reservation" selected="@(q.Kaynak == "reservation" ? "selected" : null)">Reservation</option>
+            <option value="lease" selected="@(q.Source == "lease" ? "selected" : null)">Sözleşme</option>
+            <option value="manuel" selected="@(q.Source == "manuel" ? "selected" : null)">Manuel</option>
+            <option value="reservation" selected="@(q.Source == "reservation" ? "selected" : null)">Reservation</option>
         </select>
 
-        <select name="yil" class="form-control w-24 text-xs font-medium">
+        <select name="year" class="form-control w-24 text-xs font-medium">
             <option value="">— Yıl —</option>
-            @foreach (var y in (List<int>)ViewBag.MevcutYillar)
+            @foreach (var y in (List<int>)ViewBag.AvailableYears)
             {
-                <option value="@y" selected="@(q.Yil == y ? "selected" : null)">@y</option>
+                <option value="@y" selected="@(q.Year == y ? "selected" : null)">@y</option>
             }
         </select>
 
@@ -127,16 +127,16 @@
             <tbody>
                 @foreach (var t in Model.Items)
                 {
-                    var kalan = t.ToplamTutar - t.PaidAmount;
-                    bool odeyebilir = kalan > 0 && t.Durum != ChargeStatus.Cancelled;
-                    string durumCls = t.Durum switch {
+                    var kalan = t.TotalAmount - t.PaidAmount;
+                    bool odeyebilir = kalan > 0 && t.Status != ChargeStatus.Cancelled;
+                    string durumCls = t.Status switch {
                         ChargeStatus.Paid    => "badge-kirali",
                         ChargeStatus.PartiallyPaid => "badge-surek",
                         ChargeStatus.Overdue      => "badge-gecmis",
                         ChargeStatus.Cancelled  => "badge-bos",
                         _                           => "badge-bos"
                     };
-                    string durumLabel = t.Durum switch {
+                    string durumLabel = t.Status switch {
                         ChargeStatus.Paid    => "Tam Ödendi",
                         ChargeStatus.PartiallyPaid => "Kısmi Ödendi",
                         ChargeStatus.Overdue      => "Gecikti",
@@ -163,18 +163,18 @@
                             </div>
                         </td>
                         <td>
-                            @(t.TasinmazAd ?? "—")
-                            @if (!string.IsNullOrEmpty(t.BirimAd))
+                            @(t.PropertyName ?? "—")
+                            @if (!string.IsNullOrEmpty(t.UnitName))
                             {
-                                <span class="cell-sub">@t.BirimAd</span>
+                                <span class="cell-sub">@t.UnitName</span>
                             }
                         </td>
                         <td class="cell-center">@t.DueDate.ToString("dd.MM.yyyy")</td>
-                        <td class="num">@t.ToplamTutar.ToString("N2") ₺</td>
+                        <td class="num">@t.TotalAmount.ToString("N2") ₺</td>
                         <td class="num num-positive">@t.PaidAmount.ToString("N2") ₺</td>
                         <td class="num @(kalan > 0 ? "num-negative" : "num-positive")">@kalan.ToString("N2") ₺</td>
                         <td>
-                            @if (t.BekleyenOdemeSayisi > 0)
+                            @if (t.PendingPaymentCount > 0)
                             {
                                 <span class="badge badge-surek">Ödeme Onayı Bekleniyor</span>
                             }
@@ -186,13 +186,13 @@
                         <td><span class="badge @kaynakCls">@kaynakLabel</span></td>
                         <td @@click.stop="" class="num">
                             <div class="flex gap-1 justify-end">
-                                <a href="/Tenant/Tahakkuklarim/Detay/@t.Id.ToHashId()" class="btn btn-sm btn-secondary p-1" title="Detay">
+                                <a href="/Tenant/Tahakkuklarim/Details/@t.Id.ToHashId()" class="btn btn-sm btn-secondary p-1" title="Detay">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                 </a>
                                 @if (odeyebilir)
                                 {
                                     <button type="button"
-                                            @@click='odemeYapModal = true; odemeTab = "havale"; modalCtx = { tahakkukId: @t.Id, kalan: @kalan.ToString(System.Globalization.CultureInfo.InvariantCulture), kalanLabel: "@kalan.ToString("N2") ₺", donem: "@t.PeriodStart.ToString("MMMM yyyy")" }'
+                                            @@click='odemeYapModal = true; odemeTab = "havale"; modalCtx = { chargeId: @t.Id, kalan: @kalan.ToString(System.Globalization.CultureInfo.InvariantCulture), kalanLabel: "@kalan.ToString("N2") ₺", donem: "@t.PeriodStart.ToString("MMMM yyyy")" }'
                                             class="btn btn-sm btn-primary">Ödeme Yap</button>
                                 }
                             </div>
@@ -215,14 +215,14 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach (var k in t.LineItems.OrderBy(k => k.BorcTipiSira))
+                                            @foreach (var k in t.LineItems.OrderBy(k => k.ChargeTypeSortOrder))
                                             {
                                                 <tr class="border-t border-slate-100 last:border-0">
-                                                    <td class="p-2 px-3 text-slate-600">@k.Aciklama</td>
+                                                    <td class="p-2 px-3 text-slate-600">@k.Description</td>
                                                     <td class="p-2 px-3 text-right text-slate-500">@k.UnitValue.ToString("N2") ₺</td>
                                                     <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Amount.ToString("N2") ₺</td>
-                                                    <td class="p-2 px-3 text-right text-slate-400/60">@k.KdvTutari.ToString("N2") ₺</td>
-                                                    <td class="p-2 px-3 text-right font-bold text-slate-700">@k.ToplamTutar.ToString("N2") ₺</td>
+                                                    <td class="p-2 px-3 text-right text-slate-400/60">@k.VatAmount.ToString("N2") ₺</td>
+                                                    <td class="p-2 px-3 text-right font-bold text-slate-700">@k.TotalAmount.ToString("N2") ₺</td>
                                                 </tr>
                                             }
                                         </tbody>
@@ -281,7 +281,7 @@
             <div x-show="odemeTab === 'havale'">
                 <form method="post" action="/Tenant/Tahakkuklarim/OdemeBildir" enctype="multipart/form-data">
                     @Html.AntiForgeryToken()
-                    <input type="hidden" name="tahakkukId" :value="modalCtx?.tahakkukId" />
+                    <input type="hidden" name="chargeId" :value="modalCtx?.chargeId" />
 
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
@@ -386,4 +386,3 @@
 </div>
 
 </div>
-

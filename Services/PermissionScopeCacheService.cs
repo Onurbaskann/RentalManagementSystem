@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
@@ -20,9 +20,9 @@ public class PermissionScopeCacheService : IPermissionScopeCache
         _scopeFactory = scopeFactory;
     }
 
-    public async Task<KullaniciKapsamDto> GetAsync(string userId)
+    public async Task<UserScopeDto> GetAsync(string userId)
     {
-        if (_cache.TryGetValue(CacheKey(userId), out KullaniciKapsamDto? cached) && cached != null)
+        if (_cache.TryGetValue(CacheKey(userId), out UserScopeDto? cached) && cached != null)
             return cached;
 
         using var scope = _scopeFactory.CreateScope();
@@ -34,26 +34,26 @@ public class PermissionScopeCacheService : IPermissionScopeCache
             .FirstOrDefaultAsync();
 
         if (user == null)
-            return new KullaniciKapsamDto { GlobalErisim = false };
+            return new UserScopeDto { GlobalAccess = false };
 
         bool isGlobal = user.TumTasinmazlaraErisim || user.IsSuperAdmin;
 
-        KullaniciKapsamDto dto;
+        UserScopeDto dto;
         if (isGlobal)
         {
-            dto = new KullaniciKapsamDto { GlobalErisim = true };
+            dto = new UserScopeDto { GlobalAccess = true };
         }
         else
         {
-            var tasinmazIds = await db.KullaniciYetkiKapsamlari
+            var propertyIds = await db.KullaniciYetkiKapsamlari
                 .Where(k => k.UserId == userId && k.ScopeType == ScopeType.Property)
                 .Select(k => k.KapsamId)
                 .ToListAsync();
-            var birimIds = await db.KullaniciYetkiKapsamlari
+            var unitIds = await db.KullaniciYetkiKapsamlari
                 .Where(k => k.UserId == userId && k.ScopeType == ScopeType.Unit)
                 .Select(k => k.KapsamId)
                 .ToListAsync();
-            dto = new KullaniciKapsamDto { GlobalErisim = false, TasinmazIds = tasinmazIds, BirimIds = birimIds };
+            dto = new UserScopeDto { GlobalAccess = false, PropertyIds = propertyIds, UnitIds = unitIds };
         }
 
         _cache.Set(CacheKey(userId), dto, Ttl);
