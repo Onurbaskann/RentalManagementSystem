@@ -111,9 +111,9 @@ public class ReservationRepository : BaseRepository<Reservation>, IReservationRe
         await _ctx.RezervasyonTarifeler.AddAsync(kural);
     }
 
-    public async Task AddTahakkukAsync(Charge tahakkuk)
+    public async Task AddTahakkukAsync(Charge charge)
     {
-        await _ctx.Charges.AddAsync(tahakkuk);
+        await _ctx.Charges.AddAsync(charge);
     }
 
     public async Task<ChargeType?> ResolveRezervasyonBorcTipiAsync(int? preferredBorcTipiId)

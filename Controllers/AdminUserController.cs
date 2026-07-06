@@ -75,7 +75,7 @@ public class AdminUserController : Controller
         var kiraciItems = new List<KiraciKullaniciListItemViewModel>();
         foreach (var u in kiraciKullanicilar)
         {
-            var kiraci = await _db.Tenants.IgnoreQueryFilters()
+            var tenant = await _db.Tenants.IgnoreQueryFilters()
                 .FirstOrDefaultAsync(k => k.Id == u.KiraciId);
             var rol = await _db.UserRoller
                 .Where(ur => ur.UserId == u.Id)
@@ -88,7 +88,7 @@ public class AdminUserController : Controller
                 AdSoyad = u.AdSoyad ?? u.Email ?? "—",
                 Email = u.Email ?? "—",
                 KiraciId = u.KiraciId!.Value,
-                KiraciAd = kiraci?.DisplayName ?? "—",
+                KiraciAd = tenant?.DisplayName ?? "—",
                 RolAd = rol ?? "—",
                 IsActive = u.IsActive
             });
@@ -355,7 +355,7 @@ public class AdminUserController : Controller
 
         var parts = new List<string>();
         if (tasinmazIds.Count > 0) parts.Add($"{tasinmazIds.Count} taşınmaz");
-        if (birimIds.Count > 0) parts.Add($"{birimIds.Count} birim");
+        if (birimIds.Count > 0) parts.Add($"{birimIds.Count} unit");
         var detail = parts.Count > 0 ? $"Kapsam: {string.Join(", ", parts)}" : "Kapsam temizlendi";
         await _auditService.LogAsync("User.ScopeChanged", "ApplicationUser", userId, detail);
     }

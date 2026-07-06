@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
@@ -39,41 +39,41 @@ public class PaymentService : IPaymentService, ITransactionalService
         return await _repo.GetDetayAsync(id);
     }
 
-    public async Task<PaymentAllocation> EkleAsync(PaymentAllocation odeme)
+    public async Task<PaymentAllocation> EkleAsync(PaymentAllocation payment)
     {
-        odeme.EntryDate = DateTime.Now;
-        odeme.Status = PaymentStatus.PendingApproval;
-        await _repo.AddAsync(odeme);
+        payment.EntryDate = DateTime.Now;
+        payment.Status = PaymentStatus.PendingApproval;
+        await _repo.AddAsync(payment);
         await _uow.SaveChangesAsync();
-        return odeme;
+        return payment;
     }
 
     public async Task<bool> OnaylaAsync(int id, string onaylayanUserId)
     {
-        var odeme = await _repo.GetByIdAsync(id);
-        if (odeme == null || odeme.Status != PaymentStatus.PendingApproval) return false;
+        var payment = await _repo.GetByIdAsync(id);
+        if (payment == null || payment.Status != PaymentStatus.PendingApproval) return false;
 
-        odeme.Status = PaymentStatus.Approved;
-        odeme.ApprovedByUserId = onaylayanUserId;
-        odeme.ApprovalDate = DateTime.Now;
-        await _repo.UpdateAsync(odeme);
+        payment.Status = PaymentStatus.Approved;
+        payment.ApprovedByUserId = onaylayanUserId;
+        payment.ApprovalDate = DateTime.Now;
+        await _repo.UpdateAsync(payment);
         await _uow.SaveChangesAsync();
 
-        await _chargeService.OdenenTutarGuncelleAsync(odeme.ChargeId);
+        await _chargeService.OdenenTutarGuncelleAsync(payment.ChargeId);
         return true;
     }
 
     public async Task<bool> ReddetAsync(int id, string neden)
     {
-        var odeme = await _repo.GetByIdAsync(id);
-        if (odeme == null || odeme.Status != PaymentStatus.PendingApproval) return false;
+        var payment = await _repo.GetByIdAsync(id);
+        if (payment == null || payment.Status != PaymentStatus.PendingApproval) return false;
 
-        odeme.Status = PaymentStatus.Rejected;
-        odeme.RejectionReason = neden;
-        await _repo.UpdateAsync(odeme);
+        payment.Status = PaymentStatus.Rejected;
+        payment.RejectionReason = neden;
+        await _repo.UpdateAsync(payment);
         await _uow.SaveChangesAsync();
 
-        await _chargeService.OdenenTutarGuncelleAsync(odeme.ChargeId);
+        await _chargeService.OdenenTutarGuncelleAsync(payment.ChargeId);
         return true;
     }
 }

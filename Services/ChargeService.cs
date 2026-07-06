@@ -48,21 +48,21 @@ public class ChargeService : IChargeService
     // ── Business: Ödenen Amount Güncelleme ────────────────────────────────
     public async Task OdenenTutarGuncelleAsync(int tahakkukId)
     {
-        var tahakkuk = await _repo.GetByIdAsync(tahakkukId);
-        if (tahakkuk == null) return;
+        var charge = await _repo.GetByIdAsync(tahakkukId);
+        if (charge == null) return;
 
         var odenenTutar = await _repo.GetOdenenTutarAsync(tahakkukId);
-        tahakkuk.PaidAmount = odenenTutar;
+        charge.PaidAmount = odenenTutar;
 
-        tahakkuk.Status = odenenTutar >= tahakkuk.TotalAmount
+        charge.Status = odenenTutar >= charge.TotalAmount
             ? ChargeStatus.Paid
             : odenenTutar > 0
                 ? ChargeStatus.PartiallyPaid
-                : DateTime.Today > tahakkuk.DueDate
+                : DateTime.Today > charge.DueDate
                     ? ChargeStatus.Overdue
                     : ChargeStatus.Pending;
 
-        await _repo.UpdateAsync(tahakkuk);
+        await _repo.UpdateAsync(charge);
         await _uow.SaveChangesAsync();
     }
 

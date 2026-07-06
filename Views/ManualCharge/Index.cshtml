@@ -1,0 +1,252 @@
+﻿@model List<KiraTakip.Models.Dtos.ManuelBorcListItemDto>
+@using KiraTakip.Models
+@{
+    ViewData["Title"] = "Manuel Borçlar";
+    bool canCreate = User.HasPermission(PermissionCatalog.ManualCharge.Create);
+    bool canCancel = User.HasPermission(PermissionCatalog.ManualCharge.Cancel);
+    string aktifDurum = ViewBag.Durum ?? "tum";
+    string aktifBaglanti = ViewBag.Baglanti ?? "";
+    int iptalSayisi = ViewBag.IptalSayisi ?? 0;
+    int? leaseId = ViewBag.SozlesmeId;
+
+    string BtnCls(string d) => aktifDurum == d
+        ? "btn btn-sm bg-primary text-white border-primary"
+        : "btn btn-sm btn-secondary";
+}
+
+<div class="page-header flex items-center justify-between">
+    <div>
+        <div class="page-title">Manuel Borçlar</div>
+        <div class="page-subtitle">@Model.Count kayıt</div>
+    </div>
+    @if (canCreate)
+    {
+        <a href="/ManualCharge/Ekle" class="btn btn-primary flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Manuel Borç Ekle
+        </a>
+    }
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
+        ✓ @TempData["Success"]
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
+        ✕ @TempData["Error"]
+    </div>
+}
+
+@* Durum filtre butonları *@
+<div class="flex items-center gap-2 mb-3 flex-wrap">
+    <a href="/ManualCharge?durum=tum&baglanti=@aktifBaglanti" class="@BtnCls("tum")">Tümü</a>
+    <a href="/ManualCharge?durum=bekliyor&baglanti=@aktifBaglanti" class="@BtnCls("bekliyor")">Bekliyor</a>
+    <a href="/ManualCharge?durum=kismi&baglanti=@aktifBaglanti" class="@BtnCls("kismi")">Kısmi</a>
+    <a href="/ManualCharge?durum=tamodendi&baglanti=@aktifBaglanti" class="@BtnCls("tamodendi")">Tam Ödendi</a>
+    <a href="/ManualCharge?durum=gecikti&baglanti=@aktifBaglanti" class="@BtnCls("gecikti")">Gecikti</a>
+
+    @if (iptalSayisi > 0 && aktifDurum != "iptal")
+    {
+        <span class="ml-2 text-xs text-muted">
+            @iptalSayisi iptal edilmiş kayıt gizleniyor
+            <a href="/ManualCharge?durum=iptal&baglanti=@aktifBaglanti" class="text-primary font-semibold hover:underline ml-1">Görüntüle →</a>
+        </span>
+    }
+    @if (aktifDurum == "iptal")
+    {
+        <a href="/ManualCharge?durum=iptal&baglanti=@aktifBaglanti" class="@BtnCls("iptal")">İptal Edildi</a>
+    }
+</div>
+
+@* Filtre formu *@
+<form method="get" action="/ManualCharge" class="card p-3 mb-3 flex flex-wrap items-center gap-3">
+    <input type="hidden" name="durum" value="@aktifDurum" />
+    <select name="baglanti" class="form-control w-40 text-sm" onchange="this.form.submit()">
+        <option value="" selected="@(aktifBaglanti == "")">Bağlantı: Hepsi</option>
+        <option value="sozlesmeli" selected="@(aktifBaglanti == "sozlesmeli")">Sözleşmeli</option>
+        <option value="sozlesmesiz" selected="@(aktifBaglanti == "sozlesmesiz")">Sözleşmesiz</option>
+    </select>
+    @if (leaseId.HasValue)
+    {
+        <input type="hidden" name="leaseId" value="@leaseId" />
+        <span class="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-md">
+            Sözleşme #@leaseId filtreli
+            <a href="/ManualCharge?durum=@aktifDurum" class="ml-1 font-bold hover:underline">✕</a>
+        </span>
+    }
+</form>
+
+<div class="card p-0 overflow-hidden">
+    <div class="table-wrapper">
+        <table class="w-full">
+            <thead>
+                <tr>
+                    <th>Kiracı</th>
+                    <th>Taşınmaz / Unit</th>
+                    <th class="w-24 cell-center">Tip</th>
+                    <th>Açıklama</th>
+                    <th class="w-28 num">Amount</th>
+                    <th class="w-24 num">KDV</th>
+                    <th class="w-32 num">Toplam</th>
+                    <th class="w-28 cell-center">Vade</th>
+                    <th class="w-40">Bağlı Sözleşme</th>
+                    <th class="w-32">Durum</th>
+                    <th class="w-36 text-right"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in Model)
+                {
+                    var kalan = t.ToplamTutar - t.PaidAmount;
+                    string durumCls = t.Durum switch {
+                        ChargeStatus.Paid    => "badge-kirali",
+                        ChargeStatus.PartiallyPaid => "badge-surek",
+                        ChargeStatus.Overdue      => "badge-gecmis",
+                        ChargeStatus.Cancelled  => "badge-bos",
+                        _                           => "badge-bos"
+                    };
+                    string durumLabel = t.Durum switch {
+                        ChargeStatus.Paid    => "Tam Ödendi",
+                        ChargeStatus.PartiallyPaid => "Kısmi Ödendi",
+                        ChargeStatus.Overdue      => "Gecikti",
+                        ChargeStatus.Cancelled  => "İptal Edildi",
+                        _                           => "Bekleniyor"
+                    };
+                    <tr class="cursor-pointer hover:bg-slate-50 transition-colors"
+                        onclick="if(!event.target.closest('a,button,[data-stop]'))window.location.href='/Charge/Detay/@t.Id.ToHashId()'">
+                        <td>
+                            @if (t.KiraciId > 0)
+                            {
+                                <a href="/Tenant/Detay/@t.KiraciId.ToHashId()" class="font-semibold text-primary hover:underline">@t.KiraciGosterimAdi</a>
+                            }
+                            else
+                            {
+                                <div class="font-semibold">@(t.KiraciGosterimAdi ?? "-")</div>
+                            }
+                            @if (!string.IsNullOrEmpty(t.KiraciKategoriAd))
+                            {
+                                <div class="cell-sub">@t.KiraciKategoriAd</div>
+                            }
+                        </td>
+                        <td>
+                            <div>@(t.TasinmazAd ?? "-")</div>
+                            <span class="cell-sub">@(t.BirimAd ?? "-")</span>
+                        </td>
+                        <td class="cell-center">
+                            @if (!string.IsNullOrEmpty(t.ChargeTypeCode))
+                            {
+                                <span class="font-mono text-[11px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">@t.ChargeTypeCode</span>
+                            }
+                        </td>
+                        <td class="text-muted max-w-[200px] truncate">@(t.IlkKalemAciklama ?? "-")</td>
+                        <td class="num">@t.ExpectedAmount.ToString("N2") ₺</td>
+                        <td class="num num-muted">@t.KdvTutari.ToString("N2") ₺</td>
+                        <td class="num">@t.ToplamTutar.ToString("N2") ₺</td>
+                        <td class="cell-center">@t.DueDate.ToString("dd.MM.yyyy")</td>
+                        <td>
+                            @if (t.LeaseId.HasValue)
+                            {
+                                <a href="/Lease/Detay/@t.LeaseId.ToHashId()" data-stop class="font-mono text-xs text-primary hover:underline">#@t.LeaseId</a>
+                            }
+                            else
+                            {
+                                <span class="text-slate-300 text-xs">—</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge @durumCls">@durumLabel</span>
+                            @if (!string.IsNullOrEmpty(t.CancellationNote))
+                            {
+                                <div class="text-[10px] text-muted mt-1 italic truncate max-w-[100px]" title="@t.CancellationNote">⤵ @t.CancellationNote</div>
+                            }
+                        </td>
+                        <td class="text-right">
+                            <div class="flex gap-1.5 justify-end items-center">
+                                @if (t.Durum != ChargeStatus.Cancelled && t.Durum != ChargeStatus.Paid)
+                                {
+                                    <a href="/Payment/Ekle?tahakkukId=@t.Id.ToHashId()" class="btn btn-sm btn-primary">Ödeme</a>
+                                }
+                                @if (canCancel && t.Durum != ChargeStatus.Cancelled && t.Durum != ChargeStatus.Paid)
+                                {
+                                    <button type="button" class="btn btn-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white"
+                                        data-confirm="Bu manuel borcu iptal etmek istediğinize emin misiniz?"
+                                        data-confirm-title="Manuel Borç İptali"
+                                        data-confirm-action="/ManualCharge/Iptal/@t.Id.ToHashId()"
+                                        data-confirm-method="POST"
+                                        data-confirm-needs-reason="true"
+                                        data-confirm-reason-label="İptal nedeni">
+                                        İptal
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="11" class="py-16 text-center">
+                            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 text-slate-300 mb-4">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                            </div>
+                            <div class="text-slate-500 font-bold">Manuel borç kaydı bulunamadı</div>
+                            @if (canCreate)
+                            {
+                                <div class="text-xs text-muted mt-1">
+                                    <a href="/ManualCharge/Ekle" class="text-primary font-semibold hover:underline">Manuel Borç Ekle</a> butonuyla ilk kaydı oluşturun.
+                                </div>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+document.querySelectorAll('[data-confirm]').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const needsReason = this.dataset.confirmNeedsReason === 'true';
+        if (!needsReason) return;
+
+        const action = this.dataset.confirmAction;
+        const title = this.dataset.confirmTitle || 'Onay';
+        const message = this.dataset.confirm;
+        const reasonLabel = this.dataset.confirmReasonLabel || 'Neden';
+
+        const neden = await window.Alpine.store('confirm').ask(message, title, true, reasonLabel);
+        if (!neden) return;
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = action;
+
+        const token = document.querySelector('input[name="__RequestVerificationToken"]');
+        if (token) {
+            const t = document.createElement('input');
+            t.type = 'hidden';
+            t.name = '__RequestVerificationToken';
+            t.value = token.value;
+            form.appendChild(t);
+        }
+
+        const n = document.createElement('input');
+        n.type = 'hidden';
+        n.name = 'neden';
+        n.value = neden;
+        form.appendChild(n);
+
+        document.body.appendChild(form);
+        form.submit();
+    });
+});
+</script>
+@Html.AntiForgeryToken()
+}
+

@@ -1,0 +1,82 @@
+﻿@model List<KiraTakip.Models.Dtos.UnitTypeListItemDto>
+@{
+    ViewData["Title"] = "Unit Türleri";
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
+        ✓ @TempData["Success"]
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
+        ✕ @TempData["Error"]
+    </div>
+}
+
+<div class="page-header flex items-center justify-between">
+    <div>
+        <div class="page-title">Unit Türleri</div>
+        <div class="page-subtitle">@Model.Count kayıt</div>
+    </div>
+    <a href="/Admin/UnitType/Ekle" class="btn btn-primary flex items-center gap-2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Yeni Unit Türü
+    </a>
+</div>
+
+<div class="card p-0 overflow-hidden">
+    <div class="table-wrapper">
+        <table class="w-full">
+            <thead>
+                <tr>
+                    <th class="w-16 text-center">Sıra</th>
+                    <th>Ad</th>
+                    <th class="w-24 text-center">Kiralama</th>
+                    <th class="w-24 text-center">Reservation</th>
+                    <th class="w-24">Durum</th>
+                    <th class="w-40"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var bt in Model)
+                {
+                    <tr>
+                        <td class="text-center text-muted text-xs">@bt.Sira</td>
+                        <td class="font-medium text-slate-700">@bt.Ad</td>
+                        <td class="text-center">
+                            @if (bt.KiralanabilirMi) { <span class="badge badge-kirali">✓</span> }
+                        </td>
+                        <td class="text-center">
+                            @if (bt.RezervasyonYapilabilirMi) { <span class="badge badge-surek">✓</span> }
+                        </td>
+                        <td>
+                            @if (bt.Aktif)
+                            { <span class="badge badge-kirali">Aktif</span> }
+                            else
+                            { <span class="badge badge-gecmis">Pasif</span> }
+                        </td>
+                        <td class="flex gap-1.5 justify-end">
+                            <a href="/Admin/UnitType/Duzenle/@bt.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
+                            <form method="post" action="/Admin/UnitType/DurumDegistir/@bt.Id.ToHashId()"
+                                  data-confirm="@(bt.Aktif ? $"'{bt.Ad}' pasif yapılsın mı?" : $"'{bt.Ad}' aktif yapılsın mı?")"
+                                  class="inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm @(bt.Aktif ? "btn-danger" : "btn-amber")">
+                                    @(bt.Aktif ? "Pasif Yap" : "Aktif Yap")
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="6" class="text-center py-8 text-muted">Henüz unit türü tanımlanmamış.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+

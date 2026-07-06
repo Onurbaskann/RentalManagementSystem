@@ -18,9 +18,9 @@ public interface IReservationRepository : IBaseRepository<Reservation>
     Task<RezervasyonTarife?> GetUcretKuralByIdAsync(int id);
     Task AddUcretKuralAsync(RezervasyonTarife kural);
 
-    // ChargeType — rezervasyon tahakkuk üretimi için
+    // ChargeType — reservation charge üretimi için
     Task<ChargeType?> ResolveRezervasyonBorcTipiAsync(int? preferredBorcTipiId);
 
     // Charge — Transfer işlemi için
-    Task AddTahakkukAsync(Charge tahakkuk);
+    Task AddTahakkukAsync(Charge charge);
 }

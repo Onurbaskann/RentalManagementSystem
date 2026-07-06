@@ -42,7 +42,7 @@
         <div class="text-xs text-white/70 mt-2">
             @if (hasTahakkuk && Model.GecikmisTahakkukAdet > 0)
             {
-                <span>⚠ @Model.GecikmisTahakkukAdet gecikmiş tahakkuk var (@Model.GecikmisTutarToplam.ToString("N2") ₺)</span>
+                <span>⚠ @Model.GecikmisTahakkukAdet gecikmiş charge var (@Model.GecikmisTutarToplam.ToString("N2") ₺)</span>
             }
             else if (hasOdeme && Model.OnayBekleyenOdemeAdet > 0)
             {
@@ -154,7 +154,7 @@
                 <i data-lucide="alarm-clock" class="w-5 h-5"></i>
             </div>
             <div>
-                <div class="text-sm font-bold text-amber-900">Bugün vade dolan @Model.BugunVadeDolanAdet tahakkuk</div>
+                <div class="text-sm font-bold text-amber-900">Bugün vade dolan @Model.BugunVadeDolanAdet charge</div>
                 <div class="text-xs text-amber-700 mt-0.5">Toplam kalan: <strong>@Model.BugunVadeDolanTutar.ToString("N2") ₺</strong> — Bugün takip et</div>
             </div>
         </div>
@@ -219,7 +219,7 @@
             </div>
             <div class="text-3xl font-bold text-slate-800" data-countup="@Model.OnayBekleyenOdemeAdet" data-decimals="0">0</div>
             <div class="text-[12px] text-slate-500 mt-1">Onay Bekleyen Ödeme</div>
-            <a href="/Odeme?durum=onaybekliyor" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-1 block">İncele →</a>
+            <a href="/Payment?durum=onaybekliyor" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-1 block">İncele →</a>
         </div>
 
         <!-- D: Eşleşmemiş Banka Hareketi -->
@@ -289,7 +289,7 @@
         }
         else
         {
-            <div class="text-center py-10 text-slate-400 text-sm">Henüz birim yok</div>
+            <div class="text-center py-10 text-slate-400 text-sm">Henüz unit yok</div>
         }
     </div>
     }
@@ -373,24 +373,24 @@
     <!-- C: Top 5 Gelir Şampiyonları -->
     @if (hasOdeme)
     {
-    <div class="bg-white rounded-2xl border border-slate-200 p-5" x-data="{ gelirSekme: 'kiraci' }">
+    <div class="bg-white rounded-2xl border border-slate-200 p-5" x-data="{ gelirSekme: 'tenant' }">
         <div class="flex items-center justify-between mb-3">
             <div>
                 <div class="text-sm font-bold text-slate-800">Gelir Şampiyonları</div>
                 <div class="text-[11px] text-slate-500 mt-0.5">Son 12 ay tahsilat</div>
             </div>
             <div class="flex gap-1 bg-slate-100 rounded-lg p-0.5">
-                <button type="button" @@click="gelirSekme = 'kiraci'"
-                        :class="gelirSekme === 'kiraci' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'"
+                <button type="button" @@click="gelirSekme = 'tenant'"
+                        :class="gelirSekme === 'tenant' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'"
                         class="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all">Kiracı</button>
-                <button type="button" @@click="gelirSekme = 'tasinmaz'"
-                        :class="gelirSekme === 'tasinmaz' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'"
+                <button type="button" @@click="gelirSekme = 'property'"
+                        :class="gelirSekme === 'property' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'"
                         class="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all">Taşınmaz</button>
             </div>
         </div>
 
         <!-- Kiracı sekmesi -->
-        <div x-show="gelirSekme === 'kiraci'">
+        <div x-show="gelirSekme === 'tenant'">
         @if (!Model.TopGelirKiraci.Any())
         {
             <div class="text-center py-8 text-slate-400 text-sm">Henüz tahsilat verisi yok</div>
@@ -424,7 +424,7 @@
         </div>
 
         <!-- Taşınmaz sekmesi -->
-        <div x-show="gelirSekme === 'tasinmaz'" x-cloak>
+        <div x-show="gelirSekme === 'property'" x-cloak>
         @if (!Model.TopGelirTasinmaz.Any())
         {
             <div class="text-center py-8 text-slate-400 text-sm">Henüz tahsilat verisi yok</div>
@@ -450,7 +450,7 @@
                             <div class="h-full bg-gradient-to-r from-[#1a6b5c] to-emerald-500"
                                  style="width:@pct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
                         </div>
-                        <div class="text-[10px] text-slate-500 mt-1">@g.BirimSayisi birim</div>
+                        <div class="text-[10px] text-slate-500 mt-1">@g.BirimSayisi unit</div>
                     </a>
                 }
             </div>
@@ -534,13 +534,13 @@
                 <i data-lucide="calendar-plus" class="w-6 h-6"></i>
             </div>
             <div class="text-sm font-bold text-slate-800 mt-3">Yeni Reservation</div>
-            <div class="text-xs text-slate-600 mt-0.5">Salon/birim rezervasyonu</div>
+            <div class="text-xs text-slate-600 mt-0.5">Salon/unit rezervasyonu</div>
         </a>
     }
 
     @if (User.HasPermission(PermissionCatalog.ManualCharge.Create))
     {
-        <a href="/ManuelBorc/Ekle"
+        <a href="/ManualCharge/Ekle"
            class="block p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
             <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-sm">
                 <i data-lucide="pencil-line" class="w-6 h-6"></i>
@@ -653,7 +653,7 @@
                         dataLabels: { enabled: false },
                         legend: { position: 'bottom', fontSize: '11px', markers: { width: 8, height: 8 } },
                         stroke: { width: 2, colors: ['#fff'] },
-                        tooltip: { y: { formatter: function (v) { return v + ' birim'; } } }
+                        tooltip: { y: { formatter: function (v) { return v + ' unit'; } } }
                     }).render();
                 }
             }

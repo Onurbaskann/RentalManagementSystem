@@ -5,8 +5,8 @@ namespace KiraTakip.Services.Interfaces;
 
 public interface IStatisticsService
 {
-    OccupancyStatus GetBirimDurumu(Unit birim);
-    Lease? GetAktifSozlesme(Unit birim);
+    OccupancyStatus GetBirimDurumu(Unit unit);
+    Lease? GetAktifSozlesme(Unit unit);
     bool Aktif(Lease s);
     Task<decimal> AylikBedelAsync(Lease s);
     Task<decimal> YillikBedelAsync(Lease s);

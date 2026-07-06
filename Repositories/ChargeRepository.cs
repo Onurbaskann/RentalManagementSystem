@@ -96,8 +96,8 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
             ChargeSourceType? kt = q.Kaynak.ToLower() switch
             {
                 "manuel" => ChargeSourceType.Manual,
-                "sozlesme" => ChargeSourceType.Lease,
-                "rezervasyon" => ChargeSourceType.Reservation,
+                "lease" => ChargeSourceType.Lease,
+                "reservation" => ChargeSourceType.Reservation,
                 _ => null
             };
             if (kt.HasValue) query = query.Where(t => t.SourceType == kt.Value);

@@ -1,4 +1,4 @@
-using KiraTakip.Models;
+﻿using KiraTakip.Models;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -737,7 +737,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                 Id = 1,
                 Code = "ODEME_DEKONT",
                 Name = "Ödeme Dekontu",
-                TargetEntity = BelgeOwnerTipi.Odeme,
+                TargetEntity = BelgeOwnerTipi.Payment,
                 AllowedExtensions = "pdf,jpg,jpeg,png",
                 MaxSizeMb = 5,
                 SortOrder = 1,

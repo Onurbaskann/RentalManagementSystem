@@ -1,4 +1,4 @@
-namespace KiraTakip.Models.ViewModels;
+﻿namespace KiraTakip.Models.ViewModels;
 
 public class BirimOzelFiyatViewModel
 {
@@ -15,7 +15,7 @@ public class BirimOzelFiyatViewModel
     public List<BirimTarifeKolonu> Kolonlar { get; set; } = [];
     public ParentTarifeKartViewModel? ParentTarife { get; set; }
 
-    // Senaryo B — rezervasyon ücreti kuralı
+    // Senaryo B — reservation ücreti kuralı
     public RezervasyonTarife? OzelRezervasyonKural { get; set; }
     public ParentRezervasyonTarifeKartViewModel? ParentRezervasyonTarife { get; set; }
 }

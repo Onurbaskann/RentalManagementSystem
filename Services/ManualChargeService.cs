@@ -59,14 +59,14 @@ public class ManualChargeService : IManualChargeService, ITransactionalService
         int? kiraSozlesmesiId = null;
         if (model.SozlesmeId.HasValue && model.SozlesmeId.Value > 0)
         {
-            var sozlesme = await _sozlesmeRepo.GetByIdAsync(model.SozlesmeId.Value);
-            if (sozlesme == null)
+            var lease = await _sozlesmeRepo.GetByIdAsync(model.SozlesmeId.Value);
+            if (lease == null)
                 return (false, "Sözleşme bulunamadı.", 0);
-            if (sozlesme.Status == LeaseStatus.Terminated)
+            if (lease.Status == LeaseStatus.Terminated)
                 return (false, "Feshedilmiş sözleşme için manuel borç oluşturulamaz.", 0);
-            if (sozlesme.TenantId != model.KiraciId)
+            if (lease.TenantId != model.KiraciId)
                 return (false, "Seçilen kiracı, sözleşmenin kiracısıyla eşleşmiyor.", 0);
-            kiraSozlesmesiId = sozlesme.Id;
+            kiraSozlesmesiId = lease.Id;
         }
 
         var borcTipi = await _borcTipiRepo.GetActiveManuelByIdAsync(model.ChargeTypeId);
@@ -96,7 +96,7 @@ public class ManualChargeService : IManualChargeService, ITransactionalService
             SourceType = LineItemSourceType.ManualInput
         };
 
-        var tahakkuk = new Charge
+        var charge = new Charge
         {
             TenantId = model.KiraciId,
             UnitId = model.BirimId,
@@ -114,31 +114,31 @@ public class ManualChargeService : IManualChargeService, ITransactionalService
             LineItems = new List<ChargeLineItem> { kalem }
         };
 
-        await _tahakkukRepo.AddAsync(tahakkuk);
+        await _tahakkukRepo.AddAsync(charge);
         await _uow.SaveChangesAsync();
 
-        return (true, null, tahakkuk.Id);
+        return (true, null, charge.Id);
     }
 
     // ── Cancel ────────────────────────────────────────────────────────────
     public async Task<(bool Basarili, string? Hata)> CancelAsync(int tahakkukId, string userId, string neden)
     {
-        var tahakkuk = await _tahakkukRepo.GetManuelBorcByIdAsync(tahakkukId);
+        var charge = await _tahakkukRepo.GetManuelBorcByIdAsync(tahakkukId);
 
-        if (tahakkuk == null)
+        if (charge == null)
             return (false, "Manuel borç kaydı bulunamadı.");
 
-        if (tahakkuk.Status == ChargeStatus.Cancelled)
+        if (charge.Status == ChargeStatus.Cancelled)
             return (false, "Bu kayıt zaten iptal edilmiş.");
 
-        var odemeVar = tahakkuk.Allocations.Any(o => o.Status == PaymentStatus.Approved);
+        var odemeVar = charge.Allocations.Any(o => o.Status == PaymentStatus.Approved);
         if (odemeVar)
             return (false, "Ödemesi alınmış manuel borç iptal edilemez.");
 
-        tahakkuk.Status = ChargeStatus.Cancelled;
-        tahakkuk.CancellationNote = string.IsNullOrEmpty(tahakkuk.CancellationNote)
+        charge.Status = ChargeStatus.Cancelled;
+        charge.CancellationNote = string.IsNullOrEmpty(charge.CancellationNote)
             ? neden
-            : $"{tahakkuk.CancellationNote} | İptal: {neden}";
+            : $"{charge.CancellationNote} | İptal: {neden}";
 
         await _uow.SaveChangesAsync();
 

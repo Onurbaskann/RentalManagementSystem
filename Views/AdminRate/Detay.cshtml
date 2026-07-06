@@ -1,0 +1,166 @@
+﻿@model KiraTakip.Models.ViewModels.TarifeMatrisViewModel
+@{
+    ViewData["Title"] = $"{Model.Yil} Tarifeleri";
+    int idx = 0;
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 px-4 rounded-lg mb-4 text-[13.5px] font-medium">
+        ✓ @TempData["Success"]
+    </div>
+}
+
+<div class="page-header flex items-center justify-between">
+    <div>
+        <div class="page-title">@Model.Yil Tarifeleri</div>
+        <div class="page-subtitle">Kiracı kategorisi × borç tipi bazında yıllık unit fiyatlar</div>
+    </div>
+    <a href="/Admin/Tarife" class="btn btn-secondary">← Geri</a>
+</div>
+
+<form method="post" action="/Admin/Tarife/Yil/@Model.Yil/KalemGuncelle">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Yil" value="@Model.Yil" />
+    <input type="hidden" name="Aktif" value="@Model.Aktif.ToString().ToLower()" />
+
+    <div class="card p-0 overflow-hidden mb-4">
+        @if (Model.Satirlar == null || !Model.Satirlar.Any() || Model.Kolonlar == null || !Model.Kolonlar.Any())
+        {
+            <div class="p-6 text-center text-muted">
+                Aktif kiracı kategorisi veya borç tipi bulunmuyor.
+            </div>
+        }
+        else
+        {
+            <div class="table-wrapper overflow-x-auto">
+                <table class="min-w-[700px] border-collapse w-full">
+                    <thead>
+                        <tr>
+                            <th class="p-4 text-left bg-slate-50 border-b border-[var(--color-border)] min-w-[160px] text-xs font-bold text-muted uppercase tracking-wider">
+                                Kiracı Kategorisi
+                            </th>
+                            @foreach (var kolon in Model.Kolonlar)
+                            {
+                                <th class="p-[10px_12px] text-center bg-slate-50 border-b border-[var(--color-border)] min-w-[200px]">
+                                    <div class="text-[10px] color-muted font-bold uppercase tracking-wider mb-0.5">@kolon.ChargeTypeCode</div>
+                                    <div class="text-[13px] font-bold text-slate-700">@kolon.ChargeTypeName</div>
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var satir in Model.Satirlar)
+                        {
+                            <tr>
+                                <td class="p-4 font-semibold text-[13.5px] border-b border-[var(--color-border)] align-middle">
+                                    @satir.KiraciKategoriAd
+                                </td>
+                                @foreach (var hucre in satir.Hucreler)
+                                {
+                                    <td class="p-[10px_12px] border-b border-[var(--color-border)] align-top bg-white/50">
+                                        <input type="hidden" name="Hucreler[@idx].KalemId"          value="@hucre.KalemId" />
+                                        <input type="hidden" name="Hucreler[@idx].KiraciKategoriId" value="@hucre.KiraciKategoriId" />
+                                        <input type="hidden" name="Hucreler[@idx].ChargeTypeId"       value="@hucre.ChargeTypeId" />
+
+                                        <div class="mb-2">
+                                            <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">Unit Değer (₺)</label>
+                                            <input type="number" name="Hucreler[@idx].UnitValue" 
+                                                   value="@hucre.UnitValue.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
+                                                   class="form-control form-control-sm text-xs font-mono" step="0.01" min="0" />
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">Yöntem</label>
+                                            <select name="Hucreler[@idx].CalculationMethod" class="form-control form-control-sm text-xs">
+                                                @if (hucre.CalculationMethod == KiraTakip.Models.CalculationMethod.Fixed)
+                                                {
+                                                    <option value="1" selected>Sabit</option>
+                                                    <option value="2">m²</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="1">Sabit</option>
+                                                    <option value="2" selected>m²</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">KDV (%)</label>
+                                            <input type="number" name="Hucreler[@idx].KdvRate" 
+                                                   value="@hucre.KdvRate.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
+                                                   class="form-control form-control-sm text-xs font-mono" step="0.01" min="0" max="100" />
+                                        </div>
+                                    </td>
+                                    idx++;
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+        }
+    </div>
+
+    <!-- Reservation Genel Tarifeleri Bölümü -->
+    <div class="card p-0 overflow-hidden mt-6">
+        <div class="p-4 bg-slate-50 border-b border-[var(--color-border)] flex items-center gap-2.5">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-primary shrink-0"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16"/><path d="M12 11h.01"/><path d="M12 7h.01"/><path d="M12 15h.01"/><path d="M8 11h.01"/><path d="M8 7h.01"/><path d="M8 15h.01"/><path d="M16 11h.01"/><path d="M16 7h.01"/><path d="M16 15h.01"/></svg>
+            <div class="text-[15px] font-bold text-slate-700">Reservation Genel Tarifeleri</div>
+        </div>
+
+        @if (Model.RezervasyonSatirlari == null || !Model.RezervasyonSatirlari.Any())
+        {
+            <div class="p-6 text-center text-muted">
+                Aktif reservation yapılabilir unit türü bulunmuyor.
+            </div>
+        }
+        else
+        {
+            <div class="table-wrapper overflow-x-auto">
+                <table class="min-w-[700px] border-collapse w-full">
+                    <thead>
+                        <tr>
+                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted uppercase tracking-wider">Alan Türü</th>
+                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted uppercase tracking-wider w-[120px]">Ücretsiz Süre (dk)</th>
+                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted uppercase tracking-wider w-[120px]">Periyot (dk)</th>
+                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted uppercase tracking-wider w-[150px]">Periyot Ücreti (₺)</th>
+                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted uppercase tracking-wider w-[100px]">KDV (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.RezervasyonSatirlari.Count; i++)
+                        {
+                            var rez = Model.RezervasyonSatirlari[i];
+                            <tr>
+                                <td class="p-[12px_16px] border-b border-[var(--color-border)] font-semibold text-[13.5px] text-slate-700">
+                                    <input type="hidden" name="RezervasyonHucreler[@i].RezervasyonTarifeId" value="@rez.RezervasyonTarifeId" />
+                                    <input type="hidden" name="RezervasyonHucreler[@i].UnitTypeId" value="@rez.UnitTypeId" />
+                                    @rez.UnitTypeAd
+                                </td>
+                                <td class="p-[10px_16px] border-b border-[var(--color-border)]">
+                                    <input type="number" name="RezervasyonHucreler[@i].FreeDurationMinutes" value="@rez.FreeDurationMinutes" class="form-control form-control-sm text-center" min="0" />
+                                </td>
+                                <td class="p-[10px_16px] border-b border-[var(--color-border)]">
+                                    <input type="number" name="RezervasyonHucreler[@i].UcretlendirmePeriyoduDakika" value="@rez.UcretlendirmePeriyoduDakika" class="form-control form-control-sm text-center" min="1" />
+                                </td>
+                                <td class="p-[10px_16px] border-b border-[var(--color-border)]">
+                                    <input type="number" name="RezervasyonHucreler[@i].PeriyotUcreti" value="@rez.PeriyotUcreti.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm font-mono text-center" step="0.01" min="0" />
+                                </td>
+                                <td class="p-[10px_16px] border-b border-[var(--color-border)]">
+                                    <input type="number" name="RezervasyonHucreler[@i].KdvRate" value="@rez.KdvRate.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm font-mono text-center" step="0.01" min="0" max="100" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="mt-6 flex gap-3">
+        <button type="submit" class="btn btn-primary btn-lg min-w-[140px]">Kaydet</button>
+        <a href="/Admin/Tarife" class="btn btn-secondary btn-lg min-w-[100px]">İptal</a>
+    </div>
+</form>
+

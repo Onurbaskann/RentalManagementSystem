@@ -1,17 +1,17 @@
-@model KiraTakip.Models.ViewModels.ParentRezervasyonTarifeKartViewModel
+﻿@model KiraTakip.Models.ViewModels.ParentRezervasyonTarifeKartViewModel
 
 @{
     bool isOpen = ViewData["IsOpen"] as bool? ?? true;
 }
 
-<details class="parent-rezervasyon-tarife-kart mb-3 group" @(isOpen ? "open" : "")>
+<details class="parent-reservation-tarife-kart mb-3 group" @(isOpen ? "open" : "")>
     <summary class="list-none cursor-pointer flex items-center gap-2.5 p-2 px-3 bg-fuchsia-50/50 border border-fuchsia-100 rounded-lg select-none group-open:rounded-b-none transition-all hover:bg-fuchsia-100/50">
         <span class="text-[9px] font-bold tracking-widest uppercase bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200 rounded px-1.5 py-0.5">
             @Model.KaynakAdi
         </span>
         @if (!Model.Satirlar.Any())
         {
-            <span class="text-[11px] text-fuchsia-400 italic">rezervasyon tarifesi tanımlanmamış</span>
+            <span class="text-[11px] text-fuchsia-400 italic">reservation tarifesi tanımlanmamış</span>
         }
         else
         {
@@ -28,7 +28,7 @@
         @if (!Model.Satirlar.Any())
         {
             <p class="text-[11px] text-fuchsia-400 italic text-center py-2">
-                Bu yıl için rezervasyon tarifesi bulunamadı.
+                Bu yıl için reservation tarifesi bulunamadı.
             </p>
         }
         else

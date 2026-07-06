@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
@@ -158,14 +158,14 @@ public class BankTransactionRepository : BaseRepository<BankTransaction>, IBankT
 
     public async Task<List<BankaHareketiListItemDto>> GetHareketAdaylariAsync(int odemeId)
     {
-        var odeme = await _ctx.PaymentAllocations.AsNoTracking()
+        var payment = await _ctx.PaymentAllocations.AsNoTracking()
                               .Where(o => o.Id == odemeId)
                               .Select(o => new { o.Amount, o.PaymentDate })
                               .FirstOrDefaultAsync();
-        if (odeme == null) return [];
+        if (payment == null) return [];
 
-        decimal tutar = odeme.Amount;
-        DateTime tarih = odeme.PaymentDate;
+        decimal tutar = payment.Amount;
+        DateTime tarih = payment.PaymentDate;
         decimal tolerans = tutar * 0.02m;
 
         var liste = await _dbSet.AsNoTracking()

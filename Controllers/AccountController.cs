@@ -71,9 +71,9 @@ public class AccountController : Controller
         // Kiracı kullanıcısı → bağlı kiracının aktif olup olmadığını kontrol et
         if (user != null && user.UserType == UserType.Tenant && user.KiraciId.HasValue)
         {
-            var kiraci = await _db.Tenants.IgnoreQueryFilters()
+            var tenant = await _db.Tenants.IgnoreQueryFilters()
                 .FirstOrDefaultAsync(k => k.Id == user.KiraciId.Value);
-            if (kiraci != null && !kiraci.IsActive)
+            if (tenant != null && !tenant.IsActive)
             {
                 ModelState.AddModelError(string.Empty, "Firmanızın hesabı pasif durumdadır. Lütfen yöneticinizle iletişime geçin.");
                 await _auditService.LogAsync("User.LoginFailed", "ApplicationUser", user.Id, "Pasif kiracı");
@@ -91,7 +91,7 @@ public class AccountController : Controller
                 return Redirect(returnUrl);
             // Kiracı kullanıcıları kendi paneline yönlendirilir
             if (user?.UserType == UserType.Tenant)
-                return RedirectToAction("Index", "KiraciPanel");
+                return RedirectToAction("Index", "TenantPanel");
             return RedirectToAction("Index", "Home");
         }
 
@@ -196,7 +196,7 @@ public class AccountController : Controller
             await _signInManager.SignInAsync(user, isPersistent: false);
             TempData["Success"] = "Hesabınız başarıyla oluşturuldu. Hoş geldiniz!";
             if (user.UserType == UserType.Tenant)
-                return RedirectToAction("Index", "KiraciPanel");
+                return RedirectToAction("Index", "TenantPanel");
             return RedirectToAction("Index", "Home");
         }
         catch (Exception ex)

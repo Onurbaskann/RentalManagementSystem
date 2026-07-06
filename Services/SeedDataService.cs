@@ -341,14 +341,14 @@ public class SeedDataService
         var birim104 = teknokent.Units.First(b => b.UnitNo == "104");
 
         // Unit Tarifesi Örneği (Hiyerarşide Matrisin Üstündedir)
-        // Ofis 101 için Akademik kategorisinde özel birim fiyatı tanımlayalım
+        // Ofis 101 için Akademik kategorisinde özel unit fiyatı tanımlayalım
         _ctx.BirimTarifeler.Add(new BirimTarife
         {
             UnitId = birim101.Id,
             KiraciKategoriId = katMap["AKADEMIK"],
             ChargeTypeId = btKiraId,
             CalculationMethod = CalculationMethod.M2,
-            UnitValue = 400, // Genel Tarife 300 / Matris 320 yerine birim bazlı 400
+            UnitValue = 400, // Genel Tarife 300 / Matris 320 yerine unit bazlı 400
             KdvRate = 20
         });
 
@@ -599,7 +599,7 @@ public class SeedDataService
         _ctx.Belgeler.AddRange(belgeler);
         await _ctx.SaveChangesAsync();
 
-        // Yardımcı fonksiyon: Dinamik m2 birim bedeli çözünürlüğü
+        // Yardımcı fonksiyon: Dinamik m2 unit bedeli çözünürlüğü
         async Task<decimal> ResolveKiraM2Rate(Unit b, Tenant k)
         {
             var res = await _rateResolver.ResolveAsync(null, k.Id, b.Id, btKiraId, now);
@@ -919,7 +919,7 @@ public class SeedDataService
                 odemeTutari = Math.Round(t.TotalAmount * kismiOran, 2);
             }
 
-            var odeme = new PaymentAllocation
+            var payment = new PaymentAllocation
             {
                 LeaseId = t.LeaseId,
                 ChargeId = t.Id,
@@ -933,7 +933,7 @@ public class SeedDataService
 
             t.PaidAmount = odemeTutari;
             t.Status = kismiMi ? ChargeStatus.PartiallyPaid : ChargeStatus.Paid;
-            _ctx.PaymentAllocations.Add(odeme);
+            _ctx.PaymentAllocations.Add(payment);
         }
     }
 
@@ -947,7 +947,7 @@ public class SeedDataService
         foreach (var t in bekleyenler)
         {
             var kismiTutar = Math.Round(t.TotalAmount / 2, 2);
-            var odeme = new PaymentAllocation
+            var payment = new PaymentAllocation
             {
                 LeaseId = t.LeaseId,
                 ChargeId = t.Id,
@@ -960,7 +960,7 @@ public class SeedDataService
             };
             t.PaidAmount = kismiTutar;
             t.Status = ChargeStatus.PartiallyPaid;
-            _ctx.PaymentAllocations.Add(odeme);
+            _ctx.PaymentAllocations.Add(payment);
         }
     }
 
@@ -968,10 +968,10 @@ public class SeedDataService
     {
         var salon = await _ctx.Units.Include(b => b.Property).FirstOrDefaultAsync(b => b.Name == "Toplantı Salonu Z01");
         var salonB = await _ctx.Units.Include(b => b.Property).FirstOrDefaultAsync(b => b.Name == "Toplantı Odası Z02");
-        var kiraci = await _ctx.Tenants.FirstOrDefaultAsync();
-        var sozlesme = await _ctx.Leases.FirstOrDefaultAsync(s => s.TenantId == kiraci.Id);
+        var tenant = await _ctx.Tenants.FirstOrDefaultAsync();
+        var lease = await _ctx.Leases.FirstOrDefaultAsync(s => s.TenantId == tenant.Id);
 
-        if (salon == null || kiraci == null) return;
+        if (salon == null || tenant == null) return;
 
         var btRezervasyon = await _ctx.ChargeTypes.FirstOrDefaultAsync(b => b.Code == "TOPLANTI");
 
@@ -979,7 +979,7 @@ public class SeedDataService
         var rezervasyon1 = new Reservation
         {
             UnitId = salon.Id,
-            TenantId = kiraci.Id,
+            TenantId = tenant.Id,
             StartDate = DateTime.Today.AddDays(-10).AddHours(10),
             EndDate = DateTime.Today.AddDays(-10).AddHours(13),
             TotalDurationMinutes = 180,
@@ -997,9 +997,9 @@ public class SeedDataService
 
         if (btRezervasyon != null)
         {
-            var tahakkuk = new Charge
+            var charge = new Charge
             {
-                TenantId = kiraci.Id,
+                TenantId = tenant.Id,
                 UnitId = salon.Id,
                 ReservationId = rezervasyon1.Id,
                 PeriodStart = rezervasyon1.StartDate,
@@ -1028,7 +1028,7 @@ public class SeedDataService
                     }
                 }
             };
-            _ctx.Charges.Add(tahakkuk);
+            _ctx.Charges.Add(charge);
             await _ctx.SaveChangesAsync();
         }
 
@@ -1036,7 +1036,7 @@ public class SeedDataService
         _ctx.Reservations.Add(new Reservation
         {
             UnitId = salon.Id,
-            TenantId = kiraci.Id,
+            TenantId = tenant.Id,
             StartDate = DateTime.Today.AddDays(3).AddHours(14),
             EndDate = DateTime.Today.AddDays(3).AddHours(17),
             TotalDurationMinutes = 180,
@@ -1122,16 +1122,16 @@ public class SeedDataService
             RegistrationDate = DateTime.Now.AddMonths(-Random.Shared.Next(6, 36))
         };
 
-    private static Lease MakeSozlesme(Unit birim, Tenant kiraci,
+    private static Lease MakeSozlesme(Unit unit, Tenant tenant,
         DateTime baslangic, DateTime bitis,
         bool kdv, decimal kdvOrani = 20, string? notlar = null,
         DueDateRuleType vadeKuraliTipi = DueDateRuleType.FixedDayOfMonth,
         int vadeGunu = 1) => new()
         {
-            Unit = birim,
-            UnitId = birim.Id,
-            Tenant = kiraci,
-            TenantId = kiraci.Id,
+            Unit = unit,
+            UnitId = unit.Id,
+            Tenant = tenant,
+            TenantId = tenant.Id,
             StartDate = baslangic,
             EndDate = bitis,
             Description = notlar,
@@ -1176,7 +1176,7 @@ public class SeedDataService
         _ctx.Belgeler.RemoveRange(_ctx.Belgeler.IgnoreQueryFilters());
         await _ctx.SaveChangesAsync();
 
-        // Kiracı kullanıcılarını ve rollerini temizle (Referans veren tüm tahakkuk ödemeleri silindikten sonra güvenle silinebilir)
+        // Kiracı kullanıcılarını ve rollerini temizle (Referans veren tüm charge ödemeleri silindikten sonra güvenle silinebilir)
         var kiraciUsers = await _userManager.Users.Where(u => u.UserType == UserType.Tenant).ToListAsync();
         foreach (var ku in kiraciUsers)
         {

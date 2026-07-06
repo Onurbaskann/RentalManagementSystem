@@ -1,0 +1,122 @@
+﻿@model KiraTakip.Models.ViewModels.BelgeTuruFormViewModel
+@using KiraTakip.Models.Entities
+@{
+    ViewData["Title"] = "Belge Türü Düzenle";
+}
+
+<div class="max-w-[680px] mx-auto">
+    <div class="page-header">
+        <a href="/Admin/DocumentType" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Belge Türleri</a>
+        <div class="page-title">Belge Türü Düzenle</div>
+    </div>
+
+    <form asp-action="Edit" asp-hashid="@Model.Id" method="post" asp-form-write-permission="@PermissionCatalog.DocumentType.Edit">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="Sistem" />
+        <div asp-validation-summary="ModelOnly" class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-[13.5px]"></div>
+
+        <div class="card mb-4">
+            <div class="text-[15px] font-bold mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                Temel Bilgiler
+            </div>
+
+            <div class="form-group mb-0">
+                <label class="form-label">Ad *</label>
+                <input asp-for="Ad" class="form-control" />
+                <span asp-validation-for="Ad" class="form-error"></span>
+            </div>
+
+            <div class="form-group mt-4 mb-0">
+                <label class="form-label">Açıklama</label>
+                <textarea asp-for="Aciklama" class="form-control" rows="2"></textarea>
+                <span asp-validation-for="Aciklama" class="form-error"></span>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="text-[15px] font-bold mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                Kural & Kısıtlamalar
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-4">
+                <div class="form-group mb-0">
+                    <label class="form-label">Hedef Kayıt Tipi *</label>
+                    @if (Model.Sistem)
+                    {
+                        <input type="hidden" asp-for="HedefEntite" />
+                        <select class="form-control bg-slate-100 text-slate-500" disabled>
+                            @if (Model.HedefEntite == BelgeOwnerTipi.Tenant)
+                            {
+                                <option value="@((int)BelgeOwnerTipi.Tenant)" selected>Kiracı</option>
+                            }
+                            else if (Model.HedefEntite == BelgeOwnerTipi.Payment)
+                            {
+                                <option value="@((int)BelgeOwnerTipi.Payment)" selected>Ödeme</option>
+                            }
+                            else if (Model.HedefEntite == BelgeOwnerTipi.Lease)
+                            {
+                                <option value="@((int)BelgeOwnerTipi.Lease)" selected>Sözleşme</option>
+                            }
+                            else if (Model.HedefEntite == BelgeOwnerTipi.Sablon)
+                            {
+                                <option value="@((int)BelgeOwnerTipi.Sablon)" selected>Şablon</option>
+                            }
+                        </select>
+                        <div class="text-xs text-muted mt-1">🔒 Sistem kaydı — hedef kayıt tipi değiştirilemez.</div>
+                    }
+                    else
+                    {
+                        <select asp-for="HedefEntite" class="form-control">
+                            <option value="@((int)BelgeOwnerTipi.Tenant)">Kiracı</option>
+                            <option value="@((int)BelgeOwnerTipi.Lease)">Sözleşme</option>
+                            <option value="@((int)BelgeOwnerTipi.Payment)">Ödeme</option>
+                        </select>
+                        <span asp-validation-for="HedefEntite" class="form-error"></span>
+                    }
+                </div>
+                <div class="form-group mb-0">
+                    <label class="form-label">İzin Verilen Uzantılar *</label>
+                    <input asp-for="IzinVerilenUzantilar" class="form-control font-mono" />
+                    <span asp-validation-for="IzinVerilenUzantilar" class="form-error"></span>
+                    <div class="text-xs text-muted mt-1">Virgülle ayırın. Küçük harf.</div>
+                </div>
+                <div class="form-group mb-0">
+                    <label class="form-label">Maks. Boyut (MB) *</label>
+                    <input asp-for="MaxBoyutMb" type="number" min="1" max="100" class="form-control" />
+                    <span asp-validation-for="MaxBoyutMb" class="form-error"></span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4 mt-4">
+                <div class="form-group mb-0">
+                    <label class="form-label">Sıra *</label>
+                    <input asp-for="Sira" type="number" min="1" class="form-control" />
+                    <span asp-validation-for="Sira" class="form-error"></span>
+                </div>
+                <div class="flex flex-col gap-2 mt-auto pb-1">
+                    <label class="flex items-center gap-2 cursor-pointer select-none text-sm">
+                        <input asp-for="Zorunlu" type="checkbox" class="w-4 h-4 rounded" />
+                        Zorunlu belge
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer select-none text-sm">
+                        <input asp-for="IsActive" type="checkbox" class="w-4 h-4 rounded" />
+                        Aktif
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-3 mt-4">
+            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.DocumentType.Edit">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="mr-1.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Kaydet
+            </button>
+            <a href="/Admin/DocumentType" class="btn btn-secondary px-6">İptal</a>
+        </div>
+    </form>
+</div>
+
+

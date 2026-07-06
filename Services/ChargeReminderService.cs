@@ -62,8 +62,8 @@ public class ChargeReminderService : IChargeReminderService
 
         foreach (var group in groups)
         {
-            var kiraci = group.First().Tenant;
-            if (kiraci == null || string.IsNullOrWhiteSpace(kiraci.Email))
+            var tenant = group.First().Tenant;
+            if (tenant == null || string.IsNullOrWhiteSpace(tenant.Email))
             {
                 _logger.LogWarning("Tenant {KiraciId} için geçerli e-posta adresi bulunamadı. Atlanıyor.", group.Key);
                 sonuc.BasarisizGonderim++;
@@ -83,10 +83,10 @@ public class ChargeReminderService : IChargeReminderService
             // 4. Prepare email model with ALL outstanding debts for the tenant
             var mailModel = new KiraciBorcHatirlatmaMailModel
             {
-                Ad = kiraci.Name,
+                Ad = tenant.Name,
                 Soyad = "",
-                Email = kiraci.Email,
-                OdemeLink = await _paymentLinkService.BuildLinkAsync(kiraci.Id, ct),
+                Email = tenant.Email,
+                OdemeLink = await _paymentLinkService.BuildLinkAsync(tenant.Id, ct),
                 Borclar = group.OrderBy(t => t.DueDate).Select(t => new BorcSatiri
                 {
                     TasinmazAdi = t.Lease?.Unit?.Property?.Name ?? "-",
@@ -106,7 +106,7 @@ public class ChargeReminderService : IChargeReminderService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Tenant {KiraciId} için e-posta şablonu render edilemedi.", kiraci.Id);
+                _logger.LogError(ex, "Tenant {KiraciId} için e-posta şablonu render edilemedi.", tenant.Id);
                 sonuc.BasarisizGonderim++;
                 continue;
             }
@@ -115,7 +115,7 @@ public class ChargeReminderService : IChargeReminderService
             try
             {
                 await _mailService.SendAsync(
-                    kiraci.Email,
+                    tenant.Email,
                     mailModel.GosterimAdi,
                     "KiraTakip - Ödeme Hatırlatması",
                     htmlBody,
@@ -132,7 +132,7 @@ public class ChargeReminderService : IChargeReminderService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Tenant {KiraciId} e-posta gönderimi başarısız.", kiraci.Id);
+                _logger.LogError(ex, "Tenant {KiraciId} e-posta gönderimi başarısız.", tenant.Id);
                 sonuc.BasarisizGonderim++;
             }
         }

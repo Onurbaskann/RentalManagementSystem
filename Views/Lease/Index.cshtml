@@ -1,0 +1,154 @@
+﻿@model List<KiraTakip.Models.Dtos.SozlesmeListItemDto>
+@using KiraTakip.Models
+@{
+    ViewData["Title"] = "Sözleşmeler";
+    string filtre = ViewBag.Filtre ?? "tum";
+    bool canEdit = User.HasPermission(PermissionCatalog.Lease.Create);
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
+        ✓ @TempData["Success"]
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
+        ⚠ @TempData["Error"]
+    </div>
+}
+
+<div class="page-header flex flex-wrap items-center justify-between gap-3">
+    <div>
+        <div class="page-title">Sözleşmeler</div>
+        <div class="page-subtitle">@Model.Count kayıt listeleniyor</div>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+        @{
+            int borcluSayisi = ViewBag.BorcluSayisi ?? 0;
+        }
+        @if (borcluSayisi > 0 && User.HasPermission(PermissionCatalog.Notification.BorcHatirlatma))
+        {
+            <form asp-controller="Lease" asp-action="BorclularaMailGonder" method="post"
+                  data-confirm="@borcluSayisi kiracıya borç hatırlatma maili gönderilsin mi?">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-secondary flex items-center gap-2">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    Borçlulara Mail (@borcluSayisi)
+                </button>
+            </form>
+        }
+        @if (canEdit)
+        {
+            <a href="/Lease/Ekle" class="btn btn-primary flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Yeni Sözleşme
+            </a>
+        }
+    </div>
+</div>
+
+<!-- Filtreler -->
+<div class="flex gap-1.5 flex-wrap mb-5">
+    @{
+        var filters = new[] {
+            ("tum",         "Tümü"),
+            ("aktif",       "Aktif"),
+            ("surek",       "Dolmak Üzere"),
+            ("gecmis",      "Sona Erdi"),
+            ("feshedildi",  "Feshedildi")
+        };
+    }
+    @foreach (var (key, label) in filters)
+    {
+        bool isActive = filtre == key;
+        <a href="/Lease?filtre=@key" 
+           class="btn btn-sm @(isActive ? "btn-primary" : "btn-secondary text-slate-600 bg-white border-slate-200")">@label</a>
+    }
+</div>
+
+<div class="card p-0 overflow-hidden" x-data="clientTable({ pageSize: 25 })" x-init="init()">
+    <div class="flex items-center gap-4 p-3 bg-slate-50/50 border-b border-slate-200">
+        <input type="search" class="form-control w-full max-w-sm" placeholder="Ara: kiracı, taşınmaz, unit…" x-model.debounce.250ms="q" />
+        <span class="ml-auto text-xs text-muted">
+            <span x-text="total" class="font-bold"></span> kayıt
+        </span>
+    </div>
+    <div class="table-wrapper">
+        <table class="w-full">
+            <thead>
+                <tr>
+                    <th class="w-16">#</th>
+                    <th>Kiracı</th>
+                    <th>Taşınmaz / Unit</th>
+                    <th class="w-28 cell-center">Başlangıç</th>
+                    <th class="w-28 cell-center">Bitiş</th>
+                    <th class="w-32 num">Aylık Bedel</th>
+                    <th class="w-24 cell-center">Kalan</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in Model)
+                {
+                    bool aktif = s.Aktif;
+                    int kalanGun = s.KalanGun;
+                    bool surek = aktif && kalanGun <= 30;
+                    bool feshedildi = s.Durum == LeaseStatus.Terminated;
+                    string dayBadgeClass = kalanGun <= 10 ? "bg-red-50 text-red-700 border-red-200" : kalanGun <= 30 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200";
+                    var search = $"{s.Id} {s.KiraciGosterimAdi} {s.TasinmazAd} {s.BirimAd}".ToLower();
+
+                    <tr data-row data-search="@search" data-href="/Lease/Detay/@s.Id.ToHashId()"
+                        class="cursor-pointer hover:bg-slate-50 transition-colors"
+                        @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
+                        <td class="text-xs text-muted font-mono">@s.Id</td>
+                        <td>
+                            <a href="/Tenant/Detay/@s.KiraciId.ToHashId()" class="font-semibold text-primary hover:underline">@s.KiraciGosterimAdi</a>
+                            @if (!string.IsNullOrEmpty(s.KiraciKategoriAd))
+                            {
+                                <div class="cell-sub">@s.KiraciKategoriAd</div>
+                            }
+                        </td>
+                        <td>
+                            <a href="/Property/Detay/@s.TasinmazId.ToHashId()" class="font-medium hover:text-primary transition-colors">@s.TasinmazAd</a>
+                            <span class="cell-sub">@s.BirimAd</span>
+                        </td>
+                        <td class="cell-center">@s.StartDate.ToString("dd.MM.yyyy")</td>
+                        <td class="cell-center">@s.EndDate.ToString("dd.MM.yyyy")</td>
+                        <td class="num">@s.AylikBedel.ToString("N2") ₺</td>
+                        <td class="cell-center">
+                            @if (feshedildi)
+                            { <span class="text-muted text-[11px] italic" title="Durum: Feshedildi">Feshedildi</span> }
+                            else if (aktif)
+                            { <span class="px-2 py-0.5 rounded text-[10px] font-bold border @dayBadgeClass" title="Durum: @(surek ? "Doluyor" : "Aktif")">@kalanGun GÜN</span> }
+                            else
+                            { <span class="text-muted text-[11px] italic" title="Durum: Sona Erdi">Sona erdi</span> }
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="8" class="text-center py-12 text-muted italic">Bu filtreye uygun sözleşme bulunamadı.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="flex items-center justify-between p-3 bg-slate-50/50 border-t border-slate-200" x-show="totalPages > 1">
+        <div class="text-xs text-muted font-medium">
+            <span x-text="from"></span>–<span x-text="to"></span> / <strong x-text="total"></strong> kayıt
+        </div>
+        <nav class="flex gap-1" aria-label="Sayfalar">
+            <button type="button" class="w-8 h-8 flex items-center justify-center rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" :disabled="page === 1" @@click="prev()">‹</button>
+            <template x-for="p in pageList" :key="p">
+                <button type="button" class="w-8 h-8 flex items-center justify-center rounded border font-medium text-xs transition-colors" 
+                        :class="p === page ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'" 
+                        @@click="goto(p)" x-text="p"></button>
+            </template>
+            <button type="button" class="w-8 h-8 flex items-center justify-center rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" :disabled="page === totalPages" @@click="next()">›</button>
+        </nav>
+    </div>
+    <div class="p-8 text-center" x-show="total === 0 && q.length > 0" x-cloak>
+        <div class="text-slate-400 font-medium">Aramaya uyan kayıt bulunamadı.</div>
+    </div>
+</div>
+

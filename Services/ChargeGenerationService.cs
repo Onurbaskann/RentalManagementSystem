@@ -30,18 +30,18 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
 
     public async Task UretSozlesmeIcinAsync(int leaseId)
     {
-        var sozlesme = await _sozlesmeRepo.GetByIdAsync(leaseId);
-        if (sozlesme == null) return;
+        var lease = await _sozlesmeRepo.GetByIdAsync(leaseId);
+        if (lease == null) return;
 
-        foreach (var donemIlkGunu in GetDonemler(sozlesme.StartDate, sozlesme.EndDate))
+        foreach (var donemIlkGunu in GetDonemler(lease.StartDate, lease.EndDate))
         {
             var mevcutVar = await _tahakkukRepo.AnyAsync(t => t.LeaseId == leaseId
                 && t.PeriodStart == donemIlkGunu
                 && t.SourceType == ChargeSourceType.Lease);
             if (mevcutVar) continue;
 
-            var proRata = HesaplaProRataKatsayi(donemIlkGunu, sozlesme.StartDate, sozlesme.EndDate);
-            var composedPreviews = await ComposeKalemlerAsync(sozlesme.UnitId, sozlesme.TenantId, donemIlkGunu, leaseId);
+            var proRata = HesaplaProRataKatsayi(donemIlkGunu, lease.StartDate, lease.EndDate);
+            var composedPreviews = await ComposeKalemlerAsync(lease.UnitId, lease.TenantId, donemIlkGunu, leaseId);
             var kalemler = new List<ChargeLineItem>();
 
             foreach (var preview in composedPreviews)
@@ -66,16 +66,16 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
             }
 
             var ayBitis = donemIlkGunu.AddMonths(1).AddDays(-1);
-            var donemBitis = sozlesme.EndDate < ayBitis ? sozlesme.EndDate : ayBitis;
+            var donemBitis = lease.EndDate < ayBitis ? lease.EndDate : ayBitis;
 
-            var tahakkuk = new Charge
+            var charge = new Charge
             {
-                TenantId = sozlesme.TenantId,
-                UnitId = sozlesme.UnitId,
+                TenantId = lease.TenantId,
+                UnitId = lease.UnitId,
                 LeaseId = leaseId,
                 PeriodStart = donemIlkGunu,
                 PeriodEnd = donemBitis,
-                DueDate = HesaplaVadeTarihi(donemIlkGunu, sozlesme.DueDateRuleType, sozlesme.DueDay),
+                DueDate = HesaplaVadeTarihi(donemIlkGunu, lease.DueDateRuleType, lease.DueDay),
                 ExpectedAmount = kalemler.Sum(k => k.Amount),
                 KdvAmount = kalemler.Sum(k => k.KdvAmount),
                 TotalAmount = kalemler.Sum(k => k.TotalAmount),
@@ -85,7 +85,7 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
                 LineItems = kalemler
             };
 
-            await _tahakkukRepo.AddAsync(tahakkuk);
+            await _tahakkukRepo.AddAsync(charge);
         }
 
         await _uow.SaveChangesAsync();
@@ -102,8 +102,8 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
 
     public async Task BekleyenVadeleriYenidenHesaplaAsync(int leaseId)
     {
-        var sozlesme = await _sozlesmeRepo.GetByIdAsync(leaseId);
-        if (sozlesme == null) return;
+        var lease = await _sozlesmeRepo.GetByIdAsync(leaseId);
+        if (lease == null) return;
 
         var hedefDurumlar = new[] { ChargeStatus.Pending, ChargeStatus.PartiallyPaid, ChargeStatus.Overdue };
         var bekleyenler = await _tahakkukRepo.GetAllAsync(t =>
@@ -116,7 +116,7 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
         var bugun = DateTime.Today;
         foreach (var t in bekleyenler)
         {
-            t.DueDate = HesaplaVadeTarihi(t.PeriodStart, sozlesme.DueDateRuleType, sozlesme.DueDay);
+            t.DueDate = HesaplaVadeTarihi(t.PeriodStart, lease.DueDateRuleType, lease.DueDay);
 
             t.Status = t.PaidAmount >= t.TotalAmount
                 ? ChargeStatus.Paid
@@ -185,8 +185,8 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
 
     public async Task<IList<Models.DTOs.TahakkukKalemiPreview>> ComposeKalemlerAsync(int unitId, int tenantId, DateTime donem, int? leaseId = null)
     {
-        var birim = await _birimRepo.GetByIdAsync(unitId);
-        if (birim == null) return new List<Models.DTOs.TahakkukKalemiPreview>();
+        var unit = await _birimRepo.GetByIdAsync(unitId);
+        if (unit == null) return new List<Models.DTOs.TahakkukKalemiPreview>();
 
         var aktifBorcTipleri = await _tahakkukRepo.GetAktifUretimBorcTipleriAsync();
         var previewList = new List<Models.DTOs.TahakkukKalemiPreview>();
@@ -213,7 +213,7 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
 
             if (snapshot != null)
             {
-                var carpanBase = snapshot.CalculationMethod == CalculationMethod.M2 ? birim.Area : 1m;
+                var carpanBase = snapshot.CalculationMethod == CalculationMethod.M2 ? unit.Area : 1m;
                 var tutar = Math.Round(snapshot.UnitValue * carpanBase, 2);
                 var kdvTutari = Math.Round(tutar * snapshot.KdvRate / 100, 2);
 

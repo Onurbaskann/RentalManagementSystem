@@ -18,9 +18,9 @@ public class StatisticsService : IStatisticsService
         _rateResolver = rateResolver;
     }
 
-    public OccupancyStatus GetBirimDurumu(Unit birim)
+    public OccupancyStatus GetBirimDurumu(Unit unit)
     {
-        var aktif = birim.Leases
+        var aktif = unit.Leases
             .Where(s =>
                 s.Status == LeaseStatus.Active &&
                 s.StartDate <= DateTime.Now &&
@@ -34,9 +34,9 @@ public class StatisticsService : IStatisticsService
         return kalanGun <= 30 ? OccupancyStatus.ExpiringSoon : OccupancyStatus.Leased;
     }
 
-    public Lease? GetAktifSozlesme(Unit birim)
+    public Lease? GetAktifSozlesme(Unit unit)
     {
-        return birim.Leases
+        return unit.Leases
             .Where(s =>
                 s.Status == LeaseStatus.Active &&
                 s.StartDate <= DateTime.Now &&

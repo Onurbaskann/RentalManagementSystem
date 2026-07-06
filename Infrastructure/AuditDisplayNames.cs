@@ -1,4 +1,4 @@
-namespace KiraTakip.Infrastructure;
+﻿namespace KiraTakip.Infrastructure;
 
 public static class AuditDisplayNames
 {
@@ -52,7 +52,7 @@ public static class AuditDisplayNames
         ["Tenant"]                  = "Kiracı",
         ["Lease"]                = "Sözleşme",
         ["Charge"]                = "Charge",
-        ["Odeme"]                   = "Ödeme",
+        ["Payment"]                   = "Ödeme",
         ["Property"]                = "Taşınmaz",
         ["Unit"]                   = "Unit",
         ["BankTransaction"]           = "Banka hareketi",
@@ -67,7 +67,7 @@ public static class AuditDisplayNames
         ["GenelTarife"]             = "Genel tarife",
         ["SozlesmeTarife"]          = "Sözleşme tarifesi",
         ["RezervasyonTarife"]       = "Reservation tarifesi",
-        ["TasinmazFiyat"]           = "Taşınmaz fiyatı",
+        ["PropertyPricing"]           = "Taşınmaz fiyatı",
         ["ChargeType"]                = "Borç tipi",
         ["UnitType"]               = "Unit türü",
         ["Kategori"]                = "Kategori",

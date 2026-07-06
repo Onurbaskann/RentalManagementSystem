@@ -42,7 +42,7 @@ public class PaymentLinkService : IPaymentLinkService, ITransactionalService
         kayit.TokenHash = result.TokenHash;
         await _db.SaveChangesAsync(ct);
 
-        return $"{_settings.BaseUrl.TrimEnd('/')}/Odeme/Portal?t={Uri.EscapeDataString(result.RawToken)}";
+        return $"{_settings.BaseUrl.TrimEnd('/')}/Payment/Portal?t={Uri.EscapeDataString(result.RawToken)}";
     }
 
     public async Task<(bool Success, int KiraciId, string? Reason)> TryValidateAsync(string token, CancellationToken ct = default)

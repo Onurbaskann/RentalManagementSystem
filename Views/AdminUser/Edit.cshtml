@@ -1,4 +1,4 @@
-@model KiraTakip.Models.ViewModels.KullaniciDuzenleViewModel
+﻿@model KiraTakip.Models.ViewModels.KullaniciDuzenleViewModel
 @{
     ViewData["Title"] = "Kullanıcı Düzenle";
     var adminRolId = Model.Roller.FirstOrDefault(r => r.Ad == "Sistem Yöneticisi")?.Id.ToString() ?? "0";
@@ -94,7 +94,7 @@
                     Kullanıcı sistemdeki tüm taşınmazlara erişebilir.
                 </p>
 
-                <!-- Spesifik taşınmaz / birim kapsamı: global toggle kapalıyken -->
+                <!-- Spesifik taşınmaz / unit kapsamı: global toggle kapalıyken -->
                 @if (Model.Properties.Any() || Model.Units.Any())
                 {
                     <div x-show="seciliRolId !== '@adminRolId' && seciliRolId !== '0' && !globalErisim" x-cloak class="mt-3">

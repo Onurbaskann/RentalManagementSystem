@@ -50,7 +50,7 @@ public class HomeController : Controller
     {
         var user = await _userManager.GetUserAsync(User);
         if (user?.UserType == UserType.Tenant)
-            return RedirectToAction("Index", "KiraciPanel");
+            return RedirectToAction("Index", "TenantPanel");
 
         var now = DateTime.Now;
         var today = DateTime.Today;
@@ -195,7 +195,7 @@ public class HomeController : Controller
             vm.BugunVadeDolanAdet = bugun.Count;
             vm.BugunVadeDolanTutar = bugun.Sum(t => t.ToplamTutar - t.PaidAmount);
 
-            // Top 5 gelir getiren taşınmaz (son 12 ay tahakkuk dönemleri, ödenen tutara göre)
+            // Top 5 gelir getiren taşınmaz (son 12 ay charge dönemleri, ödenen tutara göre)
             var sonYil = today.AddYears(-1);
             var birimSayisiByTasinmaz = tasinmazlar.ToDictionary(x => x.Id, x => x.BirimSayisi);
             vm.TopGelirTasinmaz = tahakkuklar

@@ -45,7 +45,7 @@ public class ReservationService : IReservationService, ITransactionalService
         return await _repo.GetByIdAsync(id);
     }
 
-    // ── Ücret Hesaplama (precedence: birime özel → birim türü genel tarife → hata) ─
+    // ── Ücret Hesaplama (precedence: birime özel → unit türü genel tarife → hata) ─
 
     public async Task<RezervasyonHesapSonucu> HesaplaAsync(int unitId, DateTime baslangic, DateTime bitis)
     {
@@ -76,9 +76,9 @@ public class ReservationService : IReservationService, ITransactionalService
         else
         {
             // 2) Unit Türü bazlı Yıllık Genel Tarife
-            var birim = await _birimRepo.GetByIdAsync(unitId, q => q.Include(b => b.UnitType));
+            var unit = await _birimRepo.GetByIdAsync(unitId, q => q.Include(b => b.UnitType));
 
-            if (birim?.UnitTypeId is not int btId)
+            if (unit?.UnitTypeId is not int btId)
             {
                 sonuc.HataMessaji = "Unit türü tanımlanmamış.";
                 return sonuc;
@@ -89,7 +89,7 @@ public class ReservationService : IReservationService, ITransactionalService
 
             if (genel == null)
             {
-                sonuc.HataMessaji = $"{cariYil} yılı için '{birim.UnitType?.Ad}' türünde genel rezervasyon tarifesi tanımlı değil.";
+                sonuc.HataMessaji = $"{cariYil} yılı için '{unit.UnitType?.Ad}' türünde genel reservation tarifesi tanımlı değil.";
                 return sonuc;
             }
 
@@ -129,21 +129,21 @@ public class ReservationService : IReservationService, ITransactionalService
 
         // 8.5.4 — Çakışma kontrolü
         if (await _repo.IsConflictAsync(model.BirimId.Value, model.StartDate, model.EndDate))
-            return (false, "Seçilen zaman aralığında bu birim için başka bir rezervasyon mevcut.", 0);
+            return (false, "Seçilen zaman aralığında bu unit için başka bir reservation mevcut.", 0);
 
-        var kiraci = await _kiraciRepo.GetByIdAsync(model.KiraciId.Value);
-        if (kiraci == null)
+        var tenant = await _kiraciRepo.GetByIdAsync(model.KiraciId.Value);
+        if (tenant == null)
             return (false, "Kiracı bulunamadı.", 0);
 
-        var birim = await _birimRepo.GetByIdAsync(model.BirimId.Value, q => q.Include(b => b.UnitType));
-        if (birim == null)
+        var unit = await _birimRepo.GetByIdAsync(model.BirimId.Value, q => q.Include(b => b.UnitType));
+        if (unit == null)
             return (false, "Unit bulunamadı.", 0);
-        if (birim.UnitType == null || !birim.UnitType.RezervasyonYapilabilirMi)
-            return (false, "Seçilen birim rezervasyon yapılabilir türde değil.", 0);
+        if (unit.UnitType == null || !unit.UnitType.RezervasyonYapilabilirMi)
+            return (false, "Seçilen unit reservation yapılabilir türde değil.", 0);
 
         var hesap = await HesaplaAsync(model.BirimId.Value, model.StartDate, model.EndDate);
 
-        var rezervasyon = new Reservation
+        var reservation = new Reservation
         {
             UnitId = model.BirimId.Value,
             TenantId = model.KiraciId.Value,
@@ -161,45 +161,45 @@ public class ReservationService : IReservationService, ITransactionalService
             Description = model.Aciklama,
         };
 
-        await _repo.AddAsync(rezervasyon);
+        await _repo.AddAsync(reservation);
         await _uow.SaveChangesAsync();
 
-        return (true, null, rezervasyon.Id);
+        return (true, null, reservation.Id);
     }
 
     // ── İptal ────────────────────────────────────────────────────────────────
 
     public async Task<(bool Basarili, string? Hata)> CancelAsync(int id, string userId, string neden)
     {
-        var rezervasyon = await _repo.GetByIdAsync(id, (Func<IQueryable<Reservation>, IQueryable<Reservation>>?)(q => q));
+        var reservation = await _repo.GetByIdAsync(id, (Func<IQueryable<Reservation>, IQueryable<Reservation>>?)(q => q));
 
-        if (rezervasyon == null)
+        if (reservation == null)
             return (false, "Reservation bulunamadı.");
 
-        if (rezervasyon.Status == ReservationStatus.Cancelled)
-            return (false, "Bu rezervasyon zaten iptal edilmiş.");
+        if (reservation.Status == ReservationStatus.Cancelled)
+            return (false, "Bu reservation zaten iptal edilmiş.");
 
-        if (rezervasyon.Status == ReservationStatus.TransferredToCharge)
+        if (reservation.Status == ReservationStatus.TransferredToCharge)
         {
-            var tahakkuk = await _ctx.Charges
+            var charge = await _ctx.Charges
                 .Include(t => t.Allocations)
-                .FirstOrDefaultAsync(t => t.ReservationId == rezervasyon.Id);
+                .FirstOrDefaultAsync(t => t.ReservationId == reservation.Id);
 
-            var odemeVar = tahakkuk?.Allocations.Any(o => o.Status == PaymentStatus.Approved) ?? false;
+            var odemeVar = charge?.Allocations.Any(o => o.Status == PaymentStatus.Approved) ?? false;
             if (odemeVar)
-                return (false, "Ödemesi alınmış tahakkuka bağlı rezervasyon iptal edilemez.");
+                return (false, "Ödemesi alınmış tahakkuka bağlı reservation iptal edilemez.");
 
-            if (tahakkuk != null)
+            if (charge != null)
             {
-                tahakkuk.Status = ChargeStatus.Cancelled;
-                tahakkuk.CancellationNote = $"Reservation iptal edildi: {neden}";
+                charge.Status = ChargeStatus.Cancelled;
+                charge.CancellationNote = $"Reservation iptal edildi: {neden}";
             }
         }
 
-        rezervasyon.Status = ReservationStatus.Cancelled;
-        rezervasyon.Description = string.IsNullOrWhiteSpace(rezervasyon.Description)
+        reservation.Status = ReservationStatus.Cancelled;
+        reservation.Description = string.IsNullOrWhiteSpace(reservation.Description)
             ? $"İptal: {neden}"
-            : $"{rezervasyon.Description} | İptal: {neden}";
+            : $"{reservation.Description} | İptal: {neden}";
 
         await _uow.SaveChangesAsync();
         return (true, null);
@@ -209,66 +209,66 @@ public class ReservationService : IReservationService, ITransactionalService
 
     public async Task<(bool Basarili, string? Hata, int? ChargeId)> TransferToChargeAsync(int id, string userId)
     {
-        var rezervasyon = await _repo.GetByIdAsync(id, q => q
+        var reservation = await _repo.GetByIdAsync(id, q => q
             .Include(r => r.Unit).ThenInclude(b => b.UnitType));
 
-        if (rezervasyon == null)
+        if (reservation == null)
             return (false, "Reservation bulunamadı.", null);
 
-        if (rezervasyon.Status != ReservationStatus.Planned)
+        if (reservation.Status != ReservationStatus.Planned)
             return (false, "Sadece 'Planlandı' durumundaki rezervasyonlar tahakkuka aktarılabilir.", null);
 
-        if (await _ctx.Charges.AnyAsync(t => t.ReservationId == rezervasyon.Id))
-            return (false, "Bu rezervasyon zaten tahakkuka aktarılmış.", null);
+        if (await _ctx.Charges.AnyAsync(t => t.ReservationId == reservation.Id))
+            return (false, "Bu reservation zaten tahakkuka aktarılmış.", null);
 
-        if (rezervasyon.TotalAmount <= 0)
-            return (false, "Ücretsiz rezervasyonlar için tahakkuk oluşturulamaz.", null);
+        if (reservation.TotalAmount <= 0)
+            return (false, "Ücretsiz rezervasyonlar için charge oluşturulamaz.", null);
 
-        var birimTuru = rezervasyon.Unit.UnitType;
+        var birimTuru = reservation.Unit.UnitType;
         var borcTipi = await _repo.ResolveRezervasyonBorcTipiAsync(birimTuru?.ChargeTypeId);
 
         if (borcTipi == null)
             return (false, "Reservation borç tipi bulunamadı. Lütfen yöneticinize başvurun.", null);
 
-        var aciklama = $"Toplantı salonu: {rezervasyon.Unit.Name} " +
-                       $"({rezervasyon.StartDate:dd.MM.yyyy HH:mm} – {rezervasyon.EndDate:HH:mm})";
+        var aciklama = $"Toplantı salonu: {reservation.Unit.Name} " +
+                       $"({reservation.StartDate:dd.MM.yyyy HH:mm} – {reservation.EndDate:HH:mm})";
 
         var kalem = new ChargeLineItem
         {
             ChargeTypeId = borcTipi.Id,
             Description = aciklama,
             CalculationMethod = CalculationMethod.Fixed,
-            UnitValue = rezervasyon.RateAmount,
+            UnitValue = reservation.RateAmount,
             Multiplier = 1m,
-            Amount = rezervasyon.RateAmount,
-            KdvRate = rezervasyon.KdvRate ?? 0m,
-            KdvAmount = rezervasyon.KdvAmount ?? 0m,
-            TotalAmount = rezervasyon.TotalAmount,
+            Amount = reservation.RateAmount,
+            KdvRate = reservation.KdvRate ?? 0m,
+            KdvAmount = reservation.KdvAmount ?? 0m,
+            TotalAmount = reservation.TotalAmount,
             SourceType = LineItemSourceType.ReservationRule
         };
 
-        var tahakkuk = new Charge
+        var charge = new Charge
         {
-            TenantId = rezervasyon.TenantId,
-            UnitId = rezervasyon.UnitId,
-            ReservationId = rezervasyon.Id,
-            PeriodStart = rezervasyon.StartDate,
-            PeriodEnd = rezervasyon.EndDate,
-            DueDate = rezervasyon.EndDate.Date,
-            ExpectedAmount = rezervasyon.RateAmount,
-            KdvAmount = rezervasyon.KdvAmount ?? 0m,
-            TotalAmount = rezervasyon.TotalAmount,
+            TenantId = reservation.TenantId,
+            UnitId = reservation.UnitId,
+            ReservationId = reservation.Id,
+            PeriodStart = reservation.StartDate,
+            PeriodEnd = reservation.EndDate,
+            DueDate = reservation.EndDate.Date,
+            ExpectedAmount = reservation.RateAmount,
+            KdvAmount = reservation.KdvAmount ?? 0m,
+            TotalAmount = reservation.TotalAmount,
             PaidAmount = 0,
             Status = ChargeStatus.Pending,
             SourceType = ChargeSourceType.Reservation,
             LineItems = new List<ChargeLineItem> { kalem }
         };
 
-        await _repo.AddTahakkukAsync(tahakkuk);
-        rezervasyon.Status = ReservationStatus.TransferredToCharge;
+        await _repo.AddTahakkukAsync(charge);
+        reservation.Status = ReservationStatus.TransferredToCharge;
         await _uow.SaveChangesAsync();
 
-        return (true, null, tahakkuk.Id);
+        return (true, null, charge.Id);
     }
 
     // ── Ücret Kuralı CRUD ─────────────────────────────────────────────────────

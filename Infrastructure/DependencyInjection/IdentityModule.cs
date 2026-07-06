@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
@@ -58,7 +58,7 @@ namespace KiraTakip.Infrastructure.DependencyInjection
                     }
                 }
 
-                options.AddPolicy("KiraciKullanici", policy =>
+                options.AddPolicy("TenantUser", policy =>
                     policy.RequireClaim(AppClaimTypes.UserType, ((int)UserType.Tenant).ToString()));
             });
 

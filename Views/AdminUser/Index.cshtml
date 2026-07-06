@@ -1,4 +1,4 @@
-@model KiraTakip.Models.ViewModels.AdminKullaniciIndexViewModel
+﻿@model KiraTakip.Models.ViewModels.AdminKullaniciIndexViewModel
 @using KiraTakip.Models.Entities
 @{
     ViewData["Title"] = "Kullanıcı Yönetimi";
@@ -34,8 +34,8 @@
         </button>
         <button type="button"
                 class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
-                :class="tab === 'kiraci' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-gray-700'"
-                @@click="tab = 'kiraci'">
+                :class="tab === 'tenant' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-gray-700'"
+                @@click="tab = 'tenant'">
             Kiracı Kullanıcıları
             <span class="ml-1.5 text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">@Model.KiraciKullanicilar.Count</span>
         </button>
@@ -162,7 +162,7 @@
     </div>
 
     @* Kiracı Kullanıcıları *@
-    <div x-show="tab === 'kiraci'" x-cloak x-data="clientTable({ pageSize: 25 })" x-init="init()">
+    <div x-show="tab === 'tenant'" x-cloak x-data="clientTable({ pageSize: 25 })" x-init="init()">
         <div class="card p-0 overflow-hidden">
             <div class="table-toolbar">
                 <input type="search" class="form-control toolbar-search" placeholder="Ara: ad, e-posta, kiracı…" x-model.debounce.250ms="q" />

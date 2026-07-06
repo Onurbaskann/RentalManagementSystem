@@ -24,11 +24,11 @@ public class PropertyPricingService : Interfaces.IPropertyPricingService
 
     public async Task<TasinmazFiyatMatrisiViewModel> GetMatrisiAsync(int propertyId, int page = 1, int pageSize = 10)
     {
-        Property? tasinmaz = null;
+        Property? property = null;
         if (propertyId > 0)
         {
-            tasinmaz = await _tasinmazRepo.GetByIdAsync(propertyId);
-            if (tasinmaz == null) throw new ArgumentException("Taşınmaz bulunamadı");
+            property = await _tasinmazRepo.GetByIdAsync(propertyId);
+            if (property == null) throw new ArgumentException("Taşınmaz bulunamadı");
         }
 
         var kiraciKategorileri = await _tarifeRepo.GetKiraciKategorileriAsync();
@@ -38,7 +38,7 @@ public class PropertyPricingService : Interfaces.IPropertyPricingService
         var vm = new TasinmazFiyatMatrisiViewModel
         {
             TasinmazId = propertyId,
-            TasinmazAd = tasinmaz?.Name ?? "Yeni Taşınmaz",
+            TasinmazAd = property?.Name ?? "Yeni Taşınmaz",
             Kolonlar = borcTipleri.Select(b => new BorcTipiFiyatKolonuViewModel
             {
                 ChargeTypeId = b.Id,

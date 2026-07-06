@@ -103,7 +103,7 @@ public class PropertyService : IPropertyService
         {
             foreach (var r in rezervasyonAlanlari)
             {
-                var birim = new Unit
+                var unit = new Unit
                 {
                     UnitKind = UnitKind.Unit,
                     UnitNo = r.BirimNo,
@@ -112,12 +112,12 @@ public class PropertyService : IPropertyService
                     Description = r.Aciklama,
                     UnitTypeId = r.UnitTypeId
                 };
-                t.Units.Add(birim);
+                t.Units.Add(unit);
 
                 // Ücret kuralını ekle
                 await _repo.AddRezervasyonTarifeAsync(new RezervasyonTarife
                 {
-                    Unit = birim,
+                    Unit = unit,
                     FreeDurationMinutes = r.FreeDurationMinutes,
                     UcretlendirmePeriyoduDakika = 60,
                     PeriyotUcreti = r.SaatlikUcret,
@@ -291,7 +291,7 @@ public class PropertyService : IPropertyService
             }
         }
 
-        // ---- Komple birim m² senkronu ----
+        // ---- Komple unit m² senkronu ----
         if (t.RentalMode == RentalMode.WholeProperty)
         {
             var komple = t.Units.FirstOrDefault(b => b.UnitKind == UnitKind.Whole);
