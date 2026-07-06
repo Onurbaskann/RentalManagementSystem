@@ -23,7 +23,7 @@
         <table class="w-full">
             <thead>
                 <tr>
-                    <th>Birim</th>
+                    <th>Unit</th>
                     <th>Taşınmaz</th>
                     <th class="w-28 cell-center">Başlangıç</th>
                     <th class="w-28 cell-center">Bitiş</th>
@@ -40,15 +40,15 @@
                     bool feshedildi = s.Durum == LeaseStatus.Terminated;
                     string dayBadgeClass = kalanGun <= 10 ? "bg-red-50 text-red-700 border-red-200" : kalanGun <= 30 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200";
                     var search = $"{s.BirimAd} {s.TasinmazAd}".ToLower();
-                    var detayHref = $"/Kiraci/Sozlesmeler/{s.Id}";
+                    var detayHref = $"/Tenant/Leases/{s.Id}";
 
                     <tr data-row data-search="@search" data-href="@detayHref"
                         class="cursor-pointer hover:bg-slate-50 transition-colors"
                         @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
                         <td class="font-semibold">@s.BirimAd</td>
                         <td class="text-sm text-muted">@s.TasinmazAd</td>
-                        <td class="cell-center text-sm">@s.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
-                        <td class="cell-center text-sm">@s.BitisTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="cell-center text-sm">@s.StartDate.ToString("dd.MM.yyyy")</td>
+                        <td class="cell-center text-sm">@s.EndDate.ToString("dd.MM.yyyy")</td>
                         <td class="num text-sm font-medium">@s.AylikBedel.ToString("N2") ₺</td>
                         <td class="cell-center">
                             @if (feshedildi)

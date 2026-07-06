@@ -1,13 +1,13 @@
 @model KiraTakip.Models.ViewModels.RezervasyonCreateViewModel
 @using KiraTakip.Models
 @{
-    ViewData["Title"] = "Rezervasyon Ekle";
+    ViewData["Title"] = "Reservation Ekle";
 }
 
 <div class="max-w-[1000px] mx-auto">
     <div class="page-header">
-        <a href="/Rezervasyon" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Rezervasyonlar</a>
-        <div class="page-title">Rezervasyon Ekle</div>
+        <a href="/Reservation" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Rezervasyonlar</a>
+        <div class="page-title">Reservation Ekle</div>
         <div class="page-subtitle">Seçilen birim için tarih ve saat belirleyin</div>
     </div>
 
@@ -20,13 +20,13 @@
         <div class="card mb-4">
             <div class="text-lg font-bold mb-5 flex items-center gap-2">
                 <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
-                <span>Birim ve Kiracı</span>
+                <span>Unit ve Kiracı</span>
             </div>
 
             <div class="form-group mb-5">
                 <label asp-for="BirimId" class="form-label">Taşınmaz Birimi <span class="text-red-500">*</span></label>
                 <select asp-for="BirimId" class="form-control" x-on:change="birimSecildi($event)">
-                    <option value="">— Birim seçin —</option>
+                    <option value="">— Unit seçin —</option>
                     @foreach (var b in Model.RezervasyonBirimleri)
                     {
                         <option value="@b.Id"
@@ -45,7 +45,7 @@
                     <label asp-for="KiraciId" class="form-label">Kiracı <span class="text-red-500">*</span></label>
                     <select asp-for="KiraciId" class="form-control" x-model="kiraciId" x-on:change="kiraciSecildi($event)">
                         <option value="">— Kiracı seçin —</option>
-                        @foreach (var k in Model.Kiraciler)
+                        @foreach (var k in Model.Tenants)
                         {
                             <option value="@k.Id">@k.GosterimAdi</option>
                         }
@@ -67,22 +67,22 @@
                 <div class="form-group mb-0">
                     <label class="form-label">Başlangıç <span class="text-red-500">*</span></label>
                     @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
-                        { "Name",  "BaslangicTarihi" },
-                        { "Value", Model.BaslangicTarihi.ToString("yyyy-MM-ddTHH:mm") },
+                        { "Name",  "StartDate" },
+                        { "Value", Model.StartDate.ToString("yyyy-MM-ddTHH:mm") },
                         { "Mode",  "datetime" },
                         { "Field", "baslangic" }
                     })
-                    <span asp-validation-for="BaslangicTarihi" class="form-error"></span>
+                    <span asp-validation-for="StartDate" class="form-error"></span>
                 </div>
                 <div class="form-group mb-0">
                     <label class="form-label">Bitiş <span class="text-red-500">*</span></label>
                     @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
-                        { "Name",  "BitisTarihi" },
-                        { "Value", Model.BitisTarihi.ToString("yyyy-MM-ddTHH:mm") },
+                        { "Name",  "EndDate" },
+                        { "Value", Model.EndDate.ToString("yyyy-MM-ddTHH:mm") },
                         { "Mode",  "datetime" },
                         { "Field", "bitis" }
                     })
-                    <span asp-validation-for="BitisTarihi" class="form-error"></span>
+                    <span asp-validation-for="EndDate" class="form-error"></span>
                 </div>
             </div>
 
@@ -133,13 +133,13 @@
         <div class="card mb-4">
             <div class="form-group mb-0">
                 <label asp-for="Aciklama" class="form-label">Açıklama <span class="text-muted font-normal">(opsiyonel)</span></label>
-                <textarea asp-for="Aciklama" class="form-control" rows="2" placeholder="Rezervasyon konusu, katılımcılar vb."></textarea>
+                <textarea asp-for="Aciklama" class="form-control" rows="2" placeholder="Reservation konusu, katılımcılar vb."></textarea>
             </div>
         </div>
 
         <div class="flex justify-end gap-3 mt-6">
-            <a href="/Rezervasyon" class="btn btn-secondary px-6">İptal</a>
-            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.Reservation.Create">Rezervasyon Oluştur</button>
+            <a href="/Reservation" class="btn btn-secondary px-6">İptal</a>
+            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.Reservation.Create">Reservation Oluştur</button>
         </div>
     </form>
 </div>
@@ -151,8 +151,8 @@ function rezervasyonForm() {
     return {
         birimId: @(Model.BirimId > 0 ? Model.BirimId.ToString() : "0"),
         kiraciId: @(Model.KiraciId > 0 ? Model.KiraciId.ToString() : "0"),
-        baslangic: '@Model.BaslangicTarihi.ToString("yyyy-MM-ddTHH:mm")',
-        bitis: '@Model.BitisTarihi.ToString("yyyy-MM-ddTHH:mm")',
+        baslangic: '@Model.StartDate.ToString("yyyy-MM-ddTHH:mm")',
+        bitis: '@Model.EndDate.ToString("yyyy-MM-ddTHH:mm")',
         hesapSonucu: null,
         hataMessaji: null,
         _timer: null,
@@ -184,7 +184,7 @@ function rezervasyonForm() {
 
         async _fetchHesap() {
             try {
-                const r = await fetch(`/Rezervasyon/Hesapla?birimId=${this.birimId}&baslangic=${encodeURIComponent(this.baslangic)}&bitis=${encodeURIComponent(this.bitis)}`);
+                const r = await fetch(`/Reservation/Hesapla?birimId=${this.birimId}&baslangic=${encodeURIComponent(this.baslangic)}&bitis=${encodeURIComponent(this.bitis)}`);
                 const d = await r.json();
                 if (d.hataMessaji) {
                     this.hataMessaji = d.hataMessaji;

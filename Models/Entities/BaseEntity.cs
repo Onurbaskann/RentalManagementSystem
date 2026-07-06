@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace KiraTakip.Models.Entities;
 
 public abstract class BaseEntity : IAuditable
@@ -8,5 +10,7 @@ public abstract class BaseEntity : IAuditable
     public DateTime? UpdatedAt { get; set; }
     public string? UpdatedBy { get; set; }
     public bool IsDeleted { get; set; }
+
+    [Column("Aktif")]
     public bool IsActive { get; set; } = true;
 }

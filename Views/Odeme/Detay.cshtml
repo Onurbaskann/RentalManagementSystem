@@ -9,7 +9,7 @@
     bool canMatch      = User.HasPermission(PermissionCatalog.Payment.MatchBankTransaction);
     bool bekliyor      = Model.Durum == PaymentStatus.PendingApproval;
     var belgeler        = (ViewBag.Belgeler    as List<Belge>)    ?? [];
-    var belgeTurleri    = (ViewBag.BelgeTurleri as List<BelgeTuru>) ?? [];
+    var belgeTurleri    = (ViewBag.DocumentTypes as List<DocumentType>) ?? [];
 
     string durumCls = Model.Durum switch {
         PaymentStatus.Approved  => "badge-kirali",
@@ -72,12 +72,12 @@
             </div>
             <div class="grid grid-cols-2 gap-x-4 gap-y-6">
                 <div>
-                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Tutar</div>
-                    <div class="text-2xl font-bold text-slate-900">@Model.Tutar.ToString("N2") <span class="text-base font-medium text-slate-400 ml-1">₺</span></div>
+                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Amount</div>
+                    <div class="text-2xl font-bold text-slate-900">@Model.Amount.ToString("N2") <span class="text-base font-medium text-slate-400 ml-1">₺</span></div>
                 </div>
                 <div>
                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Ödeme Tarihi</div>
-                    <div class="text-base font-bold text-slate-700">@Model.OdemeTarihi.ToString("dd.MM.yyyy")</div>
+                    <div class="text-base font-bold text-slate-700">@Model.PaymentDate.ToString("dd.MM.yyyy")</div>
                 </div>
                 <div>
                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Kanal</div>
@@ -85,7 +85,7 @@
                 </div>
                 <div>
                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Giriş Tarihi</div>
-                    <div class="text-[14px] font-medium text-slate-500">@Model.GirisTarihi.ToString("dd.MM.yyyy HH:mm")</div>
+                    <div class="text-[14px] font-medium text-slate-500">@Model.EntryDate.ToString("dd.MM.yyyy HH:mm")</div>
                 </div>
                 <div>
                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Giriş Yapan</div>
@@ -106,14 +106,14 @@
                     <div class="text-[13.5px] text-slate-600 leading-relaxed bg-slate-50/50 p-3 rounded-lg border border-slate-100 italic">"@Model.Aciklama"</div>
                 </div>
             }
-            @if (Model.Durum == PaymentStatus.Rejected && !string.IsNullOrEmpty(Model.RedNedeni))
+            @if (Model.Durum == PaymentStatus.Rejected && !string.IsNullOrEmpty(Model.RejectionReason))
             {
                 <div class="mt-5 p-4 bg-red-50 rounded-xl border border-red-100">
                     <div class="text-[10px] text-red-400 font-bold mb-2 uppercase tracking-widest flex items-center gap-1.5">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                         Red Nedeni
                     </div>
-                    <div class="text-[13.5px] text-red-800 font-medium">@Model.RedNedeni</div>
+                    <div class="text-[13.5px] text-red-800 font-medium">@Model.RejectionReason</div>
                 </div>
             }
         </div>
@@ -165,7 +165,7 @@
         {
             OwnerType    = KiraTakip.Models.Entities.BelgeOwnerTipi.Odeme,
             OwnerId      = Model.Id,
-            BelgeTurleri = belgeTurleri,
+            DocumentTypes = belgeTurleri,
             Belgeler     = belgeler,
             CanEdit      = canUpload
         })
@@ -176,17 +176,17 @@
             <div class="flex items-center justify-between mb-5">
                 <div class="text-[15px] font-bold text-slate-800 flex items-center gap-2">
                     <span class="w-1.5 h-4 bg-emerald-500 rounded-full"></span>
-                    Banka Eşleşmeleri (@Model.BankaEslesmeleri.Count)
+                    Banka Eşleşmeleri (@Model.BankMatches.Count)
                 </div>
                 @if (canMatch)
                 {
                     <a href="/Odeme/HareketSec/@Model.Id.ToHashId()" class="text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:underline transition-all">+ Yeni Eşleşme</a>
                 }
             </div>
-            @if (Model.BankaEslesmeleri.Any())
+            @if (Model.BankMatches.Any())
             {
                 <div class="flex flex-col gap-2.5">
-                    @foreach (var e in Model.BankaEslesmeleri)
+                    @foreach (var e in Model.BankMatches)
                     {
                         <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl group hover:border-emerald-200 transition-all">
                             <div class="flex items-center justify-between mb-1.5">

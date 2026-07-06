@@ -8,8 +8,8 @@ public interface IUnitTypeRepository : IBaseRepository<UnitType>
     Task<int> GetMaxSiraAsync();
     Task<bool> KodExistsAsync(string kod, int? excludeId = null);
 
-    // Cross-aggregate kontroller (BorcTipi DurumDegistir + UnitType DurumDegistir için)
-    Task<bool> AnyAktifByBorcTipiIdAsync(int borcTipiId, int? excludeId = null);
+    // Cross-aggregate kontroller (ChargeType DurumDegistir + UnitType DurumDegistir için)
+    Task<bool> AnyAktifByBorcTipiIdAsync(int chargeTypeId, int? excludeId = null);
     Task<bool> HasAktifTahakkukForUnitTypeAsync(int birimTuruId);
     Task<bool> HasPlanlanmisRezervasyonForUnitTypeAsync(int birimTuruId);
 }

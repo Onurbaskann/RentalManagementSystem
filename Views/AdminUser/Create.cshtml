@@ -58,15 +58,15 @@
             <div class="form-group border border-slate-200 bg-slate-50/50 p-4 rounded-xl mt-6" x-show="seciliRol !== '' && seciliRol !== 'Sistem Yöneticisi'" x-cloak>
                 <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-4">Taşınmaz Görüntüleme Yetkileri</label>
                 <div class="flex flex-col gap-2.5">
-                    @if(Model.Tasinmazlar != null && Model.Tasinmazlar.Any())
+                    @if(Model.Properties != null && Model.Properties.Any())
                     {
-                        @for (int i = 0; i < Model.Tasinmazlar.Count; i++)
+                        @for (int i = 0; i < Model.Properties.Count; i++)
                         {
                             <label class="flex items-center gap-3 p-2 px-3 bg-white border border-slate-200 rounded-lg cursor-pointer hover:border-indigo-300 transition-colors group">
-                                <input type="checkbox" name="SelectedTasinmazIds" value="@Model.Tasinmazlar[i].TasinmazId" @(Model.Tasinmazlar[i].Selected ? "checked" : "") class="w-4.5 h-4.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                <input type="checkbox" name="SelectedTasinmazIds" value="@Model.Properties[i].TasinmazId" @(Model.Properties[i].Selected ? "checked" : "") class="w-4.5 h-4.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                                 <div>
-                                    <div class="text-[13.5px] font-bold text-slate-700 group-hover:text-indigo-700">@Model.Tasinmazlar[i].Ad</div>
-                                    <div class="text-[10px] text-muted font-medium">@Model.Tasinmazlar[i].Konum</div>
+                                    <div class="text-[13.5px] font-bold text-slate-700 group-hover:text-indigo-700">@Model.Properties[i].Ad</div>
+                                    <div class="text-[10px] text-muted font-medium">@Model.Properties[i].Konum</div>
                                 </div>
                             </label>
                         }

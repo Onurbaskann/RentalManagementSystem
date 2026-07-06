@@ -5,13 +5,13 @@ namespace KiraTakip.Models.ViewModels;
 
 public class OdemeEkleViewModel
 {
-    public int TahakkukId { get; set; }
-    public int? KiraSozlesmesiId { get; set; }
-    public DateTime OdemeTarihi { get; set; } = DateTime.Today;
+    public int ChargeId { get; set; }
+    public int? LeaseId { get; set; }
+    public DateTime PaymentDate { get; set; } = DateTime.Today;
 
-    [Range(0.01, double.MaxValue, ErrorMessage = "Tutar sıfırdan büyük olmalıdır.")]
-    public decimal Tutar { get; set; }
+    [Range(0.01, double.MaxValue, ErrorMessage = "Amount sıfırdan büyük olmalıdır.")]
+    public decimal Amount { get; set; }
     public PaymentChannel PaymentChannel { get; set; } = PaymentChannel.Eft;
     public string? Aciklama { get; set; }
-    public TahakkukDetayDto? Tahakkuk { get; set; }
+    public TahakkukDetayDto? Charge { get; set; }
 }

@@ -2,18 +2,18 @@
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Ödeme Ekle";
-    var t = Model.Tahakkuk;
-    var kalan = t != null ? t.ToplamTutar - t.OdenenTutar : 0;
+    var t = Model.Charge;
+    var kalan = t != null ? t.ToplamTutar - t.PaidAmount : 0;
 }
 
 <div class="max-w-[600px] mx-auto">
     <div class="page-header">
         <div>
-            <a href="/Tahakkuk" class="text-xs text-muted no-underline inline-flex items-center gap-1 mb-2">← Tahakkuklar</a>
+            <a href="/Charge" class="text-xs text-muted no-underline inline-flex items-center gap-1 mb-2">← Charges</a>
             <div class="page-title">Ödeme Ekle</div>
             @if (t != null)
             {
-                <div class="page-subtitle">@t.KiraciGosterimAdi — @t.DonemBaslangic.ToString("MMMM yyyy")</div>
+                <div class="page-subtitle">@t.KiraciGosterimAdi — @t.PeriodStart.ToString("MMMM yyyy")</div>
             }
         </div>
     </div>
@@ -22,12 +22,12 @@
     {
         <div class="flex gap-3 mb-5 flex-wrap">
             <div class="card card-sm flex-1 min-w-[9.375rem]">
-                <div class="card-title">Toplam Tahakkuk</div>
+                <div class="card-title">Toplam Charge</div>
                 <div class="card-value" style="font-size: 1.375rem;">@t.ToplamTutar.ToString("N0") ₺</div>
             </div>
             <div class="card card-sm flex-1 min-w-[9.375rem]">
                 <div class="card-title">Ödenen</div>
-                <div class="card-value" style="font-size: 1.375rem; color: #065f46;">@t.OdenenTutar.ToString("N0") ₺</div>
+                <div class="card-value" style="font-size: 1.375rem; color: #065f46;">@t.PaidAmount.ToString("N0") ₺</div>
             </div>
             <div class="card card-sm flex-1 min-w-[9.375rem]">
                 <div class="card-title">Kalan</div>
@@ -40,8 +40,8 @@
     <div class="card">
         <form method="post" action="/Odeme/Ekle" asp-form-write-permission="@PermissionCatalog.Payment.Create">
             @Html.AntiForgeryToken()
-            <input type="hidden" asp-for="TahakkukId" />
-            <input type="hidden" asp-for="KiraSozlesmesiId" />
+            <input type="hidden" asp-for="ChargeId" />
+            <input type="hidden" asp-for="LeaseId" />
 
             @if (!ViewData.ModelState.IsValid)
             {
@@ -51,18 +51,18 @@
             <div class="form-group">
                 <label class="form-label">Ödeme Tarihi</label>
                 @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
-                    { "Name",  "OdemeTarihi" },
-                    { "Value", Model.OdemeTarihi.ToString("yyyy-MM-dd") },
+                    { "Name",  "PaymentDate" },
+                    { "Value", Model.PaymentDate.ToString("yyyy-MM-dd") },
                     { "Mode",  "date" },
                     { "Field", "odemeTarihi" }
                 })
-                <span asp-validation-for="OdemeTarihi" class="form-error"></span>
+                <span asp-validation-for="PaymentDate" class="form-error"></span>
             </div>
 
             <div class="form-group">
-                <label class="form-label">Tutar (₺)</label>
-                <input asp-for="Tutar" type="number" step="0.01" class="form-control" />
-                <span asp-validation-for="Tutar" class="form-error"></span>
+                <label class="form-label">Amount (₺)</label>
+                <input asp-for="Amount" type="number" step="0.01" class="form-control" />
+                <span asp-validation-for="Amount" class="form-error"></span>
             </div>
 
             <div class="form-group">
@@ -86,7 +86,7 @@
 
             <div class="flex gap-2.5">
                 <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Payment.Create">Kaydet</button>
-                <a href="/Tahakkuk" class="btn btn-secondary">İptal</a>
+                <a href="/Charge" class="btn btn-secondary">İptal</a>
             </div>
         </form>
     </div>

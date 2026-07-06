@@ -22,7 +22,7 @@
         <div class="page-title">Borç Tipleri</div>
         <div class="page-subtitle">@Model.Count kayıt</div>
     </div>
-    <a href="/Admin/BorcTipi/Ekle" class="btn btn-primary flex items-center gap-2">
+    <a href="/Admin/ChargeType/Ekle" class="btn btn-primary flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Yeni Borç Tipi
     </a>
@@ -34,7 +34,7 @@
         <button @@click="filtre='AylikSabit'" :class="filtre==='AylikSabit' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Aylık Sabit</button>
         <button @@click="filtre='IlkAyTekSeferlik'" :class="filtre==='IlkAyTekSeferlik' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">İlk Ay Tek Seferlik</button>
         <button @@click="filtre='KullaniciManuel'" :class="filtre==='KullaniciManuel' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Kullanıcı Manuel</button>
-        <button @@click="filtre='RezervasyonOzel'" :class="filtre==='RezervasyonOzel' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Rezervasyon Özel</button>
+        <button @@click="filtre='RezervasyonOzel'" :class="filtre==='RezervasyonOzel' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Reservation Özel</button>
     </div>
 
     <div class="card p-0 overflow-hidden mt-3">
@@ -58,19 +58,19 @@
                             ChargeTypeBehavior.MonthlyFixed        => ("Aylık Sabit",         "text-blue-700"),
                             ChargeTypeBehavior.FirstMonthOneTime  => ("İlk Ay Tek Seferlik", "text-purple-700"),
                             ChargeTypeBehavior.UserManual   => ("Kullanıcı Manuel",    "text-amber-700"),
-                            ChargeTypeBehavior.ReservationSpecific   => ("Rezervasyon Özel",    "text-teal-700"),
+                            ChargeTypeBehavior.ReservationSpecific   => ("Reservation Özel",    "text-teal-700"),
                             _                                   => (bt.Davranis.ToString(), "text-slate-700")
                         };
                         <tr x-show="filtre==='' || filtre==='@davranisKey'" x-cloak>
                             <td class="text-center">
                                 <div class="flex items-center justify-center gap-1">
-                                    <form method="post" action="/Admin/BorcTipi/SiraDegistir/@bt.Id.ToHashId()" class="inline">
+                                    <form method="post" action="/Admin/ChargeType/SiraDegistir/@bt.Id.ToHashId()" class="inline">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="yeniSira" value="@(bt.Sira - 1)" />
                                         <button type="submit" class="btn btn-sm btn-secondary px-1.5 py-0.5 text-[10px] leading-tight" title="Yukarı taşı" @(bt.Sira <= 1 ? "disabled" : "")>▲</button>
                                     </form>
                                     <span class="text-muted text-xs min-w-[1.25rem] text-center">@bt.Sira</span>
-                                    <form method="post" action="/Admin/BorcTipi/SiraDegistir/@bt.Id.ToHashId()" class="inline">
+                                    <form method="post" action="/Admin/ChargeType/SiraDegistir/@bt.Id.ToHashId()" class="inline">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="yeniSira" value="@(bt.Sira + 1)" />
                                         <button type="submit" class="btn btn-sm btn-secondary px-1.5 py-0.5 text-[10px] leading-tight" title="Aşağı taşı">▼</button>
@@ -94,10 +94,10 @@
                                 { <span class="badge badge-gecmis">Pasif</span> }
                             </td>
                             <td class="flex gap-1.5 justify-end">
-                                <a href="/Admin/BorcTipi/Duzenle/@bt.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
+                                <a href="/Admin/ChargeType/Duzenle/@bt.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
                                 @if (!bt.Sistem)
                                 {
-                                    <form method="post" action="/Admin/BorcTipi/DurumDegistir/@bt.Id.ToHashId()"
+                                    <form method="post" action="/Admin/ChargeType/DurumDegistir/@bt.Id.ToHashId()"
                                           data-confirm="@(bt.Aktif ? $"'{bt.Ad}' pasif yapılsın mı?" : $"'{bt.Ad}' aktif yapılsın mı?")"
                                           class="inline">
                                         @Html.AntiForgeryToken()

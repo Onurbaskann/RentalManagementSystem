@@ -35,8 +35,8 @@ public class TarifeHiyerarsiService : ITarifeHiyerarsiService
     {
         int hedefYil = yil ?? DateTime.Now.Year;
 
-        // Sozlesme katmanı: önce BirimTarife'e bak
-        if (katman == TarifeHiyerarsiKatmani.Sozlesme && birimId.HasValue)
+        // Lease katmanı: önce BirimTarife'e bak
+        if (katman == TarifeHiyerarsiKatmani.Lease && birimId.HasValue)
         {
             var kartlar = await _birimTarifeRepo.GetByBirimForKartAsync(birimId.Value, kategoriId);
             if (kartlar.Count > 0)
@@ -46,8 +46,8 @@ public class TarifeHiyerarsiService : ITarifeHiyerarsiService
                 tasinmazId = await _birimRepo.GetTasinmazIdAsync(birimId.Value);
         }
 
-        // Birim veya Sozlesme katmanı: TasinmazTarife'a bak
-        if (katman is TarifeHiyerarsiKatmani.Birim or TarifeHiyerarsiKatmani.Sozlesme
+        // Unit veya Lease katmanı: TasinmazTarife'a bak
+        if (katman is TarifeHiyerarsiKatmani.Unit or TarifeHiyerarsiKatmani.Lease
             && tasinmazId.HasValue)
         {
             var fiyatlar = await _tasinmazTarifeRepo.GetForHiyerarsiAsync(tasinmazId.Value, kategoriId);
@@ -59,10 +59,10 @@ public class TarifeHiyerarsiService : ITarifeHiyerarsiService
                     Satirlar = fiyatlar.Select(f => new ParentTarifeSatir
                     {
                         KategoriAd = f.KiraciKategori.Ad,
-                        BorcTipiAd = f.BorcTipi.Ad,
+                        ChargeTypeName = f.ChargeType.Name,
                         CalculationMethod = f.CalculationMethod,
-                        BirimDeger = f.BirimDeger,
-                        KdvOrani = f.KdvOrani
+                        UnitValue = f.UnitValue,
+                        KdvRate = f.KdvRate
                     }).ToList()
                 };
         }
@@ -85,7 +85,7 @@ public class TarifeHiyerarsiService : ITarifeHiyerarsiService
 
         return new ParentRezervasyonTarifeKartViewModel
         {
-            KaynakAdi = $"Rezervasyon Tarifesi - {hedefYil}",
+            KaynakAdi = $"Reservation Tarifesi - {hedefYil}",
             Satirlar = satirlar
         };
     }

@@ -16,5 +16,5 @@ public class KullaniciEkleViewModel
     public string Rol { get; set; } = string.Empty;
 
     public List<int> SelectedTasinmazIds { get; set; } = [];
-    public List<TasinmazYetkiCheckboxViewModel> Tasinmazlar { get; set; } = [];
+    public List<TasinmazYetkiCheckboxViewModel> Properties { get; set; } = [];
 }

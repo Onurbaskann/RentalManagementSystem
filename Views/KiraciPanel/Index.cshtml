@@ -147,8 +147,8 @@ BÖLÜM 2 — KPI KARTLARI (spec §3.2)
             <span class="text-[10px] font-bold uppercase tracking-wider text-red-700 bg-red-50 border border-red-100 px-2 py-0.5 rounded-md">@Model.GecikmisTutar.ToString("N2") ₺</span>
         </div>
         <div class="text-3xl font-bold text-slate-800" data-countup="@Model.GecikmisAdet" data-decimals="0">0</div>
-        <div class="text-[12px] text-slate-500 mt-1">Gecikmiş Tahakkuk</div>
-        <a href="/Kiraci/Tahakkuklarim?durum=gecikti" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-1 block">Görüntüle →</a>
+        <div class="text-[12px] text-slate-500 mt-1">Gecikmiş Charge</div>
+        <a href="/Tenant/Tahakkuklarim?durum=gecikti" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-1 block">Görüntüle →</a>
     </div>
     }
 
@@ -212,13 +212,13 @@ BÖLÜM 4 — YAKLAŞAN TAHAKKUKLAR + SON ÖDEMELER (spec §3.4)
 {
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
 
-    @* §3.4.A Sol — Yaklaşan Tahakkuklar *@
+    @* §3.4.A Sol — Yaklaşan Charges *@
     @if (hasBorc)
     {
     <div class="bg-white rounded-2xl border border-slate-200 p-5">
         <div class="flex items-center justify-between mb-4">
-            <div class="text-sm font-bold text-slate-800">Yaklaşan Tahakkuklar</div>
-            <a href="/Kiraci/Tahakkuklarim" class="text-xs font-semibold text-[#1a6b5c] hover:underline">Tümünü Gör →</a>
+            <div class="text-sm font-bold text-slate-800">Yaklaşan Charges</div>
+            <a href="/Tenant/Tahakkuklarim" class="text-xs font-semibold text-[#1a6b5c] hover:underline">Tümünü Gör →</a>
         </div>
         @if (!Model.YaklasanTahakkuklar.Any())
         {
@@ -231,7 +231,7 @@ BÖLÜM 4 — YAKLAŞAN TAHAKKUKLAR + SON ÖDEMELER (spec §3.4)
                 {
                     var borderCls = t.BorderRenk == "red" ? "border-red-500" : t.BorderRenk == "amber" ? "border-amber-500" : "border-emerald-500";
                     var rozetCls  = t.BorderRenk == "red" ? "bg-red-100 text-red-700" : t.BorderRenk == "amber" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700";
-                    var vadeMesaj = t.GunFarki < 0 ? $"{Math.Abs(t.GunFarki)} gün geçti" : t.GunFarki == 0 ? "Bugün" : t.GunFarki <= 7 ? $"{t.GunFarki} gün kaldı" : t.VadeTarihi.ToString("dd.MM.yyyy");
+                    var vadeMesaj = t.GunFarki < 0 ? $"{Math.Abs(t.GunFarki)} gün geçti" : t.GunFarki == 0 ? "Bugün" : t.GunFarki <= 7 ? $"{t.GunFarki} gün kaldı" : t.DueDate.ToString("dd.MM.yyyy");
                     <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50/50 border-l-4 @borderCls hover:translate-x-0.5 transition-all">
                         <div class="flex-1 min-w-0">
                             <div class="text-sm font-semibold text-slate-800 truncate">@t.Donem</div>
@@ -242,7 +242,7 @@ BÖLÜM 4 — YAKLAŞAN TAHAKKUKLAR + SON ÖDEMELER (spec §3.4)
                         </div>
                         <div class="text-right shrink-0">
                             <div class="text-sm font-bold text-slate-800">@t.Kalan.ToString("N2") ₺</div>
-                            <a href="/Kiraci/Tahakkuklarim/Detay/@t.TahakkukId.ToHashId()" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-0.5 block">Ödeme Yap →</a>
+                            <a href="/Tenant/Tahakkuklarim/Detay/@t.ChargeId.ToHashId()" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-0.5 block">Ödeme Yap →</a>
                         </div>
                     </div>
                 }
@@ -257,7 +257,7 @@ BÖLÜM 4 — YAKLAŞAN TAHAKKUKLAR + SON ÖDEMELER (spec §3.4)
     <div class="bg-white rounded-2xl border border-slate-200 p-5">
         <div class="flex items-center justify-between mb-4">
             <div class="text-sm font-bold text-slate-800">Son Ödemeler</div>
-            <a href="/Kiraci/Tahakkuklarim" class="text-xs font-semibold text-[#1a6b5c] hover:underline">Tümünü Gör →</a>
+            <a href="/Tenant/Tahakkuklarim" class="text-xs font-semibold text-[#1a6b5c] hover:underline">Tümünü Gör →</a>
         </div>
         @if (!Model.SonOdemeler.Any())
         {
@@ -274,11 +274,11 @@ BÖLÜM 4 — YAKLAŞAN TAHAKKUKLAR + SON ÖDEMELER (spec §3.4)
                     <div class="relative flex items-center justify-between py-2.5">
                         <span class="absolute -left-[18px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full ring-4 ring-white @dotCls"></span>
                         <div>
-                            <div class="text-sm font-semibold text-slate-800">@o.OdemeTarihi.ToString("dd.MM.yyyy")</div>
+                            <div class="text-sm font-semibold text-slate-800">@o.PaymentDate.ToString("dd.MM.yyyy")</div>
                             <div class="text-xs text-slate-500 mt-0.5">@o.KanalAd</div>
                         </div>
                         <div class="text-right">
-                            <div class="text-sm font-bold text-slate-800">@o.Tutar.ToString("N2") ₺</div>
+                            <div class="text-sm font-bold text-slate-800">@o.Amount.ToString("N2") ₺</div>
                             <div class="text-[10px] font-bold uppercase tracking-wider @durumRenkCls">@o.DurumAd</div>
                         </div>
                     </div>
@@ -301,19 +301,19 @@ BÖLÜM 5 — HIZLI EYLEMLER (spec §3.5)
 
     @if (hasBorc)
     {
-    <a href="/Kiraci/Tahakkuklarim"
+    <a href="/Tenant/Tahakkuklarim"
        class="block p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-sm">
             <i data-lucide="receipt" class="w-6 h-6"></i>
         </div>
-        <div class="text-sm font-bold text-slate-800 mt-3">Tahakkuklarım</div>
+        <div class="text-sm font-bold text-slate-800 mt-3">Chargesım</div>
         <div class="text-xs text-slate-600 mt-0.5">Borç ve ödeme akışı</div>
     </a>
     }
 
     @if (hasSozlesme)
     {
-    <a href="/Kiraci/Sozlesmeler"
+    <a href="/Tenant/Leases"
        class="block p-5 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-sm">
             <i data-lucide="file-text" class="w-6 h-6"></i>
@@ -325,7 +325,7 @@ BÖLÜM 5 — HIZLI EYLEMLER (spec §3.5)
 
     @if (hasRezervasy)
     {
-    <a href="/Kiraci/Rezervasyonum"
+    <a href="/Tenant/Rezervasyonum"
        class="block p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-sm">
             <i data-lucide="calendar" class="w-6 h-6"></i>
@@ -335,7 +335,7 @@ BÖLÜM 5 — HIZLI EYLEMLER (spec §3.5)
     </a>
     }
 
-    <a href="/Kiraci/Profil"
+    <a href="/Tenant/Profil"
        class="block p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center text-white shadow-sm">
             <i data-lucide="building-2" class="w-6 h-6"></i>
@@ -399,7 +399,7 @@ SCRIPTS — Sayfaya özel JS (spec §4)
 
             // §4.B — Borç Tipi Dağılımı (Donut) + §4.C — Sparkline
             if (_hasBorc) {
-                const donutData   = [@Html.Raw(string.Join(",", Model.BorcTipiDagilimi.Select(x => x.Tutar.ToString(System.Globalization.CultureInfo.InvariantCulture))))];
+                const donutData   = [@Html.Raw(string.Join(",", Model.BorcTipiDagilimi.Select(x => x.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture))))];
                 const donutLabels = [@Html.Raw(string.Join(",", Model.BorcTipiDagilimi.Select(x => $"'{x.Ad.Replace("'", "\\'")}'")))];
                 if (donutData.length > 0) {
                     new ApexCharts(document.querySelector('#chart-donut'), {

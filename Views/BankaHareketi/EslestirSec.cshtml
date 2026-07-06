@@ -3,12 +3,12 @@
 @using KiraTakip.Models.Dtos
 @{
     ViewData["Title"] = "Ödeme Eşleştir";
-    var b = Model.BankaHareketi;
+    var b = Model.BankTransaction;
 }
 
 <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
     <div>
-        <a href="/BankaHareketi" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">← Banka Hareketleri</a>
+        <a href="/BankTransaction" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">← Banka Hareketleri</a>
         <div class="page-title">Ödeme Eşleştir</div>
         <div class="page-subtitle">Banka hareketine karşılık gelen ödemeyi seçin</div>
     </div>
@@ -20,15 +20,15 @@
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;">
         <div>
             <div style="font-size:11.5px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:3px;">Tarih</div>
-            <div style="font-weight:600;">@b.IslemTarihi.ToString("dd.MM.yyyy")</div>
+            <div style="font-weight:600;">@b.TransactionDate.ToString("dd.MM.yyyy")</div>
         </div>
         <div>
-            <div style="font-size:11.5px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:3px;">Tutar</div>
-            <div style="font-size:18px;font-weight:700;font-family:'Fraunces',serif;">@b.IslemTutari.ToString("N0") ₺</div>
+            <div style="font-size:11.5px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:3px;">Amount</div>
+            <div style="font-size:18px;font-weight:700;font-family:'Fraunces',serif;">@b.TransactionAmount.ToString("N0") ₺</div>
         </div>
         <div>
             <div style="font-size:11.5px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:3px;">Karşı Taraf</div>
-            <div>@(b.GonderenBilgisi ?? b.GonderenIban ?? "—")</div>
+            <div>@(b.SenderInfo ?? b.SenderIban ?? "—")</div>
         </div>
         <div>
             <div style="font-size:11.5px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:3px;">Açıklama</div>
@@ -55,7 +55,7 @@
                         <th>Ödeme</th>
                         <th>Kiracı</th>
                         <th>Dönem</th>
-                        <th>Tutar</th>
+                        <th>Amount</th>
                         <th>Ödeme Tarihi</th>
                         <th>Durum</th>
                         <th>Uyum</th>
@@ -67,41 +67,41 @@
                         int sira = 0;
                         foreach (var o in Model.OdemeAdaylari)
                         {
-                            bool tutarExact = o.Tutar == b.IslemTutari;
-                            bool tutarClose = Math.Abs(o.Tutar - b.IslemTutari) <= b.IslemTutari * 0.02m;
-                            int gunFark = Math.Abs((o.OdemeTarihi - b.IslemTarihi).Days);
+                            bool tutarExact = o.Amount == b.TransactionAmount;
+                            bool tutarClose = Math.Abs(o.Amount - b.TransactionAmount) <= b.TransactionAmount * 0.02m;
+                            int gunFark = Math.Abs((o.PaymentDate - b.TransactionDate).Days);
 
                             string uyumLabel, uyumCls, uyumTip;
-                            if (tutarExact && gunFark <= 15)      { uyumLabel = "Yüksek"; uyumCls = "badge-kirali"; uyumTip = $"Tutar birebir eşleşiyor • Tarih farkı {gunFark} gün (≤15)"; }
-                            else if (tutarExact)                   { uyumLabel = "Orta";   uyumCls = "badge-surek";  uyumTip = $"Tutar birebir eşleşiyor • Tarih farkı {gunFark} gün (>15)"; }
-                            else if (tutarClose && gunFark <= 15)  { uyumLabel = "Zayıf";  uyumCls = "badge-bos";    uyumTip = $"Tutar %2 toleransta • Tarih farkı {gunFark} gün"; }
-                            else                                   { uyumLabel = "Düşük";  uyumCls = "badge-gecmis"; uyumTip = $"Tutar farkı %2'den fazla veya tarih uzak ({gunFark} gün)"; }
+                            if (tutarExact && gunFark <= 15)      { uyumLabel = "Yüksek"; uyumCls = "badge-kirali"; uyumTip = $"Amount birebir eşleşiyor • Tarih farkı {gunFark} gün (≤15)"; }
+                            else if (tutarExact)                   { uyumLabel = "Orta";   uyumCls = "badge-surek";  uyumTip = $"Amount birebir eşleşiyor • Tarih farkı {gunFark} gün (>15)"; }
+                            else if (tutarClose && gunFark <= 15)  { uyumLabel = "Zayıf";  uyumCls = "badge-bos";    uyumTip = $"Amount %2 toleransta • Tarih farkı {gunFark} gün"; }
+                            else                                   { uyumLabel = "Düşük";  uyumCls = "badge-gecmis"; uyumTip = $"Amount farkı %2'den fazla veya tarih uzak ({gunFark} gün)"; }
 
                             string durumCls   = o.Durum == PaymentStatus.Approved ? "badge-kirali" : "badge-surek";
                             string durumLabel = o.Durum == PaymentStatus.Approved ? "Onaylandı" : "Onay Bekliyor";
                             sira++;
                         <tr style="@(sira == 1 ? "background:#f0fdf4;" : "")">
                             <td style="color:var(--color-muted);font-size:12.5px;">#@o.Id</td>
-                            <td style="font-weight:600;">@(string.IsNullOrEmpty(o.KiraciGosterimAdi) ? "Rezervasyon Ödemesi" : o.KiraciGosterimAdi)</td>
-                            <td style="font-size:13px;">@o.DonemBaslangic.ToString("MMMM yyyy")</td>
+                            <td style="font-weight:600;">@(string.IsNullOrEmpty(o.KiraciGosterimAdi) ? "Reservation Ödemesi" : o.KiraciGosterimAdi)</td>
+                            <td style="font-size:13px;">@o.PeriodStart.ToString("MMMM yyyy")</td>
                             <td style="font-weight:@(tutarExact ? "700" : "400");">
-                                @o.Tutar.ToString("N0") ₺
+                                @o.Amount.ToString("N0") ₺
                                 @if (!tutarExact)
                                 {
-                                    <span style="font-size:11px;color:var(--color-muted);"> (fark: @Math.Abs(o.Tutar - b.IslemTutari).ToString("N0") ₺)</span>
+                                    <span style="font-size:11px;color:var(--color-muted);"> (fark: @Math.Abs(o.Amount - b.TransactionAmount).ToString("N0") ₺)</span>
                                 }
                             </td>
                             <td>
-                                @o.OdemeTarihi.ToString("dd.MM.yyyy")
+                                @o.PaymentDate.ToString("dd.MM.yyyy")
                                 <span style="font-size:11px;color:var(--color-muted);"> (@gunFark gün)</span>
                             </td>
                             <td><span class="badge @durumCls">@durumLabel</span></td>
                             <td><span class="badge @uyumCls" data-tip="@uyumTip">@uyumLabel</span></td>
                             <td>
-                                <form method="post" action="/BankaHareketi/Eslestir">
+                                <form method="post" action="/BankTransaction/Eslestir">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="OdemeId" value="@o.Id" />
-                                    <input type="hidden" name="BankaHareketiId" value="@b.Id" />
+                                    <input type="hidden" name="BankTransactionId" value="@b.Id" />
                                     <button type="submit" class="btn btn-primary btn-sm">Eşleştir</button>
                                 </form>
                             </td>

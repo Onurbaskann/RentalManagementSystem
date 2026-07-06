@@ -2,12 +2,12 @@
 @using KiraTakip.Models.Entities
 @using System.Linq
 
-@if (!Model.BelgeTurleri.Any()) { return; }
+@if (!Model.DocumentTypes.Any()) { return; }
 
 @{
-    var yuklenenSayisi = Model.BelgeTurleri.Count(bt => Model.Belgeler.Any(b => b.BelgeTuruId == bt.Id));
-    var eksikZorunlu   = Model.BelgeTurleri
-        .Where(bt => bt.Zorunlu && !Model.Belgeler.Any(b => b.BelgeTuruId == bt.Id))
+    var yuklenenSayisi = Model.DocumentTypes.Count(bt => Model.Belgeler.Any(b => b.DocumentTypeId == bt.Id));
+    var eksikZorunlu   = Model.DocumentTypes
+        .Where(bt => bt.Required && !Model.Belgeler.Any(b => b.DocumentTypeId == bt.Id))
         .ToList();
 }
 
@@ -15,14 +15,14 @@
     <div class="p-[18px_20px_14px] border-b border-[var(--color-border)] flex items-center gap-2">
         <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
         <span class="section-title">Belgeler</span>
-        <span class="text-[12px] text-muted font-normal">(@yuklenenSayisi / @Model.BelgeTurleri.Count yüklendi)</span>
+        <span class="text-[12px] text-muted font-normal">(@yuklenenSayisi / @Model.DocumentTypes.Count yüklendi)</span>
     </div>
 
     <div class="divide-y divide-[var(--color-border)]">
-        @foreach (var bt in Model.BelgeTurleri)
+        @foreach (var bt in Model.DocumentTypes)
         {
-            var mevcut = Model.Belgeler.FirstOrDefault(b => b.BelgeTuruId == bt.Id);
-            var acceptAttr = string.Join(",", bt.IzinVerilenUzantilar.Split(',').Select(e => "." + e.Trim()));
+            var mevcut = Model.Belgeler.FirstOrDefault(b => b.DocumentTypeId == bt.Id);
+            var acceptAttr = string.Join(",", bt.AllowedExtensions.Split(',').Select(e => "." + e.Trim()));
             <div x-data="{ showForm: false }" class="px-5 py-4">
                 <div class="flex items-center justify-between gap-4">
                     <!-- Sol: ikon + bilgi -->
@@ -39,8 +39,8 @@
                         </div>
                         <div class="min-w-0">
                             <div class="flex items-center gap-1.5 flex-wrap">
-                                <span class="text-[13.5px] font-semibold text-slate-800">@bt.Ad</span>
-                                @if (bt.Zorunlu)
+                                <span class="text-[13.5px] font-semibold text-slate-800">@bt.Name</span>
+                                @if (bt.Required)
                                 {
                                     <span class="text-[10px] font-bold bg-red-50 text-red-600 px-1.5 py-0.5 rounded-md border border-red-100 leading-tight">Zorunlu</span>
                                 }
@@ -67,7 +67,7 @@
                                class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="İndir">
                                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                             </a>
-                            @if (Model.CanEdit && !bt.Zorunlu)
+                            @if (Model.CanEdit && !bt.Required)
                             {
                                 <form method="post" action="/Belge/Sil/@mevcut.Id.ToHashId()" data-confirm="Bu belge silinsin mi?" class="inline">
                                     @Html.AntiForgeryToken()
@@ -106,7 +106,7 @@
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="ownerType" value="@((int)Model.OwnerType)" />
                             <input type="hidden" name="ownerId"   value="@Model.OwnerId" />
-                            <input type="hidden" name="belgeTuruId" value="@bt.Id" />
+                            <input type="hidden" name="documentTypeId" value="@bt.Id" />
                             <div class="flex-1 w-full">
                                 <input type="file" name="dosya" class="form-control text-xs
                                        file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0
@@ -114,7 +114,7 @@
                                        hover:file:bg-indigo-100 transition-all"
                                        accept="@acceptAttr" required />
                                 <div class="text-[10.5px] text-muted mt-1.5">
-                                    İzin verilen: @bt.IzinVerilenUzantilar · Maks. @bt.MaxBoyutMb MB
+                                    İzin verilen: @bt.AllowedExtensions · Maks. @bt.MaxSizeMb MB
                                 </div>
                             </div>
                             <button type="submit" class="btn btn-primary btn-sm px-5 flex-shrink-0">Kaydet</button>
@@ -129,7 +129,7 @@
     {
         <div class="px-5 py-3 border-t border-amber-100 bg-amber-50 flex items-center gap-2 text-amber-700 text-[12.5px]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="flex-shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <span><span class="font-semibold">Eksik zorunlu belgeler:</span> @string.Join(", ", eksikZorunlu.Select(b => b.Ad))</span>
+            <span><span class="font-semibold">Eksik zorunlu belgeler:</span> @string.Join(", ", eksikZorunlu.Select(b => b.Name))</span>
         </div>
     }
 </div>

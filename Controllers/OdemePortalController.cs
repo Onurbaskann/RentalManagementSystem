@@ -35,19 +35,19 @@ public class OdemePortalController : Controller
             return View("Invalid", validation.Reason ?? "Geçersiz veya süresi dolmuş ödeme linki.");
         var kiraciId = validation.KiraciId;
 
-        var kiraci = await _ctx.Kiraciler.FirstOrDefaultAsync(k => k.Id == kiraciId);
+        var kiraci = await _ctx.Tenants.FirstOrDefaultAsync(k => k.Id == kiraciId);
         if (kiraci == null) return View("Invalid", "Kiracı bulunamadı.");
 
         var vadeEsigi = DateTime.Today.AddDays(_paymentLinkSettings.ReminderDaysBefore);
 
-        var borclar = await _ctx.Tahakkuklar
-            .Include(x => x.KiraSozlesmesi!).ThenInclude(s => s!.Birim).ThenInclude(b => b.Tasinmaz)
-            .Include(x => x.Odemeler)
-            .Where(x => x.KiraSozlesmesi!.KiraciId == kiraciId
-                     && x.Durum != ChargeStatus.Paid
-                     && x.Durum != ChargeStatus.Cancelled
-                     && x.VadeTarihi <= vadeEsigi)
-            .OrderBy(x => x.VadeTarihi)
+        var borclar = await _ctx.Charges
+            .Include(x => x.Lease!).ThenInclude(s => s!.Unit).ThenInclude(b => b.Property)
+            .Include(x => x.Allocations)
+            .Where(x => x.Lease!.TenantId == kiraciId
+                     && x.Status != ChargeStatus.Paid
+                     && x.Status != ChargeStatus.Cancelled
+                     && x.DueDate <= vadeEsigi)
+            .OrderBy(x => x.DueDate)
             .ToListAsync();
 
         if (borclar.Count == 0)
@@ -55,7 +55,7 @@ public class OdemePortalController : Controller
             var noDebtModel = new KiraciOdemePortalViewModel
             {
                 KiraciId = kiraci.Id,
-                Ad = kiraci.Ad,
+                Ad = kiraci.Name,
                 Soyad = "",
                 Email = kiraci.Email ?? ""
             };
@@ -65,18 +65,18 @@ public class OdemePortalController : Controller
         var vm = new KiraciOdemePortalViewModel
         {
             KiraciId = kiraci.Id,
-            Ad = kiraci.Ad,
+            Ad = kiraci.Name,
             Soyad = "",
             Email = kiraci.Email ?? "",
             Borclar = borclar.Select(b => new BorcKart
             {
-                TahakkukId = b.Id,
-                TasinmazAdi = b.KiraSozlesmesi!.Birim!.Tasinmaz!.Ad,
-                BirimAdi = b.KiraSozlesmesi!.Birim!.Ad,
-                DonemBaslangic = b.DonemBaslangic,
-                VadeTarihi = b.VadeTarihi,
-                ToplamTutar = b.ToplamTutar,
-                OdenenTutar = b.Odemeler.Where(o => o.Durum == PaymentStatus.Approved).Sum(o => o.Tutar)
+                ChargeId = b.Id,
+                TasinmazAdi = b.Lease!.Unit!.Property!.Name,
+                BirimAdi = b.Lease!.Unit!.Name,
+                PeriodStart = b.PeriodStart,
+                DueDate = b.DueDate,
+                ToplamTutar = b.TotalAmount,
+                PaidAmount = b.Allocations.Where(o => o.Status == PaymentStatus.Approved).Sum(o => o.Amount)
             }).ToList(),
             DefaultSelectedId = borclar.First().Id
         };

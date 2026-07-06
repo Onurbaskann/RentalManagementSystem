@@ -3,8 +3,8 @@
 @model KiraTakip.Models.ViewModels.AuditLogFilterViewModel
 @{
     ViewData["Title"] = "Hareket Geçmişi";
-    var baslangicStr = Model.BaslangicTarihi.HasValue ? Model.BaslangicTarihi.Value.ToString("yyyy-MM-dd") : string.Empty;
-    var bitisStr     = Model.BitisTarihi.HasValue     ? Model.BitisTarihi.Value.ToString("yyyy-MM-dd")     : string.Empty;
+    var baslangicStr = Model.StartDate.HasValue ? Model.StartDate.Value.ToString("yyyy-MM-dd") : string.Empty;
+    var bitisStr     = Model.EndDate.HasValue     ? Model.EndDate.Value.ToString("yyyy-MM-dd")     : string.Empty;
     var emailStr     = Model.KullaniciEmail ?? string.Empty;
 }
 
@@ -41,11 +41,11 @@
         </div>
         <div>
             <label class="form-label">Başlangıç</label>
-            <input type="date" name="BaslangicTarihi" class="form-control" value="@baslangicStr" />
+            <input type="date" name="StartDate" class="form-control" value="@baslangicStr" />
         </div>
         <div>
             <label class="form-label">Bitiş</label>
-            <input type="date" name="BitisTarihi" class="form-control" value="@bitisStr" />
+            <input type="date" name="EndDate" class="form-control" value="@bitisStr" />
         </div>
         <div class="flex-1 min-w-[180px]">
             <label class="form-label">Kullanıcı E-posta</label>
@@ -137,7 +137,7 @@
         var _ent = Uri.EscapeDataString(Model.EntityType ?? string.Empty);
         var _em  = Uri.EscapeDataString(Model.KullaniciEmail ?? string.Empty);
         Func<int, string> SayfaUrl = s =>
-            $"?EventType={_et}&EntityType={_ent}&BaslangicTarihi={baslangicStr}&BitisTarihi={bitisStr}&KullaniciEmail={_em}&Sayfa={s}";
+            $"?EventType={_et}&EntityType={_ent}&StartDate={baslangicStr}&EndDate={bitisStr}&KullaniciEmail={_em}&Sayfa={s}";
 
         var pencereBas = Math.Max(1, Model.Sayfa - 2);
         var pencereSon = Math.Min(Model.ToplamSayfa, Model.Sayfa + 2);

@@ -22,9 +22,9 @@ namespace KiraTakip.Models.ViewModels
 
     public class BorcTipiFiyatKolonuViewModel
     {
-        public int BorcTipiId { get; set; }
-        public string BorcTipiAd { get; set; } = string.Empty;
-        public string BorcTipiKod { get; set; } = string.Empty;
+        public int ChargeTypeId { get; set; }
+        public string ChargeTypeName { get; set; } = string.Empty;
+        public string ChargeTypeCode { get; set; } = string.Empty;
         public ChargeTypeBehavior ChargeTypeBehavior { get; set; }
     }
 
@@ -33,10 +33,10 @@ namespace KiraTakip.Models.ViewModels
         public int? TasinmazTarifeId { get; set; }
         public int TasinmazId { get; set; }
         public int KiraciKategoriId { get; set; }
-        public int BorcTipiId { get; set; }
-        public decimal? BirimDeger { get; set; }
+        public int ChargeTypeId { get; set; }
+        public decimal? UnitValue { get; set; }
         public CalculationMethod CalculationMethod { get; set; } = CalculationMethod.Fixed;
-        public decimal? KdvOrani { get; set; }
+        public decimal? KdvRate { get; set; }
         public bool RateVarMi { get; set; }
     }
 }

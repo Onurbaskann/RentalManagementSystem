@@ -17,9 +17,9 @@ public class DavetGonderViewModel
 
     public bool TumTasinmazlaraErisim { get; set; } = false;
     public List<int> SelectedTasinmazIds { get; set; } = [];
-    public List<TasinmazYetkiCheckboxViewModel> Tasinmazlar { get; set; } = [];
+    public List<TasinmazYetkiCheckboxViewModel> Properties { get; set; } = [];
     public List<int> SelectedBirimIds { get; set; } = [];
-    public List<BirimYetkiCheckboxViewModel> Birimler { get; set; } = [];
+    public List<BirimYetkiCheckboxViewModel> Units { get; set; } = [];
 }
 
 public class RolSecenekViewModel

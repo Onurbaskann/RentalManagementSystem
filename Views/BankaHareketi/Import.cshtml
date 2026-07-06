@@ -6,7 +6,7 @@
 <div class="max-w-[600px] mx-auto">
     <div class="page-header">
         <div>
-            <a href="/BankaHareketi" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">← Banka Hareketleri</a>
+            <a href="/BankTransaction" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">← Banka Hareketleri</a>
             <div class="page-title">CSV İçe Aktar</div>
             <div class="page-subtitle">Bankanızdan indirdiğiniz CSV dosyasını yükleyin.</div>
         </div>
@@ -14,7 +14,7 @@
 
     <div>
     <div class="card">
-        <form method="post" action="/BankaHareketi/Import" enctype="multipart/form-data">
+        <form method="post" action="/BankTransaction/Import" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
 
             @if (!ViewData.ModelState.IsValid)
@@ -24,7 +24,7 @@
 
             <div class="form-group">
                 <label class="form-label">Banka</label>
-                <select asp-for="BankaKodu" class="form-control">
+                <select asp-for="BankCode" class="form-control">
                     <option value="AKBANK">Akbank</option>
                 </select>
             </div>
@@ -42,7 +42,7 @@
 
             <div style="display:flex;gap:10px;">
                 <button type="submit" class="btn btn-primary">İçe Aktar</button>
-                <a href="/BankaHareketi" class="btn btn-secondary">İptal</a>
+                <a href="/BankTransaction" class="btn btn-secondary">İptal</a>
             </div>
         </form>
     </div>

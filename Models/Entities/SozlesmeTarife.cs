@@ -4,14 +4,15 @@ namespace KiraTakip.Models.Entities;
 
 public class SozlesmeTarife : BaseEntity
 {
-    public int KiraSozlesmesiId { get; set; }
-    public int BorcTipiId { get; set; }
+    [Column("LeaseId")]
+    public int LeaseId { get; set; }
+    public int ChargeTypeId { get; set; }
 
     [Column("HesaplamaYontemi")]
     public CalculationMethod CalculationMethod { get; set; } = CalculationMethod.Fixed;
-    public decimal BirimDeger { get; set; }
-    public decimal KdvOrani { get; set; }
+    public decimal UnitValue { get; set; }
+    public decimal KdvRate { get; set; }
 
-    public Sozlesme KiraSozlesmesi { get; set; } = null!;
-    public BorcTipi BorcTipi { get; set; } = null!;
+    public Lease Lease { get; set; } = null!;
+    public ChargeType ChargeType { get; set; } = null!;
 }

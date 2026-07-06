@@ -30,12 +30,12 @@ public class BirimService : IBirimService
 
         if (dto.AktifSozlesmeId.HasValue)
         {
-            var dummySozlesme = new Sozlesme
+            var dummySozlesme = new Lease
             {
                 Id = dto.AktifSozlesmeId.Value,
-                KiraciId = dto.AktifSozlesmeKiraciId ?? 0,
-                BirimId = dto.Id,
-                Birim = new Birim { Id = dto.Id, Yuzolcumu = dto.Yuzolcumu }
+                TenantId = dto.AktifSozlesmeKiraciId ?? 0,
+                UnitId = dto.Id,
+                Unit = new Unit { Id = dto.Id, Area = dto.Yuzolcumu }
             };
             dto.AylikBedel = await _istatistikService.AylikBedelAsync(dummySozlesme);
         }
@@ -43,13 +43,13 @@ public class BirimService : IBirimService
         return dto;
     }
 
-    public async Task CreateAsync(Birim b)
+    public async Task CreateAsync(Unit b)
     {
         await _repo.AddAsync(b);
         await _uow.SaveChangesAsync();
     }
 
-    public async Task UpdateAsync(Birim b)
+    public async Task UpdateAsync(Unit b)
     {
         await _repo.UpdateAsync(b);
         await _uow.SaveChangesAsync();

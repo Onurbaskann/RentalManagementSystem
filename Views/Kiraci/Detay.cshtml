@@ -3,8 +3,8 @@
 @using KiraTakip.Models
 @using KiraTakip.Extensions
 @{
-    ViewData["Title"] = Model.Kiraci.GosterimAdi;
-    var k = Model.Kiraci;
+    ViewData["Title"] = Model.Tenant.GosterimAdi;
+    var k = Model.Tenant;
     bool canEdit    = User.HasPermission(PermissionCatalog.Tenant.Edit);
     bool hasSozlesme = User.HasModuleAccess("Internal.Lease");
 }
@@ -16,7 +16,7 @@
 
 <div class="page-header flex flex-wrap items-start justify-between mb-2.5 gap-4">
     <div>
-        <a href="/Kiraci" class="text-[12.5px] text-muted no-underline mb-2.5 inline-block transition-colors hover:text-primary">← Kiracılar</a>
+        <a href="/Tenant" class="text-[12.5px] text-muted no-underline mb-2.5 inline-block transition-colors hover:text-primary">← Kiracılar</a>
         <div class="flex items-center gap-3">
             <div class="page-title m-0">@k.GosterimAdi</div>
             <span class="text-[12px] text-muted font-mono bg-[var(--color-surface-muted)] p-0.5 px-2 rounded border border-[var(--color-border)]">@k.KiraciNo</span>
@@ -38,11 +38,11 @@
         }
         @if (canEdit)
         {
-            <a href="/Kiraci/Duzenle/@k.Id.ToHashId()" class="btn btn-secondary">Düzenle</a>
+            <a href="/Tenant/Duzenle/@k.Id.ToHashId()" class="btn btn-secondary">Düzenle</a>
         }
         @if (hasSozlesme && User.HasPermission(PermissionCatalog.Lease.Create))
         {
-            <a href="/Sozlesme/Ekle" class="btn btn-primary">Sözleşme Ekle</a>
+            <a href="/Lease/Ekle" class="btn btn-primary">Sözleşme Ekle</a>
         }
     </div>
 </div>
@@ -125,7 +125,7 @@
     <div class="card">
         <div class="card-title">Sözleşme Özeti</div>
         @{
-            var aktifler = Model.Sozlesmeler.Where(s => s.Aktif).ToList();
+            var aktifler = Model.Leases.Where(s => s.Aktif).ToList();
             decimal toplamAylik = 0m;
             foreach (var aks in aktifler)
                 toplamAylik += aks.AylikBedel;
@@ -145,9 +145,9 @@
 <!-- Belgeler -->
 @await Html.PartialAsync("_BelgePanel", new KiraTakip.Models.ViewModels.BelgePanelViewModel
 {
-    OwnerType   = KiraTakip.Models.Entities.BelgeOwnerTipi.Kiraci,
+    OwnerType   = KiraTakip.Models.Entities.BelgeOwnerTipi.Tenant,
     OwnerId     = k.Id,
-    BelgeTurleri = Model.BelgeTurleri,
+    DocumentTypes = Model.DocumentTypes,
     Belgeler    = Model.Belgeler,
     CanEdit     = canEdit
 })
@@ -159,7 +159,7 @@
     <div class="p-[18px_20px_14px] border-b border-[var(--color-border)]">
         <div class="section-title">Sözleşmeler</div>
     </div>
-    @if (!Model.Sozlesmeler.Any())
+    @if (!Model.Leases.Any())
     {
         <div class="p-8 text-center text-muted">Bu kiracıya ait sözleşme yok.</div>
     }
@@ -169,7 +169,7 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Taşınmaz / Birim</th>
+                        <th>Taşınmaz / Unit</th>
                         <th>Başlangıç</th>
                         <th>Bitiş</th>
                         <th>Aylık Bedel</th>
@@ -179,7 +179,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var s in Model.Sozlesmeler)
+                    @foreach (var s in Model.Leases)
                     {
                         bool aktif = s.Aktif;
                         int kalanGun = s.KalanGun;
@@ -190,9 +190,9 @@
                                 <div class="font-semibold">@s.TasinmazAd</div>
                                 <div class="text-xs text-muted">@s.BirimAd</div>
                             </td>
-                            <td>@s.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
+                            <td>@s.StartDate.ToString("dd.MM.yyyy")</td>
                             <td>
-                                @s.BitisTarihi.ToString("dd.MM.yyyy")
+                                @s.EndDate.ToString("dd.MM.yyyy")
                                 @if (surek) { <span class="day-badge day-badge-amber ml-1.5 text-[11px]">@kalanGun g</span> }
                             </td>
                             <td class="font-bold">@s.AylikBedel.ToString("N0") ₺</td>
@@ -203,7 +203,7 @@
                                 else if (aktif) { <span class="badge badge-kirali">Aktif</span> }
                                 else { <span class="badge badge-gecmis">Geçmiş</span> }
                             </td>
-                            <td><a href="/Sozlesme/Detay/@s.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
+                            <td><a href="/Lease/Detay/@s.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
                         </tr>
                     }
                 </tbody>

@@ -1,11 +1,11 @@
 @model KiraTakip.Models.ViewModels.UnitTypeFormViewModel
 @{
-    ViewData["Title"] = "Yeni Birim Türü";
+    ViewData["Title"] = "Yeni Unit Türü";
 }
 
 <div class="max-w-[600px] mx-auto"><div class="page-header">
     <div>
-        <div class="page-title">Yeni Birim Türü</div>
+        <div class="page-title">Yeni Unit Türü</div>
     </div>
 </div>
 
@@ -38,14 +38,14 @@
                 <label class="flex items-center gap-2 cursor-pointer">
                     <input type="radio" name="usage_selector" value="rez" 
                            x-model="tur" class="w-4 h-4 accent-primary cursor-pointer" />
-                    <span class="text-sm">Rezervasyon yapılabilir <span class="text-muted text-xs">(sözleşmeye bağlı değil)</span></span>
+                    <span class="text-sm">Reservation yapılabilir <span class="text-muted text-xs">(sözleşmeye bağlı değil)</span></span>
                 </label>
                 <div class="text-xs text-muted mt-1">Tam olarak bir seçenek işaretli olmalıdır.</div>
             </div>
         </div>
 
         <div class="form-group" x-show="tur === 'rez'" x-cloak>
-            <label class="form-label">Tahakkuk Borç Tipi <span class="text-red-500">*</span></label>
+            <label class="form-label">Charge Borç Tipi <span class="text-red-500">*</span></label>
             <select asp-for="BorcTipiId" class="form-control" :required="tur === 'rez'">
                 <option value="">-- Borç Tipi Seçin --</option>
                 @foreach (var bt in Model.BorcTipiAdaylari)

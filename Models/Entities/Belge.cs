@@ -1,8 +1,11 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace KiraTakip.Models.Entities;
 
 public class Belge : BaseEntity
 {
-    public int BelgeTuruId { get; set; }
+    [Column("DocumentTypeId")]
+    public int DocumentTypeId { get; set; }
     public BelgeOwnerTipi OwnerType { get; set; }
     public int OwnerId { get; set; }
 
@@ -15,7 +18,7 @@ public class Belge : BaseEntity
     public DateTime? GecersizlikTarihi { get; set; }
     public int? DegistirenBelgeId { get; set; }
 
-    public BelgeTuru BelgeTuru { get; set; } = null!;
+    public DocumentType DocumentType { get; set; } = null!;
     public BelgeIcerik? Icerik { get; set; }
     public Belge? DegistirenBelge { get; set; }
 }

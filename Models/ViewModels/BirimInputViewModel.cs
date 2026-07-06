@@ -4,7 +4,7 @@ namespace KiraTakip.Models.ViewModels;
 
 public class BirimInputViewModel
 {
-    [Display(Name = "Birim No")]
+    [Display(Name = "Unit No")]
     public string BirimNo { get; set; } = string.Empty;
     public int? KatNo { get; set; }
     public string? Ad { get; set; }

@@ -7,7 +7,7 @@
 
 <div class="max-w-[1000px] mx-auto">
     <div class="page-header">
-        <a href="/Tasinmaz" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">← Taşınmazlar</a>
+        <a href="/Property" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">← Taşınmazlar</a>
         <div class="page-title">Yeni Taşınmaz Ekle</div>
     </div>
 
@@ -60,7 +60,7 @@
                     </label>
                     <label class="radio-option" :class="!izinli(2) ? 'opacity-40 cursor-not-allowed' : ''">
                         <input type="radio" asp-for="RentalMode" value="2" x-model="sekli" :disabled="!izinli(2)" />
-                        <span>Birim Bazlı</span>
+                        <span>Unit Bazlı</span>
                     </label>
                 </div>
                 <div class="form-hint" x-show="!tasinmazTipiId">Önce taşınmaz tipi seçiniz.</div>
@@ -88,17 +88,17 @@
 
 
 
-        <!-- Birim Bazlı bölümü -->
+        <!-- Unit Bazlı bölümü -->
         <template x-if="sekli == '2'">
             <div class="card mt-4">
                 <div class="flex items-center justify-between mb-5 pb-3 border-b border-[var(--color-border)]">
                     <div class="text-[15px] font-bold flex items-center gap-2">
                         <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
-                        <span>Birimler</span>
+                        <span>Units</span>
                     </div>
                     <button type="button" class="btn btn-secondary btn-sm" @@click="addBirim()">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                        Birim Ekle
+                        Unit Ekle
                     </button>
                 </div>
 
@@ -112,19 +112,19 @@
 
                         <div class="grid grid-cols-3 gap-3 mb-3 mr-10">
                             <div>
-                                <div class="form-label mb-1">Birim No *</div>
-                                <input class="form-control" :name="'Birimler['+i+'].BirimNo'" x-model="birim.birimNo"
+                                <div class="form-label mb-1">Unit No *</div>
+                                <input class="form-control" :name="'Units['+i+'].BirimNo'" x-model="birim.birimNo"
                                        placeholder="101" @@blur="autoAd(birim)" />
                                 <span x-show="birimErrors[i]?.birimNo" x-text="birimErrors[i]?.birimNo" class="form-error"></span>
                             </div>
                             <div>
                                 <div class="form-label mb-1">Kat No *</div>
-                                <input class="form-control" type="number" :name="'Birimler['+i+'].KatNo'" x-model="birim.katNo" placeholder="1" />
+                                <input class="form-control" type="number" :name="'Units['+i+'].KatNo'" x-model="birim.katNo" placeholder="1" />
                                 <span x-show="birimErrors[i]?.katNo" x-text="birimErrors[i]?.katNo" class="form-error"></span>
                             </div>
                             <div>
-                                <div class="form-label mb-1">Birim Türü *</div>
-                                <select class="form-control" :name="'Birimler['+i+'].UnitTypeId'" x-model="birim.birimTuruId">
+                                <div class="form-label mb-1">Unit Türü *</div>
+                                <select class="form-control" :name="'Units['+i+'].UnitTypeId'" x-model="birim.birimTuruId">
                                     <option value="">— Seçiniz —</option>
                                     @foreach (var bt in (IEnumerable<UnitType>)ViewBag.BirimTurleri)
                                     {
@@ -138,17 +138,17 @@
                         <div class="grid grid-cols-[1fr_100px_2fr] gap-3">
                             <div>
                                 <div class="form-label mb-1">Ad *</div>
-                                <input class="form-control" :name="'Birimler['+i+'].Ad'" x-model="birim.ad" placeholder="Boşsa otomatik doldurulur" />
+                                <input class="form-control" :name="'Units['+i+'].Ad'" x-model="birim.ad" placeholder="Boşsa otomatik doldurulur" />
                                 <span x-show="birimErrors[i]?.ad" x-text="birimErrors[i]?.ad" class="form-error"></span>
                             </div>
                             <div>
                                 <div class="form-label mb-1">m² *</div>
-                                <input class="form-control" type="number" min="1" step="0.01" :name="'Birimler['+i+'].Yuzolcumu'" x-model="birim.yuzolcumu" placeholder="0" />
+                                <input class="form-control" type="number" min="1" step="0.01" :name="'Units['+i+'].Yuzolcumu'" x-model="birim.yuzolcumu" placeholder="0" />
                                 <span x-show="birimErrors[i]?.yuzolcumu" x-text="birimErrors[i]?.yuzolcumu" class="form-error"></span>
                             </div>
                             <div>
                                 <div class="form-label mb-1">Açıklama</div>
-                                <input class="form-control" :name="'Birimler['+i+'].Aciklama'" x-model="birim.aciklama" placeholder="Opsiyonel" />
+                                <input class="form-control" :name="'Units['+i+'].Aciklama'" x-model="birim.aciklama" placeholder="Opsiyonel" />
                             </div>
                         </div>
                     </div>
@@ -156,15 +156,15 @@
 
                 <template x-if="birimler.length === 0">
                     <div class="text-center py-6 text-muted text-[13.5px]">
-                        Henüz birim eklenmedi. Yukarıdaki "Birim Ekle" butonu ile birim tanımlayınız.
+                        Henüz birim eklenmedi. Yukarıdaki "Unit Ekle" butonu ile birim tanımlayınız.
                     </div>
                 </template>
 
-                <span asp-validation-for="Birimler" class="form-error block mt-1"></span>
+                <span asp-validation-for="Units" class="form-error block mt-1"></span>
 
                 <template x-if="birimler.length > 0">
                     <div class="text-[12.5px] text-muted mt-1">
-                        Birim No aynı bina içinde benzersiz olmalıdır. Ad boş bırakılırsa "Birim {BirimNo}" olarak oluşturulur.
+                        Unit No aynı bina içinde benzersiz olmalıdır. Ad boş bırakılırsa "Unit {BirimNo}" olarak oluşturulur.
                     </div>
                 </template>
             </div>
@@ -232,7 +232,7 @@
                             <thead>
                                 <tr>
                                     <th class="text-left text-[11px] text-muted font-medium p-1 pr-3 pb-1.5">Borç Tipi</th>
-                                    <th class="text-left text-[11px] text-muted font-medium p-1 px-3 pb-1.5 w-[145px]">Tutar</th>
+                                    <th class="text-left text-[11px] text-muted font-medium p-1 px-3 pb-1.5 w-[145px]">Amount</th>
                                     <th class="text-left text-[11px] text-muted font-medium p-1 px-3 pb-1.5 w-[110px]">Yöntem</th>
                                     <th class="text-left text-[11px] text-muted font-medium p-1 pl-3 pb-1.5 w-[125px]">KDV %</th>
                                 </tr>
@@ -244,21 +244,21 @@
                                     var kolon = Model.FiyatMatrisi.Kolonlar[j];
                                     var isIlkAy = kolon.ChargeTypeBehavior == ChargeTypeBehavior.FirstMonthOneTime;
                                     var isDepozito = isIlkAy;
-                                    var parentSatir = Model.ParentTarife?.Satirlar?.FirstOrDefault(p => p.KategoriAd == satir.KiraciKategoriAd && p.BorcTipiAd == kolon.BorcTipiAd);
-                                    decimal? parentDeger = parentSatir?.BirimDeger;
-                                    decimal? parentKdv = parentSatir?.KdvOrani;
+                                    var parentSatir = Model.ParentTarife?.Satirlar?.FirstOrDefault(p => p.KategoriAd == satir.KiraciKategoriAd && p.ChargeTypeName == kolon.ChargeTypeName);
+                                    decimal? parentDeger = parentSatir?.UnitValue;
+                                    decimal? parentKdv = parentSatir?.KdvRate;
                                     <tr data-depozito="@(isDepozito ? "true" : "false")">
                                         <!-- Borç Tipi: nokta + davranış rozeti + ad -->
                                         <td class="p-1.5 pr-3 align-middle">
                                             <input type="hidden" name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].KiraciKategoriId" value="@hucre.KiraciKategoriId" />
-                                            <input type="hidden" name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].BorcTipiId" value="@hucre.BorcTipiId" />
+                                            <input type="hidden" name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].ChargeTypeId" value="@hucre.ChargeTypeId" />
                                             <div class="flex items-center gap-2">
                                                 <!-- RateVarMi göstergesi -->
                                                 <span title="@(hucre.RateVarMi ? "Kayıtlı fiyat" : "Varsayılan — henüz kaydedilmedi")"
                                                       class="w-2 h-2 rounded-full flex-shrink-0 @(hucre.RateVarMi ? "bg-green-500" : "bg-gray-300")"></span>
                                                 <div>
                                                     <div class="flex items-center gap-1.5 mb-0.5">
-                                                        <span class="text-[10px] text-muted uppercase">@kolon.BorcTipiKod</span>
+                                                        <span class="text-[10px] text-muted uppercase">@kolon.ChargeTypeCode</span>
                                                         @if (isIlkAy)
                                                         {
                                                             <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-800">İlk Ay</span>
@@ -268,18 +268,18 @@
                                                             <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">Aylık</span>
                                                         }
                                                     </div>
-                                                    <div class="text-[12.5px] font-semibold">@kolon.BorcTipiAd</div>
+                                                    <div class="text-[12.5px] font-semibold">@kolon.ChargeTypeName</div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <!-- Tutar — ₺ prefix -->
+                                        <!-- Amount — ₺ prefix -->
                                         <td class="p-1.5 px-3 align-middle">
                                             <div class="flex items-stretch border border-[#ced4da] rounded-md overflow-hidden bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all">
                                                 <span class="px-2 bg-[#f8f9fa] text-xs text-[#6c757d] border-r border-[#ced4da] flex items-center">₺</span>
                                                 <input type="number" step="0.01" min="0"
                                                        class="border-none outline-none p-1.5 px-2 w-[85px] text-[13px] bg-transparent"
-                                                       name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].BirimDeger"
-                                                       value="@(hucre.BirimDeger?.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                                                       name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].UnitValue"
+                                                       value="@(hucre.UnitValue?.ToString(System.Globalization.CultureInfo.InvariantCulture))"
                                                        placeholder="@(parentDeger?.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) ?? "0.00")" />
                                             </div>
                                         </td>
@@ -306,8 +306,8 @@
                                             <div class="flex items-stretch border border-[#ced4da] rounded-md overflow-hidden bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all">
                                                 <input type="number" step="0.01" min="0" max="100"
                                                        class="border-none outline-none p-1.5 px-2 w-[80px] text-[13px] bg-transparent text-right"
-                                                       name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].KdvOrani"
-                                                       value="@(hucre.KdvOrani?.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                                                       name="FiyatMatrisi.Satirlar[@i].Hucreler[@j].KdvRate"
+                                                       value="@(hucre.KdvRate?.ToString(System.Globalization.CultureInfo.InvariantCulture))"
                                                        placeholder="@(parentKdv?.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) ?? "20")" />
                                                 <span class="px-2 bg-[#f8f9fa] text-xs text-[#6c757d] border-l border-[#ced4da] flex items-center">%</span>
                                             </div>
@@ -323,7 +323,7 @@
                 <script>
                                     function topluKdvAta(btn, value) {
                                         const blok = btn.closest('.fiyat-kategori-blok');
-                                        blok.querySelectorAll('tr[data-depozito="false"] input[name*="KdvOrani"]').forEach(function(inp) {
+                                        blok.querySelectorAll('tr[data-depozito="false"] input[name*="KdvRate"]').forEach(function(inp) {
                                             inp.value = value;
                                         });
                                     }
@@ -331,13 +331,13 @@
             </div>
         </div>
 
-        <!-- Rezervasyon Alanları -->
+        <!-- Reservation Alanları -->
         <div class="card mt-4">
             <div class="flex items-center justify-between mb-5 pb-3 border-b border-[var(--color-border)]">
                 <div>
                     <div class="text-[15px] font-bold flex items-center gap-2">
                         <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
-                        <span>Rezervasyon Alanları</span>
+                        <span>Reservation Alanları</span>
                     </div>
                     <div class="text-[12.5px] text-muted mt-0.5">Toplantı salonu, etkinlik alanı gibi rezerve edilebilen ortak alanlar</div>
                 </div>
@@ -399,7 +399,7 @@
                     <div class="grid grid-cols-[120px_120px_80px_1fr] gap-3">
                         <div>
                             <div class="form-label mb-1">Ücretsiz Süre (Dk)</div>
-                            <input class="form-control" type="number" min="0" :name="'RezervasyonAlanlari['+i+'].UcretsizSureDakika'" x-model="alan.ucretsizSureDakika" placeholder="60" />
+                            <input class="form-control" type="number" min="0" :name="'RezervasyonAlanlari['+i+'].FreeDurationMinutes'" x-model="alan.ucretsizSureDakika" placeholder="60" />
                         </div>
                         <div>
                             <div class="form-label mb-1">Saatlik Ücret (₺)</div>
@@ -407,7 +407,7 @@
                         </div>
                         <div>
                             <div class="form-label mb-1">KDV %</div>
-                            <input class="form-control" type="number" min="0" :name="'RezervasyonAlanlari['+i+'].KdvOrani'" x-model="alan.kdvOrani" placeholder="20" />
+                            <input class="form-control" type="number" min="0" :name="'RezervasyonAlanlari['+i+'].KdvRate'" x-model="alan.kdvOrani" placeholder="20" />
                         </div>
                         <div>
                             <div class="form-label mb-1">Açıklama</div>
@@ -462,7 +462,7 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>
                 Kaydet
             </button>
-            <a href="/Tasinmaz" class="btn btn-secondary">İptal</a>
+            <a href="/Property" class="btn btn-secondary">İptal</a>
         </div>
     </form>
 </div>
@@ -471,8 +471,8 @@
 @section Scripts {
     @{
         var birimlerJson = System.Text.Json.JsonSerializer.Serialize(
-            Model.Birimler.Count > 0
-                ? (IEnumerable<object>)Model.Birimler.Select(b => new
+            Model.Units.Count > 0
+                ? (IEnumerable<object>)Model.Units.Select(b => new
                 {
                     birimNo = b.BirimNo ?? "",
                     katNo = b.KatNo?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "",
@@ -492,20 +492,20 @@
                     yuzolcumu = r.Yuzolcumu.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     birimTuruId = r.UnitTypeId?.ToString() ?? "",
                     aciklama = r.Aciklama ?? "",
-                    ucretsizSureDakika = r.UcretsizSureDakika,
+                    ucretsizSureDakika = r.FreeDurationMinutes,
                     saatlikUcret = r.SaatlikUcret.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    kdvOrani = r.KdvOrani.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    kdvOrani = r.KdvRate.ToString(System.Globalization.CultureInfo.InvariantCulture)
                 })
                 : (IEnumerable<object>)Array.Empty<object>()
         );
         var birimErrorsJson = System.Text.Json.JsonSerializer.Serialize(
-            Enumerable.Range(0, Model.Birimler.Count).Select(i => new
+            Enumerable.Range(0, Model.Units.Count).Select(i => new
             {
-                birimNo = ViewData.ModelState[$"Birimler[{i}].BirimNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
-                katNo = ViewData.ModelState[$"Birimler[{i}].KatNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
-                birimTuruId = ViewData.ModelState[$"Birimler[{i}].UnitTypeId"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
-                ad = ViewData.ModelState[$"Birimler[{i}].Ad"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
-                yuzolcumu = ViewData.ModelState[$"Birimler[{i}].Yuzolcumu"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                birimNo = ViewData.ModelState[$"Units[{i}].BirimNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                katNo = ViewData.ModelState[$"Units[{i}].KatNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                birimTuruId = ViewData.ModelState[$"Units[{i}].UnitTypeId"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                ad = ViewData.ModelState[$"Units[{i}].Ad"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                yuzolcumu = ViewData.ModelState[$"Units[{i}].Yuzolcumu"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
             }).ToList()
         );
         var rezErrorsJson = System.Text.Json.JsonSerializer.Serialize(
@@ -557,7 +557,7 @@
                     this.birimler.splice(i, 1);
                     this.birimErrors.splice(i, 1);
                 },
-                autoAd(b) { if (!b.ad && b.birimNo) b.ad = 'Birim ' + b.birimNo; },
+                autoAd(b) { if (!b.ad && b.birimNo) b.ad = 'Unit ' + b.birimNo; },
                 addRezAlani() {
                     this.rezAlanlari.push({ birimNo: '', ad: '', yuzolcumu: '', birimTuruId: '', aciklama: '', ucretsizSureDakika: 0, saatlikUcret: 0, kdvOrani: 20 });
                     this.rezErrors.push({});
@@ -569,13 +569,13 @@
                 validate() {
                     var ok = true;
                     this.birimler.forEach(b => {
-                        if (!b.ad?.trim() && b.birimNo?.trim()) b.ad = 'Birim ' + b.birimNo;
+                        if (!b.ad?.trim() && b.birimNo?.trim()) b.ad = 'Unit ' + b.birimNo;
                     });
                     this.birimErrors = this.birimler.map(b => {
                         var e = {};
-                        if (!b.birimNo?.trim()) e.birimNo = 'Birim No zorunludur.';
+                        if (!b.birimNo?.trim()) e.birimNo = 'Unit No zorunludur.';
                         if (b.katNo === '' || b.katNo === null || b.katNo === undefined) e.katNo = 'Kat No zorunludur.';
-                        if (!b.birimTuruId) e.birimTuruId = 'Birim Türü zorunludur.';
+                        if (!b.birimTuruId) e.birimTuruId = 'Unit Türü zorunludur.';
                         if (!b.ad?.trim()) e.ad = 'Ad zorunludur.';
                         if (!b.yuzolcumu || parseFloat(b.yuzolcumu) <= 0) e.yuzolcumu = 'Yüzölçümü 0\'dan büyük olmalıdır.';
                         if (Object.keys(e).length) ok = false;

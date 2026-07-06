@@ -35,15 +35,15 @@ public class KiraciPanelAylikNakit
 public class KiraciPanelBorcDilim
 {
     public string Ad { get; set; } = string.Empty;
-    public decimal Tutar { get; set; }
+    public decimal Amount { get; set; }
 }
 
 public class KiraciPanelYaklasanItem
 {
-    public int TahakkukId { get; set; }
+    public int ChargeId { get; set; }
     public string Donem { get; set; } = string.Empty;       // "Mayıs 2026"
     public string BirimAd { get; set; } = string.Empty;     // "A101 / Bina A"
-    public DateTime VadeTarihi { get; set; }
+    public DateTime DueDate { get; set; }
     public int GunFarki { get; set; }                        // <0 = gecikmiş
     public decimal Kalan { get; set; }
     public string BorderRenk { get; set; } = string.Empty;  // "red" | "amber" | "emerald"
@@ -52,8 +52,8 @@ public class KiraciPanelYaklasanItem
 public class KiraciPanelSonOdemeItem
 {
     public int OdemeId { get; set; }
-    public DateTime OdemeTarihi { get; set; }
-    public decimal Tutar { get; set; }
+    public DateTime PaymentDate { get; set; }
+    public decimal Amount { get; set; }
     public string KanalAd { get; set; } = string.Empty;
     public string DurumAd { get; set; } = string.Empty;
     public string DurumDotRenk { get; set; } = string.Empty; // "emerald" | "amber" | "red"

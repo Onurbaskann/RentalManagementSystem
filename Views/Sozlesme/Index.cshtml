@@ -30,7 +30,7 @@
         }
         @if (borcluSayisi > 0 && User.HasPermission(PermissionCatalog.Notification.BorcHatirlatma))
         {
-            <form asp-controller="Sozlesme" asp-action="BorclularaMailGonder" method="post"
+            <form asp-controller="Lease" asp-action="BorclularaMailGonder" method="post"
                   data-confirm="@borcluSayisi kiracıya borç hatırlatma maili gönderilsin mi?">
                 @Html.AntiForgeryToken()
                 <button type="submit" class="btn btn-secondary flex items-center gap-2">
@@ -41,7 +41,7 @@
         }
         @if (canEdit)
         {
-            <a href="/Sozlesme/Ekle" class="btn btn-primary flex items-center gap-2">
+            <a href="/Lease/Ekle" class="btn btn-primary flex items-center gap-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Yeni Sözleşme
             </a>
@@ -63,7 +63,7 @@
     @foreach (var (key, label) in filters)
     {
         bool isActive = filtre == key;
-        <a href="/Sozlesme?filtre=@key" 
+        <a href="/Lease?filtre=@key" 
            class="btn btn-sm @(isActive ? "btn-primary" : "btn-secondary text-slate-600 bg-white border-slate-200")">@label</a>
     }
 </div>
@@ -81,7 +81,7 @@
                 <tr>
                     <th class="w-16">#</th>
                     <th>Kiracı</th>
-                    <th>Taşınmaz / Birim</th>
+                    <th>Taşınmaz / Unit</th>
                     <th class="w-28 cell-center">Başlangıç</th>
                     <th class="w-28 cell-center">Bitiş</th>
                     <th class="w-32 num">Aylık Bedel</th>
@@ -98,23 +98,23 @@
                     string dayBadgeClass = kalanGun <= 10 ? "bg-red-50 text-red-700 border-red-200" : kalanGun <= 30 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200";
                     var search = $"{s.Id} {s.KiraciGosterimAdi} {s.TasinmazAd} {s.BirimAd}".ToLower();
 
-                    <tr data-row data-search="@search" data-href="/Sozlesme/Detay/@s.Id.ToHashId()"
+                    <tr data-row data-search="@search" data-href="/Lease/Detay/@s.Id.ToHashId()"
                         class="cursor-pointer hover:bg-slate-50 transition-colors"
                         @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
                         <td class="text-xs text-muted font-mono">@s.Id</td>
                         <td>
-                            <a href="/Kiraci/Detay/@s.KiraciId.ToHashId()" class="font-semibold text-primary hover:underline">@s.KiraciGosterimAdi</a>
+                            <a href="/Tenant/Detay/@s.KiraciId.ToHashId()" class="font-semibold text-primary hover:underline">@s.KiraciGosterimAdi</a>
                             @if (!string.IsNullOrEmpty(s.KiraciKategoriAd))
                             {
                                 <div class="cell-sub">@s.KiraciKategoriAd</div>
                             }
                         </td>
                         <td>
-                            <a href="/Tasinmaz/Detay/@s.TasinmazId.ToHashId()" class="font-medium hover:text-primary transition-colors">@s.TasinmazAd</a>
+                            <a href="/Property/Detay/@s.TasinmazId.ToHashId()" class="font-medium hover:text-primary transition-colors">@s.TasinmazAd</a>
                             <span class="cell-sub">@s.BirimAd</span>
                         </td>
-                        <td class="cell-center">@s.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
-                        <td class="cell-center">@s.BitisTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="cell-center">@s.StartDate.ToString("dd.MM.yyyy")</td>
+                        <td class="cell-center">@s.EndDate.ToString("dd.MM.yyyy")</td>
                         <td class="num">@s.AylikBedel.ToString("N2") ₺</td>
                         <td class="cell-center">
                             @if (feshedildi)

@@ -29,7 +29,7 @@
 
 <div class="page-header">
     <div>
-        <a href="/Kiraci/Roller" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
+        <a href="/Tenant/Roller" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
             ← Rol Yönetimi
         </a>
         <div class="page-title">Yeni Rol</div>
@@ -38,7 +38,7 @@
 </div>
 
 <div class="card">
-    <form method="post" action="/Kiraci/Roller/Ekle" asp-form-write-permission="@PermissionCatalog.TenantPortal.System.Role.Create">
+    <form method="post" action="/Tenant/Roller/Ekle" asp-form-write-permission="@PermissionCatalog.TenantPortal.System.Role.Create">
         @Html.AntiForgeryToken()
 
         @if (!ViewData.ModelState.IsValid)
@@ -64,7 +64,7 @@
 
         <div class="flex gap-2 mt-6">
             <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.TenantPortal.System.Role.Create">Oluştur</button>
-            <a href="/Kiraci/Roller" class="btn btn-secondary">İptal</a>
+            <a href="/Tenant/Roller" class="btn btn-secondary">İptal</a>
         </div>
     </form>
 </div>

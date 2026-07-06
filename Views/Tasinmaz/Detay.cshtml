@@ -2,7 +2,7 @@
 @using KiraTakip.Models
 @inject KiraTakip.Services.Interfaces.IIstatistikService Istatistik
 @{
-    ViewData["Title"] = Model.Tasinmaz.Ad;
+    ViewData["Title"] = Model.Property.Ad;
     bool canEdit = User.HasPermission(PermissionCatalog.Lease.Create) || User.HasPermission(PermissionCatalog.Reservation.Create);
     bool canDuzenle = User.HasPermission(PermissionCatalog.Property.Edit);
     bool canManageRate = User.HasPermission(PermissionCatalog.Unit.OverrideRate);
@@ -35,23 +35,23 @@
 
 <div class="page-header flex items-start justify-between">
     <div>
-        <a href="/Tasinmaz" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
+        <a href="/Property" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
             ← Taşınmazlar
         </a>
-        <div class="page-title">@Model.Tasinmaz.Ad</div>
-        <div class="page-subtitle">@Model.Tasinmaz.Mahalle, @Model.Tasinmaz.Ilce / @Model.Tasinmaz.Il</div>
+        <div class="page-title">@Model.Property.Ad</div>
+        <div class="page-subtitle">@Model.Property.Mahalle, @Model.Property.Ilce / @Model.Property.Il</div>
     </div>
     <div class="flex items-center gap-2">
         @if (canDuzenle)
         {
-            <a href="/Tasinmaz/Duzenle/@Model.Tasinmaz.Id.ToHashId()" class="btn btn-secondary">
+            <a href="/Property/Duzenle/@Model.Property.Id.ToHashId()" class="btn btn-secondary">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                 Düzenle
             </a>
         }
         @if (canEdit)
         {
-            <a href="/Sozlesme/Ekle" class="btn btn-primary">
+            <a href="/Lease/Ekle" class="btn btn-primary">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                 Sözleşme Ekle
             </a>
@@ -62,9 +62,9 @@
 <div id="detay-tabs">
     <div class="tabs">
         <button class="tab">Genel Bilgiler</button>
-        <button class="tab">Birimler (@Model.Tasinmaz.Birimler.Count)</button>
+        <button class="tab">Units (@Model.Property.Units.Count)</button>
         <button class="tab">Sözleşme Geçmişi</button>
-        <button class="tab">Rezervasyonlar (@Model.Tasinmaz.Rezervasyonlar.Count)</button>
+        <button class="tab">Rezervasyonlar (@Model.Property.Rezervasyonlar.Count)</button>
         <button class="tab">Kira Tarifeleri</button>
     </div>
 
@@ -73,26 +73,26 @@
         <div class="three-col">
             <div class="card">
                 <div class="card-title">Taşınmaz Tipi</div>
-                <div class="text-[18px] font-bold mb-1.5">@(Model.Tasinmaz.TasinmazTipiAd)</div>
+                <div class="text-[18px] font-bold mb-1.5">@(Model.Property.TasinmazTipiAd)</div>
                 <div class="text-[13px] text-muted">
-                    @(Model.Tasinmaz.RentalMode == RentalMode.UnitBased ? "Birim bazlı kiralama" : "Tek parça kiralama")
+                    @(Model.Property.RentalMode == RentalMode.UnitBased ? "Unit bazlı kiralama" : "Tek parça kiralama")
                 </div>
             </div>
             <div class="card">
                 <div class="card-title">Yüzölçüm</div>
-                @if (Model.Tasinmaz.KapaliYuzolcumu > 0)
+                @if (Model.Property.KapaliYuzolcumu > 0)
                 {
-                    <div class="text-base font-bold">@Model.Tasinmaz.KapaliYuzolcumu.ToString("N0") m² <span class="text-[13px] font-normal text-muted">kapalı</span></div>
+                    <div class="text-base font-bold">@Model.Property.KapaliYuzolcumu.ToString("N0") m² <span class="text-[13px] font-normal text-muted">kapalı</span></div>
                 }
-                @if (Model.Tasinmaz.AcikYuzolcumu > 0)
+                @if (Model.Property.AcikYuzolcumu > 0)
                 {
-                    <div class="text-base font-bold mt-1">@Model.Tasinmaz.AcikYuzolcumu.ToString("N0") m² <span class="text-[13px] font-normal text-muted">açık</span></div>
+                    <div class="text-base font-bold mt-1">@Model.Property.AcikYuzolcumu.ToString("N0") m² <span class="text-[13px] font-normal text-muted">açık</span></div>
                 }
             </div>
-            @if (Model.Tasinmaz.RentalMode == RentalMode.UnitBased)
+            @if (Model.Property.RentalMode == RentalMode.UnitBased)
             {
-                var kiraliSayisi = Model.Tasinmaz.Birimler.Count(b => b.Durum == OccupancyStatus.Leased || b.Durum == OccupancyStatus.ExpiringSoon);
-                var toplamSayisi = Model.Tasinmaz.Birimler.Count;
+                var kiraliSayisi = Model.Property.Units.Count(b => b.Durum == OccupancyStatus.Leased || b.Durum == OccupancyStatus.ExpiringSoon);
+                var toplamSayisi = Model.Property.Units.Count;
                 var bosSayisi = toplamSayisi - kiraliSayisi;
                 <div class="card">
                     <div class="card-title">Doluluk Durumu</div>
@@ -106,7 +106,7 @@
             }
             else
             {
-                var komple = Model.Tasinmaz.Birimler.FirstOrDefault();
+                var komple = Model.Property.Units.FirstOrDefault();
                 var hasAktifSozlesme = komple?.AktifSozlesmeId.HasValue == true;
                 var durum = komple?.Durum ?? OccupancyStatus.Vacant;
                 <div class="card">
@@ -139,44 +139,44 @@
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <div class="detail-label mb-0.5">İl</div>
-                    <div class="text-sm font-medium">@Model.Tasinmaz.Il</div>
+                    <div class="text-sm font-medium">@Model.Property.Il</div>
                 </div>
                 <div>
                     <div class="detail-label mb-0.5">İlçe</div>
-                    <div class="text-sm font-medium">@Model.Tasinmaz.Ilce</div>
+                    <div class="text-sm font-medium">@Model.Property.Ilce</div>
                 </div>
                 <div>
                     <div class="detail-label mb-0.5">Mahalle</div>
-                    <div class="text-sm font-medium">@Model.Tasinmaz.Mahalle</div>
+                    <div class="text-sm font-medium">@Model.Property.Mahalle</div>
                 </div>
                 <div>
                     <div class="detail-label mb-0.5">Açık Adres</div>
-                    <div class="text-sm font-medium">@Model.Tasinmaz.AcikAdres</div>
+                    <div class="text-sm font-medium">@Model.Property.AcikAdres</div>
                 </div>
             </div>
-            @if (!string.IsNullOrEmpty(Model.Tasinmaz.Aciklama))
+            @if (!string.IsNullOrEmpty(Model.Property.Aciklama))
             {
                 <div class="mt-3.5 pt-3.5 border-t border-[var(--color-border)]">
                     <div class="detail-label mb-1">Açıklama</div>
-                    <div class="text-sm">@Model.Tasinmaz.Aciklama</div>
+                    <div class="text-sm">@Model.Property.Aciklama</div>
                 </div>
             }
         </div>
     </div>
 
-    <!-- Tab 2: Birimler -->
+    <!-- Tab 2: Units -->
     <div class="tab-content">
         @{
-            bool isBirimBazli = Model.Tasinmaz.RentalMode == RentalMode.UnitBased;
-            int totalBirim = Model.Tasinmaz.Birimler.Count;
-            int kirali = Model.Tasinmaz.Birimler.Count(b => b.Durum == OccupancyStatus.Leased || b.Durum == OccupancyStatus.ExpiringSoon);
+            bool isBirimBazli = Model.Property.RentalMode == RentalMode.UnitBased;
+            int totalBirim = Model.Property.Units.Count;
+            int kirali = Model.Property.Units.Count(b => b.Durum == OccupancyStatus.Leased || b.Durum == OccupancyStatus.ExpiringSoon);
             int bos = totalBirim - kirali;
         }
 
-        <!-- Birim Özet Kartları -->
+        <!-- Unit Özet Kartları -->
         <div class="grid grid-cols-3 gap-3 mb-6">
             <div class="bg-white border border-[var(--color-border)] rounded-xl p-3.5 px-4.5">
-                <div class="text-[11px] font-semibold text-muted uppercase tracking-wider">Toplam Birim</div>
+                <div class="text-[11px] font-semibold text-muted uppercase tracking-wider">Toplam Unit</div>
                 <div class="font-serif text-[28px] font-bold mt-1">@totalBirim</div>
             </div>
             <div class="bg-white border border-[var(--color-border)] rounded-xl p-3.5 px-4.5">
@@ -191,7 +191,7 @@
 
         @if (isBirimBazli)
         {
-            var katGruplari = Model.Tasinmaz.Birimler
+            var katGruplari = Model.Property.Units
                 .GroupBy(b => b.KatNo)
                 .OrderByDescending(g => g.Key ?? int.MinValue)
                 .ToList();
@@ -234,11 +234,11 @@
                 <!-- Filtre Bar -->
                 <div class="flex items-center gap-2.5 mb-6 flex-wrap">
                     <select x-model="filter" class="form-control w-auto min-w-[150px] text-[13px] py-1.5 px-2.5">
-                        <option value="tum">Tüm Birimler</option>
+                        <option value="tum">Tüm Units</option>
                         <option value="bos">Boş</option>
                         <option value="kirali">Kiralı</option>
                     </select>
-                    <input type="text" x-model="search" placeholder="Birim ara..." class="form-control w-[180px] text-[13px] py-1.5 px-2.5" />
+                    <input type="text" x-model="search" placeholder="Unit ara..." class="form-control w-[180px] text-[13px] py-1.5 px-2.5" />
                     <button type="button" class="btn btn-sm btn-secondary" x-show="viewMode === 'table'"
                         @@click="filter = 'tum'; Object.keys(katBosMap).forEach(k => { openFloors[k] = true })">
                         Tümünü Aç
@@ -333,8 +333,8 @@
                                                 var durumData = b.AktifSozlesmeId.HasValue ? "kirali" : "bos";
                                                 var searchData = ((b.BirimNo ?? "") + " " + (b.Ad ?? "")).ToLowerInvariant();
                                                 var rowHref = b.AktifSozlesmeId.HasValue
-                                                    ? $"/Sozlesme/Detay/{b.AktifSozlesmeId}"
-                                                    : (canEdit ? (b.RezervasyonYapilabilirMi ? $"/Rezervasyon/Ekle?birimId={b.Id}" : $"/Sozlesme/Ekle?birimId={b.Id}") : "");
+                                                    ? $"/Lease/Detay/{b.AktifSozlesmeId}"
+                                                    : (canEdit ? (b.RezervasyonYapilabilirMi ? $"/Reservation/Ekle?birimId={b.Id}" : $"/Lease/Ekle?birimId={b.Id}") : "");
                                                 <tr data-durum="@durumData"
                                                     data-search="@searchData"
                                                     @Html.Raw(rowHref != "" ? $"data-href=\"{rowHref}\"" : "")
@@ -353,7 +353,7 @@
                                                     <td>
                                                         @if (b.AktifSozlesmeId.HasValue)
                                                         {
-                                                            <a href="/Kiraci/Detay/@b.AktifSozlesmeKiraciId.ToHashId()" class="font-semibold text-primary no-underline text-[13px] hover:underline">@b.AktifSozlesmeKiraciGosterimAdi</a>
+                                                            <a href="/Tenant/Detay/@b.AktifSozlesmeKiraciId.ToHashId()" class="font-semibold text-primary no-underline text-[13px] hover:underline">@b.AktifSozlesmeKiraciGosterimAdi</a>
                                                         }
                                                         else
                                                         {
@@ -408,18 +408,18 @@
                                                             {
                                                                 @if (canEdit)
                                                                 {
-                                                                    <a href="/Rezervasyon/Ekle?birimId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Rezervasyon</a>
+                                                                    <a href="/Reservation/Ekle?birimId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Reservation</a>
                                                                 }
                                                             }
                                                             else
                                                             {
                                                                 @if (b.AktifSozlesmeId.HasValue)
                                                                 {
-                                                                    <a href="/Sozlesme/Detay/@b.AktifSozlesmeId.ToHashId()" class="btn btn-sm btn-secondary">Sözleşme</a>
+                                                                    <a href="/Lease/Detay/@b.AktifSozlesmeId.ToHashId()" class="btn btn-sm btn-secondary">Sözleşme</a>
                                                                 }
                                                                 else if (canEdit)
                                                                 {
-                                                                    <a href="/Sozlesme/Ekle?birimId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Kiraya Ver</a>
+                                                                    <a href="/Lease/Ekle?birimId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Kiraya Ver</a>
                                                                 }
                                                             }
                                                             @if (canManageRate)
@@ -433,7 +433,7 @@
                                                                     </button>
                                                                     <div x-show="open" @@click.outside="open = false" x-cloak
                                                                          class="absolute right-0 mt-1 bg-white border border-[var(--color-border)] rounded-lg shadow-lg z-20 min-w-[150px] py-1">
-                                                                        <a href="/Birim/@b.Id.ToHashId()/OzelFiyat"
+                                                                        <a href="/Unit/@b.Id.ToHashId()/OzelFiyat"
                                                                            class="flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--color-text)] hover:bg-[#f7f9fb] no-underline">
                                                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                                                                 <line x1="12" y1="1" x2="12" y2="23"/>
@@ -474,8 +474,8 @@
                                 var durumData = b.AktifSozlesmeId.HasValue ? "kirali" : "bos";
                                 var searchData = ((b.BirimNo ?? "") + " " + (b.Ad ?? "")).ToLowerInvariant();
                                 var cardHref = b.AktifSozlesmeId.HasValue
-                                    ? $"/Sozlesme/Detay/{b.AktifSozlesmeId}"
-                                    : (canEdit ? (b.RezervasyonYapilabilirMi ? $"/Rezervasyon/Ekle?birimId={b.Id}" : $"/Sozlesme/Ekle?birimId={b.Id}") : "");
+                                    ? $"/Lease/Detay/{b.AktifSozlesmeId}"
+                                    : (canEdit ? (b.RezervasyonYapilabilirMi ? $"/Reservation/Ekle?birimId={b.Id}" : $"/Lease/Ekle?birimId={b.Id}") : "");
                                 var cardBg = b.Durum switch {
                                     OccupancyStatus.Leased => "border-l-[var(--color-primary)] bg-[#f0faf7]",
                                     OccupancyStatus.ExpiringSoon => "border-l-amber-400 bg-[#fffbeb]",
@@ -489,7 +489,7 @@
                                      x-show="(filter === 'tum' || $el.getAttribute('data-durum') === filter) && (search === '' || ($el.getAttribute('data-search') || '').includes(search.toLowerCase()))">
                                     @if (canManageRate)
                                     {
-                                        <a href="/Birim/@b.Id.ToHashId()/OzelFiyat" data-stop title="Özel Fiyat"
+                                        <a href="/Unit/@b.Id.ToHashId()/OzelFiyat" data-stop title="Özel Fiyat"
                                            class="absolute top-1.5 right-1.5 w-6 h-6 flex items-center justify-center rounded bg-white border border-[var(--color-border)] text-muted hover:text-primary hover:border-primary transition-colors text-[12px] font-bold no-underline leading-none">₺</a>
                                     }
                                     <div class="font-mono font-bold text-primary leading-none mb-1.5"
@@ -532,7 +532,7 @@
                         </colgroup>
                         <thead>
                             <tr>
-                                <th>Birim</th>
+                                <th>Unit</th>
                                 <th>Yüzölçüm</th>
                                 <th>Durum</th>
                                 <th>Kiracı</th>
@@ -542,7 +542,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var b in Model.Tasinmaz.Birimler)
+                            @foreach (var b in Model.Property.Units)
                             {
                                 <tr>
                                     <td class="font-semibold">@b.Ad</td>
@@ -554,7 +554,7 @@
                                     <td>
                                         @if (b.AktifSozlesmeId.HasValue)
                                         {
-                                            <a href="/Kiraci/Detay/@b.AktifSozlesmeKiraciId.ToHashId()" class="font-semibold text-primary no-underline text-[13px] hover:underline">@b.AktifSozlesmeKiraciGosterimAdi</a>
+                                            <a href="/Tenant/Detay/@b.AktifSozlesmeKiraciId.ToHashId()" class="font-semibold text-primary no-underline text-[13px] hover:underline">@b.AktifSozlesmeKiraciGosterimAdi</a>
                                         }
                                         else
                                         {
@@ -612,23 +612,23 @@
                                         {
                                             @if (canEdit)
                                             {
-                                                <a href="/Rezervasyon/Ekle?birimId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Rezervasyon</a>
+                                                <a href="/Reservation/Ekle?birimId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Reservation</a>
                                             }
                                         }
                                         else
                                         {
                                             @if (b.AktifSozlesmeId.HasValue)
                                             {
-                                                <a href="/Sozlesme/Detay/@b.AktifSozlesmeId.ToHashId()" class="btn btn-sm btn-secondary">Sözleşme</a>
+                                                <a href="/Lease/Detay/@b.AktifSozlesmeId.ToHashId()" class="btn btn-sm btn-secondary">Sözleşme</a>
                                             }
                                             else if (canEdit)
                                             {
-                                                <a href="/Sozlesme/Ekle?birimId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Kiraya Ver</a>
+                                                <a href="/Lease/Ekle?birimId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Kiraya Ver</a>
                                             }
                                         }
                                         @if (canManageRate)
                                         {
-                                            <a href="/Birim/@b.Id.ToHashId()/OzelFiyat" class="btn btn-sm btn-secondary" title="Özel Fiyatlar">₺</a>
+                                            <a href="/Unit/@b.Id.ToHashId()/OzelFiyat" class="btn btn-sm btn-secondary" title="Özel Fiyatlar">₺</a>
                                         }
                                     </td>
                                 </tr>
@@ -643,8 +643,8 @@
     <!-- Tab 3: Sözleşme Geçmişi -->
     <div class="tab-content">
         @{
-            var tumSozlesmeler = Model.Tasinmaz.SozlesmeGecmisi
-                .OrderByDescending(s => s.BaslangicTarihi)
+            var tumSozlesmeler = Model.Property.SozlesmeGecmisi
+                .OrderByDescending(s => s.StartDate)
                 .ToList();
         }
         @if (!tumSozlesmeler.Any())
@@ -657,7 +657,7 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Birim</th>
+                            <th>Unit</th>
                             <th>Kiracı</th>
                             <th>Başlangıç</th>
                             <th>Bitiş</th>
@@ -669,15 +669,15 @@
                     <tbody>
                         @foreach (var s in tumSozlesmeler)
                         {
-                            bool aktif = s.BaslangicTarihi <= DateTime.Now && s.BitisTarihi >= DateTime.Now;
-                            bool surek = aktif && (s.BitisTarihi - DateTime.Now).TotalDays <= 30;
+                            bool aktif = s.StartDate <= DateTime.Now && s.EndDate >= DateTime.Now;
+                            bool surek = aktif && (s.EndDate - DateTime.Now).TotalDays <= 30;
                             <tr>
                                 <td class="font-semibold">@s.BirimAd</td>
                                 <td>
-                                    <a href="/Kiraci/Detay/@s.KiraciId.ToHashId()" class="text-primary no-underline font-medium hover:underline">@s.KiraciGosterimAdi</a>
+                                    <a href="/Tenant/Detay/@s.KiraciId.ToHashId()" class="text-primary no-underline font-medium hover:underline">@s.KiraciGosterimAdi</a>
                                 </td>
-                                <td>@s.BaslangicTarihi.ToString("dd.MM.yyyy")</td>
-                                <td>@s.BitisTarihi.ToString("dd.MM.yyyy")</td>
+                                <td>@s.StartDate.ToString("dd.MM.yyyy")</td>
+                                <td>@s.EndDate.ToString("dd.MM.yyyy")</td>
                                 <td class="font-semibold">@s.AylikBedel.ToString("N0") ₺/ay</td>
                                 <td>
                                     @if (surek)
@@ -695,7 +695,7 @@
                                         <span class="badge badge-gecmis">Geçmiş</span>
                                     }
                                 </td>
-                                <td><a href="/Sozlesme/Detay/@s.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
+                                <td><a href="/Lease/Detay/@s.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
                             </tr>
                         }
                     </tbody>
@@ -706,7 +706,7 @@
 
     <!-- Tab 4: Rezervasyonlar -->
     <div class="tab-content">
-        @if (!Model.Tasinmaz.Rezervasyonlar.Any())
+        @if (!Model.Property.Rezervasyonlar.Any())
         {
             <div class="p-8 text-center text-muted">Henüz rezervasyon kaydı yok.</div>
         }
@@ -716,18 +716,18 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Birim</th>
+                            <th>Unit</th>
                             <th>Kiracı</th>
                             <th>Başlangıç</th>
                             <th>Bitiş</th>
                             <th>Süre</th>
-                            <th>Tutar</th>
+                            <th>Amount</th>
                             <th>Durum</th>
                             <th></th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var r in Model.Tasinmaz.Rezervasyonlar)
+                        @foreach (var r in Model.Property.Rezervasyonlar)
                         {
                             var rezDurumBadge = r.Durum switch
                             {
@@ -740,20 +740,20 @@
                             <tr>
                                 <td class="font-semibold">@r.BirimAd</td>
                                 <td>
-                                    <a href="/Kiraci/Detay/@r.KiraciId.ToHashId()" class="text-primary no-underline font-medium hover:underline">@r.KiraciGosterimAdi</a>
+                                    <a href="/Tenant/Detay/@r.KiraciId.ToHashId()" class="text-primary no-underline font-medium hover:underline">@r.KiraciGosterimAdi</a>
                                 </td>
-                                <td>@r.BaslangicTarihi.ToString("dd.MM.yyyy HH:mm")</td>
-                                <td>@r.BitisTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td>@r.StartDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td>@r.EndDate.ToString("dd.MM.yyyy HH:mm")</td>
                                 <td>
-                                    <span class="font-mono text-[12.5px]">@r.ToplamSureDakika dk</span>
-                                    @if (r.UcretsizSureDakika > 0)
+                                    <span class="font-mono text-[12.5px]">@r.TotalDurationMinutes dk</span>
+                                    @if (r.FreeDurationMinutes > 0)
                                     {
-                                        <span class="text-[11px] text-muted"> (@r.UcretsizSureDakika dk ücretsiz)</span>
+                                        <span class="text-[11px] text-muted"> (@r.FreeDurationMinutes dk ücretsiz)</span>
                                     }
                                 </td>
                                 <td class="font-semibold">@r.ToplamTutar.ToString("N0") ₺</td>
                                 <td>@Html.Raw(rezDurumBadge)</td>
-                                <td><a href="/Rezervasyon/Detay/@r.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
+                                <td><a href="/Reservation/Detay/@r.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
                             </tr>
                         }
                     </tbody>
@@ -769,7 +769,7 @@
         <div class="flex justify-between items-center mb-3.5 pb-3 border-b-2 border-[var(--color-border)]">
             <div>
                 <div class="text-[15px] font-bold">Taşınmaz Tarifeleri</div>
-                <div class="text-xs text-muted mt-1">Sözleşme oluşturulurken varsayılan olarak kullanılır. Birim bazlı özel fiyat tanımlıysa bu tarife geçersiz kalır.</div>
+                <div class="text-xs text-muted mt-1">Sözleşme oluşturulurken varsayılan olarak kullanılır. Unit bazlı özel fiyat tanımlıysa bu tarife geçersiz kalır.</div>
             </div>
         </div>
 
@@ -781,8 +781,8 @@
                         @foreach (var col in Model.FiyatMatrisi.Kolonlar)
                         {
                             <th class="text-center">
-                                <div class="text-[11px] text-muted mb-0.5">@col.BorcTipiKod</div>
-                                <div class="text-[13px]">@col.BorcTipiAd</div>
+                                <div class="text-[11px] text-muted mb-0.5">@col.ChargeTypeCode</div>
+                                <div class="text-[13px]">@col.ChargeTypeName</div>
                             </th>
                         }
                     </tr>
@@ -808,12 +808,12 @@
                                         @if (hucre.RateVarMi)
                                         {
                                             <div class="font-serif font-bold text-[15px]">
-                                                @hucre.BirimDeger?.ToString("N2") ₺
+                                                @hucre.UnitValue?.ToString("N2") ₺
                                                 <small class="font-sans text-[11px] font-normal text-muted">
                                                     @(hucre.CalculationMethod == CalculationMethod.Fixed ? "/sabit" : "/m²")
                                                 </small>
                                             </div>
-                                            <div class="text-[11px] text-muted mt-1">KDV: %@hucre.KdvOrani?.ToString("N0")</div>
+                                            <div class="text-[11px] text-muted mt-1">KDV: %@hucre.KdvRate?.ToString("N0")</div>
                                         }
                                         else
                                         {
@@ -828,18 +828,18 @@
             </table>
         </div>
 
-        <!-- Bölüm 2: Birim Bazlı Özel Fiyatlar -->
+        <!-- Bölüm 2: Unit Bazlı Özel Fiyatlar -->
         <div class="flex justify-between items-center mb-3.5 pb-3 border-b-2 border-[var(--color-border)]">
             <div>
-                <div class="text-[15px] font-bold">Birim Bazlı Özel Fiyatlar</div>
+                <div class="text-[15px] font-bold">Unit Bazlı Özel Fiyatlar</div>
                 <div class="text-xs text-muted mt-1">Aşağıdaki birimler için taşınmaz tarifesi yerine bu özel fiyatlar geçerlidir.</div>
             </div>
         </div>
 
-        @if (Model.Tasinmaz.BirimOzelFiyatlari.Any())
+        @if (Model.Property.BirimOzelFiyatlari.Any())
         {
             <div class="mb-8">
-                @foreach (var birimOzet in Model.Tasinmaz.BirimOzelFiyatlari)
+                @foreach (var birimOzet in Model.Property.BirimOzelFiyatlari)
                 {
                     <div class="card mb-2.5 p-0 overflow-hidden">
                         <div class="flex items-center justify-between p-2.5 px-4 bg-[#fafbfc] border-b border-[var(--color-border)]">
@@ -853,7 +853,7 @@
                             </div>
                             @if (canManageRate)
                             {
-                                <a href="/Birim/@birimOzet.BirimId.ToHashId()/OzelFiyat" class="btn btn-sm btn-secondary">Düzenle</a>
+                                <a href="/Unit/@birimOzet.BirimId.ToHashId()/OzelFiyat" class="btn btn-sm btn-secondary">Düzenle</a>
                             }
                         </div>
                         <div class="table-wrapper m-0">
@@ -872,10 +872,10 @@
                                     {
                                         <tr>
                                             <td class="font-semibold">@r.KiraciKategoriAd</td>
-                                            <td>@r.BorcTipiAd</td>
+                                            <td>@r.ChargeTypeName</td>
                                             <td class="text-xs text-muted">@(r.CalculationMethod == CalculationMethod.Fixed ? "Sabit" : "m² bazlı")</td>
-                                            <td class="font-serif font-bold">@r.BirimDeger.ToString("N2") ₺</td>
-                                            <td class="text-[12.5px] text-muted">%@r.KdvOrani.ToString("N0")</td>
+                                            <td class="font-serif font-bold">@r.UnitValue.ToString("N2") ₺</td>
+                                            <td class="text-[12.5px] text-muted">%@r.KdvRate.ToString("N0")</td>
                                         </tr>
                                     }
                                 </tbody>
@@ -888,27 +888,27 @@
         else
         {
             <div class="p-3.5 px-4.5 bg-[#f9fafb] border border-[var(--color-border)] rounded-lg text-[13px] text-muted mb-8">
-                Tüm birimler için taşınmaz tarifeleri geçerlidir. Birim bazlı özel fiyat tanımlı değil.
+                Tüm birimler için taşınmaz tarifeleri geçerlidir. Unit bazlı özel fiyat tanımlı değil.
             </div>
         }
 
-        <!-- Bölüm 3: Rezervasyon Ücret Kuralları -->
+        <!-- Bölüm 3: Reservation Ücret Kuralları -->
         @{
-            var rezBirimler = Model.Tasinmaz.Birimler.Where(b => b.RezervasyonYapilabilirMi).ToList();
+            var rezBirimler = Model.Property.Units.Where(b => b.RezervasyonYapilabilirMi).ToList();
         }
         @if (rezBirimler.Any())
         {
             <div class="flex justify-between items-center mb-3.5 pb-3 border-b-2 border-[var(--color-border)]">
                 <div>
-                    <div class="text-[15px] font-bold">Rezervasyon Ücret Kuralları</div>
-                    <div class="text-xs text-muted mt-1">Rezervasyon birimi olan birimlerin saatlik/periyotluk ücretlendirme kuralları.</div>
+                    <div class="text-[15px] font-bold">Reservation Ücret Kuralları</div>
+                    <div class="text-xs text-muted mt-1">Reservation birimi olan birimlerin saatlik/periyotluk ücretlendirme kuralları.</div>
                 </div>
             </div>
             <div class="table-wrapper m-0">
                 <table>
                     <thead>
                         <tr>
-                            <th>Birim</th>
+                            <th>Unit</th>
                             <th>Kural</th>
                             <th>Periyot Ücreti</th>
                             <th>Periyot</th>
@@ -920,7 +920,7 @@
                     <tbody>
                         @foreach (var b in rezBirimler)
                         {
-                            var ozelKural = Model.Tasinmaz.BirimRezervasyonKurallari.FirstOrDefault(k => k.BirimId == b.Id);
+                            var ozelKural = Model.Property.BirimRezervasyonKurallari.FirstOrDefault(k => k.BirimId == b.Id);
                             var aktifKural = ozelKural;
                             <tr>
                                 <td class="font-semibold">@(b.Ad ?? b.BirimNo)</td>
@@ -938,8 +938,8 @@
                                 {
                                     <td class="font-semibold">@aktifKural.PeriyotUcreti.ToString("N0") ₺</td>
                                     <td>@aktifKural.UcretlendirmePeriyoduDakika dk</td>
-                                    <td>@aktifKural.UcretsizSureDakika dk</td>
-                                    <td>%@aktifKural.KdvOrani.ToString("N0")</td>
+                                    <td>@aktifKural.FreeDurationMinutes dk</td>
+                                    <td>%@aktifKural.KdvRate.ToString("N0")</td>
                                 }
                                 else
                                 {
@@ -948,7 +948,7 @@
                                 <td>
                                     @if (canManageRate)
                                     {
-                                        <a href="/Birim/@b.Id.ToHashId()/OzelFiyat" class="btn btn-sm btn-secondary">Düzenle</a>
+                                        <a href="/Unit/@b.Id.ToHashId()/OzelFiyat" class="btn btn-sm btn-secondary">Düzenle</a>
                                     }
                                 </td>
                             </tr>

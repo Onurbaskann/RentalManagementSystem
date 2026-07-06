@@ -10,7 +10,7 @@ public class BirimOzelFiyatViewModel
     public bool RezervasyonYapilabilirMi { get; set; }
     public string? UnitTypeAd { get; set; }
 
-    // Senaryo A — kira: KiraciKategori × BorcTipi matrisi
+    // Senaryo A — kira: KiraciKategori × ChargeType matrisi
     public List<BirimTarifeKategoriSatiri> Satirlar { get; set; } = [];
     public List<BirimTarifeKolonu> Kolonlar { get; set; } = [];
     public ParentTarifeKartViewModel? ParentTarife { get; set; }

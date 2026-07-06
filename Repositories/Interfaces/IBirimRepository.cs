@@ -2,7 +2,7 @@ using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IBirimRepository : IBaseRepository<Birim>
+public interface IBirimRepository : IBaseRepository<Unit>
 {
     Task<List<BirimListItemDto>> GetByTasinmazIdAsync(int tasinmazId);
     Task<BirimDetayDto?> GetDetayAsync(int id);

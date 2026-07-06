@@ -11,7 +11,7 @@
 </div>
 
 <div class="card">
-    <form method="post" action="/Admin/BorcTipi/Ekle" asp-form-write-permission="@PermissionCatalog.ChargeType.Create">
+    <form method="post" action="/Admin/ChargeType/Ekle" asp-form-write-permission="@PermissionCatalog.ChargeType.Create">
         @Html.AntiForgeryToken()
 
         <div class="form-group">
@@ -26,7 +26,7 @@
                 <option value="@((int)ChargeTypeBehavior.MonthlyFixed)">Aylık Sabit — Her ay tahakkuka eklenir</option>
                 <option value="@((int)ChargeTypeBehavior.FirstMonthOneTime)">İlk Ay Tek Seferlik — Sadece sözleşmenin ilk ayında eklenir (ör. depozito)</option>
                 <option value="@((int)ChargeTypeBehavior.UserManual)">Kullanıcı Manuel — Kullanıcı tarafından manuel eklenir</option>
-                <option value="@((int)ChargeTypeBehavior.ReservationSpecific)">Rezervasyon Özel — Yalnızca rezervasyon akışı tarafından oluşturulur</option>
+                <option value="@((int)ChargeTypeBehavior.ReservationSpecific)">Reservation Özel — Yalnızca rezervasyon akışı tarafından oluşturulur</option>
             </select>
             <div class="text-xs text-muted mt-1">Borç kaleminin tahakkuklarda nasıl oluşturulacağını belirler.</div>
             <span asp-validation-for="Davranis" class="text-red-500 text-xs mt-1"></span>
@@ -47,7 +47,7 @@
 
         <div class="flex gap-2 mt-4">
             <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.ChargeType.Create">Kaydet</button>
-            <a href="/Admin/BorcTipi" class="btn btn-secondary px-6">İptal</a>
+            <a href="/Admin/ChargeType" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>
 </div>

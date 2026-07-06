@@ -3,7 +3,7 @@
 @using KiraTakip.Models.Common
 @{
     ViewData["Title"] = "Ödemeler";
-    int? tahakkukId = ViewBag.TahakkukId;
+    int? tahakkukId = ViewBag.ChargeId;
     string durum = ViewBag.Durum ?? "tum";
     var q = (TableQuery)ViewBag.Query;
     bool canApprove = User.HasPermission(PermissionCatalog.Payment.Approve);
@@ -17,9 +17,9 @@
     <div>
         @if (tahakkukId.HasValue)
         {
-            <a href="/Tahakkuk" class="text-[12.5px] text-muted hover:text-primary transition-colors inline-flex items-center gap-1 mb-2 no-underline">
+            <a href="/Charge" class="text-[12.5px] text-muted hover:text-primary transition-colors inline-flex items-center gap-1 mb-2 no-underline">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                Tahakkuklar
+                Charges
             </a>
         }
         <div class="page-title">Ödemeler</div>
@@ -82,7 +82,7 @@
                     <th class="w-28">Tarih</th>
                     <th>Kiracı</th>
                     <th class="w-32">Dönem</th>
-                    <th class="w-32 num">Tutar</th>
+                    <th class="w-32 num">Amount</th>
                     <th class="w-24 cell-center">Kanal</th>
                     <th class="w-32">Giren</th>
                     <th class="w-36">Durum</th>
@@ -109,10 +109,10 @@
                         _                  => "Diğer"
                     };
                     <tr>
-                        <td>@o.OdemeTarihi.ToString("dd.MM.yyyy")</td>
+                        <td>@o.PaymentDate.ToString("dd.MM.yyyy")</td>
                         <td class="font-semibold">@o.KiraciGosterimAdi</td>
                         <td class="text-muted">@o.TahakkukDonemBaslangic.ToString("MMMM yyyy")</td>
-                        <td class="num">@o.Tutar.ToString("N2") ₺</td>
+                        <td class="num">@o.Amount.ToString("N2") ₺</td>
                         <td class="cell-center">@kanalLabel</td>
                         <td class="text-muted truncate max-w-[120px]">@(o.GirenUserGosterimAdi ?? "—")</td>
                         <td><span class="badge @durumCls">@durumLabel</span></td>

@@ -21,8 +21,8 @@ public class SozlesmeDetayDto
     public string TasinmazIlce { get; set; } = string.Empty;
     public string TasinmazMahalle { get; set; } = string.Empty;
     public string TasinmazAcikAdres { get; set; } = string.Empty;
-    public DateTime BaslangicTarihi { get; set; }
-    public DateTime BitisTarihi { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
     public string? Aciklama { get; set; }
     public LeaseStatus Durum { get; set; }
     public DateTime? FesihTarihi { get; set; }

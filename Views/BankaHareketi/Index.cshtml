@@ -8,7 +8,7 @@
     var q = (TableQuery)ViewBag.Query;
     bool canImport = User.HasPermission(PermissionCatalog.Payment.ImportBankStatement);
     bool canMatch  = User.HasPermission(PermissionCatalog.Payment.MatchBankTransaction);
-    var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/BankaHareketi", Extra = q.ToQueryDict() };
+    var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/BankTransaction", Extra = q.ToQueryDict() };
 }
 
 <div class="page-header flex items-center justify-between">
@@ -18,7 +18,7 @@
     </div>
     @if (canImport)
     {
-        <a href="/BankaHareketi/Import" class="btn btn-primary flex items-center gap-2">
+        <a href="/BankTransaction/Import" class="btn btn-primary flex items-center gap-2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
             CSV İçe Aktar
         </a>
@@ -40,13 +40,13 @@
     @foreach (var (key, label) in filters)
     {
         bool isActive = durum == key;
-        var url = key == "tum" ? "/BankaHareketi" : $"/BankaHareketi?durum={key}";
+        var url = key == "tum" ? "/BankTransaction" : $"/BankTransaction?durum={key}";
         <a href="@url" class="btn btn-sm @(isActive ? "btn-primary" : "btn-secondary text-slate-600 bg-white border-slate-200")">@label</a>
     }
 </div>
 
 <div class="card p-0 overflow-hidden">
-    <form method="get" class="flex flex-wrap items-center gap-3 p-3 bg-slate-50/50 border-b border-slate-200" action="/BankaHareketi">
+    <form method="get" class="flex flex-wrap items-center gap-3 p-3 bg-slate-50/50 border-b border-slate-200" action="/BankTransaction">
         <input type="search" name="q" value="@q.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: açıklama, karşı taraf…" />
         <div class="flex items-center gap-2">
             @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
@@ -67,7 +67,7 @@
         <button type="submit" class="btn btn-primary btn-sm px-4">Filtrele</button>
         @if (!string.IsNullOrEmpty(q.Q) || q.From.HasValue || q.To.HasValue || q.Min.HasValue || q.Max.HasValue)
         {
-            <a href="/BankaHareketi@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
+            <a href="/BankTransaction@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
         }
     </form>
     <div class="table-wrapper">
@@ -77,7 +77,7 @@
                     <th class="w-28">Tarih</th>
                     <th>Açıklama</th>
                     <th class="w-48">Karşı Taraf</th>
-                    <th class="w-32 num">Tutar</th>
+                    <th class="w-32 num">Amount</th>
                     <th class="w-24 cell-center">Banka</th>
                     <th class="w-32">Durum</th>
                     @if (canMatch) { <th class="w-24"></th> }
@@ -86,29 +86,29 @@
             <tbody>
                 @foreach (var b in Model.Items)
                 {
-                    string eslesmeCls = b.EslesmeDurumu switch {
+                    string eslesmeCls = b.MatchStatus switch {
                         BankMatchStatus.Matched        => "badge-kirali",
                         BankMatchStatus.ManuallyMatched  => "badge-kirali",
                         _                                 => "badge-bos"
                     };
-                    string eslesmeLabel = b.EslesmeDurumu switch {
+                    string eslesmeLabel = b.MatchStatus switch {
                         BankMatchStatus.Matched        => "Eşleşti",
                         BankMatchStatus.ManuallyMatched  => "Manuel",
                         _                                 => "Bekliyor"
                     };
                     <tr>
-                        <td>@b.IslemTarihi.ToString("dd.MM.yyyy")</td>
+                        <td>@b.TransactionDate.ToString("dd.MM.yyyy")</td>
                         <td class="max-w-[300px] truncate" title="@b.Aciklama">@b.Aciklama</td>
-                        <td class="text-muted truncate max-w-[150px]">@(b.GonderenBilgisi ?? b.GonderenIban ?? "—")</td>
-                        <td class="num">@b.IslemTutari.ToString("N2") ₺</td>
-                        <td class="cell-center">@b.BankaKodu</td>
+                        <td class="text-muted truncate max-w-[150px]">@(b.SenderInfo ?? b.SenderIban ?? "—")</td>
+                        <td class="num">@b.TransactionAmount.ToString("N2") ₺</td>
+                        <td class="cell-center">@b.BankCode</td>
                         <td><span class="badge @eslesmeCls">@eslesmeLabel</span></td>
                         @if (canMatch)
                         {
                             <td class="text-right">
-                                @if (b.EslesmeDurumu == BankMatchStatus.Unmatched)
+                                @if (b.MatchStatus == BankMatchStatus.Unmatched)
                                 {
-                                    <a href="/BankaHareketi/EslestirSec/@b.Id.ToHashId()" class="btn btn-sm btn-primary">Eşleştir</a>
+                                    <a href="/BankTransaction/EslestirSec/@b.Id.ToHashId()" class="btn btn-sm btn-primary">Eşleştir</a>
                                 }
                             </td>
                         }

@@ -6,77 +6,77 @@ using KiraTakip.Services.Interfaces;
 namespace KiraTakip.Services;
 
 // NOT: Bu servis cross-aggregate hesaplama yapar. Tek bir entity aggregate'ine ait değildir.
-// Kullanılan repolar: ITahakkukRepository (BorcTipleri lookup)
+// Kullanılan repolar: IChargeRepository (ChargeTypes lookup)
 public class IstatistikService : IIstatistikService
 {
-    private readonly ITahakkukRepository _tahakkukRepo;
+    private readonly IChargeRepository _tahakkukRepo;
     private readonly IRateResolverService _rateResolver;
 
-    public IstatistikService(ITahakkukRepository tahakkukRepo, IRateResolverService rateResolver)
+    public IstatistikService(IChargeRepository tahakkukRepo, IRateResolverService rateResolver)
     {
         _tahakkukRepo = tahakkukRepo;
         _rateResolver = rateResolver;
     }
 
-    public OccupancyStatus GetBirimDurumu(Birim birim)
+    public OccupancyStatus GetBirimDurumu(Unit birim)
     {
-        var aktif = birim.Sozlesmeler
+        var aktif = birim.Leases
             .Where(s =>
-                s.Durum == LeaseStatus.Active &&
-                s.BaslangicTarihi <= DateTime.Now &&
-                s.BitisTarihi >= DateTime.Now)
-            .OrderByDescending(s => s.BitisTarihi)
+                s.Status == LeaseStatus.Active &&
+                s.StartDate <= DateTime.Now &&
+                s.EndDate >= DateTime.Now)
+            .OrderByDescending(s => s.EndDate)
             .FirstOrDefault();
 
         if (aktif == null) return OccupancyStatus.Vacant;
 
-        var kalanGun = (aktif.BitisTarihi - DateTime.Now).Days;
+        var kalanGun = (aktif.EndDate - DateTime.Now).Days;
         return kalanGun <= 30 ? OccupancyStatus.ExpiringSoon : OccupancyStatus.Leased;
     }
 
-    public Sozlesme? GetAktifSozlesme(Birim birim)
+    public Lease? GetAktifSozlesme(Unit birim)
     {
-        return birim.Sozlesmeler
+        return birim.Leases
             .Where(s =>
-                s.Durum == LeaseStatus.Active &&
-                s.BaslangicTarihi <= DateTime.Now &&
-                s.BitisTarihi >= DateTime.Now)
-            .OrderByDescending(s => s.BitisTarihi)
+                s.Status == LeaseStatus.Active &&
+                s.StartDate <= DateTime.Now &&
+                s.EndDate >= DateTime.Now)
+            .OrderByDescending(s => s.EndDate)
             .FirstOrDefault();
     }
 
-    public bool Aktif(Sozlesme s) =>
-        s.Durum == LeaseStatus.Active &&
-        s.BaslangicTarihi <= DateTime.Now &&
-        s.BitisTarihi >= DateTime.Now;
+    public bool Aktif(Lease s) =>
+        s.Status == LeaseStatus.Active &&
+        s.StartDate <= DateTime.Now &&
+        s.EndDate >= DateTime.Now;
 
-    public async Task<decimal> AylikBedelAsync(Sozlesme s)
+    public async Task<decimal> AylikBedelAsync(Lease s)
     {
-        var yuzolcumu = s.Birim?.Yuzolcumu ?? 0m;
+        var yuzolcumu = s.Unit?.Area ?? 0m;
         var tumBorcTipleri = await _tahakkukRepo.GetAktifUretimBorcTipleriAsync();
-        var borcTipleri = tumBorcTipleri.Where(b => b.Davranis == ChargeTypeBehavior.MonthlyFixed).ToList();
+        var borcTipleri = tumBorcTipleri.Where(b => b.Behavior == ChargeTypeBehavior.MonthlyFixed).ToList();
 
         decimal toplam = 0m;
         var donem = DateTime.Today;
         foreach (var bt in borcTipleri)
         {
-            var snap = await _rateResolver.ResolveAsync(s.Id, s.KiraciId, s.BirimId, bt.Id, donem);
+            var snap = await _rateResolver.ResolveAsync(s.Id, s.TenantId, s.UnitId, bt.Id, donem);
             if (snap == null) continue;
             toplam += snap.CalculationMethod == CalculationMethod.M2
-                ? snap.BirimDeger * yuzolcumu
-                : snap.BirimDeger;
+                ? snap.UnitValue * yuzolcumu
+                : snap.UnitValue;
         }
         return toplam;
     }
 
-    public async Task<decimal> YillikBedelAsync(Sozlesme s) => await AylikBedelAsync(s) * 12;
+    public async Task<decimal> YillikBedelAsync(Lease s) => await AylikBedelAsync(s) * 12;
 
-    public int KalanGun(Sozlesme s) => (int)(s.BitisTarihi - DateTime.Now).TotalDays;
+    public int KalanGun(Lease s) => (int)(s.EndDate - DateTime.Now).TotalDays;
 
-    public double SureYuzdesi(Sozlesme s)
+    public double SureYuzdesi(Lease s)
     {
-        var toplam = (s.BitisTarihi - s.BaslangicTarihi).TotalDays;
-        var gecen = (DateTime.Now - s.BaslangicTarihi).TotalDays;
+        var toplam = (s.EndDate - s.StartDate).TotalDays;
+        var gecen = (DateTime.Now - s.StartDate).TotalDays;
         if (toplam <= 0) return 100;
         return Math.Min(100, Math.Max(0, gecen / toplam * 100));
     }
@@ -107,7 +107,7 @@ public class IstatistikService : IIstatistikService
             MevcutKiraBedeli = mevcutKiraBedeli,
             TufeOrani = tufeOrani,
             KdvUygulandiMi = kdvUygulanacakMi,
-            KdvOrani = kdvUygulanacakMi ? (kdvOrani ?? 20) : null
+            KdvRate = kdvUygulanacakMi ? (kdvOrani ?? 20) : null
         };
 
         var tufeArtisTutari = tufeOrani.HasValue

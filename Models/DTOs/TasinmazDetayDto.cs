@@ -13,7 +13,7 @@ public class TasinmazDetayDto
     public decimal AcikYuzolcumu { get; set; }
     public RentalMode RentalMode { get; set; }
     public string? Aciklama { get; set; }
-    public List<BirimDetayDto> Birimler { get; set; } = [];
+    public List<BirimDetayDto> Units { get; set; } = [];
     public List<TasinmazRezervasyonDto> Rezervasyonlar { get; set; } = [];
     public List<BirimRezervasyonKuralDto> BirimRezervasyonKurallari { get; set; } = [];
     public List<BirimOzelFiyatOzetDto> BirimOzelFiyatlari { get; set; } = [];

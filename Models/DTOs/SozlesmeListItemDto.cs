@@ -10,12 +10,12 @@ public class SozlesmeListItemDto
     public string BirimAd { get; set; } = string.Empty;
     public int TasinmazId { get; set; }
     public string TasinmazAd { get; set; } = string.Empty;
-    public DateTime BaslangicTarihi { get; set; }
-    public DateTime BitisTarihi { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
     public decimal AylikBedel { get; set; }
     public LeaseStatus Durum { get; set; }
     public decimal BirimYuzolcumu { get; set; }
 
-    public int KalanGun => (int)(BitisTarihi - DateTime.Now).TotalDays;
-    public bool Aktif => Durum == LeaseStatus.Active && BaslangicTarihi <= DateTime.Now && BitisTarihi >= DateTime.Now;
+    public int KalanGun => (int)(EndDate - DateTime.Now).TotalDays;
+    public bool Aktif => Durum == LeaseStatus.Active && StartDate <= DateTime.Now && EndDate >= DateTime.Now;
 }

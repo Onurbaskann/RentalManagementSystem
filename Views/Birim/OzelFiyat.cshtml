@@ -23,7 +23,7 @@
 <div class="@(Model.KiralanabilirMi ? "max-w-[1200px]" : "max-w-[600px]") mx-auto">
     <div class="page-header flex items-center justify-between">
         <div>
-            <a href="/Tasinmaz/Detay/@Model.TasinmazId.ToHashId()" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
+            <a href="/Property/Detay/@Model.TasinmazId.ToHashId()" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
                 ← @Model.TasinmazAd
             </a>
             <div class="page-title">@Model.BirimAd — Özel Fiyatlar</div>
@@ -36,7 +36,7 @@
 
 @if (Model.KiralanabilirMi)
 {
-    <!-- Senaryo A: Kiralanabilir birim — KiraciKategori × BorcTipi matrisi -->
+    <!-- Senaryo A: Kiralanabilir birim — KiraciKategori × ChargeType matrisi -->
     @if (Model.ParentTarife != null)
     {
         <div class="mb-2.5">
@@ -45,7 +45,7 @@
         </div>
     }
 
-    <form method="post" action="/Birim/@Model.BirimId.ToHashId()/OzelFiyat">
+    <form method="post" action="/Unit/@Model.BirimId.ToHashId()/OzelFiyat">
         @Html.AntiForgeryToken()
         <input type="hidden" name="BirimId" value="@Model.BirimId" />
         <input type="hidden" name="TasinmazId" value="@Model.TasinmazId" />
@@ -86,7 +86,7 @@
                                     <tr>
                                         <th class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pb-2 text-left border-b border-slate-100">Borç Tipi</th>
                                         <th class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pb-2 text-center border-b border-slate-100 w-10">Aktif</th>
-                                        <th class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pb-2 text-center border-b border-slate-100 w-36">Tutar (₺)</th>
+                                        <th class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pb-2 text-center border-b border-slate-100 w-36">Amount (₺)</th>
                                         <th class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pb-2 text-left border-b border-slate-100 w-24">Yöntem</th>
                                         <th class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pb-2 text-left border-b border-slate-100 w-28">KDV %</th>
                                     </tr>
@@ -103,14 +103,14 @@
                                              class="border-t border-slate-50">
                                              <td class="py-2.5 pr-2">
                                                  <input type="hidden" name="Satirlar[@i].Hucreler[@j].KiraciKategoriId" value="@hucre.KiraciKategoriId" />
-                                                 <input type="hidden" name="Satirlar[@i].Hucreler[@j].BorcTipiId" value="@hucre.BorcTipiId" />
+                                                 <input type="hidden" name="Satirlar[@i].Hucreler[@j].ChargeTypeId" value="@hucre.ChargeTypeId" />
                                                  <input type="hidden" name="Satirlar[@i].Hucreler[@j].RateId" value="@hucre.RateId" />
                                                  <div class="flex items-center gap-2.5">
                                                      <span :class="aktif ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-slate-300'"
                                                            class="w-1.5 h-1.5 rounded-full flex-shrink-0 transition-all"></span>
                                                      <div class="overflow-hidden">
                                                          <div class="flex items-center gap-1.5 mb-1">
-                                                             <span class="text-[9px] text-slate-400 font-bold uppercase tracking-tight">@kolon.BorcTipiKod</span>
+                                                             <span class="text-[9px] text-slate-400 font-bold uppercase tracking-tight">@kolon.ChargeTypeCode</span>
                                                              @if (isIlkAy)
                                                              {
                                                                  <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100 uppercase">İlk Ay</span>
@@ -120,7 +120,7 @@
                                                                  <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase">Aylık</span>
                                                              }
                                                          </div>
-                                                         <div class="text-[13px] font-bold text-slate-700 leading-tight truncate">@kolon.BorcTipiAd</div>
+                                                         <div class="text-[13px] font-bold text-slate-700 leading-tight truncate">@kolon.ChargeTypeName</div>
                                                      </div>
                                                  </div>
                                              </td>
@@ -136,8 +136,8 @@
                                                      <span class="px-2 bg-slate-50 text-[10px] font-bold text-slate-400 border-r border-slate-200 flex items-center">₺</span>
                                                      <input type="number" step="0.01" min="0"
                                                              class="border-none outline-none p-1.5 px-2 text-xs bg-transparent flex-1 min-w-0 text-center font-bold text-slate-700"
-                                                             name="Satirlar[@i].Hucreler[@j].BirimDeger"
-                                                             value="@(hucre.OzelFiyatAktif ? hucre.BirimDeger.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "")"
+                                                             name="Satirlar[@i].Hucreler[@j].UnitValue"
+                                                             value="@(hucre.OzelFiyatAktif ? hucre.UnitValue.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "")"
                                                              placeholder="@hucre.VarsayilanBirimDeger.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
                                                              :disabled="!aktif" />
                                                  </div>
@@ -165,8 +165,8 @@
                                                       :class="!aktif ? 'opacity-30 grayscale pointer-events-none' : 'focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100'">
                                                      <input type="number" step="0.01" min="0" max="100"
                                                              class="border-none outline-none p-1.5 px-2 text-xs bg-transparent w-full min-w-0 text-right font-bold text-slate-700"
-                                                             name="Satirlar[@i].Hucreler[@j].KdvOrani"
-                                                             value="@(hucre.OzelFiyatAktif ? hucre.KdvOrani.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "")"
+                                                             name="Satirlar[@i].Hucreler[@j].KdvRate"
+                                                             value="@(hucre.OzelFiyatAktif ? hucre.KdvRate.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "")"
                                                              placeholder="@hucre.VarsayilanKdvOrani.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
                                                              :disabled="!aktif" />
                                                      <span class="px-2 bg-slate-50 text-[10px] font-bold text-slate-400 border-l border-slate-200 flex items-center">%</span>
@@ -183,7 +183,7 @@
 
             <div class="flex gap-2 mt-1">
                 <button type="submit" class="btn btn-primary">Kaydet</button>
-                <a href="/Tasinmaz/Detay/@Model.TasinmazId.ToHashId()" class="btn btn-secondary">İptal</a>
+                <a href="/Property/Detay/@Model.TasinmazId.ToHashId()" class="btn btn-secondary">İptal</a>
             </div>
         }
     </form>
@@ -191,7 +191,7 @@
     <script>
         function topluKdvAta(btn, value) {
             const blok = btn.closest('.fiyat-kategori-blok');
-            blok.querySelectorAll('tr[data-depozito="false"] input[name*="KdvOrani"]').forEach(function(inp) {
+            blok.querySelectorAll('tr[data-depozito="false"] input[name*="KdvRate"]').forEach(function(inp) {
                 inp.value = value;
             });
         }
@@ -199,7 +199,7 @@
 }
 else if (Model.RezervasyonYapilabilirMi)
 {
-    <!-- Senaryo B: Rezervasyon birimi — RezervasyonTarifeKural formu -->
+    <!-- Senaryo B: Reservation birimi — RezervasyonTarifeKural formu -->
     @if (Model.ParentRezervasyonTarife != null)
     {
         <div class="mb-3.5">
@@ -210,7 +210,7 @@ else if (Model.RezervasyonYapilabilirMi)
 
     @if (Model.OzelRezervasyonKural == null)
     {
-        <form method="post" action="/Birim/@Model.BirimId.ToHashId()/RezKuralKaydet" class="mt-4">
+        <form method="post" action="/Unit/@Model.BirimId.ToHashId()/RezKuralKaydet" class="mt-4">
             @Html.AntiForgeryToken()
             <input type="hidden" name="Id" value="0" />
             @{
@@ -218,9 +218,9 @@ else if (Model.RezervasyonYapilabilirMi)
                     .FirstOrDefault(s => s.UnitTypeAd == Model.UnitTypeAd);
                 
                 int defPeriyot = parentSatir?.UcretlendirmePeriyoduDakika ?? 60;
-                int defUcretsiz = parentSatir?.UcretsizSureDakika ?? 0;
+                int defUcretsiz = parentSatir?.FreeDurationMinutes ?? 0;
                 decimal defUcret = parentSatir?.PeriyotUcreti ?? 0;
-                decimal defKdv   = parentSatir?.KdvOrani ?? 20;
+                decimal defKdv   = parentSatir?.KdvRate ?? 20;
             }
             <div class="card p-6">
                 <div class="text-base font-bold text-slate-800 mb-6 flex items-center gap-2">
@@ -231,7 +231,7 @@ else if (Model.RezervasyonYapilabilirMi)
                 <div class="grid grid-cols-2 gap-4">
                     <div class="form-group">
                         <label class="form-label">Ücretsiz Süre (dk)</label>
-                        <input type="number" name="UcretsizSureDakika" value="@defUcretsiz" class="form-control" min="0" max="1440" />
+                        <input type="number" name="FreeDurationMinutes" value="@defUcretsiz" class="form-control" min="0" max="1440" />
                     </div>
                     <div class="form-group">
                         <label class="form-label">Ücret Periyodu (dk)</label>
@@ -243,7 +243,7 @@ else if (Model.RezervasyonYapilabilirMi)
                     </div>
                     <div class="form-group">
                         <label class="form-label">KDV Oranı (%)</label>
-                        <input type="number" name="KdvOrani" value="@defKdv.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" min="0" max="100" step="0.01" />
+                        <input type="number" name="KdvRate" value="@defKdv.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" min="0" max="100" step="0.01" />
                     </div>
                 </div>
 
@@ -256,26 +256,26 @@ else if (Model.RezervasyonYapilabilirMi)
 
                 <div class="flex items-center gap-3 mt-8">
                     <button type="submit" class="btn btn-primary px-6">Kaydet</button>
-                    <a href="/Tasinmaz/Detay/@Model.TasinmazId.ToHashId()" class="btn btn-secondary px-6">İptal</a>
+                    <a href="/Property/Detay/@Model.TasinmazId.ToHashId()" class="btn btn-secondary px-6">İptal</a>
                 </div>
             </div>
         </form>
     }
     else
     {
-        <form method="post" action="/Birim/@Model.BirimId.ToHashId()/RezKuralKaydet">
+        <form method="post" action="/Unit/@Model.BirimId.ToHashId()/RezKuralKaydet">
             @Html.AntiForgeryToken()
             <input type="hidden" name="Id" value="@Model.OzelRezervasyonKural.Id" />
             <div class="card p-6">
                 <div class="text-base font-bold text-slate-800 mb-6 flex items-center gap-2">
                     <span class="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                    Özel Rezervasyon Kuralı
+                    Özel Reservation Kuralı
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div class="form-group">
                         <label class="form-label">Ücretsiz Süre (dk)</label>
-                        <input type="number" name="UcretsizSureDakika" value="@Model.OzelRezervasyonKural.UcretsizSureDakika" class="form-control" min="0" max="1440" />
+                        <input type="number" name="FreeDurationMinutes" value="@Model.OzelRezervasyonKural.FreeDurationMinutes" class="form-control" min="0" max="1440" />
                     </div>
                     <div class="form-group">
                         <label class="form-label">Ücret Periyodu (dk)</label>
@@ -287,7 +287,7 @@ else if (Model.RezervasyonYapilabilirMi)
                     </div>
                     <div class="form-group">
                         <label class="form-label">KDV Oranı (%)</label>
-                        <input type="number" name="KdvOrani" value="@Model.OzelRezervasyonKural.KdvOrani.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" min="0" max="100" step="0.01" />
+                        <input type="number" name="KdvRate" value="@Model.OzelRezervasyonKural.KdvRate.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" min="0" max="100" step="0.01" />
                     </div>
                 </div>
 
@@ -305,12 +305,12 @@ else if (Model.RezervasyonYapilabilirMi)
 
                 <div class="flex items-center gap-3 mt-8">
                     <button type="submit" class="btn btn-primary px-6">Kaydet</button>
-                    <a href="/Tasinmaz/Detay/@Model.TasinmazId.ToHashId()" class="btn btn-secondary px-6">İptal</a>
+                    <a href="/Property/Detay/@Model.TasinmazId.ToHashId()" class="btn btn-secondary px-6">İptal</a>
                 </div>
             </div>
         </form>
 
-        <form method="post" action="/Birim/@Model.BirimId.ToHashId()/RezKuralSifirla" class="mt-4">
+        <form method="post" action="/Unit/@Model.BirimId.ToHashId()/RezKuralSifirla" class="mt-4">
             @Html.AntiForgeryToken()
             <button type="submit" class="text-xs font-bold text-red-500 bg-red-50 border border-red-100 rounded-lg px-4 py-2 hover:bg-red-100 transition-all flex items-center gap-2"
                     data-confirm="Özel kural silinecek. Genel tarife devreye girecek. Onaylıyor musunuz?">
@@ -327,11 +327,11 @@ else
         <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         </div>
-        <div class="text-base font-bold text-red-800 mb-2">Birim Türü Hatalı Tanımlı</div>
+        <div class="text-base font-bold text-red-800 mb-2">Unit Türü Hatalı Tanımlı</div>
         <p class="text-sm text-red-700/70 leading-relaxed max-w-sm mb-6">
-            Bu birim türünde hem <b>Kiralanabilir</b> hem de <b>Rezervasyon</b> yapılabilir işaretli değil veya her ikisi de işaretli. Lütfen yöneticiye bildirin.
+            Bu birim türünde hem <b>Kiralanabilir</b> hem de <b>Reservation</b> yapılabilir işaretli değil veya her ikisi de işaretli. Lütfen yöneticiye bildirin.
         </p>
-        <a href="/Tasinmaz/Detay/@Model.TasinmazId.ToHashId()" class="btn btn-secondary px-8">Geri Dön</a>
+        <a href="/Property/Detay/@Model.TasinmazId.ToHashId()" class="btn btn-secondary px-8">Geri Dön</a>
     </div>
 }
 </div>

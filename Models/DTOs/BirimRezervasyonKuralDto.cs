@@ -7,6 +7,6 @@ public class BirimRezervasyonKuralDto
     public string BirimAd { get; set; } = string.Empty;
     public decimal PeriyotUcreti { get; set; }
     public int UcretlendirmePeriyoduDakika { get; set; }
-    public int UcretsizSureDakika { get; set; }
-    public decimal KdvOrani { get; set; }
+    public int FreeDurationMinutes { get; set; }
+    public decimal KdvRate { get; set; }
 }

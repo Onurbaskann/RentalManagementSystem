@@ -6,7 +6,7 @@
 
 <div class="page-header">
     <div>
-        <a href="/Kiraci/Kullanicilar" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
+        <a href="/Tenant/Kullanicilar" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
             ← Kullanıcılar
         </a>
         <div class="page-title">Kullanıcı Davet Et</div>
@@ -15,7 +15,7 @@
 </div>
 
 <div class="card">
-    <form method="post" action="/Kiraci/Kullanicilar/Davet">
+    <form method="post" action="/Tenant/Kullanicilar/Davet">
         @Html.AntiForgeryToken()
 
         @if (!ViewData.ModelState.IsValid)
@@ -46,12 +46,12 @@
             <span asp-validation-for="RolId" class="form-error"></span>
         </div>
 
-        @if (Model.Birimler.Any())
+        @if (Model.Units.Any())
         {
             <div class="form-group">
-                <label class="form-label">Birim Erişimi <span class="text-muted font-normal">(opsiyonel — boş bırakılırsa tüm birimler)</span></label>
+                <label class="form-label">Unit Erişimi <span class="text-muted font-normal">(opsiyonel — boş bırakılırsa tüm birimler)</span></label>
                 <div class="border border-[var(--color-border)] rounded-lg p-3 flex flex-col gap-2 max-h-48 overflow-y-auto">
-                    @foreach (var b in Model.Birimler)
+                    @foreach (var b in Model.Units)
                     {
                         <label class="flex items-center gap-2 text-[13.5px] cursor-pointer">
                             <input type="checkbox" name="BirimIds" value="@b.Id"
@@ -66,7 +66,7 @@
 
         <div class="flex gap-2.5 mt-6">
             <button type="submit" class="btn btn-primary px-6">Davet Gönder</button>
-            <a href="/Kiraci/Kullanicilar" class="btn btn-secondary px-6">İptal</a>
+            <a href="/Tenant/Kullanicilar" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>
 </div>

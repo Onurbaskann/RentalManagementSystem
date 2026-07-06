@@ -21,11 +21,11 @@
         <table>
             <thead>
                 <tr>
-                    <th>Birim</th>
+                    <th>Unit</th>
                     <th>Taşınmaz</th>
                     <th>Başlangıç</th>
                     <th>Bitiş</th>
-                    <th>Tutar</th>
+                    <th>Amount</th>
                     <th>Durum</th>
                 </tr>
             </thead>
@@ -50,8 +50,8 @@
                     <tr data-row data-search="@search">
                         <td class="font-semibold">@r.BirimAd</td>
                         <td class="text-sm text-muted">@r.TasinmazAd</td>
-                        <td class="text-sm">@r.BaslangicTarihi.ToString("dd.MM.yyyy HH:mm")</td>
-                        <td class="text-sm">@r.BitisTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td class="text-sm">@r.StartDate.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td class="text-sm">@r.EndDate.ToString("dd.MM.yyyy HH:mm")</td>
                         <td class="text-sm font-medium">@r.ToplamTutar.ToString("N2") ₺</td>
                         <td><span class="badge @durumClass">@durumLabel</span></td>
                     </tr>

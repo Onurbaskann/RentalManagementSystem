@@ -2,7 +2,7 @@ using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IKiraciRepository : IBaseRepository<Kiraci>
+public interface IKiraciRepository : IBaseRepository<Tenant>
 {
     Task<List<KiraciListItemDto>> GetListAsync(List<int>? yetkiliTasinmazIds);
     Task<KiraciDetayDto?> GetDetayAsync(int id);

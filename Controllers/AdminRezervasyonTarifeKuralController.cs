@@ -11,10 +11,10 @@ namespace KiraTakip.Controllers;
 [Route("Admin/RezervasyonTarifeKural")]
 public class AdminRezervasyonTarifeKuralController : Controller
 {
-    private readonly IRezervasyonService _service;
+    private readonly IReservationService _service;
     private readonly IBirimRepository _birimRepo;
 
-    public AdminRezervasyonTarifeKuralController(IRezervasyonService service, IBirimRepository birimRepo)
+    public AdminRezervasyonTarifeKuralController(IReservationService service, IBirimRepository birimRepo)
     {
         _service = service;
         _birimRepo = birimRepo;
@@ -34,9 +34,9 @@ public class AdminRezervasyonTarifeKuralController : Controller
     {
         var vm = new RezervasyonTarifeKuralViewModel
         {
-            UcretsizSureDakika = 120,
+            FreeDurationMinutes = 120,
             UcretlendirmePeriyoduDakika = 60,
-            KdvOrani = 20,
+            KdvRate = 20,
             IsActive = true
         };
         await PopulateDropdownsAsync(vm);
@@ -76,11 +76,11 @@ public class AdminRezervasyonTarifeKuralController : Controller
         var vm = new RezervasyonTarifeKuralViewModel
         {
             Id = kural.Id,
-            BirimId = kural.BirimId,
-            UcretsizSureDakika = kural.UcretsizSureDakika,
+            BirimId = kural.UnitId,
+            FreeDurationMinutes = kural.FreeDurationMinutes,
             UcretlendirmePeriyoduDakika = kural.UcretlendirmePeriyoduDakika,
             PeriyotUcreti = kural.PeriyotUcreti,
-            KdvOrani = kural.KdvOrani,
+            KdvRate = kural.KdvRate,
             IsActive = kural.IsActive,
             Aciklama = kural.Aciklama
         };

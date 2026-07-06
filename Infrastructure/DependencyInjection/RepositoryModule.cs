@@ -14,9 +14,9 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<ITasinmazRepository, TasinmazRepository>();
             services.AddScoped<IBirimRepository, BirimRepository>();
             services.AddScoped<ISozlesmeRepository, SozlesmeRepository>();
-            services.AddScoped<ITahakkukRepository, TahakkukRepository>();
-            services.AddScoped<IOdemeRepository, OdemeRepository>();
-            services.AddScoped<IBankaHareketiRepository, BankaHareketiRepository>();
+            services.AddScoped<IChargeRepository, ChargeRepository>();
+            services.AddScoped<IPaymentRepository, PaymentRepository>();
+            services.AddScoped<IBankTransactionRepository, BankTransactionRepository>();
             services.AddScoped<ITasinmazTarifeRepository, TasinmazTarifeRepository>();
             services.AddScoped<IBorcTipiRepository, BorcTipiRepository>();
             services.AddScoped<ISozlesmeTarifeRepository, SozlesmeTarifeRepository>();
@@ -27,7 +27,7 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<IBelgeTuruRepository, BelgeTuruRepository>();
             services.AddScoped<IKategoriRepository, KategoriRepository>();
             services.AddScoped<ITasinmazTipiRepository, TasinmazTipiRepository>();
-            services.AddScoped<IRezervasyonRepository, RezervasyonRepository>();
+            services.AddScoped<IReservationRepository, ReservationRepository>();
             services.AddScoped<IUserPermissionRepository, UserPermissionRepository>();
 
             return services;

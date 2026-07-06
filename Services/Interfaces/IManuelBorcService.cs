@@ -10,7 +10,7 @@ public interface IManuelBorcService
     Task<int> GetIptalSayisiAsync(IReadOnlyList<int>? tasinmazIds = null, IReadOnlyList<int>? birimIds = null);
 
     // Create / Cancel — entity döner (business logic)
-    Task<(bool Basarili, string? Hata, int TahakkukId)> CreateAsync(ManuelBorcCreateViewModel model, string userId);
+    Task<(bool Basarili, string? Hata, int ChargeId)> CreateAsync(ManuelBorcCreateViewModel model, string userId);
     Task<(bool Basarili, string? Hata)> CancelAsync(int tahakkukId, string userId, string neden);
 
     // Dropdown verileri — DTO döner

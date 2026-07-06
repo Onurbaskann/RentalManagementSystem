@@ -19,24 +19,24 @@ public class BelgeService : IBelgeService
     public async Task<List<Belge>> GetListAsync(BelgeOwnerTipi ownerType, int ownerId)
         => await _db.Belgeler
             .AsNoTracking()
-            .Include(b => b.BelgeTuru)
+            .Include(b => b.DocumentType)
             .Where(b => b.OwnerType == ownerType && b.OwnerId == ownerId && !b.Gecersiz)
             .OrderByDescending(b => b.CreatedAt)
             .ToListAsync();
 
-    public async Task<Belge> UploadAsync(BelgeOwnerTipi ownerType, int ownerId, int belgeTuruId,
+    public async Task<Belge> UploadAsync(BelgeOwnerTipi ownerType, int ownerId, int documentTypeId,
         string dosyaAdi, string mimeType, byte[] icerik, string? aciklama = null, bool invalidateOld = true)
     {
         var eskiBelge = invalidateOld
             ? await _db.Belgeler
                 .Where(b => b.OwnerType == ownerType && b.OwnerId == ownerId
-                         && b.BelgeTuruId == belgeTuruId && !b.Gecersiz && !b.IsDeleted)
+                         && b.DocumentTypeId == documentTypeId && !b.Gecersiz && !b.IsDeleted)
                 .FirstOrDefaultAsync()
             : null;
 
         var yeni = new Belge
         {
-            BelgeTuruId = belgeTuruId,
+            DocumentTypeId = documentTypeId,
             OwnerType = ownerType,
             OwnerId = ownerId,
             DosyaAdi = dosyaAdi,
@@ -65,7 +65,7 @@ public class BelgeService : IBelgeService
     {
         var meta = await _db.Belgeler
             .AsNoTracking()
-            .Include(b => b.BelgeTuru)
+            .Include(b => b.DocumentType)
             .FirstOrDefaultAsync(b => b.Id == belgeId)
             ?? throw new KeyNotFoundException($"Belge {belgeId} bulunamadı.");
 
@@ -88,10 +88,10 @@ public class BelgeService : IBelgeService
         await _uow.SaveChangesAsync();
     }
 
-    public async Task<List<BelgeTuru>> GetTurlerAsync(BelgeOwnerTipi hedefEntite, bool sadeceDogru = false)
-        => await _db.BelgeTurleri
+    public async Task<List<DocumentType>> GetTurlerAsync(BelgeOwnerTipi hedefEntite, bool sadeceDogru = false)
+        => await _db.DocumentTypes
             .AsNoTracking()
-            .Where(t => t.HedefEntite == hedefEntite && t.IsActive && (!sadeceDogru || t.Zorunlu))
-            .OrderBy(t => t.Sira)
+            .Where(t => t.TargetEntity == hedefEntite && t.IsActive && (!sadeceDogru || t.Required))
+            .OrderBy(t => t.SortOrder)
             .ToListAsync();
 }

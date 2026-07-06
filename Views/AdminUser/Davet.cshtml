@@ -46,7 +46,7 @@
         </div>
 
 
-        @if (Model.Tasinmazlar.Any())
+        @if (Model.Properties.Any())
         {
             <div class="form-group" x-show="seciliRolId !== '0'" x-cloak>
                 <label class="form-label">Taşınmaz Yetkileri</label>
@@ -57,16 +57,16 @@
                 </label>
 
                 <div x-show="!tumErisim" x-cloak class="grid grid-cols-1 gap-1.5 pl-1">
-                    @for (int i = 0; i < Model.Tasinmazlar.Count; i++)
+                    @for (int i = 0; i < Model.Properties.Count; i++)
                     {
                         <label class="flex items-center gap-2 cursor-pointer text-sm">
                             <input type="checkbox"
                                    name="SelectedTasinmazIds"
-                                   value="@Model.Tasinmazlar[i].TasinmazId"
-                                   @(Model.Tasinmazlar[i].Selected ? "checked" : "")
+                                   value="@Model.Properties[i].TasinmazId"
+                                   @(Model.Properties[i].Selected ? "checked" : "")
                                    class="rounded" />
-                            <span class="font-medium">@Model.Tasinmazlar[i].Ad</span>
-                            <span class="text-muted">— @Model.Tasinmazlar[i].Konum</span>
+                            <span class="font-medium">@Model.Properties[i].Ad</span>
+                            <span class="text-muted">— @Model.Properties[i].Konum</span>
                         </label>
                     }
                 </div>

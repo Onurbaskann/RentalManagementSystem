@@ -11,7 +11,7 @@ public class KullaniciDuzenleViewModel
     public bool IsCurrentUser { get; set; }
     public bool TumTasinmazlaraErisim { get; set; }
     public List<int> SelectedTasinmazIds { get; set; } = [];
-    public List<TasinmazYetkiCheckboxViewModel> Tasinmazlar { get; set; } = [];
+    public List<TasinmazYetkiCheckboxViewModel> Properties { get; set; } = [];
     public List<int> SelectedBirimIds { get; set; } = [];
-    public List<BirimYetkiCheckboxViewModel> Birimler { get; set; } = [];
+    public List<BirimYetkiCheckboxViewModel> Units { get; set; } = [];
 }

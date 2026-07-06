@@ -14,7 +14,7 @@
     </div>
     @if (canEdit)
     {
-        <a href="/Kiraci/Ekle" class="btn btn-primary flex items-center gap-2">
+        <a href="/Tenant/Ekle" class="btn btn-primary flex items-center gap-2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Yeni Kiracı
         </a>
@@ -46,7 +46,7 @@
                 {
                     var aktifSozlesmeCount = ((Dictionary<int,int>)ViewBag.AktifSozlesme).GetValueOrDefault(k.Id, 0);
                     var search = $"{k.KiraciNo} {k.GosterimAdi} {k.VergiNo} {k.Telefon} {k.Email}".ToLower();
-                    <tr data-row data-search="@search" data-href="/Kiraci/Detay/@k.Id.ToHashId()"
+                    <tr data-row data-search="@search" data-href="/Tenant/Detay/@k.Id.ToHashId()"
                         class="cursor-pointer hover:bg-slate-50 transition-colors"
                         @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
                         <td class="font-mono text-xs text-muted">@k.KiraciNo</td>
@@ -85,7 +85,7 @@
                         @if (canEdit)
                         {
                             <td class="text-right">
-                                <a href="/Kiraci/Duzenle/@k.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
+                                <a href="/Tenant/Duzenle/@k.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
                             </td>
                         }
                         else

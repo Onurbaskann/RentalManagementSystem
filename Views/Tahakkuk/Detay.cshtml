@@ -1,9 +1,9 @@
 @model TahakkukDetayDto
 @using KiraTakip.Models
 @{
-    ViewData["Title"] = $"Tahakkuk #{Model.Id}";
+    ViewData["Title"] = $"Charge #{Model.Id}";
 
-    var kalan = Model.ToplamTutar - Model.OdenenTutar;
+    var kalan = Model.ToplamTutar - Model.PaidAmount;
 
     string durumCls = Model.Durum switch {
         ChargeStatus.Paid    => "badge-kirali",
@@ -36,11 +36,11 @@
 
 <!-- Breadcrumb -->
 <div class="flex items-center justify-between mb-5">
-    <a href="/Tahakkuk" class="text-[12.5px] text-muted no-underline hover:text-primary transition-colors">← Tahakkuklar</a>
+    <a href="/Charge" class="text-[12.5px] text-muted no-underline hover:text-primary transition-colors">← Charges</a>
     <div class="flex gap-2">
-        @if (Model.KiraSozlesmesiId != null)
+        @if (Model.LeaseId != null)
         {
-            <a href="/Sozlesme/Detay/@Model.KiraSozlesmesiId.ToHashId()" class="btn btn-sm btn-secondary">Sözleşme Detayı</a>
+            <a href="/Lease/Detay/@Model.LeaseId.ToHashId()" class="btn btn-sm btn-secondary">Sözleşme Detayı</a>
         }
         @if (canCreate && !iptal && !tamOdendi)
         {
@@ -54,10 +54,10 @@
     <div class="flex items-start justify-between flex-wrap gap-5">
         <div>
             <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-1.5">Dönem</div>
-            <div class="font-serif text-[28px] font-bold leading-tight">@Model.DonemBaslangic.ToString("MMMM yyyy")</div>
+            <div class="font-serif text-[28px] font-bold leading-tight">@Model.PeriodStart.ToString("MMMM yyyy")</div>
             <div class="text-[13px] text-muted mt-1">
-                @Model.DonemBaslangic.ToString("dd.MM.yyyy") — @Model.DonemBitis.ToString("dd.MM.yyyy")
-                &nbsp;•&nbsp; Vade: @Model.VadeTarihi.ToString("dd.MM.yyyy")
+                @Model.PeriodStart.ToString("dd.MM.yyyy") — @Model.PeriodEnd.ToString("dd.MM.yyyy")
+                &nbsp;•&nbsp; Vade: @Model.DueDate.ToString("dd.MM.yyyy")
             </div>
             <div class="mt-2"><span class="badge @durumCls text-[12.5px] px-3.5 py-1.5">@durumLabel</span></div>
         </div>
@@ -68,7 +68,7 @@
             </div>
             <div class="text-center">
                 <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Ödenen</div>
-                <div class="text-xl font-bold text-emerald-800">@Model.OdenenTutar.ToString("N2") ₺</div>
+                <div class="text-xl font-bold text-emerald-800">@Model.PaidAmount.ToString("N2") ₺</div>
             </div>
             <div class="text-center">
                 <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Kalan</div>
@@ -81,27 +81,27 @@
         <div>
             <span class="text-muted">Kiracı: </span>
             @if (Model.KiraciId != null) {
-                <a href="/Kiraci/Detay/@Model.KiraciId.ToHashId()" class="font-semibold no-underline hover:underline">@Model.KiraciGosterimAdi</a>
+                <a href="/Tenant/Detay/@Model.KiraciId.ToHashId()" class="font-semibold no-underline hover:underline">@Model.KiraciGosterimAdi</a>
             } else {
-                <span class="font-semibold">Rezervasyon Sahibi</span>
+                <span class="font-semibold">Reservation Sahibi</span>
             }
         </div>
         <div>
             <span class="text-muted">Taşınmaz: </span>
             @if (Model.TasinmazId != null) {
-                <a href="/Tasinmaz/Detay/@Model.TasinmazId.ToHashId()" class="font-semibold no-underline hover:underline">@Model.TasinmazAd</a>
+                <a href="/Property/Detay/@Model.TasinmazId.ToHashId()" class="font-semibold no-underline hover:underline">@Model.TasinmazAd</a>
             } else {
                 <span class="font-semibold">Toplantı Salonu</span>
             }
         </div>
         <div>
-            <span class="text-muted">Birim: </span>
-            <span class="font-semibold">@(Model.BirimAd ?? "Rezervasyon")</span>
+            <span class="text-muted">Unit: </span>
+            <span class="font-semibold">@(Model.BirimAd ?? "Reservation")</span>
         </div>
-        @if (Model.KiraSozlesmesiId != null) {
+        @if (Model.LeaseId != null) {
             <div>
                 <span class="text-muted">Sözleşme: </span>
-                <a href="/Sozlesme/Detay/@Model.KiraSozlesmesiId.ToHashId()" class="font-semibold no-underline hover:underline">#@Model.KiraSozlesmesiId</a>
+                <a href="/Lease/Detay/@Model.LeaseId.ToHashId()" class="font-semibold no-underline hover:underline">#@Model.LeaseId</a>
             </div>
         }
     </div>
@@ -111,9 +111,9 @@
 <div class="card p-0 overflow-hidden mb-4">
     <div class="p-[14px_20px] border-b border-[var(--color-border)]">
         <div class="text-sm font-bold">Kalem Dökümü</div>
-        <div class="text-xs text-muted mt-0.5">Tahakkuk oluşturulma tarihi: @Model.OlusturmaTarihi.ToString("dd.MM.yyyy HH:mm")</div>
+        <div class="text-xs text-muted mt-0.5">Charge oluşturulma tarihi: @Model.OlusturmaTarihi.ToString("dd.MM.yyyy HH:mm")</div>
     </div>
-    @if (Model.Kalemler.Any())
+    @if (Model.LineItems.Any())
     {
         <div class="overflow-hidden rounded-lg border border-slate-200 bg-white m-4">
             <table class="w-full text-xs">
@@ -121,18 +121,18 @@
                     <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
                         <th class="p-2 px-3 text-left">Açıklama</th>
                         <th class="p-2 px-3 text-left">Hesaplama</th>
-                        <th class="p-2 px-3 text-right">Birim</th>
-                        <th class="p-2 px-3 text-right">Tutar</th>
+                        <th class="p-2 px-3 text-right">Unit</th>
+                        <th class="p-2 px-3 text-right">Amount</th>
                         <th class="p-2 px-3 text-right text-muted">KDV (%)</th>
-                        <th class="p-2 px-3 text-right text-muted">KDV Tutarı</th>
+                        <th class="p-2 px-3 text-right text-muted">KDV Amountı</th>
                         <th class="p-2 px-3 text-right">Toplam</th>
                         <th class="p-2 px-3 text-center">Kaynak</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var k in Model.Kalemler.OrderBy(k => k.BorcTipiSira))
+                    @foreach (var k in Model.LineItems.OrderBy(k => k.BorcTipiSira))
                     {
-                        string kaynakCls = k.KaynakTipi switch {
+                        string kaynakCls = k.SourceType switch {
                             LineItemSourceType.UndefinedRate    => "badge-bos",
                             LineItemSourceType.LeaseRateOverride  => "badge-surek",
                             LineItemSourceType.UnitRateOverride     => "badge-kirali",
@@ -142,32 +142,32 @@
                             LineItemSourceType.ReservationRule => "badge-bireysel",
                             _                                 => "badge-bos"
                         };
-                        string kaynakLabel = k.KaynakTipi switch {
+                        string kaynakLabel = k.SourceType switch {
                             LineItemSourceType.UndefinedRate    => "Tanımsız Tarife",
                             LineItemSourceType.LeaseRateOverride  => "Sözleşme Tarifesi",
-                            LineItemSourceType.UnitRateOverride     => "Birim Tarifesi",
+                            LineItemSourceType.UnitRateOverride     => "Unit Tarifesi",
                             LineItemSourceType.PropertyRateOverride  => "Taşınmaz Tarifesi",
                             LineItemSourceType.RateSchedule       => "Genel Tarife",
                             LineItemSourceType.ManualInput       => "Manuel Giriş",
-                            LineItemSourceType.ReservationRule => "Rezervasyon Kuralı",
+                            LineItemSourceType.ReservationRule => "Reservation Kuralı",
                             _                                 => "Bilinmiyor"
                         };
-                        string kaynakTip = k.KaynakTipi switch {
+                        string kaynakTip = k.SourceType switch {
                             LineItemSourceType.UndefinedRate    => "Fiyat tanımı bulunamadığı için 0₺ olarak üretildi.",
                             LineItemSourceType.LeaseRateOverride  => "Sözleşmeye özel tarife fiyatı kullanıldı.",
-                            LineItemSourceType.UnitRateOverride     => "Birim düzeyinde özel fiyat kullanıldı.",
+                            LineItemSourceType.UnitRateOverride     => "Unit düzeyinde özel fiyat kullanıldı.",
                             LineItemSourceType.PropertyRateOverride  => "Taşınmaz ve kiracı kategorisine özel matris fiyatı kullanıldı.",
                             LineItemSourceType.RateSchedule       => "Genel tarife fiyatı uygulandı.",
                             LineItemSourceType.ManualInput       => "Kullanıcı tarafından manuel olarak girildi.",
-                            LineItemSourceType.ReservationRule => "Rezervasyon kuralından aktarıldı.",
+                            LineItemSourceType.ReservationRule => "Reservation kuralından aktarıldı.",
                             _                                 => ""
                         };
                         <tr class="border-t border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
                             <td class="p-2 px-3 text-slate-600 font-medium">@k.Aciklama</td>
                             <td class="p-2 px-3 text-slate-400">@(k.CalculationMethod == CalculationMethod.M2 ? "m² Bazlı" : "Sabit")</td>
-                            <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺@(k.CalculationMethod == CalculationMethod.M2 ? "/m²" : "")</td>
-                            <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Tutar.ToString("N2") ₺</td>
-                            <td class="p-2 px-3 text-right text-slate-400/60">%@k.KdvOrani.ToString("G")</td>
+                            <td class="p-2 px-3 text-right text-slate-500">@k.UnitValue.ToString("N2") ₺@(k.CalculationMethod == CalculationMethod.M2 ? "/m²" : "")</td>
+                            <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Amount.ToString("N2") ₺</td>
+                            <td class="p-2 px-3 text-right text-slate-400/60">%@k.KdvRate.ToString("G")</td>
                             <td class="p-2 px-3 text-right text-slate-400/60">@k.KdvTutari.ToString("N2") ₺</td>
                             <td class="p-2 px-3 text-right font-bold text-slate-700">@k.ToplamTutar.ToString("N2") ₺</td>
                             <td class="p-2 px-3 text-center"><span class="badge @kaynakCls text-[11px]" data-tip="@kaynakTip">@kaynakLabel</span></td>
@@ -177,7 +177,7 @@
                 <tfoot class="bg-slate-50 border-t-2 border-slate-200">
                     <tr class="font-bold text-[9px] uppercase tracking-wider text-slate-500">
                         <td colspan="3" class="p-2 px-3">Toplam</td>
-                        <td class="p-2 px-3 text-right text-slate-600">@Model.BeklenenTutar.ToString("N2") ₺</td>
+                        <td class="p-2 px-3 text-right text-slate-600">@Model.ExpectedAmount.ToString("N2") ₺</td>
                         <td></td>
                         <td class="p-2 px-3 text-right text-slate-400/60">@Model.KdvTutari.ToString("N2") ₺</td>
                         <td class="p-2 px-3 text-right text-slate-700">@Model.ToplamTutar.ToString("N2") ₺</td>
@@ -198,14 +198,14 @@
     <div class="p-[14px_20px] border-b border-[var(--color-border)]">
         <div class="text-sm font-bold">Ödeme Geçmişi</div>
     </div>
-    @if (Model.Odemeler.Any())
+    @if (Model.Allocations.Any())
     {
         <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
                         <th>Ödeme Tarihi</th>
-                        <th class="text-right">Tutar</th>
+                        <th class="text-right">Amount</th>
                         <th>Kanal</th>
                         <th>Durum</th>
                         <th>Giriş Tarihi</th>
@@ -214,7 +214,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var o in Model.Odemeler.OrderByDescending(o => o.OdemeTarihi))
+                    @foreach (var o in Model.Allocations.OrderByDescending(o => o.PaymentDate))
                     {
                         string odCls = o.Durum switch {
                             PaymentStatus.Approved     => "badge-kirali",
@@ -233,11 +233,11 @@
                             _                  => "Diğer"
                         };
                         <tr>
-                            <td class="font-semibold">@o.OdemeTarihi.ToString("dd.MM.yyyy")</td>
-                            <td class="text-right font-bold @(o.Durum == PaymentStatus.Approved ? "text-emerald-800" : "")">@o.Tutar.ToString("N2") ₺</td>
+                            <td class="font-semibold">@o.PaymentDate.ToString("dd.MM.yyyy")</td>
+                            <td class="text-right font-bold @(o.Durum == PaymentStatus.Approved ? "text-emerald-800" : "")">@o.Amount.ToString("N2") ₺</td>
                             <td class="text-[13px]">@kanalLabel</td>
                             <td><span class="badge @odCls">@odLabel</span></td>
-                            <td class="text-[12px] text-muted">@o.GirisTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+                            <td class="text-[12px] text-muted">@o.EntryDate.ToString("dd.MM.yyyy HH:mm")</td>
                             <td class="text-[13px] text-muted">@o.Aciklama</td>
                             <td><a href="/Odeme/Detay/@o.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
                         </tr>

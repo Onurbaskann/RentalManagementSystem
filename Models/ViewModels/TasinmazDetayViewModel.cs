@@ -4,6 +4,6 @@ namespace KiraTakip.Models.ViewModels;
 
 public class TasinmazDetayViewModel
 {
-    public TasinmazDetayDto Tasinmaz { get; set; } = null!;
+    public TasinmazDetayDto Property { get; set; } = null!;
     public TasinmazFiyatMatrisiViewModel FiyatMatrisi { get; set; } = null!;
 }

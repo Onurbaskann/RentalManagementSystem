@@ -1,7 +1,7 @@
 @model KiraTakip.Models.Dtos.RezervasyonListItemDto
 @using KiraTakip.Models
 @{
-    ViewData["Title"] = "Rezervasyon Detayı";
+    ViewData["Title"] = "Reservation Detayı";
     bool canCancel   = User.HasPermission(PermissionCatalog.Reservation.Cancel);
     bool canTransfer = User.HasPermission(PermissionCatalog.Reservation.TransferToCharge);
 
@@ -31,14 +31,14 @@
 
 <div class="page-header flex flex-wrap items-start justify-between mb-2.5 gap-4">
     <div>
-        <a href="/Rezervasyon" class="text-[12.5px] text-muted no-underline mb-2 inline-block hover:text-primary transition-colors">← Rezervasyonlar</a>
-        <div class="page-title">Rezervasyon #@Model.Id</div>
+        <a href="/Reservation" class="text-[12.5px] text-muted no-underline mb-2 inline-block hover:text-primary transition-colors">← Rezervasyonlar</a>
+        <div class="page-title">Reservation #@Model.Id</div>
         <div class="mt-1.5"><span class="badge @durumCls">@durumLabel</span></div>
     </div>
     <div class="flex gap-2">
-        @if (canTransfer && Model.Durum == ReservationStatus.Planned && Model.ToplamTutar > 0 && Model.TahakkukId == null)
+        @if (canTransfer && Model.Durum == ReservationStatus.Planned && Model.ToplamTutar > 0 && Model.ChargeId == null)
         {
-            <form method="post" action="/Rezervasyon/TahakkukaAktar/@Model.Id.ToHashId()"
+            <form method="post" action="/Reservation/TahakkukaAktar/@Model.Id.ToHashId()"
                   data-confirm="Bu rezervasyon tahakkuka aktarılsın mı?">
                 @Html.AntiForgeryToken()
                 <button type="submit" class="btn btn-primary">Tahakkuka Aktar</button>
@@ -48,7 +48,7 @@
         {
             <button type="button" class="btn btn-danger"
                     data-confirm-prompt="İptal nedeni"
-                    data-confirm-action="/Rezervasyon/Iptal/@Model.Id.ToHashId()"
+                    data-confirm-action="/Reservation/Iptal/@Model.Id.ToHashId()"
                     data-confirm-field="neden">
                 İptal Et
             </button>
@@ -59,27 +59,27 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
     <!-- Genel Bilgiler -->
     <div class="card">
-        <div class="card-title mb-3">Rezervasyon Bilgileri</div>
+        <div class="card-title mb-3">Reservation Bilgileri</div>
         <div class="flex flex-col gap-2.5 text-[13.5px]">
             <div class="flex justify-between">
                 <span class="text-muted">Kiracı</span>
-                <a href="/Kiraci/Detay/@Model.KiraciId.ToHashId()" class="font-medium text-primary no-underline hover:underline">@Model.KiraciGosterimAdi</a>
+                <a href="/Tenant/Detay/@Model.KiraciId.ToHashId()" class="font-medium text-primary no-underline hover:underline">@Model.KiraciGosterimAdi</a>
             </div>
             <div class="flex justify-between">
                 <span class="text-muted">Taşınmaz</span>
                 <span class="font-medium">@Model.TasinmazAd</span>
             </div>
             <div class="flex justify-between">
-                <span class="text-muted">Birim</span>
+                <span class="text-muted">Unit</span>
                 <span class="font-medium">@Model.BirimAd</span>
             </div>
             <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
                 <span class="text-muted">Başlangıç</span>
-                <span class="font-mono text-[13px]">@Model.BaslangicTarihi.ToString("dd.MM.yyyy HH:mm")</span>
+                <span class="font-mono text-[13px]">@Model.StartDate.ToString("dd.MM.yyyy HH:mm")</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-muted">Bitiş</span>
-                <span class="font-mono text-[13px]">@Model.BitisTarihi.ToString("dd.MM.yyyy HH:mm")</span>
+                <span class="font-mono text-[13px]">@Model.EndDate.ToString("dd.MM.yyyy HH:mm")</span>
             </div>
             @if (!string.IsNullOrEmpty(Model.Aciklama))
             {
@@ -97,25 +97,25 @@
         <div class="flex flex-col gap-2.5 text-[13.5px]">
             <div class="flex justify-between">
                 <span class="text-muted">Toplam Süre</span>
-                <span>@(Model.ToplamSureDakika / 60) sa @(Model.ToplamSureDakika % 60) dk</span>
+                <span>@(Model.TotalDurationMinutes / 60) sa @(Model.TotalDurationMinutes % 60) dk</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-muted">Ücretsiz Süre</span>
-                <span>@(Model.UcretsizSureDakika / 60) sa @(Model.UcretsizSureDakika % 60) dk</span>
+                <span>@(Model.FreeDurationMinutes / 60) sa @(Model.FreeDurationMinutes % 60) dk</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-muted">Ücretli Süre</span>
-                <span>@(Model.UcretliSureDakika / 60) sa @(Model.UcretliSureDakika % 60) dk</span>
+                <span>@(Model.PaidDurationMinutes / 60) sa @(Model.PaidDurationMinutes % 60) dk</span>
             </div>
             <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
-                <span class="text-muted font-semibold">Toplam Tutar</span>
+                <span class="text-muted font-semibold">Toplam Amount</span>
                 <span class="font-bold text-primary text-base">@Model.ToplamTutar.ToString("N2") ₺</span>
             </div>
-            @if (Model.TahakkukId.HasValue)
+            @if (Model.ChargeId.HasValue)
             {
                 <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
-                    <span class="text-muted">Tahakkuk</span>
-                    <a href="/Tahakkuk/Detay/@Model.TahakkukId.ToHashId()" class="text-primary no-underline hover:underline font-medium">#@Model.TahakkukId</a>
+                    <span class="text-muted">Charge</span>
+                    <a href="/Charge/Detay/@Model.ChargeId.ToHashId()" class="text-primary no-underline hover:underline font-medium">#@Model.ChargeId</a>
                 </div>
             }
         </div>

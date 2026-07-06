@@ -21,9 +21,9 @@ public class UnitTypeRepository : BaseRepository<UnitType>, IUnitTypeRepository
                 Sira = b.Sira,
                 KiralanabilirMi = b.KiralanabilirMi,
                 RezervasyonYapilabilirMi = b.RezervasyonYapilabilirMi,
-                BorcTipiId = b.BorcTipiId,
-                BorcTipiAd = b.BorcTipi != null ? b.BorcTipi.Ad : null,
-                Aktif = b.Aktif
+                BorcTipiId = b.ChargeTypeId,
+                BorcTipiAd = b.ChargeType != null ? b.ChargeType.Name : null,
+                Aktif = b.IsActive
             })
             .ToListAsync();
 
@@ -36,16 +36,16 @@ public class UnitTypeRepository : BaseRepository<UnitType>, IUnitTypeRepository
 
     public async Task<bool> AnyAktifByBorcTipiIdAsync(int borcTipiId, int? excludeId = null)
         => await _dbSet.AsNoTracking()
-            .AnyAsync(b => b.BorcTipiId == borcTipiId && b.Aktif && (excludeId == null || b.Id != excludeId));
+            .AnyAsync(b => b.ChargeTypeId == borcTipiId && b.IsActive && (excludeId == null || b.Id != excludeId));
 
     public async Task<bool> HasAktifTahakkukForUnitTypeAsync(int birimTuruId)
-        => await _ctx.Tahakkuklar.AsNoTracking()
-            .AnyAsync(t => t.Durum != ChargeStatus.Paid
-                        && t.Durum != ChargeStatus.Cancelled
-                        && t.Birim.UnitTypeId == birimTuruId);
+        => await _ctx.Charges.AsNoTracking()
+            .AnyAsync(t => t.Status != ChargeStatus.Paid
+                        && t.Status != ChargeStatus.Cancelled
+                        && t.Unit.UnitTypeId == birimTuruId);
 
     public async Task<bool> HasPlanlanmisRezervasyonForUnitTypeAsync(int birimTuruId)
-        => await _ctx.Rezervasyonlari.AsNoTracking()
-            .AnyAsync(r => r.Durum == ReservationStatus.Planned
-                        && _ctx.Birimler.Any(b => b.UnitTypeId == birimTuruId && b.Id == r.BirimId));
+        => await _ctx.Reservations.AsNoTracking()
+            .AnyAsync(r => r.Status == ReservationStatus.Planned
+                        && _ctx.Units.Any(b => b.UnitTypeId == birimTuruId && b.Id == r.UnitId));
 }

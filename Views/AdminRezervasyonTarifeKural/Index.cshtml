@@ -1,6 +1,6 @@
 @model List<KiraTakip.Models.Dtos.RezervasyonTarifeKuralListItemDto>
 @{
-    ViewData["Title"] = "Rezervasyon Ücret Kuralları";
+    ViewData["Title"] = "Reservation Ücret Kuralları";
 }
 
 @if (TempData["Success"] != null)
@@ -14,7 +14,7 @@
 
 <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
     <div>
-        <div class="page-title">Rezervasyon Ücret Kuralları</div>
+        <div class="page-title">Reservation Ücret Kuralları</div>
         <div class="page-subtitle">@Model.Count kayıt · Birime özel kural genel kuralı geçersiz kılar</div>
     </div>
     <a href="/Admin/RezervasyonTarifeKural/Ekle" class="btn btn-primary">
@@ -57,10 +57,10 @@
                                 <div style="font-size:11px;color:var(--color-muted);margin-top:2px;">@k.Aciklama</div>
                             }
                         </td>
-                        <td style="text-align:center;">@k.UcretsizSureDakika dk</td>
+                        <td style="text-align:center;">@k.FreeDurationMinutes dk</td>
                         <td style="text-align:center;">@k.UcretlendirmePeriyoduDakika dk/periyot</td>
                         <td style="text-align:right;font-weight:600;">@k.PeriyotUcreti.ToString("N2") ₺</td>
-                        <td style="text-align:center;">%@k.KdvOrani.ToString("F0")</td>
+                        <td style="text-align:center;">%@k.KdvRate.ToString("F0")</td>
                         <td>
                             @if (k.IsActive) { <span class="badge badge-kirali">Aktif</span> }
                             else { <span class="badge badge-gecmis">Pasif</span> }

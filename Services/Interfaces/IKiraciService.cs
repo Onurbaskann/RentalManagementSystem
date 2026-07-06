@@ -6,8 +6,8 @@ public interface IKiraciService
 {
     Task<List<KiraciListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null);
     Task<KiraciDetayDto?> GetDetayAsync(int id);
-    Task<Kiraci> CreateAsync(Kiraci k);
-    Task UpdateAsync(Kiraci k);
+    Task<Tenant> CreateAsync(Tenant k);
+    Task UpdateAsync(Tenant k);
     Task<string> GenerateKiraciNoAsync();
     Task<bool> KiraciNoExistsAsync(string kiraciNo, int? excludeId = null);
 }

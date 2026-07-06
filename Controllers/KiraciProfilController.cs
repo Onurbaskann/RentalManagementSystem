@@ -9,7 +9,7 @@ namespace KiraTakip.Controllers;
 
 [Authorize(Policy = "KiraciKullanici")]
 [RequireKiraciId]
-[Route("Kiraci/Profil")]
+[Route("Tenant/Profil")]
 public class KiraciProfilController : Controller
 {
     private readonly ApplicationDbContext _db;
@@ -25,9 +25,9 @@ public class KiraciProfilController : Controller
     public async Task<IActionResult> Index()
     {
         var kiraciId = _currentUser.KiraciId!.Value;
-        var kiraci = await _db.Kiraciler
-            .Include(k => k.KiraciKategori)
-            .Include(k => k.Sektor)
+        var kiraci = await _db.Tenants
+            .Include(k => k.TenantCategory)
+            .Include(k => k.Sector)
             .AsNoTracking()
             .FirstOrDefaultAsync(k => k.Id == kiraciId);
 

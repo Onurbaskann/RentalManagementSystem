@@ -60,7 +60,7 @@ public class AdminTasinmazTipiController : Controller
             Ad = model.Ad,
             Kod = kod,
             Sira = model.Sira,
-            Aktif = model.Aktif,
+            IsActive = model.Aktif,
             OlusturmaTarihi = DateTime.UtcNow,
             TekParcaDestekli = model.TekParcaDestekli,
             BirimBazliDestekli = model.BirimBazliDestekli
@@ -98,7 +98,7 @@ public class AdminTasinmazTipiController : Controller
 
         entity.Ad = model.Ad;
         entity.Sira = model.Sira;
-        entity.Aktif = model.Aktif;
+        entity.IsActive = model.Aktif;
         entity.TekParcaDestekli = model.TekParcaDestekli;
         entity.BirimBazliDestekli = model.BirimBazliDestekli;
 
@@ -114,9 +114,9 @@ public class AdminTasinmazTipiController : Controller
     {
         var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
-        entity.Aktif = !entity.Aktif;
+        entity.IsActive = !entity.IsActive;
         await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Ad}' {(entity.Aktif ? "aktif" : "pasif")} yapıldı.";
+        TempData["Success"] = $"'{entity.Ad}' {(entity.IsActive ? "aktif" : "pasif")} yapıldı.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -125,7 +125,7 @@ public class AdminTasinmazTipiController : Controller
         Id = e.Id,
         Ad = e.Ad,
         Sira = e.Sira,
-        Aktif = e.Aktif,
+        Aktif = e.IsActive,
         TekParcaDestekli = e.TekParcaDestekli,
         BirimBazliDestekli = e.BirimBazliDestekli
     };

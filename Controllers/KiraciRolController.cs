@@ -13,7 +13,7 @@ namespace KiraTakip.Controllers;
 
 [Authorize(Policy = "KiraciKullanici")]
 [RequireKiraciId]
-[Route("Kiraci/Roller")]
+[Route("Tenant/Roller")]
 public class KiraciRolController : Controller
 {
     private readonly ApplicationDbContext _db;
@@ -244,7 +244,7 @@ public class KiraciRolController : Controller
         target.Clear();
         target.AddRange(
             PermissionCatalog.AllModules
-                .Where(m => m.Path.StartsWith("Kiraci."))
+                .Where(m => m.Path.StartsWith("Tenant."))
                 .Select(m =>
                 {
                     var items = new List<PermissionCheckboxViewModel>

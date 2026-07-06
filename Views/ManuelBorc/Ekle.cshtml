@@ -71,14 +71,14 @@
         <div class="card mb-4">
             <div class="text-lg font-bold mb-5 flex items-center gap-2">
                 <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
-                <span>Birim</span>
+                <span>Unit</span>
             </div>
 
             <div class="form-group mb-0">
-                <label class="form-label">Birim <span class="text-red-500">*</span></label>
+                <label class="form-label">Unit <span class="text-red-500">*</span></label>
                 <select class="form-control" name="BirimId" x-model.number="birimId">
-                    <option value="0">— Birim seçin —</option>
-                    @foreach (var b in Model.Birimler)
+                    <option value="0">— Unit seçin —</option>
+                    @foreach (var b in Model.Units)
                     {
                         <option value="@b.Id">@b.TasinmazAd — @b.Ad@(b.BirimNo != null ? " (" + b.BirimNo + ")" : "")</option>
                     }
@@ -95,26 +95,26 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div class="form-group mb-0">
-                    <label asp-for="BorcTipiId" class="form-label">Borç Tipi <span class="text-red-500">*</span></label>
-                    <select asp-for="BorcTipiId" class="form-control">
+                    <label asp-for="ChargeTypeId" class="form-label">Borç Tipi <span class="text-red-500">*</span></label>
+                    <select asp-for="ChargeTypeId" class="form-control">
                         <option value="">— Borç tipi seçin —</option>
-                        @foreach (var bt in Model.BorcTipleri)
+                        @foreach (var bt in Model.ChargeTypes)
                         {
                             <option value="@bt.Id">@bt.Ad (@bt.Kod)</option>
                         }
                     </select>
-                    <span asp-validation-for="BorcTipiId" class="form-error"></span>
+                    <span asp-validation-for="ChargeTypeId" class="form-error"></span>
                 </div>
 
                 <div class="form-group mb-0">
-                    <label asp-for="VadeTarihi" class="form-label">Vade Tarihi <span class="text-red-500">*</span></label>
+                    <label asp-for="DueDate" class="form-label">Vade Tarihi <span class="text-red-500">*</span></label>
                     @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
-                        { "Name",  "VadeTarihi" },
-                        { "Value", Model.VadeTarihi.ToString("yyyy-MM-dd") },
+                        { "Name",  "DueDate" },
+                        { "Value", Model.DueDate.ToString("yyyy-MM-dd") },
                         { "Mode",  "date" },
                         { "Field", "vadeTarihi" }
                     })
-                    <span asp-validation-for="VadeTarihi" class="form-error"></span>
+                    <span asp-validation-for="DueDate" class="form-error"></span>
                 </div>
             </div>
 
@@ -126,10 +126,10 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div class="form-group mb-0">
-                    <label asp-for="Tutar" class="form-label">Tutar (₺) <span class="text-red-500">*</span></label>
-                    <input asp-for="Tutar" type="number" step="0.01" class="form-control"
+                    <label asp-for="Amount" class="form-label">Amount (₺) <span class="text-red-500">*</span></label>
+                    <input asp-for="Amount" type="number" step="0.01" class="form-control"
                            placeholder="0,00" x-model.number="tutar" x-on:input="hesapla()" />
-                    <span asp-validation-for="Tutar" class="form-error"></span>
+                    <span asp-validation-for="Amount" class="form-error"></span>
                 </div>
 
                 <div class="form-group mb-0">
@@ -141,7 +141,7 @@
                         </label>
                         <template x-if="kdvAktif">
                             <div class="flex items-center gap-1.5">
-                                <input asp-for="KdvOrani" type="number" step="1" min="0" max="100" class="form-control w-20"
+                                <input asp-for="KdvRate" type="number" step="1" min="0" max="100" class="form-control w-20"
                                        x-model.number="kdvOrani" x-on:input="hesapla()" />
                                 <span class="text-sm text-muted">%</span>
                             </div>
@@ -194,9 +194,9 @@
             kiraciId: @Model.KiraciId,
             sozlesmeId: @(Model.SozlesmeId.HasValue ? Model.SozlesmeId.Value.ToString() : "0"),
             birimId: @Model.BirimId,
-            tutar: @(Model.Tutar > 0 ? Model.Tutar.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "0"),
+            tutar: @(Model.Amount > 0 ? Model.Amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "0"),
             kdvAktif: @(Model.KdvUygulanacakMi ? "true" : "false"),
-            kdvOrani: @Model.KdvOrani.ToString("F0", System.Globalization.CultureInfo.InvariantCulture),
+            kdvOrani: @Model.KdvRate.ToString("F0", System.Globalization.CultureInfo.InvariantCulture),
             kdvTutari: 0,
             toplamTutar: 0,
 

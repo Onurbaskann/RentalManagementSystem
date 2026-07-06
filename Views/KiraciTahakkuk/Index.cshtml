@@ -4,10 +4,10 @@
 @using KiraTakip.Models.Common
 @{
     Layout = "_KiraciLayout";
-    ViewData["Title"] = "Tahakkuklarım";
+    ViewData["Title"] = "Chargesım";
     string durum = ViewBag.Durum ?? "tum";
     var q = (TableQuery)ViewBag.Query;
-    var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/Kiraci/Tahakkuklarim", Extra = q.ToQueryDict() };
+    var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/Tenant/Tahakkuklarim", Extra = q.ToQueryDict() };
 
     decimal toplamTahakkuk = ViewBag.ToplamTahakkuk ?? 0m;
     decimal tahsilEdilen = ViewBag.TahsilEdilen ?? 0m;
@@ -25,14 +25,14 @@
 }
 
 <div class="page-header">
-    <div class="page-title">Tahakkuklarım</div>
+    <div class="page-title">Chargesım</div>
     <div class="page-subtitle">Toplam yükümlülük, tahsilat ve gecikmiş bakiye özeti</div>
 </div>
 
 <!-- Mutabakat Özeti -->
 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 mb-5">
     <div class="card bg-gradient-to-br from-slate-50 to-white border-slate-200">
-        <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-2">Toplam Tahakkuk</div>
+        <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-2">Toplam Charge</div>
         <div class="text-2xl font-bold text-slate-800">@toplamTahakkuk.ToString("N2") ₺</div>
         <div class="text-[11px] text-muted mt-1">Tüm dönemlerin brüt yükümlülüğü</div>
     </div>
@@ -68,7 +68,7 @@
     @foreach (var (key, label) in filters)
     {
         bool isActive = durum == key;
-        var url = key == "tum" ? "/Kiraci/Tahakkuklarim" : $"/Kiraci/Tahakkuklarim?durum={key}";
+        var url = key == "tum" ? "/Tenant/Tahakkuklarim" : $"/Tenant/Tahakkuklarim?durum={key}";
         <a href="@url" class="btn btn-sm @(isActive ? "btn-primary" : "btn-secondary text-slate-600 bg-white border-slate-200")">@label</a>
     }
 </div>
@@ -76,15 +76,15 @@
 <div x-data="{ open: {}, odemeYapModal: false, modalCtx: null, odemeTab: 'havale' }">
 
 <div class="card p-0 overflow-hidden">
-    <form method="get" class="flex flex-col gap-2.5 p-3 bg-slate-50/50 border-b border-slate-200" action="/Kiraci/Tahakkuklarim">
+    <form method="get" class="flex flex-col gap-2.5 p-3 bg-slate-50/50 border-b border-slate-200" action="/Tenant/Tahakkuklarim">
         <input type="search" name="q" value="@q.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: dönem, taşınmaz…" />
 
         <div class="flex flex-wrap items-center gap-2.5">
         <select name="birimId" class="form-control w-44 text-xs font-medium">
-            <option value="">— Tüm Birimler —</option>
-            @foreach (var b in (List<Birim>)ViewBag.Birimler)
+            <option value="">— Tüm Units —</option>
+            @foreach (var b in (List<Unit>)ViewBag.Units)
             {
-                <option value="@b.Id" selected="@(q.BirimId == b.Id ? "selected" : null)">@b.Ad</option>
+                <option value="@b.Id" selected="@(q.BirimId == b.Id ? "selected" : null)">@b.Name</option>
             }
         </select>
 
@@ -92,7 +92,7 @@
             <option value="">— Kaynak —</option>
             <option value="sozlesme" selected="@(q.Kaynak == "sozlesme" ? "selected" : null)">Sözleşme</option>
             <option value="manuel" selected="@(q.Kaynak == "manuel" ? "selected" : null)">Manuel</option>
-            <option value="rezervasyon" selected="@(q.Kaynak == "rezervasyon" ? "selected" : null)">Rezervasyon</option>
+            <option value="rezervasyon" selected="@(q.Kaynak == "rezervasyon" ? "selected" : null)">Reservation</option>
         </select>
 
         <select name="yil" class="form-control w-24 text-xs font-medium">
@@ -105,7 +105,7 @@
 
         @if (durum != "tum") { <input type="hidden" name="durum" value="@durum" /> }
         <button type="submit" class="btn btn-primary btn-sm px-4">Filtrele</button>
-        <a href="/Kiraci/Tahakkuklarim@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
+        <a href="/Tenant/Tahakkuklarim@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
         </div>
     </form>
 
@@ -114,7 +114,7 @@
             <thead>
                 <tr>
                     <th class="w-36">Dönem</th>
-                    <th>Birim</th>
+                    <th>Unit</th>
                     <th class="w-28 cell-center">Vade</th>
                     <th class="w-32 num">Borç</th>
                     <th class="w-32 num">Ödenen</th>
@@ -127,7 +127,7 @@
             <tbody>
                 @foreach (var t in Model.Items)
                 {
-                    var kalan = t.ToplamTutar - t.OdenenTutar;
+                    var kalan = t.ToplamTutar - t.PaidAmount;
                     bool odeyebilir = kalan > 0 && t.Durum != ChargeStatus.Cancelled;
                     string durumCls = t.Durum switch {
                         ChargeStatus.Paid    => "badge-kirali",
@@ -143,14 +143,14 @@
                         ChargeStatus.Cancelled  => "İptal Edildi",
                         _                           => "Bekleniyor"
                     };
-                    string kaynakCls = t.KaynakTipi switch {
+                    string kaynakCls = t.SourceType switch {
                         ChargeSourceType.Manual      => "badge-surek",
                         ChargeSourceType.Reservation => "badge-bireysel",
                         _                              => "badge-bos"
                     };
-                    string kaynakLabel = t.KaynakTipi switch {
+                    string kaynakLabel = t.SourceType switch {
                         ChargeSourceType.Manual      => "Manuel",
-                        ChargeSourceType.Reservation => "Rezervasyon",
+                        ChargeSourceType.Reservation => "Reservation",
                         _                              => "Sözleşme"
                     };
                     <tr @@click="open[@t.Id] = !open[@t.Id]" class="cursor-pointer transition-colors hover:bg-slate-50">
@@ -159,7 +159,7 @@
                                 <span class="text-slate-300 transition-transform duration-200" :class="open[@t.Id] ? 'rotate-180' : ''">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
                                 </span>
-                                @t.DonemBaslangic.ToString("MMMM yyyy")
+                                @t.PeriodStart.ToString("MMMM yyyy")
                             </div>
                         </td>
                         <td>
@@ -169,9 +169,9 @@
                                 <span class="cell-sub">@t.BirimAd</span>
                             }
                         </td>
-                        <td class="cell-center">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="cell-center">@t.DueDate.ToString("dd.MM.yyyy")</td>
                         <td class="num">@t.ToplamTutar.ToString("N2") ₺</td>
-                        <td class="num num-positive">@t.OdenenTutar.ToString("N2") ₺</td>
+                        <td class="num num-positive">@t.PaidAmount.ToString("N2") ₺</td>
                         <td class="num @(kalan > 0 ? "num-negative" : "num-positive")">@kalan.ToString("N2") ₺</td>
                         <td>
                             @if (t.BekleyenOdemeSayisi > 0)
@@ -186,13 +186,13 @@
                         <td><span class="badge @kaynakCls">@kaynakLabel</span></td>
                         <td @@click.stop="" class="num">
                             <div class="flex gap-1 justify-end">
-                                <a href="/Kiraci/Tahakkuklarim/Detay/@t.Id.ToHashId()" class="btn btn-sm btn-secondary p-1" title="Detay">
+                                <a href="/Tenant/Tahakkuklarim/Detay/@t.Id.ToHashId()" class="btn btn-sm btn-secondary p-1" title="Detay">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                 </a>
                                 @if (odeyebilir)
                                 {
                                     <button type="button"
-                                            @@click='odemeYapModal = true; odemeTab = "havale"; modalCtx = { tahakkukId: @t.Id, kalan: @kalan.ToString(System.Globalization.CultureInfo.InvariantCulture), kalanLabel: "@kalan.ToString("N2") ₺", donem: "@t.DonemBaslangic.ToString("MMMM yyyy")" }'
+                                            @@click='odemeYapModal = true; odemeTab = "havale"; modalCtx = { tahakkukId: @t.Id, kalan: @kalan.ToString(System.Globalization.CultureInfo.InvariantCulture), kalanLabel: "@kalan.ToString("N2") ₺", donem: "@t.PeriodStart.ToString("MMMM yyyy")" }'
                                             class="btn btn-sm btn-primary">Ödeme Yap</button>
                                 }
                             </div>
@@ -200,7 +200,7 @@
                     </tr>
                     <tr x-show="open[@t.Id]" x-cloak class="bg-slate-50/80 border-b border-slate-200">
                         <td colspan="9" class="p-4 px-12">
-                            @if (t.Kalemler.Any())
+                            @if (t.LineItems.Any())
                             {
                                 <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Kalem Detayları</div>
                                 <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
@@ -208,19 +208,19 @@
                                         <thead class="bg-slate-50 border-b border-slate-200">
                                             <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
                                                 <th class="p-2 px-3 text-left">Açıklama</th>
-                                                <th class="p-2 px-3 text-right">Birim</th>
-                                                <th class="p-2 px-3 text-right">Tutar</th>
+                                                <th class="p-2 px-3 text-right">Unit</th>
+                                                <th class="p-2 px-3 text-right">Amount</th>
                                                 <th class="p-2 px-3 text-right text-muted">KDV</th>
                                                 <th class="p-2 px-3 text-right">Toplam</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach (var k in t.Kalemler.OrderBy(k => k.BorcTipiSira))
+                                            @foreach (var k in t.LineItems.OrderBy(k => k.BorcTipiSira))
                                             {
                                                 <tr class="border-t border-slate-100 last:border-0">
                                                     <td class="p-2 px-3 text-slate-600">@k.Aciklama</td>
-                                                    <td class="p-2 px-3 text-right text-slate-500">@k.BirimDeger.ToString("N2") ₺</td>
-                                                    <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Tutar.ToString("N2") ₺</td>
+                                                    <td class="p-2 px-3 text-right text-slate-500">@k.UnitValue.ToString("N2") ₺</td>
+                                                    <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Amount.ToString("N2") ₺</td>
                                                     <td class="p-2 px-3 text-right text-slate-400/60">@k.KdvTutari.ToString("N2") ₺</td>
                                                     <td class="p-2 px-3 text-right font-bold text-slate-700">@k.ToplamTutar.ToString("N2") ₺</td>
                                                 </tr>
@@ -279,13 +279,13 @@
         <div class="p-6 overflow-y-auto">
             <!-- HAVALE TAB -->
             <div x-show="odemeTab === 'havale'">
-                <form method="post" action="/Kiraci/Tahakkuklarim/OdemeBildir" enctype="multipart/form-data">
+                <form method="post" action="/Tenant/Tahakkuklarim/OdemeBildir" enctype="multipart/form-data">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="tahakkukId" :value="modalCtx?.tahakkukId" />
 
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Tutar (₺) *</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Amount (₺) *</label>
                             <input type="number" name="tutar" step="0.01" min="0.01" :max="modalCtx?.kalan" :value="modalCtx?.kalan" required class="form-control w-full" />
                         </div>
                         <div>

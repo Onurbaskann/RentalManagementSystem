@@ -39,7 +39,7 @@ public class ManuelBorcController : Controller
     [Authorize(Policy = PermissionCatalog.ManualCharge.Create)]
     public async Task<IActionResult> Ekle(int? sozlesmeId)
     {
-        var vm = new ManuelBorcCreateViewModel { VadeTarihi = DateTime.Today };
+        var vm = new ManuelBorcCreateViewModel { DueDate = DateTime.Today };
         await PopulateDropdownsAsync(vm);
         if (sozlesmeId.HasValue)
         {
@@ -62,9 +62,9 @@ public class ManuelBorcController : Controller
         if (vm.KiraciId <= 0)
             ModelState.AddModelError("KiraciId", "Kiracı seçilmelidir.");
         if (vm.BirimId <= 0)
-            ModelState.AddModelError("BirimId", "Birim seçilmelidir.");
-        if (vm.BorcTipiId <= 0)
-            ModelState.AddModelError("BorcTipiId", "Borç tipi seçilmelidir.");
+            ModelState.AddModelError("BirimId", "Unit seçilmelidir.");
+        if (vm.ChargeTypeId <= 0)
+            ModelState.AddModelError("ChargeTypeId", "Borç tipi seçilmelidir.");
         if (string.IsNullOrWhiteSpace(vm.Aciklama))
             ModelState.AddModelError("Aciklama", "Açıklama zorunludur.");
 
@@ -114,7 +114,7 @@ public class ManuelBorcController : Controller
     {
         var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
         vm.AktifSozlesmeler = await _service.GetAktifSozlesmelerAsync();
-        vm.BorcTipleri = await _service.GetManuelBorcTipleriAsync();
-        vm.Birimler = await _service.GetTumBirimlerAsync(tasinmazIds);
+        vm.ChargeTypes = await _service.GetManuelBorcTipleriAsync();
+        vm.Units = await _service.GetTumBirimlerAsync(tasinmazIds);
     }
 }

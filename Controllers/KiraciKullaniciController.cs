@@ -13,7 +13,7 @@ namespace KiraTakip.Controllers;
 
 [Authorize(Policy = "KiraciKullanici")]
 [RequireKiraciId]
-[Route("Kiraci/Kullanicilar")]
+[Route("Tenant/Kullanicilar")]
 public class KiraciKullaniciController : Controller
 {
     private readonly ApplicationDbContext _db;
@@ -111,7 +111,7 @@ public class KiraciKullaniciController : Controller
         var kiraciId = _currentUser.KiraciId!.Value;
         var model = new KiraciDavetViewModel();
         await PopulateRollerAsync(model.Roller);
-        model.Birimler = await GetKiraciBirimleriAsync(kiraciId);
+        model.Units = await GetKiraciBirimleriAsync(kiraciId);
         return View(model);
     }
 
@@ -125,7 +125,7 @@ public class KiraciKullaniciController : Controller
         if (!ModelState.IsValid)
         {
             await PopulateRollerAsync(model.Roller);
-            model.Birimler = await GetKiraciBirimleriAsync(kiraciId);
+            model.Units = await GetKiraciBirimleriAsync(kiraciId);
             return View(model);
         }
 
@@ -136,7 +136,7 @@ public class KiraciKullaniciController : Controller
         {
             ModelState.AddModelError("RolId", "Geçersiz rol seçildi.");
             await PopulateRollerAsync(model.Roller);
-            model.Birimler = await GetKiraciBirimleriAsync(kiraciId);
+            model.Units = await GetKiraciBirimleriAsync(kiraciId);
             return View(model);
         }
 
@@ -151,22 +151,22 @@ public class KiraciKullaniciController : Controller
         {
             ModelState.AddModelError(string.Empty, ex.Message);
             await PopulateRollerAsync(model.Roller);
-            model.Birimler = await GetKiraciBirimleriAsync(kiraciId);
+            model.Units = await GetKiraciBirimleriAsync(kiraciId);
             return View(model);
         }
     }
 
     private async Task<List<BirimLookupDto>> GetKiraciBirimleriAsync(int kiraciId)
     {
-        return await _db.Sozlesmeler
+        return await _db.Leases
             .AsNoTracking()
-            .Where(s => s.KiraciId == kiraciId && s.Durum == LeaseStatus.Active)
+            .Where(s => s.TenantId == kiraciId && s.Status == LeaseStatus.Active)
             .Select(s => new BirimLookupDto
             {
-                Id = s.BirimId,
-                Ad = s.Birim.Ad,
-                TasinmazAd = s.Birim.Tasinmaz.Ad,
-                BirimNo = s.Birim.BirimNo,
+                Id = s.UnitId,
+                Ad = s.Unit.Name,
+                TasinmazAd = s.Unit.Property.Name,
+                BirimNo = s.Unit.UnitNo,
             })
             .Distinct()
             .OrderBy(b => b.TasinmazAd).ThenBy(b => b.Ad)

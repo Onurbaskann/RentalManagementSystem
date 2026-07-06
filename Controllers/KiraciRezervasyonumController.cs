@@ -8,22 +8,22 @@ namespace KiraTakip.Controllers;
 
 [Authorize(Policy = "KiraciKullanici")]
 [Authorize(Policy = PermissionCatalog.TenantPortal.Reservation.Module)]
-[Route("Kiraci/Rezervasyonum")]
+[Route("Tenant/Rezervasyonum")]
 public class KiraciRezervasyonumController : Controller
 {
-    private readonly IRezervasyonService _rezervasyonService;
+    private readonly IReservationService _reservationService;
     private readonly ICurrentUserContext _currentUser;
 
-    public KiraciRezervasyonumController(IRezervasyonService rezervasyonService, ICurrentUserContext currentUser)
+    public KiraciRezervasyonumController(IReservationService rezervasyonService, ICurrentUserContext currentUser)
     {
-        _rezervasyonService = rezervasyonService;
+        _reservationService = rezervasyonService;
         _currentUser = currentUser;
     }
 
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var list = await _rezervasyonService.GetAllAsync();
+        var list = await _reservationService.GetAllAsync();
         return View(list);
     }
 }

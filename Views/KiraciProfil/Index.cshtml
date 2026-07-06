@@ -1,4 +1,4 @@
-@model KiraTakip.Models.Entities.Kiraci
+@model KiraTakip.Models.Entities.Tenant
 @using System.Globalization
 @{
     Layout = "_KiraciLayout";
@@ -17,25 +17,25 @@
 <div class="card mb-4">
     <div class="flex items-start gap-4">
         <div class="w-14 h-14 rounded-full bg-primary text-white flex items-center justify-center text-[20px] font-bold flex-shrink-0">
-            @(Model.Ad.Split(' ').Where(p => p.Length > 0).Take(2).Select(p => p[0].ToString().ToUpper()).Aggregate("", (a, b) => a + b))
+            @(Model.Name.Split(' ').Where(p => p.Length > 0).Take(2).Select(p => p[0].ToString().ToUpper()).Aggregate("", (a, b) => a + b))
         </div>
         <div class="flex-1 min-w-0">
-            <div class="font-serif text-[24px] font-bold leading-tight">@Model.Ad</div>
+            <div class="font-serif text-[24px] font-bold leading-tight">@Model.Name</div>
             <div class="mt-1.5 flex flex-wrap gap-1.5 items-center">
                 <span class="badge badge-kurumsal">Tüzel Kişi</span>
-                @if (Model.KiraciKategori != null)
+                @if (Model.TenantCategory != null)
                 {
-                    <span class="badge badge-bos">@Model.KiraciKategori.Ad</span>
+                    <span class="badge badge-bos">@Model.TenantCategory.Ad</span>
                 }
-                @if (Model.Sektor != null)
+                @if (Model.Sector != null)
                 {
-                    <span class="badge badge-bos">@Model.Sektor.Ad</span>
+                    <span class="badge badge-bos">@Model.Sector.Ad</span>
                 }
             </div>
-            @if (!string.IsNullOrEmpty(Model.KiraciNo))
+            @if (!string.IsNullOrEmpty(Model.TenantNo))
             {
                 <div class="mt-2 text-[12.5px] text-muted">
-                    Kiracı No: <span class="font-mono font-semibold">@Model.KiraciNo</span>
+                    Kiracı No: <span class="font-mono font-semibold">@Model.TenantNo</span>
                 </div>
             }
         </div>
@@ -55,12 +55,12 @@
                         <div class="text-sm font-medium @(mono ? "font-mono" : "")">@(string.IsNullOrEmpty(value) ? "—" : value)</div>
                     </div>
                 }
-                Row("Firma Adı", Model.Ad);
-                Row("Ticaret Sicil No", Model.TicaretSicilNo, true);
-                Row("Vergi No", Model.VergiNo, true);
-                Row("Vergi Dairesi", Model.VergiDairesi);
+                Row("Firma Adı", Model.Name);
+                Row("Ticaret Sicil No", Model.TradeRegistryNo, true);
+                Row("Vergi No", Model.TaxNo, true);
+                Row("Vergi Dairesi", Model.TaxOffice);
                 Row("MERSİS No", Model.MersisNo, true);
-                Row("Kayıt Tarihi", Model.KayitTarihi.ToString("dd MMMM yyyy", trCulture));
+                Row("Kayıt Tarihi", Model.RegistrationDate.ToString("dd MMMM yyyy", trCulture));
             }
         </div>
     </div>
@@ -70,9 +70,9 @@
         <div class="card-title">İletişim Bilgileri</div>
         <div class="mt-3 grid grid-cols-1 gap-0">
             @{
-                Row("Telefon", Model.Telefon);
+                Row("Telefon", Model.Phone);
                 Row("E-posta", Model.Email);
-                Row("Adres", Model.Adres);
+                Row("Adres", Model.Address);
             }
         </div>
     </div>

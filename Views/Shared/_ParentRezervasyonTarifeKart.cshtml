@@ -43,10 +43,10 @@
                 @foreach (var satir in Model.Satirlar)
                 {
                     <span class="font-bold text-slate-700">@satir.UnitTypeAd</span>
-                    <span class="text-slate-400">@satir.UcretsizSureDakika dk</span>
+                    <span class="text-slate-400">@satir.FreeDurationMinutes dk</span>
                     <span class="text-slate-400">@satir.UcretlendirmePeriyoduDakika dk</span>
                     <span class="text-right font-bold text-fuchsia-700 font-mono">@satir.PeriyotUcreti.ToString("N2") ₺</span>
-                    <span class="text-right text-fuchsia-400 text-[10px] font-bold">%@satir.KdvOrani.ToString("N0")</span>
+                    <span class="text-right text-fuchsia-400 text-[10px] font-bold">%@satir.KdvRate.ToString("N0")</span>
                 }
             </div>
         }

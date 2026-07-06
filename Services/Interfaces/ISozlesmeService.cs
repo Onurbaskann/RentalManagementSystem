@@ -8,7 +8,7 @@ public interface ISozlesmeService
 {
     Task<List<SozlesmeListItemDto>> GetAllAsync(string? filtre = null, IReadOnlyList<int>? tasinmazIds = null);
     Task<SozlesmeDetayDto?> GetByIdAsync(int id);
-    Task<Sozlesme> CreateAsync(Sozlesme s, decimal? aylikBedel = null);
+    Task<Lease> CreateAsync(Lease s, decimal? aylikBedel = null);
     Task UzatAsync(int id, DateTime yeniBitis, decimal eskiBedel, decimal yeniBedel, bool kdvUygulanacakMi, decimal kdvOrani, decimal? tufeOrani, string? aciklama);
     Task FeshetAsync(int id, DateTime fesihTarihi, string fesihNedeni, string? aciklama);
     Task VadeGuncelleAsync(int id, DueDateRuleType tip, int gun, string? aciklama);

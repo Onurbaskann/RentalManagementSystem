@@ -6,7 +6,7 @@
 
 <div class="page-header">
     <div>
-        <a href="/Kiraci/Kullanicilar" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
+        <a href="/Tenant/Kullanicilar" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
             ← Kullanıcılar
         </a>
         <div class="page-title">Kullanıcı Düzenle</div>
@@ -22,7 +22,7 @@
 }
 
 <div class="card">
-    <form method="post" action="/Kiraci/Kullanicilar/Duzenle/@Model.Id" asp-form-write-permission="@PermissionCatalog.TenantPortal.System.User.Edit">
+    <form method="post" action="/Tenant/Kullanicilar/Duzenle/@Model.Id" asp-form-write-permission="@PermissionCatalog.TenantPortal.System.User.Edit">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Id" />
         <input type="hidden" asp-for="IsCurrentUser" />
@@ -74,7 +74,7 @@
             {
                 <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.TenantPortal.System.User.Edit">Kaydet</button>
             }
-            <a href="/Kiraci/Kullanicilar" class="btn btn-secondary px-6">İptal</a>
+            <a href="/Tenant/Kullanicilar" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>
 </div>

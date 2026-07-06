@@ -2,10 +2,10 @@ using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IBorcTipiRepository : IBaseRepository<BorcTipi>
+public interface IBorcTipiRepository : IBaseRepository<ChargeType>
 {
     Task<List<BorcTipiLookupDto>> GetManuelBorcTipleriAsync();
-    Task<BorcTipi?> GetActiveManuelByIdAsync(int id);
+    Task<ChargeType?> GetActiveManuelByIdAsync(int id);
     Task<List<BorcTipiListItemDto>> GetListAsync();
     Task<int> GetMaxSiraAsync();
     Task<bool> KodExistsAsync(string kod, int? excludeId = null);

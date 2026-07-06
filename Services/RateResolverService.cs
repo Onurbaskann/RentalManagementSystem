@@ -32,11 +32,11 @@ public class RateResolverService : IRateResolverService
         _kiraciRepo = kiraciRepo;
     }
 
-    public async Task<RateSnapshot?> ResolveAsync(int? sozlesmeId, int? kiraciId, int birimId, int borcTipiId, DateTime donem)
+    public async Task<RateSnapshot?> ResolveAsync(int? sozlesmeId, int? kiraciId, int birimId, int chargeTypeId, DateTime donem)
     {
         if (sozlesmeId.HasValue)
         {
-            var sozRate = await _sozlesmeTarifeRepo.GetRateAsync(sozlesmeId.Value, borcTipiId);
+            var sozRate = await _sozlesmeTarifeRepo.GetRateAsync(sozlesmeId.Value, chargeTypeId);
             if (sozRate != null)
                 return Wrap(sozRate, LineItemSourceType.LeaseRateOverride);
         }
@@ -61,21 +61,21 @@ public class RateResolverService : IRateResolverService
 
         if (kategoriId.HasValue)
         {
-            var birimRate = await _birimTarifeRepo.GetRateAsync(birimId, kategoriId.Value, borcTipiId);
+            var birimRate = await _birimTarifeRepo.GetRateAsync(birimId, kategoriId.Value, chargeTypeId);
             if (birimRate != null)
                 return Wrap(birimRate, LineItemSourceType.UnitRateOverride);
         }
 
         if (tasinmazId.HasValue && kategoriId.HasValue)
         {
-            var fiyatMatrisi = await _tasinmazTarifeRepo.GetRateAsync(tasinmazId.Value, kategoriId.Value, borcTipiId);
+            var fiyatMatrisi = await _tasinmazTarifeRepo.GetRateAsync(tasinmazId.Value, kategoriId.Value, chargeTypeId);
             if (fiyatMatrisi != null)
                 return Wrap(fiyatMatrisi, LineItemSourceType.PropertyRateOverride);
         }
 
         if (!kategoriId.HasValue) return null;
 
-        var kalem = await _genelTarifeRepo.GetRateAsync(kategoriId.Value, borcTipiId, donem.Year);
+        var kalem = await _genelTarifeRepo.GetRateAsync(kategoriId.Value, chargeTypeId, donem.Year);
         if (kalem == null) return null;
 
         return Wrap(kalem, LineItemSourceType.RateSchedule);
@@ -85,8 +85,8 @@ public class RateResolverService : IRateResolverService
         => new RateSnapshot
         {
             CalculationMethod = v.CalculationMethod,
-            BirimDeger = v.BirimDeger,
-            KdvOrani = v.KdvOrani,
-            KaynakTipi = kaynak
+            UnitValue = v.UnitValue,
+            KdvRate = v.KdvRate,
+            SourceType = kaynak
         };
 }

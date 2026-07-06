@@ -25,31 +25,31 @@ public class KiraciService : IKiraciService
         return await _repo.GetDetayAsync(id);
     }
 
-    public async Task<Kiraci> CreateAsync(Kiraci k)
+    public async Task<Tenant> CreateAsync(Tenant k)
     {
-        if (string.IsNullOrWhiteSpace(k.KiraciNo))
-            k.KiraciNo = await GenerateKiraciNoAsync();
-        k.KayitTarihi = DateTime.Now;
+        if (string.IsNullOrWhiteSpace(k.TenantNo))
+            k.TenantNo = await GenerateKiraciNoAsync();
+        k.RegistrationDate = DateTime.Now;
         await _repo.AddAsync(k);
         await _uow.SaveChangesAsync();
         return k;
     }
 
-    public async Task UpdateAsync(Kiraci k)
+    public async Task UpdateAsync(Tenant k)
     {
         var dbKiraci = await _repo.GetByIdAsync(k.Id);
         if (dbKiraci == null) return;
 
-        dbKiraci.KiraciKategoriId = k.KiraciKategoriId;
-        dbKiraci.SektorId = k.SektorId;
-        dbKiraci.Ad = k.Ad;
-        dbKiraci.TicaretSicilNo = k.TicaretSicilNo;
-        dbKiraci.VergiNo = k.VergiNo;
-        dbKiraci.VergiDairesi = k.VergiDairesi;
+        dbKiraci.TenantCategoryId = k.TenantCategoryId;
+        dbKiraci.SectorId = k.SectorId;
+        dbKiraci.Name = k.Name;
+        dbKiraci.TradeRegistryNo = k.TradeRegistryNo;
+        dbKiraci.TaxNo = k.TaxNo;
+        dbKiraci.TaxOffice = k.TaxOffice;
         dbKiraci.MersisNo = k.MersisNo;
-        dbKiraci.Telefon = k.Telefon;
+        dbKiraci.Phone = k.Phone;
         dbKiraci.Email = k.Email;
-        dbKiraci.Adres = k.Adres;
+        dbKiraci.Address = k.Address;
         dbKiraci.IsActive = k.IsActive;
 
         await _repo.UpdateAsync(dbKiraci); // No-op marker
@@ -71,6 +71,6 @@ public class KiraciService : IKiraciService
     public async Task<bool> KiraciNoExistsAsync(string kiraciNo, int? excludeId = null)
     {
         return await _repo.AnyAsync(k =>
-            k.KiraciNo == kiraciNo && (excludeId == null || k.Id != excludeId));
+            k.TenantNo == kiraciNo && (excludeId == null || k.Id != excludeId));
     }
 }

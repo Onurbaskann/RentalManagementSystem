@@ -12,37 +12,37 @@ public class RezervasyonTarifeRepository : BaseRepository<RezervasyonTarife>, IR
 
     public async Task<List<ParentRezervasyonTarifeSatir>> GetGenelForKartAsync(int yil)
         => await _dbSet.AsNoTracking()
-            .Where(r => r.BirimId == null
+            .Where(r => r.UnitId == null
                      && r.UnitTypeId != null
                      && r.Yil == yil
                      && r.IsActive
-                     && r.UnitType!.Aktif)
+                     && r.UnitType!.IsActive)
             .OrderBy(r => r.UnitType!.Sira)
             .Select(r => new ParentRezervasyonTarifeSatir
             {
                 UnitTypeAd = r.UnitType!.Ad,
-                UcretsizSureDakika = r.UcretsizSureDakika,
+                FreeDurationMinutes = r.FreeDurationMinutes,
                 UcretlendirmePeriyoduDakika = r.UcretlendirmePeriyoduDakika,
                 PeriyotUcreti = r.PeriyotUcreti,
-                KdvOrani = r.KdvOrani
+                KdvRate = r.KdvRate
             })
             .ToListAsync();
 
     public async Task<List<RezervasyonTarifeKuralListItemDto>> GetUcretKurallariListAsync()
         => await _dbSet.AsNoTracking()
-            .OrderBy(r => r.BirimId == null ? 0 : 1)
-            .ThenBy(r => r.Birim != null ? r.Birim.Tasinmaz.Ad : string.Empty)
-            .ThenBy(r => r.Birim != null ? r.Birim.Ad : string.Empty)
+            .OrderBy(r => r.UnitId == null ? 0 : 1)
+            .ThenBy(r => r.Unit != null ? r.Unit.Property.Name : string.Empty)
+            .ThenBy(r => r.Unit != null ? r.Unit.Name : string.Empty)
             .Select(r => new RezervasyonTarifeKuralListItemDto
             {
                 Id = r.Id,
-                BirimId = r.BirimId,
-                BirimAd = r.Birim != null ? r.Birim.Ad : null,
-                TasinmazAd = r.Birim != null ? r.Birim.Tasinmaz.Ad : null,
-                UcretsizSureDakika = r.UcretsizSureDakika,
+                BirimId = r.UnitId,
+                BirimAd = r.Unit != null ? r.Unit.Name : null,
+                TasinmazAd = r.Unit != null ? r.Unit.Property.Name : null,
+                FreeDurationMinutes = r.FreeDurationMinutes,
                 UcretlendirmePeriyoduDakika = r.UcretlendirmePeriyoduDakika,
                 PeriyotUcreti = r.PeriyotUcreti,
-                KdvOrani = r.KdvOrani,
+                KdvRate = r.KdvRate,
                 IsActive = r.IsActive,
                 Aciklama = r.Aciklama
             })

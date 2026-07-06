@@ -13,7 +13,7 @@ namespace KiraTakip.Controllers;
 [Route("Admin/KiraciKategori")]
 public class AdminKiraciKategoriController : Controller
 {
-    private const KategoriTipi Tipi = KategoriTipi.Kiraci;
+    private const KategoriTipi Tipi = KategoriTipi.Tenant;
     private readonly IKategoriRepository _repo;
     private readonly IUnitOfWork _uow;
 
@@ -60,7 +60,7 @@ public class AdminKiraciKategoriController : Controller
             Ad = model.Ad,
             Kod = kod,
             Sira = model.Sira,
-            Aktif = model.Aktif,
+            IsActive = model.Aktif,
             OlusturmaTarihi = DateTime.UtcNow
         };
 
@@ -93,7 +93,7 @@ public class AdminKiraciKategoriController : Controller
 
         entity.Ad = model.Ad;
         entity.Sira = model.Sira;
-        entity.Aktif = model.Aktif;
+        entity.IsActive = model.Aktif;
 
         await _uow.SaveChangesAsync();
         TempData["Success"] = $"'{entity.Ad}' güncellendi.";
@@ -107,9 +107,9 @@ public class AdminKiraciKategoriController : Controller
     {
         var entity = await _repo.GetByIdAndTipiAsync(id, Tipi);
         if (entity == null) return NotFound();
-        entity.Aktif = !entity.Aktif;
+        entity.IsActive = !entity.IsActive;
         await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Ad}' {(entity.Aktif ? "aktif" : "pasif")} yapıldı.";
+        TempData["Success"] = $"'{entity.Ad}' {(entity.IsActive ? "aktif" : "pasif")} yapıldı.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -119,6 +119,6 @@ public class AdminKiraciKategoriController : Controller
         Tipi = e.Tipi,
         Ad = e.Ad,
         Sira = e.Sira,
-        Aktif = e.Aktif
+        Aktif = e.IsActive
     };
 }

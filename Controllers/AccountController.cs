@@ -71,7 +71,7 @@ public class AccountController : Controller
         // Kiracı kullanıcısı → bağlı kiracının aktif olup olmadığını kontrol et
         if (user != null && user.UserType == UserType.Tenant && user.KiraciId.HasValue)
         {
-            var kiraci = await _db.Kiraciler.IgnoreQueryFilters()
+            var kiraci = await _db.Tenants.IgnoreQueryFilters()
                 .FirstOrDefaultAsync(k => k.Id == user.KiraciId.Value);
             if (kiraci != null && !kiraci.IsActive)
             {

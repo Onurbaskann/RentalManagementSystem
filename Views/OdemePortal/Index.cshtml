@@ -5,7 +5,7 @@
     ViewData["WideLayout"] = true;
 
     var trCulture = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
-    var amountDict = string.Join(",", Model.Borclar.Select(b => $"{b.TahakkukId}: '{b.KalanTutar.ToString("N2", trCulture)}'"));
+    var amountDict = string.Join(",", Model.Borclar.Select(b => $"{b.ChargeId}: '{b.KalanTutar.ToString("N2", trCulture)}'"));
 }
 
 <div class="portal-card max-w-none shadow-xl border-0 overflow-hidden flex-1 min-h-0 flex bg-white rounded-2xl"
@@ -76,19 +76,19 @@
             <div class="space-y-3 overflow-y-auto overflow-x-hidden pr-4 pt-3 pb-3 min-h-0 flex-1">
                 @foreach (var b in Model.Borclar)
                 {
-                    bool isOverdue = b.VadeTarihi < DateTime.Today;
-                    bool isPartiallyPaid = b.OdenenTutar > 0;
+                    bool isOverdue = b.DueDate < DateTime.Today;
+                    bool isPartiallyPaid = b.PaidAmount > 0;
 
                     <div role="button" tabindex="0" class="block relative p-4 rounded-xl border-2 transition-all cursor-pointer focus:outline-none"
-                         @@click="selected = @b.TahakkukId"
-                         @@keydown.enter.prevent="selected = @b.TahakkukId"
-                         @@keydown.space.prevent="selected = @b.TahakkukId"
-                         :class="selected === @b.TahakkukId ? 'border-blue-500 bg-blue-50/50 shadow-md shadow-blue-500/10' : 'border-slate-200 bg-white hover:border-slate-300'">
+                         @@click="selected = @b.ChargeId"
+                         @@keydown.enter.prevent="selected = @b.ChargeId"
+                         @@keydown.space.prevent="selected = @b.ChargeId"
+                         :class="selected === @b.ChargeId ? 'border-blue-500 bg-blue-50/50 shadow-md shadow-blue-500/10' : 'border-slate-200 bg-white hover:border-slate-300'">
 
                         <div class="flex justify-between items-start mb-2">
                             <div>
                                 <div class="font-semibold text-slate-800 text-sm">@b.TasinmazAdi / @b.BirimAdi</div>
-                                <div class="text-[11px] text-slate-500 font-medium">@b.DonemBaslangic.ToString("MMMM yyyy") Dönemi</div>
+                                <div class="text-[11px] text-slate-500 font-medium">@b.PeriodStart.ToString("MMMM yyyy") Dönemi</div>
                             </div>
                             <div class="text-right">
                                 <div class="font-bold text-base text-slate-800">@b.KalanTutar.ToString("N2") ₺</div>
@@ -102,7 +102,7 @@
                         <div class="flex items-center justify-between mt-3">
                             <div class="flex items-center gap-2">
                                 <span class="px-2 py-0.5 rounded text-[10px] font-bold border @(isOverdue ? "bg-red-50 text-red-600 border-red-200" : "bg-slate-100 text-slate-600 border-slate-200")">
-                                    VADE: @b.VadeTarihi.ToString("dd.MM.yyyy")
+                                    VADE: @b.DueDate.ToString("dd.MM.yyyy")
                                 </span>
                                 @if (isOverdue)
                                 {
@@ -113,13 +113,13 @@
                             @if (isPartiallyPaid)
                             {
                                 <div class="text-[10px] text-slate-500">
-                                    Toplam: @b.ToplamTutar.ToString("N0") ₺ • Ödenen: <span class="text-emerald-600 font-semibold">@b.OdenenTutar.ToString("N0") ₺</span>
+                                    Toplam: @b.ToplamTutar.ToString("N0") ₺ • Ödenen: <span class="text-emerald-600 font-semibold">@b.PaidAmount.ToString("N0") ₺</span>
                                 </div>
                             }
                         </div>
 
                         <div class="absolute -right-2 -top-2 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-sm transition-transform scale-0"
-                             :class="selected === @b.TahakkukId ? 'scale-100' : 'scale-0'">
+                             :class="selected === @b.ChargeId ? 'scale-100' : 'scale-0'">
                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
                         </div>
                     </div>

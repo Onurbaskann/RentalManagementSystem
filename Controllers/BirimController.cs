@@ -10,19 +10,19 @@ using Microsoft.EntityFrameworkCore;
 namespace KiraTakip.Controllers;
 
 [Authorize]
-[Route("Birim")]
+[Route("Unit")]
 public class BirimController : Controller
 {
     private readonly ApplicationDbContext _ctx;
-    private readonly IRezervasyonService _rezervasyonService;
+    private readonly IReservationService _reservationService;
     private readonly ITarifeHiyerarsiService _tarifeHiyerarsisi;
     private readonly IBirimService _birimService;
     private readonly IYetkiKapsamiProvider _provider;
 
-    public BirimController(ApplicationDbContext ctx, IRezervasyonService rezervasyonService, ITarifeHiyerarsiService tarifeHiyerarsisi, IBirimService birimService, IYetkiKapsamiProvider provider)
+    public BirimController(ApplicationDbContext ctx, IReservationService rezervasyonService, ITarifeHiyerarsiService tarifeHiyerarsisi, IBirimService birimService, IYetkiKapsamiProvider provider)
     {
         _ctx = ctx;
-        _rezervasyonService = rezervasyonService;
+        _reservationService = rezervasyonService;
         _tarifeHiyerarsisi = tarifeHiyerarsisi;
         _birimService = birimService;
         _provider = provider;
@@ -51,22 +51,22 @@ public class BirimController : Controller
 
         if (vm.KiralanabilirMi)
         {
-            var aktifBorcTipleri = await _ctx.BorcTipleri
-                .Where(b => b.Aktif && b.Davranis != ChargeTypeBehavior.UserManual && b.Davranis != ChargeTypeBehavior.ReservationSpecific)
-                .OrderBy(b => b.Sira)
+            var aktifBorcTipleri = await _ctx.ChargeTypes
+                .Where(b => b.IsActive && b.Behavior != ChargeTypeBehavior.UserManual && b.Behavior != ChargeTypeBehavior.ReservationSpecific)
+                .OrderBy(b => b.SortOrder)
                 .ToListAsync();
 
             var kategoriler = await _ctx.Kategoriler
-                .Where(k => k.Tipi == KategoriTipi.Kiraci && k.Aktif)
+                .Where(k => k.Tipi == KategoriTipi.Tenant && k.IsActive)
                 .OrderBy(k => k.Sira)
                 .ToListAsync();
 
             var mevcutRateler = await _ctx.BirimTarifeler
-                .Where(r => r.BirimId == id)
+                .Where(r => r.UnitId == id)
                 .ToListAsync();
 
             var tasinmazFiyatlar = await _ctx.TasinmazTarifeler
-                .Where(f => f.TasinmazId == birim.TasinmazId)
+                .Where(f => f.PropertyId == birim.TasinmazId)
                 .ToListAsync();
 
             var genelFiyatlar = await _ctx.GenelTarifeler
@@ -79,25 +79,25 @@ public class BirimController : Controller
             {
                 foreach (var bt in aktifBorcTipleri)
                 {
-                    var tasinmazRate = tasinmazFiyatlar.FirstOrDefault(tf => tf.KiraciKategoriId == kat.Id && tf.BorcTipiId == bt.Id);
-                    var genelRate = genelFiyatlar.FirstOrDefault(gf => gf.KiraciKategoriId == kat.Id && gf.BorcTipiId == bt.Id);
+                    var tasinmazRate = tasinmazFiyatlar.FirstOrDefault(tf => tf.KiraciKategoriId == kat.Id && tf.ChargeTypeId == bt.Id);
+                    var genelRate = genelFiyatlar.FirstOrDefault(gf => gf.KiraciKategoriId == kat.Id && gf.ChargeTypeId == bt.Id);
 
                     decimal deger = 0;
                     decimal kdv = 0;
-                    CalculationMethod yontem = (bt.Kod == Models.Entities.BorcTipiConsts.Kira ? CalculationMethod.M2 : CalculationMethod.Fixed);
+                    CalculationMethod yontem = (bt.Code == Models.Entities.BorcTipiConsts.Kira ? CalculationMethod.M2 : CalculationMethod.Fixed);
                     string kaynak = "Tanımsız";
 
                     if (tasinmazRate != null)
                     {
-                        deger = tasinmazRate.BirimDeger;
-                        kdv = tasinmazRate.KdvOrani;
+                        deger = tasinmazRate.UnitValue;
+                        kdv = tasinmazRate.KdvRate;
                         yontem = tasinmazRate.CalculationMethod;
                         kaynak = "Taşınmaz Tarifesi";
                     }
                     else if (genelRate != null)
                     {
-                        deger = genelRate.BirimDeger;
-                        kdv = genelRate.KdvOrani;
+                        deger = genelRate.UnitValue;
+                        kdv = genelRate.KdvRate;
                         yontem = genelRate.CalculationMethod;
                         kaynak = "Genel Tarife";
                     }
@@ -109,10 +109,10 @@ public class BirimController : Controller
                     parentTarifeSatirlar.Add(new ParentTarifeSatir
                     {
                         KategoriAd = kat.Ad,
-                        BorcTipiAd = bt.Ad,
+                        ChargeTypeName = bt.Name,
                         CalculationMethod = yontem,
-                        BirimDeger = deger,
-                        KdvOrani = kdv,
+                        UnitValue = deger,
+                        KdvRate = kdv,
                         Kaynak = kaynak
                     });
                 }
@@ -127,10 +127,10 @@ public class BirimController : Controller
 
             vm.Kolonlar = aktifBorcTipleri.Select(bt => new BirimTarifeKolonu
             {
-                BorcTipiId = bt.Id,
-                BorcTipiAd = bt.Ad,
-                BorcTipiKod = bt.Kod,
-                ChargeTypeBehavior = bt.Davranis
+                ChargeTypeId = bt.Id,
+                ChargeTypeName = bt.Name,
+                ChargeTypeCode = bt.Code,
+                ChargeTypeBehavior = bt.Behavior
             }).ToList();
 
             vm.Satirlar = kategoriler.Select(kat => new BirimTarifeKategoriSatiri
@@ -140,27 +140,27 @@ public class BirimController : Controller
                 Hucreler = aktifBorcTipleri.Select(bt =>
                 {
                     var rate = mevcutRateler.FirstOrDefault(r =>
-                        r.KiraciKategoriId == kat.Id && r.BorcTipiId == bt.Id);
+                        r.KiraciKategoriId == kat.Id && r.ChargeTypeId == bt.Id);
 
-                    var tasinmazRate = tasinmazFiyatlar.FirstOrDefault(tf => tf.KiraciKategoriId == kat.Id && tf.BorcTipiId == bt.Id);
-                    var genelRate = genelFiyatlar.FirstOrDefault(gf => gf.KiraciKategoriId == kat.Id && gf.BorcTipiId == bt.Id);
+                    var tasinmazRate = tasinmazFiyatlar.FirstOrDefault(tf => tf.KiraciKategoriId == kat.Id && tf.ChargeTypeId == bt.Id);
+                    var genelRate = genelFiyatlar.FirstOrDefault(gf => gf.KiraciKategoriId == kat.Id && gf.ChargeTypeId == bt.Id);
 
                     decimal varsayilanDeger = 0;
                     decimal varsayilanKdv = 0;
-                    CalculationMethod varsayilanYontem = (bt.Kod == Models.Entities.BorcTipiConsts.Kira ? CalculationMethod.M2 : CalculationMethod.Fixed);
+                    CalculationMethod varsayilanYontem = (bt.Code == Models.Entities.BorcTipiConsts.Kira ? CalculationMethod.M2 : CalculationMethod.Fixed);
                     string kaynak = "Tanımsız";
 
                     if (tasinmazRate != null)
                     {
-                        varsayilanDeger = tasinmazRate.BirimDeger;
-                        varsayilanKdv = tasinmazRate.KdvOrani;
+                        varsayilanDeger = tasinmazRate.UnitValue;
+                        varsayilanKdv = tasinmazRate.KdvRate;
                         varsayilanYontem = tasinmazRate.CalculationMethod;
                         kaynak = "Taşınmaz Tarifesi";
                     }
                     else if (genelRate != null)
                     {
-                        varsayilanDeger = genelRate.BirimDeger;
-                        varsayilanKdv = genelRate.KdvOrani;
+                        varsayilanDeger = genelRate.UnitValue;
+                        varsayilanKdv = genelRate.KdvRate;
                         varsayilanYontem = genelRate.CalculationMethod;
                         kaynak = "Genel Tarife";
                     }
@@ -169,11 +169,11 @@ public class BirimController : Controller
                     {
                         RateId = rate?.Id ?? 0,
                         KiraciKategoriId = kat.Id,
-                        BorcTipiId = bt.Id,
+                        ChargeTypeId = bt.Id,
                         OzelFiyatAktif = rate != null,
-                        CalculationMethod = rate?.CalculationMethod ?? (bt.Kod == Models.Entities.BorcTipiConsts.Kira ? CalculationMethod.M2 : CalculationMethod.Fixed),
-                        BirimDeger = rate?.BirimDeger ?? 0,
-                        KdvOrani = rate?.KdvOrani ?? 0,
+                        CalculationMethod = rate?.CalculationMethod ?? (bt.Code == Models.Entities.BorcTipiConsts.Kira ? CalculationMethod.M2 : CalculationMethod.Fixed),
+                        UnitValue = rate?.UnitValue ?? 0,
+                        KdvRate = rate?.KdvRate ?? 0,
                         VarsayilanBirimDeger = varsayilanDeger,
                         VarsayilanKdvOrani = varsayilanKdv,
                         VarsayilanCalculationMethod = varsayilanYontem,
@@ -185,7 +185,7 @@ public class BirimController : Controller
         else if (vm.RezervasyonYapilabilirMi)
         {
             vm.OzelRezervasyonKural = await _ctx.RezervasyonTarifeler
-                .FirstOrDefaultAsync(r => r.BirimId == id);
+                .FirstOrDefaultAsync(r => r.UnitId == id);
 
             vm.ParentRezervasyonTarife = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(DateTime.Now.Year);
         }
@@ -199,7 +199,7 @@ public class BirimController : Controller
     public async Task<IActionResult> OzelFiyat(int id, BirimOzelFiyatViewModel vm)
     {
         var mevcutRateler = await _ctx.BirimTarifeler
-            .Where(r => r.BirimId == id)
+            .Where(r => r.UnitId == id)
             .ToListAsync();
 
         foreach (var satir in vm.Satirlar)
@@ -208,7 +208,7 @@ public class BirimController : Controller
             {
                 var mevcut = mevcutRateler.FirstOrDefault(r =>
                     r.KiraciKategoriId == hucre.KiraciKategoriId &&
-                    r.BorcTipiId == hucre.BorcTipiId);
+                    r.ChargeTypeId == hucre.ChargeTypeId);
 
                 if (hucre.OzelFiyatAktif)
                 {
@@ -216,19 +216,19 @@ public class BirimController : Controller
                     {
                         _ctx.BirimTarifeler.Add(new BirimTarife
                         {
-                            BirimId = id,
+                            UnitId = id,
                             KiraciKategoriId = hucre.KiraciKategoriId,
-                            BorcTipiId = hucre.BorcTipiId,
+                            ChargeTypeId = hucre.ChargeTypeId,
                             CalculationMethod = hucre.CalculationMethod,
-                            BirimDeger = hucre.BirimDeger,
-                            KdvOrani = hucre.KdvOrani
+                            UnitValue = hucre.UnitValue,
+                            KdvRate = hucre.KdvRate
                         });
                     }
                     else
                     {
                         mevcut.CalculationMethod = hucre.CalculationMethod;
-                        mevcut.BirimDeger = hucre.BirimDeger;
-                        mevcut.KdvOrani = hucre.KdvOrani;
+                        mevcut.UnitValue = hucre.UnitValue;
+                        mevcut.KdvRate = hucre.KdvRate;
                     }
                 }
                 else if (mevcut != null)
@@ -254,7 +254,7 @@ public class BirimController : Controller
             return RedirectToAction(nameof(OzelFiyat), new { id });
         }
         vm.BirimId = id;
-        var (basarili, hata, _) = await _rezervasyonService.SaveUcretKuralAsync(vm);
+        var (basarili, hata, _) = await _reservationService.SaveUcretKuralAsync(vm);
         TempData[basarili ? "Success" : "Error"] = basarili
             ? "Özel rezervasyon kuralı kaydedildi."
             : hata;
@@ -267,7 +267,7 @@ public class BirimController : Controller
     public async Task<IActionResult> RezKuralSifirla(int id)
     {
         var kural = await _ctx.RezervasyonTarifeler
-            .FirstOrDefaultAsync(r => r.BirimId == id);
+            .FirstOrDefaultAsync(r => r.UnitId == id);
         if (kural != null)
         {
             _ctx.RezervasyonTarifeler.Remove(kural);

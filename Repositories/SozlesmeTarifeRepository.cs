@@ -9,14 +9,14 @@ public class SozlesmeTarifeRepository : BaseRepository<SozlesmeTarife>, ISozlesm
 {
     public SozlesmeTarifeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<RateValueDto?> GetRateAsync(int sozlesmeId, int borcTipiId)
+    public async Task<RateValueDto?> GetRateAsync(int sozlesmeId, int chargeTypeId)
         => await _dbSet.AsNoTracking()
-            .Where(r => r.KiraSozlesmesiId == sozlesmeId && r.BorcTipiId == borcTipiId)
+            .Where(r => r.LeaseId == sozlesmeId && r.ChargeTypeId == chargeTypeId)
             .Select(r => new RateValueDto
             {
                 CalculationMethod = r.CalculationMethod,
-                BirimDeger = r.BirimDeger,
-                KdvOrani = r.KdvOrani
+                UnitValue = r.UnitValue,
+                KdvRate = r.KdvRate
             })
             .FirstOrDefaultAsync();
 }

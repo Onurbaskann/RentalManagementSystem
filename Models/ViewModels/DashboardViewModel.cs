@@ -29,7 +29,7 @@ public class DashboardViewModel
     public int OnayBekleyenOdemeAdet { get; set; }
     public int EslesmemisHareketAdet { get; set; }
 
-    // Rezervasyon ve manuel borç metrikleri
+    // Reservation ve manuel borç metrikleri
     public decimal BuAyManuelBorcToplami { get; set; }
     public decimal BuAyRezervasyonGeliri { get; set; }
     public int TahakkukaAktarilmamisRezervasyonAdet { get; set; }
@@ -89,7 +89,7 @@ public class SuresiDolmakUzereSozlesme
     public string TasinmazAdi { get; set; } = string.Empty;
     public string BirimAdi { get; set; } = string.Empty;
     public int KalanGun { get; set; }
-    public DateTime BitisTarihi { get; set; }
+    public DateTime EndDate { get; set; }
 }
 
 public class BosBirimOzet

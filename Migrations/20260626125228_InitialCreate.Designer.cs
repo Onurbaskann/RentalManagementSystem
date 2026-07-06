@@ -430,10 +430,12 @@ namespace KiraTakip.Migrations
 
                     b.Property<int>("UnitKind")
                         .HasColumnType("int")
+                        .HasColumnName("BirimTipi")
                         .HasComment("Komple=1, Birim=2");
 
                     b.Property<int?>("UnitTypeId")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("BirimTuruId");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -499,7 +501,8 @@ namespace KiraTakip.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("CalculationMethod")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("HesaplamaYontemi");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -859,6 +862,7 @@ namespace KiraTakip.Migrations
 
                     b.Property<int>("CalculationMethod")
                         .HasColumnType("int")
+                        .HasColumnName("HesaplamaYontemi")
                         .HasComment("Sabit=1, M2=2");
 
                     b.Property<bool>("IsActive")
@@ -1071,7 +1075,8 @@ namespace KiraTakip.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("ScopeType")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("KapsamTipi");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1112,6 +1117,7 @@ namespace KiraTakip.Migrations
 
                     b.Property<int>("MatchType")
                         .HasColumnType("int")
+                        .HasColumnName("EslesmeTipi")
                         .HasComment("Otomatik=1, Manuel=2");
 
                     b.Property<bool>("IsActive")
@@ -1314,7 +1320,8 @@ namespace KiraTakip.Migrations
                         .HasColumnType("int");
 
                     b.Property<int?>("UnitTypeId")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("BirimTuruId");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -1358,12 +1365,12 @@ namespace KiraTakip.Migrations
 
                     b.HasIndex("UnitTypeId", "Yil")
                         .IsUnique()
-                        .HasDatabaseName("UX_RezervasyonTarifeler_UnitTypeYil_GenelKural")
+                        .HasDatabaseName("UX_RezervasyonTarifeler_BirimTuruYil_GenelKural")
                         .HasFilter("[BirimId] IS NULL");
 
                     b.ToTable("RezervasyonTarifeler", t =>
                         {
-                            t.HasCheckConstraint("CK_RezervasyonTarife_BirimOrYilTuru", "[BirimId] IS NOT NULL OR ([UnitTypeId] IS NOT NULL AND [Yil] IS NOT NULL)");
+                            t.HasCheckConstraint("CK_RezervasyonTarife_BirimOrYilTuru", "[BirimId] IS NOT NULL OR ([BirimTuruId] IS NOT NULL AND [Yil] IS NOT NULL)");
 
                             t.HasCheckConstraint("CK_RezervasyonTarifeler_Degerler_Pozitif", "[PeriyotUcreti] >= 0 AND [UcretsizSureDakika] >= 0 AND [UcretlendirmePeriyoduDakika] > 0 AND [KdvOrani] BETWEEN 0 AND 100");
                         });
@@ -1565,7 +1572,8 @@ namespace KiraTakip.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("DueDateRuleType")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("VadeKuraliTipi");
 
                     b.HasKey("Id");
 
@@ -1691,7 +1699,8 @@ namespace KiraTakip.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("CalculationMethod")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("HesaplamaYontemi");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -1854,6 +1863,7 @@ namespace KiraTakip.Migrations
 
                     b.Property<int>("CalculationMethod")
                         .HasColumnType("int")
+                        .HasColumnName("HesaplamaYontemi")
                         .HasComment("Sabit=1, M2=2");
 
                     b.Property<bool>("IsActive")
@@ -1945,10 +1955,12 @@ namespace KiraTakip.Migrations
 
                     b.Property<int>("PaymentChannel")
                         .HasColumnType("int")
+                        .HasColumnName("OdemeKanali")
                         .HasComment("Havale=1, EFT=2, Nakit=3, Diger=4");
 
                     b.Property<int>("PaymentSourceType")
                         .HasColumnType("int")
+                        .HasColumnName("OdemeKaynakTipi")
                         .HasComment("Manuel=1, BankaEslesme=2, SanalPos=3");
 
                     b.Property<DateTime>("OdemeTarihi")
@@ -2054,6 +2066,7 @@ namespace KiraTakip.Migrations
 
                     b.Property<int>("RentalMode")
                         .HasColumnType("int")
+                        .HasColumnName("KiralamaSekli")
                         .HasComment("TekParca=1, BirimBazli=2");
 
                     b.Property<string>("Mahalle")
@@ -2100,7 +2113,8 @@ namespace KiraTakip.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("CalculationMethod")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("HesaplamaYontemi");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");

@@ -34,11 +34,11 @@ public class AdminHareketGecmisiController : Controller
         if (!string.IsNullOrWhiteSpace(filter.EntityType))
             query = query.Where(a => a.EntityType == filter.EntityType);
 
-        if (filter.BaslangicTarihi.HasValue)
-            query = query.Where(a => a.CreatedAt >= filter.BaslangicTarihi.Value.ToUniversalTime());
+        if (filter.StartDate.HasValue)
+            query = query.Where(a => a.CreatedAt >= filter.StartDate.Value.ToUniversalTime());
 
-        if (filter.BitisTarihi.HasValue)
-            query = query.Where(a => a.CreatedAt < filter.BitisTarihi.Value.AddDays(1).ToUniversalTime());
+        if (filter.EndDate.HasValue)
+            query = query.Where(a => a.CreatedAt < filter.EndDate.Value.AddDays(1).ToUniversalTime());
 
         if (!string.IsNullOrWhiteSpace(filter.KullaniciEmail))
         {

@@ -14,14 +14,14 @@ namespace KiraTakip.Controllers;
 [Authorize(Policy = "KiraciKullanici")]
 [RequireKiraciId]
 [Authorize(Policy = PermissionCatalog.TenantPortal.Lease.Module)]
-[Route("Kiraci/Sozlesmeler")]
+[Route("Tenant/Leases")]
 public class KiraciSozlesmeController : Controller
 {
     private readonly ApplicationDbContext _db;
     private readonly ICurrentUserContext _currentUser;
     private readonly ISozlesmeService _sozlesmeService;
     private readonly IIstatistikService _istatistik;
-    private readonly ITahakkukService _tahakkukService;
+    private readonly IChargeService _chargeService;
     private readonly IBelgeService _belgeService;
 
     public KiraciSozlesmeController(
@@ -29,14 +29,14 @@ public class KiraciSozlesmeController : Controller
         ICurrentUserContext currentUser,
         ISozlesmeService sozlesmeService,
         IIstatistikService istatistik,
-        ITahakkukService tahakkukService,
+        IChargeService tahakkukService,
         IBelgeService belgeService)
     {
         _db = db;
         _currentUser = currentUser;
         _sozlesmeService = sozlesmeService;
         _istatistik = istatistik;
-        _tahakkukService = tahakkukService;
+        _chargeService = tahakkukService;
         _belgeService = belgeService;
     }
 
@@ -57,57 +57,57 @@ public class KiraciSozlesmeController : Controller
         var kiraciId = _currentUser.KiraciId!.Value;
         if (s.KiraciId != kiraciId) return Forbid();
 
-        var dummySozlesme = new Sozlesme
+        var dummySozlesme = new Lease
         {
             Id = s.Id,
-            KiraciId = s.KiraciId,
-            BirimId = s.BirimId,
-            BaslangicTarihi = s.BaslangicTarihi,
-            BitisTarihi = s.BitisTarihi,
-            Durum = s.Durum,
-            FesihTarihi = s.FesihTarihi,
-            Birim = new Birim
+            TenantId = s.KiraciId,
+            UnitId = s.BirimId,
+            StartDate = s.StartDate,
+            EndDate = s.EndDate,
+            Status = s.Durum,
+            TerminationDate = s.FesihTarihi,
+            Unit = new Unit
             {
                 Id = s.BirimId,
-                Yuzolcumu = s.BirimYuzolcumu,
+                Area = s.BirimYuzolcumu,
                 UnitKind = s.UnitKind,
-                TasinmazId = s.TasinmazId
+                PropertyId = s.TasinmazId
             }
         };
 
         var vm = new SozlesmeDetayViewModel
         {
-            Sozlesme = s,
+            Lease = s,
             KalanGun = _istatistik.KalanGun(dummySozlesme),
             AylikBedel = await _istatistik.AylikBedelAsync(dummySozlesme),
             YillikBedel = await _istatistik.YillikBedelAsync(dummySozlesme),
             Aktif = _istatistik.Aktif(dummySozlesme),
             SureYuzdesi = _istatistik.SureYuzdesi(dummySozlesme),
-            Durum = _istatistik.GetBirimDurumu(dummySozlesme.Birim),
+            Durum = _istatistik.GetBirimDurumu(dummySozlesme.Unit),
             HasOdemeAccess = true,
             KdvOraniEtkin = s.SozlesmeTarifeler
-                .FirstOrDefault(r => r.BorcTipiDavranis == ChargeTypeBehavior.MonthlyFixed)?.KdvOrani ?? 20m
+                .FirstOrDefault(r => r.BorcTipiDavranis == ChargeTypeBehavior.MonthlyFixed)?.KdvRate ?? 20m
         };
 
-        await _tahakkukService.GecikmeleriGuncelleAsync();
-        vm.Tahakkuklar = await _tahakkukService.GetListAsync(sozlesmeId: id);
+        await _chargeService.GecikmeleriGuncelleAsync();
+        vm.Charges = await _chargeService.GetListAsync(sozlesmeId: id);
 
         var bugun = DateTime.Today;
-        var guncelTahakkuk = await _db.Tahakkuklar
-            .Include(t => t.Kalemler).ThenInclude(k => k.BorcTipi)
-            .Where(t => t.KiraSozlesmesiId == id && t.Durum != ChargeStatus.Cancelled && t.DonemBaslangic <= bugun)
-            .OrderByDescending(t => t.DonemBaslangic)
+        var guncelTahakkuk = await _db.Charges
+            .Include(t => t.LineItems).ThenInclude(k => k.ChargeType)
+            .Where(t => t.LeaseId == id && t.Status != ChargeStatus.Cancelled && t.PeriodStart <= bugun)
+            .OrderByDescending(t => t.PeriodStart)
             .FirstOrDefaultAsync();
-        vm.GuncelKalemler = guncelTahakkuk?.Kalemler
-            .Where(k => k.BorcTipi.Davranis == ChargeTypeBehavior.MonthlyFixed)
-            .OrderBy(k => k.BorcTipi.Sira).ToList() ?? new();
-        vm.GuncelKalemDonemi = guncelTahakkuk?.DonemBaslangic;
+        vm.GuncelKalemler = guncelTahakkuk?.LineItems
+            .Where(k => k.ChargeType.Behavior == ChargeTypeBehavior.MonthlyFixed)
+            .OrderBy(k => k.ChargeType.SortOrder).ToList() ?? new();
+        vm.GuncelKalemDonemi = guncelTahakkuk?.PeriodStart;
 
         var depozitoTutarlari = await _sozlesmeService.GetDepozitoTutarlariAsync(new[] { id });
         vm.DepozitoTutari = depozitoTutarlari.TryGetValue(id, out var dep) ? dep : null;
 
-        vm.BelgeTurleri = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Sozlesme);
-        vm.Belgeler     = await _belgeService.GetListAsync(BelgeOwnerTipi.Sozlesme, id);
+        vm.DocumentTypes = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Lease);
+        vm.Belgeler     = await _belgeService.GetListAsync(BelgeOwnerTipi.Lease, id);
 
         return View(vm);
     }

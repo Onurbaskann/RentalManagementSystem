@@ -12,7 +12,7 @@
         k => char.ToLowerInvariant(k[0]) + k.Substring(1),
         k => ViewData.ModelState[k]?.Errors.FirstOrDefault()?.ErrorMessage ?? ""
     );
-    var belgeTurleriForErr = ViewBag.BelgeTurleri as List<KiraTakip.Models.Entities.BelgeTuru>;
+    var belgeTurleriForErr = ViewBag.DocumentTypes as List<KiraTakip.Models.Entities.DocumentType>;
     if (belgeTurleriForErr != null)
     {
         foreach (var bt in belgeTurleriForErr)
@@ -26,7 +26,7 @@
 
 <div class="max-w-[800px] mx-auto">
     <div class="page-header">
-        <a href="/Kiraci" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Kiracılar</a>
+        <a href="/Tenant" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Kiracılar</a>
         <div class="page-title">Yeni Kiracı Ekle</div>
     </div>
     <form asp-action="Ekle" method="post" enctype="multipart/form-data"
@@ -135,7 +135,7 @@
         </div>
 
         @{
-            var belgeTurleri = ViewBag.BelgeTurleri as List<KiraTakip.Models.Entities.BelgeTuru> ?? [];
+            var belgeTurleri = ViewBag.DocumentTypes as List<KiraTakip.Models.Entities.DocumentType> ?? [];
         }
         @await Html.PartialAsync("_BelgeEkleForm", belgeTurleri)
 
@@ -160,7 +160,7 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="mr-1.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Kaydet
             </button>
-            <a href="/Kiraci" class="btn btn-secondary px-6">İptal</a>
+            <a href="/Tenant" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>
 </div>

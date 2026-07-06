@@ -10,35 +10,35 @@ public class BirimTarifeRepository : BaseRepository<BirimTarife>, IBirimTarifeRe
 {
     public BirimTarifeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<RateValueDto?> GetRateAsync(int birimId, int kategoriId, int borcTipiId)
+    public async Task<RateValueDto?> GetRateAsync(int birimId, int kategoriId, int chargeTypeId)
         => await _dbSet.AsNoTracking()
-            .Where(r => r.BirimId == birimId
+            .Where(r => r.UnitId == birimId
                      && r.KiraciKategoriId == kategoriId
-                     && r.BorcTipiId == borcTipiId)
+                     && r.ChargeTypeId == chargeTypeId)
             .Select(r => new RateValueDto
             {
                 CalculationMethod = r.CalculationMethod,
-                BirimDeger = r.BirimDeger,
-                KdvOrani = r.KdvOrani
+                UnitValue = r.UnitValue,
+                KdvRate = r.KdvRate
             })
             .FirstOrDefaultAsync();
 
     public async Task<List<ParentTarifeKartViewModel>> GetByBirimForKartAsync(int birimId, int? kategoriId)
     {
-        var q = _dbSet.AsNoTracking().Where(r => r.BirimId == birimId);
+        var q = _dbSet.AsNoTracking().Where(r => r.UnitId == birimId);
         if (kategoriId.HasValue)
             q = q.Where(r => r.KiraciKategoriId == kategoriId.Value);
 
         var rateler = await q
             .OrderBy(r => r.KiraciKategori.Sira)
-            .ThenBy(r => r.BorcTipi.Sira)
+            .ThenBy(r => r.ChargeType.SortOrder)
             .Select(r => new ParentTarifeSatir
             {
                 KategoriAd = r.KiraciKategori.Ad,
-                BorcTipiAd = r.BorcTipi.Ad,
+                ChargeTypeName = r.ChargeType.Name,
                 CalculationMethod = r.CalculationMethod,
-                BirimDeger = r.BirimDeger,
-                KdvOrani = r.KdvOrani
+                UnitValue = r.UnitValue,
+                KdvRate = r.KdvRate
             })
             .ToListAsync();
 
@@ -48,7 +48,7 @@ public class BirimTarifeRepository : BaseRepository<BirimTarife>, IBirimTarifeRe
         {
             new ParentTarifeKartViewModel
             {
-                KaynakAdi = "Birim Tarifesi",
+                KaynakAdi = "Unit Tarifesi",
                 Satirlar = rateler
             }
         };

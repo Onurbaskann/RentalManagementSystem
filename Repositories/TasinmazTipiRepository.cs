@@ -18,7 +18,7 @@ public class TasinmazTipiRepository : BaseRepository<TasinmazTipi>, ITasinmazTip
                 Ad = k.Ad,
                 Kod = k.Kod,
                 Sira = k.Sira,
-                Aktif = k.Aktif,
+                Aktif = k.IsActive,
                 TekParcaDestekli = k.TekParcaDestekli,
                 BirimBazliDestekli = k.BirimBazliDestekli
             })

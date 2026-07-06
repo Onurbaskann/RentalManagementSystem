@@ -1,11 +1,11 @@
-@model List<KiraTakip.Models.Entities.BelgeTuru>
+@model List<KiraTakip.Models.Entities.DocumentType>
 @using System.Linq
 
 @if (!Model.Any()) { return; }
 
 @{
-    var zorunlular    = Model.Where(bt => bt.Zorunlu).ToList();
-    var opsiyoneller  = Model.Where(bt => !bt.Zorunlu).ToList();
+    var zorunlular    = Model.Where(bt => bt.Required).ToList();
+    var opsiyoneller  = Model.Where(bt => !bt.Required).ToList();
 }
 
 <div class="card mb-5">
@@ -23,19 +23,19 @@
         <div class="flex flex-col gap-4">
             @foreach (var bt in zorunlular)
             {
-                var acceptAttr = string.Join(",", bt.IzinVerilenUzantilar.Split(',').Select(e => "." + e.Trim()));
+                var acceptAttr = string.Join(",", bt.AllowedExtensions.Split(',').Select(e => "." + e.Trim()));
                 <div>
                     <label class="form-label">
-                        @bt.Ad <span class="text-red-500 font-bold ml-0.5">*</span>
-                        <span class="text-muted font-normal text-[11.5px] ml-1.5">(@bt.IzinVerilenUzantilar · maks. @bt.MaxBoyutMb MB)</span>
+                        @bt.Name <span class="text-red-500 font-bold ml-0.5">*</span>
+                        <span class="text-muted font-normal text-[11.5px] ml-1.5">(@bt.AllowedExtensions · maks. @bt.MaxSizeMb MB)</span>
                     </label>
-                    @if (!string.IsNullOrEmpty(bt.Aciklama))
+                    @if (!string.IsNullOrEmpty(bt.Description))
                     {
-                        <div class="text-xs text-muted mb-1.5">@bt.Aciklama</div>
+                        <div class="text-xs text-muted mb-1.5">@bt.Description</div>
                     }
                     <input type="file" name="dosya_@bt.Id"
                            class="form-control text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                           data-belge-zorunlu="1" data-belge-ad="@bt.Ad"
+                           data-belge-zorunlu="1" data-belge-ad="@bt.Name"
                            accept="@acceptAttr" />
                     @Html.ValidationMessage($"dosya_{bt.Id}", null, new { @class = "form-error" })
                 </div>
@@ -59,15 +59,15 @@
             <div x-show="acik" x-cloak class="flex flex-col gap-4 mt-4">
                 @foreach (var bt in opsiyoneller)
                 {
-                    var acceptAttr = string.Join(",", bt.IzinVerilenUzantilar.Split(',').Select(e => "." + e.Trim()));
+                    var acceptAttr = string.Join(",", bt.AllowedExtensions.Split(',').Select(e => "." + e.Trim()));
                     <div>
                         <label class="form-label">
-                            @bt.Ad
-                            <span class="text-muted font-normal text-[11.5px] ml-1.5">(@bt.IzinVerilenUzantilar · maks. @bt.MaxBoyutMb MB)</span>
+                            @bt.Name
+                            <span class="text-muted font-normal text-[11.5px] ml-1.5">(@bt.AllowedExtensions · maks. @bt.MaxSizeMb MB)</span>
                         </label>
-                        @if (!string.IsNullOrEmpty(bt.Aciklama))
+                        @if (!string.IsNullOrEmpty(bt.Description))
                         {
-                            <div class="text-xs text-muted mb-1.5">@bt.Aciklama</div>
+                            <div class="text-xs text-muted mb-1.5">@bt.Description</div>
                         }
                         <input type="file" name="dosya_@bt.Id"
                                class="form-control text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"

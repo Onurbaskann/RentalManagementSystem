@@ -27,14 +27,14 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<SeedDataService>();
 
             // Domain & Calculation Services
-            services.AddScoped<ITahakkukService, TahakkukService>();
-            services.AddScoped<IOdemeService, OdemeService>();
-            services.AddScoped<IBankaHareketiService, BankaHareketiService>();
+            services.AddScoped<IChargeService, ChargeService>();
+            services.AddScoped<IPaymentService, PaymentService>();
+            services.AddScoped<IBankTransactionService, BankTransactionService>();
             services.AddSingleton<IBankaHareketiParser, AkbankCsvParser>();
             services.AddScoped<IRateResolverService, RateResolverService>();
-            services.AddScoped<ITahakkukUretimService, TahakkukUretimService>();
+            services.AddScoped<IChargeGenerationService, ChargeGenerationService>();
             services.AddScoped<IManuelBorcService, ManuelBorcService>();
-            services.AddScoped<IRezervasyonService, RezervasyonService>();
+            services.AddScoped<IReservationService, ReservationService>();
             services.AddScoped<ITasinmazFiyatService, TasinmazFiyatService>();
             services.AddScoped<ITarifeHiyerarsiService, TarifeHiyerarsiService>();
 

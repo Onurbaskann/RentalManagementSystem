@@ -6,7 +6,7 @@
 
 <div class="max-w-[680px] mx-auto">
     <div class="page-header">
-        <a href="/Admin/BelgeTuru" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Belge Türleri</a>
+        <a href="/Admin/DocumentType" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Belge Türleri</a>
         <div class="page-title">Belge Türü Ekle</div>
     </div>
 
@@ -43,8 +43,8 @@
                 <div class="form-group mb-0">
                     <label class="form-label">Hedef Kayıt Tipi *</label>
                     <select asp-for="HedefEntite" class="form-control">
-                        <option value="@((int)BelgeOwnerTipi.Kiraci)">Kiracı</option>
-                        <option value="@((int)BelgeOwnerTipi.Sozlesme)">Sözleşme</option>
+                        <option value="@((int)BelgeOwnerTipi.Tenant)">Kiracı</option>
+                        <option value="@((int)BelgeOwnerTipi.Lease)">Sözleşme</option>
                         <option value="@((int)BelgeOwnerTipi.Odeme)">Ödeme</option>
                     </select>
                     <span asp-validation-for="HedefEntite" class="form-error"></span>
@@ -86,7 +86,7 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="mr-1.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Kaydet
             </button>
-            <a href="/Admin/BelgeTuru" class="btn btn-secondary px-6">İptal</a>
+            <a href="/Admin/DocumentType" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>
 </div>

@@ -32,7 +32,7 @@ public class PaymentLinkService : IPaymentLinkService, ITransactionalService
         var ttl = TimeSpan.FromHours(_settings.TokenTtlHours);
         var kayit = new OdemeLinkKayit
         {
-            KiraciId = kiraciId,
+            TenantId = kiraciId,
             ExpiresAt = DateTime.UtcNow.Add(ttl)
         };
         _db.OdemeLinkKayitlari.Add(kayit);
@@ -86,7 +86,7 @@ public class PaymentLinkService : IPaymentLinkService, ITransactionalService
             return (false, 0, reason ?? "Geçersiz ödeme linki.");
         }
 
-        return (true, kayit.KiraciId, null);
+        return (true, kayit.TenantId, null);
     }
 
     public async Task IptalEtAsync(int kayitId, string iptalEdenUserId, CancellationToken ct = default)

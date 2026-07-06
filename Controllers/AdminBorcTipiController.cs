@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace KiraTakip.Controllers;
 
 [Authorize]
-[Route("Admin/BorcTipi")]
+[Route("Admin/ChargeType")]
 public class AdminBorcTipiController : Controller
 {
     private readonly IBorcTipiRepository _repo;
@@ -56,19 +56,19 @@ public class AdminBorcTipiController : Controller
             return View(model);
         }
 
-        var entity = new BorcTipi
+        var entity = new ChargeType
         {
-            Ad = model.Ad,
-            Kod = kod,
-            Davranis = model.Davranis,
-            Sira = model.Sira,
-            Aktif = model.Aktif,
-            Sistem = false
+            Name = model.Ad,
+            Code = kod,
+            Behavior = model.Davranis,
+            SortOrder = model.Sira,
+            IsActive = model.Aktif,
+            IsSystem = false
         };
 
         await _repo.AddAsync(entity);
         await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Ad}' borç tipi eklendi.";
+        TempData["Success"] = $"'{entity.Name}' borç tipi eklendi.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -94,23 +94,23 @@ public class AdminBorcTipiController : Controller
         if (entity == null) return NotFound();
 
         // Sistem tiplerinde Davranış değiştirilemez
-        if (entity.Sistem)
-            model.Davranis = entity.Davranis;
+        if (entity.IsSystem)
+            model.Davranis = entity.Behavior;
 
         if (!ModelState.IsValid)
         {
-            model.Sistem = entity.Sistem;
+            model.Sistem = entity.IsSystem;
             return View(model);
         }
 
-        entity.Ad = model.Ad;
-        entity.Davranis = model.Davranis;
-        entity.Sira = model.Sira;
-        entity.Aktif = model.Aktif;
+        entity.Name = model.Ad;
+        entity.Behavior = model.Davranis;
+        entity.SortOrder = model.Sira;
+        entity.IsActive = model.Aktif;
         // entity.Kod ve entity.Sistem hiç değiştirilmez
 
         await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Ad}' güncellendi.";
+        TempData["Success"] = $"'{entity.Name}' güncellendi.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -122,11 +122,11 @@ public class AdminBorcTipiController : Controller
         var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
 
-        if (entity.Aktif)
+        if (entity.IsActive)
         {
-            if (entity.Sistem)
+            if (entity.IsSystem)
             {
-                TempData["Error"] = $"'{entity.Ad}' bir sistem kaydıdır ve pasif yapılamaz.";
+                TempData["Error"] = $"'{entity.Name}' bir sistem kaydıdır ve pasif yapılamaz.";
                 return RedirectToAction(nameof(Index));
             }
 
@@ -137,9 +137,9 @@ public class AdminBorcTipiController : Controller
             }
         }
 
-        entity.Aktif = !entity.Aktif;
+        entity.IsActive = !entity.IsActive;
         await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Ad}' {(entity.Aktif ? "aktif" : "pasif")} yapıldı.";
+        TempData["Success"] = $"'{entity.Name}' {(entity.IsActive ? "aktif" : "pasif")} yapıldı.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -150,18 +150,18 @@ public class AdminBorcTipiController : Controller
     {
         var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
-        entity.Sira = yeniSira;
+        entity.SortOrder = yeniSira;
         await _uow.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
     }
 
-    private static BorcTipiFormViewModel ToFormVm(BorcTipi e) => new()
+    private static BorcTipiFormViewModel ToFormVm(ChargeType e) => new()
     {
         Id = e.Id,
-        Ad = e.Ad,
-        Davranis = e.Davranis,
-        Sira = e.Sira,
-        Aktif = e.Aktif,
-        Sistem = e.Sistem
+        Ad = e.Name,
+        Davranis = e.Behavior,
+        Sira = e.SortOrder,
+        Aktif = e.IsActive,
+        Sistem = e.IsSystem
     };
 }

@@ -44,13 +44,13 @@ public class AdminTarifeController : Controller
         if (kalemler.Count == 0) return NotFound();
 
         var kategoriler = await _ctx.Kategoriler
-            .Where(k => k.Tipi == KategoriTipi.Kiraci && k.Aktif)
+            .Where(k => k.Tipi == KategoriTipi.Tenant && k.IsActive)
             .OrderBy(k => k.Sira)
             .ToListAsync();
 
-        var borcTipleri = await _ctx.BorcTipleri
-            .Where(b => b.Aktif && b.Davranis != ChargeTypeBehavior.UserManual && b.Davranis != ChargeTypeBehavior.ReservationSpecific)
-            .OrderBy(b => b.Sira)
+        var borcTipleri = await _ctx.ChargeTypes
+            .Where(b => b.IsActive && b.Behavior != ChargeTypeBehavior.UserManual && b.Behavior != ChargeTypeBehavior.ReservationSpecific)
+            .OrderBy(b => b.SortOrder)
             .ToListAsync();
 
         var vm = new TarifeMatrisViewModel
@@ -59,9 +59,9 @@ public class AdminTarifeController : Controller
             Aktif = kalemler.Any(k => k.IsActive),
             Kolonlar = borcTipleri.Select(bt => new TarifeMatrisBorcTipiKolon
             {
-                BorcTipiId  = bt.Id,
-                BorcTipiAd  = bt.Ad,
-                BorcTipiKod = bt.Kod
+                ChargeTypeId  = bt.Id,
+                ChargeTypeName  = bt.Name,
+                ChargeTypeCode = bt.Code
             }).ToList(),
             Satirlar = kategoriler.Select(kat => new TarifeMatrisSatir
             {
@@ -70,27 +70,27 @@ public class AdminTarifeController : Controller
                 Hucreler = borcTipleri.Select(bt =>
                 {
                     var mevcut = kalemler.FirstOrDefault(k =>
-                        k.KiraciKategoriId == kat.Id && k.BorcTipiId == bt.Id);
+                        k.KiraciKategoriId == kat.Id && k.ChargeTypeId == bt.Id);
                     return new TarifeMatrisHucre
                     {
                         KalemId          = mevcut?.Id ?? 0,
                         KiraciKategoriId = kat.Id,
-                        BorcTipiId       = bt.Id,
+                        ChargeTypeId       = bt.Id,
                         CalculationMethod = mevcut?.CalculationMethod ?? CalculationMethod.Fixed,
-                        BirimDeger       = mevcut?.BirimDeger ?? 0,
-                        KdvOrani         = mevcut?.KdvOrani ?? 0
+                        UnitValue       = mevcut?.UnitValue ?? 0,
+                        KdvRate         = mevcut?.KdvRate ?? 0
                     };
                 }).ToList()
             }).ToList()
         };
 
         var rezervasyonBirimTurleri = await _ctx.BirimTurleri
-            .Where(t => t.Aktif && t.RezervasyonYapilabilirMi)
+            .Where(t => t.IsActive && t.RezervasyonYapilabilirMi)
             .OrderBy(t => t.Sira)
             .ToListAsync();
 
         var mevcutRezervasyonlar = await _ctx.RezervasyonTarifeler
-            .Where(r => r.BirimId == null && r.Yil == yil)
+            .Where(r => r.UnitId == null && r.Yil == yil)
             .ToListAsync();
 
         vm.RezervasyonSatirlari = rezervasyonBirimTurleri.Select(bt =>
@@ -101,10 +101,10 @@ public class AdminTarifeController : Controller
                 RezervasyonTarifeId          = mevcut?.Id ?? 0,
                 UnitTypeId                 = bt.Id,
                 UnitTypeAd                 = bt.Ad,
-                UcretsizSureDakika          = mevcut?.UcretsizSureDakika ?? 0,
+                FreeDurationMinutes          = mevcut?.FreeDurationMinutes ?? 0,
                 UcretlendirmePeriyoduDakika = mevcut?.UcretlendirmePeriyoduDakika ?? 60,
                 PeriyotUcreti               = mevcut?.PeriyotUcreti ?? 0,
-                KdvOrani                    = mevcut?.KdvOrani ?? 20
+                KdvRate                    = mevcut?.KdvRate ?? 20
             };
         }).ToList();
 
@@ -123,31 +123,31 @@ public class AdminTarifeController : Controller
         foreach (var hucre in vm.Hucreler)
         {
             var mevcut = mevcutKalemler.FirstOrDefault(k =>
-                k.KiraciKategoriId == hucre.KiraciKategoriId && k.BorcTipiId == hucre.BorcTipiId);
+                k.KiraciKategoriId == hucre.KiraciKategoriId && k.ChargeTypeId == hucre.ChargeTypeId);
             if (mevcut == null)
             {
                 _ctx.GenelTarifeler.Add(new GenelTarife
                 {
                     Yil              = yil,
                     KiraciKategoriId = hucre.KiraciKategoriId,
-                    BorcTipiId       = hucre.BorcTipiId,
+                    ChargeTypeId       = hucre.ChargeTypeId,
                     CalculationMethod = hucre.CalculationMethod,
-                    BirimDeger       = hucre.BirimDeger,
-                    KdvOrani         = hucre.KdvOrani
+                    UnitValue       = hucre.UnitValue,
+                    KdvRate         = hucre.KdvRate
                 });
             }
             else
             {
                 mevcut.CalculationMethod = hucre.CalculationMethod;
-                mevcut.BirimDeger       = hucre.BirimDeger;
-                mevcut.KdvOrani         = hucre.KdvOrani;
+                mevcut.UnitValue       = hucre.UnitValue;
+                mevcut.KdvRate         = hucre.KdvRate;
             }
         }
 
         foreach (var rez in vm.RezervasyonHucreler)
         {
             var mevcut = await _ctx.RezervasyonTarifeler
-                .FirstOrDefaultAsync(r => r.BirimId == null && r.Yil == yil && r.UnitTypeId == rez.UnitTypeId);
+                .FirstOrDefaultAsync(r => r.UnitId == null && r.Yil == yil && r.UnitTypeId == rez.UnitTypeId);
 
             if (mevcut == null)
             {
@@ -155,18 +155,18 @@ public class AdminTarifeController : Controller
                 {
                     Yil                         = yil,
                     UnitTypeId                 = rez.UnitTypeId,
-                    UcretsizSureDakika          = rez.UcretsizSureDakika,
+                    FreeDurationMinutes          = rez.FreeDurationMinutes,
                     UcretlendirmePeriyoduDakika = rez.UcretlendirmePeriyoduDakika,
                     PeriyotUcreti               = rez.PeriyotUcreti,
-                    KdvOrani                    = rez.KdvOrani
+                    KdvRate                    = rez.KdvRate
                 });
             }
             else
             {
-                mevcut.UcretsizSureDakika          = rez.UcretsizSureDakika;
+                mevcut.FreeDurationMinutes          = rez.FreeDurationMinutes;
                 mevcut.UcretlendirmePeriyoduDakika = rez.UcretlendirmePeriyoduDakika;
                 mevcut.PeriyotUcreti               = rez.PeriyotUcreti;
-                mevcut.KdvOrani                    = rez.KdvOrani;
+                mevcut.KdvRate                    = rez.KdvRate;
             }
         }
 
@@ -221,15 +221,15 @@ public class AdminTarifeController : Controller
                 {
                     Yil              = vm.Yil,
                     KiraciKategoriId = kalem.KiraciKategoriId,
-                    BorcTipiId       = kalem.BorcTipiId,
+                    ChargeTypeId       = kalem.ChargeTypeId,
                     CalculationMethod = kalem.CalculationMethod,
-                    BirimDeger       = kalem.BirimDeger,
-                    KdvOrani         = kalem.KdvOrani
+                    UnitValue       = kalem.UnitValue,
+                    KdvRate         = kalem.KdvRate
                 });
             }
 
             var kaynakRezervasyonlar = await _ctx.RezervasyonTarifeler
-                .Where(r => r.BirimId == null && r.Yil == vm.KopyalaYil.Value)
+                .Where(r => r.UnitId == null && r.Yil == vm.KopyalaYil.Value)
                 .ToListAsync();
 
             foreach (var rez in kaynakRezervasyonlar)
@@ -238,19 +238,19 @@ public class AdminTarifeController : Controller
                 {
                     Yil                         = vm.Yil,
                     UnitTypeId                 = rez.UnitTypeId,
-                    UcretsizSureDakika          = rez.UcretsizSureDakika,
+                    FreeDurationMinutes          = rez.FreeDurationMinutes,
                     UcretlendirmePeriyoduDakika = rez.UcretlendirmePeriyoduDakika,
                     PeriyotUcreti               = rez.PeriyotUcreti,
-                    KdvOrani                    = rez.KdvOrani
+                    KdvRate                    = rez.KdvRate
                 });
             }
         }
         else
         {
-            var kategoriler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Kiraci && k.Aktif).OrderBy(k => k.Sira).ToListAsync();
-            var aktifBorcTipleri = await _ctx.BorcTipleri
-                .Where(b => b.Aktif && b.Davranis != ChargeTypeBehavior.UserManual && b.Davranis != ChargeTypeBehavior.ReservationSpecific)
-                .OrderBy(b => b.Sira).ToListAsync();
+            var kategoriler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Tenant && k.IsActive).OrderBy(k => k.Sira).ToListAsync();
+            var aktifBorcTipleri = await _ctx.ChargeTypes
+                .Where(b => b.IsActive && b.Behavior != ChargeTypeBehavior.UserManual && b.Behavior != ChargeTypeBehavior.ReservationSpecific)
+                .OrderBy(b => b.SortOrder).ToListAsync();
 
             foreach (var kat in kategoriler)
             {
@@ -260,16 +260,16 @@ public class AdminTarifeController : Controller
                     {
                         Yil              = vm.Yil,
                         KiraciKategoriId = kat.Id,
-                        BorcTipiId       = bt.Id,
+                        ChargeTypeId       = bt.Id,
                         CalculationMethod = CalculationMethod.Fixed,
-                        BirimDeger       = 0,
-                        KdvOrani         = 0
+                        UnitValue       = 0,
+                        KdvRate         = 0
                     });
                 }
             }
 
             var rezBirimTurleri = await _ctx.BirimTurleri
-                .Where(t => t.Aktif && t.RezervasyonYapilabilirMi)
+                .Where(t => t.IsActive && t.RezervasyonYapilabilirMi)
                 .ToListAsync();
 
             foreach (var bt in rezBirimTurleri)
@@ -278,10 +278,10 @@ public class AdminTarifeController : Controller
                 {
                     Yil                         = vm.Yil,
                     UnitTypeId                 = bt.Id,
-                    UcretsizSureDakika          = 0,
+                    FreeDurationMinutes          = 0,
                     UcretlendirmePeriyoduDakika = 60,
                     PeriyotUcreti               = 0,
-                    KdvOrani                    = 0
+                    KdvRate                    = 0
                 });
             }
         }
@@ -306,7 +306,7 @@ public class AdminTarifeController : Controller
             .ExecuteUpdateAsync(s => s.SetProperty(k => k.IsActive, yeniDeger));
 
         await _ctx.RezervasyonTarifeler
-            .Where(r => r.BirimId == null && r.Yil == yil)
+            .Where(r => r.UnitId == null && r.Yil == yil)
             .ExecuteUpdateAsync(s => s.SetProperty(r => r.IsActive, yeniDeger));
 
         TempData["Success"] = $"{yil} yılı tarifeleri {(yeniDeger ? "aktif" : "pasif")} yapıldı.";

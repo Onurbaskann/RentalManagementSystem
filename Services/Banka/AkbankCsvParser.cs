@@ -6,12 +6,12 @@ namespace KiraTakip.Services.Banka;
 
 public class AkbankCsvParser : IBankaHareketiParser
 {
-    public string BankaKodu => "AKBANK";
+    public string BankCode => "AKBANK";
 
     // Beklenen kolon sırası: Tarih;Açıklama;Borç;Alacak;Bakiye;KarşıHesap;KarşıUnvan
     // Alacak sütunundaki değerler pozitif tutar (gelen para).
     // Borç sütunundaki değerler negatif tutar (giden para) olarak kaydedilir.
-    public IEnumerable<BankaHareketi> Parse(Stream csv)
+    public IEnumerable<BankTransaction> Parse(Stream csv)
     {
         using var reader = new StreamReader(csv, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
 
@@ -42,15 +42,15 @@ public class AkbankCsvParser : IBankaHareketiParser
             var borc   = ParseDecimal(Get(cols, idxBorc));
             var tutar  = alacak > 0 ? alacak : -borc;
 
-            yield return new BankaHareketi
+            yield return new BankTransaction
             {
-                IslemTarihi     = tarih.Value,
-                IslemTutari     = tutar,
-                Aciklama        = Get(cols, idxAciklama),
-                GonderenIban    = Get(cols, idxGonderenIban) is { Length: > 0 } gi ? gi : null,
-                GonderenBilgisi = Get(cols, idxGonderenBilgi) is { Length: > 0 } gb ? gb : null,
-                BankaKodu       = BankaKodu,
-                EslesmeDurumu   = BankMatchStatus.Unmatched,
+                TransactionDate     = tarih.Value,
+                TransactionAmount     = tutar,
+                Description        = Get(cols, idxAciklama),
+                SenderIban    = Get(cols, idxGonderenIban) is { Length: > 0 } gi ? gi : null,
+                SenderInfo = Get(cols, idxGonderenBilgi) is { Length: > 0 } gb ? gb : null,
+                BankCode       = BankCode,
+                MatchStatus   = BankMatchStatus.Unmatched,
             };
         }
     }

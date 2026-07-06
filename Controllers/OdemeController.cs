@@ -14,23 +14,23 @@ namespace KiraTakip.Controllers;
 [Authorize]
 public class OdemeController : Controller
 {
-    private readonly IOdemeService _odemeService;
-    private readonly ITahakkukService _tahakkukService;
+    private readonly IPaymentService _paymentService;
+    private readonly IChargeService _chargeService;
     private readonly IBelgeService _belgeService;
-    private readonly IBankaHareketiService _bankaService;
+    private readonly IBankTransactionService _bankaService;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IYetkiKapsamiProvider _provider;
 
     public OdemeController(
-        IOdemeService odemeService,
-        ITahakkukService tahakkukService,
+        IPaymentService odemeService,
+        IChargeService tahakkukService,
         IBelgeService belgeService,
-        IBankaHareketiService bankaService,
+        IBankTransactionService bankaService,
         UserManager<ApplicationUser> userManager,
         IYetkiKapsamiProvider provider)
     {
-        _odemeService = odemeService;
-        _tahakkukService = tahakkukService;
+        _paymentService = odemeService;
+        _chargeService = tahakkukService;
         _belgeService = belgeService;
         _bankaService = bankaService;
         _userManager = userManager;
@@ -40,9 +40,9 @@ public class OdemeController : Controller
     [Authorize(Policy = PermissionCatalog.Payment.Module)]
     public async Task<IActionResult> Index([FromQuery] TableQuery query, int? tahakkukId = null)
     {
-        var paged = await _odemeService.GetPagedAsync(query, tahakkukId, _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
+        var paged = await _paymentService.GetPagedAsync(query, tahakkukId, _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds);
 
-        ViewBag.TahakkukId = tahakkukId;
+        ViewBag.ChargeId = tahakkukId;
         ViewBag.Query = query;
         ViewBag.Durum = query.Durum ?? "tum";
         return View(paged);
@@ -51,14 +51,14 @@ public class OdemeController : Controller
     [Authorize(Policy = PermissionCatalog.Payment.Module)]
     public async Task<IActionResult> Detay(int id)
     {
-        var odeme = await _odemeService.GetByIdAsync(id);
+        var odeme = await _paymentService.GetByIdAsync(id);
         if (odeme == null) return NotFound();
 
         if (odeme.TasinmazId != null && !_provider.KapsamdaMi(odeme.TasinmazId.Value))
             return Forbid();
 
         ViewBag.Belgeler    = await _belgeService.GetListAsync(BelgeOwnerTipi.Odeme, id);
-        ViewBag.BelgeTurleri = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Odeme);
+        ViewBag.DocumentTypes = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Odeme);
         return View(odeme);
     }
 
@@ -66,15 +66,15 @@ public class OdemeController : Controller
     [Authorize(Policy = PermissionCatalog.Payment.Create)]
     public async Task<IActionResult> Ekle(int tahakkukId)
     {
-        var tahakkuk = await _tahakkukService.GetDetayAsync(tahakkukId);
+        var tahakkuk = await _chargeService.GetDetayAsync(tahakkukId);
         if (tahakkuk == null) return NotFound();
 
         var vm = new OdemeEkleViewModel
         {
-            TahakkukId = tahakkukId,
-            KiraSozlesmesiId = tahakkuk.KiraSozlesmesiId,
-            Tutar = tahakkuk.ToplamTutar - tahakkuk.OdenenTutar,
-            Tahakkuk = tahakkuk
+            ChargeId = tahakkukId,
+            LeaseId = tahakkuk.LeaseId,
+            Amount = tahakkuk.ToplamTutar - tahakkuk.PaidAmount,
+            Charge = tahakkuk
         };
         return View(vm);
     }
@@ -86,24 +86,24 @@ public class OdemeController : Controller
     {
         if (!ModelState.IsValid)
         {
-            vm.Tahakkuk = await _tahakkukService.GetDetayAsync(vm.TahakkukId);
+            vm.Charge = await _chargeService.GetDetayAsync(vm.ChargeId);
             return View(vm);
         }
 
         var userId = _userManager.GetUserId(User)!;
-        var odeme = new TahakkukOdeme
+        var odeme = new PaymentAllocation
         {
-            TahakkukId = vm.TahakkukId,
-            KiraSozlesmesiId = vm.KiraSozlesmesiId,
-            OdemeTarihi = vm.OdemeTarihi,
-            Tutar = vm.Tutar,
+            ChargeId = vm.ChargeId,
+            LeaseId = vm.LeaseId,
+            PaymentDate = vm.PaymentDate,
+            Amount = vm.Amount,
             PaymentChannel = vm.PaymentChannel,
             PaymentSourceType = PaymentSourceType.Manual,
-            Aciklama = vm.Aciklama,
-            GirenUserId = userId
+            Description = vm.Aciklama,
+            CreatedByUserId = userId
         };
 
-        await _odemeService.EkleAsync(odeme);
+        await _paymentService.EkleAsync(odeme);
         TempData["Success"] = "Ödeme kaydedildi, onay bekleniyor.";
         return RedirectToAction(nameof(Detay), new { id = odeme.Id });
     }
@@ -114,7 +114,7 @@ public class OdemeController : Controller
     public async Task<IActionResult> Onayla(int id)
     {
         var userId = _userManager.GetUserId(User)!;
-        var basarili = await _odemeService.OnaylaAsync(id, userId);
+        var basarili = await _paymentService.OnaylaAsync(id, userId);
         TempData[basarili ? "Success" : "Error"] = basarili ? "Ödeme onaylandı." : "Ödeme onaylanamadı.";
         return RedirectToAction(nameof(Detay), new { id });
     }
@@ -130,7 +130,7 @@ public class OdemeController : Controller
             return RedirectToAction(nameof(Detay), new { id = vm.OdemeId });
         }
 
-        var basarili = await _odemeService.ReddetAsync(vm.OdemeId, vm.Neden);
+        var basarili = await _paymentService.ReddetAsync(vm.OdemeId, vm.Neden);
         TempData[basarili ? "Success" : "Error"] = basarili ? "Ödeme reddedildi." : "Ödeme reddedilemedi.";
         return RedirectToAction(nameof(Detay), new { id = vm.OdemeId });
     }
@@ -140,7 +140,7 @@ public class OdemeController : Controller
     [Authorize(Policy = PermissionCatalog.Payment.MatchBankTransaction)]
     public async Task<IActionResult> HareketSec(int id)
     {
-        var odeme = await _odemeService.GetByIdAsync(id);
+        var odeme = await _paymentService.GetByIdAsync(id);
         if (odeme == null) return NotFound();
 
         if (odeme.TasinmazId != null && !_provider.KapsamdaMi(odeme.TasinmazId.Value))

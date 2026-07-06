@@ -2,7 +2,7 @@ using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface ISozlesmeRepository : IBaseRepository<Sozlesme>
+public interface ISozlesmeRepository : IBaseRepository<Lease>
 {
     Task<List<SozlesmeListItemDto>> GetListAsync(string? filtre, List<int>? yetkiliTasinmazIds);
     Task<SozlesmeDetayDto?> GetDetayAsync(int id);
@@ -10,8 +10,8 @@ public interface ISozlesmeRepository : IBaseRepository<Sozlesme>
     Task<List<SozlesmeListItemDto>> GetByBirimIdAsync(int birimId);
     Task<Dictionary<int, decimal?>> GetDepozitoTutarlariAsync(IEnumerable<int> sozlesmeIds);
 
-    // Dropdown — entity döner (Kiraci + Birim + Tasinmaz yüklü)
-    Task<List<Sozlesme>> GetAktiflerAsync();
+    // Dropdown — entity döner (Tenant + Unit + Property yüklü)
+    Task<List<Lease>> GetAktiflerAsync();
 
     // Dropdown — DTO döner (Manuel Borç ekleme ekranı)
     Task<List<SozlesmeDropdownDto>> GetAktifDropdownAsync();

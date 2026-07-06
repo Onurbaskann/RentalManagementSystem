@@ -11,19 +11,19 @@ namespace KiraTakip.Controllers;
 [Authorize]
 public class BankaHareketiController : Controller
 {
-    private readonly IBankaHareketiService _bankaService;
-    private readonly IOdemeService _odemeService;
+    private readonly IBankTransactionService _bankaService;
+    private readonly IPaymentService _paymentService;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IYetkiKapsamiProvider _provider;
 
     public BankaHareketiController(
-        IBankaHareketiService bankaService,
-        IOdemeService odemeService,
+        IBankTransactionService bankaService,
+        IPaymentService odemeService,
         UserManager<ApplicationUser> userManager,
         IYetkiKapsamiProvider provider)
     {
         _bankaService = bankaService;
-        _odemeService = odemeService;
+        _paymentService = odemeService;
         _userManager = userManager;
         _provider = provider;
     }
@@ -60,7 +60,7 @@ public class BankaHareketiController : Controller
         try
         {
             await using var stream = vm.Dosya.OpenReadStream();
-            var adet = await _bankaService.ImportAsync(stream, vm.BankaKodu);
+            var adet = await _bankaService.ImportAsync(stream, vm.BankCode);
             TempData["Success"] = $"{adet} hareket içe aktarıldı.";
         }
         catch (InvalidOperationException ex)
@@ -82,7 +82,7 @@ public class BankaHareketiController : Controller
         var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
         var adaylar = await _bankaService.GetOdemeAdaylariAsync(id, tasinmazIds);
 
-        return View(new BankaEslesmeSecViewModel { BankaHareketi = hareketi, OdemeAdaylari = adaylar });
+        return View(new BankaEslesmeSecViewModel { BankTransaction = hareketi, OdemeAdaylari = adaylar });
     }
 
     [HttpPost]
@@ -90,7 +90,7 @@ public class BankaHareketiController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Eslestir(EslesmeViewModel vm)
     {
-        await _bankaService.EslestirAsync(vm.OdemeId, vm.BankaHareketiId);
+        await _bankaService.EslestirAsync(vm.OdemeId, vm.BankTransactionId);
         TempData["Success"] = "Eşleştirme yapıldı.";
         return RedirectToAction(nameof(Index));
     }

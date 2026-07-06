@@ -14,9 +14,9 @@ public class BorcSatiri
 {
     public string TasinmazAdi { get; set; } = string.Empty;
     public string BirimAdi { get; set; } = string.Empty;
-    public DateTime DonemBaslangic { get; set; }
-    public DateTime VadeTarihi { get; set; }
+    public DateTime PeriodStart { get; set; }
+    public DateTime DueDate { get; set; }
     public decimal ToplamTutar { get; set; }
-    public decimal OdenenTutar { get; set; }
-    public decimal KalanTutar => ToplamTutar - OdenenTutar;
+    public decimal PaidAmount { get; set; }
+    public decimal KalanTutar => ToplamTutar - PaidAmount;
 }

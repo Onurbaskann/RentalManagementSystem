@@ -10,7 +10,7 @@ namespace KiraTakip.Services;
 
 public class BorcHatirlatmaService : IBorcHatirlatmaService
 {
-    private readonly ITahakkukRepository _tahakkukRepo;
+    private readonly IChargeRepository _tahakkukRepo;
     private readonly IUnitOfWork _uow;
     private readonly IPaymentLinkService _paymentLinkService;
     private readonly IMailService _mailService;
@@ -20,7 +20,7 @@ public class BorcHatirlatmaService : IBorcHatirlatmaService
     private readonly SmtpSettings _smtpSettings;
 
     public BorcHatirlatmaService(
-        ITahakkukRepository tahakkukRepo,
+        IChargeRepository tahakkukRepo,
         IUnitOfWork uow,
         IPaymentLinkService paymentLinkService,
         IMailService mailService,
@@ -56,26 +56,26 @@ public class BorcHatirlatmaService : IBorcHatirlatmaService
         // 2. Fetch Outstanding Debts
         var borclar = await _tahakkukRepo.GetBekleyenBorclarAsync(limitVade, ct);
 
-        // Group by Kiraci
-        var groups = borclar.GroupBy(t => t.KiraciId).ToList();
+        // Group by Tenant
+        var groups = borclar.GroupBy(t => t.TenantId).ToList();
         sonuc.ToplamBorclu = groups.Count;
 
         foreach (var group in groups)
         {
-            var kiraci = group.First().Kiraci;
+            var kiraci = group.First().Tenant;
             if (kiraci == null || string.IsNullOrWhiteSpace(kiraci.Email))
             {
-                _logger.LogWarning("Kiraci {KiraciId} için geçerli e-posta adresi bulunamadı. Atlanıyor.", group.Key);
+                _logger.LogWarning("Tenant {KiraciId} için geçerli e-posta adresi bulunamadı. Atlanıyor.", group.Key);
                 sonuc.BasarisizGonderim++;
                 continue;
             }
 
             // 3. Cooldown check
-            var debtsOutsideCooldown = group.Where(t => t.SonHatirlatmaTarihi == null || t.SonHatirlatmaTarihi.Value.Date <= cooldownThreshold).ToList();
+            var debtsOutsideCooldown = group.Where(t => t.LastReminderDate == null || t.LastReminderDate.Value.Date <= cooldownThreshold).ToList();
 
             if (!debtsOutsideCooldown.Any())
             {
-                _logger.LogInformation("Kiraci {KiraciId} için son hatırlatmalar bekleme süresi içerisinde. Atlanıyor.", group.Key);
+                _logger.LogInformation("Tenant {KiraciId} için son hatırlatmalar bekleme süresi içerisinde. Atlanıyor.", group.Key);
                 sonuc.CooldownAtlanan++;
                 continue;
             }
@@ -83,18 +83,18 @@ public class BorcHatirlatmaService : IBorcHatirlatmaService
             // 4. Prepare email model with ALL outstanding debts for the tenant
             var mailModel = new KiraciBorcHatirlatmaMailModel
             {
-                Ad = kiraci.Ad,
+                Ad = kiraci.Name,
                 Soyad = "",
                 Email = kiraci.Email,
                 OdemeLink = await _paymentLinkService.BuildLinkAsync(kiraci.Id, ct),
-                Borclar = group.OrderBy(t => t.VadeTarihi).Select(t => new BorcSatiri
+                Borclar = group.OrderBy(t => t.DueDate).Select(t => new BorcSatiri
                 {
-                    TasinmazAdi = t.KiraSozlesmesi?.Birim?.Tasinmaz?.Ad ?? "-",
-                    BirimAdi = t.KiraSozlesmesi?.Birim?.Ad ?? "-",
-                    DonemBaslangic = t.DonemBaslangic,
-                    VadeTarihi = t.VadeTarihi,
-                    ToplamTutar = t.ToplamTutar,
-                    OdenenTutar = t.Odemeler.Where(o => o.Durum == PaymentStatus.Approved).Sum(o => o.Tutar)
+                    TasinmazAdi = t.Lease?.Unit?.Property?.Name ?? "-",
+                    BirimAdi = t.Lease?.Unit?.Name ?? "-",
+                    PeriodStart = t.PeriodStart,
+                    DueDate = t.DueDate,
+                    ToplamTutar = t.TotalAmount,
+                    PaidAmount = t.Allocations.Where(o => o.Status == PaymentStatus.Approved).Sum(o => o.Amount)
                 }).ToList()
             };
 
@@ -106,7 +106,7 @@ public class BorcHatirlatmaService : IBorcHatirlatmaService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Kiraci {KiraciId} için e-posta şablonu render edilemedi.", kiraci.Id);
+                _logger.LogError(ex, "Tenant {KiraciId} için e-posta şablonu render edilemedi.", kiraci.Id);
                 sonuc.BasarisizGonderim++;
                 continue;
             }
@@ -125,19 +125,19 @@ public class BorcHatirlatmaService : IBorcHatirlatmaService
                 // 7. Mark as sent ONLY for debts outside cooldown (so we reset their cooldown)
                 foreach (var debt in debtsOutsideCooldown)
                 {
-                    debt.SonHatirlatmaTarihi = DateTime.Today;
+                    debt.LastReminderDate = DateTime.Today;
                 }
 
                 sonuc.BasariliGonderim++;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Kiraci {KiraciId} e-posta gönderimi başarısız.", kiraci.Id);
+                _logger.LogError(ex, "Tenant {KiraciId} e-posta gönderimi başarısız.", kiraci.Id);
                 sonuc.BasarisizGonderim++;
             }
         }
 
-        // 8. Save changes to DB (updates SonHatirlatmaTarihi)
+        // 8. Save changes to DB (updates LastReminderDate)
         if (sonuc.BasariliGonderim > 0)
         {
             await _uow.SaveChangesAsync(ct);

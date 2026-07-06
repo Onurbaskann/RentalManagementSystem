@@ -6,60 +6,60 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class BorcTipiRepository : BaseRepository<BorcTipi>, IBorcTipiRepository
+public class BorcTipiRepository : BaseRepository<ChargeType>, IBorcTipiRepository
 {
     public BorcTipiRepository(ApplicationDbContext ctx) : base(ctx) { }
 
     public async Task<List<BorcTipiLookupDto>> GetManuelBorcTipleriAsync()
         => await _dbSet.AsNoTracking()
-            .Where(b => b.Aktif && b.Davranis == ChargeTypeBehavior.UserManual)
-            .OrderBy(b => b.Sira)
+            .Where(b => b.IsActive && b.Behavior == ChargeTypeBehavior.UserManual)
+            .OrderBy(b => b.SortOrder)
             .Select(b => new BorcTipiLookupDto
             {
                 Id = b.Id,
-                Ad = b.Ad,
-                Kod = b.Kod,
-                Davranis = b.Davranis
+                Ad = b.Name,
+                Kod = b.Code,
+                Davranis = b.Behavior
             })
             .ToListAsync();
 
-    public async Task<BorcTipi?> GetActiveManuelByIdAsync(int id)
+    public async Task<ChargeType?> GetActiveManuelByIdAsync(int id)
         => await _dbSet
-            .FirstOrDefaultAsync(b => b.Id == id && b.Aktif && b.Davranis == ChargeTypeBehavior.UserManual);
+            .FirstOrDefaultAsync(b => b.Id == id && b.IsActive && b.Behavior == ChargeTypeBehavior.UserManual);
 
     public async Task<List<BorcTipiListItemDto>> GetListAsync()
         => await _dbSet.AsNoTracking()
-            .OrderBy(b => b.Sira)
-            .ThenBy(b => b.Ad)
+            .OrderBy(b => b.SortOrder)
+            .ThenBy(b => b.Name)
             .Select(b => new BorcTipiListItemDto
             {
                 Id = b.Id,
-                Ad = b.Ad,
-                Kod = b.Kod,
-                Davranis = b.Davranis,
-                Sira = b.Sira,
-                Sistem = b.Sistem,
-                Aktif = b.Aktif
+                Ad = b.Name,
+                Kod = b.Code,
+                Davranis = b.Behavior,
+                Sira = b.SortOrder,
+                Sistem = b.IsSystem,
+                Aktif = b.IsActive
             })
             .ToListAsync();
 
     public async Task<int> GetMaxSiraAsync()
-        => await _dbSet.AsNoTracking().MaxAsync(b => (int?)b.Sira) ?? 0;
+        => await _dbSet.AsNoTracking().MaxAsync(b => (int?)b.SortOrder) ?? 0;
 
     public async Task<bool> KodExistsAsync(string kod, int? excludeId = null)
         => await _dbSet.AsNoTracking()
-            .AnyAsync(b => b.Kod == kod && (excludeId == null || b.Id != excludeId));
+            .AnyAsync(b => b.Code == kod && (excludeId == null || b.Id != excludeId));
 
     public async Task<List<BorcTipiLookupDto>> GetRezervasyonAdaylariAsync()
         => await _dbSet.AsNoTracking()
-            .Where(b => b.Davranis == ChargeTypeBehavior.ReservationSpecific && b.Aktif)
-            .OrderBy(b => b.Sira).ThenBy(b => b.Ad)
+            .Where(b => b.Behavior == ChargeTypeBehavior.ReservationSpecific && b.IsActive)
+            .OrderBy(b => b.SortOrder).ThenBy(b => b.Name)
             .Select(b => new BorcTipiLookupDto
             {
                 Id = b.Id,
-                Ad = b.Ad,
-                Kod = b.Kod,
-                Davranis = b.Davranis
+                Ad = b.Name,
+                Kod = b.Code,
+                Davranis = b.Behavior
             })
             .ToListAsync();
 }

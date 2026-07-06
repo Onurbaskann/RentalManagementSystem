@@ -6,7 +6,7 @@
 
 <div class="max-w-[1000px] mx-auto">
     <div class="page-header">
-        <a href="/Sozlesme" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Sözleşmeler</a>
+        <a href="/Lease" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Sözleşmeler</a>
         <div class="page-title">Yeni Sözleşme Oluştur</div>
     </div>
 
@@ -19,13 +19,13 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Birim *</label>
+                <label class="form-label">Unit *</label>
                 <select asp-for="BirimId" class="form-control" x-model="birimId" id="birimSelect">
                     <option value="">— Boş birim seçin —</option>
                     @foreach (var b in Model.MevcutBirimler)
                     {
                         string birimLabel = b.UnitKind == KiraTakip.Models.UnitKind.Unit
-                            ? $"{b.TasinmazAd} — Birim {b.BirimNo}{(b.KatNo.HasValue ? $" • {b.KatNo}. Kat" : "")} • {b.Yuzolcumu.ToString("N0")} m²"
+                            ? $"{b.TasinmazAd} — Unit {b.BirimNo}{(b.KatNo.HasValue ? $" • {b.KatNo}. Kat" : "")} • {b.Yuzolcumu.ToString("N0")} m²"
                             : $"{b.TasinmazAd} — Komple • {b.Yuzolcumu.ToString("N0")} m² • {b.Ilce}";
                         <option value="@b.Id">@birimLabel</option>
                     }
@@ -33,7 +33,7 @@
                 <span asp-validation-for="BirimId" class="form-error"></span>
             </div>
 
-            <!-- Birim info card -->
+            <!-- Unit info card -->
             <div x-show="birimId && birimler[birimId]" class="mb-4" x-cloak>
                 <div class="info-card bg-primary/5 border border-primary/10 rounded-lg p-3">
                     <div class="text-[13.5px] font-medium text-primary" 
@@ -45,7 +45,7 @@
                 <label class="form-label">Kiracı *</label>
                 <select asp-for="KiraciId" class="form-control" x-model="kiraciId">
                     <option value="">— Kiracı seçin —</option>
-                    @foreach (var k in Model.Kiraciler)
+                    @foreach (var k in Model.Tenants)
                     {
                         <option value="@k.Id">@k.GosterimAdi</option>
                     }
@@ -63,8 +63,8 @@
                 <div class="form-group mb-0">
                     <label class="form-label">Başlangıç Tarihi *</label>
                     @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
-                        { "Name",  "BaslangicTarihi" },
-                        { "Value", Model.BaslangicTarihi.ToString("yyyy-MM-dd") },
+                        { "Name",  "StartDate" },
+                        { "Value", Model.StartDate.ToString("yyyy-MM-dd") },
                         { "Mode",  "date" },
                         { "Field", "baslangic" }
                     })
@@ -72,12 +72,12 @@
                 <div class="form-group mb-0">
                     <label class="form-label">Bitiş Tarihi *</label>
                     @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
-                        { "Name",  "BitisTarihi" },
-                        { "Value", Model.BitisTarihi.ToString("yyyy-MM-dd") },
+                        { "Name",  "EndDate" },
+                        { "Value", Model.EndDate.ToString("yyyy-MM-dd") },
                         { "Mode",  "date" },
                         { "Field", "bitis" }
                     })
-                    <span asp-validation-for="BitisTarihi" class="form-error"></span>
+                    <span asp-validation-for="EndDate" class="form-error"></span>
                     <div class="text-red-500 text-xs mt-1.5 font-medium" x-show="bitisTarihi && baslangicTarihi && bitisTarihi <= baslangicTarihi" x-cloak>Bitiş tarihi başlangıçtan büyük olmalıdır.</div>
                 </div>
             </div>
@@ -132,7 +132,7 @@
             <div x-show="error" class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-sm" x-text="error"></div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <template x-for="(k, index) in kalemler" :key="k.borcTipiId">
+                <template x-for="(k, index) in kalemler" :key="k.chargeTypeId">
                     <div class="bg-slate-50/50 border border-[var(--color-border)] rounded-xl p-4 flex flex-col justify-between">
                         <div>
                             <div class="flex justify-between items-start mb-3">
@@ -155,7 +155,7 @@
                             <div class="grid grid-cols-3 gap-2 items-end mb-2">
                                 <div>
                                     <label class="text-[10px] text-muted font-bold mb-1 block">
-                                        <span x-show="k.hesaplamaYontemi != 2">Tutar (₺)</span>
+                                        <span x-show="k.hesaplamaYontemi != 2">Amount (₺)</span>
                                         <span x-show="k.hesaplamaYontemi == 2">₺ / m²</span>
                                     </label>
                                     <input type="number" step="0.01" min="0" class="form-control form-control-sm"
@@ -176,7 +176,7 @@
                                     <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm"
                                            x-model.number="k.kdvOrani"
                                            @@input="k.kullaniciDegistirdiMi = true"
-                                           :name="`SozlesmeKalemleri[${index}].KdvOrani`">
+                                           :name="`SozlesmeKalemleri[${index}].KdvRate`">
                                 </div>
                             </div>
 
@@ -194,7 +194,7 @@
                                 </div>
                                 <div x-show="getBirimYuzolcumu() === 0" class="flex items-center gap-1 text-rose-600 font-semibold">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                    <span>Birim m² tanımlı değil!</span>
+                                    <span>Unit m² tanımlı değil!</span>
                                 </div>
                             </div>
                         </div>
@@ -211,17 +211,17 @@
                         </div>
 
                         <!-- Gizli Alanlar -->
-                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].BorcTipiId`" :value="k.borcTipiId">
-                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].BorcTipiAd`" :value="k.borcTipiAd">
-                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].BorcTipiKod`" :value="k.borcTipiKod">
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].ChargeTypeId`" :value="k.chargeTypeId">
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].ChargeTypeName`" :value="k.borcTipiAd">
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].ChargeTypeCode`" :value="k.borcTipiKod">
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].Davranis`" :value="k.davranis">
-                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].BirimDeger`" :value="k.birimDeger">
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].UnitValue`" :value="k.birimDeger">
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].CalculationMethod`" :value="k.hesaplamaYontemi">
-                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].Tutar`" :value="hesaplaTutar(k)">
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].Amount`" :value="hesaplaTutar(k)">
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].VarsayilanTutar`" :value="k.varsayilanTutar">
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].KullaniciDegistirdiMi`" :value="k.kullaniciDegistirdiMi">
                         <input type="hidden" :name="`SozlesmeKalemleri[${index}].RateBulundu`" :value="k.rateBulundu">
-                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].KaynakTipi`" :value="k.kaynakTipi">
+                        <input type="hidden" :name="`SozlesmeKalemleri[${index}].SourceType`" :value="k.kaynakTipi">
                     </div>
                 </template>
             </div>
@@ -231,7 +231,7 @@
             </div>
         </div>
 
-        @await Html.PartialAsync("_BelgeEkleForm", Model.BelgeTurleri)
+        @await Html.PartialAsync("_BelgeEkleForm", Model.DocumentTypes)
 
         <div class="card mt-4">
             <div class="form-group mb-0">
@@ -245,7 +245,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Sözleşme Oluştur
             </button>
-            <a href="/Sozlesme" class="btn btn-secondary px-6">İptal</a>
+            <a href="/Lease" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>
 </div>
@@ -257,8 +257,8 @@
         Alpine.data('sozlesmeForm', () => ({
             birimId: @(Model.BirimId.HasValue ? Model.BirimId.Value.ToString() : "null"),
             kiraciId: @(Model.KiraciId != 0 ? Model.KiraciId.ToString() : "null"),
-            baslangicTarihi: '@Model.BaslangicTarihi.ToString("yyyy-MM-dd")',
-            bitisTarihi: '@Model.BitisTarihi.ToString("yyyy-MM-dd")',
+            baslangicTarihi: '@Model.StartDate.ToString("yyyy-MM-dd")',
+            bitisTarihi: '@Model.EndDate.ToString("yyyy-MM-dd")',
             onPickerChanged(e) {
                 if (e.detail.field === 'baslangic') this.baslangicTarihi = e.detail.value;
                 else if (e.detail.field === 'bitis') this.bitisTarihi = e.detail.value;
@@ -272,7 +272,7 @@
                 @foreach (var b in Model.MevcutBirimler)
                 {
                     string birimAd = b.UnitKind == KiraTakip.Models.UnitKind.Unit
-                        ? $"{b.TasinmazAd} — Birim {b.BirimNo}"
+                        ? $"{b.TasinmazAd} — Unit {b.BirimNo}"
                         : $"{b.TasinmazAd} — Komple";
                     string meta = b.UnitKind == KiraTakip.Models.UnitKind.Unit && b.KatNo.HasValue
                         ? $"{b.KatNo}. Kat • {b.Yuzolcumu.ToString("N0")} m²"
@@ -281,7 +281,7 @@
                 }
             },
             kiraciler: {
-                @foreach (var k in Model.Kiraciler)
+                @foreach (var k in Model.Tenants)
                 {
                     @Html.Raw($"{k.Id}: {{ad: '{k.GosterimAdi.Replace("'", "\\'")}', no: '{k.KiraciNo}', kategori: '{k.KiraciKategoriAd?.Replace("'", "\\'") ?? "Kategori Belirtilmemiş"}'}},")
                 }
@@ -305,10 +305,10 @@
                 this.loading = true;
                 this.error = null;
                 try {
-                    const url = `/Sozlesme/GetVarsayilanKalemler?birimId=${this.birimId}&kiraciId=${this.kiraciId}&baslangic=${this.baslangicTarihi}`;
+                    const url = `/Lease/GetVarsayilanKalemler?birimId=${this.birimId}&kiraciId=${this.kiraciId}&baslangic=${this.baslangicTarihi}`;
                     console.log('API çağrılıyor:', url);
                     const response = await fetch(url);
-                    if (!response.ok) throw new Error('Kalemler alınırken hata oluştu.');
+                    if (!response.ok) throw new Error('LineItems alınırken hata oluştu.');
                     const data = await response.json();
                     console.log('API cevabı:', data);
                     this.kalemler = data.map(k => ({
@@ -342,13 +342,13 @@
             },
             validateKalem(k) {
                 k._error = null;
-                if (k.birimDeger < 0) k._error = 'Tutar negatif olamaz.';
-                if (k.hesaplamaYontemi == 2 && this.getBirimYuzolcumu() === 0) k._error = 'Birim için m² tanımlı değil.';
+                if (k.birimDeger < 0) k._error = 'Amount negatif olamaz.';
+                if (k.hesaplamaYontemi == 2 && this.getBirimYuzolcumu() === 0) k._error = 'Unit için m² tanımlı değil.';
             },
             getKaynakTipiLabel(val) {
                 const map = {
                     'SozlesmeTarifesi':  'Sözleşme Tarifesi',
-                    'BirimTarifesi':     'Birim Tarifesi',
+                    'BirimTarifesi':     'Unit Tarifesi',
                     'TasinmazTarifesi':  'Taşınmaz Tarifesi',
                     'GenelTarife':       'Genel Tarife',
                     'TanimsizTarife':    'Tanımsız Tarife'

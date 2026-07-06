@@ -95,43 +95,43 @@
                 </p>
 
                 <!-- Spesifik taşınmaz / birim kapsamı: global toggle kapalıyken -->
-                @if (Model.Tasinmazlar.Any() || Model.Birimler.Any())
+                @if (Model.Properties.Any() || Model.Units.Any())
                 {
                     <div x-show="seciliRolId !== '@adminRolId' && seciliRolId !== '0' && !globalErisim" x-cloak class="mt-3">
-                        @if (Model.Tasinmazlar.Any())
+                        @if (Model.Properties.Any())
                         {
                             <div class="text-[11.5px] font-semibold text-slate-500 mb-2">Taşınmaz Bazlı</div>
                             <div class="flex flex-col gap-2.5">
-                                @for (int i = 0; i < Model.Tasinmazlar.Count; i++)
+                                @for (int i = 0; i < Model.Properties.Count; i++)
                                 {
                                     <label class="flex items-center gap-2.5 text-[13.5px] cursor-pointer group">
                                         <input type="checkbox" name="SelectedTasinmazIds"
-                                               value="@Model.Tasinmazlar[i].TasinmazId"
-                                               @(Model.Tasinmazlar[i].Selected ? "checked" : "")
+                                               value="@Model.Properties[i].TasinmazId"
+                                               @(Model.Properties[i].Selected ? "checked" : "")
                                                class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                                         <div class="flex flex-col">
-                                            <span class="font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors">@Model.Tasinmazlar[i].Ad</span>
-                                            <span class="text-[11px] text-slate-400">@Model.Tasinmazlar[i].Konum</span>
+                                            <span class="font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors">@Model.Properties[i].Ad</span>
+                                            <span class="text-[11px] text-slate-400">@Model.Properties[i].Konum</span>
                                         </div>
                                     </label>
                                 }
                             </div>
                         }
-                        @if (Model.Birimler.Any())
+                        @if (Model.Units.Any())
                         {
-                            <div class="@(Model.Tasinmazlar.Any() ? "mt-4 pt-3 border-t border-slate-200/60" : "")">
-                                <div class="text-[11.5px] font-semibold text-slate-500 mb-2">Birim Bazlı</div>
+                            <div class="@(Model.Properties.Any() ? "mt-4 pt-3 border-t border-slate-200/60" : "")">
+                                <div class="text-[11.5px] font-semibold text-slate-500 mb-2">Unit Bazlı</div>
                                 <div class="flex flex-col gap-2.5">
-                                    @for (int i = 0; i < Model.Birimler.Count; i++)
+                                    @for (int i = 0; i < Model.Units.Count; i++)
                                     {
                                         <label class="flex items-center gap-2.5 text-[13.5px] cursor-pointer group">
                                             <input type="checkbox" name="SelectedBirimIds"
-                                                   value="@Model.Birimler[i].BirimId"
-                                                   @(Model.Birimler[i].Selected ? "checked" : "")
+                                                   value="@Model.Units[i].BirimId"
+                                                   @(Model.Units[i].Selected ? "checked" : "")
                                                    class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                                             <div class="flex flex-col">
-                                                <span class="font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors">@Model.Birimler[i].Ad</span>
-                                                <span class="text-[11px] text-slate-400">@Model.Birimler[i].TasinmazAd</span>
+                                                <span class="font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors">@Model.Units[i].Ad</span>
+                                                <span class="text-[11px] text-slate-400">@Model.Units[i].TasinmazAd</span>
                                             </div>
                                         </label>
                                     }

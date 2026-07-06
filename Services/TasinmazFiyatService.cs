@@ -24,7 +24,7 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
 
     public async Task<TasinmazFiyatMatrisiViewModel> GetMatrisiAsync(int tasinmazId, int page = 1, int pageSize = 10)
     {
-        Tasinmaz? tasinmaz = null;
+        Property? tasinmaz = null;
         if (tasinmazId > 0)
         {
             tasinmaz = await _tasinmazRepo.GetByIdAsync(tasinmazId);
@@ -38,13 +38,13 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
         var vm = new TasinmazFiyatMatrisiViewModel
         {
             TasinmazId = tasinmazId,
-            TasinmazAd = tasinmaz?.Ad ?? "Yeni Taşınmaz",
+            TasinmazAd = tasinmaz?.Name ?? "Yeni Taşınmaz",
             Kolonlar = borcTipleri.Select(b => new BorcTipiFiyatKolonuViewModel
             {
-                BorcTipiId = b.Id,
-                BorcTipiAd = b.Ad,
-                BorcTipiKod = b.Kod,
-                ChargeTypeBehavior = b.Davranis
+                ChargeTypeId = b.Id,
+                ChargeTypeName = b.Name,
+                ChargeTypeCode = b.Code,
+                ChargeTypeBehavior = b.Behavior
             }).ToList()
         };
 
@@ -59,7 +59,7 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
             };
             foreach (var bt in borcTipleri)
             {
-                var fiyat = mevcutFiyatlar.FirstOrDefault(f => f.KiraciKategoriId == kk.Id && f.BorcTipiId == bt.Id);
+                var fiyat = mevcutFiyatlar.FirstOrDefault(f => f.KiraciKategoriId == kk.Id && f.ChargeTypeId == bt.Id);
                 if (fiyat != null)
                 {
                     satir.Hucreler.Add(new TasinmazFiyatHucreViewModel
@@ -67,10 +67,10 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
                         TasinmazTarifeId = fiyat.Id,
                         TasinmazId = tasinmazId,
                         KiraciKategoriId = kk.Id,
-                        BorcTipiId = bt.Id,
-                        BirimDeger = fiyat.BirimDeger,
+                        ChargeTypeId = bt.Id,
+                        UnitValue = fiyat.UnitValue,
                         CalculationMethod = fiyat.CalculationMethod,
-                        KdvOrani = fiyat.KdvOrani,
+                        KdvRate = fiyat.KdvRate,
                         RateVarMi = true
                     });
                 }
@@ -81,10 +81,10 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
                         TasinmazTarifeId = null,
                         TasinmazId = tasinmazId,
                         KiraciKategoriId = kk.Id,
-                        BorcTipiId = bt.Id,
-                        BirimDeger = null,
-                        CalculationMethod = (bt.Kod == BorcTipiConsts.Kira) ? CalculationMethod.M2 : CalculationMethod.Fixed,
-                        KdvOrani = null,
+                        ChargeTypeId = bt.Id,
+                        UnitValue = null,
+                        CalculationMethod = (bt.Code == BorcTipiConsts.Kira) ? CalculationMethod.M2 : CalculationMethod.Fixed,
+                        KdvRate = null,
                         RateVarMi = false
                     });
                 }
@@ -113,11 +113,11 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
                     var entity = await _tarifeRepo.GetByIdAsync(hucre.TasinmazTarifeId.Value);
                     if (entity != null)
                     {
-                        if (hucre.BirimDeger.HasValue)
+                        if (hucre.UnitValue.HasValue)
                         {
-                            entity.BirimDeger = hucre.BirimDeger.Value;
+                            entity.UnitValue = hucre.UnitValue.Value;
                             entity.CalculationMethod = hucre.CalculationMethod;
-                            entity.KdvOrani = hucre.KdvOrani ?? 0m;
+                            entity.KdvRate = hucre.KdvRate ?? 0m;
                         }
                         else
                         {
@@ -127,16 +127,16 @@ public class TasinmazFiyatService : Interfaces.ITasinmazFiyatService
                 }
                 else
                 {
-                    if (hucre.BirimDeger.HasValue)
+                    if (hucre.UnitValue.HasValue)
                     {
                         var newEntity = new TasinmazTarife
                         {
-                            TasinmazId = tasinmazId,
+                            PropertyId = tasinmazId,
                             KiraciKategoriId = hucre.KiraciKategoriId,
-                            BorcTipiId = hucre.BorcTipiId,
-                            BirimDeger = hucre.BirimDeger.Value,
+                            ChargeTypeId = hucre.ChargeTypeId,
+                            UnitValue = hucre.UnitValue.Value,
                             CalculationMethod = hucre.CalculationMethod,
-                            KdvOrani = hucre.KdvOrani ?? 0m
+                            KdvRate = hucre.KdvRate ?? 0m
                         };
                         await _tarifeRepo.AddAsync(newEntity);
                     }

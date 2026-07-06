@@ -54,11 +54,11 @@ public class AdminUnitTypeController : Controller
     public async Task<IActionResult> Create(UnitTypeFormViewModel model)
     {
         if (model.RezervasyonYapilabilirMi && (!model.BorcTipiId.HasValue || model.BorcTipiId <= 0))
-            ModelState.AddModelError(nameof(model.BorcTipiId), "Rezervasyon birim türü için borç tipi seçilmelidir.");
+            ModelState.AddModelError(nameof(model.BorcTipiId), "Reservation birim türü için borç tipi seçilmelidir.");
 
         if (model.KiralanabilirMi == model.RezervasyonYapilabilirMi)
             ModelState.AddModelError(string.Empty,
-                "Tam olarak bir kullanım türü seçilmelidir: Kiralanabilir VEYA Rezervasyon yapılabilir.");
+                "Tam olarak bir kullanım türü seçilmelidir: Kiralanabilir VEYA Reservation yapılabilir.");
 
         if (!ModelState.IsValid)
         {
@@ -81,8 +81,8 @@ public class AdminUnitTypeController : Controller
             Sira = model.Sira,
             KiralanabilirMi = model.KiralanabilirMi,
             RezervasyonYapilabilirMi = model.RezervasyonYapilabilirMi,
-            BorcTipiId = model.KiralanabilirMi ? null : model.BorcTipiId,
-            Aktif = model.Aktif,
+            ChargeTypeId = model.KiralanabilirMi ? null : model.BorcTipiId,
+            IsActive = model.Aktif,
             OlusturmaTarihi = DateTime.UtcNow
         };
 
@@ -112,11 +112,11 @@ public class AdminUnitTypeController : Controller
         if (id != model.Id) return BadRequest();
 
         if (model.RezervasyonYapilabilirMi && (!model.BorcTipiId.HasValue || model.BorcTipiId <= 0))
-            ModelState.AddModelError(nameof(model.BorcTipiId), "Rezervasyon birim türü için borç tipi seçilmelidir.");
+            ModelState.AddModelError(nameof(model.BorcTipiId), "Reservation birim türü için borç tipi seçilmelidir.");
 
         if (model.KiralanabilirMi == model.RezervasyonYapilabilirMi)
             ModelState.AddModelError(string.Empty,
-                "Tam olarak bir kullanım türü seçilmelidir: Kiralanabilir VEYA Rezervasyon yapılabilir.");
+                "Tam olarak bir kullanım türü seçilmelidir: Kiralanabilir VEYA Reservation yapılabilir.");
 
         if (!ModelState.IsValid)
         {
@@ -131,8 +131,8 @@ public class AdminUnitTypeController : Controller
         entity.Sira = model.Sira;
         entity.KiralanabilirMi = model.KiralanabilirMi;
         entity.RezervasyonYapilabilirMi = model.RezervasyonYapilabilirMi;
-        entity.BorcTipiId = model.KiralanabilirMi ? null : model.BorcTipiId;
-        entity.Aktif = model.Aktif;
+        entity.ChargeTypeId = model.KiralanabilirMi ? null : model.BorcTipiId;
+        entity.IsActive = model.Aktif;
 
         await _uow.SaveChangesAsync();
         TempData["Success"] = $"'{entity.Ad}' güncellendi.";
@@ -147,7 +147,7 @@ public class AdminUnitTypeController : Controller
         var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
 
-        if (entity.Aktif) // Pasife çekme
+        if (entity.IsActive) // Pasife çekme
         {
             if (await _repo.HasAktifTahakkukForUnitTypeAsync(id))
             {
@@ -162,20 +162,20 @@ public class AdminUnitTypeController : Controller
             }
 
             // Cascade BorcTipi pasif (başka aktif UnitType kullanmıyorsa)
-            if (entity.BorcTipiId.HasValue)
+            if (entity.ChargeTypeId.HasValue)
             {
-                var baskaKullananVar = await _repo.AnyAktifByBorcTipiIdAsync(entity.BorcTipiId.Value, id);
+                var baskaKullananVar = await _repo.AnyAktifByBorcTipiIdAsync(entity.ChargeTypeId.Value, id);
                 if (!baskaKullananVar)
                 {
-                    var borcTipi = await _borcTipiRepo.GetByIdAsync(entity.BorcTipiId.Value);
-                    if (borcTipi != null) borcTipi.Aktif = false;
+                    var borcTipi = await _borcTipiRepo.GetByIdAsync(entity.ChargeTypeId.Value);
+                    if (borcTipi != null) borcTipi.IsActive = false;
                 }
             }
         }
 
-        entity.Aktif = !entity.Aktif;
+        entity.IsActive = !entity.IsActive;
         await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Ad}' {(entity.Aktif ? "aktif" : "pasif")} yapıldı.";
+        TempData["Success"] = $"'{entity.Ad}' {(entity.IsActive ? "aktif" : "pasif")} yapıldı.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -186,7 +186,7 @@ public class AdminUnitTypeController : Controller
         Sira = e.Sira,
         KiralanabilirMi = e.KiralanabilirMi,
         RezervasyonYapilabilirMi = e.RezervasyonYapilabilirMi,
-        BorcTipiId = e.BorcTipiId,
-        Aktif = e.Aktif
+        BorcTipiId = e.ChargeTypeId,
+        Aktif = e.IsActive
     };
 }

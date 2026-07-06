@@ -36,7 +36,7 @@ public class BelgeController : Controller
 
     [HttpPost("Yukle")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Yukle(BelgeOwnerTipi ownerType, int ownerId, int belgeTuruId, IFormFile dosya, string? aciklama)
+    public async Task<IActionResult> Yukle(BelgeOwnerTipi ownerType, int ownerId, int documentTypeId, IFormFile dosya, string? aciklama)
     {
         if (!User.HasPermission(GetRequiredPermission(ownerType)))
             return Forbid();
@@ -64,7 +64,7 @@ public class BelgeController : Controller
         await dosya.CopyToAsync(ms);
 
         await _belgeService.UploadAsync(
-            ownerType, ownerId, belgeTuruId,
+            ownerType, ownerId, documentTypeId,
             dosya.FileName, dosya.ContentType, ms.ToArray(), aciklama, invalidateOld: true);
 
         TempData["Success"] = "Belge yüklendi.";
@@ -85,16 +85,16 @@ public class BelgeController : Controller
 
     private static string GetRequiredPermission(BelgeOwnerTipi ownerType) => ownerType switch
     {
-        BelgeOwnerTipi.Kiraci   => PermissionCatalog.Tenant.Edit,
-        BelgeOwnerTipi.Sozlesme => PermissionCatalog.Lease.Edit,
+        BelgeOwnerTipi.Tenant   => PermissionCatalog.Tenant.Edit,
+        BelgeOwnerTipi.Lease => PermissionCatalog.Lease.Edit,
         BelgeOwnerTipi.Odeme    => PermissionCatalog.Payment.UploadReceipt,
         _ => throw new ArgumentOutOfRangeException(nameof(ownerType))
     };
 
     private IActionResult RedirectToEntity(BelgeOwnerTipi ownerType, int ownerId) => ownerType switch
     {
-        BelgeOwnerTipi.Kiraci   => RedirectToAction("Detay", "Kiraci",   new { id = ownerId }),
-        BelgeOwnerTipi.Sozlesme => RedirectToAction("Detay", "Sozlesme", new { id = ownerId }),
+        BelgeOwnerTipi.Tenant   => RedirectToAction("Detay", "Tenant",   new { id = ownerId }),
+        BelgeOwnerTipi.Lease => RedirectToAction("Detay", "Lease", new { id = ownerId }),
         BelgeOwnerTipi.Odeme    => RedirectToAction("Detay", "Odeme",    new { id = ownerId }),
         _ => RedirectToAction("Index", "Home")
     };

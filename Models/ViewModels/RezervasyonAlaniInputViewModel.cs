@@ -7,7 +7,7 @@ public class RezervasyonAlaniInputViewModel
     public decimal Yuzolcumu { get; set; }
     public int? UnitTypeId { get; set; }
     public string? Aciklama { get; set; }
-    public int UcretsizSureDakika { get; set; }
+    public int FreeDurationMinutes { get; set; }
     public decimal SaatlikUcret { get; set; }
-    public decimal KdvOrani { get; set; } = 20;
+    public decimal KdvRate { get; set; } = 20;
 }

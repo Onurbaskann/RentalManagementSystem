@@ -4,16 +4,17 @@ namespace KiraTakip.Models.Entities;
 
 public class BirimTarife : BaseEntity
 {
-    public int BirimId { get; set; }
+    [Column("BirimId")]
+    public int UnitId { get; set; }
     public int KiraciKategoriId { get; set; }
-    public int BorcTipiId { get; set; }
+    public int ChargeTypeId { get; set; }
 
     [Column("HesaplamaYontemi")]
     public CalculationMethod CalculationMethod { get; set; } = CalculationMethod.Fixed;
-    public decimal BirimDeger { get; set; }
-    public decimal KdvOrani { get; set; }
+    public decimal UnitValue { get; set; }
+    public decimal KdvRate { get; set; }
 
-    public Birim Birim { get; set; } = null!;
+    public Unit Unit { get; set; } = null!;
     public Kategori KiraciKategori { get; set; } = null!;
-    public BorcTipi BorcTipi { get; set; } = null!;
+    public ChargeType ChargeType { get; set; } = null!;
 }

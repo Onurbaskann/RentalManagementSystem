@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class KiraciRepository : BaseRepository<Kiraci>, IKiraciRepository
+public class KiraciRepository : BaseRepository<Tenant>, IKiraciRepository
 {
     public KiraciRepository(ApplicationDbContext ctx) : base(ctx)
     {
@@ -14,30 +14,30 @@ public class KiraciRepository : BaseRepository<Kiraci>, IKiraciRepository
 
     public async Task<List<KiraciListItemDto>> GetListAsync(List<int>? yetkiliTasinmazIds)
     {
-        IQueryable<Kiraci> q = _dbSet.AsNoTracking();
+        IQueryable<Tenant> q = _dbSet.AsNoTracking();
 
         if (yetkiliTasinmazIds != null)
         {
-            var yetkiliKiraciIds = _ctx.Sozlesmeler
-                .Where(s => yetkiliTasinmazIds.Contains(s.Birim.TasinmazId))
-                .Select(s => s.KiraciId)
+            var yetkiliKiraciIds = _ctx.Leases
+                .Where(s => yetkiliTasinmazIds.Contains(s.Unit.PropertyId))
+                .Select(s => s.TenantId)
                 .Distinct();
 
             q = q.Where(k => yetkiliKiraciIds.Contains(k.Id));
         }
 
         return await q
-            .OrderBy(k => k.KiraciNo)
+            .OrderBy(k => k.TenantNo)
             .Select(k => new KiraciListItemDto
             {
                 Id = k.Id,
-                KiraciNo = k.KiraciNo,
-                GosterimAdi = k.Ad,
-                VergiNo = k.VergiNo,
-                KiraciKategoriAd = k.KiraciKategori != null ? k.KiraciKategori.Ad : null,
-                Telefon = k.Telefon,
+                KiraciNo = k.TenantNo,
+                GosterimAdi = k.Name,
+                VergiNo = k.TaxNo,
+                KiraciKategoriAd = k.TenantCategory != null ? k.TenantCategory.Ad : null,
+                Telefon = k.Phone,
                 Email = k.Email,
-                KayitTarihi = k.KayitTarihi
+                KayitTarihi = k.RegistrationDate
             })
             .ToListAsync();
     }
@@ -49,20 +49,20 @@ public class KiraciRepository : BaseRepository<Kiraci>, IKiraciRepository
             .Select(k => new KiraciDetayDto
             {
                 Id = k.Id,
-                KiraciKategoriId = k.KiraciKategoriId,
-                KiraciKategoriAd = k.KiraciKategori != null ? k.KiraciKategori.Ad : null,
-                SektorId = k.SektorId,
-                SektorAd = k.Sektor != null ? k.Sektor.Ad : null,
-                KiraciNo = k.KiraciNo,
-                Ad = k.Ad,
-                TicaretSicilNo = k.TicaretSicilNo,
-                VergiNo = k.VergiNo,
-                VergiDairesi = k.VergiDairesi,
+                KiraciKategoriId = k.TenantCategoryId,
+                KiraciKategoriAd = k.TenantCategory != null ? k.TenantCategory.Ad : null,
+                SektorId = k.SectorId,
+                SektorAd = k.Sector != null ? k.Sector.Ad : null,
+                KiraciNo = k.TenantNo,
+                Ad = k.Name,
+                TicaretSicilNo = k.TradeRegistryNo,
+                VergiNo = k.TaxNo,
+                VergiDairesi = k.TaxOffice,
                 MersisNo = k.MersisNo,
-                Telefon = k.Telefon,
+                Telefon = k.Phone,
                 Email = k.Email,
-                Adres = k.Adres,
-                KayitTarihi = k.KayitTarihi
+                Adres = k.Address,
+                KayitTarihi = k.RegistrationDate
             })
             .FirstOrDefaultAsync();
     }
@@ -70,13 +70,13 @@ public class KiraciRepository : BaseRepository<Kiraci>, IKiraciRepository
     public async Task<List<string>> GetExistingKiraciNosAsync()
     {
         return await _dbSet.AsNoTracking()
-            .Select(k => k.KiraciNo)
+            .Select(k => k.TenantNo)
             .ToListAsync();
     }
 
     public async Task<int?> GetKategoriIdAsync(int kiraciId)
         => await _dbSet.AsNoTracking()
             .Where(k => k.Id == kiraciId)
-            .Select(k => k.KiraciKategoriId)
+            .Select(k => k.TenantCategoryId)
             .FirstOrDefaultAsync();
 }

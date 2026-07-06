@@ -9,6 +9,6 @@ public interface IBirimService
 {
     Task<List<BirimListItemDto>> GetByTasinmazIdAsync(int tasinmazId);
     Task<BirimDetayDto?> GetByIdAsync(int id);
-    Task CreateAsync(Birim b);
-    Task UpdateAsync(Birim b);
+    Task CreateAsync(Unit b);
+    Task UpdateAsync(Unit b);
 }

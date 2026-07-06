@@ -86,10 +86,10 @@
             <thead>
                 <tr>
                     <th>Kiracı</th>
-                    <th>Taşınmaz / Birim</th>
+                    <th>Taşınmaz / Unit</th>
                     <th class="w-24 cell-center">Tip</th>
                     <th>Açıklama</th>
-                    <th class="w-28 num">Tutar</th>
+                    <th class="w-28 num">Amount</th>
                     <th class="w-24 num">KDV</th>
                     <th class="w-32 num">Toplam</th>
                     <th class="w-28 cell-center">Vade</th>
@@ -101,7 +101,7 @@
             <tbody>
                 @foreach (var t in Model)
                 {
-                    var kalan = t.ToplamTutar - t.OdenenTutar;
+                    var kalan = t.ToplamTutar - t.PaidAmount;
                     string durumCls = t.Durum switch {
                         ChargeStatus.Paid    => "badge-kirali",
                         ChargeStatus.PartiallyPaid => "badge-surek",
@@ -117,11 +117,11 @@
                         _                           => "Bekleniyor"
                     };
                     <tr class="cursor-pointer hover:bg-slate-50 transition-colors"
-                        onclick="if(!event.target.closest('a,button,[data-stop]'))window.location.href='/Tahakkuk/Detay/@t.Id.ToHashId()'">
+                        onclick="if(!event.target.closest('a,button,[data-stop]'))window.location.href='/Charge/Detay/@t.Id.ToHashId()'">
                         <td>
                             @if (t.KiraciId > 0)
                             {
-                                <a href="/Kiraci/Detay/@t.KiraciId.ToHashId()" class="font-semibold text-primary hover:underline">@t.KiraciGosterimAdi</a>
+                                <a href="/Tenant/Detay/@t.KiraciId.ToHashId()" class="font-semibold text-primary hover:underline">@t.KiraciGosterimAdi</a>
                             }
                             else
                             {
@@ -137,20 +137,20 @@
                             <span class="cell-sub">@(t.BirimAd ?? "-")</span>
                         </td>
                         <td class="cell-center">
-                            @if (!string.IsNullOrEmpty(t.BorcTipiKod))
+                            @if (!string.IsNullOrEmpty(t.ChargeTypeCode))
                             {
-                                <span class="font-mono text-[11px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">@t.BorcTipiKod</span>
+                                <span class="font-mono text-[11px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">@t.ChargeTypeCode</span>
                             }
                         </td>
                         <td class="text-muted max-w-[200px] truncate">@(t.IlkKalemAciklama ?? "-")</td>
-                        <td class="num">@t.BeklenenTutar.ToString("N2") ₺</td>
+                        <td class="num">@t.ExpectedAmount.ToString("N2") ₺</td>
                         <td class="num num-muted">@t.KdvTutari.ToString("N2") ₺</td>
                         <td class="num">@t.ToplamTutar.ToString("N2") ₺</td>
-                        <td class="cell-center">@t.VadeTarihi.ToString("dd.MM.yyyy")</td>
+                        <td class="cell-center">@t.DueDate.ToString("dd.MM.yyyy")</td>
                         <td>
-                            @if (t.KiraSozlesmesiId.HasValue)
+                            @if (t.LeaseId.HasValue)
                             {
-                                <a href="/Sozlesme/Detay/@t.KiraSozlesmesiId.ToHashId()" data-stop class="font-mono text-xs text-primary hover:underline">#@t.KiraSozlesmesiId</a>
+                                <a href="/Lease/Detay/@t.LeaseId.ToHashId()" data-stop class="font-mono text-xs text-primary hover:underline">#@t.LeaseId</a>
                             }
                             else
                             {
@@ -159,9 +159,9 @@
                         </td>
                         <td>
                             <span class="badge @durumCls">@durumLabel</span>
-                            @if (!string.IsNullOrEmpty(t.IptalNotu))
+                            @if (!string.IsNullOrEmpty(t.CancellationNote))
                             {
-                                <div class="text-[10px] text-muted mt-1 italic truncate max-w-[100px]" title="@t.IptalNotu">⤵ @t.IptalNotu</div>
+                                <div class="text-[10px] text-muted mt-1 italic truncate max-w-[100px]" title="@t.CancellationNote">⤵ @t.CancellationNote</div>
                             }
                         </td>
                         <td class="text-right">

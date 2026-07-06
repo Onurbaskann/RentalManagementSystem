@@ -45,7 +45,7 @@ public class KiraciDavetViewModel
 
     public List<int> BirimIds { get; set; } = [];
     public List<RolSecenekViewModel> Roller { get; set; } = [];
-    public List<BirimLookupDto> Birimler { get; set; } = [];
+    public List<BirimLookupDto> Units { get; set; } = [];
 }
 
 public class KiraciKullaniciDuzenleViewModel

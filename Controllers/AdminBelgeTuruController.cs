@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace KiraTakip.Controllers;
 
 [Authorize]
-[Route("Admin/BelgeTuru")]
+[Route("Admin/DocumentType")]
 public class AdminBelgeTuruController : Controller
 {
     private readonly IBelgeTuruRepository _repo;
@@ -55,23 +55,23 @@ public class AdminBelgeTuruController : Controller
             return View(model);
         }
 
-        var entity = new BelgeTuru
+        var entity = new DocumentType
         {
-            Kod = kod,
-            Ad = model.Ad.Trim(),
-            Aciklama = model.Aciklama?.Trim(),
-            HedefEntite = model.HedefEntite,
-            Zorunlu = model.Zorunlu,
-            IzinVerilenUzantilar = model.IzinVerilenUzantilar.Trim().ToLowerInvariant(),
-            MaxBoyutMb = model.MaxBoyutMb,
-            Sira = model.Sira,
+            Code = kod,
+            Name = model.Ad.Trim(),
+            Description = model.Aciklama?.Trim(),
+            TargetEntity = model.HedefEntite,
+            Required = model.Zorunlu,
+            AllowedExtensions = model.IzinVerilenUzantilar.Trim().ToLowerInvariant(),
+            MaxSizeMb = model.MaxBoyutMb,
+            SortOrder = model.Sira,
             IsActive = model.IsActive,
-            Sistem = false
+            IsSystem = false
         };
 
         await _repo.AddAsync(entity);
         await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Ad}' belge türü eklendi.";
+        TempData["Success"] = $"'{entity.Name}' belge türü eklendi.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -95,26 +95,26 @@ public class AdminBelgeTuruController : Controller
         if (entity == null || entity.IsDeleted) return NotFound();
 
         // Sistem tiplerinde HedefEntite değiştirilemez
-        if (entity.Sistem)
-            model.HedefEntite = entity.HedefEntite;
+        if (entity.IsSystem)
+            model.HedefEntite = entity.TargetEntity;
 
         if (!ModelState.IsValid)
         {
-            model.Sistem = entity.Sistem;
+            model.Sistem = entity.IsSystem;
             return View(model);
         }
 
-        entity.Ad = model.Ad.Trim();
-        entity.Aciklama = model.Aciklama?.Trim();
-        entity.HedefEntite = model.HedefEntite;
-        entity.Zorunlu = model.Zorunlu;
-        entity.IzinVerilenUzantilar = model.IzinVerilenUzantilar.Trim().ToLowerInvariant();
-        entity.MaxBoyutMb = model.MaxBoyutMb;
-        entity.Sira = model.Sira;
+        entity.Name = model.Ad.Trim();
+        entity.Description = model.Aciklama?.Trim();
+        entity.TargetEntity = model.HedefEntite;
+        entity.Required = model.Zorunlu;
+        entity.AllowedExtensions = model.IzinVerilenUzantilar.Trim().ToLowerInvariant();
+        entity.MaxSizeMb = model.MaxBoyutMb;
+        entity.SortOrder = model.Sira;
         entity.IsActive = model.IsActive;
 
         await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Ad}' güncellendi.";
+        TempData["Success"] = $"'{entity.Name}' güncellendi.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -126,15 +126,15 @@ public class AdminBelgeTuruController : Controller
         var entity = await _repo.GetByIdAsync(id);
         if (entity == null || entity.IsDeleted) return NotFound();
 
-        if (entity.IsActive && entity.Sistem)
+        if (entity.IsActive && entity.IsSystem)
         {
-            TempData["Error"] = $"'{entity.Ad}' bir sistem kaydıdır ve pasif yapılamaz.";
+            TempData["Error"] = $"'{entity.Name}' bir sistem kaydıdır ve pasif yapılamaz.";
             return RedirectToAction(nameof(Index));
         }
 
         entity.IsActive = !entity.IsActive;
         await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Ad}' {(entity.IsActive ? "aktif" : "pasif")} yapıldı.";
+        TempData["Success"] = $"'{entity.Name}' {(entity.IsActive ? "aktif" : "pasif")} yapıldı.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -146,29 +146,29 @@ public class AdminBelgeTuruController : Controller
         var entity = await _repo.GetByIdAsync(id);
         if (entity == null || entity.IsDeleted) return NotFound();
 
-        if (entity.Sistem)
+        if (entity.IsSystem)
         {
-            TempData["Error"] = $"'{entity.Ad}' bir sistem kaydıdır ve silinemez.";
+            TempData["Error"] = $"'{entity.Name}' bir sistem kaydıdır ve silinemez.";
             return RedirectToAction(nameof(Index));
         }
 
         entity.IsDeleted = true;
         await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Ad}' silindi.";
+        TempData["Success"] = $"'{entity.Name}' silindi.";
         return RedirectToAction(nameof(Index));
     }
 
-    private static BelgeTuruFormViewModel ToFormVm(BelgeTuru e) => new()
+    private static BelgeTuruFormViewModel ToFormVm(DocumentType e) => new()
     {
         Id = e.Id,
-        Ad = e.Ad,
-        Aciklama = e.Aciklama,
-        HedefEntite = e.HedefEntite,
-        Zorunlu = e.Zorunlu,
-        IzinVerilenUzantilar = e.IzinVerilenUzantilar,
-        MaxBoyutMb = e.MaxBoyutMb,
-        Sira = e.Sira,
+        Ad = e.Name,
+        Aciklama = e.Description,
+        HedefEntite = e.TargetEntity,
+        Zorunlu = e.Required,
+        IzinVerilenUzantilar = e.AllowedExtensions,
+        MaxBoyutMb = e.MaxSizeMb,
+        Sira = e.SortOrder,
         IsActive = e.IsActive,
-        Sistem = e.Sistem
+        Sistem = e.IsSystem
     };
 }

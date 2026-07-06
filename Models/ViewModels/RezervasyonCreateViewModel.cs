@@ -12,12 +12,12 @@ public class RezervasyonCreateViewModel
     [Required(ErrorMessage = "{0} seçilmelidir.")]
     [Display(Name = "Kiracı")]
     public int? KiraciId { get; set; }
-    public DateTime BaslangicTarihi { get; set; } = DateTime.Today;
-    public DateTime BitisTarihi { get; set; } = DateTime.Today.AddHours(2);
+    public DateTime StartDate { get; set; } = DateTime.Today;
+    public DateTime EndDate { get; set; } = DateTime.Today.AddHours(2);
 
     [MaxLength(500)]
     public string? Aciklama { get; set; }
     public List<BirimListItemDto> RezervasyonBirimleri { get; set; } = [];
-    public List<KiraciListItemDto> Kiraciler { get; set; } = [];
+    public List<KiraciListItemDto> Tenants { get; set; } = [];
     public RezervasyonHesapSonucu? Hesap { get; set; }
 }

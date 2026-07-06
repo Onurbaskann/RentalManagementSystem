@@ -150,7 +150,7 @@ public class AdminRolController : Controller
         target.Clear();
         target.AddRange(
             PermissionCatalog.AllModules
-                .Where(m => !m.Path.StartsWith("Kiraci."))
+                .Where(m => !m.Path.StartsWith("Tenant."))
                 .Select(m =>
                 {
                     var items = new List<PermissionCheckboxViewModel>

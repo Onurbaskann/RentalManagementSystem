@@ -10,8 +10,8 @@ public interface ITasinmazService
 {
     Task<List<TasinmazListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null);
     Task<TasinmazDetayDto?> GetByIdAsync(int id);
-    Task<Tasinmaz> CreateAsync(Tasinmaz t, List<BirimInputViewModel>? birimler = null, List<RezervasyonAlaniInputViewModel>? rezervasyonAlanlari = null);
-    Task UpdateAsync(Tasinmaz t);
+    Task<Property> CreateAsync(Property t, List<BirimInputViewModel>? birimler = null, List<RezervasyonAlaniInputViewModel>? rezervasyonAlanlari = null);
+    Task UpdateAsync(Property t);
     Task<TasinmazDuzenleViewModel?> GetForEditAsync(int id);
     Task UpdateWithChildrenAsync(TasinmazDuzenleViewModel vm);
     Task<List<BirimLookupDto>> GetBosBirimlerAsync(IReadOnlyList<int>? tasinmazIds = null);

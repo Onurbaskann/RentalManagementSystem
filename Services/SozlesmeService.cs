@@ -30,12 +30,12 @@ public class SozlesmeService : ISozlesmeService, ITransactionalService
         var list = await _repo.GetListAsync(filtre, yetkiliIds);
         foreach (var s in list)
         {
-            var dummySozlesme = new Sozlesme
+            var dummySozlesme = new Lease
             {
                 Id = s.Id,
-                KiraciId = s.KiraciId,
-                BirimId = s.BirimId,
-                Birim = new Birim { Id = s.BirimId, Yuzolcumu = s.BirimYuzolcumu }
+                TenantId = s.KiraciId,
+                UnitId = s.BirimId,
+                Unit = new Unit { Id = s.BirimId, Area = s.BirimYuzolcumu }
             };
             s.AylikBedel = await _istatistikService.AylikBedelAsync(dummySozlesme);
         }
@@ -47,12 +47,12 @@ public class SozlesmeService : ISozlesmeService, ITransactionalService
         return await _repo.GetDetayAsync(id);
     }
 
-    public async Task<Sozlesme> CreateAsync(Sozlesme s, decimal? aylikBedel = null)
+    public async Task<Lease> CreateAsync(Lease s, decimal? aylikBedel = null)
     {
-        s.IslemGecmisi.Add(new SozlesmeIslemGecmisi
+        s.ActivityLog.Add(new SozlesmeIslemGecmisi
         {
             IslemTipi = LeaseActivityType.Creation,
-            IslemTarihi = DateTime.Now,
+            TransactionDate = DateTime.Now,
             Aciklama = "Sözleşme oluşturuldu.",
             YeniKiraBedeli = aylikBedel
         });
@@ -65,22 +65,22 @@ public class SozlesmeService : ISozlesmeService, ITransactionalService
     public async Task UzatAsync(int id, DateTime yeniBitis, decimal eskiBedel, decimal yeniBedel,
         bool kdvUygulanacakMi, decimal kdvOrani, decimal? tufeOrani, string? aciklama)
     {
-        var s = await _repo.GetByIdAsync(id, include: q => q.Include(x => x.IslemGecmisi))
+        var s = await _repo.GetByIdAsync(id, include: q => q.Include(x => x.ActivityLog))
             ?? throw new InvalidOperationException($"Sözleşme {id} bulunamadı.");
 
-        var eskiBitis = s.BitisTarihi;
+        var eskiBitis = s.EndDate;
 
-        s.BitisTarihi = yeniBitis;
-        s.KdvUygulanacakMi = kdvUygulanacakMi;
+        s.EndDate = yeniBitis;
+        s.IsKdvApplied = kdvUygulanacakMi;
 
         decimal? kdvTutari = kdvUygulanacakMi ? yeniBedel * kdvOrani / 100 : null;
         decimal? kdvDahil = kdvUygulanacakMi ? yeniBedel + kdvTutari : null;
 
-        s.IslemGecmisi.Add(new SozlesmeIslemGecmisi
+        s.ActivityLog.Add(new SozlesmeIslemGecmisi
         {
-            KiraSozlesmesiId = id,
+            LeaseId = id,
             IslemTipi = LeaseActivityType.Extension,
-            IslemTarihi = DateTime.Now,
+            TransactionDate = DateTime.Now,
             Aciklama = aciklama ?? "Sözleşme süresi uzatıldı.",
             EskiBitisTarihi = eskiBitis,
             YeniBitisTarihi = yeniBitis,
@@ -88,7 +88,7 @@ public class SozlesmeService : ISozlesmeService, ITransactionalService
             YeniKiraBedeli = yeniBedel,
             TufeOrani = tufeOrani,
             KdvUygulandiMi = kdvUygulanacakMi,
-            KdvOrani = kdvUygulanacakMi ? kdvOrani : null,
+            KdvRate = kdvUygulanacakMi ? kdvOrani : null,
             KdvTutari = kdvTutari,
             KdvDahilTutar = kdvDahil
         });
@@ -98,18 +98,18 @@ public class SozlesmeService : ISozlesmeService, ITransactionalService
 
     public async Task FeshetAsync(int id, DateTime fesihTarihi, string fesihNedeni, string? aciklama)
     {
-        var s = await _repo.GetByIdAsync(id, include: q => q.Include(x => x.IslemGecmisi))
+        var s = await _repo.GetByIdAsync(id, include: q => q.Include(x => x.ActivityLog))
             ?? throw new InvalidOperationException($"Sözleşme {id} bulunamadı.");
 
-        s.Durum = LeaseStatus.Terminated;
-        s.FesihTarihi = fesihTarihi;
-        s.FesihNedeni = fesihNedeni;
+        s.Status = LeaseStatus.Terminated;
+        s.TerminationDate = fesihTarihi;
+        s.TerminationReason = fesihNedeni;
 
-        s.IslemGecmisi.Add(new SozlesmeIslemGecmisi
+        s.ActivityLog.Add(new SozlesmeIslemGecmisi
         {
-            KiraSozlesmesiId = id,
+            LeaseId = id,
             IslemTipi = LeaseActivityType.Termination,
-            IslemTarihi = DateTime.Now,
+            TransactionDate = DateTime.Now,
             Aciklama = aciklama ?? fesihNedeni
         });
 
@@ -121,22 +121,22 @@ public class SozlesmeService : ISozlesmeService, ITransactionalService
         if (gun < 1 || gun > 31)
             throw new ArgumentOutOfRangeException(nameof(gun), "Vade günü 1-31 arasında olmalıdır.");
 
-        var s = await _repo.GetByIdAsync(id, include: q => q.Include(x => x.IslemGecmisi))
+        var s = await _repo.GetByIdAsync(id, include: q => q.Include(x => x.ActivityLog))
             ?? throw new InvalidOperationException($"Sözleşme {id} bulunamadı.");
 
         var eskiTip = s.DueDateRuleType;
-        var eskiGun = s.VadeGunu;
+        var eskiGun = s.DueDay;
 
         if (eskiTip == tip && eskiGun == gun) return;
 
         s.DueDateRuleType = tip;
-        s.VadeGunu = gun;
+        s.DueDay = gun;
 
-        s.IslemGecmisi.Add(new SozlesmeIslemGecmisi
+        s.ActivityLog.Add(new SozlesmeIslemGecmisi
         {
-            KiraSozlesmesiId = id,
+            LeaseId = id,
             IslemTipi = LeaseActivityType.ChargeRegeneration,
-            IslemTarihi = DateTime.Now,
+            TransactionDate = DateTime.Now,
             Aciklama = aciklama ?? $"Vade kuralı güncellendi: {eskiTip}({eskiGun}) → {tip}({gun})"
         });
 
@@ -148,12 +148,12 @@ public class SozlesmeService : ISozlesmeService, ITransactionalService
         var list = await _repo.GetByKiraciIdAsync(kiraciId);
         foreach (var s in list)
         {
-            var dummySozlesme = new Sozlesme
+            var dummySozlesme = new Lease
             {
                 Id = s.Id,
-                KiraciId = s.KiraciId,
-                BirimId = s.BirimId,
-                Birim = new Birim { Id = s.BirimId, Yuzolcumu = s.BirimYuzolcumu }
+                TenantId = s.KiraciId,
+                UnitId = s.BirimId,
+                Unit = new Unit { Id = s.BirimId, Area = s.BirimYuzolcumu }
             };
             s.AylikBedel = await _istatistikService.AylikBedelAsync(dummySozlesme);
         }
@@ -165,12 +165,12 @@ public class SozlesmeService : ISozlesmeService, ITransactionalService
         var list = await _repo.GetByBirimIdAsync(birimId);
         foreach (var s in list)
         {
-            var dummySozlesme = new Sozlesme
+            var dummySozlesme = new Lease
             {
                 Id = s.Id,
-                KiraciId = s.KiraciId,
-                BirimId = s.BirimId,
-                Birim = new Birim { Id = s.BirimId, Yuzolcumu = s.BirimYuzolcumu }
+                TenantId = s.KiraciId,
+                UnitId = s.BirimId,
+                Unit = new Unit { Id = s.BirimId, Area = s.BirimYuzolcumu }
             };
             s.AylikBedel = await _istatistikService.AylikBedelAsync(dummySozlesme);
         }

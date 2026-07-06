@@ -47,12 +47,12 @@
             <span asp-validation-for="RolId" class="form-error"></span>
         </div>
 
-        @if (Model.Birimler.Any())
+        @if (Model.Units.Any())
         {
             <div class="form-group">
-                <label class="form-label">Birim Erişimi <span class="text-muted font-normal">(opsiyonel — boş bırakılırsa tüm birimler)</span></label>
+                <label class="form-label">Unit Erişimi <span class="text-muted font-normal">(opsiyonel — boş bırakılırsa tüm birimler)</span></label>
                 <div class="border border-[var(--color-border)] rounded-lg p-3 flex flex-col gap-2 max-h-48 overflow-y-auto">
-                    @foreach (var b in Model.Birimler)
+                    @foreach (var b in Model.Units)
                     {
                         <label class="flex items-center gap-2 text-[13.5px] cursor-pointer">
                             <input type="checkbox" name="BirimIds" value="@b.Id"

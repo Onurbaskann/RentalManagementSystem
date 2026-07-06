@@ -6,7 +6,7 @@ public class BelgePanelViewModel
 {
     public BelgeOwnerTipi OwnerType { get; set; }
     public int OwnerId { get; set; }
-    public List<BelgeTuru> BelgeTurleri { get; set; } = [];
+    public List<DocumentType> DocumentTypes { get; set; } = [];
     public List<Belge> Belgeler { get; set; } = [];
     public bool CanEdit { get; set; }
 }

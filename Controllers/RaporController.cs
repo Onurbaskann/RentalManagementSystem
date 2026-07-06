@@ -12,28 +12,28 @@ namespace KiraTakip.Controllers;
 [Authorize(Policy = PermissionCatalog.Payment.Module)]
 public class RaporController : Controller
 {
-    private readonly ITahakkukService _tahakkukService;
+    private readonly IChargeService _chargeService;
     private readonly IYetkiKapsamiProvider _provider;
 
-    public RaporController(ITahakkukService tahakkukService, IYetkiKapsamiProvider provider)
+    public RaporController(IChargeService tahakkukService, IYetkiKapsamiProvider provider)
     {
-        _tahakkukService = tahakkukService;
+        _chargeService = tahakkukService;
         _provider = provider;
     }
 
     public async Task<IActionResult> Index(int? yil)
     {
-        await _tahakkukService.GecikmeleriGuncelleAsync();
+        await _chargeService.GecikmeleriGuncelleAsync();
 
         int secilenYil = yil ?? DateTime.Today.Year;
         var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
-        var tahakkuklar = await _tahakkukService.GetListAsync(tasinmazIds: tasinmazIds);
+        var tahakkuklar = await _chargeService.GetListAsync(tasinmazIds: tasinmazIds);
 
         var trCulture = new CultureInfo("tr-TR");
 
         var satirlar = Enumerable.Range(1, 12).Select(ay =>
         {
-            var ayTahakkuklar = tahakkuklar.Where(t => t.DonemBaslangic.Year == secilenYil && t.DonemBaslangic.Month == ay).ToList();
+            var ayTahakkuklar = tahakkuklar.Where(t => t.PeriodStart.Year == secilenYil && t.PeriodStart.Month == ay).ToList();
             var gecikmisler = ayTahakkuklar.Where(t => t.Durum == ChargeStatus.Overdue).ToList();
             return new AylikRaporSatir
             {
@@ -41,15 +41,15 @@ public class RaporController : Controller
                 AyAdi = new DateTime(secilenYil, ay, 1).ToString("MMMM", trCulture),
                 TahakkukSayisi = ayTahakkuklar.Count,
                 Beklenen = ayTahakkuklar.Sum(t => t.ToplamTutar),
-                TahsilEdilen = ayTahakkuklar.Sum(t => t.OdenenTutar),
+                TahsilEdilen = ayTahakkuklar.Sum(t => t.PaidAmount),
                 GecikmisTahakkukAdet = gecikmisler.Count,
-                GecikmisTutar = gecikmisler.Sum(t => t.ToplamTutar - t.OdenenTutar)
+                GecikmisTutar = gecikmisler.Sum(t => t.ToplamTutar - t.PaidAmount)
             };
         }).ToList();
 
         var vm = new AylikRaporViewModel { Yil = secilenYil, Satirlar = satirlar };
 
-        var mevcutYillar = tahakkuklar.Select(t => t.DonemBaslangic.Year).Distinct().OrderByDescending(y => y).ToList();
+        var mevcutYillar = tahakkuklar.Select(t => t.PeriodStart.Year).Distinct().OrderByDescending(y => y).ToList();
         if (!mevcutYillar.Contains(secilenYil)) mevcutYillar.Insert(0, secilenYil);
         ViewBag.MevcutYillar = mevcutYillar;
 

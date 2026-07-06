@@ -14,7 +14,7 @@ public class TasinmazDuzenleViewModel
     public decimal KapaliYuzolcumu { get; set; }
     public int? KatSayisi { get; set; }
     public string? Aciklama { get; set; }
-    public List<BirimDuzenleViewModel> Birimler { get; set; } = [];
+    public List<BirimDuzenleViewModel> Units { get; set; } = [];
     public List<RezervasyonAlaniDuzenleViewModel> RezervasyonAlanlari { get; set; } = [];
     public TasinmazFiyatMatrisiViewModel FiyatMatrisi { get; set; } = new();
     public ParentTarifeKartViewModel? ParentTarife { get; set; }

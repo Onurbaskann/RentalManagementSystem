@@ -43,8 +43,8 @@
                             @foreach (var kolon in Model.Kolonlar)
                             {
                                 <th class="p-[10px_12px] text-center bg-slate-50 border-b border-[var(--color-border)] min-w-[200px]">
-                                    <div class="text-[10px] color-muted font-bold uppercase tracking-wider mb-0.5">@kolon.BorcTipiKod</div>
-                                    <div class="text-[13px] font-bold text-slate-700">@kolon.BorcTipiAd</div>
+                                    <div class="text-[10px] color-muted font-bold uppercase tracking-wider mb-0.5">@kolon.ChargeTypeCode</div>
+                                    <div class="text-[13px] font-bold text-slate-700">@kolon.ChargeTypeName</div>
                                 </th>
                             }
                         </tr>
@@ -61,12 +61,12 @@
                                     <td class="p-[10px_12px] border-b border-[var(--color-border)] align-top bg-white/50">
                                         <input type="hidden" name="Hucreler[@idx].KalemId"          value="@hucre.KalemId" />
                                         <input type="hidden" name="Hucreler[@idx].KiraciKategoriId" value="@hucre.KiraciKategoriId" />
-                                        <input type="hidden" name="Hucreler[@idx].BorcTipiId"       value="@hucre.BorcTipiId" />
+                                        <input type="hidden" name="Hucreler[@idx].ChargeTypeId"       value="@hucre.ChargeTypeId" />
 
                                         <div class="mb-2">
-                                            <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">Birim Değer (₺)</label>
-                                            <input type="number" name="Hucreler[@idx].BirimDeger" 
-                                                   value="@hucre.BirimDeger.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
+                                            <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">Unit Değer (₺)</label>
+                                            <input type="number" name="Hucreler[@idx].UnitValue" 
+                                                   value="@hucre.UnitValue.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
                                                    class="form-control form-control-sm text-xs font-mono" step="0.01" min="0" />
                                         </div>
                                         <div class="mb-2">
@@ -86,8 +86,8 @@
                                         </div>
                                         <div>
                                             <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">KDV (%)</label>
-                                            <input type="number" name="Hucreler[@idx].KdvOrani" 
-                                                   value="@hucre.KdvOrani.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
+                                            <input type="number" name="Hucreler[@idx].KdvRate" 
+                                                   value="@hucre.KdvRate.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
                                                    class="form-control form-control-sm text-xs font-mono" step="0.01" min="0" max="100" />
                                         </div>
                                     </td>
@@ -102,11 +102,11 @@
         }
     </div>
 
-    <!-- Rezervasyon Genel Tarifeleri Bölümü -->
+    <!-- Reservation Genel Tarifeleri Bölümü -->
     <div class="card p-0 overflow-hidden mt-6">
         <div class="p-4 bg-slate-50 border-b border-[var(--color-border)] flex items-center gap-2.5">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-primary shrink-0"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16"/><path d="M12 11h.01"/><path d="M12 7h.01"/><path d="M12 15h.01"/><path d="M8 11h.01"/><path d="M8 7h.01"/><path d="M8 15h.01"/><path d="M16 11h.01"/><path d="M16 7h.01"/><path d="M16 15h.01"/></svg>
-            <div class="text-[15px] font-bold text-slate-700">Rezervasyon Genel Tarifeleri</div>
+            <div class="text-[15px] font-bold text-slate-700">Reservation Genel Tarifeleri</div>
         </div>
 
         @if (Model.RezervasyonSatirlari == null || !Model.RezervasyonSatirlari.Any())
@@ -139,7 +139,7 @@
                                     @rez.UnitTypeAd
                                 </td>
                                 <td class="p-[10px_16px] border-b border-[var(--color-border)]">
-                                    <input type="number" name="RezervasyonHucreler[@i].UcretsizSureDakika" value="@rez.UcretsizSureDakika" class="form-control form-control-sm text-center" min="0" />
+                                    <input type="number" name="RezervasyonHucreler[@i].FreeDurationMinutes" value="@rez.FreeDurationMinutes" class="form-control form-control-sm text-center" min="0" />
                                 </td>
                                 <td class="p-[10px_16px] border-b border-[var(--color-border)]">
                                     <input type="number" name="RezervasyonHucreler[@i].UcretlendirmePeriyoduDakika" value="@rez.UcretlendirmePeriyoduDakika" class="form-control form-control-sm text-center" min="1" />
@@ -148,7 +148,7 @@
                                     <input type="number" name="RezervasyonHucreler[@i].PeriyotUcreti" value="@rez.PeriyotUcreti.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm font-mono text-center" step="0.01" min="0" />
                                 </td>
                                 <td class="p-[10px_16px] border-b border-[var(--color-border)]">
-                                    <input type="number" name="RezervasyonHucreler[@i].KdvOrani" value="@rez.KdvOrani.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm font-mono text-center" step="0.01" min="0" max="100" />
+                                    <input type="number" name="RezervasyonHucreler[@i].KdvRate" value="@rez.KdvRate.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm font-mono text-center" step="0.01" min="0" max="100" />
                                 </td>
                             </tr>
                         }

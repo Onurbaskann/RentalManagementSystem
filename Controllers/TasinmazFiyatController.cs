@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace KiraTakip.Controllers
 {
     [Authorize]
-    [Route("Tasinmaz/{tasinmazId}/Parametreler")]
+    [Route("Property/{tasinmazId}/Parametreler")]
     public class TasinmazFiyatController : Controller
     {
         private readonly ITasinmazFiyatService _fiyatService;

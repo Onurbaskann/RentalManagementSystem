@@ -1,4 +1,4 @@
-@model List<KiraTakip.Models.Entities.BelgeTuru>
+@model List<KiraTakip.Models.Entities.DocumentType>
 @using KiraTakip.Models.Entities
 @{
     ViewData["Title"] = "Belge Türleri";
@@ -22,7 +22,7 @@
         <div class="page-title">Belge Türleri</div>
         <div class="page-subtitle">@Model.Count kayıt</div>
     </div>
-    <a href="/Admin/BelgeTuru/Ekle" class="btn btn-primary flex items-center gap-2">
+    <a href="/Admin/DocumentType/Ekle" class="btn btn-primary flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Yeni Belge Türü
     </a>
@@ -46,26 +46,26 @@
                 @foreach (var bt in Model)
                 {
                     <tr>
-                        <td class="text-center text-muted text-xs">@bt.Sira</td>
+                        <td class="text-center text-muted text-xs">@bt.SortOrder</td>
                         <td>
-                            <span class="font-medium text-slate-700">@bt.Ad</span>
-                            @if (bt.Sistem)
+                            <span class="font-medium text-slate-700">@bt.Name</span>
+                            @if (bt.IsSystem)
                             {
                                 <span class="ml-1.5 text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded align-middle" title="Sistem kaydı: kod ve pasifleştirme kilitli">Sistem</span>
                             }
-                            @if (!string.IsNullOrEmpty(bt.Aciklama))
+                            @if (!string.IsNullOrEmpty(bt.Description))
                             {
-                                <div class="text-xs text-muted mt-0.5">@bt.Aciklama</div>
+                                <div class="text-xs text-muted mt-0.5">@bt.Description</div>
                             }
                         </td>
                         <td class="text-[13px]">
-                            @(bt.HedefEntite == BelgeOwnerTipi.Kiraci ? "Kiracı" : bt.HedefEntite == BelgeOwnerTipi.Sozlesme ? "Sözleşme" : bt.HedefEntite == BelgeOwnerTipi.Odeme ? "Ödeme" : bt.HedefEntite.ToString())
+                            @(bt.TargetEntity == BelgeOwnerTipi.Tenant ? "Kiracı" : bt.TargetEntity == BelgeOwnerTipi.Lease ? "Sözleşme" : bt.TargetEntity == BelgeOwnerTipi.Odeme ? "Ödeme" : bt.TargetEntity.ToString())
                         </td>
                         <td class="text-center">
-                            @if (bt.Zorunlu) { <span class="badge badge-kirali">Zorunlu</span> }
+                            @if (bt.Required) { <span class="badge badge-kirali">Zorunlu</span> }
                             else { <span class="text-muted text-xs">—</span> }
                         </td>
-                        <td class="text-[12.5px] text-muted font-mono">@bt.IzinVerilenUzantilar (max @bt.MaxBoyutMb MB)</td>
+                        <td class="text-[12.5px] text-muted font-mono">@bt.AllowedExtensions (max @bt.MaxSizeMb MB)</td>
                         <td>
                             @if (bt.IsActive)
                             { <span class="badge badge-kirali">Aktif</span> }
@@ -73,11 +73,11 @@
                             { <span class="badge badge-gecmis">Pasif</span> }
                         </td>
                         <td class="flex gap-1.5 justify-end">
-                            <a href="/Admin/BelgeTuru/Duzenle/@bt.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
-                            @if (!bt.Sistem)
+                            <a href="/Admin/DocumentType/Duzenle/@bt.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
+                            @if (!bt.IsSystem)
                             {
-                                <form method="post" action="/Admin/BelgeTuru/DurumDegistir/@bt.Id.ToHashId()"
-                                      data-confirm="@(bt.IsActive ? $"'{bt.Ad}' pasif yapılsın mı?" : $"'{bt.Ad}' aktif yapılsın mı?")"
+                                <form method="post" action="/Admin/DocumentType/DurumDegistir/@bt.Id.ToHashId()"
+                                      data-confirm="@(bt.IsActive ? $"'{bt.Name}' pasif yapılsın mı?" : $"'{bt.Name}' aktif yapılsın mı?")"
                                       class="inline">
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="btn btn-sm @(bt.IsActive ? "btn-danger" : "btn-amber")">

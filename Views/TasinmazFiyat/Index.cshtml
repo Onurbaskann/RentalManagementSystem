@@ -25,8 +25,8 @@
                     @foreach (var col in Model.Kolonlar)
                     {
                         <th class="text-center bg-slate-50/50 border-l border-slate-100">
-                            <div class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">@col.BorcTipiKod</div>
-                            <div class="text-[13px] text-slate-700">@col.BorcTipiAd</div>
+                            <div class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">@col.ChargeTypeCode</div>
+                            <div class="text-[13px] text-slate-700">@col.ChargeTypeName</div>
                         </th>
                     }
                 </tr>
@@ -52,13 +52,13 @@
                                     @if (hucre.RateVarMi)
                                     {
                                         <div class="text-base font-bold text-slate-800 flex items-baseline justify-center gap-1">
-                                            @hucre.BirimDeger?.ToString("N2") <span class="text-xs font-normal">₺</span>
+                                            @hucre.UnitValue?.ToString("N2") <span class="text-xs font-normal">₺</span>
                                             <span class="text-[10px] font-medium text-slate-400 uppercase ml-0.5">
                                                 @(hucre.CalculationMethod == KiraTakip.Models.CalculationMethod.Fixed ? "Sbt" : "m²")
                                             </span>
                                         </div>
                                         <div class="text-[10px] font-bold text-indigo-500 uppercase tracking-tighter mt-1">
-                                            KDV %@hucre.KdvOrani?.ToString("N0")
+                                            KDV %@hucre.KdvRate?.ToString("N0")
                                         </div>
                                     }
                                     else

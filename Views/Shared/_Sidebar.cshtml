@@ -56,39 +56,39 @@
         </a>
         @if (User.HasModuleAccess("Internal.Property"))
         {
-            <a href="/Tasinmaz" class="nav-item @(currentController == "Tasinmaz" ? "nav-item-active" : "")">
+            <a href="/Property" class="nav-item @(currentController == "Property" ? "nav-item-active" : "")">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
                 Taşınmazlar
             </a>
         }
         @if (User.HasModuleAccess("Internal.Tenant"))
         {
-            <a href="/Kiraci" class="nav-item @(currentController == "Kiraci" ? "nav-item-active" : "")">
+            <a href="/Tenant" class="nav-item @(currentController == "Tenant" ? "nav-item-active" : "")">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Kiracılar
             </a>
         }
         @if (User.HasModuleAccess("Internal.Lease"))
         {
-            <a href="/Sozlesme" class="nav-item @(currentController == "Sozlesme" ? "nav-item-active" : "")">
+            <a href="/Lease" class="nav-item @(currentController == "Lease" ? "nav-item-active" : "")">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                 Sözleşmeler
             </a>
         }
         @if (User.HasModuleAccess("Internal.Reservation"))
         {
-            <a href="/Rezervasyon" class="nav-item @(currentController == "Rezervasyon" ? "nav-item-active" : "")">
+            <a href="/Reservation" class="nav-item @(currentController == "Reservation" ? "nav-item-active" : "")">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 Rezervasyonlar
             </a>
         }
         @if (User.HasModuleAccess("Internal.Payment"))
         {
-            <a href="/Tahakkuk" class="nav-item @(currentController is "Tahakkuk" or "Odeme" ? "nav-item-active" : "")">
+            <a href="/Charge" class="nav-item @(currentController is "Charge" or "Odeme" ? "nav-item-active" : "")">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                Tahakkuklar
+                Charges
             </a>
-            <a href="/BankaHareketi" class="nav-item nav-item-sub @(currentController == "BankaHareketi" ? "nav-item-active" : "")">
+            <a href="/BankTransaction" class="nav-item nav-item-sub @(currentController == "BankTransaction" ? "nav-item-active" : "")">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
                 Banka Hareketleri
             </a>
@@ -139,7 +139,7 @@
             {
                 <a href="/Admin/UnitType" class="nav-item nav-item-sub @(currentController == "AdminUnitType" ? "nav-item-active" : "")">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-                    Birim Türleri
+                    Unit Türleri
                 </a>
             }
             @if (User.HasModuleAccess("Internal.TenantCategory"))
@@ -158,7 +158,7 @@
             }
             @if (User.HasModuleAccess("Internal.ChargeType"))
             {
-                <a href="/Admin/BorcTipi" class="nav-item nav-item-sub @(currentController == "AdminBorcTipi" ? "nav-item-active" : "")">
+                <a href="/Admin/ChargeType" class="nav-item nav-item-sub @(currentController == "AdminBorcTipi" ? "nav-item-active" : "")">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
                     Borç Tipleri
                 </a>
@@ -179,7 +179,7 @@
             }
             @if (User.HasModuleAccess("Internal.DocumentType"))
             {
-                <a href="/Admin/BelgeTuru" class="nav-item nav-item-sub @(currentController == "AdminBelgeTuru" ? "nav-item-active" : "")">
+                <a href="/Admin/DocumentType" class="nav-item nav-item-sub @(currentController == "AdminBelgeTuru" ? "nav-item-active" : "")">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                     Belge Türleri
                 </a>
@@ -200,30 +200,30 @@
             <div class="nav-group-label">Hızlı Ekle</div>
             @if (canAddTasinmaz)
             {
-                <a href="/Tasinmaz/Ekle" class="nav-item nav-item-sub">
+                <a href="/Property/Ekle" class="nav-item nav-item-sub">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     Taşınmaz Ekle
                 </a>
             }
             @if (canAddKiraci)
             {
-                <a href="/Kiraci/Ekle" class="nav-item nav-item-sub">
+                <a href="/Tenant/Ekle" class="nav-item nav-item-sub">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     Kiracı Ekle
                 </a>
             }
             @if (canAddSozlesme)
             {
-                <a href="/Sozlesme/Ekle" class="nav-item nav-item-sub">
+                <a href="/Lease/Ekle" class="nav-item nav-item-sub">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     Sözleşme Ekle
                 </a>
             }
             @if (canAddRezervasyon)
             {
-                <a href="/Rezervasyon/Ekle" class="nav-item nav-item-sub">
+                <a href="/Reservation/Ekle" class="nav-item nav-item-sub">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Rezervasyon Ekle
+                    Reservation Ekle
                 </a>
             }
         }

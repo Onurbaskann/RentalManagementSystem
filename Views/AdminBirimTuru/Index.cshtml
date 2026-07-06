@@ -1,6 +1,6 @@
 @model List<KiraTakip.Models.Dtos.UnitTypeListItemDto>
 @{
-    ViewData["Title"] = "Birim Türleri";
+    ViewData["Title"] = "Unit Türleri";
 }
 
 @if (TempData["Success"] != null)
@@ -18,12 +18,12 @@
 
 <div class="page-header flex items-center justify-between">
     <div>
-        <div class="page-title">Birim Türleri</div>
+        <div class="page-title">Unit Türleri</div>
         <div class="page-subtitle">@Model.Count kayıt</div>
     </div>
     <a href="/Admin/UnitType/Ekle" class="btn btn-primary flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Yeni Birim Türü
+        Yeni Unit Türü
     </a>
 </div>
 
@@ -35,7 +35,7 @@
                     <th class="w-16 text-center">Sıra</th>
                     <th>Ad</th>
                     <th class="w-24 text-center">Kiralama</th>
-                    <th class="w-24 text-center">Rezervasyon</th>
+                    <th class="w-24 text-center">Reservation</th>
                     <th class="w-24">Durum</th>
                     <th class="w-40"></th>
                 </tr>

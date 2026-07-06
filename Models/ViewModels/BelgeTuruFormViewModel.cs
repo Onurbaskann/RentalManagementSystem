@@ -15,7 +15,7 @@ public class BelgeTuruFormViewModel
     public string? Aciklama { get; set; }
 
     [Required]
-    public BelgeOwnerTipi HedefEntite { get; set; } = BelgeOwnerTipi.Kiraci;
+    public BelgeOwnerTipi HedefEntite { get; set; } = BelgeOwnerTipi.Tenant;
 
     public bool Zorunlu { get; set; }
 

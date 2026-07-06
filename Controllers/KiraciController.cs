@@ -84,25 +84,25 @@ public class KiraciController : Controller
         }
 
         var depozitoTutarlari = await _sozlesmeService.GetDepozitoTutarlariAsync(sozlesmeler.Select(s => s.Id));
-        var belgeler = await _belgeService.GetListAsync(Models.Entities.BelgeOwnerTipi.Kiraci, id);
-        var belgeTurleri = await _belgeService.GetTurlerAsync(Models.Entities.BelgeOwnerTipi.Kiraci);
+        var belgeler = await _belgeService.GetListAsync(Models.Entities.BelgeOwnerTipi.Tenant, id);
+        var belgeTurleri = await _belgeService.GetTurlerAsync(Models.Entities.BelgeOwnerTipi.Tenant);
 
         var vm = new KiraciDetayViewModel
         {
-            Kiraci = k,
-            Sozlesmeler = sozlesmeler,
+            Tenant = k,
+            Leases = sozlesmeler,
             DepozitoTutarlari = depozitoTutarlari,
             Belgeler = belgeler,
-            BelgeTurleri = belgeTurleri
+            DocumentTypes = belgeTurleri
         };
         return View(vm);
     }
 
     private async Task PopulateKiraciViewBagAsync()
     {
-        ViewBag.Kategoriler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Kiraci && k.Aktif).OrderBy(k => k.Sira).ToListAsync();
-        ViewBag.Sektorler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Sektor && k.Aktif).OrderBy(k => k.Sira).ToListAsync();
-        ViewBag.BelgeTurleri = await _belgeService.GetTurlerAsync(Models.Entities.BelgeOwnerTipi.Kiraci);
+        ViewBag.Kategoriler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Tenant && k.IsActive).OrderBy(k => k.Sira).ToListAsync();
+        ViewBag.Sektorler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Sektor && k.IsActive).OrderBy(k => k.Sira).ToListAsync();
+        ViewBag.DocumentTypes = await _belgeService.GetTurlerAsync(Models.Entities.BelgeOwnerTipi.Tenant);
     }
 
     [HttpGet]
@@ -123,12 +123,12 @@ public class KiraciController : Controller
     {
         await ValidateKiraciAsync(vm);
 
-        var belgeTurleri = await _belgeService.GetTurlerAsync(Models.Entities.BelgeOwnerTipi.Kiraci);
-        foreach (var bt in belgeTurleri.Where(bt => bt.Zorunlu))
+        var belgeTurleri = await _belgeService.GetTurlerAsync(Models.Entities.BelgeOwnerTipi.Tenant);
+        foreach (var bt in belgeTurleri.Where(bt => bt.Required))
         {
             var f = Request.Form.Files.GetFile($"dosya_{bt.Id}");
             if (f == null || f.Length == 0)
-                ModelState.AddModelError($"dosya_{bt.Id}", $"'{bt.Ad}' belgesi zorunludur.");
+                ModelState.AddModelError($"dosya_{bt.Id}", $"'{bt.Name}' belgesi zorunludur.");
         }
 
         if (!ModelState.IsValid)
@@ -148,7 +148,7 @@ public class KiraciController : Controller
             using var ms = new MemoryStream();
             await file.CopyToAsync(ms);
             await _belgeService.UploadAsync(
-                Models.Entities.BelgeOwnerTipi.Kiraci, k.Id, bt.Id,
+                Models.Entities.BelgeOwnerTipi.Tenant, k.Id, bt.Id,
                 file.FileName, file.ContentType, ms.ToArray());
         }
 
@@ -163,17 +163,17 @@ public class KiraciController : Controller
                     .FirstOrDefaultAsync(r => r.KiraciId == null && r.Ad == RoleNames.KiraciYoneticisi);
                 if (firmaRol != null)
                     await _davetiyeService.GonderAsync(vm.IlkYetkiliEmail, vm.IlkYetkiliAdSoyad, firmaRol.Id, currentUserId, k.Id);
-                TempData["Success"] = $"'{k.GosterimAdi}' eklendi ve {vm.IlkYetkiliEmail} adresine davet gönderildi.";
+                TempData["Success"] = $"'{k.DisplayName}' eklendi ve {vm.IlkYetkiliEmail} adresine davet gönderildi.";
             }
             catch
             {
-                TempData["Success"] = $"'{k.GosterimAdi}' başarıyla eklendi.";
+                TempData["Success"] = $"'{k.DisplayName}' başarıyla eklendi.";
                 TempData["Error"] = "İlk yetkili daveti gönderilemedi; Kiracı > Kullanıcılar ekranından tekrar deneyebilirsiniz.";
             }
         }
         else
         {
-            TempData["Success"] = $"'{k.GosterimAdi}' başarıyla eklendi.";
+            TempData["Success"] = $"'{k.DisplayName}' başarıyla eklendi.";
         }
 
         return RedirectToAction("Detay", new { id = k.Id });
@@ -258,21 +258,21 @@ public class KiraciController : Controller
             ModelState.AddModelError("Adres", "Adres zorunludur.");
     }
 
-    private static Kiraci BuildKiraciFromVm(KiraciFormViewModel vm)
+    private static Tenant BuildKiraciFromVm(KiraciFormViewModel vm)
     {
-        return new Kiraci
+        return new Tenant
         {
-            KiraciNo = vm.KiraciNo,
-            Ad = vm.Ad,
-            TicaretSicilNo = vm.TicaretSicilNo,
-            VergiNo = vm.VergiNo,
-            VergiDairesi = vm.VergiDairesi,
+            TenantNo = vm.KiraciNo,
+            Name = vm.Ad,
+            TradeRegistryNo = vm.TicaretSicilNo,
+            TaxNo = vm.VergiNo,
+            TaxOffice = vm.VergiDairesi,
             MersisNo = vm.MersisNo,
-            Telefon = vm.Telefon,
+            Phone = vm.Telefon,
             Email = vm.Email,
-            Adres = vm.Adres,
-            KiraciKategoriId = vm.KiraciKategoriId,
-            SektorId = vm.SektorId
+            Address = vm.Adres,
+            TenantCategoryId = vm.KiraciKategoriId,
+            SectorId = vm.SektorId
         };
     }
 }

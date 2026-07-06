@@ -5,9 +5,9 @@ namespace KiraTakip.Models.ViewModels;
 
 public class KiraciDetayViewModel
 {
-    public KiraciDetayDto Kiraci { get; set; } = null!;
-    public List<SozlesmeListItemDto> Sozlesmeler { get; set; } = [];
+    public KiraciDetayDto Tenant { get; set; } = null!;
+    public List<SozlesmeListItemDto> Leases { get; set; } = [];
     public Dictionary<int, decimal?> DepozitoTutarlari { get; set; } = [];
     public List<Belge> Belgeler { get; set; } = [];
-    public List<BelgeTuru> BelgeTurleri { get; set; } = [];
+    public List<DocumentType> DocumentTypes { get; set; } = [];
 }

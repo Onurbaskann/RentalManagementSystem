@@ -21,7 +21,7 @@
     </div>
     @if (Model.CanInvite)
     {
-        <a href="/Kiraci/Kullanicilar/Davet" class="btn btn-primary">
+        <a href="/Tenant/Kullanicilar/Davet" class="btn btn-primary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Davet Gönder
         </a>
@@ -67,8 +67,8 @@
                         <td class="flex gap-1.5 justify-end">
                             @if (Model.CanManage && !u.IsCurrentUser)
                             {
-                                <a href="/Kiraci/Kullanicilar/Duzenle/@u.Id" class="btn btn-sm btn-secondary">Düzenle</a>
-                                <form method="post" action="/Kiraci/Kullanicilar/DurumDegistir/@u.Id"
+                                <a href="/Tenant/Kullanicilar/Duzenle/@u.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                                <form method="post" action="/Tenant/Kullanicilar/DurumDegistir/@u.Id"
                                       data-confirm="@(u.IsActive ? "Kullanıcı pasif yapılsın mı?" : "Kullanıcı aktif yapılsın mı?")" class="inline">
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="btn btn-sm @(u.IsActive ? "btn-danger" : "btn-amber")">
@@ -117,11 +117,11 @@
                                 <td class="flex gap-1.5 justify-end">
                                     @if (Model.CanInvite)
                                     {
-                                        <form method="post" action="/Kiraci/Kullanicilar/Davet/YenidenGonder/@d.Id" class="inline">
+                                        <form method="post" action="/Tenant/Kullanicilar/Davet/YenidenGonder/@d.Id" class="inline">
                                             @Html.AntiForgeryToken()
                                             <button type="submit" class="btn btn-sm btn-secondary">Yeniden Gönder</button>
                                         </form>
-                                        <form method="post" action="/Kiraci/Kullanicilar/Davet/Iptal/@d.Id"
+                                        <form method="post" action="/Tenant/Kullanicilar/Davet/Iptal/@d.Id"
                                               data-confirm="Bu daveti iptal etmek istediğinizden emin misiniz?" class="inline">
                                             @Html.AntiForgeryToken()
                                             <button type="submit" class="btn btn-sm btn-danger">İptal</button>

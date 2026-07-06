@@ -51,7 +51,7 @@ public class AdminKiraciKullaniciController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index(int kiraciId)
     {
-        var kiraci = await _db.Kiraciler.IgnoreQueryFilters().FirstOrDefaultAsync(k => k.Id == kiraciId);
+        var kiraci = await _db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(k => k.Id == kiraciId);
         if (kiraci == null) return NotFound();
 
         var kullanicilar = await _db.Users
@@ -97,7 +97,7 @@ public class AdminKiraciKullaniciController : Controller
         }).ToList();
 
         ViewBag.KiraciId = kiraciId;
-        ViewBag.KiraciAd = kiraci.GosterimAdi;
+        ViewBag.KiraciAd = kiraci.DisplayName;
 
         return View(new KiraciKullaniciListeViewModel
         {
@@ -170,15 +170,15 @@ public class AdminKiraciKullaniciController : Controller
     [HttpGet("Davet")]
     public async Task<IActionResult> Davet(int kiraciId)
     {
-        var kiraci = await _db.Kiraciler.IgnoreQueryFilters().FirstOrDefaultAsync(k => k.Id == kiraciId);
+        var kiraci = await _db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(k => k.Id == kiraciId);
         if (kiraci == null) return NotFound();
 
         var model = new KiraciDavetViewModel();
         await PopulateRollerAsync(model.Roller, kiraciId);
-        model.Birimler = await GetKiraciBirimleriAsync(kiraciId);
+        model.Units = await GetKiraciBirimleriAsync(kiraciId);
 
         ViewBag.KiraciId = kiraciId;
-        ViewBag.KiraciAd = kiraci.GosterimAdi;
+        ViewBag.KiraciAd = kiraci.DisplayName;
         return View(model);
     }
 
@@ -189,7 +189,7 @@ public class AdminKiraciKullaniciController : Controller
         if (!ModelState.IsValid)
         {
             await PopulateRollerAsync(model.Roller, kiraciId);
-            model.Birimler = await GetKiraciBirimleriAsync(kiraciId);
+            model.Units = await GetKiraciBirimleriAsync(kiraciId);
             ViewBag.KiraciId = kiraciId;
             return View(model);
         }
@@ -200,7 +200,7 @@ public class AdminKiraciKullaniciController : Controller
         {
             ModelState.AddModelError("RolId", "Geçersiz rol seçildi.");
             await PopulateRollerAsync(model.Roller, kiraciId);
-            model.Birimler = await GetKiraciBirimleriAsync(kiraciId);
+            model.Units = await GetKiraciBirimleriAsync(kiraciId);
             ViewBag.KiraciId = kiraciId;
             return View(model);
         }
@@ -217,7 +217,7 @@ public class AdminKiraciKullaniciController : Controller
         {
             ModelState.AddModelError(string.Empty, ex.Message);
             await PopulateRollerAsync(model.Roller, kiraciId);
-            model.Birimler = await GetKiraciBirimleriAsync(kiraciId);
+            model.Units = await GetKiraciBirimleriAsync(kiraciId);
             ViewBag.KiraciId = kiraciId;
             return View(model);
         }
@@ -225,15 +225,15 @@ public class AdminKiraciKullaniciController : Controller
 
     private async Task<List<BirimLookupDto>> GetKiraciBirimleriAsync(int kiraciId)
     {
-        return await _db.Sozlesmeler
+        return await _db.Leases
             .AsNoTracking()
-            .Where(s => s.KiraciId == kiraciId && s.Durum == LeaseStatus.Active)
+            .Where(s => s.TenantId == kiraciId && s.Status == LeaseStatus.Active)
             .Select(s => new BirimLookupDto
             {
-                Id = s.BirimId,
-                Ad = s.Birim.Ad,
-                TasinmazAd = s.Birim.Tasinmaz.Ad,
-                BirimNo = s.Birim.BirimNo,
+                Id = s.UnitId,
+                Ad = s.Unit.Name,
+                TasinmazAd = s.Unit.Property.Name,
+                BirimNo = s.Unit.UnitNo,
             })
             .Distinct()
             .OrderBy(b => b.TasinmazAd).ThenBy(b => b.Ad)

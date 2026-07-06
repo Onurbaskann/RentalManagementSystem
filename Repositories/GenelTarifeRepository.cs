@@ -11,16 +11,16 @@ public class GenelTarifeRepository : BaseRepository<GenelTarife>, IGenelTarifeRe
 {
     public GenelTarifeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<RateValueDto?> GetRateAsync(int kategoriId, int borcTipiId, int donemYil)
+    public async Task<RateValueDto?> GetRateAsync(int kategoriId, int chargeTypeId, int donemYil)
         => await _dbSet.AsNoTracking()
-            .Where(k => k.IsActive && k.KiraciKategoriId == kategoriId && k.BorcTipiId == borcTipiId)
+            .Where(k => k.IsActive && k.KiraciKategoriId == kategoriId && k.ChargeTypeId == chargeTypeId)
             .OrderByDescending(k => k.Yil == donemYil ? 1 : 0)
             .ThenByDescending(k => k.Yil)
             .Select(k => new RateValueDto
             {
                 CalculationMethod = k.CalculationMethod,
-                BirimDeger = k.BirimDeger,
-                KdvOrani = k.KdvOrani
+                UnitValue = k.UnitValue,
+                KdvRate = k.KdvRate
             })
             .FirstOrDefaultAsync();
 
@@ -28,21 +28,21 @@ public class GenelTarifeRepository : BaseRepository<GenelTarife>, IGenelTarifeRe
     {
         var q = _dbSet.AsNoTracking()
             .Where(k => k.Yil == yil && k.IsActive
-                     && k.BorcTipi.Davranis != ChargeTypeBehavior.UserManual
-                     && k.BorcTipi.Davranis != ChargeTypeBehavior.ReservationSpecific);
+                     && k.ChargeType.Behavior != ChargeTypeBehavior.UserManual
+                     && k.ChargeType.Behavior != ChargeTypeBehavior.ReservationSpecific);
         if (kategoriId.HasValue)
             q = q.Where(k => k.KiraciKategoriId == kategoriId.Value);
 
         return await q
             .OrderBy(k => k.KiraciKategori.Sira)
-            .ThenBy(k => k.BorcTipi.Sira)
+            .ThenBy(k => k.ChargeType.SortOrder)
             .Select(k => new ParentTarifeSatir
             {
                 KategoriAd = k.KiraciKategori.Ad,
-                BorcTipiAd = k.BorcTipi.Ad,
+                ChargeTypeName = k.ChargeType.Name,
                 CalculationMethod = k.CalculationMethod,
-                BirimDeger = k.BirimDeger,
-                KdvOrani = k.KdvOrani
+                UnitValue = k.UnitValue,
+                KdvRate = k.KdvRate
             })
             .ToListAsync();
     }

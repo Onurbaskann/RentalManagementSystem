@@ -4,8 +4,8 @@ public class AuditLogFilterViewModel
 {
     public string? EventType { get; set; }
     public string? EntityType { get; set; }
-    public DateTime? BaslangicTarihi { get; set; }
-    public DateTime? BitisTarihi { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
     public string? KullaniciEmail { get; set; }
     public int Sayfa { get; set; } = 1;
     public const int SayfaBoyutu = 10;

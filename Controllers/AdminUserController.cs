@@ -75,7 +75,7 @@ public class AdminUserController : Controller
         var kiraciItems = new List<KiraciKullaniciListItemViewModel>();
         foreach (var u in kiraciKullanicilar)
         {
-            var kiraci = await _db.Kiraciler.IgnoreQueryFilters()
+            var kiraci = await _db.Tenants.IgnoreQueryFilters()
                 .FirstOrDefaultAsync(k => k.Id == u.KiraciId);
             var rol = await _db.UserRoller
                 .Where(ur => ur.UserId == u.Id)
@@ -88,7 +88,7 @@ public class AdminUserController : Controller
                 AdSoyad = u.AdSoyad ?? u.Email ?? "—",
                 Email = u.Email ?? "—",
                 KiraciId = u.KiraciId!.Value,
-                KiraciAd = kiraci?.GosterimAdi ?? "—",
+                KiraciAd = kiraci?.DisplayName ?? "—",
                 RolAd = rol ?? "—",
                 IsActive = u.IsActive
             });
@@ -138,8 +138,8 @@ public class AdminUserController : Controller
         };
 
         await PopulateRollerAsync(model.Roller);
-        await PopulateTasinmazlarAsync(model.Tasinmazlar, yetkiliTasinmazIds);
-        await PopulateBirimlerAsync(model.Birimler, yetkililBirimIds);
+        await PopulateTasinmazlarAsync(model.Properties, yetkiliTasinmazIds);
+        await PopulateBirimlerAsync(model.Units, yetkililBirimIds);
         return View(model);
     }
 
@@ -159,8 +159,8 @@ public class AdminUserController : Controller
         if (!ModelState.IsValid)
         {
             await PopulateRollerAsync(model.Roller);
-            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
-            await PopulateBirimlerAsync(model.Birimler, model.SelectedBirimIds);
+            await PopulateTasinmazlarAsync(model.Properties, model.SelectedTasinmazIds);
+            await PopulateBirimlerAsync(model.Units, model.SelectedBirimIds);
             return View(model);
         }
 
@@ -169,8 +169,8 @@ public class AdminUserController : Controller
         {
             ModelState.AddModelError("RolId", "Geçersiz rol seçildi.");
             await PopulateRollerAsync(model.Roller);
-            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
-            await PopulateBirimlerAsync(model.Birimler, model.SelectedBirimIds);
+            await PopulateTasinmazlarAsync(model.Properties, model.SelectedTasinmazIds);
+            await PopulateBirimlerAsync(model.Units, model.SelectedBirimIds);
             return View(model);
         }
 
@@ -184,8 +184,8 @@ public class AdminUserController : Controller
         {
             ModelState.AddModelError("RolId", "Kendi rolünüzü değiştiremezsiniz.");
             await PopulateRollerAsync(model.Roller);
-            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
-            await PopulateBirimlerAsync(model.Birimler, model.SelectedBirimIds);
+            await PopulateTasinmazlarAsync(model.Properties, model.SelectedTasinmazIds);
+            await PopulateBirimlerAsync(model.Units, model.SelectedBirimIds);
             return View(model);
         }
 
@@ -240,8 +240,8 @@ public class AdminUserController : Controller
     {
         var model = new DavetGonderViewModel();
         await PopulateDavetRollerAsync(model);
-        await PopulateTasinmazlarAsync(model.Tasinmazlar, new List<int>());
-        await PopulateBirimlerAsync(model.Birimler, new List<int>());
+        await PopulateTasinmazlarAsync(model.Properties, new List<int>());
+        await PopulateBirimlerAsync(model.Units, new List<int>());
         return View(model);
     }
 
@@ -252,8 +252,8 @@ public class AdminUserController : Controller
         if (!ModelState.IsValid)
         {
             await PopulateDavetRollerAsync(model);
-            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
-            await PopulateBirimlerAsync(model.Birimler, model.SelectedBirimIds);
+            await PopulateTasinmazlarAsync(model.Properties, model.SelectedTasinmazIds);
+            await PopulateBirimlerAsync(model.Units, model.SelectedBirimIds);
             return View(model);
         }
 
@@ -262,8 +262,8 @@ public class AdminUserController : Controller
         {
             ModelState.AddModelError("Email", "Bu e-posta adresi sistemde kayıtlı bir kullanıcıya ait.");
             await PopulateDavetRollerAsync(model);
-            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
-            await PopulateBirimlerAsync(model.Birimler, model.SelectedBirimIds);
+            await PopulateTasinmazlarAsync(model.Properties, model.SelectedTasinmazIds);
+            await PopulateBirimlerAsync(model.Units, model.SelectedBirimIds);
             return View(model);
         }
 
@@ -284,8 +284,8 @@ public class AdminUserController : Controller
         {
             ModelState.AddModelError(string.Empty, ex.Message);
             await PopulateDavetRollerAsync(model);
-            await PopulateTasinmazlarAsync(model.Tasinmazlar, model.SelectedTasinmazIds);
-            await PopulateBirimlerAsync(model.Birimler, model.SelectedBirimIds);
+            await PopulateTasinmazlarAsync(model.Properties, model.SelectedTasinmazIds);
+            await PopulateBirimlerAsync(model.Units, model.SelectedBirimIds);
             return View(model);
         }
     }
@@ -400,16 +400,16 @@ public class AdminUserController : Controller
     private async Task PopulateBirimlerAsync(List<BirimYetkiCheckboxViewModel> liste, List<int> selectedIds)
     {
         liste.Clear();
-        var birimler = await _db.Birimler.AsNoTracking()
-            .OrderBy(b => b.Tasinmaz.Ad).ThenBy(b => b.Ad)
-            .Select(b => new { b.Id, b.Ad, TasinmazAd = b.Tasinmaz.Ad })
+        var birimler = await _db.Units.AsNoTracking()
+            .OrderBy(b => b.Property.Name).ThenBy(b => b.Name)
+            .Select(b => new { b.Id, b.Name, TasinmazAd = b.Property.Name })
             .ToListAsync();
         foreach (var b in birimler)
         {
             liste.Add(new BirimYetkiCheckboxViewModel
             {
                 BirimId = b.Id,
-                Ad = b.Ad,
+                Ad = b.Name,
                 TasinmazAd = b.TasinmazAd,
                 Selected = selectedIds?.Contains(b.Id) ?? false
             });

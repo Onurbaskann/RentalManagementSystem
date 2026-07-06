@@ -11,14 +11,14 @@ namespace KiraTakip.Controllers;
 [Authorize]
 public class RezervasyonController : Controller
 {
-    private readonly IRezervasyonService _service;
+    private readonly IReservationService _service;
     private readonly IBirimRepository _birimRepo;
     private readonly IKiraciRepository _kiraciRepo;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IYetkiKapsamiProvider _provider;
 
     public RezervasyonController(
-        IRezervasyonService service,
+        IReservationService service,
         IBirimRepository birimRepo,
         IKiraciRepository kiraciRepo,
         UserManager<ApplicationUser> userManager,
@@ -38,7 +38,7 @@ public class RezervasyonController : Controller
         return View(liste);
     }
 
-    [HttpGet("Rezervasyon/Detay/{id:int}")]
+    [HttpGet("Reservation/Detay/{id:int}")]
     [Authorize(Policy = PermissionCatalog.Reservation.Module)]
     public async Task<IActionResult> Detay(int id)
     {
@@ -59,8 +59,8 @@ public class RezervasyonController : Controller
         var vm = new RezervasyonCreateViewModel
         {
             BirimId = birimId,
-            BaslangicTarihi = DateTime.Today.AddHours(9),
-            BitisTarihi = DateTime.Today.AddHours(11)
+            StartDate = DateTime.Today.AddHours(9),
+            EndDate = DateTime.Today.AddHours(11)
         };
         await PopulateDropdownsAsync(vm);
         return View(vm);
@@ -75,12 +75,12 @@ public class RezervasyonController : Controller
             ModelState.AddModelError("BirimId", "Taşınmaz birimi seçilmelidir.");
         if (!vm.KiraciId.HasValue || vm.KiraciId.Value <= 0)
             ModelState.AddModelError("KiraciId", "Kiracı seçilmelidir.");
-        if (vm.BaslangicTarihi == default)
-            ModelState.AddModelError("BaslangicTarihi", "Başlangıç tarihi zorunludur.");
-        if (vm.BitisTarihi == default)
-            ModelState.AddModelError("BitisTarihi", "Bitiş tarihi zorunludur.");
-        if (vm.BitisTarihi <= vm.BaslangicTarihi)
-            ModelState.AddModelError("BitisTarihi", "Bitiş tarihi başlangıçtan sonra olmalıdır.");
+        if (vm.StartDate == default)
+            ModelState.AddModelError("StartDate", "Başlangıç tarihi zorunludur.");
+        if (vm.EndDate == default)
+            ModelState.AddModelError("EndDate", "Bitiş tarihi zorunludur.");
+        if (vm.EndDate <= vm.StartDate)
+            ModelState.AddModelError("EndDate", "Bitiş tarihi başlangıçtan sonra olmalıdır.");
 
         if (!ModelState.IsValid)
         {
@@ -98,7 +98,7 @@ public class RezervasyonController : Controller
             return View(vm);
         }
 
-        TempData["Success"] = "Rezervasyon başarıyla oluşturuldu.";
+        TempData["Success"] = "Reservation başarıyla oluşturuldu.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -119,7 +119,7 @@ public class RezervasyonController : Controller
         if (!basarili)
             TempData["Error"] = hata;
         else
-            TempData["Success"] = "Rezervasyon iptal edildi.";
+            TempData["Success"] = "Reservation iptal edildi.";
 
         return RedirectToAction(nameof(Index));
     }
@@ -135,7 +135,7 @@ public class RezervasyonController : Controller
         if (!basarili)
             TempData["Error"] = hata;
         else
-            TempData["Success"] = "Rezervasyon tahakkuka aktarıldı.";
+            TempData["Success"] = "Reservation tahakkuka aktarıldı.";
 
         return RedirectToAction(nameof(Index));
     }
@@ -154,6 +154,6 @@ public class RezervasyonController : Controller
     private async Task PopulateDropdownsAsync(RezervasyonCreateViewModel vm)
     {
         vm.RezervasyonBirimleri = await _birimRepo.GetRezervasyonBirimleriAsync();
-        vm.Kiraciler = await _kiraciRepo.GetListAsync(null);
+        vm.Tenants = await _kiraciRepo.GetListAsync(null);
     }
 }
