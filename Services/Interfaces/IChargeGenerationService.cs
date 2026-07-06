@@ -1,10 +1,10 @@
-namespace KiraTakip.Services.Interfaces;
+﻿namespace KiraTakip.Services.Interfaces;
 
 public interface IChargeGenerationService
 {
-    Task UretSozlesmeIcinAsync(int sozlesmeId);
-    Task YenidenUretAsync(int sozlesmeId, DateTime baslangicTarihi);
-    Task IptalEtFutureTahakkuklarAsync(int sozlesmeId, DateTime fesihTarihi);
-    Task BekleyenVadeleriYenidenHesaplaAsync(int sozlesmeId);
-    Task<IList<Models.DTOs.TahakkukKalemiPreview>> ComposeKalemlerAsync(int birimId, int kiraciId, DateTime donem, int? sozlesmeId = null);
+    Task UretSozlesmeIcinAsync(int leaseId);
+    Task YenidenUretAsync(int leaseId, DateTime baslangicTarihi);
+    Task IptalEtFutureTahakkuklarAsync(int leaseId, DateTime fesihTarihi);
+    Task BekleyenVadeleriYenidenHesaplaAsync(int leaseId);
+    Task<IList<Models.DTOs.TahakkukKalemiPreview>> ComposeKalemlerAsync(int unitId, int tenantId, DateTime donem, int? leaseId = null);
 }

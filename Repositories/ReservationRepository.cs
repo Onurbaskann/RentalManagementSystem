@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
@@ -10,12 +10,12 @@ public class ReservationRepository : BaseRepository<Reservation>, IReservationRe
 {
     public ReservationRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<List<RezervasyonListItemDto>> GetListAsync(List<int>? yetkiliTasinmazIds)
+    public async Task<List<RezervasyonListItemDto>> GetListAsync(List<int>? yetkiliPropertyIds)
     {
         var query = _dbSet.AsNoTracking().AsQueryable();
 
-        if (yetkiliTasinmazIds != null)
-            query = query.Where(r => yetkiliTasinmazIds.Contains(r.Unit.PropertyId));
+        if (yetkiliPropertyIds != null)
+            query = query.Where(r => yetkiliPropertyIds.Contains(r.Unit.PropertyId));
 
         return await query
             .OrderByDescending(r => r.CreatedAt)
@@ -67,26 +67,26 @@ public class ReservationRepository : BaseRepository<Reservation>, IReservationRe
             .FirstOrDefaultAsync();
     }
 
-    public async Task<bool> IsConflictAsync(int birimId, DateTime baslangic, DateTime bitis)
+    public async Task<bool> IsConflictAsync(int unitId, DateTime baslangic, DateTime bitis)
     {
         return await _dbSet.AnyAsync(r =>
-            r.UnitId == birimId &&
+            r.UnitId == unitId &&
             r.Status != ReservationStatus.Cancelled &&
             r.StartDate < bitis &&
             r.EndDate > baslangic);
     }
 
-    public async Task<RezervasyonTarife?> GetAktifTarifeForBirimAsync(int birimId)
+    public async Task<RezervasyonTarife?> GetAktifTarifeForBirimAsync(int unitId)
     {
         return await _ctx.RezervasyonTarifeler
-            .Where(k => k.IsActive && k.UnitId == birimId)
+            .Where(k => k.IsActive && k.UnitId == unitId)
             .FirstOrDefaultAsync();
     }
 
-    public async Task<RezervasyonTarife?> GetGenelTarifeAsync(int birimTuruId, int yil)
+    public async Task<RezervasyonTarife?> GetGenelTarifeAsync(int unitTypeId, int yil)
     {
         return await _ctx.RezervasyonTarifeler
-            .Where(g => g.UnitId == null && g.UnitTypeId == birimTuruId && g.IsActive && g.Yil == yil)
+            .Where(g => g.UnitId == null && g.UnitTypeId == unitTypeId && g.IsActive && g.Yil == yil)
             .FirstOrDefaultAsync();
     }
 

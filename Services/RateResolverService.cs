@@ -1,4 +1,4 @@
-using KiraTakip.Models;
+﻿using KiraTakip.Models;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
 
@@ -10,18 +10,18 @@ public class RateResolverService : IRateResolverService
     private readonly IBirimTarifeRepository _birimTarifeRepo;
     private readonly ITasinmazTarifeRepository _tasinmazTarifeRepo;
     private readonly IGenelTarifeRepository _genelTarifeRepo;
-    private readonly ISozlesmeRepository _sozlesmeRepo;
-    private readonly IBirimRepository _birimRepo;
-    private readonly IKiraciRepository _kiraciRepo;
+    private readonly ILeaseRepository _sozlesmeRepo;
+    private readonly IUnitRepository _birimRepo;
+    private readonly ITenantRepository _kiraciRepo;
 
     public RateResolverService(
         ISozlesmeTarifeRepository sozlesmeTarifeRepo,
         IBirimTarifeRepository birimTarifeRepo,
         ITasinmazTarifeRepository tasinmazTarifeRepo,
         IGenelTarifeRepository genelTarifeRepo,
-        ISozlesmeRepository sozlesmeRepo,
-        IBirimRepository birimRepo,
-        IKiraciRepository kiraciRepo)
+        ILeaseRepository sozlesmeRepo,
+        IUnitRepository birimRepo,
+        ITenantRepository kiraciRepo)
     {
         _sozlesmeTarifeRepo = sozlesmeTarifeRepo;
         _birimTarifeRepo = birimTarifeRepo;
@@ -32,43 +32,43 @@ public class RateResolverService : IRateResolverService
         _kiraciRepo = kiraciRepo;
     }
 
-    public async Task<RateSnapshot?> ResolveAsync(int? sozlesmeId, int? kiraciId, int birimId, int chargeTypeId, DateTime donem)
+    public async Task<RateSnapshot?> ResolveAsync(int? leaseId, int? tenantId, int unitId, int chargeTypeId, DateTime donem)
     {
-        if (sozlesmeId.HasValue)
+        if (leaseId.HasValue)
         {
-            var sozRate = await _sozlesmeTarifeRepo.GetRateAsync(sozlesmeId.Value, chargeTypeId);
+            var sozRate = await _sozlesmeTarifeRepo.GetRateAsync(leaseId.Value, chargeTypeId);
             if (sozRate != null)
                 return Wrap(sozRate, LineItemSourceType.LeaseRateOverride);
         }
 
-        int? tasinmazId = null;
+        int? propertyId = null;
         int? kategoriId = null;
 
-        if (sozlesmeId.HasValue)
+        if (leaseId.HasValue)
         {
-            var info = await _sozlesmeRepo.GetTasinmazVeKategoriAsync(sozlesmeId.Value);
+            var info = await _sozlesmeRepo.GetPropertyAndCategoryAsync(leaseId.Value);
             if (info != null)
             {
-                tasinmazId = info.Value.TasinmazId;
+                propertyId = info.Value.TasinmazId;
                 kategoriId = info.Value.KategoriId;
             }
         }
-        else if (kiraciId.HasValue)
+        else if (tenantId.HasValue)
         {
-            tasinmazId = await _birimRepo.GetTasinmazIdAsync(birimId);
-            kategoriId = await _kiraciRepo.GetKategoriIdAsync(kiraciId.Value);
+            propertyId = await _birimRepo.GetPropertyIdAsync(unitId);
+            kategoriId = await _kiraciRepo.GetKategoriIdAsync(tenantId.Value);
         }
 
         if (kategoriId.HasValue)
         {
-            var birimRate = await _birimTarifeRepo.GetRateAsync(birimId, kategoriId.Value, chargeTypeId);
+            var birimRate = await _birimTarifeRepo.GetRateAsync(unitId, kategoriId.Value, chargeTypeId);
             if (birimRate != null)
                 return Wrap(birimRate, LineItemSourceType.UnitRateOverride);
         }
 
-        if (tasinmazId.HasValue && kategoriId.HasValue)
+        if (propertyId.HasValue && kategoriId.HasValue)
         {
-            var fiyatMatrisi = await _tasinmazTarifeRepo.GetRateAsync(tasinmazId.Value, kategoriId.Value, chargeTypeId);
+            var fiyatMatrisi = await _tasinmazTarifeRepo.GetRateAsync(propertyId.Value, kategoriId.Value, chargeTypeId);
             if (fiyatMatrisi != null)
                 return Wrap(fiyatMatrisi, LineItemSourceType.PropertyRateOverride);
         }

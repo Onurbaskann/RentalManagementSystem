@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Helpers;
 using KiraTakip.Models.Entities;
@@ -13,10 +13,10 @@ namespace KiraTakip.Controllers;
 [Route("Admin/DocumentType")]
 public class AdminBelgeTuruController : Controller
 {
-    private readonly IBelgeTuruRepository _repo;
+    private readonly IDocumentTypeRepository _repo;
     private readonly IUnitOfWork _uow;
 
-    public AdminBelgeTuruController(IBelgeTuruRepository repo, IUnitOfWork uow)
+    public AdminBelgeTuruController(IDocumentTypeRepository repo, IUnitOfWork uow)
     {
         _repo = repo;
         _uow = uow;

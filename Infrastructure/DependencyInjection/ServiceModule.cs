@@ -1,4 +1,4 @@
-using KiraTakip.Services;
+﻿using KiraTakip.Services;
 using KiraTakip.Services.Banka;
 using KiraTakip.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,16 +14,16 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<ICurrentUserContext, CurrentUserContext>();
             services.AddScoped<IdentitySeedService>();
             services.AddScoped<IPermissionService, PermissionService>();
-            services.AddScoped<IUserRolService, UserRolService>();
+            services.AddScoped<IUserRoleService, UserRoleService>();
             services.AddScoped<IUserSecurityService, UserSecurityService>();
-            services.AddScoped<IRolService, RolService>();
-            services.AddScoped<IKiraciKullaniciService, KiraciKullaniciService>();
+            services.AddScoped<IRoleService, RoleService>();
+            services.AddScoped<ITenantUserService, TenantUserService>();
             services.AddScoped<IAuditService, AuditService>();
-            services.AddScoped<ITasinmazService, TasinmazService>();
-            services.AddScoped<IBirimService, BirimService>();
-            services.AddScoped<IKiraciService, KiraciService>();
-            services.AddScoped<ISozlesmeService, SozlesmeService>();
-            services.AddScoped<IIstatistikService, IstatistikService>();
+            services.AddScoped<IPropertyService, PropertyService>();
+            services.AddScoped<IUnitService, UnitService>();
+            services.AddScoped<ITenantService, TenantService>();
+            services.AddScoped<ILeaseService, LeaseService>();
+            services.AddScoped<IStatisticsService, StatisticsService>();
             services.AddScoped<SeedDataService>();
 
             // Domain & Calculation Services
@@ -33,20 +33,20 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddSingleton<IBankaHareketiParser, AkbankCsvParser>();
             services.AddScoped<IRateResolverService, RateResolverService>();
             services.AddScoped<IChargeGenerationService, ChargeGenerationService>();
-            services.AddScoped<IManuelBorcService, ManuelBorcService>();
+            services.AddScoped<IManualChargeService, ManualChargeService>();
             services.AddScoped<IReservationService, ReservationService>();
-            services.AddScoped<ITasinmazFiyatService, TasinmazFiyatService>();
-            services.AddScoped<ITarifeHiyerarsiService, TarifeHiyerarsiService>();
+            services.AddScoped<IPropertyPricingService, PropertyPricingService>();
+            services.AddScoped<IRateHierarchyService, RateHierarchyService>();
 
             // Notification, Payment & Integration Services
             services.AddScoped<IMailService, SmtpMailService>();
             services.AddScoped<IPaymentLinkService, PaymentLinkService>();
-            services.AddScoped<IBorcHatirlatmaService, BorcHatirlatmaService>();
+            services.AddScoped<IChargeReminderService, ChargeReminderService>();
             services.AddSingleton<ISecureTokenService, SecureTokenService>();
-            services.AddScoped<IDavetiyeService, DavetiyeService>();
-            services.AddScoped<ISifreSifirlamaService, SifreSifirlamaService>();
+            services.AddScoped<IInvitationService, InvitationService>();
+            services.AddScoped<IPasswordResetService, PasswordResetService>();
             services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
-            services.AddScoped<IBelgeService, BelgeService>();
+            services.AddScoped<IDocumentService, DocumentService>();
 
             return services;
         }

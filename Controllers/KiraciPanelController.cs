@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
@@ -30,11 +30,11 @@ public class KiraciPanelController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var kiraciId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.KiraciId!.Value;
         var today = DateTime.Today;
         var trCulture = CultureInfo.GetCultureInfo("tr-TR");
 
-        var kiraci = await _db.Tenants.FirstOrDefaultAsync(k => k.Id == kiraciId);
+        var kiraci = await _db.Tenants.FirstOrDefaultAsync(k => k.Id == tenantId);
         if (kiraci == null) return NotFound();
 
         var user = await _userManager.GetUserAsync(User);
@@ -53,7 +53,7 @@ public class KiraciPanelController : Controller
 
         // KPI hesaplamaları
         var aktifSozlesmeAdedi = await _db.Leases
-            .CountAsync(s => s.TenantId == kiraciId && s.Status == LeaseStatus.Active);
+            .CountAsync(s => s.TenantId == tenantId && s.Status == LeaseStatus.Active);
 
         var toplamAcikBorc = await acikTahakkuklarBase
             .SumAsync(t => (decimal?)(t.TotalAmount - t.PaidAmount)) ?? 0m;

@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Entities;
@@ -19,20 +19,20 @@ public class KiraciRolController : Controller
     private readonly ApplicationDbContext _db;
     private readonly ICurrentUserContext _currentUser;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IRolService _rolService;
-    private readonly IKiraciKullaniciService _kullaniciService;
+    private readonly IRoleService _rolService;
+    private readonly ITenantUserService _kullaniciService;
 
     public KiraciRolController(
         ApplicationDbContext db,
         ICurrentUserContext currentUser,
         UserManager<ApplicationUser> userManager,
-        IRolService rolService,
-        IKiraciKullaniciService kullaniciService)
+        IRoleService roleService,
+        ITenantUserService kullaniciService)
     {
         _db = db;
         _currentUser = currentUser;
         _userManager = userManager;
-        _rolService = rolService;
+        _rolService = roleService;
         _kullaniciService = kullaniciService;
     }
 
@@ -40,15 +40,15 @@ public class KiraciRolController : Controller
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Module)]
     public async Task<IActionResult> Index()
     {
-        var kiraciId = _currentUser.KiraciId!.Value;
-        var roller = await _rolService.GetKiraciRollerAsync(kiraciId);
+        var tenantId = _currentUser.KiraciId!.Value;
+        var roller = await _rolService.GetKiraciRollerAsync(tenantId);
 
         var model = new List<RolListeViewModel>();
         foreach (var r in roller)
         {
             var kullaniciSayisi = await _db.UserRoller
                 .CountAsync(ur => ur.RolId == r.Id &&
-                                  _db.Users.Any(u => u.Id == ur.UserId && u.KiraciId == kiraciId));
+                                  _db.Users.Any(u => u.Id == ur.UserId && u.KiraciId == tenantId));
             var perms = await _rolService.GetRolPermissionsAsync(r.Id);
             model.Add(new RolListeViewModel
             {
@@ -85,13 +85,13 @@ public class KiraciRolController : Controller
             return View(model);
         }
 
-        var kiraciId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.KiraciId!.Value;
         var currentUserId = _userManager.GetUserId(User)!;
 
         try
         {
             var rol = await _db.Roller
-                .Where(r => r.KiraciId == kiraciId && r.Ad == model.Ad && !r.IsDeleted)
+                .Where(r => r.KiraciId == tenantId && r.Ad == model.Ad && !r.IsDeleted)
                 .FirstOrDefaultAsync();
 
             if (rol != null)
@@ -106,7 +106,7 @@ public class KiraciRolController : Controller
                 Ad = model.Ad,
                 Aciklama = model.Aciklama,
                 Scope = Models.RoleScope.Tenant,
-                KiraciId = kiraciId,
+                KiraciId = tenantId,
                 IsSystemRole = false,
                 IsActive = true
             };
@@ -133,9 +133,9 @@ public class KiraciRolController : Controller
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Edit)]
     public async Task<IActionResult> Edit(int id)
     {
-        var kiraciId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.KiraciId!.Value;
         var rol = await _db.Roller
-            .FirstOrDefaultAsync(r => r.Id == id && r.KiraciId == kiraciId && !r.IsDeleted);
+            .FirstOrDefaultAsync(r => r.Id == id && r.KiraciId == tenantId && !r.IsDeleted);
         if (rol == null) return NotFound();
 
         var selected = await _rolService.GetRolPermissionsAsync(id);
@@ -156,9 +156,9 @@ public class KiraciRolController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, RolDuzenleViewModel model)
     {
-        var kiraciId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.KiraciId!.Value;
         var rol = await _db.Roller
-            .FirstOrDefaultAsync(r => r.Id == id && r.KiraciId == kiraciId && !r.IsDeleted);
+            .FirstOrDefaultAsync(r => r.Id == id && r.KiraciId == tenantId && !r.IsDeleted);
         if (rol == null) return NotFound();
 
         if (!ModelState.IsValid)
@@ -172,7 +172,7 @@ public class KiraciRolController : Controller
         {
             try
             {
-                await _kullaniciService.EnsureSonYetkiliAsync(kiraciId, excludeRolId: id);
+                await _kullaniciService.EnsureSonYetkiliAsync(tenantId, excludeRolId: id);
             }
             catch (InvalidOperationException ex)
             {
@@ -205,9 +205,9 @@ public class KiraciRolController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
-        var kiraciId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.KiraciId!.Value;
         var rol = await _db.Roller
-            .FirstOrDefaultAsync(r => r.Id == id && r.KiraciId == kiraciId && !r.IsDeleted);
+            .FirstOrDefaultAsync(r => r.Id == id && r.KiraciId == tenantId && !r.IsDeleted);
         if (rol == null) return NotFound();
 
         if (rol.IsSystemRole)
@@ -218,7 +218,7 @@ public class KiraciRolController : Controller
 
         try
         {
-            await _kullaniciService.EnsureSonYetkiliAsync(kiraciId, excludeRolId: id);
+            await _kullaniciService.EnsureSonYetkiliAsync(tenantId, excludeRolId: id);
         }
         catch (InvalidOperationException ex)
         {

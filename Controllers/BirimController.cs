@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
@@ -15,16 +15,16 @@ public class BirimController : Controller
 {
     private readonly ApplicationDbContext _ctx;
     private readonly IReservationService _reservationService;
-    private readonly ITarifeHiyerarsiService _tarifeHiyerarsisi;
-    private readonly IBirimService _birimService;
-    private readonly IYetkiKapsamiProvider _provider;
+    private readonly IRateHierarchyService _tarifeHiyerarsisi;
+    private readonly IUnitService _birimService;
+    private readonly IPermissionScopeProvider _provider;
 
-    public BirimController(ApplicationDbContext ctx, IReservationService rezervasyonService, ITarifeHiyerarsiService tarifeHiyerarsisi, IBirimService birimService, IYetkiKapsamiProvider provider)
+    public BirimController(ApplicationDbContext ctx, IReservationService rezervasyonService, IRateHierarchyService tarifeHiyerarsisi, IUnitService unitService, IPermissionScopeProvider provider)
     {
         _ctx = ctx;
         _reservationService = rezervasyonService;
         _tarifeHiyerarsisi = tarifeHiyerarsisi;
-        _birimService = birimService;
+        _birimService = unitService;
         _provider = provider;
     }
 

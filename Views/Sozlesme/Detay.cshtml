@@ -1,4 +1,4 @@
-@model KiraTakip.Models.ViewModels.SozlesmeDetayViewModel
+﻿@model KiraTakip.Models.ViewModels.SozlesmeDetayViewModel
 @using KiraTakip.Models
 @using KiraTakip.Services.Interfaces
 @using KiraTakip.Authorization
@@ -93,7 +93,7 @@
     birimYuzolcumu: @s.BirimYuzolcumu.ToString(System.Globalization.CultureInfo.InvariantCulture),
     sozlesmeBirimId: @s.BirimId,
     sozlesmeKiraciId: @s.KiraciId,
-    sozlesmeId: @s.Id,
+    leaseId: @s.Id,
     tarifeYenidenUret: false,
     yenidenUretKalemler: [],
     yenidenUretKalemlerYuklendi: false,
@@ -162,7 +162,7 @@
         const kalemler = hedef === 'yenidenUret' ? 'yenidenUretKalemler' : 'uzatKalemler';
         if (this[yuklendi]) return;
         const dateParam = hedef === 'yenidenUret' ? this.yenidenUretBaslangicTarihi : '@DateTime.Today.ToString("yyyy-MM-dd")';
-        const res = await fetch(`/Lease/GetVarsayilanKalemler?birimId=${this.sozlesmeBirimId}&kiraciId=${this.sozlesmeKiraciId}&baslangic=${dateParam}&sozlesmeId=${this.sozlesmeId}`);
+        const res = await fetch(`/Lease/GetVarsayilanKalemler?unitId=${this.sozlesmeBirimId}&tenantId=${this.sozlesmeKiraciId}&baslangic=${dateParam}&leaseId=${this.leaseId}`);
         const data = await res.json();
         this[kalemler] = data.map(k => ({ ...k, originalBirimDeger: k.birimDeger, varsayilanCalculationMethod: k.hesaplamaYontemi, _error: null }));
         this[yuklendi] = true;
@@ -455,7 +455,7 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-500 flex-shrink-0"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                 <span>Bu sözleşmeyle ilgili <strong>@mbSayisi manuel borç</strong> (@mbKalan!.Value.ToString("N2") ₺ kalan)</span>
             </div>
-            <a href="/ManuelBorc?sozlesmeId=@Model.Lease.Id.ToHashId()&durum=bekliyor" class="btn btn-sm btn-secondary flex-shrink-0">Görüntüle →</a>
+            <a href="/ManuelBorc?leaseId=@Model.Lease.Id.ToHashId()&durum=bekliyor" class="btn btn-sm btn-secondary flex-shrink-0">Görüntüle →</a>
         </div>
     }
 </div>

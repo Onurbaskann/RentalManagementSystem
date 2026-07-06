@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Extensions;
 using KiraTakip.Models.Entities;
 using KiraTakip.Services.Interfaces;
@@ -11,13 +11,13 @@ namespace KiraTakip.Controllers;
 [Route("Belge")]
 public class BelgeController : Controller
 {
-    private readonly IBelgeService _belgeService;
+    private readonly IDocumentService _belgeService;
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
         { "pdf", "jpg", "jpeg", "png", "doc", "docx", "xls", "xlsx" };
 
-    public BelgeController(IBelgeService belgeService)
+    public BelgeController(IDocumentService documentService)
     {
-        _belgeService = belgeService;
+        _belgeService = documentService;
     }
 
     [HttpGet("Indir/{id:int}")]

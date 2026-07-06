@@ -1,4 +1,4 @@
-@model KiraTakip.Models.Common.PagedResult<TahakkukListItemDto>
+﻿@model KiraTakip.Models.Common.PagedResult<TahakkukListItemDto>
 @using KiraTakip.Models
 @using KiraTakip.Models.Common
 @{
@@ -56,24 +56,24 @@
 <script>
     window._tahakkukBirimler = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
         ((List<Unit>)ViewBag.Units)
-            .Select(b => new { id = b.Id, ad = b.Name, tasinmazId = b.PropertyId })
+            .Select(b => new { id = b.Id, ad = b.Name, propertyId = b.PropertyId })
     ));
 </script>
 <div class="card p-0 overflow-hidden">
     <form method="get" class="flex flex-col gap-2.5 p-3 bg-slate-50/50 border-b border-slate-200" action="/Charge"
           x-data="{
-              tasinmazId: '@(q.TasinmazId?.ToString() ?? "")',
-              birimId: '@(q.BirimId?.ToString() ?? "")',
+              propertyId: '@(q.TasinmazId?.ToString() ?? "")',
+              unitId: '@(q.BirimId?.ToString() ?? "")',
               get filtrelenmisBirimler() {
-                  if (!this.tasinmazId) return [];
-                  var tid = parseInt(this.tasinmazId);
-                  return window._tahakkukBirimler.filter(function(b) { return b.tasinmazId === tid; });
+                  if (!this.propertyId) return [];
+                  var tid = parseInt(this.propertyId);
+                  return window._tahakkukBirimler.filter(function(b) { return b.propertyId === tid; });
               }
           }">
         <input type="search" name="q" value="@q.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: kiracı, taşınmaz…" />
 
         <div class="flex flex-wrap items-center gap-2.5">
-        <select name="tasinmazId" x-model="tasinmazId" @@change="birimId = ''"
+        <select name="propertyId" x-model="propertyId" @@change="unitId = ''"
                 class="form-control w-44 text-xs font-medium">
             <option value="">— Tüm Taşınmazlar —</option>
             @foreach (var t in (List<Property>)ViewBag.Properties)
@@ -82,15 +82,15 @@
             }
         </select>
 
-        <select name="birimId" x-model="birimId" x-show="filtrelenmisBirimler.length > 0"
+        <select name="unitId" x-model="unitId" x-show="filtrelenmisBirimler.length > 0"
                 class="form-control w-44 text-xs font-medium" x-cloak>
             <option value="">— Tüm Units —</option>
             <template x-for="b in filtrelenmisBirimler" :key="b.id">
-                <option :value="b.id" x-text="b.ad" :selected="b.id.toString() === birimId"></option>
+                <option :value="b.id" x-text="b.ad" :selected="b.id.toString() === unitId"></option>
             </template>
         </select>
 
-        <select name="kiraciId" class="form-control w-44 text-xs font-medium">
+        <select name="tenantId" class="form-control w-44 text-xs font-medium">
             <option value="">— Tüm Kiracılar —</option>
             @foreach (var k in (List<Tenant>)ViewBag.Kiracilar)
             {

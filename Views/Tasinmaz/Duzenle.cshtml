@@ -1,4 +1,4 @@
-@model KiraTakip.Models.ViewModels.TasinmazDuzenleViewModel
+﻿@model KiraTakip.Models.ViewModels.TasinmazDuzenleViewModel
 @using KiraTakip.Models
 @using KiraTakip.Models.Entities
 @{
@@ -131,14 +131,14 @@
                             </div>
                             <div>
                                 <div class="form-label mb-1">Unit Türü *</div>
-                                <select class="form-control" :name="'Units['+i+'].UnitTypeId'" x-model="birim.birimTuruId">
+                                <select class="form-control" :name="'Units['+i+'].UnitTypeId'" x-model="birim.unitTypeId">
                                     <option value="">— Seçiniz —</option>
                                     @foreach (var bt in (IEnumerable<UnitType>)ViewBag.BirimTurleri)
                                     {
                                         <option value="@bt.Id">@bt.Ad</option>
                                     }
                                 </select>
-                                <span x-show="birimErrors[i]?.birimTuruId" x-text="birimErrors[i]?.birimTuruId" class="form-error"></span>
+                                <span x-show="birimErrors[i]?.unitTypeId" x-text="birimErrors[i]?.unitTypeId" class="form-error"></span>
                             </div>
                         </div>
 
@@ -388,14 +388,14 @@
                         </div>
                         <div>
                             <div class="form-label mb-1">Alan Türü *</div>
-                            <select class="form-control" :name="'RezervasyonAlanlari['+i+'].UnitTypeId'" x-model="alan.birimTuruId">
+                            <select class="form-control" :name="'RezervasyonAlanlari['+i+'].UnitTypeId'" x-model="alan.unitTypeId">
                                 <option value="">— Seçiniz —</option>
                                 @foreach (var bt in (IEnumerable<UnitType>)ViewBag.RezervasyonBirimTurleri)
                                 {
                                     <option value="@bt.Id">@bt.Ad</option>
                                 }
                             </select>
-                            <span x-show="rezErrors[i]?.birimTuruId" x-text="rezErrors[i]?.birimTuruId" class="form-error"></span>
+                            <span x-show="rezErrors[i]?.unitTypeId" x-text="rezErrors[i]?.unitTypeId" class="form-error"></span>
                         </div>
                     </div>
                     <div class="grid grid-cols-[120px_120px_80px_1fr] gap-3">
@@ -481,7 +481,7 @@
                 ad = b.Ad ?? "",
                 yuzolcumu = b.Yuzolcumu.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 aciklama = b.Aciklama ?? "",
-                birimTuruId = b.UnitTypeId?.ToString() ?? "",
+                unitTypeId = b.UnitTypeId?.ToString() ?? "",
                 aktifSozlesmesiVar = b.AktifSozlesmesiVar
             })
         );
@@ -492,7 +492,7 @@
                 birimNo = r.BirimNo ?? "",
                 ad = r.Ad ?? "",
                 yuzolcumu = r.Yuzolcumu.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                birimTuruId = r.UnitTypeId?.ToString() ?? "",
+                unitTypeId = r.UnitTypeId?.ToString() ?? "",
                 aciklama = r.Aciklama ?? "",
                 ucretsizSureDakika = r.FreeDurationMinutes,
                 saatlikUcret = r.SaatlikUcret.ToString(System.Globalization.CultureInfo.InvariantCulture),
@@ -505,7 +505,7 @@
             {
                 birimNo = ViewData.ModelState[$"Units[{i}].BirimNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 katNo = ViewData.ModelState[$"Units[{i}].KatNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
-                birimTuruId = ViewData.ModelState[$"Units[{i}].UnitTypeId"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                unitTypeId = ViewData.ModelState[$"Units[{i}].UnitTypeId"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 ad = ViewData.ModelState[$"Units[{i}].Ad"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 yuzolcumu = ViewData.ModelState[$"Units[{i}].Yuzolcumu"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
             }).ToList()
@@ -516,7 +516,7 @@
                 birimNo = ViewData.ModelState[$"RezervasyonAlanlari[{i}].BirimNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 ad = ViewData.ModelState[$"RezervasyonAlanlari[{i}].Ad"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 yuzolcumu = ViewData.ModelState[$"RezervasyonAlanlari[{i}].Yuzolcumu"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
-                birimTuruId = ViewData.ModelState[$"RezervasyonAlanlari[{i}].UnitTypeId"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                unitTypeId = ViewData.ModelState[$"RezervasyonAlanlari[{i}].UnitTypeId"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
             }).ToList()
         );
     }
@@ -528,7 +528,7 @@
                 birimErrors: @Html.Raw(birimErrorsJson),
                 rezErrors: @Html.Raw(rezErrorsJson),
                 addBirim() {
-                    this.birimler.push({ id: null, birimNo: '', katNo: '', ad: '', yuzolcumu: '', aciklama: '', birimTuruId: '', aktifSozlesmesiVar: false });
+                    this.birimler.push({ id: null, birimNo: '', katNo: '', ad: '', yuzolcumu: '', aciklama: '', unitTypeId: '', aktifSozlesmesiVar: false });
                     this.birimErrors.push({});
                 },
                 removeBirim(i) {
@@ -537,7 +537,7 @@
                 },
                 autoAd(b) { if (!b.ad && b.birimNo) b.ad = 'Unit ' + b.birimNo; },
                 addRezAlani() {
-                    this.rezAlanlari.push({ id: null, birimNo: '', ad: '', yuzolcumu: '', birimTuruId: '', aciklama: '', ucretsizSureDakika: 0, saatlikUcret: 0, kdvOrani: 20, aktifRezervasyonuVar: false });
+                    this.rezAlanlari.push({ id: null, birimNo: '', ad: '', yuzolcumu: '', unitTypeId: '', aciklama: '', ucretsizSureDakika: 0, saatlikUcret: 0, kdvOrani: 20, aktifRezervasyonuVar: false });
                     this.rezErrors.push({});
                 },
                 removeRezAlani(i) {
@@ -553,7 +553,7 @@
                         var e = {};
                         if (!b.birimNo?.trim()) e.birimNo = 'Unit No zorunludur.';
                         if (b.katNo === '' || b.katNo === null || b.katNo === undefined) e.katNo = 'Kat No zorunludur.';
-                        if (!b.birimTuruId) e.birimTuruId = 'Unit Türü zorunludur.';
+                        if (!b.unitTypeId) e.unitTypeId = 'Unit Türü zorunludur.';
                         if (!b.ad?.trim()) e.ad = 'Ad zorunludur.';
                         if (!b.yuzolcumu || parseFloat(b.yuzolcumu) <= 0) e.yuzolcumu = 'Yüzölçümü 0\'dan büyük olmalıdır.';
                         if (Object.keys(e).length) ok = false;
@@ -564,7 +564,7 @@
                         if (!a.birimNo?.trim()) e.birimNo = 'No zorunludur.';
                         if (!a.ad?.trim()) e.ad = 'Alan Adı zorunludur.';
                         if (!a.yuzolcumu || parseFloat(a.yuzolcumu) <= 0) e.yuzolcumu = 'Yüzölçümü 0\'dan büyük olmalıdır.';
-                        if (!a.birimTuruId) e.birimTuruId = 'Alan Türü zorunludur.';
+                        if (!a.unitTypeId) e.unitTypeId = 'Alan Türü zorunludur.';
                         if (Object.keys(e).length) ok = false;
                         return e;
                     });

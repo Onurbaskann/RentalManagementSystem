@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Repositories;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,21 +10,21 @@ namespace KiraTakip.Infrastructure.DependencyInjection
         public static IServiceCollection AddRepositoryModule(this IServiceCollection services)
         {
             services.AddScoped<IUnitOfWork, UnitOfWork>();
-            services.AddScoped<IKiraciRepository, KiraciRepository>();
-            services.AddScoped<ITasinmazRepository, TasinmazRepository>();
-            services.AddScoped<IBirimRepository, BirimRepository>();
-            services.AddScoped<ISozlesmeRepository, SozlesmeRepository>();
+            services.AddScoped<ITenantRepository, TenantRepository>();
+            services.AddScoped<IPropertyRepository, PropertyRepository>();
+            services.AddScoped<IUnitRepository, UnitRepository>();
+            services.AddScoped<ILeaseRepository, LeaseRepository>();
             services.AddScoped<IChargeRepository, ChargeRepository>();
             services.AddScoped<IPaymentRepository, PaymentRepository>();
             services.AddScoped<IBankTransactionRepository, BankTransactionRepository>();
             services.AddScoped<ITasinmazTarifeRepository, TasinmazTarifeRepository>();
-            services.AddScoped<IBorcTipiRepository, BorcTipiRepository>();
+            services.AddScoped<IChargeTypeRepository, ChargeTypeRepository>();
             services.AddScoped<ISozlesmeTarifeRepository, SozlesmeTarifeRepository>();
             services.AddScoped<IBirimTarifeRepository, BirimTarifeRepository>();
             services.AddScoped<IGenelTarifeRepository, GenelTarifeRepository>();
             services.AddScoped<IRezervasyonTarifeRepository, RezervasyonTarifeRepository>();
             services.AddScoped<IUnitTypeRepository, UnitTypeRepository>();
-            services.AddScoped<IBelgeTuruRepository, BelgeTuruRepository>();
+            services.AddScoped<IDocumentTypeRepository, DocumentTypeRepository>();
             services.AddScoped<IKategoriRepository, KategoriRepository>();
             services.AddScoped<ITasinmazTipiRepository, TasinmazTipiRepository>();
             services.AddScoped<IReservationRepository, ReservationRepository>();

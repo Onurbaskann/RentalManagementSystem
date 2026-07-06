@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Helpers;
 using KiraTakip.Models.ViewModels;
@@ -13,12 +13,12 @@ namespace KiraTakip.Controllers;
 public class AdminUnitTypeController : Controller
 {
     private readonly IUnitTypeRepository _repo;
-    private readonly IBorcTipiRepository _borcTipiRepo;
+    private readonly IChargeTypeRepository _borcTipiRepo;
     private readonly IUnitOfWork _uow;
 
     public AdminUnitTypeController(
         IUnitTypeRepository repo,
-        IBorcTipiRepository borcTipiRepo,
+        IChargeTypeRepository borcTipiRepo,
         IUnitOfWork uow)
     {
         _repo = repo;

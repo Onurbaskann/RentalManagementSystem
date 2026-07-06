@@ -1,8 +1,8 @@
-@model KiraTakip.Models.ViewModels.KiraciKullaniciListeViewModel
+﻿@model KiraTakip.Models.ViewModels.KiraciKullaniciListeViewModel
 @using KiraTakip.Models.Entities
 @{
     ViewData["Title"] = "Kiracı Kullanıcıları";
-    var kiraciId = ViewBag.KiraciId as int? ?? 0;
+    var tenantId = ViewBag.KiraciId as int? ?? 0;
     var kiraciAd = ViewBag.KiraciAd as string ?? "—";
 }
 
@@ -17,12 +17,12 @@
 
 <div class="page-header flex items-center justify-between">
     <div>
-        <a href="/Tenant/Detay/@kiraciId" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
+        <a href="/Tenant/Detay/@tenantId" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
             ← @kiraciAd
         </a>
         <div class="page-title">Kiracı Kullanıcıları</div>
     </div>
-    <a href="/Admin/Kiracilar/@kiraciId/Kullanicilar/Davet" class="btn btn-primary">+ Davet Gönder</a>
+    <a href="/Admin/Kiracilar/@tenantId/Kullanicilar/Davet" class="btn btn-primary">+ Davet Gönder</a>
 </div>
 
 <div class="card p-0 overflow-hidden" x-data="clientTable({ pageSize: 25 })" x-init="init()">
@@ -56,7 +56,7 @@
                             { <span class="badge badge-gecmis">Pasif</span> }
                         </td>
                         <td class="flex gap-1.5 justify-end">
-                            <form method="post" action="/Admin/Kiracilar/@kiraciId/Kullanicilar/DurumDegistir/@u.Id"
+                            <form method="post" action="/Admin/Kiracilar/@tenantId/Kullanicilar/DurumDegistir/@u.Id"
                                   data-confirm="@(u.IsActive ? "Kullanıcı pasif yapılsın mı?" : "Kullanıcı aktif yapılsın mı?")" class="inline">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-sm @(u.IsActive ? "btn-danger" : "btn-amber")">
@@ -102,11 +102,11 @@
                                     @d.ExpiresAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
                                 </td>
                                 <td class="flex gap-1.5 justify-end">
-                                    <form method="post" action="/Admin/Kiracilar/@kiraciId/Kullanicilar/Davet/YenidenGonder/@d.Id" class="inline">
+                                    <form method="post" action="/Admin/Kiracilar/@tenantId/Kullanicilar/Davet/YenidenGonder/@d.Id" class="inline">
                                         @Html.AntiForgeryToken()
                                         <button type="submit" class="btn btn-sm btn-secondary">Yeniden Gönder</button>
                                     </form>
-                                    <form method="post" action="/Admin/Kiracilar/@kiraciId/Kullanicilar/Davet/Iptal/@d.Id"
+                                    <form method="post" action="/Admin/Kiracilar/@tenantId/Kullanicilar/Davet/Iptal/@d.Id"
                                           data-confirm="Bu daveti iptal etmek istediğinizden emin misiniz?" class="inline">
                                         @Html.AntiForgeryToken()
                                         <button type="submit" class="btn btn-sm btn-danger">İptal</button>

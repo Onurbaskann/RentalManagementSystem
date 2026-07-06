@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Entities;
@@ -16,22 +16,22 @@ public class OdemeController : Controller
 {
     private readonly IPaymentService _paymentService;
     private readonly IChargeService _chargeService;
-    private readonly IBelgeService _belgeService;
+    private readonly IDocumentService _belgeService;
     private readonly IBankTransactionService _bankaService;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IYetkiKapsamiProvider _provider;
+    private readonly IPermissionScopeProvider _provider;
 
     public OdemeController(
         IPaymentService odemeService,
         IChargeService tahakkukService,
-        IBelgeService belgeService,
+        IDocumentService documentService,
         IBankTransactionService bankaService,
         UserManager<ApplicationUser> userManager,
-        IYetkiKapsamiProvider provider)
+        IPermissionScopeProvider provider)
     {
         _paymentService = odemeService;
         _chargeService = tahakkukService;
-        _belgeService = belgeService;
+        _belgeService = documentService;
         _bankaService = bankaService;
         _userManager = userManager;
         _provider = provider;

@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Entities;
@@ -12,21 +12,21 @@ namespace KiraTakip.Services;
 public class IdentitySeedService
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IUserRolService _userRolService;
-    private readonly IRolService _rolService;
+    private readonly IUserRoleService _userRolService;
+    private readonly IRoleService _rolService;
     private readonly ApplicationDbContext _db;
     private readonly IWebHostEnvironment _env;
 
     public IdentitySeedService(
         UserManager<ApplicationUser> userManager,
-        IUserRolService userRolService,
-        IRolService rolService,
+        IUserRoleService userRoleService,
+        IRoleService roleService,
         ApplicationDbContext db,
         IWebHostEnvironment env)
     {
         _userManager = userManager;
-        _userRolService = userRolService;
-        _rolService = rolService;
+        _userRolService = userRoleService;
+        _rolService = roleService;
         _db = db;
         _env = env;
     }

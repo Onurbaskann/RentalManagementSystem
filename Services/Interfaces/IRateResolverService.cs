@@ -1,4 +1,4 @@
-using KiraTakip.Models;
+﻿using KiraTakip.Models;
 
 namespace KiraTakip.Services.Interfaces;
 
@@ -12,5 +12,5 @@ public class RateSnapshot
 
 public interface IRateResolverService
 {
-    Task<RateSnapshot?> ResolveAsync(int? sozlesmeId, int? kiraciId, int birimId, int chargeTypeId, DateTime donem);
+    Task<RateSnapshot?> ResolveAsync(int? leaseId, int? tenantId, int unitId, int chargeTypeId, DateTime donem);
 }

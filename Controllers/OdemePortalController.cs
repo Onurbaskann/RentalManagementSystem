@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Settings;
 using KiraTakip.Models.ViewModels;
@@ -33,9 +33,9 @@ public class OdemePortalController : Controller
         var validation = await _paymentLink.TryValidateAsync(t);
         if (!validation.Success)
             return View("Invalid", validation.Reason ?? "Geçersiz veya süresi dolmuş ödeme linki.");
-        var kiraciId = validation.KiraciId;
+        var tenantId = validation.KiraciId;
 
-        var kiraci = await _ctx.Tenants.FirstOrDefaultAsync(k => k.Id == kiraciId);
+        var kiraci = await _ctx.Tenants.FirstOrDefaultAsync(k => k.Id == tenantId);
         if (kiraci == null) return View("Invalid", "Kiracı bulunamadı.");
 
         var vadeEsigi = DateTime.Today.AddDays(_paymentLinkSettings.ReminderDaysBefore);
@@ -43,7 +43,7 @@ public class OdemePortalController : Controller
         var borclar = await _ctx.Charges
             .Include(x => x.Lease!).ThenInclude(s => s!.Unit).ThenInclude(b => b.Property)
             .Include(x => x.Allocations)
-            .Where(x => x.Lease!.TenantId == kiraciId
+            .Where(x => x.Lease!.TenantId == tenantId
                      && x.Status != ChargeStatus.Paid
                      && x.Status != ChargeStatus.Cancelled
                      && x.DueDate <= vadeEsigi)

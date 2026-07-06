@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
@@ -13,13 +13,13 @@ namespace KiraTakip.Controllers;
 [Route("Admin/Roller")]
 public class AdminRolController : Controller
 {
-    private readonly IRolService _rolService;
+    private readonly IRoleService _rolService;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _db;
 
-    public AdminRolController(IRolService rolService, UserManager<ApplicationUser> userManager, ApplicationDbContext db)
+    public AdminRolController(IRoleService roleService, UserManager<ApplicationUser> userManager, ApplicationDbContext db)
     {
-        _rolService = rolService;
+        _rolService = roleService;
         _userManager = userManager;
         _db = db;
     }

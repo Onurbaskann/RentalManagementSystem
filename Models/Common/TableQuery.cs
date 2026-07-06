@@ -1,4 +1,4 @@
-namespace KiraTakip.Models.Common;
+﻿namespace KiraTakip.Models.Common;
 
 public class TableQuery
 {
@@ -31,9 +31,9 @@ public class TableQuery
         if (Max.HasValue) d["max"] = Max.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
         if (!string.IsNullOrWhiteSpace(Durum) && Durum != "tum") d["durum"] = Durum;
         
-        if (TasinmazId.HasValue) d["tasinmazId"] = TasinmazId.ToString();
-        if (BirimId.HasValue) d["birimId"] = BirimId.ToString();
-        if (KiraciId.HasValue) d["kiraciId"] = KiraciId.ToString();
+        if (TasinmazId.HasValue) d["propertyId"] = TasinmazId.ToString();
+        if (BirimId.HasValue) d["unitId"] = BirimId.ToString();
+        if (KiraciId.HasValue) d["tenantId"] = KiraciId.ToString();
         if (!string.IsNullOrWhiteSpace(Kaynak)) d["kaynak"] = Kaynak;
         if (Yil.HasValue) d["yil"] = Yil.ToString();
         

@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
@@ -14,23 +14,23 @@ public class AccountController : Controller
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IAuditService _auditService;
-    private readonly IDavetiyeService _davetiyeService;
-    private readonly ISifreSifirlamaService _sifreSifirlamaService;
+    private readonly IInvitationService _davetiyeService;
+    private readonly IPasswordResetService _sifreSifirlamaService;
     private readonly ApplicationDbContext _db;
 
     public AccountController(
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager,
         IAuditService auditService,
-        IDavetiyeService davetiyeService,
-        ISifreSifirlamaService sifreSifirlamaService,
+        IInvitationService invitationService,
+        IPasswordResetService passwordResetService,
         ApplicationDbContext db)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _auditService = auditService;
-        _davetiyeService = davetiyeService;
-        _sifreSifirlamaService = sifreSifirlamaService;
+        _davetiyeService = invitationService;
+        _sifreSifirlamaService = passwordResetService;
         _db = db;
     }
 

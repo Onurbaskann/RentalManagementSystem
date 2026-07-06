@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Entities;
@@ -13,24 +13,24 @@ public class SeedDataService
     private readonly ApplicationDbContext _ctx;
     private readonly IChargeGenerationService _chargeGeneration;
     private readonly IRateResolverService _rateResolver;
-    private readonly IRolService _rolService;
+    private readonly IRoleService _rolService;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IUserRolService _userRolService;
+    private readonly IUserRoleService _userRolService;
 
     public SeedDataService(
         ApplicationDbContext ctx,
         IChargeGenerationService tahakkukUretim,
         IRateResolverService rateResolver,
-        IRolService rolService,
+        IRoleService roleService,
         UserManager<ApplicationUser> userManager,
-        IUserRolService userRolService)
+        IUserRoleService userRoleService)
     {
         _ctx = ctx;
         _chargeGeneration = tahakkukUretim;
         _rateResolver = rateResolver;
-        _rolService = rolService;
+        _rolService = roleService;
         _userManager = userManager;
-        _userRolService = userRolService;
+        _userRolService = userRoleService;
     }
 
     public async Task SeedEnumDegerleriAsync()
@@ -1201,7 +1201,7 @@ public class SeedDataService
         await _ctx.SaveChangesAsync();
     }
 
-    private async Task EnsureKiraciUserAsync(string email, string password, string adSoyad, int kiraciId)
+    private async Task EnsureKiraciUserAsync(string email, string password, string adSoyad, int tenantId)
     {
         var user = await _userManager.FindByEmailAsync(email);
         if (user == null)
@@ -1214,7 +1214,7 @@ public class SeedDataService
                 EmailConfirmed = true,
                 IsActive = true,
                 UserType = UserType.Tenant,
-                KiraciId = kiraciId
+                KiraciId = tenantId
             };
             var result = await _userManager.CreateAsync(user, password);
             if (!result.Succeeded)
@@ -1225,7 +1225,7 @@ public class SeedDataService
         else
         {
             user.UserType = UserType.Tenant;
-            user.KiraciId = kiraciId;
+            user.KiraciId = tenantId;
             user.IsActive = true;
             await _userManager.UpdateAsync(user);
         }

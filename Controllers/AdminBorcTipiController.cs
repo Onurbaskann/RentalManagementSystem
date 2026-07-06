@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Helpers;
 using KiraTakip.Models.ViewModels;
@@ -12,12 +12,12 @@ namespace KiraTakip.Controllers;
 [Route("Admin/ChargeType")]
 public class AdminBorcTipiController : Controller
 {
-    private readonly IBorcTipiRepository _repo;
+    private readonly IChargeTypeRepository _repo;
     private readonly IUnitTypeRepository _birimTuruRepo;
     private readonly IUnitOfWork _uow;
 
     public AdminBorcTipiController(
-        IBorcTipiRepository repo,
+        IChargeTypeRepository repo,
         IUnitTypeRepository birimTuruRepo,
         IUnitOfWork uow)
     {

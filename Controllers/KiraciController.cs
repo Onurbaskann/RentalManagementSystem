@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
@@ -14,36 +14,36 @@ namespace KiraTakip.Controllers;
 [Authorize]
 public class KiraciController : Controller
 {
-    private readonly IKiraciService _kiraciService;
-    private readonly ISozlesmeService _sozlesmeService;
-    private readonly IIstatistikService _istatistik;
+    private readonly ITenantService _kiraciService;
+    private readonly ILeaseService _sozlesmeService;
+    private readonly IStatisticsService _istatistik;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _ctx;
-    private readonly IRolService _rolService;
-    private readonly IDavetiyeService _davetiyeService;
-    private readonly IYetkiKapsamiProvider _provider;
-    private readonly IBelgeService _belgeService;
+    private readonly IRoleService _rolService;
+    private readonly IInvitationService _davetiyeService;
+    private readonly IPermissionScopeProvider _provider;
+    private readonly IDocumentService _belgeService;
 
     public KiraciController(
-        IKiraciService kiraciService,
-        ISozlesmeService sozlesmeService,
-        IIstatistikService istatistik,
+        ITenantService tenantService,
+        ILeaseService leaseService,
+        IStatisticsService istatistik,
         UserManager<ApplicationUser> userManager,
         ApplicationDbContext ctx,
-        IRolService rolService,
-        IDavetiyeService davetiyeService,
-        IYetkiKapsamiProvider provider,
-        IBelgeService belgeService)
+        IRoleService roleService,
+        IInvitationService invitationService,
+        IPermissionScopeProvider provider,
+        IDocumentService documentService)
     {
-        _kiraciService = kiraciService;
-        _sozlesmeService = sozlesmeService;
+        _kiraciService = tenantService;
+        _sozlesmeService = leaseService;
         _istatistik = istatistik;
         _userManager = userManager;
         _ctx = ctx;
-        _rolService = rolService;
-        _davetiyeService = davetiyeService;
+        _rolService = roleService;
+        _davetiyeService = invitationService;
         _provider = provider;
-        _belgeService = belgeService;
+        _belgeService = documentService;
     }
 
     [Authorize(Policy = PermissionCatalog.Tenant.Module)]
@@ -80,7 +80,7 @@ public class KiraciController : Controller
         }
         else
         {
-            sozlesmeler = await _sozlesmeService.GetByKiraciIdAsync(id);
+            sozlesmeler = await _sozlesmeService.GetByTenantIdAsync(id);
         }
 
         var depozitoTutarlari = await _sozlesmeService.GetDepozitoTutarlariAsync(sozlesmeler.Select(s => s.Id));

@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Entities;
@@ -27,12 +27,12 @@ public class PaymentLinkService : IPaymentLinkService, ITransactionalService
         _settings = options.Value;
     }
 
-    public async Task<string> BuildLinkAsync(int kiraciId, CancellationToken ct = default)
+    public async Task<string> BuildLinkAsync(int tenantId, CancellationToken ct = default)
     {
         var ttl = TimeSpan.FromHours(_settings.TokenTtlHours);
         var kayit = new OdemeLinkKayit
         {
-            TenantId = kiraciId,
+            TenantId = tenantId,
             ExpiresAt = DateTime.UtcNow.Add(ttl)
         };
         _db.OdemeLinkKayitlari.Add(kayit);

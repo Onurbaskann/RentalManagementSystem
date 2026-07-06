@@ -1,4 +1,4 @@
-using KiraTakip.Services.Interfaces;
+﻿using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Filters;
 using System.Security.Claims;
@@ -7,10 +7,10 @@ namespace KiraTakip.Authorization;
 
 public class YetkiKapsamiActionFilter : IAsyncActionFilter
 {
-    private readonly IYetkiKapsamiCache _cache;
-    private readonly IYetkiKapsamiProvider _provider;
+    private readonly IPermissionScopeCache _cache;
+    private readonly IPermissionScopeProvider _provider;
 
-    public YetkiKapsamiActionFilter(IYetkiKapsamiCache cache, IYetkiKapsamiProvider provider)
+    public YetkiKapsamiActionFilter(IPermissionScopeCache cache, IPermissionScopeProvider provider)
     {
         _cache = cache;
         _provider = provider;

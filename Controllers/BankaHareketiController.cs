@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
@@ -14,13 +14,13 @@ public class BankaHareketiController : Controller
     private readonly IBankTransactionService _bankaService;
     private readonly IPaymentService _paymentService;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IYetkiKapsamiProvider _provider;
+    private readonly IPermissionScopeProvider _provider;
 
     public BankaHareketiController(
         IBankTransactionService bankaService,
         IPaymentService odemeService,
         UserManager<ApplicationUser> userManager,
-        IYetkiKapsamiProvider provider)
+        IPermissionScopeProvider provider)
     {
         _bankaService = bankaService;
         _paymentService = odemeService;

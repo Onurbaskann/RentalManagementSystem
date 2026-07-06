@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Extensions;
 using KiraTakip.Models;
@@ -19,32 +19,32 @@ public class KiraciSozlesmeController : Controller
 {
     private readonly ApplicationDbContext _db;
     private readonly ICurrentUserContext _currentUser;
-    private readonly ISozlesmeService _sozlesmeService;
-    private readonly IIstatistikService _istatistik;
+    private readonly ILeaseService _sozlesmeService;
+    private readonly IStatisticsService _istatistik;
     private readonly IChargeService _chargeService;
-    private readonly IBelgeService _belgeService;
+    private readonly IDocumentService _belgeService;
 
     public KiraciSozlesmeController(
         ApplicationDbContext db,
         ICurrentUserContext currentUser,
-        ISozlesmeService sozlesmeService,
-        IIstatistikService istatistik,
+        ILeaseService leaseService,
+        IStatisticsService istatistik,
         IChargeService tahakkukService,
-        IBelgeService belgeService)
+        IDocumentService documentService)
     {
         _db = db;
         _currentUser = currentUser;
-        _sozlesmeService = sozlesmeService;
+        _sozlesmeService = leaseService;
         _istatistik = istatistik;
         _chargeService = tahakkukService;
-        _belgeService = belgeService;
+        _belgeService = documentService;
     }
 
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var kiraciId = _currentUser.KiraciId!.Value;
-        var sozlesmeler = await _sozlesmeService.GetByKiraciIdAsync(kiraciId);
+        var tenantId = _currentUser.KiraciId!.Value;
+        var sozlesmeler = await _sozlesmeService.GetByTenantIdAsync(tenantId);
         return View(sozlesmeler);
     }
 
@@ -54,8 +54,8 @@ public class KiraciSozlesmeController : Controller
         var s = await _sozlesmeService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
-        var kiraciId = _currentUser.KiraciId!.Value;
-        if (s.KiraciId != kiraciId) return Forbid();
+        var tenantId = _currentUser.KiraciId!.Value;
+        if (s.KiraciId != tenantId) return Forbid();
 
         var dummySozlesme = new Lease
         {
@@ -90,7 +90,7 @@ public class KiraciSozlesmeController : Controller
         };
 
         await _chargeService.GecikmeleriGuncelleAsync();
-        vm.Charges = await _chargeService.GetListAsync(sozlesmeId: id);
+        vm.Charges = await _chargeService.GetListAsync(leaseId: id);
 
         var bugun = DateTime.Today;
         var guncelTahakkuk = await _db.Charges

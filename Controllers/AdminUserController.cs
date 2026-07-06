@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Entities;
@@ -16,29 +16,29 @@ namespace KiraTakip.Controllers;
 public class AdminUserController : Controller
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly ITasinmazService _tasinmazService;
+    private readonly IPropertyService _tasinmazService;
     private readonly IPermissionService _permissionService;
-    private readonly IUserRolService _userRolService;
-    private readonly IDavetiyeService _davetiyeService;
+    private readonly IUserRoleService _userRolService;
+    private readonly IInvitationService _davetiyeService;
     private readonly IAuditService _auditService;
-    private readonly IYetkiKapsamiCache _kapsamCache;
+    private readonly IPermissionScopeCache _kapsamCache;
     private readonly ApplicationDbContext _db;
 
     public AdminUserController(
         UserManager<ApplicationUser> userManager,
-        ITasinmazService tasinmazService,
+        IPropertyService propertyService,
         IPermissionService permissionService,
-        IUserRolService userRolService,
-        IDavetiyeService davetiyeService,
+        IUserRoleService userRoleService,
+        IInvitationService invitationService,
         IAuditService auditService,
-        IYetkiKapsamiCache kapsamCache,
+        IPermissionScopeCache kapsamCache,
         ApplicationDbContext db)
     {
         _userManager = userManager;
-        _tasinmazService = tasinmazService;
+        _tasinmazService = propertyService;
         _permissionService = permissionService;
-        _userRolService = userRolService;
-        _davetiyeService = davetiyeService;
+        _userRolService = userRoleService;
+        _davetiyeService = invitationService;
         _auditService = auditService;
         _kapsamCache = kapsamCache;
         _db = db;
@@ -111,7 +111,7 @@ public class AdminUserController : Controller
         if (user == null || user.IsSuperAdmin) return NotFound();
 
         var currentUserId = _userManager.GetUserId(User);
-        var yetkiliTasinmazIds = await _db.KullaniciYetkiKapsamlari
+        var yetkiliPropertyIds = await _db.KullaniciYetkiKapsamlari
             .Where(k => k.UserId == user.Id && k.ScopeType == ScopeType.Property && !k.IsDeleted)
             .Select(k => k.KapsamId)
             .ToListAsync();
@@ -133,12 +133,12 @@ public class AdminUserController : Controller
             IsActive = user.IsActive,
             IsCurrentUser = user.Id == currentUserId,
             TumTasinmazlaraErisim = user.TumTasinmazlaraErisim,
-            SelectedTasinmazIds = yetkiliTasinmazIds,
+            SelectedTasinmazIds = yetkiliPropertyIds,
             SelectedBirimIds = yetkililBirimIds
         };
 
         await PopulateRollerAsync(model.Roller);
-        await PopulateTasinmazlarAsync(model.Properties, yetkiliTasinmazIds);
+        await PopulateTasinmazlarAsync(model.Properties, yetkiliPropertyIds);
         await PopulateBirimlerAsync(model.Units, yetkililBirimIds);
         return View(model);
     }
@@ -330,23 +330,23 @@ public class AdminUserController : Controller
             .ToListAsync();
         _db.KullaniciYetkiKapsamlari.RemoveRange(mevcutlar);
 
-        foreach (var tasinmazId in tasinmazIds)
+        foreach (var propertyId in tasinmazIds)
         {
             _db.KullaniciYetkiKapsamlari.Add(new KullaniciYetkiKapsami
             {
                 UserId = userId,
                 ScopeType = ScopeType.Property,
-                KapsamId = tasinmazId,
+                KapsamId = propertyId,
             });
         }
 
-        foreach (var birimId in birimIds)
+        foreach (var unitId in birimIds)
         {
             _db.KullaniciYetkiKapsamlari.Add(new KullaniciYetkiKapsami
             {
                 UserId = userId,
                 ScopeType = ScopeType.Unit,
-                KapsamId = birimId,
+                KapsamId = unitId,
             });
         }
 

@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
@@ -10,9 +10,9 @@ public class BirimTarifeRepository : BaseRepository<BirimTarife>, IBirimTarifeRe
 {
     public BirimTarifeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<RateValueDto?> GetRateAsync(int birimId, int kategoriId, int chargeTypeId)
+    public async Task<RateValueDto?> GetRateAsync(int unitId, int kategoriId, int chargeTypeId)
         => await _dbSet.AsNoTracking()
-            .Where(r => r.UnitId == birimId
+            .Where(r => r.UnitId == unitId
                      && r.KiraciKategoriId == kategoriId
                      && r.ChargeTypeId == chargeTypeId)
             .Select(r => new RateValueDto
@@ -23,9 +23,9 @@ public class BirimTarifeRepository : BaseRepository<BirimTarife>, IBirimTarifeRe
             })
             .FirstOrDefaultAsync();
 
-    public async Task<List<ParentTarifeKartViewModel>> GetByBirimForKartAsync(int birimId, int? kategoriId)
+    public async Task<List<ParentTarifeKartViewModel>> GetByBirimForKartAsync(int unitId, int? kategoriId)
     {
-        var q = _dbSet.AsNoTracking().Where(r => r.UnitId == birimId);
+        var q = _dbSet.AsNoTracking().Where(r => r.UnitId == unitId);
         if (kategoriId.HasValue)
             q = q.Where(r => r.KiraciKategoriId == kategoriId.Value);
 

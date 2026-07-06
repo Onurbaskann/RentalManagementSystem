@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
@@ -12,17 +12,17 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
     public ChargeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
     // ── Listeleme (DTO) ───────────────────────────────────────────────────
-    public async Task<List<TahakkukListItemDto>> GetListAsync(int? sozlesmeId, List<int>? yetkiliTasinmazIds, List<int>? yetkiliBirimIds = null)
+    public async Task<List<TahakkukListItemDto>> GetListAsync(int? leaseId, List<int>? yetkiliPropertyIds, List<int>? yetkiliBirimIds = null)
     {
         IQueryable<Charge> q = _dbSet.AsNoTracking();
 
-        if (sozlesmeId.HasValue)
-            q = q.Where(t => t.LeaseId == sozlesmeId.Value);
+        if (leaseId.HasValue)
+            q = q.Where(t => t.LeaseId == leaseId.Value);
 
         if (yetkiliBirimIds != null)
             q = q.Where(t => yetkiliBirimIds.Contains(t.UnitId));
-        else if (yetkiliTasinmazIds != null)
-            q = q.Where(t => yetkiliTasinmazIds.Contains(t.Unit.PropertyId));
+        else if (yetkiliPropertyIds != null)
+            q = q.Where(t => yetkiliPropertyIds.Contains(t.Unit.PropertyId));
 
         return await q.OrderByDescending(t => t.PeriodStart)
                       .Select(t => new TahakkukListItemDto
@@ -63,17 +63,17 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
     }
 
     // ── Sayfalı listeleme (DTO) ───────────────────────────────────────────
-    public async Task<PagedResult<TahakkukListItemDto>> GetPagedListAsync(TableQuery q, int? sozlesmeId, List<int>? yetkiliTasinmazIds, List<int>? yetkiliBirimIds = null)
+    public async Task<PagedResult<TahakkukListItemDto>> GetPagedListAsync(TableQuery q, int? leaseId, List<int>? yetkiliPropertyIds, List<int>? yetkiliBirimIds = null)
     {
         IQueryable<Charge> query = _dbSet.AsNoTracking();
 
-        if (sozlesmeId.HasValue)
-            query = query.Where(t => t.LeaseId == sozlesmeId.Value);
+        if (leaseId.HasValue)
+            query = query.Where(t => t.LeaseId == leaseId.Value);
 
         if (yetkiliBirimIds != null)
             query = query.Where(t => yetkiliBirimIds.Contains(t.UnitId));
-        else if (yetkiliTasinmazIds != null)
-            query = query.Where(t => yetkiliTasinmazIds.Contains(t.Unit.PropertyId));
+        else if (yetkiliPropertyIds != null)
+            query = query.Where(t => yetkiliPropertyIds.Contains(t.Unit.PropertyId));
 
         if (!string.IsNullOrWhiteSpace(q.Q))
         {
@@ -236,18 +236,18 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
     }
 
     // ── Manuel Borç — DTO ─────────────────────────────────────────────────
-    public async Task<List<ManuelBorcListItemDto>> GetManuelBorcListAsync(List<int>? yetkiliTasinmazIds, string? durum = null, string? baglanti = null, int? sozlesmeId = null, List<int>? yetkiliBirimIds = null)
+    public async Task<List<ManuelBorcListItemDto>> GetManuelBorcListAsync(List<int>? yetkiliPropertyIds, string? durum = null, string? baglanti = null, int? leaseId = null, List<int>? yetkiliBirimIds = null)
     {
         IQueryable<Charge> q = _dbSet.AsNoTracking()
             .Where(t => t.SourceType == ChargeSourceType.Manual);
 
         if (yetkiliBirimIds != null)
             q = q.Where(t => yetkiliBirimIds.Contains(t.UnitId));
-        else if (yetkiliTasinmazIds != null)
-            q = q.Where(t => yetkiliTasinmazIds.Contains(t.Unit.PropertyId));
+        else if (yetkiliPropertyIds != null)
+            q = q.Where(t => yetkiliPropertyIds.Contains(t.Unit.PropertyId));
 
-        if (sozlesmeId.HasValue)
-            q = q.Where(t => t.LeaseId == sozlesmeId.Value);
+        if (leaseId.HasValue)
+            q = q.Where(t => t.LeaseId == leaseId.Value);
 
         if (!string.IsNullOrWhiteSpace(baglanti))
         {
@@ -307,14 +307,14 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
                       .ToListAsync();
     }
 
-    public async Task<int> GetManuelBorcIptalSayisiAsync(List<int>? yetkiliTasinmazIds, List<int>? yetkiliBirimIds = null)
+    public async Task<int> GetManuelBorcIptalSayisiAsync(List<int>? yetkiliPropertyIds, List<int>? yetkiliBirimIds = null)
     {
         IQueryable<Charge> q = _dbSet.AsNoTracking()
             .Where(t => t.SourceType == ChargeSourceType.Manual && t.Status == ChargeStatus.Cancelled);
         if (yetkiliBirimIds != null)
             q = q.Where(t => yetkiliBirimIds.Contains(t.UnitId));
-        else if (yetkiliTasinmazIds != null)
-            q = q.Where(t => yetkiliTasinmazIds.Contains(t.Unit.PropertyId));
+        else if (yetkiliPropertyIds != null)
+            q = q.Where(t => yetkiliPropertyIds.Contains(t.Unit.PropertyId));
         return await q.CountAsync();
     }
 
@@ -359,8 +359,8 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
                                  .OrderBy(b => b.SortOrder)
                                  .ToListAsync();
 
-    public async Task<List<Charge>> GetSilineceklerAsync(int sozlesmeId, DateTime ilkGun)
-        => await _dbSet.Where(t => t.LeaseId == sozlesmeId
+    public async Task<List<Charge>> GetSilineceklerAsync(int leaseId, DateTime ilkGun)
+        => await _dbSet.Where(t => t.LeaseId == leaseId
                                 && t.PeriodStart >= ilkGun
                                 && t.Status != ChargeStatus.Paid
                                 && t.SourceType == ChargeSourceType.Lease

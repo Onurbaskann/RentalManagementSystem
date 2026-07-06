@@ -1,4 +1,4 @@
-@model KiraTakip.Models.Common.PagedResult<TahakkukListItemDto>
+﻿@model KiraTakip.Models.Common.PagedResult<TahakkukListItemDto>
 @using KiraTakip.Models
 @using KiraTakip.Models.Entities
 @using KiraTakip.Models.Common
@@ -80,7 +80,7 @@
         <input type="search" name="q" value="@q.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: dönem, taşınmaz…" />
 
         <div class="flex flex-wrap items-center gap-2.5">
-        <select name="birimId" class="form-control w-44 text-xs font-medium">
+        <select name="unitId" class="form-control w-44 text-xs font-medium">
             <option value="">— Tüm Units —</option>
             @foreach (var b in (List<Unit>)ViewBag.Units)
             {

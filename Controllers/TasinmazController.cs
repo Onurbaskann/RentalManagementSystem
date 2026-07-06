@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
@@ -13,25 +13,25 @@ namespace KiraTakip.Controllers;
 [Authorize]
 public class TasinmazController : Controller
 {
-    private readonly ITasinmazService _tasinmazService;
-    private readonly ITasinmazFiyatService _tasinmazFiyatService;
-    private readonly IIstatistikService _istatistik;
+    private readonly IPropertyService _tasinmazService;
+    private readonly IPropertyPricingService _tasinmazFiyatService;
+    private readonly IStatisticsService _istatistik;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _ctx;
-    private readonly ITarifeHiyerarsiService _tarifeHiyerarsisi;
-    private readonly IYetkiKapsamiProvider _provider;
+    private readonly IRateHierarchyService _tarifeHiyerarsisi;
+    private readonly IPermissionScopeProvider _provider;
 
     public TasinmazController(
-        ITasinmazService tasinmazService,
-        ITasinmazFiyatService tasinmazFiyatService,
-        IIstatistikService istatistik,
+        IPropertyService propertyService,
+        IPropertyPricingService propertyPricingService,
+        IStatisticsService istatistik,
         UserManager<ApplicationUser> userManager,
         ApplicationDbContext ctx,
-        ITarifeHiyerarsiService tarifeHiyerarsisi,
-        IYetkiKapsamiProvider provider)
+        IRateHierarchyService tarifeHiyerarsisi,
+        IPermissionScopeProvider provider)
     {
-        _tasinmazService = tasinmazService;
-        _tasinmazFiyatService = tasinmazFiyatService;
+        _tasinmazService = propertyService;
+        _tasinmazFiyatService = propertyPricingService;
         _istatistik = istatistik;
         _userManager = userManager;
         _ctx = ctx;

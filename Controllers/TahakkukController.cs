@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
@@ -15,9 +15,9 @@ public class TahakkukController : Controller
 {
     private readonly IChargeService _chargeService;
     private readonly ApplicationDbContext _ctx;
-    private readonly IYetkiKapsamiProvider _provider;
+    private readonly IPermissionScopeProvider _provider;
 
-    public TahakkukController(IChargeService tahakkukService, ApplicationDbContext ctx, IYetkiKapsamiProvider provider)
+    public TahakkukController(IChargeService tahakkukService, ApplicationDbContext ctx, IPermissionScopeProvider provider)
     {
         _chargeService = tahakkukService;
         _ctx = ctx;

@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Repositories.Interfaces;
@@ -11,15 +11,15 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
     private readonly IChargeRepository _tahakkukRepo;
     private readonly IUnitOfWork _uow;
     private readonly IRateResolverService _rateResolver;
-    private readonly ISozlesmeRepository _sozlesmeRepo;
-    private readonly IBirimRepository _birimRepo;
+    private readonly ILeaseRepository _sozlesmeRepo;
+    private readonly IUnitRepository _birimRepo;
 
     public ChargeGenerationService(
         IChargeRepository tahakkukRepo,
         IUnitOfWork uow,
         IRateResolverService rateResolver,
-        ISozlesmeRepository sozlesmeRepo,
-        IBirimRepository birimRepo)
+        ILeaseRepository sozlesmeRepo,
+        IUnitRepository birimRepo)
     {
         _tahakkukRepo = tahakkukRepo;
         _uow = uow;
@@ -28,20 +28,20 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
         _birimRepo = birimRepo;
     }
 
-    public async Task UretSozlesmeIcinAsync(int sozlesmeId)
+    public async Task UretSozlesmeIcinAsync(int leaseId)
     {
-        var sozlesme = await _sozlesmeRepo.GetByIdAsync(sozlesmeId);
+        var sozlesme = await _sozlesmeRepo.GetByIdAsync(leaseId);
         if (sozlesme == null) return;
 
         foreach (var donemIlkGunu in GetDonemler(sozlesme.StartDate, sozlesme.EndDate))
         {
-            var mevcutVar = await _tahakkukRepo.AnyAsync(t => t.LeaseId == sozlesmeId
+            var mevcutVar = await _tahakkukRepo.AnyAsync(t => t.LeaseId == leaseId
                 && t.PeriodStart == donemIlkGunu
                 && t.SourceType == ChargeSourceType.Lease);
             if (mevcutVar) continue;
 
             var proRata = HesaplaProRataKatsayi(donemIlkGunu, sozlesme.StartDate, sozlesme.EndDate);
-            var composedPreviews = await ComposeKalemlerAsync(sozlesme.UnitId, sozlesme.TenantId, donemIlkGunu, sozlesmeId);
+            var composedPreviews = await ComposeKalemlerAsync(sozlesme.UnitId, sozlesme.TenantId, donemIlkGunu, leaseId);
             var kalemler = new List<ChargeLineItem>();
 
             foreach (var preview in composedPreviews)
@@ -72,7 +72,7 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
             {
                 TenantId = sozlesme.TenantId,
                 UnitId = sozlesme.UnitId,
-                LeaseId = sozlesmeId,
+                LeaseId = leaseId,
                 PeriodStart = donemIlkGunu,
                 PeriodEnd = donemBitis,
                 DueDate = HesaplaVadeTarihi(donemIlkGunu, sozlesme.DueDateRuleType, sozlesme.DueDay),
@@ -91,23 +91,23 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
         await _uow.SaveChangesAsync();
     }
 
-    public async Task YenidenUretAsync(int sozlesmeId, DateTime baslangicTarihi)
+    public async Task YenidenUretAsync(int leaseId, DateTime baslangicTarihi)
     {
         var ilkGun = new DateTime(baslangicTarihi.Year, baslangicTarihi.Month, 1);
-        var silinecekler = await _tahakkukRepo.GetSilineceklerAsync(sozlesmeId, ilkGun);
+        var silinecekler = await _tahakkukRepo.GetSilineceklerAsync(leaseId, ilkGun);
         await _tahakkukRepo.DeleteRangeAsync(silinecekler);
         await _uow.SaveChangesAsync();
-        await UretSozlesmeIcinAsync(sozlesmeId);
+        await UretSozlesmeIcinAsync(leaseId);
     }
 
-    public async Task BekleyenVadeleriYenidenHesaplaAsync(int sozlesmeId)
+    public async Task BekleyenVadeleriYenidenHesaplaAsync(int leaseId)
     {
-        var sozlesme = await _sozlesmeRepo.GetByIdAsync(sozlesmeId);
+        var sozlesme = await _sozlesmeRepo.GetByIdAsync(leaseId);
         if (sozlesme == null) return;
 
         var hedefDurumlar = new[] { ChargeStatus.Pending, ChargeStatus.PartiallyPaid, ChargeStatus.Overdue };
         var bekleyenler = await _tahakkukRepo.GetAllAsync(t =>
-            t.LeaseId == sozlesmeId
+            t.LeaseId == leaseId
             && t.SourceType == ChargeSourceType.Lease
             && hedefDurumlar.Contains(t.Status));
 
@@ -130,11 +130,11 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
         await _uow.SaveChangesAsync();
     }
 
-    public async Task IptalEtFutureTahakkuklarAsync(int sozlesmeId, DateTime fesihTarihi)
+    public async Task IptalEtFutureTahakkuklarAsync(int leaseId, DateTime fesihTarihi)
     {
         var ilkGun = new DateTime(fesihTarihi.Year, fesihTarihi.Month, 1).AddMonths(1);
         var iptalEdilecekler = await _tahakkukRepo.GetAllAsync(t =>
-            t.LeaseId == sozlesmeId
+            t.LeaseId == leaseId
             && t.PeriodStart >= ilkGun
             && t.Status != ChargeStatus.Paid
             && t.SourceType == ChargeSourceType.Lease);
@@ -183,9 +183,9 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
         }
     }
 
-    public async Task<IList<Models.DTOs.TahakkukKalemiPreview>> ComposeKalemlerAsync(int birimId, int kiraciId, DateTime donem, int? sozlesmeId = null)
+    public async Task<IList<Models.DTOs.TahakkukKalemiPreview>> ComposeKalemlerAsync(int unitId, int tenantId, DateTime donem, int? leaseId = null)
     {
-        var birim = await _birimRepo.GetByIdAsync(birimId);
+        var birim = await _birimRepo.GetByIdAsync(unitId);
         if (birim == null) return new List<Models.DTOs.TahakkukKalemiPreview>();
 
         var aktifBorcTipleri = await _tahakkukRepo.GetAktifUretimBorcTipleriAsync();
@@ -196,9 +196,9 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
             if (bt.Behavior == ChargeTypeBehavior.FirstMonthOneTime)
             {
                 DateTime? start = null;
-                if (sozlesmeId.HasValue)
+                if (leaseId.HasValue)
                 {
-                    start = await _sozlesmeRepo.GetByIdAsync<DateTime?>(sozlesmeId.Value, s => s.StartDate);
+                    start = await _sozlesmeRepo.GetByIdAsync<DateTime?>(leaseId.Value, s => s.StartDate);
                 }
                 else
                 {
@@ -209,7 +209,7 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
                     continue;
             }
 
-            RateSnapshot? snapshot = await _rateResolver.ResolveAsync(sozlesmeId, kiraciId, birimId, bt.Id, donem);
+            RateSnapshot? snapshot = await _rateResolver.ResolveAsync(leaseId, tenantId, unitId, bt.Id, donem);
 
             if (snapshot != null)
             {

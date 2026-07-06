@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
@@ -13,15 +13,15 @@ public class ReservationService : IReservationService, ITransactionalService
 {
     private readonly IReservationRepository _repo;
     private readonly IRezervasyonTarifeRepository _tarifeRepo;
-    private readonly IBirimRepository _birimRepo;
-    private readonly IKiraciRepository _kiraciRepo;
+    private readonly IUnitRepository _birimRepo;
+    private readonly ITenantRepository _kiraciRepo;
     private readonly IUnitOfWork _uow;
     private readonly ApplicationDbContext _ctx;
     public ReservationService(
         IReservationRepository repo,
         IRezervasyonTarifeRepository tarifeRepo,
-        IBirimRepository birimRepo,
-        IKiraciRepository kiraciRepo,
+        IUnitRepository birimRepo,
+        ITenantRepository kiraciRepo,
         IUnitOfWork uow,
         ApplicationDbContext ctx)
     {
@@ -47,7 +47,7 @@ public class ReservationService : IReservationService, ITransactionalService
 
     // ── Ücret Hesaplama (precedence: birime özel → birim türü genel tarife → hata) ─
 
-    public async Task<RezervasyonHesapSonucu> HesaplaAsync(int birimId, DateTime baslangic, DateTime bitis)
+    public async Task<RezervasyonHesapSonucu> HesaplaAsync(int unitId, DateTime baslangic, DateTime bitis)
     {
         var sonuc = new RezervasyonHesapSonucu();
 
@@ -58,7 +58,7 @@ public class ReservationService : IReservationService, ITransactionalService
         }
 
         // 1) Birime özel kural
-        var kural = await _repo.GetAktifTarifeForBirimAsync(birimId);
+        var kural = await _repo.GetAktifTarifeForBirimAsync(unitId);
 
         int ucretsiz;
         int periyot;
@@ -76,7 +76,7 @@ public class ReservationService : IReservationService, ITransactionalService
         else
         {
             // 2) Unit Türü bazlı Yıllık Genel Tarife
-            var birim = await _birimRepo.GetByIdAsync(birimId, q => q.Include(b => b.UnitType));
+            var birim = await _birimRepo.GetByIdAsync(unitId, q => q.Include(b => b.UnitType));
 
             if (birim?.UnitTypeId is not int btId)
             {

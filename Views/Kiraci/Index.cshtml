@@ -1,7 +1,7 @@
-@model List<KiraTakip.Models.Dtos.KiraciListItemDto>
+﻿@model List<KiraTakip.Models.Dtos.KiraciListItemDto>
 @using KiraTakip.Models
 @using KiraTakip.Services.Interfaces
-@inject IIstatistikService Istatistik
+@inject IStatisticsService Istatistik
 @{
     ViewData["Title"] = "Kiracılar";
     bool canEdit = User.HasPermission(PermissionCatalog.Tenant.Create) || User.HasPermission(PermissionCatalog.Tenant.Edit);

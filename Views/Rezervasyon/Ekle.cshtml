@@ -1,4 +1,4 @@
-@model KiraTakip.Models.ViewModels.RezervasyonCreateViewModel
+﻿@model KiraTakip.Models.ViewModels.RezervasyonCreateViewModel
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Reservation Ekle";
@@ -43,7 +43,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="form-group mb-0">
                     <label asp-for="KiraciId" class="form-label">Kiracı <span class="text-red-500">*</span></label>
-                    <select asp-for="KiraciId" class="form-control" x-model="kiraciId" x-on:change="kiraciSecildi($event)">
+                    <select asp-for="KiraciId" class="form-control" x-model="tenantId" x-on:change="kiraciSecildi($event)">
                         <option value="">— Kiracı seçin —</option>
                         @foreach (var k in Model.Tenants)
                         {
@@ -149,8 +149,8 @@
 <script>
 function rezervasyonForm() {
     return {
-        birimId: @(Model.BirimId > 0 ? Model.BirimId.ToString() : "0"),
-        kiraciId: @(Model.KiraciId > 0 ? Model.KiraciId.ToString() : "0"),
+        unitId: @(Model.BirimId > 0 ? Model.BirimId.ToString() : "0"),
+        tenantId: @(Model.KiraciId > 0 ? Model.KiraciId.ToString() : "0"),
         baslangic: '@Model.StartDate.ToString("yyyy-MM-ddTHH:mm")',
         bitis: '@Model.EndDate.ToString("yyyy-MM-ddTHH:mm")',
         hesapSonucu: null,
@@ -158,11 +158,11 @@ function rezervasyonForm() {
         _timer: null,
 
         kiraciSecildi(e) {
-            this.kiraciId = e.target.value;
+            this.tenantId = e.target.value;
         },
 
         birimSecildi(e) {
-            this.birimId = parseInt(e.target.value) || 0;
+            this.unitId = parseInt(e.target.value) || 0;
             this.hesapla();
         },
 
@@ -174,7 +174,7 @@ function rezervasyonForm() {
 
         hesapla() {
             clearTimeout(this._timer);
-            if (!this.birimId || !this.baslangic || !this.bitis) {
+            if (!this.unitId || !this.baslangic || !this.bitis) {
                 this.hesapSonucu = null;
                 this.hataMessaji = null;
                 return;
@@ -184,7 +184,7 @@ function rezervasyonForm() {
 
         async _fetchHesap() {
             try {
-                const r = await fetch(`/Reservation/Hesapla?birimId=${this.birimId}&baslangic=${encodeURIComponent(this.baslangic)}&bitis=${encodeURIComponent(this.bitis)}`);
+                const r = await fetch(`/Reservation/Hesapla?unitId=${this.unitId}&baslangic=${encodeURIComponent(this.baslangic)}&bitis=${encodeURIComponent(this.bitis)}`);
                 const d = await r.json();
                 if (d.hataMessaji) {
                     this.hataMessaji = d.hataMessaji;

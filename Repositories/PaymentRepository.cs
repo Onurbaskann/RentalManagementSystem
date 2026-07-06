@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
@@ -11,15 +11,15 @@ public class PaymentRepository : BaseRepository<PaymentAllocation>, IPaymentRepo
 {
     public PaymentRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<List<OdemeListItemDto>> GetListAsync(int? tahakkukId, List<int>? yetkiliTasinmazIds)
+    public async Task<List<OdemeListItemDto>> GetListAsync(int? tahakkukId, List<int>? yetkiliPropertyIds)
     {
         IQueryable<PaymentAllocation> query = _dbSet.AsNoTracking();
 
         if (tahakkukId.HasValue)
             query = query.Where(o => o.ChargeId == tahakkukId.Value);
 
-        if (yetkiliTasinmazIds != null)
-            query = query.Where(o => yetkiliTasinmazIds.Contains(o.Charge.Unit.PropertyId));
+        if (yetkiliPropertyIds != null)
+            query = query.Where(o => yetkiliPropertyIds.Contains(o.Charge.Unit.PropertyId));
 
         return await query
             .OrderByDescending(o => o.EntryDate)
@@ -42,15 +42,15 @@ public class PaymentRepository : BaseRepository<PaymentAllocation>, IPaymentRepo
             .ToListAsync();
     }
 
-    public async Task<PagedResult<OdemeListItemDto>> GetPagedListAsync(TableQuery q, int? tahakkukId, List<int>? yetkiliTasinmazIds)
+    public async Task<PagedResult<OdemeListItemDto>> GetPagedListAsync(TableQuery q, int? tahakkukId, List<int>? yetkiliPropertyIds)
     {
         IQueryable<PaymentAllocation> query = _dbSet.AsNoTracking();
 
         if (tahakkukId.HasValue)
             query = query.Where(o => o.ChargeId == tahakkukId.Value);
 
-        if (yetkiliTasinmazIds != null)
-            query = query.Where(o => yetkiliTasinmazIds.Contains(o.Charge.Unit.PropertyId));
+        if (yetkiliPropertyIds != null)
+            query = query.Where(o => yetkiliPropertyIds.Contains(o.Charge.Unit.PropertyId));
 
         if (!string.IsNullOrWhiteSpace(q.Q))
         {

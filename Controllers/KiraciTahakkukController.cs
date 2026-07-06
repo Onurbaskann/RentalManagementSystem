@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
@@ -18,20 +18,20 @@ public class KiraciTahakkukController : Controller
 {
     private readonly IChargeService _chargeService;
     private readonly IPaymentService _paymentService;
-    private readonly IBelgeService _belgeService;
+    private readonly IDocumentService _belgeService;
     private readonly ApplicationDbContext _ctx;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public KiraciTahakkukController(
         IChargeService tahakkukService,
         IPaymentService odemeService,
-        IBelgeService belgeService,
+        IDocumentService documentService,
         ApplicationDbContext ctx,
         UserManager<ApplicationUser> userManager)
     {
         _chargeService = tahakkukService;
         _paymentService = odemeService;
-        _belgeService = belgeService;
+        _belgeService = documentService;
         _ctx = ctx;
         _userManager = userManager;
     }

@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
@@ -12,9 +12,9 @@ namespace KiraTakip.Controllers;
 public class AdminRezervasyonTarifeKuralController : Controller
 {
     private readonly IReservationService _service;
-    private readonly IBirimRepository _birimRepo;
+    private readonly IUnitRepository _birimRepo;
 
-    public AdminRezervasyonTarifeKuralController(IReservationService service, IBirimRepository birimRepo)
+    public AdminRezervasyonTarifeKuralController(IReservationService service, IUnitRepository birimRepo)
     {
         _service = service;
         _birimRepo = birimRepo;

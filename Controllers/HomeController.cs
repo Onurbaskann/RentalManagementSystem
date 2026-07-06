@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 using KiraTakip.Authorization;
 using KiraTakip.Models;
@@ -14,29 +14,29 @@ namespace KiraTakip.Controllers;
 [Authorize]
 public class HomeController : Controller
 {
-    private readonly ITasinmazService _tasinmazService;
-    private readonly ISozlesmeService _sozlesmeService;
-    private readonly IIstatistikService _istatistik;
+    private readonly IPropertyService _tasinmazService;
+    private readonly ILeaseService _sozlesmeService;
+    private readonly IStatisticsService _istatistik;
     private readonly IChargeService _chargeService;
     private readonly IPaymentService _paymentService;
     private readonly IBankTransactionService _bankTransactionService;
     private readonly IReservationService _reservationService;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IYetkiKapsamiProvider _provider;
+    private readonly IPermissionScopeProvider _provider;
 
     public HomeController(
-        ITasinmazService tasinmazService,
-        ISozlesmeService sozlesmeService,
-        IIstatistikService istatistik,
+        IPropertyService propertyService,
+        ILeaseService leaseService,
+        IStatisticsService istatistik,
         IChargeService tahakkukService,
         IPaymentService odemeService,
         IBankTransactionService bankaHareketiService,
         IReservationService rezervasyonService,
         UserManager<ApplicationUser> userManager,
-        IYetkiKapsamiProvider provider)
+        IPermissionScopeProvider provider)
     {
-        _tasinmazService = tasinmazService;
-        _sozlesmeService = sozlesmeService;
+        _tasinmazService = propertyService;
+        _sozlesmeService = leaseService;
         _istatistik = istatistik;
         _chargeService = tahakkukService;
         _paymentService = odemeService;

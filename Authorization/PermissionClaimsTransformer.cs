@@ -1,4 +1,4 @@
-using KiraTakip.Models;
+﻿using KiraTakip.Models;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
@@ -8,15 +8,15 @@ namespace KiraTakip.Authorization;
 
 public class PermissionClaimsTransformer : UserClaimsPrincipalFactory<ApplicationUser>
 {
-    private readonly IUserRolService _userRolService;
+    private readonly IUserRoleService _userRolService;
 
     public PermissionClaimsTransformer(
         UserManager<ApplicationUser> userManager,
         IOptions<IdentityOptions> optionsAccessor,
-        IUserRolService userRolService)
+        IUserRoleService userRoleService)
         : base(userManager, optionsAccessor)
     {
-        _userRolService = userRolService;
+        _userRolService = userRoleService;
     }
 
     protected override async Task<ClaimsIdentity> GenerateClaimsAsync(ApplicationUser user)

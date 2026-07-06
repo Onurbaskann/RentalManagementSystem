@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
@@ -10,10 +10,10 @@ public class TasinmazTarifeRepository : BaseRepository<TasinmazTarife>, ITasinma
 {
     public TasinmazTarifeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<List<TasinmazTarife>> GetByTasinmazIdAsync(int tasinmazId)
+    public async Task<List<TasinmazTarife>> GetByPropertyIdAsync(int propertyId)
         => await _dbSet
             .AsNoTracking()
-            .Where(f => f.PropertyId == tasinmazId)
+            .Where(f => f.PropertyId == propertyId)
             .ToListAsync();
 
     public async Task<List<Kategori>> GetKiraciKategorileriAsync()
@@ -31,13 +31,13 @@ public class TasinmazTarifeRepository : BaseRepository<TasinmazTarife>, ITasinma
             .OrderBy(b => b.SortOrder)
             .ToListAsync();
 
-    public async Task<List<TasinmazTarife>> GetForHiyerarsiAsync(int tasinmazId, int? kategoriId)
+    public async Task<List<TasinmazTarife>> GetForHiyerarsiAsync(int propertyId, int? kategoriId)
     {
         IQueryable<TasinmazTarife> q = _dbSet
             .AsNoTracking()
             .Include(f => f.KiraciKategori)
             .Include(f => f.ChargeType)
-            .Where(f => f.PropertyId == tasinmazId && f.IsActive);
+            .Where(f => f.PropertyId == propertyId && f.IsActive);
 
         if (kategoriId.HasValue)
             q = q.Where(f => f.KiraciKategoriId == kategoriId.Value);
@@ -48,9 +48,9 @@ public class TasinmazTarifeRepository : BaseRepository<TasinmazTarife>, ITasinma
             .ToListAsync();
     }
 
-    public async Task<RateValueDto?> GetRateAsync(int tasinmazId, int kategoriId, int chargeTypeId)
+    public async Task<RateValueDto?> GetRateAsync(int propertyId, int kategoriId, int chargeTypeId)
         => await _dbSet.AsNoTracking()
-            .Where(f => f.PropertyId == tasinmazId
+            .Where(f => f.PropertyId == propertyId
                      && f.KiraciKategoriId == kategoriId
                      && f.ChargeTypeId == chargeTypeId
                      && f.IsActive)

@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Infrastructure;
 using KiraTakip.Models.Settings;
@@ -24,8 +24,8 @@ namespace KiraTakip.Infrastructure.DependencyInjection
 
             // Memory Cache & Security Scope Providers
             services.AddMemoryCache();
-            services.AddSingleton<IYetkiKapsamiCache, YetkiKapsamiCacheService>();
-            services.AddScoped<IYetkiKapsamiProvider, YetkiKapsamiProvider>();
+            services.AddSingleton<IPermissionScopeCache, PermissionScopeCacheService>();
+            services.AddScoped<IPermissionScopeProvider, PermissionScopeProvider>();
             services.AddScoped<YetkiKapsamiActionFilter>();
 
             // Options Pattern Settings Configuration

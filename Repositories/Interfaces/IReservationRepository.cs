@@ -1,19 +1,19 @@
-using KiraTakip.Models.Dtos;
+﻿using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Repositories.Interfaces;
 
 public interface IReservationRepository : IBaseRepository<Reservation>
 {
     // Listeleme (DTO)
-    Task<List<RezervasyonListItemDto>> GetListAsync(List<int>? yetkiliTasinmazIds);
+    Task<List<RezervasyonListItemDto>> GetListAsync(List<int>? yetkiliPropertyIds);
     Task<RezervasyonListItemDto?> GetByIdAsync(int id);
 
     // Çakışma kontrolü
-    Task<bool> IsConflictAsync(int birimId, DateTime baslangic, DateTime bitis);
+    Task<bool> IsConflictAsync(int unitId, DateTime baslangic, DateTime bitis);
 
     // RezervasyonTarife — Reservation domain
-    Task<RezervasyonTarife?> GetAktifTarifeForBirimAsync(int birimId);
-    Task<RezervasyonTarife?> GetGenelTarifeAsync(int birimTuruId, int yil);
+    Task<RezervasyonTarife?> GetAktifTarifeForBirimAsync(int unitId);
+    Task<RezervasyonTarife?> GetGenelTarifeAsync(int unitTypeId, int yil);
     Task<List<RezervasyonTarife>> GetUcretKurallariAsync();
     Task<RezervasyonTarife?> GetUcretKuralByIdAsync(int id);
     Task AddUcretKuralAsync(RezervasyonTarife kural);

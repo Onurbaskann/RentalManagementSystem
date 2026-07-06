@@ -1,4 +1,4 @@
-@model KiraTakip.Models.ViewModels.TasinmazFiyatMatrisiViewModel
+﻿@model KiraTakip.Models.ViewModels.TasinmazFiyatMatrisiViewModel
 @{
     ViewData["Title"] = $"{Model.TasinmazAd} - Parametreler";
     var currentPage = ViewBag.Page ?? 1;
@@ -83,11 +83,11 @@
             <div class="flex gap-1.5">
                 @if (currentPage > 1)
                 {
-                    <a class="btn btn-sm btn-secondary text-xs px-4" asp-action="Index" asp-route-tasinmazId="@Model.TasinmazId" asp-route-page="@(currentPage - 1)" asp-route-pageSize="@pageSize">← Önceki</a>
+                    <a class="btn btn-sm btn-secondary text-xs px-4" asp-action="Index" asp-route-propertyId="@Model.TasinmazId" asp-route-page="@(currentPage - 1)" asp-route-pageSize="@pageSize">← Önceki</a>
                 }
                 @if (currentPage * pageSize < Model.TotalRows)
                 {
-                    <a class="btn btn-sm btn-secondary text-xs px-4" asp-action="Index" asp-route-tasinmazId="@Model.TasinmazId" asp-route-page="@(currentPage + 1)" asp-route-pageSize="@pageSize">Sonraki →</a>
+                    <a class="btn btn-sm btn-secondary text-xs px-4" asp-action="Index" asp-route-propertyId="@Model.TasinmazId" asp-route-page="@(currentPage + 1)" asp-route-pageSize="@pageSize">Sonraki →</a>
                 }
             </div>
         </div>

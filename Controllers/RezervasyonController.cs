@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
@@ -12,17 +12,17 @@ namespace KiraTakip.Controllers;
 public class RezervasyonController : Controller
 {
     private readonly IReservationService _service;
-    private readonly IBirimRepository _birimRepo;
-    private readonly IKiraciRepository _kiraciRepo;
+    private readonly IUnitRepository _birimRepo;
+    private readonly ITenantRepository _kiraciRepo;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IYetkiKapsamiProvider _provider;
+    private readonly IPermissionScopeProvider _provider;
 
     public RezervasyonController(
         IReservationService service,
-        IBirimRepository birimRepo,
-        IKiraciRepository kiraciRepo,
+        IUnitRepository birimRepo,
+        ITenantRepository kiraciRepo,
         UserManager<ApplicationUser> userManager,
-        IYetkiKapsamiProvider provider)
+        IPermissionScopeProvider provider)
     {
         _service = service;
         _birimRepo = birimRepo;
@@ -54,11 +54,11 @@ public class RezervasyonController : Controller
 
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.Reservation.Create)]
-    public async Task<IActionResult> Ekle(int? birimId)
+    public async Task<IActionResult> Ekle(int? unitId)
     {
         var vm = new RezervasyonCreateViewModel
         {
-            BirimId = birimId,
+            BirimId = unitId,
             StartDate = DateTime.Today.AddHours(9),
             EndDate = DateTime.Today.AddHours(11)
         };
@@ -142,12 +142,12 @@ public class RezervasyonController : Controller
 
     // AJAX: ücret önizleme
     [HttpGet]
-    public async Task<IActionResult> Hesapla(int birimId, string baslangic, string bitis)
+    public async Task<IActionResult> Hesapla(int unitId, string baslangic, string bitis)
     {
         if (!DateTime.TryParse(baslangic, out var bas) || !DateTime.TryParse(bitis, out var bit))
             return BadRequest("Geçersiz tarih formatı.");
 
-        var sonuc = await _service.HesaplaAsync(birimId, bas, bit);
+        var sonuc = await _service.HesaplaAsync(unitId, bas, bit);
         return Json(sonuc);
     }
 

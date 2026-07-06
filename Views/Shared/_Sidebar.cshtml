@@ -1,10 +1,10 @@
-@using Microsoft.AspNetCore.Identity
+﻿@using Microsoft.AspNetCore.Identity
 @using KiraTakip.Models
 @using KiraTakip.Services.Interfaces
 @using KiraTakip.Extensions
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
-@inject IUserRolService UserRolService
+@inject IUserRoleService UserRoleService
 @{
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
     ApplicationUser? currentUser = null;
@@ -21,7 +21,7 @@
             userInitials = string.Join("", userAdSoyad.Split(' ')
                 .Where(p => p.Length > 0).Take(2).Select(p => char.ToUpper(p[0])));
 
-            var roles = await UserRolService.GetUserRolesAsync(currentUser.Id);
+            var roles = await UserRoleService.GetUserRolesAsync(currentUser.Id);
             userRole = roles.FirstOrDefault() ?? "Kullanıcı";
         }
     }

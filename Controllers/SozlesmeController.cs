@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Extensions;
 using KiraTakip.Data;
 using KiraTakip.Models;
@@ -18,42 +18,42 @@ namespace KiraTakip.Controllers;
 [Authorize]
 public class SozlesmeController : Controller
 {
-    private readonly ISozlesmeService _sozlesmeService;
-    private readonly ITasinmazService _tasinmazService;
-    private readonly IKiraciService _kiraciService;
-    private readonly IIstatistikService _istatistik;
+    private readonly ILeaseService _sozlesmeService;
+    private readonly IPropertyService _tasinmazService;
+    private readonly ITenantService _kiraciService;
+    private readonly IStatisticsService _istatistik;
     private readonly IChargeService _chargeService;
     private readonly IChargeGenerationService _chargeGeneration;
     private readonly ApplicationDbContext _ctx;
-    private readonly IYetkiKapsamiProvider _provider;
-    private readonly ITarifeHiyerarsiService _tarifeHiyerarsisi;
+    private readonly IPermissionScopeProvider _provider;
+    private readonly IRateHierarchyService _tarifeHiyerarsisi;
     private readonly IMailService _mail;
     private readonly IPaymentLinkService _paymentLink;
     private readonly IRazorViewToStringRenderer _razorRenderer;
     private readonly IOptions<PaymentLinkSettings> _paymentLinkOptions;
     private readonly ILogger<SozlesmeController> _logger;
-    private readonly IBelgeService _belgeService;
+    private readonly IDocumentService _belgeService;
 
     public SozlesmeController(
-        ISozlesmeService sozlesmeService,
-        ITasinmazService tasinmazService,
-        IKiraciService kiraciService,
-        IIstatistikService istatistik,
+        ILeaseService leaseService,
+        IPropertyService propertyService,
+        ITenantService tenantService,
+        IStatisticsService istatistik,
         IChargeService tahakkukService,
         IChargeGenerationService tahakkukUretim,
         ApplicationDbContext ctx,
-        ITarifeHiyerarsiService tarifeHiyerarsisi,
+        IRateHierarchyService tarifeHiyerarsisi,
         IMailService mail,
         IPaymentLinkService paymentLink,
         IRazorViewToStringRenderer razorRenderer,
         IOptions<PaymentLinkSettings> paymentLinkOptions,
         ILogger<SozlesmeController> logger,
-        IYetkiKapsamiProvider provider,
-        IBelgeService belgeService)
+        IPermissionScopeProvider provider,
+        IDocumentService documentService)
     {
-        _sozlesmeService = sozlesmeService;
-        _tasinmazService = tasinmazService;
-        _kiraciService = kiraciService;
+        _sozlesmeService = leaseService;
+        _tasinmazService = propertyService;
+        _kiraciService = tenantService;
         _istatistik = istatistik;
         _chargeService = tahakkukService;
         _chargeGeneration = tahakkukUretim;
@@ -65,7 +65,7 @@ public class SozlesmeController : Controller
         _paymentLinkOptions = paymentLinkOptions;
         _logger = logger;
         _provider = provider;
-        _belgeService = belgeService;
+        _belgeService = documentService;
     }
 
     [Authorize(Policy = PermissionCatalog.Lease.Module)]
@@ -97,8 +97,8 @@ public class SozlesmeController : Controller
 
         if (!_provider.KapsamdaMi(s.TasinmazId)) return Forbid();
 
-        var gecmis = await _sozlesmeService.GetByBirimIdAsync(s.BirimId);
-        var kiraciSozlesmeleri = await _sozlesmeService.GetByKiraciIdAsync(s.KiraciId);
+        var gecmis = await _sozlesmeService.GetByUnitIdAsync(s.BirimId);
+        var kiraciSozlesmeleri = await _sozlesmeService.GetByTenantIdAsync(s.KiraciId);
 
         var dummySozlesme = new Lease
         {
@@ -138,7 +138,7 @@ public class SozlesmeController : Controller
         {
             vm.HasOdemeAccess = User.HasPermission(PermissionCatalog.Payment.Module);
             await _chargeService.GecikmeleriGuncelleAsync();
-            vm.Charges = await _chargeService.GetListAsync(sozlesmeId: id);
+            vm.Charges = await _chargeService.GetListAsync(leaseId: id);
         }
 
         if (vm.Charges != null && vm.Charges.Any())
@@ -193,8 +193,8 @@ public class SozlesmeController : Controller
 
         vm.ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(
             TarifeHiyerarsiKatmani.Lease,
-            tasinmazId: s.TasinmazId,
-            birimId: s.BirimId,
+            propertyId: s.TasinmazId,
+            unitId: s.BirimId,
             kategoriId: s.KiraciKategoriId,
             yil: s.StartDate.Year);
 
@@ -221,7 +221,7 @@ public class SozlesmeController : Controller
 
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.Lease.Create)]
-    public async Task<IActionResult> Ekle(int? birimId)
+    public async Task<IActionResult> Ekle(int? unitId)
     {
         var bosBirimler = await _tasinmazService.GetBosBirimlerAsync();
         var kiraciler = await _kiraciService.GetAllAsync();
@@ -229,7 +229,7 @@ public class SozlesmeController : Controller
             bosBirimler.ToDictionary(b => b.Id, b => (double)b.Yuzolcumu));
         var vm = new SozlesmeEkleViewModel
         {
-            BirimId = birimId,
+            BirimId = unitId,
             MevcutBirimler = bosBirimler,
             Tenants = kiraciler,
             DocumentTypes = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Lease)
@@ -497,9 +497,9 @@ public class SozlesmeController : Controller
 
     [HttpGet]
     [Authorize]
-    public async Task<IActionResult> GetVarsayilanKalemler(int birimId, int kiraciId, DateTime baslangic, int? sozlesmeId = null)
+    public async Task<IActionResult> GetVarsayilanKalemler(int unitId, int tenantId, DateTime baslangic, int? leaseId = null)
     {
-        var previews = await _chargeGeneration.ComposeKalemlerAsync(birimId, kiraciId, baslangic, sozlesmeId);
+        var previews = await _chargeGeneration.ComposeKalemlerAsync(unitId, tenantId, baslangic, leaseId);
         var result = previews.Select(p => new SozlesmeKalemInputDto
         {
             ChargeTypeId = p.ChargeTypeId,
@@ -523,11 +523,11 @@ public class SozlesmeController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.Lease.Module)]
-    public async Task<IActionResult> BorclularaMailGonder([FromServices] IBorcHatirlatmaService borcHatirlatmaService)
+    public async Task<IActionResult> BorclularaMailGonder([FromServices] IChargeReminderService chargeReminderService)
     {
         try
         {
-            var sonuc = await borcHatirlatmaService.GonderAsync();
+            var sonuc = await chargeReminderService.GonderAsync();
             var mesajParcalari = new List<string>();
             if (sonuc.BasariliGonderim > 0) mesajParcalari.Add($"{sonuc.BasariliGonderim} kiracıya e-posta gönderildi");
             if (sonuc.CooldownAtlanan > 0) mesajParcalari.Add($"{sonuc.CooldownAtlanan} kiracı (bekleme süresinde olduğu için) atlandı");

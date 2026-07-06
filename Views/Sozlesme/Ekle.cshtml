@@ -1,4 +1,4 @@
-@model KiraTakip.Models.ViewModels.SozlesmeEkleViewModel
+﻿@model KiraTakip.Models.ViewModels.SozlesmeEkleViewModel
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Yeni Sözleşme";
@@ -20,7 +20,7 @@
 
             <div class="form-group">
                 <label class="form-label">Unit *</label>
-                <select asp-for="BirimId" class="form-control" x-model="birimId" id="birimSelect">
+                <select asp-for="BirimId" class="form-control" x-model="unitId" id="birimSelect">
                     <option value="">— Boş birim seçin —</option>
                     @foreach (var b in Model.MevcutBirimler)
                     {
@@ -34,16 +34,16 @@
             </div>
 
             <!-- Unit info card -->
-            <div x-show="birimId && birimler[birimId]" class="mb-4" x-cloak>
+            <div x-show="unitId && birimler[unitId]" class="mb-4" x-cloak>
                 <div class="info-card bg-primary/5 border border-primary/10 rounded-lg p-3">
                     <div class="text-[13.5px] font-medium text-primary" 
-                         x-text="birimler[birimId] ? `${birimler[birimId].ad} • ${birimler[birimId].m2} • ${birimler[birimId].ilce}, ${birimler[birimId].il}` : ''"></div>
+                         x-text="birimler[unitId] ? `${birimler[unitId].ad} • ${birimler[unitId].m2} • ${birimler[unitId].ilce}, ${birimler[unitId].il}` : ''"></div>
                 </div>
             </div>
 
             <div class="form-group">
                 <label class="form-label">Kiracı *</label>
-                <select asp-for="KiraciId" class="form-control" x-model="kiraciId">
+                <select asp-for="KiraciId" class="form-control" x-model="tenantId">
                     <option value="">— Kiracı seçin —</option>
                     @foreach (var k in Model.Tenants)
                     {
@@ -109,7 +109,7 @@
 
 
         <!-- Sözleşme Kalemleri Bölümü -->
-        <div class="card mt-4" x-show="birimId && kiraciId && baslangicTarihi" x-cloak>
+        <div class="card mt-4" x-show="unitId && tenantId && baslangicTarihi" x-cloak>
             <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex justify-between items-center">
                 <div class="flex items-center gap-2 flex-wrap">
                     <div class="flex items-center gap-2">
@@ -117,10 +117,10 @@
                         <span>Sözleşme Tarifesi</span>
                     </div>
                     <!-- Kiracı Kategori Rozeti -->
-                    <template x-if="kiraciId && kiraciler[kiraciId]">
+                    <template x-if="tenantId && kiraciler[tenantId]">
                         <span class="text-[11px] font-semibold bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full border border-indigo-100/80 shadow-sm flex items-center gap-1.5 transition-all duration-300">
                             <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
-                            <span x-text="'Kategori: ' + kiraciler[kiraciId].kategori"></span>
+                            <span x-text="'Kategori: ' + kiraciler[tenantId].kategori"></span>
                         </span>
                     </template>
                 </div>
@@ -255,8 +255,8 @@
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('sozlesmeForm', () => ({
-            birimId: @(Model.BirimId.HasValue ? Model.BirimId.Value.ToString() : "null"),
-            kiraciId: @(Model.KiraciId != 0 ? Model.KiraciId.ToString() : "null"),
+            unitId: @(Model.BirimId.HasValue ? Model.BirimId.Value.ToString() : "null"),
+            tenantId: @(Model.KiraciId != 0 ? Model.KiraciId.ToString() : "null"),
             baslangicTarihi: '@Model.StartDate.ToString("yyyy-MM-dd")',
             bitisTarihi: '@Model.EndDate.ToString("yyyy-MM-dd")',
             onPickerChanged(e) {
@@ -288,24 +288,24 @@
             },
             birimYuzolcumular: @Html.Raw(ViewBag.BirimYuzolcumular ?? "{}"),
             init() {
-                this.$watch('birimId', () => this.fetchKalemler());
-                this.$watch('kiraciId', () => this.fetchKalemler());
+                this.$watch('unitId', () => this.fetchKalemler());
+                this.$watch('tenantId', () => this.fetchKalemler());
                 this.$watch('baslangicTarihi', () => this.fetchKalemler());
                 
-                if (this.birimId && this.kiraciId && this.baslangicTarihi) {
+                if (this.unitId && this.tenantId && this.baslangicTarihi) {
                     this.fetchKalemler();
                 }
             },
             async fetchKalemler() {
-                console.log('fetchKalemler tetiklendi:', { birimId: this.birimId, kiraciId: this.kiraciId, baslangic: this.baslangicTarihi });
-                if (!this.birimId || !this.kiraciId || !this.baslangicTarihi) {
+                console.log('fetchKalemler tetiklendi:', { unitId: this.unitId, tenantId: this.tenantId, baslangic: this.baslangicTarihi });
+                if (!this.unitId || !this.tenantId || !this.baslangicTarihi) {
                     this.kalemler = [];
                     return;
                 }
                 this.loading = true;
                 this.error = null;
                 try {
-                    const url = `/Lease/GetVarsayilanKalemler?birimId=${this.birimId}&kiraciId=${this.kiraciId}&baslangic=${this.baslangicTarihi}`;
+                    const url = `/Lease/GetVarsayilanKalemler?unitId=${this.unitId}&tenantId=${this.tenantId}&baslangic=${this.baslangicTarihi}`;
                     console.log('API çağrılıyor:', url);
                     const response = await fetch(url);
                     if (!response.ok) throw new Error('LineItems alınırken hata oluştu.');
@@ -328,7 +328,7 @@
                 }
             },
             getBirimYuzolcumu() {
-                return this.birimYuzolcumular[this.birimId] ?? 0;
+                return this.birimYuzolcumular[this.unitId] ?? 0;
             },
             hesaplaTutar(k) {
                 return k.hesaplamaYontemi == 2 ? k.birimDeger * this.getBirimYuzolcumu() : k.birimDeger;

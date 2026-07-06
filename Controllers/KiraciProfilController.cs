@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -24,12 +24,12 @@ public class KiraciProfilController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var kiraciId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.KiraciId!.Value;
         var kiraci = await _db.Tenants
             .Include(k => k.TenantCategory)
             .Include(k => k.Sector)
             .AsNoTracking()
-            .FirstOrDefaultAsync(k => k.Id == kiraciId);
+            .FirstOrDefaultAsync(k => k.Id == tenantId);
 
         if (kiraci == null) return NotFound();
 

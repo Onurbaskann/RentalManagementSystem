@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -7,13 +7,13 @@ using Microsoft.AspNetCore.Mvc;
 namespace KiraTakip.Controllers
 {
     [Authorize]
-    [Route("Property/{tasinmazId}/Parametreler")]
+    [Route("Property/{propertyId}/Parametreler")]
     public class TasinmazFiyatController : Controller
     {
-        private readonly ITasinmazFiyatService _fiyatService;
+        private readonly IPropertyPricingService _fiyatService;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public TasinmazFiyatController(ITasinmazFiyatService fiyatService,
+        public TasinmazFiyatController(IPropertyPricingService fiyatService,
                                       UserManager<ApplicationUser> userManager)
         {
             _fiyatService = fiyatService;
@@ -22,9 +22,9 @@ namespace KiraTakip.Controllers
 
         [HttpGet]
         [Authorize(Policy = PermissionCatalog.Property.Module)]
-        public async Task<IActionResult> Index(int tasinmazId, int page = 1, int pageSize = 10)
+        public async Task<IActionResult> Index(int propertyId, int page = 1, int pageSize = 10)
         {
-            var vm = await _fiyatService.GetMatrisiAsync(tasinmazId, page, pageSize);
+            var vm = await _fiyatService.GetMatrisiAsync(propertyId, page, pageSize);
             ViewBag.Page = page;
             ViewBag.PageSize = pageSize;
             return View(vm);

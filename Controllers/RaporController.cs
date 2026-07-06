@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
@@ -13,9 +13,9 @@ namespace KiraTakip.Controllers;
 public class RaporController : Controller
 {
     private readonly IChargeService _chargeService;
-    private readonly IYetkiKapsamiProvider _provider;
+    private readonly IPermissionScopeProvider _provider;
 
-    public RaporController(IChargeService tahakkukService, IYetkiKapsamiProvider provider)
+    public RaporController(IChargeService tahakkukService, IPermissionScopeProvider provider)
     {
         _chargeService = tahakkukService;
         _provider = provider;

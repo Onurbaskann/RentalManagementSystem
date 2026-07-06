@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -9,9 +9,9 @@ public class SozlesmeTarifeRepository : BaseRepository<SozlesmeTarife>, ISozlesm
 {
     public SozlesmeTarifeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<RateValueDto?> GetRateAsync(int sozlesmeId, int chargeTypeId)
+    public async Task<RateValueDto?> GetRateAsync(int leaseId, int chargeTypeId)
         => await _dbSet.AsNoTracking()
-            .Where(r => r.LeaseId == sozlesmeId && r.ChargeTypeId == chargeTypeId)
+            .Where(r => r.LeaseId == leaseId && r.ChargeTypeId == chargeTypeId)
             .Select(r => new RateValueDto
             {
                 CalculationMethod = r.CalculationMethod,

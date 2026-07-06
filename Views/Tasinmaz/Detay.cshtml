@@ -1,6 +1,6 @@
-@model KiraTakip.Models.ViewModels.TasinmazDetayViewModel
+﻿@model KiraTakip.Models.ViewModels.TasinmazDetayViewModel
 @using KiraTakip.Models
-@inject KiraTakip.Services.Interfaces.IIstatistikService Istatistik
+@inject KiraTakip.Services.Interfaces.IStatisticsService Istatistik
 @{
     ViewData["Title"] = Model.Property.Ad;
     bool canEdit = User.HasPermission(PermissionCatalog.Lease.Create) || User.HasPermission(PermissionCatalog.Reservation.Create);
@@ -334,7 +334,7 @@
                                                 var searchData = ((b.BirimNo ?? "") + " " + (b.Ad ?? "")).ToLowerInvariant();
                                                 var rowHref = b.AktifSozlesmeId.HasValue
                                                     ? $"/Lease/Detay/{b.AktifSozlesmeId}"
-                                                    : (canEdit ? (b.RezervasyonYapilabilirMi ? $"/Reservation/Ekle?birimId={b.Id}" : $"/Lease/Ekle?birimId={b.Id}") : "");
+                                                    : (canEdit ? (b.RezervasyonYapilabilirMi ? $"/Reservation/Ekle?unitId={b.Id}" : $"/Lease/Ekle?unitId={b.Id}") : "");
                                                 <tr data-durum="@durumData"
                                                     data-search="@searchData"
                                                     @Html.Raw(rowHref != "" ? $"data-href=\"{rowHref}\"" : "")
@@ -408,7 +408,7 @@
                                                             {
                                                                 @if (canEdit)
                                                                 {
-                                                                    <a href="/Reservation/Ekle?birimId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Reservation</a>
+                                                                    <a href="/Reservation/Ekle?unitId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Reservation</a>
                                                                 }
                                                             }
                                                             else
@@ -419,7 +419,7 @@
                                                                 }
                                                                 else if (canEdit)
                                                                 {
-                                                                    <a href="/Lease/Ekle?birimId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Kiraya Ver</a>
+                                                                    <a href="/Lease/Ekle?unitId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Kiraya Ver</a>
                                                                 }
                                                             }
                                                             @if (canManageRate)
@@ -475,7 +475,7 @@
                                 var searchData = ((b.BirimNo ?? "") + " " + (b.Ad ?? "")).ToLowerInvariant();
                                 var cardHref = b.AktifSozlesmeId.HasValue
                                     ? $"/Lease/Detay/{b.AktifSozlesmeId}"
-                                    : (canEdit ? (b.RezervasyonYapilabilirMi ? $"/Reservation/Ekle?birimId={b.Id}" : $"/Lease/Ekle?birimId={b.Id}") : "");
+                                    : (canEdit ? (b.RezervasyonYapilabilirMi ? $"/Reservation/Ekle?unitId={b.Id}" : $"/Lease/Ekle?unitId={b.Id}") : "");
                                 var cardBg = b.Durum switch {
                                     OccupancyStatus.Leased => "border-l-[var(--color-primary)] bg-[#f0faf7]",
                                     OccupancyStatus.ExpiringSoon => "border-l-amber-400 bg-[#fffbeb]",
@@ -612,7 +612,7 @@
                                         {
                                             @if (canEdit)
                                             {
-                                                <a href="/Reservation/Ekle?birimId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Reservation</a>
+                                                <a href="/Reservation/Ekle?unitId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Reservation</a>
                                             }
                                         }
                                         else
@@ -623,7 +623,7 @@
                                             }
                                             else if (canEdit)
                                             {
-                                                <a href="/Lease/Ekle?birimId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Kiraya Ver</a>
+                                                <a href="/Lease/Ekle?unitId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Kiraya Ver</a>
                                             }
                                         }
                                         @if (canManageRate)

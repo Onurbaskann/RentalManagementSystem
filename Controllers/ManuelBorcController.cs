@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -10,11 +10,11 @@ namespace KiraTakip.Controllers;
 [Authorize]
 public class ManuelBorcController : Controller
 {
-    private readonly IManuelBorcService _service;
+    private readonly IManualChargeService _service;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IYetkiKapsamiProvider _provider;
+    private readonly IPermissionScopeProvider _provider;
 
-    public ManuelBorcController(IManuelBorcService service, UserManager<ApplicationUser> userManager, IYetkiKapsamiProvider provider)
+    public ManuelBorcController(IManualChargeService service, UserManager<ApplicationUser> userManager, IPermissionScopeProvider provider)
     {
         _service = service;
         _userManager = userManager;
@@ -22,29 +22,29 @@ public class ManuelBorcController : Controller
     }
 
     [Authorize(Policy = PermissionCatalog.ManualCharge.Module)]
-    public async Task<IActionResult> Index(string? durum, string? baglanti, int? sozlesmeId)
+    public async Task<IActionResult> Index(string? durum, string? baglanti, int? leaseId)
     {
         var tasinmazIds = _provider.GlobalErisim ? null : _provider.ErisilebilirTasinmazIds;
         var birimIds = (!_provider.GlobalErisim && _provider.ErisilebilirBirimIds.Count > 0)
             ? _provider.ErisilebilirBirimIds : null;
-        var liste = await _service.GetAllAsync(tasinmazIds, durum, baglanti, sozlesmeId, birimIds);
+        var liste = await _service.GetAllAsync(tasinmazIds, durum, baglanti, leaseId, birimIds);
         ViewBag.IptalSayisi = await _service.GetIptalSayisiAsync(tasinmazIds, birimIds);
         ViewBag.Durum = durum ?? "tum";
         ViewBag.Baglanti = baglanti ?? "";
-        ViewBag.SozlesmeId = sozlesmeId;
+        ViewBag.SozlesmeId = leaseId;
         return View(liste);
     }
 
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.ManualCharge.Create)]
-    public async Task<IActionResult> Ekle(int? sozlesmeId)
+    public async Task<IActionResult> Ekle(int? leaseId)
     {
         var vm = new ManuelBorcCreateViewModel { DueDate = DateTime.Today };
         await PopulateDropdownsAsync(vm);
-        if (sozlesmeId.HasValue)
+        if (leaseId.HasValue)
         {
-            vm.SozlesmeId = sozlesmeId.Value;
-            var s = vm.AktifSozlesmeler.FirstOrDefault(x => x.Id == sozlesmeId.Value);
+            vm.SozlesmeId = leaseId.Value;
+            var s = vm.AktifSozlesmeler.FirstOrDefault(x => x.Id == leaseId.Value);
             if (s != null)
             {
                 vm.KiraciId = s.KiraciId;

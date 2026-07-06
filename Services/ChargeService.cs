@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
@@ -18,14 +18,14 @@ public class ChargeService : IChargeService
     }
 
     // ── Listeleme ────────────────────────────────────────────────────────
-    public async Task<List<TahakkukListItemDto>> GetListAsync(int? sozlesmeId = null, IReadOnlyList<int>? tasinmazIds = null, IReadOnlyList<int>? birimIds = null)
+    public async Task<List<TahakkukListItemDto>> GetListAsync(int? leaseId = null, IReadOnlyList<int>? tasinmazIds = null, IReadOnlyList<int>? birimIds = null)
     {
-        return await _repo.GetListAsync(sozlesmeId, tasinmazIds?.ToList(), birimIds?.ToList());
+        return await _repo.GetListAsync(leaseId, tasinmazIds?.ToList(), birimIds?.ToList());
     }
 
-    public async Task<PagedResult<TahakkukListItemDto>> GetPagedAsync(TableQuery q, int? sozlesmeId = null, IReadOnlyList<int>? tasinmazIds = null, IReadOnlyList<int>? birimIds = null)
+    public async Task<PagedResult<TahakkukListItemDto>> GetPagedAsync(TableQuery q, int? leaseId = null, IReadOnlyList<int>? tasinmazIds = null, IReadOnlyList<int>? birimIds = null)
     {
-        return await _repo.GetPagedListAsync(q, sozlesmeId, tasinmazIds?.ToList(), birimIds?.ToList());
+        return await _repo.GetPagedListAsync(q, leaseId, tasinmazIds?.ToList(), birimIds?.ToList());
     }
 
     public Task<TahakkukDetayDto?> GetDetayAsync(int id) => _repo.GetDetayAsync(id);

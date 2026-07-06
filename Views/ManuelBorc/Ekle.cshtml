@@ -1,4 +1,4 @@
-@model KiraTakip.Models.ViewModels.ManuelBorcCreateViewModel
+﻿@model KiraTakip.Models.ViewModels.ManuelBorcCreateViewModel
 @using KiraTakip.Models
 @using System.Text.Json
 @{
@@ -6,8 +6,8 @@
 
     var sozlesmeJson = JsonSerializer.Serialize(Model.AktifSozlesmeler.Select(s => new {
         id = s.Id,
-        kiraciId = s.KiraciId,
-        birimId = s.BirimId,
+        tenantId = s.KiraciId,
+        unitId = s.BirimId,
         kiraciAdi = s.KiraciGosterimAdi,
         birimAdi = s.TasinmazAd + " / " + s.BirimAd
     }));
@@ -32,13 +32,13 @@
                 <span>Kiracı ve Sözleşme</span>
             </div>
 
-            <input type="hidden" name="KiraciId" :value="kiraciId" />
-            <input type="hidden" name="SozlesmeId" :value="sozlesmeId || ''" />
+            <input type="hidden" name="KiraciId" :value="tenantId" />
+            <input type="hidden" name="SozlesmeId" :value="leaseId || ''" />
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div class="form-group mb-0">
                     <label class="form-label">Kiracı <span class="text-red-500">*</span></label>
-                    <select class="form-control" x-model="kiraciId" @@change="kiraciDegisti()">
+                    <select class="form-control" x-model="tenantId" @@change="kiraciDegisti()">
                         <option value="0">— Kiracı seçin —</option>
                         <template x-for="k in benzersizKiraciler" :key="k.id">
                             <option :value="k.id" x-text="k.kiraciAdi"></option>
@@ -51,7 +51,7 @@
 
                 <div class="form-group mb-0">
                     <label class="form-label">Sözleşme <span class="text-muted font-normal">(opsiyonel)</span></label>
-                    <select class="form-control" x-model.number="sozlesmeId" @@change="sozlesmeDegisti()">
+                    <select class="form-control" x-model.number="leaseId" @@change="sozlesmeDegisti()">
                         <option value="0">— Sözleşme seçmeyin —</option>
                         <template x-for="s in filtreliSozlesmeler" :key="s.id">
                             <option :value="s.id" x-text="s.birimAdi"></option>
@@ -60,7 +60,7 @@
                 </div>
             </div>
 
-            <template x-if="sozlesmeId > 0 && birimId > 0 && birimId != sozlesmeBirimId">
+            <template x-if="leaseId > 0 && unitId > 0 && unitId != sozlesmeBirimId">
                 <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-[13px] text-amber-800 mb-1">
                     <svg class="w-4 h-4 mt-0.5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
                     <span>Seçilen birim, sözleşmenin birim'inden farklı. Bu doğruysa devam edebilirsiniz.</span>
@@ -76,7 +76,7 @@
 
             <div class="form-group mb-0">
                 <label class="form-label">Unit <span class="text-red-500">*</span></label>
-                <select class="form-control" name="BirimId" x-model.number="birimId">
+                <select class="form-control" name="BirimId" x-model.number="unitId">
                     <option value="0">— Unit seçin —</option>
                     @foreach (var b in Model.Units)
                     {
@@ -191,9 +191,9 @@
 
     function manuelBorcForm() {
         return {
-            kiraciId: @Model.KiraciId,
-            sozlesmeId: @(Model.SozlesmeId.HasValue ? Model.SozlesmeId.Value.ToString() : "0"),
-            birimId: @Model.BirimId,
+            tenantId: @Model.KiraciId,
+            leaseId: @(Model.SozlesmeId.HasValue ? Model.SozlesmeId.Value.ToString() : "0"),
+            unitId: @Model.BirimId,
             tutar: @(Model.Amount > 0 ? Model.Amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "0"),
             kdvAktif: @(Model.KdvUygulanacakMi ? "true" : "false"),
             kdvOrani: @Model.KdvRate.ToString("F0", System.Globalization.CultureInfo.InvariantCulture),
@@ -203,21 +203,21 @@
             get benzersizKiraciler() {
                 const seen = new Set();
                 return sozlesmeler.filter(s => {
-                    if (seen.has(s.kiraciId)) return false;
-                    seen.add(s.kiraciId);
+                    if (seen.has(s.tenantId)) return false;
+                    seen.add(s.tenantId);
                     return true;
                 });
             },
 
             get filtreliSozlesmeler() {
-                if (!this.kiraciId || this.kiraciId == 0) return sozlesmeler;
-                return sozlesmeler.filter(s => s.kiraciId == this.kiraciId);
+                if (!this.tenantId || this.tenantId == 0) return sozlesmeler;
+                return sozlesmeler.filter(s => s.tenantId == this.tenantId);
             },
 
             get sozlesmeBirimId() {
-                if (!this.sozlesmeId || this.sozlesmeId == 0) return 0;
-                const s = sozlesmeler.find(x => x.id == this.sozlesmeId);
-                return s ? s.birimId : 0;
+                if (!this.leaseId || this.leaseId == 0) return 0;
+                const s = sozlesmeler.find(x => x.id == this.leaseId);
+                return s ? s.unitId : 0;
             },
 
             init() {
@@ -225,20 +225,20 @@
             },
 
             kiraciDegisti() {
-                if (this.sozlesmeId > 0) {
-                    const s = sozlesmeler.find(x => x.id == this.sozlesmeId);
-                    if (s && s.kiraciId != this.kiraciId) {
-                        this.sozlesmeId = 0;
+                if (this.leaseId > 0) {
+                    const s = sozlesmeler.find(x => x.id == this.leaseId);
+                    if (s && s.tenantId != this.tenantId) {
+                        this.leaseId = 0;
                     }
                 }
             },
 
             sozlesmeDegisti() {
-                if (this.sozlesmeId > 0) {
-                    const s = sozlesmeler.find(x => x.id == this.sozlesmeId);
+                if (this.leaseId > 0) {
+                    const s = sozlesmeler.find(x => x.id == this.leaseId);
                     if (s) {
-                        this.kiraciId = s.kiraciId;
-                        this.birimId = s.birimId;
+                        this.tenantId = s.tenantId;
+                        this.unitId = s.unitId;
                     }
                 }
             },

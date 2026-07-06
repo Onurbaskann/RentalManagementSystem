@@ -1,4 +1,4 @@
-@model List<KiraTakip.Models.Dtos.ManuelBorcListItemDto>
+﻿@model List<KiraTakip.Models.Dtos.ManuelBorcListItemDto>
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Manuel Borçlar";
@@ -7,7 +7,7 @@
     string aktifDurum = ViewBag.Durum ?? "tum";
     string aktifBaglanti = ViewBag.Baglanti ?? "";
     int iptalSayisi = ViewBag.IptalSayisi ?? 0;
-    int? sozlesmeId = ViewBag.SozlesmeId;
+    int? leaseId = ViewBag.SozlesmeId;
 
     string BtnCls(string d) => aktifDurum == d
         ? "btn btn-sm bg-primary text-white border-primary"
@@ -70,11 +70,11 @@
         <option value="sozlesmeli" selected="@(aktifBaglanti == "sozlesmeli")">Sözleşmeli</option>
         <option value="sozlesmesiz" selected="@(aktifBaglanti == "sozlesmesiz")">Sözleşmesiz</option>
     </select>
-    @if (sozlesmeId.HasValue)
+    @if (leaseId.HasValue)
     {
-        <input type="hidden" name="sozlesmeId" value="@sozlesmeId" />
+        <input type="hidden" name="leaseId" value="@leaseId" />
         <span class="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-md">
-            Sözleşme #@sozlesmeId filtreli
+            Sözleşme #@leaseId filtreli
             <a href="/ManuelBorc?durum=@aktifDurum" class="ml-1 font-bold hover:underline">✕</a>
         </span>
     }
