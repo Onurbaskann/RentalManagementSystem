@@ -19,10 +19,10 @@ public class TenantLeaseController : Controller
 {
     private readonly ApplicationDbContext _db;
     private readonly ICurrentUserContext _currentUser;
-    private readonly ILeaseService _sozlesmeService;
+    private readonly ILeaseService _leaseService;
     private readonly IStatisticsService _istatistik;
     private readonly IChargeService _chargeService;
-    private readonly IDocumentService _belgeService;
+    private readonly IDocumentService _documentService;
 
     public TenantLeaseController(
         ApplicationDbContext db,
@@ -34,24 +34,24 @@ public class TenantLeaseController : Controller
     {
         _db = db;
         _currentUser = currentUser;
-        _sozlesmeService = leaseService;
+        _leaseService = leaseService;
         _istatistik = istatistik;
         _chargeService = tahakkukService;
-        _belgeService = documentService;
+        _documentService = documentService;
     }
 
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
         var tenantId = _currentUser.KiraciId!.Value;
-        var sozlesmeler = await _sozlesmeService.GetByTenantIdAsync(tenantId);
+        var sozlesmeler = await _leaseService.GetByTenantIdAsync(tenantId);
         return View(sozlesmeler);
     }
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> Detay(int id)
     {
-        var s = await _sozlesmeService.GetByIdAsync(id);
+        var s = await _leaseService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
         var tenantId = _currentUser.KiraciId!.Value;
@@ -103,11 +103,11 @@ public class TenantLeaseController : Controller
             .OrderBy(k => k.ChargeType.SortOrder).ToList() ?? new();
         vm.GuncelKalemDonemi = guncelTahakkuk?.PeriodStart;
 
-        var depozitoTutarlari = await _sozlesmeService.GetDepozitoTutarlariAsync(new[] { id });
+        var depozitoTutarlari = await _leaseService.GetDepozitoTutarlariAsync(new[] { id });
         vm.DepozitoTutari = depozitoTutarlari.TryGetValue(id, out var dep) ? dep : null;
 
-        vm.DocumentTypes = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Lease);
-        vm.Belgeler     = await _belgeService.GetListAsync(BelgeOwnerTipi.Lease, id);
+        vm.DocumentTypes = await _documentService.GetTurlerAsync(DocumentOwnerType.Lease);
+        vm.Belgeler     = await _documentService.GetListAsync(DocumentOwnerType.Lease, id);
 
         return View(vm);
     }

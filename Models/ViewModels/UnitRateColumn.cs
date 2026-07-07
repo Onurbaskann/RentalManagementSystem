@@ -1,6 +1,6 @@
 namespace KiraTakip.Models.ViewModels;
 
-public class BirimTarifeKolonu
+public class UnitRateColumn
 {
     public int ChargeTypeId { get; set; }
     public string ChargeTypeName { get; set; } = string.Empty;

@@ -1,5 +1,6 @@
-﻿@model List<KiraTakip.Models.Entities.DocumentType>
+@model List<KiraTakip.Models.Entities.DocumentType>
 @using KiraTakip.Models.Entities
+@using KiraTakip.Models
 @{
     ViewData["Title"] = "Belge Türleri";
 }
@@ -59,7 +60,7 @@
                             }
                         </td>
                         <td class="text-[13px]">
-                            @(bt.TargetEntity == BelgeOwnerTipi.Tenant ? "Kiracı" : bt.TargetEntity == BelgeOwnerTipi.Lease ? "Sözleşme" : bt.TargetEntity == BelgeOwnerTipi.Payment ? "Ödeme" : bt.TargetEntity.ToString())
+                            @(bt.TargetEntity == DocumentOwnerType.Tenant ? "Kiracı" : bt.TargetEntity == DocumentOwnerType.Lease ? "Sözleşme" : bt.TargetEntity == DocumentOwnerType.Payment ? "Ödeme" : bt.TargetEntity.ToString())
                         </td>
                         <td class="text-center">
                             @if (bt.Required) { <span class="badge badge-kirali">Zorunlu</span> }

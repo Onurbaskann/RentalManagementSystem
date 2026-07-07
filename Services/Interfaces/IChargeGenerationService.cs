@@ -1,10 +1,10 @@
-﻿namespace KiraTakip.Services.Interfaces;
+namespace KiraTakip.Services.Interfaces;
 
 public interface IChargeGenerationService
 {
-    Task UretSozlesmeIcinAsync(int leaseId);
-    Task YenidenUretAsync(int leaseId, DateTime baslangicTarihi);
-    Task IptalEtFutureTahakkuklarAsync(int leaseId, DateTime fesihTarihi);
-    Task BekleyenVadeleriYenidenHesaplaAsync(int leaseId);
-    Task<IList<Models.DTOs.TahakkukKalemiPreview>> ComposeKalemlerAsync(int unitId, int tenantId, DateTime donem, int? leaseId = null);
+    Task GenerateForLeaseAsync(int leaseId);
+    Task RegenerateAsync(int leaseId, DateTime startDate);
+    Task CancelFutureChargesAsync(int leaseId, DateTime terminationDate);
+    Task RecalculatePendingDueDatesAsync(int leaseId);
+    Task<IList<Models.DTOs.ChargeLineItemPreview>> ComposeLineItemsAsync(int unitId, int tenantId, DateTime period, int? leaseId = null);
 }

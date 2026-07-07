@@ -18,7 +18,7 @@ public class TenantChargeController : Controller
 {
     private readonly IChargeService _chargeService;
     private readonly IPaymentService _paymentService;
-    private readonly IDocumentService _belgeService;
+    private readonly IDocumentService _documentService;
     private readonly ApplicationDbContext _ctx;
     private readonly UserManager<ApplicationUser> _userManager;
 
@@ -31,7 +31,7 @@ public class TenantChargeController : Controller
     {
         _chargeService = tahakkukService;
         _paymentService = odemeService;
-        _belgeService = documentService;
+        _documentService = documentService;
         _ctx = ctx;
         _userManager = userManager;
     }
@@ -87,11 +87,11 @@ public class TenantChargeController : Controller
         var charge = await _chargeService.GetDetailsAsync(id);
         if (charge == null) return NotFound();
 
-        var belgeTurleri = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Payment);
+        var belgeTurleri = await _documentService.GetTurlerAsync(DocumentOwnerType.Payment);
         var odemeIdleri = charge.Allocations.Select(o => o.Id).ToList();
-        var tumBelgeler = new Dictionary<int, List<Belge>>();
+        var tumBelgeler = new Dictionary<int, List<Document>>();
         foreach (var oid in odemeIdleri)
-            tumBelgeler[oid] = await _belgeService.GetListAsync(BelgeOwnerTipi.Payment, oid);
+            tumBelgeler[oid] = await _documentService.GetListAsync(DocumentOwnerType.Payment, oid);
 
         ViewBag.DocumentTypes = belgeTurleri;
         ViewBag.OdemeBelgeleri = tumBelgeler;
@@ -139,7 +139,7 @@ public class TenantChargeController : Controller
         await _paymentService.EkleAsync(payment);
 
         // Dekont yükle
-        var turleri = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Payment);
+        var turleri = await _documentService.GetTurlerAsync(DocumentOwnerType.Payment);
         if (turleri.Any())
         {
             var belgeTuru = turleri.First();
@@ -147,7 +147,7 @@ public class TenantChargeController : Controller
             {
                 using var ms = new MemoryStream();
                 await dekont.CopyToAsync(ms);
-                await _belgeService.UploadAsync(BelgeOwnerTipi.Payment, payment.Id, belgeTuru.Id,
+                await _documentService.UploadAsync(DocumentOwnerType.Payment, payment.Id, belgeTuru.Id,
                     dekont.FileName, dekont.ContentType, ms.ToArray(), invalidateOld: false);
             }
         }

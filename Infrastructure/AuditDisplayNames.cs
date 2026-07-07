@@ -1,4 +1,4 @@
-﻿namespace KiraTakip.Infrastructure;
+namespace KiraTakip.Infrastructure;
 
 public static class AuditDisplayNames
 {
@@ -63,7 +63,7 @@ public static class AuditDisplayNames
         ["RolPermission"]           = "Rol izni",
         ["Tarife"]                  = "Tarife",
         ["TasinmazTarife"]          = "Taşınmaz tarifesi",
-        ["BirimTarife"]             = "Unit tarifesi",
+        ["UnitRate"]                = "Unit tarifesi",
         ["GenelTarife"]             = "Genel tarife",
         ["SozlesmeTarife"]          = "Sözleşme tarifesi",
         ["RezervasyonTarife"]       = "Reservation tarifesi",

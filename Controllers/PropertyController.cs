@@ -64,9 +64,9 @@ public class PropertyController : Controller
 
     private async Task PopulateViewBagAsync()
     {
-        var birimTurleri = await _ctx.BirimTurleri.Where(b => b.IsActive).OrderBy(b => b.Sira).ToListAsync();
-        ViewBag.BirimTurleri = birimTurleri.Where(b => b.KiralanabilirMi).ToList();
-        ViewBag.RezervasyonBirimTurleri = birimTurleri.Where(b => b.RezervasyonYapilabilirMi).ToList();
+        var birimTurleri = await _ctx.UnitTypes.Where(b => b.IsActive).OrderBy(b => b.SortOrder).ToListAsync();
+        ViewBag.BirimTurleri = birimTurleri.Where(b => b.CanBeRented).ToList();
+        ViewBag.RezervasyonBirimTurleri = birimTurleri.Where(b => b.CanBeReserved).ToList();
         var tipler = await _ctx.TasinmazTipleri.Where(k => k.IsActive).OrderBy(t => t.Sira).ToListAsync();
         ViewBag.TasinmazTipleri = tipler;
         ViewBag.TasinmazTipiKiralamaSekilleri = tipler.ToDictionary(

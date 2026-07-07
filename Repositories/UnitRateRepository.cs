@@ -1,19 +1,20 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Entities;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class BirimTarifeRepository : BaseRepository<BirimTarife>, IBirimTarifeRepository
+public class UnitRateRepository : BaseRepository<UnitRate>, IUnitRateRepository
 {
-    public BirimTarifeRepository(ApplicationDbContext ctx) : base(ctx) { }
+    public UnitRateRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<RateValueDto?> GetRateAsync(int unitId, int kategoriId, int chargeTypeId)
+    public async Task<RateValueDto?> GetRateAsync(int unitId, int tenantCategoryId, int chargeTypeId)
         => await _dbSet.AsNoTracking()
             .Where(r => r.UnitId == unitId
-                     && r.KiraciKategoriId == kategoriId
+                     && r.TenantCategoryId == tenantCategoryId
                      && r.ChargeTypeId == chargeTypeId)
             .Select(r => new RateValueDto
             {
@@ -23,18 +24,18 @@ public class BirimTarifeRepository : BaseRepository<BirimTarife>, IBirimTarifeRe
             })
             .FirstOrDefaultAsync();
 
-    public async Task<List<ParentTarifeKartViewModel>> GetByBirimForKartAsync(int unitId, int? kategoriId)
+    public async Task<List<ParentTarifeKartViewModel>> GetByBirimForKartAsync(int unitId, int? tenantCategoryId)
     {
         var q = _dbSet.AsNoTracking().Where(r => r.UnitId == unitId);
-        if (kategoriId.HasValue)
-            q = q.Where(r => r.KiraciKategoriId == kategoriId.Value);
+        if (tenantCategoryId.HasValue)
+            q = q.Where(r => r.TenantCategoryId == tenantCategoryId.Value);
 
         var rateler = await q
-            .OrderBy(r => r.KiraciKategori.Sira)
+            .OrderBy(r => r.TenantCategory.Sira)
             .ThenBy(r => r.ChargeType.SortOrder)
             .Select(r => new ParentTarifeSatir
             {
-                KategoriAd = r.KiraciKategori.Ad,
+                KategoriAd = r.TenantCategory.Ad,
                 ChargeTypeName = r.ChargeType.Name,
                 CalculationMethod = r.CalculationMethod,
                 UnitValue = r.UnitValue,

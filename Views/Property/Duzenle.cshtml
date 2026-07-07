@@ -1,4 +1,4 @@
-﻿@model KiraTakip.Models.ViewModels.TasinmazDuzenleViewModel
+@model KiraTakip.Models.ViewModels.TasinmazDuzenleViewModel
 @using KiraTakip.Models
 @using KiraTakip.Models.Entities
 @{
@@ -135,7 +135,7 @@
                                     <option value="">— Seçiniz —</option>
                                     @foreach (var bt in (IEnumerable<UnitType>)ViewBag.BirimTurleri)
                                     {
-                                        <option value="@bt.Id">@bt.Ad</option>
+                                        <option value="@bt.Id">@bt.Name</option>
                                     }
                                 </select>
                                 <span x-show="birimErrors[i]?.unitTypeId" x-text="birimErrors[i]?.unitTypeId" class="form-error"></span>
@@ -392,7 +392,7 @@
                                 <option value="">— Seçiniz —</option>
                                 @foreach (var bt in (IEnumerable<UnitType>)ViewBag.RezervasyonBirimTurleri)
                                 {
-                                    <option value="@bt.Id">@bt.Ad</option>
+                                    <option value="@bt.Id">@bt.Name</option>
                                 }
                             </select>
                             <span x-show="rezErrors[i]?.unitTypeId" x-text="rezErrors[i]?.unitTypeId" class="form-error"></span>

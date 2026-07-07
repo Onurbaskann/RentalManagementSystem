@@ -145,7 +145,7 @@
 <!-- Belgeler -->
 @await Html.PartialAsync("_BelgePanel", new KiraTakip.Models.ViewModels.BelgePanelViewModel
 {
-    OwnerType   = KiraTakip.Models.Entities.BelgeOwnerTipi.Tenant,
+    OwnerType   = KiraTakip.Models.DocumentOwnerType.Tenant,
     OwnerId     = k.Id,
     DocumentTypes = Model.DocumentTypes,
     Belgeler    = Model.Belgeler,

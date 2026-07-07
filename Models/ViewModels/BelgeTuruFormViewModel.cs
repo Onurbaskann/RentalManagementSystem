@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using KiraTakip.Models.Entities;
+using KiraTakip.Models;
 
 namespace KiraTakip.Models.ViewModels;
 
@@ -15,7 +16,7 @@ public class BelgeTuruFormViewModel
     public string? Aciklama { get; set; }
 
     [Required]
-    public BelgeOwnerTipi HedefEntite { get; set; } = BelgeOwnerTipi.Tenant;
+    public DocumentOwnerType HedefEntite { get; set; } = DocumentOwnerType.Tenant;
 
     public bool Zorunlu { get; set; }
 

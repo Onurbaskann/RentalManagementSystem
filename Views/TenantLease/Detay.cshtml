@@ -582,7 +582,7 @@
     <div class="tab-content" data-tab="belgeler">
         @await Html.PartialAsync("_BelgePanel", new KiraTakip.Models.ViewModels.BelgePanelViewModel
         {
-            OwnerType    = BelgeOwnerTipi.Lease,
+            OwnerType    = DocumentOwnerType.Lease,
             OwnerId      = s.Id,
             DocumentTypes = Model.DocumentTypes,
             Belgeler     = Model.Belgeler,

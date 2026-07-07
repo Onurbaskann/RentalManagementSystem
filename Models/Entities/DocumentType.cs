@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using KiraTakip.Models;
 
 namespace KiraTakip.Models.Entities;
 
@@ -15,7 +16,7 @@ public class DocumentType : BaseEntity
     public string? Description { get; set; }
 
     [Column("HedefEntite")]
-    public BelgeOwnerTipi TargetEntity { get; set; }
+    public DocumentOwnerType TargetEntity { get; set; }
 
     [Column("Zorunlu")]
     public bool Required { get; set; }
@@ -35,5 +36,5 @@ public class DocumentType : BaseEntity
     [Column("Sistem")]
     public bool IsSystem { get; set; } = false;
 
-    public Belge? TemplateDocument { get; set; }
+    public Document? TemplateDocument { get; set; }
 }

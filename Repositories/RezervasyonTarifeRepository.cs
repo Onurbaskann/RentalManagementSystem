@@ -17,10 +17,10 @@ public class RezervasyonTarifeRepository : BaseRepository<RezervasyonTarife>, IR
                      && r.Yil == yil
                      && r.IsActive
                      && r.UnitType!.IsActive)
-            .OrderBy(r => r.UnitType!.Sira)
+            .OrderBy(r => r.UnitType!.SortOrder)
             .Select(r => new ParentRezervasyonTarifeSatir
             {
-                UnitTypeAd = r.UnitType!.Ad,
+                UnitTypeAd = r.UnitType!.Name,
                 FreeDurationMinutes = r.FreeDurationMinutes,
                 UcretlendirmePeriyoduDakika = r.UcretlendirmePeriyoduDakika,
                 PeriyotUcreti = r.PeriyotUcreti,

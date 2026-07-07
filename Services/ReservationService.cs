@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
@@ -89,7 +89,7 @@ public class ReservationService : IReservationService, ITransactionalService
 
             if (genel == null)
             {
-                sonuc.HataMessaji = $"{cariYil} yılı için '{unit.UnitType?.Ad}' türünde genel reservation tarifesi tanımlı değil.";
+                sonuc.HataMessaji = $"{cariYil} yılı için '{unit.UnitType?.Name}' türünde genel reservation tarifesi tanımlı değil.";
                 return sonuc;
             }
 
@@ -138,7 +138,7 @@ public class ReservationService : IReservationService, ITransactionalService
         var unit = await _birimRepo.GetByIdAsync(model.BirimId.Value, q => q.Include(b => b.UnitType));
         if (unit == null)
             return (false, "Unit bulunamadı.", 0);
-        if (unit.UnitType == null || !unit.UnitType.RezervasyonYapilabilirMi)
+        if (unit.UnitType == null || !unit.UnitType.CanBeReserved)
             return (false, "Seçilen unit reservation yapılabilir türde değil.", 0);
 
         var hesap = await HesaplaAsync(model.BirimId.Value, model.StartDate, model.EndDate);

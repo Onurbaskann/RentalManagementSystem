@@ -1,18 +1,18 @@
-﻿namespace KiraTakip.Models.ViewModels;
+namespace KiraTakip.Models.ViewModels;
 
 public class BirimOzelFiyatViewModel
 {
-    public int BirimId { get; set; }
-    public string BirimAd { get; set; } = string.Empty;
-    public int TasinmazId { get; set; }
-    public string TasinmazAd { get; set; } = string.Empty;
-    public bool KiralanabilirMi { get; set; }
-    public bool RezervasyonYapilabilirMi { get; set; }
+    public int UnitId { get; set; }
+    public string UnitName { get; set; } = string.Empty;
+    public int PropertyId { get; set; }
+    public string PropertyName { get; set; } = string.Empty;
+    public bool IsLeasable { get; set; }
+    public bool IsReservable { get; set; }
     public string? UnitTypeAd { get; set; }
 
     // Senaryo A — kira: KiraciKategori × ChargeType matrisi
-    public List<BirimTarifeKategoriSatiri> Satirlar { get; set; } = [];
-    public List<BirimTarifeKolonu> Kolonlar { get; set; } = [];
+    public List<UnitRateCategoryRow> Satirlar { get; set; } = [];
+    public List<UnitRateColumn> Kolonlar { get; set; } = [];
     public ParentTarifeKartViewModel? ParentTarife { get; set; }
 
     // Senaryo B — reservation ücreti kuralı

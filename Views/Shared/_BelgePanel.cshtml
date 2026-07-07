@@ -48,8 +48,8 @@
                             @if (mevcut != null)
                             {
                                 <div class="text-[11.5px] text-muted mt-0.5 truncate">
-                                    @mevcut.DosyaAdi
-                                    · @(mevcut.BoyutByte < 1024 * 1024 ? $"{mevcut.BoyutByte / 1024.0:F0} KB" : $"{mevcut.BoyutByte / 1024.0 / 1024.0:F1} MB")
+                                    @mevcut.FileName
+                                    · @(mevcut.FileSize < 1024 * 1024 ? $"{mevcut.FileSize / 1024.0:F0} KB" : $"{mevcut.FileSize / 1024.0 / 1024.0:F1} MB")
                                     · @mevcut.CreatedAt.ToString("dd.MM.yyyy")
                                 </div>
                             }

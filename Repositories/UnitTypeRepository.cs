@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
@@ -12,27 +12,27 @@ public class UnitTypeRepository : BaseRepository<UnitType>, IUnitTypeRepository
 
     public async Task<List<UnitTypeListItemDto>> GetListAsync()
         => await _dbSet.AsNoTracking()
-            .OrderBy(b => b.Sira).ThenBy(b => b.Ad)
+            .OrderBy(b => b.SortOrder).ThenBy(b => b.Name)
             .Select(b => new UnitTypeListItemDto
             {
                 Id = b.Id,
-                Ad = b.Ad,
-                Kod = b.Kod,
-                Sira = b.Sira,
-                KiralanabilirMi = b.KiralanabilirMi,
-                RezervasyonYapilabilirMi = b.RezervasyonYapilabilirMi,
-                BorcTipiId = b.ChargeTypeId,
-                BorcTipiAd = b.ChargeType != null ? b.ChargeType.Name : null,
-                Aktif = b.IsActive
+                Name = b.Name,
+                Code = b.Code,
+                SortOrder = b.SortOrder,
+                CanBeRented = b.CanBeRented,
+                CanBeReserved = b.CanBeReserved,
+                ChargeTypeId = b.ChargeTypeId,
+                ChargeTypeName = b.ChargeType != null ? b.ChargeType.Name : null,
+                IsActive = b.IsActive
             })
             .ToListAsync();
 
     public async Task<int> GetMaxSiraAsync()
-        => await _dbSet.AsNoTracking().MaxAsync(b => (int?)b.Sira) ?? 0;
+        => await _dbSet.AsNoTracking().MaxAsync(b => (int?)b.SortOrder) ?? 0;
 
     public async Task<bool> KodExistsAsync(string kod, int? excludeId = null)
         => await _dbSet.AsNoTracking()
-            .AnyAsync(b => b.Kod == kod && (excludeId == null || b.Id != excludeId));
+            .AnyAsync(b => b.Code == kod && (excludeId == null || b.Id != excludeId));
 
     public async Task<bool> AnyAktifByBorcTipiIdAsync(int chargeTypeId, int? excludeId = null)
         => await _dbSet.AsNoTracking()

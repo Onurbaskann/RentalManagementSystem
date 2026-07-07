@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
@@ -65,9 +65,9 @@ public class PropertyRepository : BaseRepository<Property>, IPropertyRepository
                     Ad = b.Name,
                     KatNo = b.FloorNo,
                     Yuzolcumu = b.Area,
-                    UnitTypeAd = b.UnitType != null ? b.UnitType.Ad : string.Empty,
-                    RezervasyonYapilabilirMi = b.UnitType != null ? b.UnitType.RezervasyonYapilabilirMi : false,
-                    KiralanabilirMi = b.UnitType != null ? b.UnitType.KiralanabilirMi : false,
+                    UnitTypeAd = b.UnitType != null ? b.UnitType.Name : string.Empty,
+                    RezervasyonYapilabilirMi = b.UnitType != null ? b.UnitType.CanBeReserved : false,
+                    KiralanabilirMi = b.UnitType != null ? b.UnitType.CanBeRented : false,
                     AktifSozlesmeId = b.Leases
                         .Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
                         .OrderByDescending(s => s.EndDate)
@@ -144,20 +144,20 @@ public class PropertyRepository : BaseRepository<Property>, IPropertyRepository
                         KdvRate = rt.KdvRate
                     }).ToList(),
                 BirimOzelFiyatlari = t.Units
-                    .Where(b => b.UnitType != null && b.UnitType.KiralanabilirMi)
-                    .Select(b => new BirimOzelFiyatOzetDto
+                    .Where(b => b.UnitType != null && b.UnitType.CanBeRented)
+                    .Select(b => new UnitCustomRateSummaryDto
                     {
-                        BirimId = b.Id,
-                        BirimAd = b.Name,
-                        BirimNo = b.UnitNo,
-                        Rateler = _ctx.BirimTarifeler
+                        UnitId = b.Id,
+                        UnitName = b.Name,
+                        UnitNo = b.UnitNo,
+                        Rateler = _ctx.UnitRates
                             .Where(r => r.UnitId == b.Id)
-                            .OrderBy(r => r.KiraciKategori.Sira)
+                            .OrderBy(r => r.TenantCategory.Sira)
                             .ThenBy(r => r.ChargeType.SortOrder)
-                            .Select(r => new BirimOzelFiyatRateDto
+                            .Select(r => new UnitCustomRateDto
                             {
                                 Id = r.Id,
-                                KiraciKategoriAd = r.KiraciKategori.Ad,
+                                TenantCategoryName = r.TenantCategory.Ad,
                                 ChargeTypeName = r.ChargeType.Name,
                                 CalculationMethod = r.CalculationMethod,
                                 UnitValue = r.UnitValue,
@@ -195,7 +195,7 @@ public class PropertyRepository : BaseRepository<Property>, IPropertyRepository
         }
 
         return await query
-            .Where(b => b.UnitType != null && b.UnitType.KiralanabilirMi)
+            .Where(b => b.UnitType != null && b.UnitType.CanBeRented)
             .Where(b => !b.Leases.Any(s =>
                 s.Status == LeaseStatus.Active &&
                 s.StartDate <= now &&

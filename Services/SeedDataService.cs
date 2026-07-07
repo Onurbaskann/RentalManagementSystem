@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Entities;
@@ -92,8 +92,8 @@ public class SeedDataService
         var varsayilanPeriyot = 60;
         var varsayilanKdv = 20m;
 
-        var rezBirimTurleri = await _ctx.BirimTurleri
-            .Where(t => t.IsActive && t.RezervasyonYapilabilirMi)
+        var rezBirimTurleri = await _ctx.UnitTypes
+            .Where(t => t.IsActive && t.CanBeReserved)
             .ToListAsync();
         if (!rezBirimTurleri.Any()) return;
 
@@ -112,7 +112,7 @@ public class SeedDataService
                 UcretlendirmePeriyoduDakika = varsayilanPeriyot,
                 PeriyotUcreti = varsayilanUcret,
                 KdvRate = varsayilanKdv,
-                Aciklama = $"{cariYil} varsayılan — {bt.Ad}"
+                Aciklama = $"{cariYil} varsayılan — {bt.Name}"
             });
         }
         await _ctx.SaveChangesAsync();
@@ -134,7 +134,7 @@ public class SeedDataService
 
     public async Task SeedBirimTurleriAsync()
     {
-        var existingCodes = await _ctx.BirimTurleri.Select(t => t.Kod).ToListAsync();
+        var existingCodes = await _ctx.UnitTypes.Select(t => t.Code).ToListAsync();
 
         var toplantiBorcTipiId = await _ctx.ChargeTypes
             .Where(b => b.Code == "TOPLANTI")
@@ -147,27 +147,27 @@ public class SeedDataService
             .FirstOrDefaultAsync();
 
         var toAdd = new List<UnitType>();
-        if (!existingCodes.Contains("OFIS")) toAdd.Add(new UnitType { Ad = "Ofis", Kod = "OFIS", IsActive = true, KiralanabilirMi = true, RezervasyonYapilabilirMi = false, Sira = 1, OlusturmaTarihi = DateTime.UtcNow });
-        if (!existingCodes.Contains("TOPLANTI")) toAdd.Add(new UnitType { Ad = "Toplantı Salonu", Kod = "TOPLANTI", IsActive = true, KiralanabilirMi = false, RezervasyonYapilabilirMi = true, Sira = 10, OlusturmaTarihi = DateTime.UtcNow, ChargeTypeId = toplantiBorcTipiId });
-        if (!existingCodes.Contains("ETKINLIK")) toAdd.Add(new UnitType { Ad = "Etkinlik Alanı", Kod = "ETKINLIK", IsActive = true, KiralanabilirMi = false, RezervasyonYapilabilirMi = true, Sira = 11, OlusturmaTarihi = DateTime.UtcNow, ChargeTypeId = etkinliBorcTipiId });
+        if (!existingCodes.Contains("OFIS")) toAdd.Add(new UnitType { Name = "Ofis", Code = "OFIS", IsActive = true, CanBeRented = true, CanBeReserved = false, SortOrder = 1, CreatedDate = DateTime.UtcNow });
+        if (!existingCodes.Contains("TOPLANTI")) toAdd.Add(new UnitType { Name = "Toplantı Salonu", Code = "TOPLANTI", IsActive = true, CanBeRented = false, CanBeReserved = true, SortOrder = 10, CreatedDate = DateTime.UtcNow, ChargeTypeId = toplantiBorcTipiId });
+        if (!existingCodes.Contains("ETKINLIK")) toAdd.Add(new UnitType { Name = "Etkinlik Alanı", Code = "ETKINLIK", IsActive = true, CanBeRented = false, CanBeReserved = true, SortOrder = 11, CreatedDate = DateTime.UtcNow, ChargeTypeId = etkinliBorcTipiId });
 
         if (toAdd.Any())
         {
-            _ctx.BirimTurleri.AddRange(toAdd);
+            _ctx.UnitTypes.AddRange(toAdd);
             await _ctx.SaveChangesAsync();
         }
 
         if (toplantiBorcTipiId.HasValue)
         {
-            await _ctx.BirimTurleri
-                .Where(t => t.Kod == "TOPLANTI" && t.ChargeTypeId == null)
+            await _ctx.UnitTypes
+                .Where(t => t.Code == "TOPLANTI" && t.ChargeTypeId == null)
                 .ExecuteUpdateAsync(s => s.SetProperty(t => t.ChargeTypeId, toplantiBorcTipiId));
         }
 
         if (etkinliBorcTipiId.HasValue)
         {
-            await _ctx.BirimTurleri
-                .Where(t => t.Kod == "ETKINLIK" && t.ChargeTypeId == null)
+            await _ctx.UnitTypes
+                .Where(t => t.Code == "ETKINLIK" && t.ChargeTypeId == null)
                 .ExecuteUpdateAsync(s => s.SetProperty(t => t.ChargeTypeId, etkinliBorcTipiId));
         }
     }
@@ -254,7 +254,7 @@ public class SeedDataService
 
         var now = DateTime.Now;
         var tipiMap = await _ctx.TasinmazTipleri.ToDictionaryAsync(k => k.Kod, k => k.Id);
-        var birimTuruMap = await _ctx.BirimTurleri.ToDictionaryAsync(t => t.Kod, t => t.Id);
+        var birimTuruMap = await _ctx.UnitTypes.ToDictionaryAsync(t => t.Code, t => t.Id);
         var katMap = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Tenant).ToDictionaryAsync(k => k.Kod, k => k.Id);
         var sekMap = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Sektor).ToDictionaryAsync(k => k.Kod, k => k.Id);
 
@@ -342,10 +342,10 @@ public class SeedDataService
 
         // Unit Tarifesi Örneği (Hiyerarşide Matrisin Üstündedir)
         // Ofis 101 için Akademik kategorisinde özel unit fiyatı tanımlayalım
-        _ctx.BirimTarifeler.Add(new BirimTarife
+        _ctx.UnitRates.Add(new UnitRate
         {
             UnitId = birim101.Id,
-            KiraciKategoriId = katMap["AKADEMIK"],
+            TenantCategoryId = katMap["AKADEMIK"],
             ChargeTypeId = btKiraId,
             CalculationMethod = CalculationMethod.M2,
             UnitValue = 400, // Genel Tarife 300 / Matris 320 yerine unit bazlı 400
@@ -396,7 +396,7 @@ public class SeedDataService
         {
             Code = "KIMLIK_FOTOKOPISI",
             Name = "Kimlik Fotokopisi",
-            TargetEntity = BelgeOwnerTipi.Tenant,
+            TargetEntity = DocumentOwnerType.Tenant,
             Required = true,
             AllowedExtensions = "pdf,jpg,png",
             MaxSizeMb = 5,
@@ -412,7 +412,7 @@ public class SeedDataService
         {
             Code = "SOZLESME_EVRAK",
             Name = "Sözleşme Evrakı",
-            TargetEntity = BelgeOwnerTipi.Tenant,
+            TargetEntity = DocumentOwnerType.Tenant,
             Required = false,
             AllowedExtensions = "pdf,jpg,png",
             MaxSizeMb = 5,
@@ -428,7 +428,7 @@ public class SeedDataService
         {
             Code = "IMZALI_SOZLESME",
             Name = "İmzalı Sözleşme Metni",
-            TargetEntity = BelgeOwnerTipi.Lease,
+            TargetEntity = DocumentOwnerType.Lease,
             Required = true,
             AllowedExtensions = "pdf,jpg,png",
             MaxSizeMb = 10,
@@ -444,7 +444,7 @@ public class SeedDataService
         {
             Code = "KVKK_BELGESI",
             Name = "KVKK Onay Belgesi",
-            TargetEntity = BelgeOwnerTipi.Tenant,
+            TargetEntity = DocumentOwnerType.Tenant,
             Required = true,
             AllowedExtensions = "pdf,jpg,png",
             MaxSizeMb = 5,
@@ -460,7 +460,7 @@ public class SeedDataService
         {
             Code = "TESLIM_TESELLUM",
             Name = "Teslim Tesellüm Tutanağı",
-            TargetEntity = BelgeOwnerTipi.Lease,
+            TargetEntity = DocumentOwnerType.Lease,
             Required = false,
             AllowedExtensions = "pdf,jpg,png",
             MaxSizeMb = 5,
@@ -476,7 +476,7 @@ public class SeedDataService
         {
             Code = "TEMINAT_MEKTUBU",
             Name = "Teminat Mektubu",
-            TargetEntity = BelgeOwnerTipi.Lease,
+            TargetEntity = DocumentOwnerType.Lease,
             Required = false,
             AllowedExtensions = "pdf,jpg,png",
             MaxSizeMb = 5,
@@ -492,108 +492,108 @@ public class SeedDataService
         await _ctx.SaveChangesAsync();
 
         // Kiracılar için belgeleri ekle
-        var belgeler = new List<Belge>
+        var belgeler = new List<Document>
         {
             // Kimlik Fotokopisi belgeleri
-            new Belge
+            new Document
             {
                 DocumentTypeId = btKimlik.Id,
-                OwnerType = BelgeOwnerTipi.Tenant,
+                OwnerType = DocumentOwnerType.Tenant,
                 OwnerId = yzCozum.Id,
-                DosyaAdi = "kimlik_yz.pdf",
+                FileName = "kimlik_yz.pdf",
                 MimeType = "application/pdf",
-                BoyutByte = 1024,
-                Aciklama = "YZ Çözüm Yetkili Kimlik Fotokopisi",
-                Gecersiz = false,
-                Icerik = new BelgeIcerik { Icerik = new byte[] { 1, 2, 3, 4 } }
+                FileSize = 1024,
+                Description = "YZ Çözüm Yetkili Kimlik Fotokopisi",
+                IsInvalid = false,
+                Content = new DocumentContent { Content = new byte[] { 1, 2, 3, 4 } }
             },
-            new Belge
+            new Document
             {
                 DocumentTypeId = btKimlik.Id,
-                OwnerType = BelgeOwnerTipi.Tenant,
+                OwnerType = DocumentOwnerType.Tenant,
                 OwnerId = megaFinans.Id,
-                DosyaAdi = "kimlik_mega.pdf",
+                FileName = "kimlik_mega.pdf",
                 MimeType = "application/pdf",
-                BoyutByte = 1024,
-                Aciklama = "Mega Finans Yetkili Kimlik Fotokopisi",
-                Gecersiz = false,
-                Icerik = new BelgeIcerik { Icerik = new byte[] { 1, 2, 3, 4 } }
+                FileSize = 1024,
+                Description = "Mega Finans Yetkili Kimlik Fotokopisi",
+                IsInvalid = false,
+                Content = new DocumentContent { Content = new byte[] { 1, 2, 3, 4 } }
             },
-            new Belge
+            new Document
             {
                 DocumentTypeId = btKimlik.Id,
-                OwnerType = BelgeOwnerTipi.Tenant,
+                OwnerType = DocumentOwnerType.Tenant,
                 OwnerId = biotech.Id,
-                DosyaAdi = "kimlik_biotech.pdf",
+                FileName = "kimlik_biotech.pdf",
                 MimeType = "application/pdf",
-                BoyutByte = 1024,
-                Aciklama = "BiyoTek Yetkili Kimlik Fotokopisi",
-                Gecersiz = false,
-                Icerik = new BelgeIcerik { Icerik = new byte[] { 1, 2, 3, 4 } }
+                FileSize = 1024,
+                Description = "BiyoTek Yetkili Kimlik Fotokopisi",
+                IsInvalid = false,
+                Content = new DocumentContent { Content = new byte[] { 1, 2, 3, 4 } }
             },
 
             // KVKK Onay Belgesi belgeleri
-            new Belge
+            new Document
             {
                 DocumentTypeId = btKvkk.Id,
-                OwnerType = BelgeOwnerTipi.Tenant,
+                OwnerType = DocumentOwnerType.Tenant,
                 OwnerId = yzCozum.Id,
-                DosyaAdi = "kvkk_yz.pdf",
+                FileName = "kvkk_yz.pdf",
                 MimeType = "application/pdf",
-                BoyutByte = 1024,
-                Aciklama = "YZ Çözüm Yetkili KVKK Belgesi",
-                Gecersiz = false,
-                Icerik = new BelgeIcerik { Icerik = new byte[] { 1, 2, 3, 4 } }
+                FileSize = 1024,
+                Description = "YZ Çözüm Yetkili KVKK Belgesi",
+                IsInvalid = false,
+                Content = new DocumentContent { Content = new byte[] { 1, 2, 3, 4 } }
             },
-            new Belge
+            new Document
             {
                 DocumentTypeId = btKvkk.Id,
-                OwnerType = BelgeOwnerTipi.Tenant,
+                OwnerType = DocumentOwnerType.Tenant,
                 OwnerId = megaFinans.Id,
-                DosyaAdi = "kvkk_mega.pdf",
+                FileName = "kvkk_mega.pdf",
                 MimeType = "application/pdf",
-                BoyutByte = 1024,
-                Aciklama = "Mega Finans Yetkili KVKK Belgesi",
-                Gecersiz = false,
-                Icerik = new BelgeIcerik { Icerik = new byte[] { 1, 2, 3, 4 } }
+                FileSize = 1024,
+                Description = "Mega Finans Yetkili KVKK Belgesi",
+                IsInvalid = false,
+                Content = new DocumentContent { Content = new byte[] { 1, 2, 3, 4 } }
             },
-            new Belge
+            new Document
             {
                 DocumentTypeId = btKvkk.Id,
-                OwnerType = BelgeOwnerTipi.Tenant,
+                OwnerType = DocumentOwnerType.Tenant,
                 OwnerId = biotech.Id,
-                DosyaAdi = "kvkk_biotech.pdf",
+                FileName = "kvkk_biotech.pdf",
                 MimeType = "application/pdf",
-                BoyutByte = 1024,
-                Aciklama = "BiyoTek Yetkili KVKK Belgesi",
-                Gecersiz = false,
-                Icerik = new BelgeIcerik { Icerik = new byte[] { 1, 2, 3, 4 } }
+                FileSize = 1024,
+                Description = "BiyoTek Yetkili KVKK Belgesi",
+                IsInvalid = false,
+                Content = new DocumentContent { Content = new byte[] { 1, 2, 3, 4 } }
             },
 
             // Sözleşme Evrakı belgeleri
-            new Belge
+            new Document
             {
                 DocumentTypeId = btSozlesmeEvrak.Id,
-                OwnerType = BelgeOwnerTipi.Tenant,
+                OwnerType = DocumentOwnerType.Tenant,
                 OwnerId = yzCozum.Id,
-                DosyaAdi = "sozlesme_yz.pdf",
+                FileName = "sozlesme_yz.pdf",
                 MimeType = "application/pdf",
-                BoyutByte = 1024,
-                Aciklama = "YZ Çözüm Sözleşme Evrakı",
-                Gecersiz = false,
-                Icerik = new BelgeIcerik { Icerik = new byte[] { 1, 2, 3, 4 } }
+                FileSize = 1024,
+                Description = "YZ Çözüm Sözleşme Evrakı",
+                IsInvalid = false,
+                Content = new DocumentContent { Content = new byte[] { 1, 2, 3, 4 } }
             },
-            new Belge
+            new Document
             {
                 DocumentTypeId = btSozlesmeEvrak.Id,
-                OwnerType = BelgeOwnerTipi.Tenant,
+                OwnerType = DocumentOwnerType.Tenant,
                 OwnerId = megaFinans.Id,
-                DosyaAdi = "sozlesme_mega.pdf",
+                FileName = "sozlesme_mega.pdf",
                 MimeType = "application/pdf",
-                BoyutByte = 2048,
-                Aciklama = "Mega Finans Sözleşme Evrakı",
-                Gecersiz = false,
-                Icerik = new BelgeIcerik { Icerik = new byte[] { 5, 6, 7, 8 } }
+                FileSize = 2048,
+                Description = "Mega Finans Sözleşme Evrakı",
+                IsInvalid = false,
+                Content = new DocumentContent { Content = new byte[] { 5, 6, 7, 8 } }
             }
         };
         _ctx.Belgeler.AddRange(belgeler);
@@ -630,79 +630,79 @@ public class SeedDataService
         await _ctx.SaveChangesAsync();
 
         // Sözleşmeler için İmzalı Sözleşme Metni belgelerini ekle
-        var sozlesmeBelgeleri = new List<Belge>
+        var sozlesmeBelgeleri = new List<Document>
         {
-            new Belge
+            new Document
             {
                 DocumentTypeId = btImzaliSozlesme.Id,
-                OwnerType = BelgeOwnerTipi.Lease,
+                OwnerType = DocumentOwnerType.Lease,
                 OwnerId = sozlesmeler[0].Id,
-                DosyaAdi = "imzali_sozlesme_101.pdf",
+                FileName = "imzali_sozlesme_101.pdf",
                 MimeType = "application/pdf",
-                BoyutByte = 4096,
-                Aciklama = "Ofis 101 İmzalı Kira Sözleşmesi",
-                Gecersiz = false,
-                Icerik = new BelgeIcerik { Icerik = new byte[] { 10, 11, 12, 13 } }
+                FileSize = 4096,
+                Description = "Ofis 101 İmzalı Kira Sözleşmesi",
+                IsInvalid = false,
+                Content = new DocumentContent { Content = new byte[] { 10, 11, 12, 13 } }
             },
-            new Belge
+            new Document
             {
                 DocumentTypeId = btImzaliSozlesme.Id,
-                OwnerType = BelgeOwnerTipi.Lease,
+                OwnerType = DocumentOwnerType.Lease,
                 OwnerId = sozlesmeler[1].Id,
-                DosyaAdi = "imzali_sozlesme_102.pdf",
+                FileName = "imzali_sozlesme_102.pdf",
                 MimeType = "application/pdf",
-                BoyutByte = 4096,
-                Aciklama = "Ofis 102 İmzalı Kira Sözleşmesi",
-                Gecersiz = false,
-                Icerik = new BelgeIcerik { Icerik = new byte[] { 14, 15, 16, 17 } }
+                FileSize = 4096,
+                Description = "Ofis 102 İmzalı Kira Sözleşmesi",
+                IsInvalid = false,
+                Content = new DocumentContent { Content = new byte[] { 14, 15, 16, 17 } }
             },
-            new Belge
+            new Document
             {
                 DocumentTypeId = btImzaliSozlesme.Id,
-                OwnerType = BelgeOwnerTipi.Lease,
+                OwnerType = DocumentOwnerType.Lease,
                 OwnerId = sozlesmeler[2].Id,
-                DosyaAdi = "imzali_sozlesme_103.pdf",
+                FileName = "imzali_sozlesme_103.pdf",
                 MimeType = "application/pdf",
-                BoyutByte = 4096,
-                Aciklama = "Ofis 103 İmzalı Kira Sözleşmesi",
-                Gecersiz = false,
-                Icerik = new BelgeIcerik { Icerik = new byte[] { 18, 19, 20, 21 } }
+                FileSize = 4096,
+                Description = "Ofis 103 İmzalı Kira Sözleşmesi",
+                IsInvalid = false,
+                Content = new DocumentContent { Content = new byte[] { 18, 19, 20, 21 } }
             },
-            new Belge
+            new Document
             {
                 DocumentTypeId = btImzaliSozlesme.Id,
-                OwnerType = BelgeOwnerTipi.Lease,
+                OwnerType = DocumentOwnerType.Lease,
                 OwnerId = sozlesmeler[3].Id,
-                DosyaAdi = "imzali_sozlesme_104.pdf",
+                FileName = "imzali_sozlesme_104.pdf",
                 MimeType = "application/pdf",
-                BoyutByte = 4096,
-                Aciklama = "Ofis 104 İmzalı Kira Sözleşmesi",
-                Gecersiz = false,
-                Icerik = new BelgeIcerik { Icerik = new byte[] { 22, 23, 24, 25 } }
+                FileSize = 4096,
+                Description = "Ofis 104 İmzalı Kira Sözleşmesi",
+                IsInvalid = false,
+                Content = new DocumentContent { Content = new byte[] { 22, 23, 24, 25 } }
             },
-            new Belge
+            new Document
             {
                 DocumentTypeId = btTeslim.Id,
-                OwnerType = BelgeOwnerTipi.Lease,
+                OwnerType = DocumentOwnerType.Lease,
                 OwnerId = sozlesmeler[0].Id,
-                DosyaAdi = "teslim_tutanagi_101.pdf",
+                FileName = "teslim_tutanagi_101.pdf",
                 MimeType = "application/pdf",
-                BoyutByte = 2048,
-                Aciklama = "Ofis 101 Teslim Tesellüm Tutanağı",
-                Gecersiz = false,
-                Icerik = new BelgeIcerik { Icerik = new byte[] { 30, 31, 32, 33 } }
+                FileSize = 2048,
+                Description = "Ofis 101 Teslim Tesellüm Tutanağı",
+                IsInvalid = false,
+                Content = new DocumentContent { Content = new byte[] { 30, 31, 32, 33 } }
             },
-            new Belge
+            new Document
             {
                 DocumentTypeId = btTeminat.Id,
-                OwnerType = BelgeOwnerTipi.Lease,
+                OwnerType = DocumentOwnerType.Lease,
                 OwnerId = sozlesmeler[0].Id,
-                DosyaAdi = "teminat_mektubu_101.pdf",
+                FileName = "teminat_mektubu_101.pdf",
                 MimeType = "application/pdf",
-                BoyutByte = 8192,
-                Aciklama = "Ofis 101 Teminat Mektubu",
-                Gecersiz = false,
-                Icerik = new BelgeIcerik { Icerik = new byte[] { 40, 41, 42, 43 } }
+                FileSize = 8192,
+                Description = "Ofis 101 Teminat Mektubu",
+                IsInvalid = false,
+                Content = new DocumentContent { Content = new byte[] { 40, 41, 42, 43 } }
             }
         };
         _ctx.Belgeler.AddRange(sozlesmeBelgeleri);
@@ -720,7 +720,7 @@ public class SeedDataService
         // --- 7. Charge Üretimi ---
         foreach (var s in sozlesmeler)
         {
-            await _chargeGeneration.UretSozlesmeIcinAsync(s.Id);
+            await _chargeGeneration.GenerateForLeaseAsync(s.Id);
         }
 
         // --- 8. Diğer Seed İşlemleri ---
@@ -815,7 +815,7 @@ public class SeedDataService
         // Geriye dönük uyumluluk için (UretSozlesmeIcinAsync SeedDomainDataAsync içinde çağrılıyor)
         if (await _ctx.Charges.AnyAsync()) return;
         var aktifSozlesmeler = await _ctx.Leases.Where(s => s.Status == LeaseStatus.Active).ToListAsync();
-        foreach (var s in aktifSozlesmeler) await _chargeGeneration.UretSozlesmeIcinAsync(s.Id);
+        foreach (var s in aktifSozlesmeler) await _chargeGeneration.GenerateForLeaseAsync(s.Id);
     }
 
     private async Task SeedTahakkuklarVeOdemelerAsync(List<Lease> sozlesmeler)
@@ -1164,7 +1164,7 @@ public class SeedDataService
         _ctx.SozlesmeIslemGecmisleri.RemoveRange(_ctx.SozlesmeIslemGecmisleri.IgnoreQueryFilters());
         _ctx.Leases.RemoveRange(_ctx.Leases.IgnoreQueryFilters());
 
-        _ctx.BirimTarifeler.RemoveRange(_ctx.BirimTarifeler.IgnoreQueryFilters());
+        _ctx.UnitRates.RemoveRange(_ctx.UnitRates.IgnoreQueryFilters());
         _ctx.Units.RemoveRange(_ctx.Units.IgnoreQueryFilters());
 
         _ctx.TasinmazTarifeler.RemoveRange(_ctx.TasinmazTarifeler.IgnoreQueryFilters());
@@ -1194,7 +1194,7 @@ public class SeedDataService
 
         // Sistem Tanımları (Baştan seed edileceği için temizlenebilir)
         _ctx.Kategoriler.RemoveRange(_ctx.Kategoriler.IgnoreQueryFilters());
-        _ctx.BirimTurleri.RemoveRange(_ctx.BirimTurleri.IgnoreQueryFilters());
+        _ctx.UnitTypes.RemoveRange(_ctx.UnitTypes.IgnoreQueryFilters());
         _ctx.ChargeTypes.RemoveRange(_ctx.ChargeTypes.IgnoreQueryFilters().Where(b => !b.IsSystem));
         _ctx.DocumentTypes.RemoveRange(_ctx.DocumentTypes.IgnoreQueryFilters().Where(b => !b.IsSystem));
 

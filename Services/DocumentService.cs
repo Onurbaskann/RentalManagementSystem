@@ -1,4 +1,5 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
+using KiraTakip.Models;
 using KiraTakip.Models.Entities;
 using KiraTakip.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -16,82 +17,82 @@ public class DocumentService : IDocumentService
         _uow = uow;
     }
 
-    public async Task<List<Belge>> GetListAsync(BelgeOwnerTipi ownerType, int ownerId)
+    public async Task<List<Document>> GetListAsync(DocumentOwnerType ownerType, int ownerId)
         => await _db.Belgeler
             .AsNoTracking()
             .Include(b => b.DocumentType)
-            .Where(b => b.OwnerType == ownerType && b.OwnerId == ownerId && !b.Gecersiz)
+            .Where(b => b.OwnerType == ownerType && b.OwnerId == ownerId && !b.IsInvalid)
             .OrderByDescending(b => b.CreatedAt)
             .ToListAsync();
 
-    public async Task<Belge> UploadAsync(BelgeOwnerTipi ownerType, int ownerId, int documentTypeId,
-        string dosyaAdi, string mimeType, byte[] icerik, string? aciklama = null, bool invalidateOld = true)
+    public async Task<Document> UploadAsync(DocumentOwnerType ownerType, int ownerId, int documentTypeId,
+        string fileName, string mimeType, byte[] content, string? description = null, bool invalidateOld = true)
     {
-        var eskiBelge = invalidateOld
+        var oldDocument = invalidateOld
             ? await _db.Belgeler
                 .Where(b => b.OwnerType == ownerType && b.OwnerId == ownerId
-                         && b.DocumentTypeId == documentTypeId && !b.Gecersiz && !b.IsDeleted)
+                         && b.DocumentTypeId == documentTypeId && !b.IsInvalid && !b.IsDeleted)
                 .FirstOrDefaultAsync()
             : null;
 
-        var yeni = new Belge
+        var newDocument = new Document
         {
             DocumentTypeId = documentTypeId,
             OwnerType = ownerType,
             OwnerId = ownerId,
-            DosyaAdi = dosyaAdi,
+            FileName = fileName,
             MimeType = mimeType,
-            BoyutByte = icerik.Length,
-            Aciklama = aciklama,
+            FileSize = content.Length,
+            Description = description,
             IsActive = true,
-            Icerik = new BelgeIcerik { Icerik = icerik }
+            Content = new DocumentContent { Content = content }
         };
 
-        await _db.Belgeler.AddAsync(yeni);
+        await _db.Belgeler.AddAsync(newDocument);
         await _uow.SaveChangesAsync(); // Id üretiliyor
 
-        if (eskiBelge != null)
+        if (oldDocument != null)
         {
-            eskiBelge.Gecersiz = true;
-            eskiBelge.GecersizlikTarihi = DateTime.UtcNow;
-            eskiBelge.DegistirenBelgeId = yeni.Id;
+            oldDocument.IsInvalid = true;
+            oldDocument.InvalidationDate = DateTime.UtcNow;
+            oldDocument.ReplacedByDocumentId = newDocument.Id;
             await _uow.SaveChangesAsync();
         }
 
-        return yeni;
+        return newDocument;
     }
 
-    public async Task<(Belge Meta, byte[] Icerik)> DownloadAsync(int belgeId)
+    public async Task<(Document Meta, byte[] Icerik)> DownloadAsync(int documentId)
     {
         var meta = await _db.Belgeler
             .AsNoTracking()
             .Include(b => b.DocumentType)
-            .FirstOrDefaultAsync(b => b.Id == belgeId)
-            ?? throw new KeyNotFoundException($"Belge {belgeId} bulunamadı.");
+            .FirstOrDefaultAsync(b => b.Id == documentId)
+            ?? throw new KeyNotFoundException($"Belge {documentId} bulunamadı.");
 
-        var icerik = await _db.BelgeIcerikleri
+        var icerik = await _db.DocumentContents
             .AsNoTracking()
-            .Where(i => i.BelgeId == belgeId)
-            .Select(i => i.Icerik)
+            .Where(i => i.DocumentId == documentId)
+            .Select(i => i.Content)
             .FirstOrDefaultAsync()
             ?? Array.Empty<byte>();
 
         return (meta, icerik);
     }
 
-    public async Task DeleteAsync(int belgeId)
+    public async Task DeleteAsync(int documentId)
     {
-        var belge = await _db.Belgeler.FindAsync(belgeId);
-        if (belge == null) return;
+        var document = await _db.Belgeler.FindAsync(documentId);
+        if (document == null) return;
 
-        belge.IsDeleted = true;
+        document.IsDeleted = true;
         await _uow.SaveChangesAsync();
     }
 
-    public async Task<List<DocumentType>> GetTurlerAsync(BelgeOwnerTipi hedefEntite, bool sadeceDogru = false)
+    public async Task<List<DocumentType>> GetTurlerAsync(DocumentOwnerType targetEntity, bool sadeceDogru = false)
         => await _db.DocumentTypes
             .AsNoTracking()
-            .Where(t => t.TargetEntity == hedefEntite && t.IsActive && (!sadeceDogru || t.Required))
+            .Where(t => t.TargetEntity == targetEntity && t.IsActive && (!sadeceDogru || t.Required))
             .OrderBy(t => t.SortOrder)
             .ToListAsync();
 }

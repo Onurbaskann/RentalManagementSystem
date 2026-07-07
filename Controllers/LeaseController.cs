@@ -18,9 +18,9 @@ namespace KiraTakip.Controllers;
 [Authorize]
 public class LeaseController : Controller
 {
-    private readonly ILeaseService _sozlesmeService;
-    private readonly IPropertyService _tasinmazService;
-    private readonly ITenantService _kiraciService;
+    private readonly ILeaseService _leaseService;
+    private readonly IPropertyService _propertyService;
+    private readonly ITenantService _tenantService;
     private readonly IStatisticsService _istatistik;
     private readonly IChargeService _chargeService;
     private readonly IChargeGenerationService _chargeGeneration;
@@ -32,7 +32,7 @@ public class LeaseController : Controller
     private readonly IRazorViewToStringRenderer _razorRenderer;
     private readonly IOptions<PaymentLinkSettings> _paymentLinkOptions;
     private readonly ILogger<LeaseController> _logger;
-    private readonly IDocumentService _belgeService;
+    private readonly IDocumentService _documentService;
 
     public LeaseController(
         ILeaseService leaseService,
@@ -51,9 +51,9 @@ public class LeaseController : Controller
         IPermissionScopeProvider provider,
         IDocumentService documentService)
     {
-        _sozlesmeService = leaseService;
-        _tasinmazService = propertyService;
-        _kiraciService = tenantService;
+        _leaseService = leaseService;
+        _propertyService = propertyService;
+        _tenantService = tenantService;
         _istatistik = istatistik;
         _chargeService = tahakkukService;
         _chargeGeneration = tahakkukUretim;
@@ -65,13 +65,13 @@ public class LeaseController : Controller
         _paymentLinkOptions = paymentLinkOptions;
         _logger = logger;
         _provider = provider;
-        _belgeService = documentService;
+        _documentService = documentService;
     }
 
     [Authorize(Policy = PermissionCatalog.Lease.Module)]
     public async Task<IActionResult> Index(string? filtre)
     {
-        var sozlesmeler = await _sozlesmeService.GetAllAsync(filtre, _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds);
+        var sozlesmeler = await _leaseService.GetAllAsync(filtre, _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds);
 
         var now = DateTime.Today;
         var esik = now.AddDays(_paymentLinkOptions.Value.ReminderDaysBefore);
@@ -92,13 +92,13 @@ public class LeaseController : Controller
     [Authorize(Policy = PermissionCatalog.Lease.Module)]
     public async Task<IActionResult> Detay(int id)
     {
-        var s = await _sozlesmeService.GetByIdAsync(id);
+        var s = await _leaseService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
         if (!_provider.IsInScope(s.PropertyId)) return Forbid();
 
-        var gecmis = await _sozlesmeService.GetByUnitIdAsync(s.UnitId);
-        var kiraciSozlesmeleri = await _sozlesmeService.GetByTenantIdAsync(s.TenantId);
+        var gecmis = await _leaseService.GetByUnitIdAsync(s.UnitId);
+        var kiraciSozlesmeleri = await _leaseService.GetByTenantIdAsync(s.TenantId);
 
         var lease = new Lease
         {
@@ -195,14 +195,14 @@ public class LeaseController : Controller
             TarifeHiyerarsiKatmani.Lease,
             propertyId: s.PropertyId,
             unitId: s.UnitId,
-            kategoriId: s.TenantCategoryId,
+            tenantCategoryId: s.TenantCategoryId,
             yil: s.StartDate.Year);
 
-        var depozitoTutarlari = await _sozlesmeService.GetDepozitoTutarlariAsync(new[] { id });
+        var depozitoTutarlari = await _leaseService.GetDepozitoTutarlariAsync(new[] { id });
         vm.DepozitoTutari = depozitoTutarlari.TryGetValue(id, out var dep) ? dep : null;
 
-        vm.Belgeler    = await _belgeService.GetListAsync(BelgeOwnerTipi.Lease, id);
-        vm.DocumentTypes = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Lease);
+        vm.Belgeler    = await _documentService.GetListAsync(DocumentOwnerType.Lease, id);
+        vm.DocumentTypes = await _documentService.GetTurlerAsync(DocumentOwnerType.Lease);
 
         var manuelBorclar = await _ctx.Charges
             .Where(t => t.LeaseId == id
@@ -223,8 +223,8 @@ public class LeaseController : Controller
     [Authorize(Policy = PermissionCatalog.Lease.Create)]
     public async Task<IActionResult> Ekle(int? unitId)
     {
-        var bosBirimler = await _tasinmazService.GetBosBirimlerAsync();
-        var kiraciler = await _kiraciService.GetAllAsync();
+        var bosBirimler = await _propertyService.GetBosBirimlerAsync();
+        var kiraciler = await _tenantService.GetAllAsync();
         ViewBag.BirimYuzolcumular = System.Text.Json.JsonSerializer.Serialize(
             bosBirimler.ToDictionary(b => b.Id, b => (double)b.Yuzolcumu));
         var vm = new SozlesmeEkleViewModel
@@ -232,7 +232,7 @@ public class LeaseController : Controller
             BirimId = unitId,
             MevcutBirimler = bosBirimler,
             Tenants = kiraciler,
-            DocumentTypes = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Lease)
+            DocumentTypes = await _documentService.GetTurlerAsync(DocumentOwnerType.Lease)
         };
         return View(vm);
     }
@@ -241,9 +241,9 @@ public class LeaseController : Controller
     [Authorize(Policy = PermissionCatalog.Lease.Create)]
     public async Task<IActionResult> Ekle(SozlesmeEkleViewModel vm)
     {
-        vm.MevcutBirimler = await _tasinmazService.GetBosBirimlerAsync();
-        vm.Tenants = await _kiraciService.GetAllAsync();
-        vm.DocumentTypes = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Lease);
+        vm.MevcutBirimler = await _propertyService.GetBosBirimlerAsync();
+        vm.Tenants = await _tenantService.GetAllAsync();
+        vm.DocumentTypes = await _documentService.GetTurlerAsync(DocumentOwnerType.Lease);
 
         if (vm.BirimId == null || vm.BirimId == 0)
             ModelState.AddModelError("BirimId", "Lütfen bir unit seçin.");
@@ -285,7 +285,7 @@ public class LeaseController : Controller
             DueDay = vm.VadeGunu,
         };
 
-        await _sozlesmeService.CreateAsync(s, kiraBedeli);
+        await _leaseService.CreateAsync(s, kiraBedeli);
 
         // Override kalemlerini kaydet
         if (vm.SozlesmeKalemleri != null && vm.SozlesmeKalemleri.Any())
@@ -305,7 +305,7 @@ public class LeaseController : Controller
             await _ctx.SaveChangesAsync();
         }
 
-        await _chargeGeneration.UretSozlesmeIcinAsync(s.Id);
+        await _chargeGeneration.GenerateForLeaseAsync(s.Id);
 
         foreach (var bt in vm.DocumentTypes)
         {
@@ -313,8 +313,8 @@ public class LeaseController : Controller
             if (file == null || file.Length == 0) continue;
             using var ms = new MemoryStream();
             await file.CopyToAsync(ms);
-            await _belgeService.UploadAsync(
-                BelgeOwnerTipi.Lease, s.Id, bt.Id,
+            await _documentService.UploadAsync(
+                DocumentOwnerType.Lease, s.Id, bt.Id,
                 file.FileName, file.ContentType, ms.ToArray());
         }
 
@@ -326,7 +326,7 @@ public class LeaseController : Controller
     [Authorize(Policy = PermissionCatalog.Lease.Extend)]
     public async Task<IActionResult> Uzat(int id, SozlesmeUzatViewModel vm)
     {
-        var s = await _sozlesmeService.GetByIdAsync(id);
+        var s = await _leaseService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
         if (s.Status == LeaseStatus.Terminated)
@@ -380,9 +380,9 @@ public class LeaseController : Controller
             .Where(r => r.LeaseId == id).ToListAsync();
         var yeniBedel = HesaplaAylikBedelHelper(yeniRateler, s.UnitArea);
 
-        await _sozlesmeService.UzatAsync(id, vm.YeniBitisTarihi, eskiBedel, yeniBedel,
+        await _leaseService.UzatAsync(id, vm.YeniBitisTarihi, eskiBedel, yeniBedel,
             vm.KdvUygulanacakMi, vm.KdvRate ?? 20, vm.TufeOrani, vm.Aciklama);
-        await _chargeGeneration.UretSozlesmeIcinAsync(id);
+        await _chargeGeneration.GenerateForLeaseAsync(id);
 
         TempData["Success"] = "Sözleşme süresi başarıyla uzatıldı.";
         return RedirectToAction("Detay", new { id });
@@ -392,7 +392,7 @@ public class LeaseController : Controller
     [Authorize(Policy = PermissionCatalog.Lease.Edit)]
     public async Task<IActionResult> VadeGuncelle(int id, DueDateRuleType vadeKuraliTipi, int vadeGunu, string? aciklama)
     {
-        var s = await _sozlesmeService.GetByIdAsync(id);
+        var s = await _leaseService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
         if (s.Status == LeaseStatus.Terminated)
@@ -407,8 +407,8 @@ public class LeaseController : Controller
             return RedirectToAction("Detay", new { id });
         }
 
-        await _sozlesmeService.VadeGuncelleAsync(id, vadeKuraliTipi, vadeGunu, aciklama);
-        await _chargeGeneration.BekleyenVadeleriYenidenHesaplaAsync(id);
+        await _leaseService.VadeGuncelleAsync(id, vadeKuraliTipi, vadeGunu, aciklama);
+        await _chargeGeneration.RecalculatePendingDueDatesAsync(id);
 
         TempData["Success"] = "Vade kuralı güncellendi ve bekleyen tahakkuklar yenilendi.";
         return RedirectToAction("Detay", new { id });
@@ -418,7 +418,7 @@ public class LeaseController : Controller
     [Authorize(Policy = PermissionCatalog.Lease.Terminate)]
     public async Task<IActionResult> Feshet(int id, SozlesmeFesihViewModel vm)
     {
-        var s = await _sozlesmeService.GetByIdAsync(id);
+        var s = await _leaseService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
         if (s.Status == LeaseStatus.Terminated)
@@ -437,8 +437,8 @@ public class LeaseController : Controller
             return RedirectToAction("Detay", new { id });
         }
 
-        await _sozlesmeService.FeshetAsync(id, vm.FesihTarihi, vm.FesihNedeni, vm.Aciklama);
-        await _chargeGeneration.IptalEtFutureTahakkuklarAsync(id, vm.FesihTarihi);
+        await _leaseService.FeshetAsync(id, vm.FesihTarihi, vm.FesihNedeni, vm.Aciklama);
+        await _chargeGeneration.CancelFutureChargesAsync(id, vm.FesihTarihi);
         TempData["Success"] = "Sözleşme başarıyla feshedildi.";
         return RedirectToAction("Detay", new { id });
     }
@@ -471,7 +471,7 @@ public class LeaseController : Controller
             await _ctx.SaveChangesAsync();
         }
 
-        await _chargeGeneration.YenidenUretAsync(id, baslangicTarihi);
+        await _chargeGeneration.RegenerateAsync(id, baslangicTarihi);
 
         s.ActivityLog.Add(new LeaseActivityLog
         {
@@ -499,13 +499,13 @@ public class LeaseController : Controller
     [Authorize]
     public async Task<IActionResult> GetVarsayilanKalemler(int unitId, int tenantId, DateTime baslangic, int? leaseId = null)
     {
-        var previews = await _chargeGeneration.ComposeKalemlerAsync(unitId, tenantId, baslangic, leaseId);
+        var previews = await _chargeGeneration.ComposeLineItemsAsync(unitId, tenantId, baslangic, leaseId);
         var result = previews.Select(p => new SozlesmeKalemInputDto
         {
             ChargeTypeId = p.ChargeTypeId,
             ChargeTypeName = p.ChargeTypeName,
             ChargeTypeCode = p.ChargeTypeCode,
-            Davranis = p.Davranis,
+            Davranis = p.Behavior,
             VarsayilanTutar = p.Amount,
             Amount = p.Amount,
             UnitValue = p.UnitValue,
@@ -513,7 +513,7 @@ public class LeaseController : Controller
             KdvRate = p.KdvRate,
             CalculationMethod = p.CalculationMethod,
             SourceType = p.SourceType.ToString(),
-            RateBulundu = p.RateBulundu,
+            RateBulundu = p.IsRateFound,
             KullaniciDegistirdiMi = false
         }).ToList();
 

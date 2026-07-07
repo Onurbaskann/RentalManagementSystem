@@ -1,5 +1,6 @@
-﻿@model KiraTakip.Models.ViewModels.BelgeTuruFormViewModel
+@model KiraTakip.Models.ViewModels.BelgeTuruFormViewModel
 @using KiraTakip.Models.Entities
+@using KiraTakip.Models
 @{
     ViewData["Title"] = "Belge Türü Ekle";
 }
@@ -43,9 +44,9 @@
                 <div class="form-group mb-0">
                     <label class="form-label">Hedef Kayıt Tipi *</label>
                     <select asp-for="HedefEntite" class="form-control">
-                        <option value="@((int)BelgeOwnerTipi.Tenant)">Kiracı</option>
-                        <option value="@((int)BelgeOwnerTipi.Lease)">Sözleşme</option>
-                        <option value="@((int)BelgeOwnerTipi.Payment)">Ödeme</option>
+                        <option value="@((int)DocumentOwnerType.Tenant)">Kiracı</option>
+                        <option value="@((int)DocumentOwnerType.Lease)">Sözleşme</option>
+                        <option value="@((int)DocumentOwnerType.Payment)">Ödeme</option>
                     </select>
                     <span asp-validation-for="HedefEntite" class="form-error"></span>
                 </div>

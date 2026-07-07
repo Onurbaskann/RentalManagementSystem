@@ -1,4 +1,4 @@
-﻿@model KiraTakip.Models.Dtos.OdemeDetayDto
+@model KiraTakip.Models.Dtos.OdemeDetayDto
 @using KiraTakip.Models
 @using KiraTakip.Models.Entities
 @{
@@ -8,7 +8,7 @@
     bool canUpload     = User.HasPermission(PermissionCatalog.Payment.UploadReceipt);
     bool canMatch      = User.HasPermission(PermissionCatalog.Payment.MatchBankTransaction);
     bool bekliyor      = Model.Durum == PaymentStatus.PendingApproval;
-    var belgeler        = (ViewBag.Belgeler    as List<Belge>)    ?? [];
+    var belgeler        = (ViewBag.Belgeler    as List<Document>)    ?? [];
     var belgeTurleri    = (ViewBag.DocumentTypes as List<DocumentType>) ?? [];
 
     string durumCls = Model.Durum switch {
@@ -163,7 +163,7 @@
         <div>
         @await Html.PartialAsync("_BelgePanel", new KiraTakip.Models.ViewModels.BelgePanelViewModel
         {
-            OwnerType    = KiraTakip.Models.Entities.BelgeOwnerTipi.Payment,
+            OwnerType    = KiraTakip.Models.DocumentOwnerType.Payment,
             OwnerId      = Model.Id,
             DocumentTypes = belgeTurleri,
             Belgeler     = belgeler,

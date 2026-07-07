@@ -9,26 +9,26 @@
     </div>
 </div>
 
-<div class="card" x-data="{ tur: '@(Model.RezervasyonYapilabilirMi ? "rez" : "kira")' }">
+<div class="card" x-data="{ tur: '@(Model.CanBeReserved ? "rez" : "kira")' }">
     <form method="post" action="/Admin/UnitType/Ekle" asp-form-write-permission="@PermissionCatalog.UnitType.Create">
         @Html.AntiForgeryToken()
 
         <div class="form-group">
             <label class="form-label">Ad <span class="text-red-500">*</span></label>
-            <input asp-for="Ad" class="form-control" placeholder="Ofis" required />
-            <span asp-validation-for="Ad" class="text-red-500 text-xs mt-1"></span>
+            <input asp-for="Name" class="form-control" placeholder="Ofis" required />
+            <span asp-validation-for="Name" class="text-red-500 text-xs mt-1"></span>
         </div>
 
         <div class="form-group">
             <label class="form-label">Sıra</label>
-            <input asp-for="Sira" type="number" class="form-control w-24" min="1" />
+            <input asp-for="SortOrder" type="number" class="form-control w-24" min="1" />
         </div>
 
         <div class="form-group">
             <label class="form-label">Kullanım Türü <span class="text-red-500">*</span></label>
             <div class="flex flex-col gap-2">
-                <input type="hidden" name="KiralanabilirMi" :value="tur === 'kira' ? 'True' : 'False'" />
-                <input type="hidden" name="RezervasyonYapilabilirMi" :value="tur === 'rez' ? 'True' : 'False'" />
+                <input type="hidden" name="CanBeRented" :value="tur === 'kira' ? 'True' : 'False'" />
+                <input type="hidden" name="CanBeReserved" :value="tur === 'rez' ? 'True' : 'False'" />
 
                 <label class="flex items-center gap-2 cursor-pointer">
                     <input type="radio" name="usage_selector" value="kira" 
@@ -46,20 +46,20 @@
 
         <div class="form-group" x-show="tur === 'rez'" x-cloak>
             <label class="form-label">Charge Borç Tipi <span class="text-red-500">*</span></label>
-            <select asp-for="BorcTipiId" class="form-control" :required="tur === 'rez'">
+            <select asp-for="ChargeTypeId" class="form-control" :required="tur === 'rez'">
                 <option value="">-- Borç Tipi Seçin --</option>
-                @foreach (var bt in Model.BorcTipiAdaylari)
+                @foreach (var bt in Model.ChargeTypeCandidates)
                 {
                     <option value="@bt.Id">@bt.Ad (@bt.Kod)</option>
                 }
             </select>
             <div class="text-xs text-muted mt-1">Rezervasyonlar tahakkuka aktarılırken bu borç tipi kullanılacaktır.</div>
-            <span asp-validation-for="BorcTipiId" class="text-red-500 text-xs mt-1"></span>
+            <span asp-validation-for="ChargeTypeId" class="text-red-500 text-xs mt-1"></span>
         </div>
 
         <div class="form-group">
             <label class="flex items-center gap-2 cursor-pointer">
-                <input asp-for="Aktif" type="checkbox" class="w-4 h-4 accent-primary cursor-pointer" />
+                <input asp-for="IsActive" type="checkbox" class="w-4 h-4 accent-primary cursor-pointer" />
                 <span class="form-label mb-0">Aktif</span>
             </label>
         </div>

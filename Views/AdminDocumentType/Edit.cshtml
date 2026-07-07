@@ -1,5 +1,6 @@
-﻿@model KiraTakip.Models.ViewModels.BelgeTuruFormViewModel
+@model KiraTakip.Models.ViewModels.BelgeTuruFormViewModel
 @using KiraTakip.Models.Entities
+@using KiraTakip.Models
 @{
     ViewData["Title"] = "Belge Türü Düzenle";
 }
@@ -48,21 +49,21 @@
                     {
                         <input type="hidden" asp-for="HedefEntite" />
                         <select class="form-control bg-slate-100 text-slate-500" disabled>
-                            @if (Model.HedefEntite == BelgeOwnerTipi.Tenant)
+                            @if (Model.HedefEntite == DocumentOwnerType.Tenant)
                             {
-                                <option value="@((int)BelgeOwnerTipi.Tenant)" selected>Kiracı</option>
+                                <option value="@((int)DocumentOwnerType.Tenant)" selected>Kiracı</option>
                             }
-                            else if (Model.HedefEntite == BelgeOwnerTipi.Payment)
+                            else if (Model.HedefEntite == DocumentOwnerType.Payment)
                             {
-                                <option value="@((int)BelgeOwnerTipi.Payment)" selected>Ödeme</option>
+                                <option value="@((int)DocumentOwnerType.Payment)" selected>Ödeme</option>
                             }
-                            else if (Model.HedefEntite == BelgeOwnerTipi.Lease)
+                            else if (Model.HedefEntite == DocumentOwnerType.Lease)
                             {
-                                <option value="@((int)BelgeOwnerTipi.Lease)" selected>Sözleşme</option>
+                                <option value="@((int)DocumentOwnerType.Lease)" selected>Sözleşme</option>
                             }
-                            else if (Model.HedefEntite == BelgeOwnerTipi.Sablon)
+                            else if (Model.HedefEntite == DocumentOwnerType.Template)
                             {
-                                <option value="@((int)BelgeOwnerTipi.Sablon)" selected>Şablon</option>
+                                <option value="@((int)DocumentOwnerType.Template)" selected>Şablon</option>
                             }
                         </select>
                         <div class="text-xs text-muted mt-1">🔒 Sistem kaydı — hedef kayıt tipi değiştirilemez.</div>
@@ -70,9 +71,9 @@
                     else
                     {
                         <select asp-for="HedefEntite" class="form-control">
-                            <option value="@((int)BelgeOwnerTipi.Tenant)">Kiracı</option>
-                            <option value="@((int)BelgeOwnerTipi.Lease)">Sözleşme</option>
-                            <option value="@((int)BelgeOwnerTipi.Payment)">Ödeme</option>
+                            <option value="@((int)DocumentOwnerType.Tenant)">Kiracı</option>
+                            <option value="@((int)DocumentOwnerType.Lease)">Sözleşme</option>
+                            <option value="@((int)DocumentOwnerType.Payment)">Ödeme</option>
                         </select>
                         <span asp-validation-for="HedefEntite" class="form-error"></span>
                     }
@@ -118,5 +119,3 @@
         </div>
     </form>
 </div>
-
-

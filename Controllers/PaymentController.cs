@@ -16,7 +16,7 @@ public class PaymentController : Controller
 {
     private readonly IPaymentService _paymentService;
     private readonly IChargeService _chargeService;
-    private readonly IDocumentService _belgeService;
+    private readonly IDocumentService _documentService;
     private readonly IBankTransactionService _bankaService;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IPermissionScopeProvider _provider;
@@ -31,7 +31,7 @@ public class PaymentController : Controller
     {
         _paymentService = odemeService;
         _chargeService = tahakkukService;
-        _belgeService = documentService;
+        _documentService = documentService;
         _bankaService = bankaService;
         _userManager = userManager;
         _provider = provider;
@@ -57,8 +57,8 @@ public class PaymentController : Controller
         if (payment.TasinmazId != null && !_provider.IsInScope(payment.TasinmazId.Value))
             return Forbid();
 
-        ViewBag.Belgeler    = await _belgeService.GetListAsync(BelgeOwnerTipi.Payment, id);
-        ViewBag.DocumentTypes = await _belgeService.GetTurlerAsync(BelgeOwnerTipi.Payment);
+        ViewBag.Belgeler    = await _documentService.GetListAsync(DocumentOwnerType.Payment, id);
+        ViewBag.DocumentTypes = await _documentService.GetTurlerAsync(DocumentOwnerType.Payment);
         return View(payment);
     }
 

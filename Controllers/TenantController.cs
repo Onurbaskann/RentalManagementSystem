@@ -14,15 +14,15 @@ namespace KiraTakip.Controllers;
 [Authorize]
 public class TenantController : Controller
 {
-    private readonly ITenantService _kiraciService;
-    private readonly ILeaseService _sozlesmeService;
+    private readonly ITenantService _tenantService;
+    private readonly ILeaseService _leaseService;
     private readonly IStatisticsService _istatistik;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _ctx;
     private readonly IRoleService _rolService;
     private readonly IInvitationService _davetiyeService;
     private readonly IPermissionScopeProvider _provider;
-    private readonly IDocumentService _belgeService;
+    private readonly IDocumentService _documentService;
 
     public TenantController(
         ITenantService tenantService,
@@ -35,23 +35,23 @@ public class TenantController : Controller
         IPermissionScopeProvider provider,
         IDocumentService documentService)
     {
-        _kiraciService = tenantService;
-        _sozlesmeService = leaseService;
+        _tenantService = tenantService;
+        _leaseService = leaseService;
         _istatistik = istatistik;
         _userManager = userManager;
         _ctx = ctx;
         _rolService = roleService;
         _davetiyeService = invitationService;
         _provider = provider;
-        _belgeService = documentService;
+        _documentService = documentService;
     }
 
     [Authorize(Policy = PermissionCatalog.Tenant.Module)]
     public async Task<IActionResult> Index()
     {
         var propertyIds = _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds;
-        var kiraciler = await _kiraciService.GetAllAsync(propertyIds);
-        var sozlesmeler = await _sozlesmeService.GetAllAsync(propertyIds: propertyIds);
+        var kiraciler = await _tenantService.GetAllAsync(propertyIds);
+        var sozlesmeler = await _leaseService.GetAllAsync(propertyIds: propertyIds);
         ViewBag.AktifSozlesme = sozlesmeler
             .Where(s => s.Aktif)
             .GroupBy(s => s.TenantId)
@@ -65,27 +65,27 @@ public class TenantController : Controller
         var propertyIds = _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds;
         if (!_provider.GlobalAccess)
         {
-            var kiraciler = await _kiraciService.GetAllAsync(propertyIds);
+            var kiraciler = await _tenantService.GetAllAsync(propertyIds);
             if (!kiraciler.Any(k => k.Id == id)) return Forbid();
         }
 
-        var k = await _kiraciService.GetDetayAsync(id);
+        var k = await _tenantService.GetDetayAsync(id);
         if (k == null) return NotFound();
 
         List<LeaseListItemDto> sozlesmeler;
         if (!_provider.GlobalAccess)
         {
-            var all = await _sozlesmeService.GetAllAsync(propertyIds: propertyIds);
+            var all = await _leaseService.GetAllAsync(propertyIds: propertyIds);
             sozlesmeler = all.Where(s => s.TenantId == id).ToList();
         }
         else
         {
-            sozlesmeler = await _sozlesmeService.GetByTenantIdAsync(id);
+            sozlesmeler = await _leaseService.GetByTenantIdAsync(id);
         }
 
-        var depozitoTutarlari = await _sozlesmeService.GetDepozitoTutarlariAsync(sozlesmeler.Select(s => s.Id));
-        var belgeler = await _belgeService.GetListAsync(Models.Entities.BelgeOwnerTipi.Tenant, id);
-        var belgeTurleri = await _belgeService.GetTurlerAsync(Models.Entities.BelgeOwnerTipi.Tenant);
+        var depozitoTutarlari = await _leaseService.GetDepozitoTutarlariAsync(sozlesmeler.Select(s => s.Id));
+        var belgeler = await _documentService.GetListAsync(DocumentOwnerType.Tenant, id);
+        var belgeTurleri = await _documentService.GetTurlerAsync(DocumentOwnerType.Tenant);
 
         var vm = new KiraciDetayViewModel
         {
@@ -102,7 +102,7 @@ public class TenantController : Controller
     {
         ViewBag.Kategoriler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Tenant && k.IsActive).OrderBy(k => k.Sira).ToListAsync();
         ViewBag.Sektorler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Sektor && k.IsActive).OrderBy(k => k.Sira).ToListAsync();
-        ViewBag.DocumentTypes = await _belgeService.GetTurlerAsync(Models.Entities.BelgeOwnerTipi.Tenant);
+        ViewBag.DocumentTypes = await _documentService.GetTurlerAsync(DocumentOwnerType.Tenant);
     }
 
     [HttpGet]
@@ -112,7 +112,7 @@ public class TenantController : Controller
         await PopulateKiraciViewBagAsync();
         var vm = new KiraciFormViewModel
         {
-            KiraciNo = await _kiraciService.GenerateKiraciNoAsync()
+            KiraciNo = await _tenantService.GenerateKiraciNoAsync()
         };
         return View(vm);
     }
@@ -123,7 +123,7 @@ public class TenantController : Controller
     {
         await ValidateKiraciAsync(vm);
 
-        var belgeTurleri = await _belgeService.GetTurlerAsync(Models.Entities.BelgeOwnerTipi.Tenant);
+        var belgeTurleri = await _documentService.GetTurlerAsync(DocumentOwnerType.Tenant);
         foreach (var bt in belgeTurleri.Where(bt => bt.Required))
         {
             var f = Request.Form.Files.GetFile($"dosya_{bt.Id}");
@@ -138,7 +138,7 @@ public class TenantController : Controller
         }
 
         var k = BuildKiraciFromVm(vm);
-        await _kiraciService.CreateAsync(k);
+        await _tenantService.CreateAsync(k);
 
         // Yüklenen belgeleri kaydet
         foreach (var bt in belgeTurleri)
@@ -147,8 +147,8 @@ public class TenantController : Controller
             if (file == null || file.Length == 0) continue;
             using var ms = new MemoryStream();
             await file.CopyToAsync(ms);
-            await _belgeService.UploadAsync(
-                Models.Entities.BelgeOwnerTipi.Tenant, k.Id, bt.Id,
+            await _documentService.UploadAsync(
+                DocumentOwnerType.Tenant, k.Id, bt.Id,
                 file.FileName, file.ContentType, ms.ToArray());
         }
 
@@ -183,7 +183,7 @@ public class TenantController : Controller
     [Authorize(Policy = PermissionCatalog.Tenant.Edit)]
     public async Task<IActionResult> Duzenle(int id)
     {
-        var k = await _kiraciService.GetDetayAsync(id);
+        var k = await _tenantService.GetDetayAsync(id);
         if (k == null) return NotFound();
 
         await PopulateKiraciViewBagAsync();
@@ -221,7 +221,7 @@ public class TenantController : Controller
 
         var k = BuildKiraciFromVm(vm);
         k.Id = id;
-        await _kiraciService.UpdateAsync(k);
+        await _tenantService.UpdateAsync(k);
         TempData["Success"] = "Kiracı bilgileri güncellendi.";
         return RedirectToAction("Detay", new { id });
     }
@@ -230,7 +230,7 @@ public class TenantController : Controller
     {
         if (string.IsNullOrWhiteSpace(vm.KiraciNo))
             ModelState.AddModelError("KiraciNo", "Kiracı No zorunludur.");
-        else if (await _kiraciService.KiraciNoExistsAsync(vm.KiraciNo, excludeId))
+        else if (await _tenantService.KiraciNoExistsAsync(vm.KiraciNo, excludeId))
             ModelState.AddModelError("KiraciNo", "Bu Kiracı No zaten kullanımda.");
 
         if (!vm.KiraciKategoriId.HasValue || vm.KiraciKategoriId <= 0)

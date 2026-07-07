@@ -1,5 +1,6 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Extensions;
+using KiraTakip.Models;
 using KiraTakip.Models.Entities;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -11,13 +12,13 @@ namespace KiraTakip.Controllers;
 [Route("Belge")]
 public class DocumentController : Controller
 {
-    private readonly IDocumentService _belgeService;
+    private readonly IDocumentService _documentService;
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
         { "pdf", "jpg", "jpeg", "png", "doc", "docx", "xls", "xlsx" };
 
     public DocumentController(IDocumentService documentService)
     {
-        _belgeService = documentService;
+        _documentService = documentService;
     }
 
     [HttpGet("Indir/{id:int}")]
@@ -25,8 +26,8 @@ public class DocumentController : Controller
     {
         try
         {
-            var (meta, icerik) = await _belgeService.DownloadAsync(id);
-            return File(icerik, meta.MimeType, meta.DosyaAdi);
+            var (meta, content) = await _documentService.DownloadAsync(id);
+            return File(content, meta.MimeType, meta.FileName);
         }
         catch (KeyNotFoundException)
         {
@@ -36,7 +37,7 @@ public class DocumentController : Controller
 
     [HttpPost("Yukle")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Yukle(BelgeOwnerTipi ownerType, int ownerId, int documentTypeId, IFormFile dosya, string? aciklama)
+    public async Task<IActionResult> Yukle(DocumentOwnerType ownerType, int ownerId, int documentTypeId, IFormFile dosya, string? aciklama)
     {
         if (!User.HasPermission(GetRequiredPermission(ownerType)))
             return Forbid();
@@ -63,7 +64,7 @@ public class DocumentController : Controller
         using var ms = new MemoryStream();
         await dosya.CopyToAsync(ms);
 
-        await _belgeService.UploadAsync(
+        await _documentService.UploadAsync(
             ownerType, ownerId, documentTypeId,
             dosya.FileName, dosya.ContentType, ms.ToArray(), aciklama, invalidateOld: true);
 
@@ -73,29 +74,29 @@ public class DocumentController : Controller
 
     [HttpPost("Sil/{id:int}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Sil(int id, BelgeOwnerTipi ownerType, int ownerId)
+    public async Task<IActionResult> Sil(int id, DocumentOwnerType ownerType, int ownerId)
     {
         if (!User.HasPermission(GetRequiredPermission(ownerType)))
             return Forbid();
 
-        await _belgeService.DeleteAsync(id);
+        await _documentService.DeleteAsync(id);
         TempData["Success"] = "Belge silindi.";
         return RedirectToEntity(ownerType, ownerId);
     }
 
-    private static string GetRequiredPermission(BelgeOwnerTipi ownerType) => ownerType switch
+    private static string GetRequiredPermission(DocumentOwnerType ownerType) => ownerType switch
     {
-        BelgeOwnerTipi.Tenant   => PermissionCatalog.Tenant.Edit,
-        BelgeOwnerTipi.Lease => PermissionCatalog.Lease.Edit,
-        BelgeOwnerTipi.Payment    => PermissionCatalog.Payment.UploadReceipt,
+        DocumentOwnerType.Tenant   => PermissionCatalog.Tenant.Edit,
+        DocumentOwnerType.Lease => PermissionCatalog.Lease.Edit,
+        DocumentOwnerType.Payment    => PermissionCatalog.Payment.UploadReceipt,
         _ => throw new ArgumentOutOfRangeException(nameof(ownerType))
     };
 
-    private IActionResult RedirectToEntity(BelgeOwnerTipi ownerType, int ownerId) => ownerType switch
+    private IActionResult RedirectToEntity(DocumentOwnerType ownerType, int ownerId) => ownerType switch
     {
-        BelgeOwnerTipi.Tenant   => RedirectToAction("Detay", "Tenant",   new { id = ownerId }),
-        BelgeOwnerTipi.Lease => RedirectToAction("Detay", "Lease", new { id = ownerId }),
-        BelgeOwnerTipi.Payment    => RedirectToAction("Detay", "Payment",    new { id = ownerId }),
+        DocumentOwnerType.Tenant   => RedirectToAction("Detay", "Tenant",   new { id = ownerId }),
+        DocumentOwnerType.Lease => RedirectToAction("Detay", "Lease", new { id = ownerId }),
+        DocumentOwnerType.Payment    => RedirectToAction("Detay", "Payment",    new { id = ownerId }),
         _ => RedirectToAction("Index", "Home")
     };
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using KiraTakip.Authorization;
@@ -84,9 +84,9 @@ public class AdminRateController : Controller
             }).ToList()
         };
 
-        var rezervasyonBirimTurleri = await _ctx.BirimTurleri
-            .Where(t => t.IsActive && t.RezervasyonYapilabilirMi)
-            .OrderBy(t => t.Sira)
+        var rezervasyonBirimTurleri = await _ctx.UnitTypes
+            .Where(t => t.IsActive && t.CanBeReserved)
+            .OrderBy(t => t.SortOrder)
             .ToListAsync();
 
         var mevcutRezervasyonlar = await _ctx.RezervasyonTarifeler
@@ -100,7 +100,7 @@ public class AdminRateController : Controller
             {
                 RezervasyonTarifeId          = mevcut?.Id ?? 0,
                 UnitTypeId                 = bt.Id,
-                UnitTypeAd                 = bt.Ad,
+                UnitTypeAd                 = bt.Name,
                 FreeDurationMinutes          = mevcut?.FreeDurationMinutes ?? 0,
                 UcretlendirmePeriyoduDakika = mevcut?.UcretlendirmePeriyoduDakika ?? 60,
                 PeriyotUcreti               = mevcut?.PeriyotUcreti ?? 0,
@@ -268,8 +268,8 @@ public class AdminRateController : Controller
                 }
             }
 
-            var rezBirimTurleri = await _ctx.BirimTurleri
-                .Where(t => t.IsActive && t.RezervasyonYapilabilirMi)
+            var rezBirimTurleri = await _ctx.UnitTypes
+                .Where(t => t.IsActive && t.CanBeReserved)
                 .ToListAsync();
 
             foreach (var bt in rezBirimTurleri)

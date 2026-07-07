@@ -16,6 +16,6 @@ public class TasinmazDetayDto
     public List<BirimDetayDto> Units { get; set; } = [];
     public List<TasinmazRezervasyonDto> Rezervasyonlar { get; set; } = [];
     public List<BirimRezervasyonKuralDto> BirimRezervasyonKurallari { get; set; } = [];
-    public List<BirimOzelFiyatOzetDto> BirimOzelFiyatlari { get; set; } = [];
+    public List<UnitCustomRateSummaryDto> BirimOzelFiyatlari { get; set; } = [];
     public List<TasinmazSozlesmeGecmisiDto> SozlesmeGecmisi { get; set; } = [];
 }

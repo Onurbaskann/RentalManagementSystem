@@ -160,3 +160,11 @@ public enum PaymentLinkStatus
     Cancelled = 2,
     Expired = 3
 }
+
+public enum DocumentOwnerType
+{
+    Tenant = 1,
+    Payment = 2,
+    Lease = 3,
+    Template = 99
+}

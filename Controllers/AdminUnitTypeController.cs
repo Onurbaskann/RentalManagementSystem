@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Helpers;
 using KiraTakip.Models.ViewModels;
@@ -41,9 +41,9 @@ public class AdminUnitTypeController : Controller
         var nextSira = (await _repo.GetMaxSiraAsync()) + 1;
         var vm = new UnitTypeFormViewModel
         {
-            Sira = nextSira,
-            KiralanabilirMi = true,
-            BorcTipiAdaylari = await _borcTipiRepo.GetRezervasyonAdaylariAsync()
+            SortOrder = nextSira,
+            CanBeRented = true,
+            ChargeTypeCandidates = await _borcTipiRepo.GetRezervasyonAdaylariAsync()
         };
         return View(vm);
     }
@@ -53,42 +53,42 @@ public class AdminUnitTypeController : Controller
     [Authorize(Policy = PermissionCatalog.UnitType.Create)]
     public async Task<IActionResult> Create(UnitTypeFormViewModel model)
     {
-        if (model.RezervasyonYapilabilirMi && (!model.BorcTipiId.HasValue || model.BorcTipiId <= 0))
-            ModelState.AddModelError(nameof(model.BorcTipiId), "Reservation unit türü için borç tipi seçilmelidir.");
+        if (model.CanBeReserved && (!model.ChargeTypeId.HasValue || model.ChargeTypeId <= 0))
+            ModelState.AddModelError(nameof(model.ChargeTypeId), "Reservation unit türü için borç tipi seçilmelidir.");
 
-        if (model.KiralanabilirMi == model.RezervasyonYapilabilirMi)
+        if (model.CanBeRented == model.CanBeReserved)
             ModelState.AddModelError(string.Empty,
                 "Tam olarak bir kullanım türü seçilmelidir: Kiralanabilir VEYA Reservation yapılabilir.");
 
         if (!ModelState.IsValid)
         {
-            model.BorcTipiAdaylari = await _borcTipiRepo.GetRezervasyonAdaylariAsync();
+            model.ChargeTypeCandidates = await _borcTipiRepo.GetRezervasyonAdaylariAsync();
             return View(model);
         }
 
-        var kod = CodeSlugger.ToCode(model.Ad);
+        var kod = CodeSlugger.ToCode(model.Name);
         if (await _repo.KodExistsAsync(kod))
         {
-            ModelState.AddModelError(nameof(model.Ad), "Bu ad zaten kullanılıyor. Farklı bir ad girin.");
-            model.BorcTipiAdaylari = await _borcTipiRepo.GetRezervasyonAdaylariAsync();
+            ModelState.AddModelError(nameof(model.Name), "Bu ad zaten kullanılıyor. Farklı bir ad girin.");
+            model.ChargeTypeCandidates = await _borcTipiRepo.GetRezervasyonAdaylariAsync();
             return View(model);
         }
 
         var entity = new UnitType
         {
-            Ad = model.Ad,
-            Kod = kod,
-            Sira = model.Sira,
-            KiralanabilirMi = model.KiralanabilirMi,
-            RezervasyonYapilabilirMi = model.RezervasyonYapilabilirMi,
-            ChargeTypeId = model.KiralanabilirMi ? null : model.BorcTipiId,
-            IsActive = model.Aktif,
-            OlusturmaTarihi = DateTime.UtcNow
+            Name = model.Name,
+            Code = kod,
+            SortOrder = model.SortOrder,
+            CanBeRented = model.CanBeRented,
+            CanBeReserved = model.CanBeReserved,
+            ChargeTypeId = model.CanBeRented ? null : model.ChargeTypeId,
+            IsActive = model.IsActive,
+            CreatedDate = DateTime.UtcNow
         };
 
         await _repo.AddAsync(entity);
         await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Ad}' unit türü eklendi.";
+        TempData["Success"] = $"'{entity.Name}' unit türü eklendi.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -100,7 +100,7 @@ public class AdminUnitTypeController : Controller
         if (entity == null) return NotFound();
 
         var vm = ToFormVm(entity);
-        vm.BorcTipiAdaylari = await _borcTipiRepo.GetRezervasyonAdaylariAsync();
+        vm.ChargeTypeCandidates = await _borcTipiRepo.GetRezervasyonAdaylariAsync();
         return View(vm);
     }
 
@@ -111,31 +111,31 @@ public class AdminUnitTypeController : Controller
     {
         if (id != model.Id) return BadRequest();
 
-        if (model.RezervasyonYapilabilirMi && (!model.BorcTipiId.HasValue || model.BorcTipiId <= 0))
-            ModelState.AddModelError(nameof(model.BorcTipiId), "Reservation unit türü için borç tipi seçilmelidir.");
+        if (model.CanBeReserved && (!model.ChargeTypeId.HasValue || model.ChargeTypeId <= 0))
+            ModelState.AddModelError(nameof(model.ChargeTypeId), "Reservation unit türü için borç tipi seçilmelidir.");
 
-        if (model.KiralanabilirMi == model.RezervasyonYapilabilirMi)
+        if (model.CanBeRented == model.CanBeReserved)
             ModelState.AddModelError(string.Empty,
                 "Tam olarak bir kullanım türü seçilmelidir: Kiralanabilir VEYA Reservation yapılabilir.");
 
         if (!ModelState.IsValid)
         {
-            model.BorcTipiAdaylari = await _borcTipiRepo.GetRezervasyonAdaylariAsync();
+            model.ChargeTypeCandidates = await _borcTipiRepo.GetRezervasyonAdaylariAsync();
             return View(model);
         }
 
         var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return NotFound();
 
-        entity.Ad = model.Ad;
-        entity.Sira = model.Sira;
-        entity.KiralanabilirMi = model.KiralanabilirMi;
-        entity.RezervasyonYapilabilirMi = model.RezervasyonYapilabilirMi;
-        entity.ChargeTypeId = model.KiralanabilirMi ? null : model.BorcTipiId;
-        entity.IsActive = model.Aktif;
+        entity.Name = model.Name;
+        entity.SortOrder = model.SortOrder;
+        entity.CanBeRented = model.CanBeRented;
+        entity.CanBeReserved = model.CanBeReserved;
+        entity.ChargeTypeId = model.CanBeRented ? null : model.ChargeTypeId;
+        entity.IsActive = model.IsActive;
 
         await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Ad}' güncellendi.";
+        TempData["Success"] = $"'{entity.Name}' güncellendi.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -175,18 +175,18 @@ public class AdminUnitTypeController : Controller
 
         entity.IsActive = !entity.IsActive;
         await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Ad}' {(entity.IsActive ? "aktif" : "pasif")} yapıldı.";
+        TempData["Success"] = $"'{entity.Name}' {(entity.IsActive ? "aktif" : "pasif")} yapıldı.";
         return RedirectToAction(nameof(Index));
     }
 
     private static UnitTypeFormViewModel ToFormVm(UnitType e) => new()
     {
         Id = e.Id,
-        Ad = e.Ad,
-        Sira = e.Sira,
-        KiralanabilirMi = e.KiralanabilirMi,
-        RezervasyonYapilabilirMi = e.RezervasyonYapilabilirMi,
-        BorcTipiId = e.ChargeTypeId,
-        Aktif = e.IsActive
+        Name = e.Name,
+        SortOrder = e.SortOrder,
+        CanBeRented = e.CanBeRented,
+        CanBeReserved = e.CanBeReserved,
+        ChargeTypeId = e.ChargeTypeId,
+        IsActive = e.IsActive
     };
 }

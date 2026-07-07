@@ -62,7 +62,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
     public DbSet<KullaniciYetkiKapsami> KullaniciYetkiKapsamlari { get; set; }
     public DbSet<UserPermission> UserPermissions { get; set; }
 
-    public DbSet<UnitType> BirimTurleri { get; set; }
+    public DbSet<UnitType> UnitTypes { get; set; }
     public DbSet<TasinmazTipi> TasinmazTipleri { get; set; }
     public DbSet<Kategori> Kategoriler { get; set; }
 
@@ -73,7 +73,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
 
     public DbSet<ChargeType> ChargeTypes { get; set; }
     public DbSet<GenelTarife> GenelTarifeler { get; set; }
-    public DbSet<BirimTarife> BirimTarifeler { get; set; }
+    public DbSet<UnitRate> UnitRates { get; set; }
     public DbSet<SozlesmeTarife> SozlesmeTarifeler { get; set; }
 
     public DbSet<Charge> Charges { get; set; }
@@ -91,8 +91,8 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
     public DbSet<OdemeLinkKayit> OdemeLinkKayitlari { get; set; }
 
     public DbSet<DocumentType> DocumentTypes { get; set; }
-    public DbSet<Belge> Belgeler { get; set; }
-    public DbSet<BelgeIcerik> BelgeIcerikleri { get; set; }
+    public DbSet<Document> Belgeler { get; set; }
+    public DbSet<DocumentContent> DocumentContents { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -223,9 +223,9 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
 
         builder.Entity<UnitType>(entity =>
         {
-            entity.Property(b => b.Ad).IsRequired().HasMaxLength(100);
-            entity.Property(b => b.Kod).IsRequired().HasMaxLength(100);
-            entity.HasIndex(b => b.Kod).IsUnique();
+            entity.Property(b => b.Name).IsRequired().HasMaxLength(100);
+            entity.Property(b => b.Code).IsRequired().HasMaxLength(100);
+            entity.HasIndex(b => b.Code).IsUnique();
 
             entity.HasOne(b => b.ChargeType)
                   .WithMany()
@@ -304,22 +304,22 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        builder.Entity<BirimTarife>(entity =>
+        builder.Entity<UnitRate>(entity =>
         {
             entity.Property(r => r.UnitValue).HasPrecision(18, 4);
             entity.Property(r => r.KdvRate).HasPrecision(5, 2);
-            entity.HasIndex(r => new { r.UnitId, r.KiraciKategoriId, r.ChargeTypeId })
+            entity.HasIndex(r => new { r.UnitId, r.TenantCategoryId, r.ChargeTypeId })
                   .IsUnique()
                   .HasDatabaseName("UX_BirimTarifeler_BirimKategoriBorc")
                   .HasFilter("[IsDeleted] = 0");
             entity.ToTable(t =>
             {
-                t.HasCheckConstraint("CK_BirimTarifeler_Degerler", "[UnitValue] >= 0 AND [KdvRate] BETWEEN 0 AND 100");
+                t.HasCheckConstraint("CK_BirimTarifeler_Degerler", "[BirimDeger] >= 0 AND [KdvOrani] BETWEEN 0 AND 100");
             });
             entity.HasOne(r => r.Unit)
                   .WithMany()
                   .OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(r => r.KiraciKategori)
+            entity.HasOne(r => r.TenantCategory)
                   .WithMany()
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(r => r.ChargeType)
@@ -614,37 +614,37 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.Property(b => b.Name).HasMaxLength(200).IsRequired();
             entity.Property(b => b.Description).HasMaxLength(500);
             entity.Property(b => b.AllowedExtensions).HasMaxLength(200);
-            entity.Property(b => b.TargetEntity).HasComment(EC<BelgeOwnerTipi>());
+            entity.Property(b => b.TargetEntity).HasComment(EC<DocumentOwnerType>());
             entity.HasOne(b => b.TemplateDocument)
                   .WithMany()
                   .HasForeignKey(b => b.TemplateDocumentId)
                   .OnDelete(DeleteBehavior.SetNull);
         });
 
-        builder.Entity<Belge>(entity =>
+        builder.Entity<Document>(entity =>
         {
-            entity.Property(b => b.DosyaAdi).HasMaxLength(255).IsRequired();
+            entity.Property(b => b.FileName).HasMaxLength(255).IsRequired();
             entity.Property(b => b.MimeType).HasMaxLength(100).IsRequired();
-            entity.Property(b => b.Aciklama).HasMaxLength(500);
-            entity.Property(b => b.OwnerType).HasComment(EC<BelgeOwnerTipi>());
+            entity.Property(b => b.Description).HasMaxLength(500);
+            entity.Property(b => b.OwnerType).HasComment(EC<DocumentOwnerType>());
             entity.HasOne(b => b.DocumentType)
                   .WithMany()
                   .HasForeignKey(b => b.DocumentTypeId)
                   .OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne(b => b.DegistirenBelge)
+            entity.HasOne(b => b.ReplacedByDocument)
                   .WithMany()
-                  .HasForeignKey(b => b.DegistirenBelgeId)
+                  .HasForeignKey(b => b.ReplacedByDocumentId)
                   .OnDelete(DeleteBehavior.NoAction);
-            entity.HasIndex(b => new { b.OwnerType, b.OwnerId, b.Gecersiz, b.IsDeleted });
+            entity.HasIndex(b => new { b.OwnerType, b.OwnerId, b.IsInvalid, b.IsDeleted });
             entity.HasIndex(b => b.DocumentTypeId);
         });
 
-        builder.Entity<BelgeIcerik>(entity =>
+        builder.Entity<DocumentContent>(entity =>
         {
-            entity.HasKey(i => i.BelgeId);
-            entity.HasOne(i => i.Belge)
-                  .WithOne(b => b.Icerik)
-                  .HasForeignKey<BelgeIcerik>(i => i.BelgeId)
+            entity.HasKey(i => i.DocumentId);
+            entity.HasOne(i => i.Document)
+                  .WithOne(b => b.Content)
+                  .HasForeignKey<DocumentContent>(i => i.DocumentId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -737,7 +737,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                 Id = 1,
                 Code = "ODEME_DEKONT",
                 Name = "Ödeme Dekontu",
-                TargetEntity = BelgeOwnerTipi.Payment,
+                TargetEntity = DocumentOwnerType.Payment,
                 AllowedExtensions = "pdf,jpg,jpeg,png",
                 MaxSizeMb = 5,
                 SortOrder = 1,

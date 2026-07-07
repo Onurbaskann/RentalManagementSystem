@@ -1,4 +1,4 @@
-﻿@model KiraTakip.Models.ViewModels.TasinmazDetayViewModel
+@model KiraTakip.Models.ViewModels.TasinmazDetayViewModel
 @using KiraTakip.Models
 @inject KiraTakip.Services.Interfaces.IStatisticsService Istatistik
 @{
@@ -844,16 +844,16 @@
                     <div class="card mb-2.5 p-0 overflow-hidden">
                         <div class="flex items-center justify-between p-2.5 px-4 bg-[#fafbfc] border-b border-[var(--color-border)]">
                             <div class="flex items-center gap-2.5">
-                                @if (!string.IsNullOrEmpty(birimOzet.BirimNo))
+                                @if (!string.IsNullOrEmpty(birimOzet.UnitNo))
                                 {
-                                    <span class="font-mono text-[13px] font-bold text-primary bg-primary-light px-2 py-0.5 rounded-md">@birimOzet.BirimNo</span>
+                                    <span class="font-mono text-[13px] font-bold text-primary bg-primary-light px-2 py-0.5 rounded-md">@birimOzet.UnitNo</span>
                                 }
-                                <span class="text-[13.5px] font-bold">@(birimOzet.BirimAd ?? "—")</span>
+                                <span class="text-[13.5px] font-bold">@(birimOzet.UnitName ?? "—")</span>
                                 <span class="badge badge-kirali text-[10.5px]">@birimOzet.Rateler.Count özel fiyat</span>
                             </div>
                             @if (canManageRate)
                             {
-                                <a href="/Unit/@birimOzet.BirimId.ToHashId()/OzelFiyat" class="btn btn-sm btn-secondary">Düzenle</a>
+                                <a href="/Unit/@birimOzet.UnitId.ToHashId()/OzelFiyat" class="btn btn-sm btn-secondary">Düzenle</a>
                             }
                         </div>
                         <div class="table-wrapper m-0">
@@ -871,7 +871,7 @@
                                     @foreach (var r in birimOzet.Rateler)
                                     {
                                         <tr>
-                                            <td class="font-semibold">@r.KiraciKategoriAd</td>
+                                            <td class="font-semibold">@r.TenantCategoryName</td>
                                             <td>@r.ChargeTypeName</td>
                                             <td class="text-xs text-muted">@(r.CalculationMethod == CalculationMethod.Fixed ? "Sabit" : "m² bazlı")</td>
                                             <td class="font-serif font-bold">@r.UnitValue.ToString("N2") ₺</td>

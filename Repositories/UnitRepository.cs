@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
@@ -23,7 +23,7 @@ public class UnitRepository : BaseRepository<Unit>, IUnitRepository
                 Ad = b.Name,
                 KatNo = b.FloorNo,
                 Yuzolcumu = b.Area,
-                UnitTypeAd = b.UnitType != null ? b.UnitType.Ad : string.Empty,
+                UnitTypeAd = b.UnitType != null ? b.UnitType.Name : string.Empty,
                 TasinmazId = b.PropertyId,
                 TasinmazAd = b.Property.Name,
                 Durum = b.Leases.Any(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
@@ -39,13 +39,13 @@ public class UnitRepository : BaseRepository<Unit>, IUnitRepository
     public async Task<List<BirimListItemDto>> GetRezervasyonBirimleriAsync()
     {
         return await _dbSet.AsNoTracking()
-            .Where(b => b.UnitType != null && b.UnitType.RezervasyonYapilabilirMi && b.UnitType.IsActive)
+            .Where(b => b.UnitType != null && b.UnitType.CanBeReserved && b.UnitType.IsActive)
             .OrderBy(b => b.Property.Name).ThenBy(b => b.Name)
             .Select(b => new BirimListItemDto
             {
                 Id = b.Id,
                 Ad = b.Name,
-                UnitTypeAd = b.UnitType != null ? b.UnitType.Ad : string.Empty,
+                UnitTypeAd = b.UnitType != null ? b.UnitType.Name : string.Empty,
                 TasinmazId = b.PropertyId,
                 TasinmazAd = b.Property.Name,
                 Yuzolcumu = b.Area,
@@ -66,9 +66,9 @@ public class UnitRepository : BaseRepository<Unit>, IUnitRepository
                 Ad = b.Name,
                 KatNo = b.FloorNo,
                 Yuzolcumu = b.Area,
-                UnitTypeAd = b.UnitType != null ? b.UnitType.Ad : string.Empty,
-                RezervasyonYapilabilirMi = b.UnitType != null ? b.UnitType.RezervasyonYapilabilirMi : false,
-                KiralanabilirMi = b.UnitType != null ? b.UnitType.KiralanabilirMi : false,
+                UnitTypeAd = b.UnitType != null ? b.UnitType.Name : string.Empty,
+                RezervasyonYapilabilirMi = b.UnitType != null ? b.UnitType.CanBeReserved : false,
+                KiralanabilirMi = b.UnitType != null ? b.UnitType.CanBeRented : false,
                 TasinmazId = b.PropertyId,
                 TasinmazAd = b.Property.Name,
                 AktifSozlesmeId = b.Leases

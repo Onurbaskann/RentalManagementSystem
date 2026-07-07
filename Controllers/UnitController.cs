@@ -1,6 +1,7 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Entities;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -40,16 +41,16 @@ public class UnitController : Controller
 
         var vm = new BirimOzelFiyatViewModel
         {
-            BirimId = unit.Id,
-            BirimAd = unit.Ad,
-            TasinmazId = unit.TasinmazId,
-            TasinmazAd = unit.TasinmazAd,
-            KiralanabilirMi = unit.KiralanabilirMi,
-            RezervasyonYapilabilirMi = unit.RezervasyonYapilabilirMi,
+            UnitId = unit.Id,
+            UnitName = unit.Ad,
+            PropertyId = unit.TasinmazId,
+            PropertyName = unit.TasinmazAd,
+            IsLeasable = unit.KiralanabilirMi,
+            IsReservable = unit.RezervasyonYapilabilirMi,
             UnitTypeAd = unit.UnitTypeAd
         };
 
-        if (vm.KiralanabilirMi)
+        if (vm.IsLeasable)
         {
             var aktifBorcTipleri = await _ctx.ChargeTypes
                 .Where(b => b.IsActive && b.Behavior != ChargeTypeBehavior.UserManual && b.Behavior != ChargeTypeBehavior.ReservationSpecific)
@@ -61,7 +62,7 @@ public class UnitController : Controller
                 .OrderBy(k => k.Sira)
                 .ToListAsync();
 
-            var mevcutRateler = await _ctx.BirimTarifeler
+            var mevcutRateler = await _ctx.UnitRates
                 .Where(r => r.UnitId == id)
                 .ToListAsync();
 
@@ -125,7 +126,7 @@ public class UnitController : Controller
                 Satirlar = parentTarifeSatirlar
             };
 
-            vm.Kolonlar = aktifBorcTipleri.Select(bt => new BirimTarifeKolonu
+            vm.Kolonlar = aktifBorcTipleri.Select(bt => new UnitRateColumn
             {
                 ChargeTypeId = bt.Id,
                 ChargeTypeName = bt.Name,
@@ -133,14 +134,14 @@ public class UnitController : Controller
                 ChargeTypeBehavior = bt.Behavior
             }).ToList();
 
-            vm.Satirlar = kategoriler.Select(kat => new BirimTarifeKategoriSatiri
+            vm.Satirlar = kategoriler.Select(kat => new UnitRateCategoryRow
             {
-                KiraciKategoriId = kat.Id,
-                KiraciKategoriAd = kat.Ad,
+                TenantCategoryId = kat.Id,
+                TenantCategoryName = kat.Ad,
                 Hucreler = aktifBorcTipleri.Select(bt =>
                 {
                     var rate = mevcutRateler.FirstOrDefault(r =>
-                        r.KiraciKategoriId == kat.Id && r.ChargeTypeId == bt.Id);
+                        r.TenantCategoryId == kat.Id && r.ChargeTypeId == bt.Id);
 
                     var tasinmazRate = tasinmazFiyatlar.FirstOrDefault(tf => tf.KiraciKategoriId == kat.Id && tf.ChargeTypeId == bt.Id);
                     var genelRate = genelFiyatlar.FirstOrDefault(gf => gf.KiraciKategoriId == kat.Id && gf.ChargeTypeId == bt.Id);
@@ -165,24 +166,24 @@ public class UnitController : Controller
                         kaynak = "Genel Tarife";
                     }
 
-                    return new BirimTarifeHucre
+                    return new UnitRateCell
                     {
                         RateId = rate?.Id ?? 0,
-                        KiraciKategoriId = kat.Id,
+                        TenantCategoryId = kat.Id,
                         ChargeTypeId = bt.Id,
-                        OzelFiyatAktif = rate != null,
+                        IsCustomRateActive = rate != null,
                         CalculationMethod = rate?.CalculationMethod ?? (bt.Code == Models.Entities.BorcTipiConsts.Kira ? CalculationMethod.M2 : CalculationMethod.Fixed),
                         UnitValue = rate?.UnitValue ?? 0,
                         KdvRate = rate?.KdvRate ?? 0,
-                        VarsayilanBirimDeger = varsayilanDeger,
-                        VarsayilanKdvOrani = varsayilanKdv,
-                        VarsayilanCalculationMethod = varsayilanYontem,
-                        VarsayilanKaynak = kaynak
+                        DefaultUnitValue = varsayilanDeger,
+                        DefaultKdvRate = varsayilanKdv,
+                        DefaultCalculationMethod = varsayilanYontem,
+                        DefaultSource = kaynak
                     };
                 }).ToList()
             }).ToList();
         }
-        else if (vm.RezervasyonYapilabilirMi)
+        else if (vm.IsReservable)
         {
             vm.OzelRezervasyonKural = await _ctx.RezervasyonTarifeler
                 .FirstOrDefaultAsync(r => r.UnitId == id);
@@ -198,7 +199,7 @@ public class UnitController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> OzelFiyat(int id, BirimOzelFiyatViewModel vm)
     {
-        var mevcutRateler = await _ctx.BirimTarifeler
+        var mevcutRateler = await _ctx.UnitRates
             .Where(r => r.UnitId == id)
             .ToListAsync();
 
@@ -207,17 +208,17 @@ public class UnitController : Controller
             foreach (var hucre in satir.Hucreler)
             {
                 var mevcut = mevcutRateler.FirstOrDefault(r =>
-                    r.KiraciKategoriId == hucre.KiraciKategoriId &&
+                    r.TenantCategoryId == hucre.TenantCategoryId &&
                     r.ChargeTypeId == hucre.ChargeTypeId);
 
-                if (hucre.OzelFiyatAktif)
+                if (hucre.IsCustomRateActive)
                 {
                     if (mevcut == null)
                     {
-                        _ctx.BirimTarifeler.Add(new BirimTarife
+                        _ctx.UnitRates.Add(new UnitRate
                         {
                             UnitId = id,
-                            KiraciKategoriId = hucre.KiraciKategoriId,
+                            TenantCategoryId = hucre.TenantCategoryId,
                             ChargeTypeId = hucre.ChargeTypeId,
                             CalculationMethod = hucre.CalculationMethod,
                             UnitValue = hucre.UnitValue,
@@ -233,7 +234,7 @@ public class UnitController : Controller
                 }
                 else if (mevcut != null)
                 {
-                    _ctx.BirimTarifeler.Remove(mevcut);
+                    _ctx.UnitRates.Remove(mevcut);
                 }
             }
         }

@@ -1,4 +1,4 @@
-﻿@model List<KiraTakip.Models.Dtos.UnitTypeListItemDto>
+@model List<KiraTakip.Models.Dtos.UnitTypeListItemDto>
 @{
     ViewData["Title"] = "Unit Türleri";
 }
@@ -44,16 +44,16 @@
                 @foreach (var bt in Model)
                 {
                     <tr>
-                        <td class="text-center text-muted text-xs">@bt.Sira</td>
-                        <td class="font-medium text-slate-700">@bt.Ad</td>
+                        <td class="text-center text-muted text-xs">@bt.SortOrder</td>
+                        <td class="font-medium text-slate-700">@bt.Name</td>
                         <td class="text-center">
-                            @if (bt.KiralanabilirMi) { <span class="badge badge-kirali">✓</span> }
+                            @if (bt.CanBeRented) { <span class="badge badge-kirali">✓</span> }
                         </td>
                         <td class="text-center">
-                            @if (bt.RezervasyonYapilabilirMi) { <span class="badge badge-surek">✓</span> }
+                            @if (bt.CanBeReserved) { <span class="badge badge-surek">✓</span> }
                         </td>
                         <td>
-                            @if (bt.Aktif)
+                            @if (bt.IsActive)
                             { <span class="badge badge-kirali">Aktif</span> }
                             else
                             { <span class="badge badge-gecmis">Pasif</span> }
@@ -61,11 +61,11 @@
                         <td class="flex gap-1.5 justify-end">
                             <a href="/Admin/UnitType/Duzenle/@bt.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
                             <form method="post" action="/Admin/UnitType/DurumDegistir/@bt.Id.ToHashId()"
-                                  data-confirm="@(bt.Aktif ? $"'{bt.Ad}' pasif yapılsın mı?" : $"'{bt.Ad}' aktif yapılsın mı?")"
+                                  data-confirm="@(bt.IsActive ? $"'{bt.Name}' pasif yapılsın mı?" : $"'{bt.Name}' aktif yapılsın mı?")"
                                   class="inline">
                                 @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm @(bt.Aktif ? "btn-danger" : "btn-amber")">
-                                    @(bt.Aktif ? "Pasif Yap" : "Aktif Yap")
+                                <button type="submit" class="btn btn-sm @(bt.IsActive ? "btn-danger" : "btn-amber")">
+                                    @(bt.IsActive ? "Pasif Yap" : "Aktif Yap")
                                 </button>
                             </form>
                         </td>
