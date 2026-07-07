@@ -12,7 +12,7 @@ public class LeaseService : ILeaseService, ITransactionalService
 {
     private readonly ILeaseRepository _repo;
     private readonly IUnitOfWork _uow;
-    private readonly IStatisticsService _istatistikService;
+    private readonly IStatisticsService _statisticsService;
 
     public LeaseService(
         ILeaseRepository repo,
@@ -21,158 +21,158 @@ public class LeaseService : ILeaseService, ITransactionalService
     {
         _repo = repo;
         _uow = uow;
-        _istatistikService = statisticsService;
+        _statisticsService = statisticsService;
     }
 
-    public async Task<List<SozlesmeListItemDto>> GetAllAsync(string? filtre = null, IReadOnlyList<int>? propertyIds = null)
+    public async Task<List<LeaseListItemDto>> GetAllAsync(string? filter = null, IReadOnlyList<int>? propertyIds = null)
     {
-        var yetkiliIds = propertyIds?.ToList();
-        var list = await _repo.GetListAsync(filtre, yetkiliIds);
-        foreach (var s in list)
+        var authorizedPropertyIds = propertyIds?.ToList();
+        var list = await _repo.GetListAsync(filter, authorizedPropertyIds);
+        foreach (var item in list)
         {
-            var dummySozlesme = new Lease
+            var lease = new Lease
             {
-                Id = s.Id,
-                TenantId = s.KiraciId,
-                UnitId = s.BirimId,
-                Unit = new Unit { Id = s.BirimId, Area = s.BirimYuzolcumu }
+                Id = item.Id,
+                TenantId = item.TenantId,
+                UnitId = item.UnitId,
+                Unit = new Unit { Id = item.UnitId, Area = item.UnitArea }
             };
-            s.AylikBedel = await _istatistikService.AylikBedelAsync(dummySozlesme);
+            item.MonthlyAmount = await _statisticsService.AylikBedelAsync(lease);
         }
         return list;
     }
 
-    public async Task<SozlesmeDetayDto?> GetByIdAsync(int id)
+    public async Task<LeaseDetailDto?> GetByIdAsync(int id)
     {
         return await _repo.GetDetayAsync(id);
     }
 
-    public async Task<Lease> CreateAsync(Lease s, decimal? aylikBedel = null)
+    public async Task<Lease> CreateAsync(Lease lease, decimal? monthlyAmount = null)
     {
-        s.ActivityLog.Add(new SozlesmeIslemGecmisi
+        lease.ActivityLog.Add(new LeaseActivityLog
         {
-            IslemTipi = LeaseActivityType.Creation,
+            ActivityType = LeaseActivityType.Creation,
             TransactionDate = DateTime.Now,
-            Aciklama = "Sözleşme oluşturuldu.",
-            YeniKiraBedeli = aylikBedel
+            Description = "Sözleşme oluşturuldu.",
+            NewRentAmount = monthlyAmount
         });
 
-        await _repo.AddAsync(s);
+        await _repo.AddAsync(lease);
         await _uow.SaveChangesAsync();
-        return s;
+        return lease;
     }
 
-    public async Task UzatAsync(int id, DateTime yeniBitis, decimal eskiBedel, decimal yeniBedel,
-        bool kdvUygulanacakMi, decimal kdvOrani, decimal? tufeOrani, string? aciklama)
+    public async Task UzatAsync(int id, DateTime newEndDate, decimal oldAmount, decimal newAmount,
+        bool isKdvApplied, decimal kdvRate, decimal? inflationRate, string? description)
     {
-        var s = await _repo.GetByIdAsync(id, include: q => q.Include(x => x.ActivityLog))
+        var lease = await _repo.GetByIdAsync(id, include: q => q.Include(x => x.ActivityLog))
             ?? throw new InvalidOperationException($"Sözleşme {id} bulunamadı.");
 
-        var eskiBitis = s.EndDate;
+        var oldEndDate = lease.EndDate;
 
-        s.EndDate = yeniBitis;
-        s.IsKdvApplied = kdvUygulanacakMi;
+        lease.EndDate = newEndDate;
+        lease.IsKdvApplied = isKdvApplied;
 
-        decimal? kdvTutari = kdvUygulanacakMi ? yeniBedel * kdvOrani / 100 : null;
-        decimal? kdvDahil = kdvUygulanacakMi ? yeniBedel + kdvTutari : null;
+        decimal? kdvAmount = isKdvApplied ? newAmount * kdvRate / 100 : null;
+        decimal? kdvIncludedAmount = isKdvApplied ? newAmount + kdvAmount : null;
 
-        s.ActivityLog.Add(new SozlesmeIslemGecmisi
+        lease.ActivityLog.Add(new LeaseActivityLog
         {
             LeaseId = id,
-            IslemTipi = LeaseActivityType.Extension,
+            ActivityType = LeaseActivityType.Extension,
             TransactionDate = DateTime.Now,
-            Aciklama = aciklama ?? "Sözleşme süresi uzatıldı.",
-            EskiBitisTarihi = eskiBitis,
-            YeniBitisTarihi = yeniBitis,
-            EskiKiraBedeli = eskiBedel,
-            YeniKiraBedeli = yeniBedel,
-            TufeOrani = tufeOrani,
-            KdvUygulandiMi = kdvUygulanacakMi,
-            KdvRate = kdvUygulanacakMi ? kdvOrani : null,
-            KdvTutari = kdvTutari,
-            KdvDahilTutar = kdvDahil
+            Description = description ?? "Sözleşme süresi uzatıldı.",
+            OldEndDate = oldEndDate,
+            NewEndDate = newEndDate,
+            OldRentAmount = oldAmount,
+            NewRentAmount = newAmount,
+            InflationRate = inflationRate,
+            IsKdvApplied = isKdvApplied,
+            KdvRate = isKdvApplied ? kdvRate : null,
+            KdvAmount = kdvAmount,
+            KdvIncludedAmount = kdvIncludedAmount
         });
 
         await _uow.SaveChangesAsync();
     }
 
-    public async Task FeshetAsync(int id, DateTime fesihTarihi, string fesihNedeni, string? aciklama)
+    public async Task FeshetAsync(int id, DateTime terminationDate, string terminationReason, string? description)
     {
-        var s = await _repo.GetByIdAsync(id, include: q => q.Include(x => x.ActivityLog))
+        var lease = await _repo.GetByIdAsync(id, include: q => q.Include(x => x.ActivityLog))
             ?? throw new InvalidOperationException($"Sözleşme {id} bulunamadı.");
 
-        s.Status = LeaseStatus.Terminated;
-        s.TerminationDate = fesihTarihi;
-        s.TerminationReason = fesihNedeni;
+        lease.Status = LeaseStatus.Terminated;
+        lease.TerminationDate = terminationDate;
+        lease.TerminationReason = terminationReason;
 
-        s.ActivityLog.Add(new SozlesmeIslemGecmisi
+        lease.ActivityLog.Add(new LeaseActivityLog
         {
             LeaseId = id,
-            IslemTipi = LeaseActivityType.Termination,
+            ActivityType = LeaseActivityType.Termination,
             TransactionDate = DateTime.Now,
-            Aciklama = aciklama ?? fesihNedeni
+            Description = description ?? terminationReason
         });
 
         await _uow.SaveChangesAsync();
     }
 
-    public async Task VadeGuncelleAsync(int id, DueDateRuleType tip, int gun, string? aciklama)
+    public async Task VadeGuncelleAsync(int id, DueDateRuleType ruleType, int dueDay, string? description)
     {
-        if (gun < 1 || gun > 31)
-            throw new ArgumentOutOfRangeException(nameof(gun), "Vade günü 1-31 arasında olmalıdır.");
+        if (dueDay < 1 || dueDay > 31)
+            throw new ArgumentOutOfRangeException(nameof(dueDay), "Vade günü 1-31 arasında olmalıdır.");
 
-        var s = await _repo.GetByIdAsync(id, include: q => q.Include(x => x.ActivityLog))
+        var lease = await _repo.GetByIdAsync(id, include: q => q.Include(x => x.ActivityLog))
             ?? throw new InvalidOperationException($"Sözleşme {id} bulunamadı.");
 
-        var eskiTip = s.DueDateRuleType;
-        var eskiGun = s.DueDay;
+        var oldRuleType = lease.DueDateRuleType;
+        var oldDueDay = lease.DueDay;
 
-        if (eskiTip == tip && eskiGun == gun) return;
+        if (oldRuleType == ruleType && oldDueDay == dueDay) return;
 
-        s.DueDateRuleType = tip;
-        s.DueDay = gun;
+        lease.DueDateRuleType = ruleType;
+        lease.DueDay = dueDay;
 
-        s.ActivityLog.Add(new SozlesmeIslemGecmisi
+        lease.ActivityLog.Add(new LeaseActivityLog
         {
             LeaseId = id,
-            IslemTipi = LeaseActivityType.ChargeRegeneration,
+            ActivityType = LeaseActivityType.ChargeRegeneration,
             TransactionDate = DateTime.Now,
-            Aciklama = aciklama ?? $"Vade kuralı güncellendi: {eskiTip}({eskiGun}) → {tip}({gun})"
+            Description = description ?? $"Vade kuralı güncellendi: {oldRuleType}({oldDueDay}) → {ruleType}({dueDay})"
         });
 
         await _uow.SaveChangesAsync();
     }
 
-    public async Task<List<SozlesmeListItemDto>> GetByTenantIdAsync(int tenantId)
+    public async Task<List<LeaseListItemDto>> GetByTenantIdAsync(int tenantId)
     {
         var list = await _repo.GetByTenantIdAsync(tenantId);
-        foreach (var s in list)
+        foreach (var item in list)
         {
-            var dummySozlesme = new Lease
+            var lease = new Lease
             {
-                Id = s.Id,
-                TenantId = s.KiraciId,
-                UnitId = s.BirimId,
-                Unit = new Unit { Id = s.BirimId, Area = s.BirimYuzolcumu }
+                Id = item.Id,
+                TenantId = item.TenantId,
+                UnitId = item.UnitId,
+                Unit = new Unit { Id = item.UnitId, Area = item.UnitArea }
             };
-            s.AylikBedel = await _istatistikService.AylikBedelAsync(dummySozlesme);
+            item.MonthlyAmount = await _statisticsService.AylikBedelAsync(lease);
         }
         return list;
     }
 
-    public async Task<List<SozlesmeListItemDto>> GetByUnitIdAsync(int unitId)
+    public async Task<List<LeaseListItemDto>> GetByUnitIdAsync(int unitId)
     {
         var list = await _repo.GetByUnitIdAsync(unitId);
-        foreach (var s in list)
+        foreach (var item in list)
         {
-            var dummySozlesme = new Lease
+            var lease = new Lease
             {
-                Id = s.Id,
-                TenantId = s.KiraciId,
-                UnitId = s.BirimId,
-                Unit = new Unit { Id = s.BirimId, Area = s.BirimYuzolcumu }
+                Id = item.Id,
+                TenantId = item.TenantId,
+                UnitId = item.UnitId,
+                Unit = new Unit { Id = item.UnitId, Area = item.UnitArea }
             };
-            s.AylikBedel = await _istatistikService.AylikBedelAsync(dummySozlesme);
+            item.MonthlyAmount = await _statisticsService.AylikBedelAsync(lease);
         }
         return list;
     }

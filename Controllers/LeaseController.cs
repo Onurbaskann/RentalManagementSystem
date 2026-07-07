@@ -95,42 +95,42 @@ public class LeaseController : Controller
         var s = await _sozlesmeService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
-        if (!_provider.IsInScope(s.TasinmazId)) return Forbid();
+        if (!_provider.IsInScope(s.PropertyId)) return Forbid();
 
-        var gecmis = await _sozlesmeService.GetByUnitIdAsync(s.BirimId);
-        var kiraciSozlesmeleri = await _sozlesmeService.GetByTenantIdAsync(s.KiraciId);
+        var gecmis = await _sozlesmeService.GetByUnitIdAsync(s.UnitId);
+        var kiraciSozlesmeleri = await _sozlesmeService.GetByTenantIdAsync(s.TenantId);
 
-        var dummySozlesme = new Lease
+        var lease = new Lease
         {
             Id = s.Id,
-            TenantId = s.KiraciId,
-            UnitId = s.BirimId,
+            TenantId = s.TenantId,
+            UnitId = s.UnitId,
             StartDate = s.StartDate,
             EndDate = s.EndDate,
-            Status = s.Durum,
-            TerminationDate = s.FesihTarihi,
+            Status = s.Status,
+            TerminationDate = s.TerminationDate,
             Unit = new Unit
             {
-                Id = s.BirimId,
-                Area = s.BirimYuzolcumu,
+                Id = s.UnitId,
+                Area = s.UnitArea,
                 UnitKind = s.UnitKind,
-                PropertyId = s.TasinmazId
+                PropertyId = s.PropertyId
             }
         };
 
         var vm = new SozlesmeDetayViewModel
         {
             Lease = s,
-            KalanGun = _istatistik.KalanGun(dummySozlesme),
-            AylikBedel = await _istatistik.AylikBedelAsync(dummySozlesme),
-            YillikBedel = await _istatistik.YillikBedelAsync(dummySozlesme),
-            Aktif = _istatistik.Aktif(dummySozlesme),
-            SureYuzdesi = _istatistik.SureYuzdesi(dummySozlesme),
-            Durum = _istatistik.GetBirimDurumu(dummySozlesme.Unit),
+            KalanGun = _istatistik.KalanGun(lease),
+            AylikBedel = await _istatistik.AylikBedelAsync(lease),
+            YillikBedel = await _istatistik.YillikBedelAsync(lease),
+            Aktif = _istatistik.Aktif(lease),
+            SureYuzdesi = _istatistik.SureYuzdesi(lease),
+            Durum = _istatistik.GetBirimDurumu(lease.Unit),
             GecmisSozlesmeler = gecmis.Where(x => x.Id != id).ToList(),
-            KiraciSozlesmeleri = kiraciSozlesmeleri.Where(x => x.Id != id && x.BirimId != s.BirimId).ToList(),
-            KdvOraniEtkin = s.SozlesmeTarifeler
-                .FirstOrDefault(r => r.BorcTipiDavranis == ChargeTypeBehavior.MonthlyFixed)?.KdvRate ?? 20m
+            KiraciSozlesmeleri = kiraciSozlesmeleri.Where(x => x.Id != id && x.UnitId != s.UnitId).ToList(),
+            KdvOraniEtkin = s.LeaseRateOverrides
+                .FirstOrDefault(r => r.ChargeTypeBehavior == ChargeTypeBehavior.MonthlyFixed)?.KdvRate ?? 20m
         };
 
         var hasRegeneratePermission = User.HasPermission(PermissionCatalog.Charge.Regenerate);
@@ -193,9 +193,9 @@ public class LeaseController : Controller
 
         vm.ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(
             TarifeHiyerarsiKatmani.Lease,
-            propertyId: s.TasinmazId,
-            unitId: s.BirimId,
-            kategoriId: s.KiraciKategoriId,
+            propertyId: s.PropertyId,
+            unitId: s.UnitId,
+            kategoriId: s.TenantCategoryId,
             yil: s.StartDate.Year);
 
         var depozitoTutarlari = await _sozlesmeService.GetDepozitoTutarlariAsync(new[] { id });
@@ -329,7 +329,7 @@ public class LeaseController : Controller
         var s = await _sozlesmeService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
-        if (s.Durum == LeaseStatus.Terminated)
+        if (s.Status == LeaseStatus.Terminated)
         {
             TempData["Error"] = "Feshedilmiş sözleşme uzatılamaz.";
             return RedirectToAction("Detay", new { id });
@@ -348,14 +348,14 @@ public class LeaseController : Controller
             return RedirectToAction("Detay", new { id });
         }
 
-        var dummySozlesme = new Lease
+        var lease = new Lease
         {
             Id = s.Id,
-            TenantId = s.KiraciId,
-            UnitId = s.BirimId,
-            Unit = new Unit { Id = s.BirimId, Area = s.BirimYuzolcumu }
+            TenantId = s.TenantId,
+            UnitId = s.UnitId,
+            Unit = new Unit { Id = s.UnitId, Area = s.UnitArea }
         };
-        var eskiBedel = await _istatistik.AylikBedelAsync(dummySozlesme);
+        var eskiBedel = await _istatistik.AylikBedelAsync(lease);
 
         if (vm.TarifeyiGuncelle && vm.SozlesmeKalemleri != null && vm.SozlesmeKalemleri.Any())
         {
@@ -378,7 +378,7 @@ public class LeaseController : Controller
         var yeniRateler = await _ctx.SozlesmeTarifeler
             .Include(r => r.ChargeType)
             .Where(r => r.LeaseId == id).ToListAsync();
-        var yeniBedel = HesaplaAylikBedelHelper(yeniRateler, s.BirimYuzolcumu);
+        var yeniBedel = HesaplaAylikBedelHelper(yeniRateler, s.UnitArea);
 
         await _sozlesmeService.UzatAsync(id, vm.YeniBitisTarihi, eskiBedel, yeniBedel,
             vm.KdvUygulanacakMi, vm.KdvRate ?? 20, vm.TufeOrani, vm.Aciklama);
@@ -395,7 +395,7 @@ public class LeaseController : Controller
         var s = await _sozlesmeService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
-        if (s.Durum == LeaseStatus.Terminated)
+        if (s.Status == LeaseStatus.Terminated)
         {
             TempData["Error"] = "Feshedilmiş sözleşmenin vadesi güncellenemez.";
             return RedirectToAction("Detay", new { id });
@@ -421,7 +421,7 @@ public class LeaseController : Controller
         var s = await _sozlesmeService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
-        if (s.Durum == LeaseStatus.Terminated)
+        if (s.Status == LeaseStatus.Terminated)
         {
             TempData["Error"] = "Sözleşme zaten feshedilmiş.";
             return RedirectToAction("Detay", new { id });
@@ -473,12 +473,12 @@ public class LeaseController : Controller
 
         await _chargeGeneration.YenidenUretAsync(id, baslangicTarihi);
 
-        s.ActivityLog.Add(new SozlesmeIslemGecmisi
+        s.ActivityLog.Add(new LeaseActivityLog
         {
             LeaseId = id,
-            IslemTipi = LeaseActivityType.ChargeRegeneration,
+            ActivityType = LeaseActivityType.ChargeRegeneration,
             TransactionDate = DateTime.Now,
-            Aciklama = $"{baslangicTarihi:MMMM yyyy} tarihinden itibaren ödenmemiş tahakkuklar yeniden üretildi."
+            Description = $"{baslangicTarihi:MMMM yyyy} tarihinden itibaren ödenmemiş tahakkuklar yeniden üretildi."
                        + (tarifeyiGuncelle ? " (Tarife güncellendi.)" : "")
         });
 

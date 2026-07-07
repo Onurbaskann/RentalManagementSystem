@@ -6,13 +6,13 @@ namespace KiraTakip.Services.Interfaces;
 
 public interface ILeaseService
 {
-    Task<List<SozlesmeListItemDto>> GetAllAsync(string? filtre = null, IReadOnlyList<int>? propertyIds = null);
-    Task<SozlesmeDetayDto?> GetByIdAsync(int id);
-    Task<Lease> CreateAsync(Lease s, decimal? aylikBedel = null);
-    Task UzatAsync(int id, DateTime yeniBitis, decimal eskiBedel, decimal yeniBedel, bool kdvUygulanacakMi, decimal kdvOrani, decimal? tufeOrani, string? aciklama);
-    Task FeshetAsync(int id, DateTime fesihTarihi, string fesihNedeni, string? aciklama);
-    Task VadeGuncelleAsync(int id, DueDateRuleType tip, int gun, string? aciklama);
-    Task<List<SozlesmeListItemDto>> GetByTenantIdAsync(int tenantId);
-    Task<List<SozlesmeListItemDto>> GetByUnitIdAsync(int unitId);
+    Task<List<LeaseListItemDto>> GetAllAsync(string? filter = null, IReadOnlyList<int>? propertyIds = null);
+    Task<LeaseDetailDto?> GetByIdAsync(int id);
+    Task<Lease> CreateAsync(Lease lease, decimal? monthlyAmount = null);
+    Task UzatAsync(int id, DateTime newEndDate, decimal oldAmount, decimal newAmount, bool isKdvApplied, decimal kdvRate, decimal? inflationRate, string? description);
+    Task FeshetAsync(int id, DateTime terminationDate, string terminationReason, string? description);
+    Task VadeGuncelleAsync(int id, DueDateRuleType ruleType, int dueDay, string? description);
+    Task<List<LeaseListItemDto>> GetByTenantIdAsync(int tenantId);
+    Task<List<LeaseListItemDto>> GetByUnitIdAsync(int unitId);
     Task<Dictionary<int, decimal?>> GetDepozitoTutarlariAsync(IEnumerable<int> leaseIds);
 }

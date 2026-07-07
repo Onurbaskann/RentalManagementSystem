@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
@@ -30,14 +30,14 @@ public class UnitService : IUnitService
 
         if (dto.AktifSozlesmeId.HasValue)
         {
-            var dummySozlesme = new Lease
+            var lease = new Lease
             {
                 Id = dto.AktifSozlesmeId.Value,
                 TenantId = dto.AktifSozlesmeKiraciId ?? 0,
                 UnitId = dto.Id,
                 Unit = new Unit { Id = dto.Id, Area = dto.Yuzolcumu }
             };
-            dto.AylikBedel = await _istatistikService.AylikBedelAsync(dummySozlesme);
+            dto.AylikBedel = await _istatistikService.AylikBedelAsync(lease);
         }
 
         return dto;

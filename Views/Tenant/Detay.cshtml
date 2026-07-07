@@ -128,7 +128,7 @@
             var aktifler = Model.Leases.Where(s => s.Aktif).ToList();
             decimal toplamAylik = 0m;
             foreach (var aks in aktifler)
-                toplamAylik += aks.AylikBedel;
+                toplamAylik += aks.MonthlyAmount;
         }
         <div class="card-value text-2xl mt-2 font-bold">@aktifler.Count</div>
         <div class="card-sub text-muted text-xs">aktif sözleşme</div>
@@ -184,18 +184,18 @@
                         bool aktif = s.Aktif;
                         int kalanGun = s.KalanGun;
                         bool surek = aktif && kalanGun <= 30;
-                        bool feshedildi = s.Durum == LeaseStatus.Terminated;
+                        bool feshedildi = s.Status == LeaseStatus.Terminated;
                         <tr>
                             <td>
-                                <div class="font-semibold">@s.TasinmazAd</div>
-                                <div class="text-xs text-muted">@s.BirimAd</div>
+                                <div class="font-semibold">@s.PropertyName</div>
+                                <div class="text-xs text-muted">@s.UnitName</div>
                             </td>
                             <td>@s.StartDate.ToString("dd.MM.yyyy")</td>
                             <td>
                                 @s.EndDate.ToString("dd.MM.yyyy")
                                 @if (surek) { <span class="day-badge day-badge-amber ml-1.5 text-[11px]">@kalanGun g</span> }
                             </td>
-                            <td class="font-bold">@s.AylikBedel.ToString("N0") ₺</td>
+                            <td class="font-bold">@s.MonthlyAmount.ToString("N0") ₺</td>
                             <td>@(Model.DepozitoTutarlari.TryGetValue(s.Id, out var dep) && dep.HasValue ? dep.Value.ToString("N0") + " ₺" : "—")</td>
                             <td>
                                 @if (feshedildi) { <span class="badge badge-gecmis">Feshedildi</span> }

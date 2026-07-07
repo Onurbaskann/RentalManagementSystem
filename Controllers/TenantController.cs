@@ -54,7 +54,7 @@ public class TenantController : Controller
         var sozlesmeler = await _sozlesmeService.GetAllAsync(propertyIds: propertyIds);
         ViewBag.AktifSozlesme = sozlesmeler
             .Where(s => s.Aktif)
-            .GroupBy(s => s.KiraciId)
+            .GroupBy(s => s.TenantId)
             .ToDictionary(g => g.Key, g => g.Count());
         return View(kiraciler);
     }
@@ -72,11 +72,11 @@ public class TenantController : Controller
         var k = await _kiraciService.GetDetayAsync(id);
         if (k == null) return NotFound();
 
-        List<SozlesmeListItemDto> sozlesmeler;
+        List<LeaseListItemDto> sozlesmeler;
         if (!_provider.GlobalAccess)
         {
             var all = await _sozlesmeService.GetAllAsync(propertyIds: propertyIds);
-            sozlesmeler = all.Where(s => s.KiraciId == id).ToList();
+            sozlesmeler = all.Where(s => s.TenantId == id).ToList();
         }
         else
         {

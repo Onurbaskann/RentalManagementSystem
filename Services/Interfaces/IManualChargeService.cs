@@ -1,4 +1,4 @@
-﻿using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
 
 namespace KiraTakip.Services.Interfaces;
@@ -14,7 +14,7 @@ public interface IManualChargeService
     Task<(bool Basarili, string? Hata)> CancelAsync(int tahakkukId, string userId, string neden);
 
     // Dropdown verileri — DTO döner
-    Task<List<SozlesmeDropdownDto>> GetAktifSozlesmelerAsync();
+    Task<List<LeaseDropdownDto>> GetAktifSozlesmelerAsync();
     Task<List<BorcTipiLookupDto>> GetManuelBorcTipleriAsync();
     Task<List<BirimLookupDto>> GetTumBirimlerAsync(IReadOnlyList<int>? tasinmazIds = null);
 }

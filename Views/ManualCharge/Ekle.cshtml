@@ -1,4 +1,4 @@
-﻿@model KiraTakip.Models.ViewModels.ManuelBorcCreateViewModel
+@model KiraTakip.Models.ViewModels.ManuelBorcCreateViewModel
 @using KiraTakip.Models
 @using System.Text.Json
 @{
@@ -6,10 +6,10 @@
 
     var sozlesmeJson = JsonSerializer.Serialize(Model.AktifSozlesmeler.Select(s => new {
         id = s.Id,
-        tenantId = s.KiraciId,
-        unitId = s.BirimId,
-        kiraciAdi = s.KiraciGosterimAdi,
-        birimAdi = s.TasinmazAd + " / " + s.BirimAd
+        tenantId = s.TenantId,
+        unitId = s.UnitId,
+        kiraciAdi = s.TenantDisplayName,
+        birimAdi = s.PropertyName + " / " + s.UnitName
     }));
 }
 

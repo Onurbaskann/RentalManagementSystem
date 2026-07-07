@@ -55,38 +55,38 @@ public class TenantLeaseController : Controller
         if (s == null) return NotFound();
 
         var tenantId = _currentUser.KiraciId!.Value;
-        if (s.KiraciId != tenantId) return Forbid();
+        if (s.TenantId != tenantId) return Forbid();
 
-        var dummySozlesme = new Lease
+        var lease = new Lease
         {
             Id = s.Id,
-            TenantId = s.KiraciId,
-            UnitId = s.BirimId,
+            TenantId = s.TenantId,
+            UnitId = s.UnitId,
             StartDate = s.StartDate,
             EndDate = s.EndDate,
-            Status = s.Durum,
-            TerminationDate = s.FesihTarihi,
+            Status = s.Status,
+            TerminationDate = s.TerminationDate,
             Unit = new Unit
             {
-                Id = s.BirimId,
-                Area = s.BirimYuzolcumu,
+                Id = s.UnitId,
+                Area = s.UnitArea,
                 UnitKind = s.UnitKind,
-                PropertyId = s.TasinmazId
+                PropertyId = s.PropertyId
             }
         };
 
         var vm = new SozlesmeDetayViewModel
         {
             Lease = s,
-            KalanGun = _istatistik.KalanGun(dummySozlesme),
-            AylikBedel = await _istatistik.AylikBedelAsync(dummySozlesme),
-            YillikBedel = await _istatistik.YillikBedelAsync(dummySozlesme),
-            Aktif = _istatistik.Aktif(dummySozlesme),
-            SureYuzdesi = _istatistik.SureYuzdesi(dummySozlesme),
-            Durum = _istatistik.GetBirimDurumu(dummySozlesme.Unit),
+            KalanGun = _istatistik.KalanGun(lease),
+            AylikBedel = await _istatistik.AylikBedelAsync(lease),
+            YillikBedel = await _istatistik.YillikBedelAsync(lease),
+            Aktif = _istatistik.Aktif(lease),
+            SureYuzdesi = _istatistik.SureYuzdesi(lease),
+            Durum = _istatistik.GetBirimDurumu(lease.Unit),
             HasOdemeAccess = true,
-            KdvOraniEtkin = s.SozlesmeTarifeler
-                .FirstOrDefault(r => r.BorcTipiDavranis == ChargeTypeBehavior.MonthlyFixed)?.KdvRate ?? 20m
+            KdvOraniEtkin = s.LeaseRateOverrides
+                .FirstOrDefault(r => r.ChargeTypeBehavior == ChargeTypeBehavior.MonthlyFixed)?.KdvRate ?? 20m
         };
 
         await _chargeService.UpdateDelaysAsync();

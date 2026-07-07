@@ -1,4 +1,4 @@
-﻿@model List<KiraTakip.Models.Dtos.SozlesmeListItemDto>
+@model List<KiraTakip.Models.Dtos.LeaseListItemDto>
 @using KiraTakip.Models
 @{
     Layout = "_KiraciLayout";
@@ -37,19 +37,19 @@
                     bool aktif = s.Aktif;
                     int kalanGun = s.KalanGun;
                     bool surek = aktif && kalanGun <= 30;
-                    bool feshedildi = s.Durum == LeaseStatus.Terminated;
+                    bool feshedildi = s.Status == LeaseStatus.Terminated;
                     string dayBadgeClass = kalanGun <= 10 ? "bg-red-50 text-red-700 border-red-200" : kalanGun <= 30 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200";
-                    var search = $"{s.BirimAd} {s.TasinmazAd}".ToLower();
+                    var search = $"{s.UnitName} {s.PropertyName}".ToLower();
                     var detayHref = $"/Tenant/Leases/{s.Id}";
 
                     <tr data-row data-search="@search" data-href="@detayHref"
                         class="cursor-pointer hover:bg-slate-50 transition-colors"
                         @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
-                        <td class="font-semibold">@s.BirimAd</td>
-                        <td class="text-sm text-muted">@s.TasinmazAd</td>
+                        <td class="font-semibold">@s.UnitName</td>
+                        <td class="text-sm text-muted">@s.PropertyName</td>
                         <td class="cell-center text-sm">@s.StartDate.ToString("dd.MM.yyyy")</td>
                         <td class="cell-center text-sm">@s.EndDate.ToString("dd.MM.yyyy")</td>
-                        <td class="num text-sm font-medium">@s.AylikBedel.ToString("N2") ₺</td>
+                        <td class="num text-sm font-medium">@s.MonthlyAmount.ToString("N2") ₺</td>
                         <td class="cell-center">
                             @if (feshedildi)
                             { <span class="text-muted text-[11px] italic" title="Durum: Feshedildi">Feshedildi</span> }

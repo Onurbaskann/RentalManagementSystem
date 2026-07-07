@@ -23,7 +23,7 @@ public class ManuelBorcCreateViewModel
 
     [MaxLength(500, ErrorMessage = "Not en fazla 500 karakter olabilir.")]
     public string? Not { get; set; }
-    public List<SozlesmeDropdownDto> AktifSozlesmeler { get; set; } = [];
+    public List<LeaseDropdownDto> AktifSozlesmeler { get; set; } = [];
     public List<BorcTipiLookupDto> ChargeTypes { get; set; } = [];
     public List<BirimLookupDto> Units { get; set; } = [];
 }

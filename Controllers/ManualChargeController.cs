@@ -47,8 +47,8 @@ public class ManualChargeController : Controller
             var s = vm.AktifSozlesmeler.FirstOrDefault(x => x.Id == leaseId.Value);
             if (s != null)
             {
-                vm.KiraciId = s.KiraciId;
-                vm.BirimId = s.BirimId;
+                vm.KiraciId = s.TenantId;
+                vm.BirimId = s.UnitId;
             }
         }
         return View(vm);

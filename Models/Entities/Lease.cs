@@ -40,6 +40,6 @@ public class Lease : BaseEntity
 
     public Unit Unit { get; set; } = null!;
     public Tenant Tenant { get; set; } = null!;
-    public List<SozlesmeIslemGecmisi> ActivityLog { get; set; } = [];
+    public List<LeaseActivityLog> ActivityLog { get; set; } = [];
     public List<SozlesmeTarife> LeaseRateOverrides { get; set; } = [];
 }

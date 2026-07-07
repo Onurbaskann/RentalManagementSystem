@@ -1,4 +1,4 @@
-﻿using KiraTakip.Models;
+using KiraTakip.Models;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -58,7 +58,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
     public DbSet<Unit> Units { get; set; }
     public DbSet<Tenant> Tenants { get; set; }
     public DbSet<Lease> Leases { get; set; }
-    public DbSet<SozlesmeIslemGecmisi> SozlesmeIslemGecmisleri { get; set; }
+    public DbSet<LeaseActivityLog> SozlesmeIslemGecmisleri { get; set; }
     public DbSet<KullaniciYetkiKapsami> KullaniciYetkiKapsamlari { get; set; }
     public DbSet<UserPermission> UserPermissions { get; set; }
 
@@ -178,16 +178,16 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             });
         });
 
-        builder.Entity<SozlesmeIslemGecmisi>(entity =>
+        builder.Entity<LeaseActivityLog>(entity =>
         {
-            entity.Property(g => g.Aciklama).HasMaxLength(1000);
-            entity.Property(g => g.IslemTipi).HasComment(EC<LeaseActivityType>());
-            entity.Property(g => g.EskiKiraBedeli).HasPrecision(18, 2);
-            entity.Property(g => g.YeniKiraBedeli).HasPrecision(18, 2);
-            entity.Property(g => g.TufeOrani).HasPrecision(5, 2);
+            entity.Property(g => g.Description).HasMaxLength(1000);
+            entity.Property(g => g.ActivityType).HasComment(EC<LeaseActivityType>());
+            entity.Property(g => g.OldRentAmount).HasPrecision(18, 2);
+            entity.Property(g => g.NewRentAmount).HasPrecision(18, 2);
+            entity.Property(g => g.InflationRate).HasPrecision(5, 2);
             entity.Property(g => g.KdvRate).HasPrecision(5, 2);
-            entity.Property(g => g.KdvTutari).HasPrecision(18, 2);
-            entity.Property(g => g.KdvDahilTutar).HasPrecision(18, 2);
+            entity.Property(g => g.KdvAmount).HasPrecision(18, 2);
+            entity.Property(g => g.KdvIncludedAmount).HasPrecision(18, 2);
             entity.HasOne(g => g.Lease)
                   .WithMany(s => s.ActivityLog)
                   .HasForeignKey(g => g.LeaseId)
@@ -677,7 +677,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
         builder.Entity<Reservation>().HasQueryFilter(
             r => !r.IsDeleted && (!_currentUser.IsKiraciUser || r.TenantId == _currentUser.KiraciId));
 
-        builder.Entity<SozlesmeIslemGecmisi>().HasQueryFilter(
+        builder.Entity<LeaseActivityLog>().HasQueryFilter(
             g => !g.IsDeleted && (!_currentUser.IsKiraciUser ||
                  g.Lease!.TenantId == _currentUser.KiraciId));
 

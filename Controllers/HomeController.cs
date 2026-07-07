@@ -64,7 +64,7 @@ public class HomeController : Controller
         var aktifSozlesmeler = sozlesmeler.Where(s => s.Aktif).ToList();
         decimal aylikToplamGelir = 0m;
         foreach (var s in aktifSozlesmeler)
-            aylikToplamGelir += s.AylikBedel;
+            aylikToplamGelir += s.MonthlyAmount;
 
         var roller = user?.IsSuperAdmin == true ? RoleNames.SistemYoneticisi
             : User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value 
@@ -82,7 +82,7 @@ public class HomeController : Controller
             BosBirim = tasinmazlar.Sum(t => t.BosBirimSayisi),
             SuresiDolmakUzereBirim = tasinmazlar.Sum(t => t.SuresiDolmakUzereBirimSayisi),
             AktifSozlesme = aktifSozlesmeler.Count,
-            AktifKiraciSayisi = aktifSozlesmeler.Select(s => s.KiraciId).Distinct().Count(),
+            AktifKiraciSayisi = aktifSozlesmeler.Select(s => s.TenantId).Distinct().Count(),
             AylikToplamGelir = aylikToplamGelir,
             YillikProj = aylikToplamGelir * 12,
         };
@@ -97,9 +97,9 @@ public class HomeController : Controller
             .Select(s => new SuresiDolmakUzereSozlesme
             {
                 SozlesmeId = s.Id,
-                KiraciAdi = s.KiraciGosterimAdi,
-                TasinmazAdi = s.TasinmazAd,
-                BirimAdi = s.BirimAd,
+                KiraciAdi = s.TenantDisplayName,
+                TasinmazAdi = s.PropertyName,
+                BirimAdi = s.UnitName,
                 KalanGun = s.KalanGun,
                 EndDate = s.EndDate
             }).ToList();

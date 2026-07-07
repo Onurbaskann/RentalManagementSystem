@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Entities;
@@ -11,17 +11,17 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
 {
     public LeaseRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<List<SozlesmeListItemDto>> GetListAsync(string? filtre, List<int>? yetkiliPropertyIds)
+    public async Task<List<LeaseListItemDto>> GetListAsync(string? filter, List<int>? authorizedPropertyIds)
     {
         var now = DateTime.Now;
         var query = _dbSet.AsNoTracking().AsQueryable();
 
-        if (yetkiliPropertyIds != null)
+        if (authorizedPropertyIds != null)
         {
-            query = query.Where(s => yetkiliPropertyIds.Contains(s.Unit.PropertyId));
+            query = query.Where(s => authorizedPropertyIds.Contains(s.Unit.PropertyId));
         }
 
-        query = filtre switch
+        query = filter switch
         {
             "aktif" => query.Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now),
             "surek" => query.Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now && s.EndDate <= now.AddDays(30)),
@@ -32,85 +32,85 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
 
         return await query
             .OrderByDescending(s => s.StartDate)
-            .Select(s => new SozlesmeListItemDto
+            .Select(s => new LeaseListItemDto
             {
                 Id = s.Id,
-                KiraciId = s.TenantId,
-                KiraciGosterimAdi = s.Tenant.DisplayName,
-                KiraciKategoriAd = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Ad : string.Empty,
-                BirimId = s.UnitId,
-                BirimAd = s.Unit.Name,
-                TasinmazId = s.Unit.PropertyId,
-                TasinmazAd = s.Unit.Property.Name,
+                TenantId = s.TenantId,
+                TenantDisplayName = s.Tenant.DisplayName,
+                TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Ad : string.Empty,
+                UnitId = s.UnitId,
+                UnitName = s.Unit.Name,
+                PropertyId = s.Unit.PropertyId,
+                PropertyName = s.Unit.Property.Name,
                 StartDate = s.StartDate,
                 EndDate = s.EndDate,
-                AylikBedel = 0,
-                Durum = s.Status,
-                BirimYuzolcumu = s.Unit.Area
+                MonthlyAmount = 0,
+                Status = s.Status,
+                UnitArea = s.Unit.Area
             })
             .ToListAsync();
     }
 
-    public async Task<SozlesmeDetayDto?> GetDetayAsync(int id)
+    public async Task<LeaseDetailDto?> GetDetayAsync(int id)
     {
         return await _dbSet.AsNoTracking()
             .Where(s => s.Id == id)
-            .Select(s => new SozlesmeDetayDto
+            .Select(s => new LeaseDetailDto
             {
                 Id = s.Id,
-                KiraciId = s.TenantId,
-                KiraciGosterimAdi = s.Tenant.DisplayName,
-                KiraciTelefon = s.Tenant.Phone,
-                KiraciEmail = s.Tenant.Email,
-                KiraciKategoriId = s.Tenant.TenantCategoryId,
-                KiraciKategoriAd = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Ad : string.Empty,
-                BirimId = s.UnitId,
-                BirimAd = s.Unit.Name,
-                BirimNo = s.Unit.UnitNo,
-                BirimKatNo = s.Unit.FloorNo,
-                BirimYuzolcumu = s.Unit.Area,
+                TenantId = s.TenantId,
+                TenantDisplayName = s.Tenant.DisplayName,
+                TenantPhone = s.Tenant.Phone,
+                TenantEmail = s.Tenant.Email,
+                TenantCategoryId = s.Tenant.TenantCategoryId,
+                TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Ad : string.Empty,
+                UnitId = s.UnitId,
+                UnitName = s.Unit.Name,
+                UnitNo = s.Unit.UnitNo,
+                UnitFloorNo = s.Unit.FloorNo,
+                UnitArea = s.Unit.Area,
                 UnitKind = s.Unit.UnitKind,
-                TasinmazId = s.Unit.PropertyId,
-                TasinmazAd = s.Unit.Property.Name,
-                TasinmazIl = s.Unit.Property.City,
-                TasinmazIlce = s.Unit.Property.District,
-                TasinmazMahalle = s.Unit.Property.Neighborhood,
-                TasinmazAcikAdres = s.Unit.Property.Address,
+                PropertyId = s.Unit.PropertyId,
+                PropertyName = s.Unit.Property.Name,
+                PropertyCity = s.Unit.Property.City,
+                PropertyDistrict = s.Unit.Property.District,
+                PropertyNeighborhood = s.Unit.Property.Neighborhood,
+                PropertyAddress = s.Unit.Property.Address,
                 StartDate = s.StartDate,
                 EndDate = s.EndDate,
-                Aciklama = s.Description,
-                Durum = s.Status,
-                FesihTarihi = s.TerminationDate,
-                FesihNedeni = s.TerminationReason,
-                KdvUygulanacakMi = s.IsKdvApplied,
+                Description = s.Description,
+                Status = s.Status,
+                TerminationDate = s.TerminationDate,
+                TerminationReason = s.TerminationReason,
+                IsKdvApplied = s.IsKdvApplied,
                 DueDateRuleType = s.DueDateRuleType,
-                VadeGunu = s.DueDay,
-                IslemGecmisi = s.ActivityLog
+                DueDay = s.DueDay,
+                ActivityLog = s.ActivityLog
                     .OrderByDescending(ig => ig.TransactionDate)
-                    .Select(ig => new SozlesmeIslemGecmisiDto
+                    .Select(ig => new LeaseActivityLogDto
                     {
                         Id = ig.Id,
                         TransactionDate = ig.TransactionDate,
-                        IslemTipi = ig.IslemTipi,
-                        Aciklama = ig.Aciklama,
-                        EskiKiraBedeli = ig.EskiKiraBedeli,
-                        YeniKiraBedeli = ig.YeniKiraBedeli,
-                        EskiBitisTarihi = ig.EskiBitisTarihi,
-                        YeniBitisTarihi = ig.YeniBitisTarihi,
-                        TufeOrani = ig.TufeOrani,
-                        KdvUygulandiMi = ig.KdvUygulandiMi ?? false,
+                        ActivityType = ig.ActivityType,
+                        Description = ig.Description,
+                        OldRentAmount = ig.OldRentAmount,
+                        NewRentAmount = ig.NewRentAmount,
+                        OldEndDate = ig.OldEndDate,
+                        NewEndDate = ig.NewEndDate,
+                        InflationRate = ig.InflationRate,
+                        IsKdvApplied = ig.IsKdvApplied ?? false,
                         KdvRate = ig.KdvRate,
-                        KdvTutari = ig.KdvTutari,
-                        KdvDahilTutar = ig.KdvDahilTutar
+                        KdvAmount = ig.KdvAmount,
+                        KdvIncludedAmount = ig.KdvIncludedAmount
                     }).ToList(),
-                SozlesmeTarifeler = s.LeaseRateOverrides
-                    .Select(st => new SozlesmeTarifeDto
+                LeaseRateOverrides = s.LeaseRateOverrides
+                    .Select(st => new LeaseRateDto
                     {
                         Id = st.Id,
                         ChargeTypeId = st.ChargeTypeId,
                         ChargeTypeCode = st.ChargeType.Code,
                         ChargeTypeName = st.ChargeType.Name,
-                        BorcTipiDavranis = st.ChargeType.Behavior,
+                        ChargeTypeBehavior = st.ChargeType.Behavior,
                         UnitValue = st.UnitValue,
                         CalculationMethod = st.CalculationMethod,
                         KdvRate = st.KdvRate
@@ -119,50 +119,50 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
             .FirstOrDefaultAsync();
     }
 
-    public async Task<List<SozlesmeListItemDto>> GetByTenantIdAsync(int tenantId)
+    public async Task<List<LeaseListItemDto>> GetByTenantIdAsync(int tenantId)
     {
         return await _dbSet.AsNoTracking()
             .Where(s => s.TenantId == tenantId)
             .OrderByDescending(s => s.StartDate)
-            .Select(s => new SozlesmeListItemDto
+            .Select(s => new LeaseListItemDto
             {
                 Id = s.Id,
-                KiraciId = s.TenantId,
-                KiraciGosterimAdi = s.Tenant.DisplayName,
-                KiraciKategoriAd = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Ad : string.Empty,
-                BirimId = s.UnitId,
-                BirimAd = s.Unit.Name,
-                TasinmazId = s.Unit.PropertyId,
-                TasinmazAd = s.Unit.Property.Name,
+                TenantId = s.TenantId,
+                TenantDisplayName = s.Tenant.DisplayName,
+                TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Ad : string.Empty,
+                UnitId = s.UnitId,
+                UnitName = s.Unit.Name,
+                PropertyId = s.Unit.PropertyId,
+                PropertyName = s.Unit.Property.Name,
                 StartDate = s.StartDate,
                 EndDate = s.EndDate,
-                AylikBedel = 0,
-                Durum = s.Status,
-                BirimYuzolcumu = s.Unit.Area
+                MonthlyAmount = 0,
+                Status = s.Status,
+                UnitArea = s.Unit.Area
             })
             .ToListAsync();
     }
 
-    public async Task<List<SozlesmeListItemDto>> GetByUnitIdAsync(int unitId)
+    public async Task<List<LeaseListItemDto>> GetByUnitIdAsync(int unitId)
     {
         return await _dbSet.AsNoTracking()
             .Where(s => s.UnitId == unitId)
             .OrderByDescending(s => s.StartDate)
-            .Select(s => new SozlesmeListItemDto
+            .Select(s => new LeaseListItemDto
             {
                 Id = s.Id,
-                KiraciId = s.TenantId,
-                KiraciGosterimAdi = s.Tenant.DisplayName,
-                KiraciKategoriAd = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Ad : string.Empty,
-                BirimId = s.UnitId,
-                BirimAd = s.Unit.Name,
-                TasinmazId = s.Unit.PropertyId,
-                TasinmazAd = s.Unit.Property.Name,
+                TenantId = s.TenantId,
+                TenantDisplayName = s.Tenant.DisplayName,
+                TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Ad : string.Empty,
+                UnitId = s.UnitId,
+                UnitName = s.Unit.Name,
+                PropertyId = s.Unit.PropertyId,
+                PropertyName = s.Unit.Property.Name,
                 StartDate = s.StartDate,
                 EndDate = s.EndDate,
-                AylikBedel = 0,
-                Durum = s.Status,
-                BirimYuzolcumu = s.Unit.Area
+                MonthlyAmount = 0,
+                Status = s.Status,
+                UnitArea = s.Unit.Area
             })
             .ToListAsync();
     }
@@ -207,18 +207,18 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
         return info == null ? null : (info.PropertyId, info.TenantCategoryId);
     }
 
-    public async Task<List<SozlesmeDropdownDto>> GetAktifDropdownAsync()
+    public async Task<List<LeaseDropdownDto>> GetAktifDropdownAsync()
         => await _dbSet.AsNoTracking()
             .Where(s => s.Status == LeaseStatus.Active)
             .OrderBy(s => s.Tenant.Name)
-            .Select(s => new SozlesmeDropdownDto
+            .Select(s => new LeaseDropdownDto
             {
                 Id = s.Id,
-                BirimId = s.UnitId,
-                KiraciId = s.TenantId,
-                KiraciGosterimAdi = s.Tenant.DisplayName,
-                BirimAd = s.Unit.Name,
-                TasinmazAd = s.Unit.Property.Name
+                UnitId = s.UnitId,
+                TenantId = s.TenantId,
+                TenantDisplayName = s.Tenant.DisplayName,
+                UnitName = s.Unit.Name,
+                PropertyName = s.Unit.Property.Name
             })
             .ToListAsync();
 }

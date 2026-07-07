@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
@@ -42,14 +42,14 @@ public class PropertyService : IPropertyService
         {
             if (b.AktifSozlesmeId.HasValue)
             {
-                var dummySozlesme = new Lease
+                var lease = new Lease
                 {
                     Id = b.AktifSozlesmeId.Value,
                     TenantId = b.AktifSozlesmeKiraciId ?? 0,
                     UnitId = b.Id,
                     Unit = new Unit { Id = b.Id, Area = b.Yuzolcumu }
                 };
-                b.AylikBedel = await _istatistikService.AylikBedelAsync(dummySozlesme);
+                b.AylikBedel = await _istatistikService.AylikBedelAsync(lease);
             }
         }
 
@@ -57,14 +57,14 @@ public class PropertyService : IPropertyService
         foreach (var s in dto.SozlesmeGecmisi)
         {
             var birimYuzolcumu = dto.Units.FirstOrDefault(b => b.Id == s.BirimId)?.Yuzolcumu ?? 0m;
-            var dummySozlesme = new Lease
+            var lease = new Lease
             {
                 Id = s.Id,
                 TenantId = s.KiraciId,
                 UnitId = s.BirimId,
                 Unit = new Unit { Id = s.BirimId, Area = birimYuzolcumu }
             };
-            s.AylikBedel = await _istatistikService.AylikBedelAsync(dummySozlesme);
+            s.AylikBedel = await _istatistikService.AylikBedelAsync(lease);
         }
 
         return dto;

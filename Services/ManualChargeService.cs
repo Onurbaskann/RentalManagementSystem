@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
@@ -38,7 +38,7 @@ public class ManualChargeService : IManualChargeService, ITransactionalService
         => await _tahakkukRepo.GetManuelBorcIptalSayisiAsync(tasinmazIds?.ToList(), birimIds?.ToList());
 
     // ── Dropdown verileri ────────────────────────────────────────────────
-    public Task<List<SozlesmeDropdownDto>> GetAktifSozlesmelerAsync()
+    public Task<List<LeaseDropdownDto>> GetAktifSozlesmelerAsync()
         => _sozlesmeRepo.GetAktifDropdownAsync();
 
     public Task<List<BorcTipiLookupDto>> GetManuelBorcTipleriAsync()

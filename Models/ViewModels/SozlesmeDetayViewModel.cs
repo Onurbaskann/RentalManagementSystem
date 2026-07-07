@@ -5,15 +5,15 @@ namespace KiraTakip.Models.ViewModels;
 
 public class SozlesmeDetayViewModel
 {
-    public SozlesmeDetayDto Lease { get; set; } = null!;
+    public LeaseDetailDto Lease { get; set; } = null!;
     public int KalanGun { get; set; }
     public decimal AylikBedel { get; set; }
     public decimal YillikBedel { get; set; }
     public bool Aktif { get; set; }
     public double SureYuzdesi { get; set; }
     public OccupancyStatus Durum { get; set; }
-    public List<SozlesmeListItemDto> GecmisSozlesmeler { get; set; } = [];
-    public List<SozlesmeListItemDto> KiraciSozlesmeleri { get; set; } = [];
+    public List<LeaseListItemDto> GecmisSozlesmeler { get; set; } = [];
+    public List<LeaseListItemDto> KiraciSozlesmeleri { get; set; } = [];
     public List<ChargeListItemDto> Charges { get; set; } = [];
     public bool HasOdemeAccess { get; set; }
     public ParentTarifeKartViewModel? ParentTarife { get; set; }
