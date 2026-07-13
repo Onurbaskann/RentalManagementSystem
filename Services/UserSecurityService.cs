@@ -27,7 +27,7 @@ public class UserSecurityService : IUserSecurityService
     public async Task UpdateStampForRoleUsersAsync(int rolId)
     {
         var userIds = await _db.UserRoller
-            .Where(ur => ur.RolId == rolId)
+            .Where(ur => ur.RoleId == rolId)
             .Select(ur => ur.UserId)
             .ToListAsync();
 

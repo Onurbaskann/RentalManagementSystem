@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace KiraTakip.Models.Entities;
 
-[Table("Properties")]
+[Table("Tasinmazlar")]
 public class Property : BaseEntity
 {
     [Column("TasinmazTipiId")]
@@ -11,8 +11,8 @@ public class Property : BaseEntity
     [Column("Ad")]
     public string Name { get; set; } = string.Empty;
 
-    [Column("KiralamaSekli")]
-    public RentalMode RentalMode { get; set; }
+    [Column("BirimYapisi")]
+    public UnitStructure UnitStructure { get; set; }
 
     [Column("AcikYuzolcumu")]
     public decimal OpenArea { get; set; }
@@ -38,6 +38,6 @@ public class Property : BaseEntity
     [Column("Aciklama")]
     public string? Description { get; set; }
 
-    public TasinmazTipi? PropertyType { get; set; }
+    public PropertyType? PropertyType { get; set; }
     public List<Unit> Units { get; set; } = [];
 }

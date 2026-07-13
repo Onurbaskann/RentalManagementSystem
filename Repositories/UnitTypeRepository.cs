@@ -19,8 +19,8 @@ public class UnitTypeRepository : BaseRepository<UnitType>, IUnitTypeRepository
                 Name = b.Name,
                 Code = b.Code,
                 SortOrder = b.SortOrder,
-                CanBeRented = b.CanBeRented,
-                CanBeReserved = b.CanBeReserved,
+                CanBeRented = b.Usage == UnitTypeUsage.Rentable,
+                CanBeReserved = b.Usage == UnitTypeUsage.Reservable,
                 ChargeTypeId = b.ChargeTypeId,
                 ChargeTypeName = b.ChargeType != null ? b.ChargeType.Name : null,
                 IsActive = b.IsActive

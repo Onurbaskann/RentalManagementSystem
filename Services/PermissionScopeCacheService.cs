@@ -47,11 +47,11 @@ public class PermissionScopeCacheService : IPermissionScopeCache
         {
             var propertyIds = await db.KullaniciYetkiKapsamlari
                 .Where(k => k.UserId == userId && k.ScopeType == ScopeType.Property)
-                .Select(k => k.KapsamId)
+                .Select(k => k.ScopeId)
                 .ToListAsync();
             var unitIds = await db.KullaniciYetkiKapsamlari
                 .Where(k => k.UserId == userId && k.ScopeType == ScopeType.Unit)
-                .Select(k => k.KapsamId)
+                .Select(k => k.ScopeId)
                 .ToListAsync();
             dto = new UserScopeDto { GlobalAccess = false, PropertyIds = propertyIds, UnitIds = unitIds };
         }

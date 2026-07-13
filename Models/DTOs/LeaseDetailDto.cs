@@ -14,7 +14,7 @@ public class LeaseDetailDto
     public string? UnitNo { get; set; }
     public int? UnitFloorNo { get; set; }
     public decimal UnitArea { get; set; }
-    public UnitKind UnitKind { get; set; }
+    public UnitStructure UnitStructure { get; set; }
     public int PropertyId { get; set; }
     public string PropertyName { get; set; } = string.Empty;
     public string PropertyCity { get; set; } = string.Empty;

@@ -1,6 +1,7 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Helpers;
+using KiraTakip.Models;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -42,7 +43,7 @@ public class AdminUnitTypeController : Controller
         var vm = new UnitTypeFormViewModel
         {
             SortOrder = nextSira,
-            CanBeRented = true,
+            Usage = UnitTypeUsage.Rentable,
             ChargeTypeCandidates = await _borcTipiRepo.GetRezervasyonAdaylariAsync()
         };
         return View(vm);
@@ -53,12 +54,8 @@ public class AdminUnitTypeController : Controller
     [Authorize(Policy = PermissionCatalog.UnitType.Create)]
     public async Task<IActionResult> Create(UnitTypeFormViewModel model)
     {
-        if (model.CanBeReserved && (!model.ChargeTypeId.HasValue || model.ChargeTypeId <= 0))
-            ModelState.AddModelError(nameof(model.ChargeTypeId), "Reservation unit türü için borç tipi seçilmelidir.");
-
-        if (model.CanBeRented == model.CanBeReserved)
-            ModelState.AddModelError(string.Empty,
-                "Tam olarak bir kullanım türü seçilmelidir: Kiralanabilir VEYA Reservation yapılabilir.");
+        if (model.Usage == UnitTypeUsage.Reservable && (!model.ChargeTypeId.HasValue || model.ChargeTypeId <= 0))
+            ModelState.AddModelError(nameof(model.ChargeTypeId), "Rezervasyon birim türü için borç tipi seçilmelidir.");
 
         if (!ModelState.IsValid)
         {
@@ -79,11 +76,9 @@ public class AdminUnitTypeController : Controller
             Name = model.Name,
             Code = kod,
             SortOrder = model.SortOrder,
-            CanBeRented = model.CanBeRented,
-            CanBeReserved = model.CanBeReserved,
-            ChargeTypeId = model.CanBeRented ? null : model.ChargeTypeId,
-            IsActive = model.IsActive,
-            CreatedDate = DateTime.UtcNow
+            Usage = model.Usage,
+            ChargeTypeId = model.Usage == UnitTypeUsage.Reservable ? model.ChargeTypeId : null,
+            IsActive = model.IsActive
         };
 
         await _repo.AddAsync(entity);
@@ -92,7 +87,7 @@ public class AdminUnitTypeController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpGet("Duzenle/{id:int}")]
+    [HttpGet("Duzenle/{id}")]
     [Authorize(Policy = PermissionCatalog.UnitType.Module)]
     public async Task<IActionResult> Edit(int id)
     {
@@ -104,19 +99,16 @@ public class AdminUnitTypeController : Controller
         return View(vm);
     }
 
-    [HttpPost("Duzenle/{id:int}")]
+    [HttpPost("Duzenle/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.UnitType.Edit)]
-    public async Task<IActionResult> Edit(int id, UnitTypeFormViewModel model)
+    public async Task<IActionResult> Edit(int id, [FromForm] UnitTypeFormViewModel model)
     {
+        System.Console.WriteLine($"[Edit POST] id parameter: {id}, model.Id property: {model.Id}");
         if (id != model.Id) return BadRequest();
 
-        if (model.CanBeReserved && (!model.ChargeTypeId.HasValue || model.ChargeTypeId <= 0))
-            ModelState.AddModelError(nameof(model.ChargeTypeId), "Reservation unit türü için borç tipi seçilmelidir.");
-
-        if (model.CanBeRented == model.CanBeReserved)
-            ModelState.AddModelError(string.Empty,
-                "Tam olarak bir kullanım türü seçilmelidir: Kiralanabilir VEYA Reservation yapılabilir.");
+        if (model.Usage == UnitTypeUsage.Reservable && (!model.ChargeTypeId.HasValue || model.ChargeTypeId <= 0))
+            ModelState.AddModelError(nameof(model.ChargeTypeId), "Rezervasyon birim türü için borç tipi seçilmelidir.");
 
         if (!ModelState.IsValid)
         {
@@ -129,9 +121,8 @@ public class AdminUnitTypeController : Controller
 
         entity.Name = model.Name;
         entity.SortOrder = model.SortOrder;
-        entity.CanBeRented = model.CanBeRented;
-        entity.CanBeReserved = model.CanBeReserved;
-        entity.ChargeTypeId = model.CanBeRented ? null : model.ChargeTypeId;
+        entity.Usage = model.Usage;
+        entity.ChargeTypeId = model.Usage == UnitTypeUsage.Reservable ? model.ChargeTypeId : null;
         entity.IsActive = model.IsActive;
 
         await _uow.SaveChangesAsync();
@@ -139,7 +130,7 @@ public class AdminUnitTypeController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("DurumDegistir/{id:int}")]
+    [HttpPost("DurumDegistir/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.UnitType.Edit)]
     public async Task<IActionResult> DurumDegistir(int id)
@@ -151,7 +142,7 @@ public class AdminUnitTypeController : Controller
         {
             if (await _repo.HasAktifTahakkukForUnitTypeAsync(id))
             {
-                TempData["Error"] = "Bu unit türüne bağlı birimlerde aktif charge bulunduğu için pasif yapılamaz.";
+                TempData["Error"] = "Bu unit türüne bağlı birimlerde aktif tahakkuku bulunduğu için pasif yapılamaz.";
                 return RedirectToAction(nameof(Index));
             }
 
@@ -184,8 +175,7 @@ public class AdminUnitTypeController : Controller
         Id = e.Id,
         Name = e.Name,
         SortOrder = e.SortOrder,
-        CanBeRented = e.CanBeRented,
-        CanBeReserved = e.CanBeReserved,
+        Usage = e.Usage,
         ChargeTypeId = e.ChargeTypeId,
         IsActive = e.IsActive
     };

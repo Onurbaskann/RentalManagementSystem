@@ -4,7 +4,7 @@
 @using KiraTakip.Models.Common
 @{
     Layout = "_KiraciLayout";
-    ViewData["Title"] = "Chargesım";
+    ViewData["Title"] = "Tahakkuklarım";
     string durum = ViewBag.Status ?? "tum";
     var q = (TableQuery)ViewBag.Query;
     var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/Tenant/Tahakkuklarim", Extra = q.ToQueryDict() };
@@ -25,14 +25,14 @@
 }
 
 <div class="page-header">
-    <div class="page-title">Chargesım</div>
+    <div class="page-title">Tahakkuklarım</div>
     <div class="page-subtitle">Toplam yükümlülük, tahsilat ve gecikmiş bakiye özeti</div>
 </div>
 
 <!-- Mutabakat Özeti -->
 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 mb-5">
     <div class="card bg-gradient-to-br from-slate-50 to-white border-slate-200">
-        <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-2">Toplam Charge</div>
+        <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-2">Toplam Tahakkuk</div>
         <div class="text-2xl font-bold text-slate-800">@toplamTahakkuk.ToString("N2") ₺</div>
         <div class="text-[11px] text-muted mt-1">Tüm dönemlerin brüt yükümlülüğü</div>
     </div>
@@ -44,7 +44,7 @@
     <div class="card bg-gradient-to-br @(kalanBorc > 0 ? "from-slate-50 to-white border-slate-200" : "from-emerald-50/60 to-white border-emerald-100")">
         <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-2">Kalan Borç</div>
         <div class="text-2xl font-bold @(kalanBorc > 0 ? "text-slate-800" : "text-emerald-700")">@kalanBorc.ToString("N2") ₺</div>
-        <div class="text-[11px] text-muted mt-1">@(kalanBorc > 0 ? "Toplam charge − tahsil edilen" : "Tüm tahakkuklar karşılandı")</div>
+        <div class="text-[11px] text-muted mt-1">@(kalanBorc > 0 ? "Toplam tahakkuk − tahsil edilen" : "Tüm tahakkuklar karşılandı")</div>
     </div>
     <div class="card bg-gradient-to-br @(gecikmisKalan > 0 ? "from-red-50/60 to-white border-red-100" : "from-emerald-50/60 to-white border-emerald-100")">
         <div class="text-[11.5px] font-bold uppercase tracking-wider mb-2 @(gecikmisKalan > 0 ? "text-red-700" : "text-emerald-700")">Gecikmiş Bakiye</div>
@@ -81,7 +81,7 @@
 
         <div class="flex flex-wrap items-center gap-2.5">
         <select name="unitId" class="form-control w-44 text-xs font-medium">
-            <option value="">— Tüm Units —</option>
+            <option value="">— Tüm Birimler —</option>
             @foreach (var b in (List<Unit>)ViewBag.Units)
             {
                 <option value="@b.Id" selected="@(q.UnitId == b.Id ? "selected" : null)">@b.Name</option>
@@ -92,7 +92,7 @@
             <option value="">— Kaynak —</option>
             <option value="lease" selected="@(q.Source == "lease" ? "selected" : null)">Sözleşme</option>
             <option value="manuel" selected="@(q.Source == "manuel" ? "selected" : null)">Manuel</option>
-            <option value="reservation" selected="@(q.Source == "reservation" ? "selected" : null)">Reservation</option>
+            <option value="reservation" selected="@(q.Source == "reservation" ? "selected" : null)">Rezervasyon</option>
         </select>
 
         <select name="year" class="form-control w-24 text-xs font-medium">
@@ -114,7 +114,7 @@
             <thead>
                 <tr>
                     <th class="w-36">Dönem</th>
-                    <th>Unit</th>
+                    <th>Birim</th>
                     <th class="w-28 cell-center">Vade</th>
                     <th class="w-32 num">Borç</th>
                     <th class="w-32 num">Ödenen</th>
@@ -150,7 +150,7 @@
                     };
                     string kaynakLabel = t.SourceType switch {
                         ChargeSourceType.Manual      => "Manuel",
-                        ChargeSourceType.Reservation => "Reservation",
+                        ChargeSourceType.Reservation => "Rezervasyon",
                         _                              => "Sözleşme"
                     };
                     <tr @@click="open[@t.Id] = !open[@t.Id]" class="cursor-pointer transition-colors hover:bg-slate-50">
@@ -208,7 +208,7 @@
                                         <thead class="bg-slate-50 border-b border-slate-200">
                                             <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
                                                 <th class="p-2 px-3 text-left">Açıklama</th>
-                                                <th class="p-2 px-3 text-right">Unit</th>
+                                                <th class="p-2 px-3 text-right">Birim</th>
                                                 <th class="p-2 px-3 text-right">Amount</th>
                                                 <th class="p-2 px-3 text-right text-muted">KDV</th>
                                                 <th class="p-2 px-3 text-right">Toplam</th>
@@ -238,7 +238,7 @@
                 }
                 @if (Model.Total == 0)
                 {
-                    <tr><td colspan="9" class="text-center py-16 text-muted italic">Filtreye uygun charge kaydı bulunamadı.</td></tr>
+                    <tr><td colspan="9" class="text-center py-16 text-muted italic">Filtreye uygun tahakkuk kaydı bulunamadı.</td></tr>
                 }
             </tbody>
         </table>

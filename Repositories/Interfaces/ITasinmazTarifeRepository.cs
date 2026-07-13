@@ -3,11 +3,11 @@ using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface ITasinmazTarifeRepository : IBaseRepository<TasinmazTarife>
+public interface ITasinmazTarifeRepository : IBaseRepository<PropertyRateOverride>
 {
-    Task<List<TasinmazTarife>> GetByPropertyIdAsync(int propertyId);
-    Task<List<Kategori>> GetKiraciKategorileriAsync();
+    Task<List<PropertyRateOverride>> GetByPropertyIdAsync(int propertyId);
+    Task<List<Category>> GetKiraciKategorileriAsync();
     Task<List<ChargeType>> GetBorcTipleriMatrisIcinAsync();
-    Task<List<TasinmazTarife>> GetForHiyerarsiAsync(int propertyId, int? kategoriId);
+    Task<List<PropertyRateOverride>> GetForHiyerarsiAsync(int propertyId, int? kategoriId);
     Task<RateValueDto?> GetRateAsync(int propertyId, int kategoriId, int chargeTypeId);
 }

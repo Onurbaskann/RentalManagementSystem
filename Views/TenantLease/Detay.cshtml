@@ -112,9 +112,9 @@
         <div class="text-right">
             <div class="text-[11.5px] font-semibold text-muted uppercase tracking-wider mb-2.5">Taşınmaz</div>
             <div class="font-serif text-xl font-bold mb-1">@s.PropertyName</div>
-            @if (s.UnitKind == UnitKind.Unit)
+            @if (s.UnitStructure == UnitStructure.MultipleUnits)
             {
-                <div class="text-sm text-muted mb-1">Unit @s.UnitNo@(s.UnitFloorNo.HasValue ? $" • {s.UnitFloorNo}. Kat" : "") • @s.UnitArea.ToString("N0") m²</div>
+                <div class="text-sm text-muted mb-1">Birim @s.UnitNo@(s.UnitFloorNo.HasValue ? $" • {s.UnitFloorNo}. Kat" : "") • @s.UnitArea.ToString("N0") m²</div>
                 <div class="text-[13px] text-muted mb-2.5">@s.PropertyDistrict, @s.PropertyCity</div>
             }
             else
@@ -195,17 +195,17 @@
         </div>
     </div>
 
-    <!-- Charge Sağlığı -->
+    <!-- Tahakkuk Sağlığı -->
     @if (hasBorc)
     {
     <div class="card">
         <div class="flex items-center justify-between">
-            <div class="card-title">Charge Sağlığı</div>
-            <span class="text-[11px] text-muted">@thkToplamSayi charge</span>
+            <div class="card-title">Tahakkuk Sağlığı</div>
+            <span class="text-[11px] text-muted">@thkToplamSayi tahakkuk</span>
         </div>
         @if (thkToplamSayi == 0)
         {
-            <div class="mt-4 text-center text-muted text-[13px] italic py-6">Henüz charge üretilmedi.</div>
+            <div class="mt-4 text-center text-muted text-[13px] italic py-6">Henüz tahakkuk üretilmedi.</div>
         }
         else
         {
@@ -261,13 +261,13 @@
     }
 </div>
 
-<!-- Aylık Charge Kalemleri -->
+<!-- Aylık Tahakkuk Kalemleri -->
 @if (hasBorc && Model.GuncelKalemler.Any())
 {
     <div class="card mb-4">
         <div class="flex justify-between items-center mb-3.5">
             <div>
-                <span class="text-xs font-semibold text-muted uppercase tracking-wider">Aylık Charge Kalemleri</span>
+                <span class="text-xs font-semibold text-muted uppercase tracking-wider">Aylık Tahakkuk Kalemleri</span>
                 @if (Model.GuncelKalemDonemi.HasValue)
                 {
                     <span class="text-xs text-muted ml-2">— @Model.GuncelKalemDonemi.Value.ToString("MMMM yyyy", trCulture)</span>
@@ -281,7 +281,7 @@
                     <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
                         <th class="p-2 px-3 text-left">Açıklama</th>
                         <th class="p-2 px-3 text-left">Hesaplama</th>
-                        <th class="p-2 px-3 text-right">Unit</th>
+                        <th class="p-2 px-3 text-right">Birim</th>
                         <th class="p-2 px-3 text-right">Amount</th>
                         <th class="p-2 px-3 text-right text-muted">KDV</th>
                         <th class="p-2 px-3 text-right">Toplam</th>
@@ -320,7 +320,7 @@
 <div id="lease-tabs">
     <div class="tabs">
         <button class="tab">Detaylar</button>
-        <button class="tab">Unit Bilgisi</button>
+        <button class="tab">Birim Bilgisi</button>
         @if (hasBorc)
         {
             <button class="tab" data-tab="odemeler">Ödemeler (@Model.Charges.Count)</button>
@@ -379,7 +379,7 @@
         <div class="card">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <div class="detail-label mb-3">Unit</div>
+                    <div class="detail-label mb-3">Birim</div>
                     <div class="flex flex-col gap-2.5">
                         <div>
                             <div class="text-xs text-muted">Ad</div>
@@ -392,9 +392,9 @@
                         <div>
                             <div class="text-xs text-muted">Tip</div>
                             <div class="text-[15px] font-semibold">
-                                @if (s.UnitKind == UnitKind.Unit)
+                                @if (s.UnitStructure == UnitStructure.MultipleUnits)
                                 {
-                                    <span>Unit @s.UnitNo</span>
+                                    <span>Birim @s.UnitNo</span>
                                     if (s.UnitFloorNo.HasValue) { <span class="text-[13px] font-normal text-muted"> • @s.UnitFloorNo. Kat</span> }
                                 }
                                 else { <span>Komple</span> }
@@ -540,7 +540,7 @@
                                                     <thead class="bg-slate-50 border-b border-slate-200">
                                                         <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
                                                             <th class="p-2 px-3 text-left">Açıklama</th>
-                                                            <th class="p-2 px-3 text-right">Unit</th>
+                                                            <th class="p-2 px-3 text-right">Birim</th>
                                                             <th class="p-2 px-3 text-right">Amount</th>
                                                             <th class="p-2 px-3 text-right text-muted">KDV</th>
                                                             <th class="p-2 px-3 text-right">Toplam</th>

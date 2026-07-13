@@ -4,8 +4,8 @@ namespace KiraTakip.Repositories.Interfaces;
 
 public interface IUnitRepository : IBaseRepository<Unit>
 {
-    Task<List<BirimListItemDto>> GetByPropertyIdAsync(int propertyId);
-    Task<BirimDetayDto?> GetDetayAsync(int id);
-    Task<List<BirimListItemDto>> GetRezervasyonBirimleriAsync();
+    Task<List<UnitListItemDto>> GetByPropertyIdAsync(int propertyId);
+    Task<UnitDetailDto?> GetDetayAsync(int id);
+    Task<List<UnitListItemDto>> GetRezervasyonBirimleriAsync();
     Task<int?> GetPropertyIdAsync(int unitId);
 }

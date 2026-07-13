@@ -8,7 +8,7 @@
 <div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Tahsilat Raporu</div>
-        <div class="page-subtitle">@Model.Yil yılı aylık charge özeti</div>
+        <div class="page-subtitle">@Model.Yil yılı aylık tahakkuk özeti</div>
     </div>
     <div>
         <form method="get" class="flex items-center">
@@ -28,7 +28,7 @@
     <div class="card bg-white border border-slate-200">
         <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Yıllık Beklenen</div>
         <div class="text-2xl font-bold text-slate-800">@TLFormat(Model.ToplamBeklenen)</div>
-        <div class="text-[11px] text-muted font-medium mt-1">@Model.Satirlar.Sum(s => s.TahakkukSayisi) charge kaydı</div>
+        <div class="text-[11px] text-muted font-medium mt-1">@Model.Satirlar.Sum(s => s.TahakkukSayisi) tahakkuk kaydı</div>
     </div>
     <div class="card bg-emerald-50/50 border border-emerald-100">
         <div class="text-[11px] font-bold text-emerald-600/60 uppercase tracking-wider mb-1">Yıllık Tahsil Edilen</div>
@@ -54,13 +54,13 @@
             <thead>
                 <tr>
                     <th class="w-32">Ay</th>
-                    <th class="w-24 cell-center">Charge</th>
+                    <th class="w-24 cell-center">Tahakkuk</th>
                     <th class="w-40 num">Beklenen</th>
                     <th class="w-40 num">Tahsil Edilen</th>
                     <th class="w-40 num">Kalan</th>
                     <th class="w-48">Tahsilat Oranı</th>
                     <th class="w-48 cell-center" title="Vade tarihi geçmiş ve henüz tamamı tahsil edilmemiş tahakkukların adedi ve kalan toplam tutarı.">
-                        Gecikmiş Charge
+                        Gecikmiş Tahakkuk
                         <span class="inline-flex items-center justify-center w-3.5 h-3.5 leading-[14px] text-center rounded-full bg-slate-200 text-slate-500 text-[9px] font-bold ml-1 cursor-help">i</span>
                     </th>
                 </tr>

@@ -10,88 +10,88 @@ public class UnitRepository : BaseRepository<Unit>, IUnitRepository
 {
     public UnitRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<List<BirimListItemDto>> GetByPropertyIdAsync(int propertyId)
+    public async Task<List<UnitListItemDto>> GetByPropertyIdAsync(int propertyId)
     {
         var now = DateTime.Now;
         return await _dbSet.AsNoTracking()
             .Where(b => b.PropertyId == propertyId)
             .OrderBy(b => b.Name)
-            .Select(b => new BirimListItemDto
+            .Select(b => new UnitListItemDto
             {
                 Id = b.Id,
-                BirimNo = b.UnitNo,
-                Ad = b.Name,
-                KatNo = b.FloorNo,
-                Yuzolcumu = b.Area,
-                UnitTypeAd = b.UnitType != null ? b.UnitType.Name : string.Empty,
-                TasinmazId = b.PropertyId,
-                TasinmazAd = b.Property.Name,
-                Durum = b.Leases.Any(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
+                UnitNo = b.UnitNo,
+                Name = b.Name,
+                FloorNo = b.FloorNo,
+                Area = b.Area,
+                UnitTypeName = b.UnitType != null ? b.UnitType.Name : string.Empty,
+                PropertyId = b.PropertyId,
+                PropertyName = b.Property.Name,
+                Status = b.Leases.Any(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
                     ? (b.Leases.Any(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now && s.EndDate <= now.AddDays(30))
                         ? OccupancyStatus.ExpiringSoon
                         : OccupancyStatus.Leased)
                     : OccupancyStatus.Vacant,
-                AylikBedel = 0
+                MonthlyRent = 0
             })
             .ToListAsync();
     }
 
-    public async Task<List<BirimListItemDto>> GetRezervasyonBirimleriAsync()
+    public async Task<List<UnitListItemDto>> GetRezervasyonBirimleriAsync()
     {
         return await _dbSet.AsNoTracking()
-            .Where(b => b.UnitType != null && b.UnitType.CanBeReserved && b.UnitType.IsActive)
+            .Where(b => b.UnitType != null && b.UnitType.Usage == UnitTypeUsage.Reservable && b.UnitType.IsActive)
             .OrderBy(b => b.Property.Name).ThenBy(b => b.Name)
-            .Select(b => new BirimListItemDto
+            .Select(b => new UnitListItemDto
             {
                 Id = b.Id,
-                Ad = b.Name,
-                UnitTypeAd = b.UnitType != null ? b.UnitType.Name : string.Empty,
-                TasinmazId = b.PropertyId,
-                TasinmazAd = b.Property.Name,
-                Yuzolcumu = b.Area,
-                AylikBedel = 0
+                Name = b.Name,
+                UnitTypeName = b.UnitType != null ? b.UnitType.Name : string.Empty,
+                PropertyId = b.PropertyId,
+                PropertyName = b.Property.Name,
+                Area = b.Area,
+                MonthlyRent = 0
             })
             .ToListAsync();
     }
 
-    public async Task<BirimDetayDto?> GetDetayAsync(int id)
+    public async Task<UnitDetailDto?> GetDetayAsync(int id)
     {
         var now = DateTime.Now;
         return await _dbSet.AsNoTracking()
             .Where(b => b.Id == id)
-            .Select(b => new BirimDetayDto
+            .Select(b => new UnitDetailDto
             {
                 Id = b.Id,
-                BirimNo = b.UnitNo,
-                Ad = b.Name,
-                KatNo = b.FloorNo,
-                Yuzolcumu = b.Area,
-                UnitTypeAd = b.UnitType != null ? b.UnitType.Name : string.Empty,
-                RezervasyonYapilabilirMi = b.UnitType != null ? b.UnitType.CanBeReserved : false,
-                KiralanabilirMi = b.UnitType != null ? b.UnitType.CanBeRented : false,
-                TasinmazId = b.PropertyId,
-                TasinmazAd = b.Property.Name,
-                AktifSozlesmeId = b.Leases
+                UnitNo = b.UnitNo,
+                Name = b.Name,
+                FloorNo = b.FloorNo,
+                Area = b.Area,
+                UnitTypeName = b.UnitType != null ? b.UnitType.Name : string.Empty,
+                CanBeReserved = b.UnitType != null ? b.UnitType.Usage == UnitTypeUsage.Reservable : false,
+                CanBeRented = b.UnitType != null ? b.UnitType.Usage == UnitTypeUsage.Rentable : false,
+                PropertyId = b.PropertyId,
+                PropertyName = b.Property.Name,
+                ActiveLeaseId = b.Leases
                     .Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
                     .OrderByDescending(s => s.EndDate)
                     .Select(s => (int?)s.Id)
                     .FirstOrDefault(),
-                AktifSozlesmeKiraciId = b.Leases
+                ActiveLeaseTenantId = b.Leases
                     .Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
                     .OrderByDescending(s => s.EndDate)
                     .Select(s => (int?)s.TenantId)
                     .FirstOrDefault(),
-                AktifSozlesmeKiraciGosterimAdi = b.Leases
+                ActiveLeaseTenantDisplayName = b.Leases
                     .Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
                     .OrderByDescending(s => s.EndDate)
                     .Select(s => s.Tenant.DisplayName)
                     .FirstOrDefault(),
-                AktifSozlesmeBitisTarihi = b.Leases
+                ActiveLeaseEndDate = b.Leases
                     .Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
                     .OrderByDescending(s => s.EndDate)
                     .Select(s => (DateTime?)s.EndDate)
                     .FirstOrDefault(),
-                Durum = b.Leases.Any(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
+                Status = b.Leases.Any(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
                     ? (b.Leases.Any(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now && s.EndDate <= now.AddDays(30))
                         ? OccupancyStatus.ExpiringSoon
                         : OccupancyStatus.Leased)
@@ -102,11 +102,11 @@ public class UnitRepository : BaseRepository<Unit>, IUnitRepository
                     .FirstOrDefault(),
                 RezKuralPeriyotUcreti = _ctx.RezervasyonTarifeler
                     .Where(rt => rt.UnitId == b.Id && rt.IsActive)
-                    .Select(rt => (decimal?)rt.PeriyotUcreti)
+                    .Select(rt => (decimal?)rt.PeriodRate)
                     .FirstOrDefault(),
                 RezKuralUcretlendirmePeriyoduDakika = _ctx.RezervasyonTarifeler
                     .Where(rt => rt.UnitId == b.Id && rt.IsActive)
-                    .Select(rt => (int?)rt.UcretlendirmePeriyoduDakika)
+                    .Select(rt => (int?)rt.BillingPeriodMinutes)
                     .FirstOrDefault(),
                 RezKuralUcretsizSureDakika = _ctx.RezervasyonTarifeler
                     .Where(rt => rt.UnitId == b.Id && rt.IsActive)
@@ -116,7 +116,7 @@ public class UnitRepository : BaseRepository<Unit>, IUnitRepository
                     .Where(rt => rt.UnitId == b.Id && rt.IsActive)
                     .Select(rt => (decimal?)rt.KdvRate)
                     .FirstOrDefault(),
-                AylikBedel = 0
+                MonthlyRent = 0
             })
             .FirstOrDefaultAsync();
     }

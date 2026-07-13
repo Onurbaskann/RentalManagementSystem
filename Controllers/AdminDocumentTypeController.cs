@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Helpers;
 using KiraTakip.Models.Entities;
@@ -75,7 +75,7 @@ public class AdminDocumentTypeController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpGet("Duzenle/{id:int}")]
+    [HttpGet("Duzenle/{id}")]
     [Authorize(Policy = PermissionCatalog.DocumentType.Module)]
     public async Task<IActionResult> Edit(int id)
     {
@@ -84,10 +84,10 @@ public class AdminDocumentTypeController : Controller
         return View(ToFormVm(entity));
     }
 
-    [HttpPost("Duzenle/{id:int}")]
+    [HttpPost("Duzenle/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.DocumentType.Edit)]
-    public async Task<IActionResult> Edit(int id, BelgeTuruFormViewModel model)
+    public async Task<IActionResult> Edit(int id, [FromForm] BelgeTuruFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
 
@@ -118,7 +118,7 @@ public class AdminDocumentTypeController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("DurumDegistir/{id:int}")]
+    [HttpPost("DurumDegistir/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.DocumentType.Edit)]
     public async Task<IActionResult> DurumDegistir(int id)
@@ -138,7 +138,7 @@ public class AdminDocumentTypeController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("Sil/{id:int}")]
+    [HttpPost("Sil/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.DocumentType.Delete)]
     public async Task<IActionResult> Delete(int id)

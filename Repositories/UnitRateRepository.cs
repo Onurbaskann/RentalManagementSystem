@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.ViewModels;
@@ -15,7 +15,8 @@ public class UnitRateRepository : BaseRepository<UnitRate>, IUnitRateRepository
         => await _dbSet.AsNoTracking()
             .Where(r => r.UnitId == unitId
                      && r.TenantCategoryId == tenantCategoryId
-                     && r.ChargeTypeId == chargeTypeId)
+                     && r.ChargeTypeId == chargeTypeId
+                     && r.IsActive)
             .Select(r => new RateValueDto
             {
                 CalculationMethod = r.CalculationMethod,
@@ -31,11 +32,11 @@ public class UnitRateRepository : BaseRepository<UnitRate>, IUnitRateRepository
             q = q.Where(r => r.TenantCategoryId == tenantCategoryId.Value);
 
         var rateler = await q
-            .OrderBy(r => r.TenantCategory.Sira)
+            .OrderBy(r => r.TenantCategory.Order)
             .ThenBy(r => r.ChargeType.SortOrder)
             .Select(r => new ParentTarifeSatir
             {
-                KategoriAd = r.TenantCategory.Ad,
+                CategoryName = r.TenantCategory.Name,
                 ChargeTypeName = r.ChargeType.Name,
                 CalculationMethod = r.CalculationMethod,
                 UnitValue = r.UnitValue,
@@ -49,8 +50,8 @@ public class UnitRateRepository : BaseRepository<UnitRate>, IUnitRateRepository
         {
             new ParentTarifeKartViewModel
             {
-                KaynakAdi = "Unit Tarifesi",
-                Satirlar = rateler
+                SourceName = "Unit Tarifesi",
+                Rows = rateler
             }
         };
     }

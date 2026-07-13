@@ -19,7 +19,7 @@ public class AdminUserController : Controller
     private readonly IPropertyService _tasinmazService;
     private readonly IPermissionService _permissionService;
     private readonly IUserRoleService _userRolService;
-    private readonly IInvitationService _davetiyeService;
+    private readonly IInvitationService _invitationService;
     private readonly IAuditService _auditService;
     private readonly IPermissionScopeCache _kapsamCache;
     private readonly ApplicationDbContext _db;
@@ -38,7 +38,7 @@ public class AdminUserController : Controller
         _tasinmazService = propertyService;
         _permissionService = permissionService;
         _userRolService = userRoleService;
-        _davetiyeService = invitationService;
+        _invitationService = invitationService;
         _auditService = auditService;
         _kapsamCache = kapsamCache;
         _db = db;
@@ -48,7 +48,7 @@ public class AdminUserController : Controller
     public async Task<IActionResult> Index()
     {
         var icKullanicilar = await _userManager.Users
-            .Where(u => u.KiraciId == null && !u.IsSuperAdmin)
+            .Where(u => u.TenantId == null && !u.IsSuperAdmin)
             .OrderBy(u => u.AdSoyad)
             .ToListAsync();
 
@@ -68,7 +68,7 @@ public class AdminUserController : Controller
 
         var kiraciKullanicilar = await _db.Users
             .IgnoreQueryFilters()
-            .Where(u => u.KiraciId != null)
+            .Where(u => u.TenantId != null)
             .OrderBy(u => u.AdSoyad)
             .ToListAsync();
 
@@ -76,10 +76,10 @@ public class AdminUserController : Controller
         foreach (var u in kiraciKullanicilar)
         {
             var tenant = await _db.Tenants.IgnoreQueryFilters()
-                .FirstOrDefaultAsync(k => k.Id == u.KiraciId);
+                .FirstOrDefaultAsync(k => k.Id == u.TenantId);
             var rol = await _db.UserRoller
                 .Where(ur => ur.UserId == u.Id)
-                .Join(_db.Roller, ur => ur.RolId, r => r.Id, (ur, r) => r.Ad)
+                .Join(_db.Roller, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name)
                 .FirstOrDefaultAsync();
 
             kiraciItems.Add(new KiraciKullaniciListItemViewModel
@@ -87,7 +87,7 @@ public class AdminUserController : Controller
                 Id = u.Id,
                 AdSoyad = u.AdSoyad ?? u.Email ?? "—",
                 Email = u.Email ?? "—",
-                KiraciId = u.KiraciId!.Value,
+                KiraciId = u.TenantId!.Value,
                 KiraciAd = tenant?.DisplayName ?? "—",
                 RolAd = rol ?? "—",
                 IsActive = u.IsActive
@@ -98,7 +98,7 @@ public class AdminUserController : Controller
         {
             IcKullanicilar = icItems,
             KiraciKullanicilar = kiraciItems,
-            BekleyenDavetler = await _davetiyeService.GetBekleyenlerAsync()
+            BekleyenDavetler = await _invitationService.GetBekleyenlerAsync()
         };
 
         return View(vm);
@@ -113,15 +113,15 @@ public class AdminUserController : Controller
         var currentUserId = _userManager.GetUserId(User);
         var yetkiliPropertyIds = await _db.KullaniciYetkiKapsamlari
             .Where(k => k.UserId == user.Id && k.ScopeType == ScopeType.Property && !k.IsDeleted)
-            .Select(k => k.KapsamId)
+            .Select(k => k.ScopeId)
             .ToListAsync();
         var yetkililBirimIds = await _db.KullaniciYetkiKapsamlari
             .Where(k => k.UserId == user.Id && k.ScopeType == ScopeType.Unit && !k.IsDeleted)
-            .Select(k => k.KapsamId)
+            .Select(k => k.ScopeId)
             .ToListAsync();
         var mevcutRolId = await _db.UserRoller
             .Where(ur => ur.UserId == user.Id)
-            .Select(ur => (int?)ur.RolId)
+            .Select(ur => (int?)ur.RoleId)
             .FirstOrDefaultAsync() ?? 0;
 
         var model = new KullaniciDuzenleViewModel
@@ -177,7 +177,7 @@ public class AdminUserController : Controller
         var existingRoleNames = await _userRolService.GetUserRolesAsync(user.Id);
         var mevcutRolId = await _db.UserRoller
             .Where(ur => ur.UserId == user.Id)
-            .Select(ur => (int?)ur.RolId)
+            .Select(ur => (int?)ur.RoleId)
             .FirstOrDefaultAsync() ?? 0;
 
         if (user.Id == currentUserId && mevcutRolId != model.RolId)
@@ -272,7 +272,7 @@ public class AdminUserController : Controller
         {
             var tasinmazIds = model.TumTasinmazlaraErisim ? null : model.SelectedTasinmazIds;
             var birimIds = model.TumTasinmazlaraErisim ? null : model.SelectedBirimIds;
-            await _davetiyeService.GonderAsync(model.Email, model.AdSoyad, model.RolId, currentUserId,
+            await _invitationService.GonderAsync(model.Email, model.AdSoyad, model.RolId, currentUserId,
                 tumTasinmazlaraErisim: model.TumTasinmazlaraErisim,
                 tasinmazIds: tasinmazIds,
                 birimIds: birimIds);
@@ -296,7 +296,7 @@ public class AdminUserController : Controller
     {
         try
         {
-            await _davetiyeService.IptalEtAsync(id);
+            await _invitationService.IptalEtAsync(id);
             TempData["Success"] = "Davet iptal edildi.";
         }
         catch (Exception ex)
@@ -313,7 +313,7 @@ public class AdminUserController : Controller
         var currentUserId = _userManager.GetUserId(User)!;
         try
         {
-            await _davetiyeService.YenidenGonderAsync(id, currentUserId);
+            await _invitationService.YenidenGonderAsync(id, currentUserId);
             TempData["Success"] = "Davet yeniden gönderildi.";
         }
         catch (Exception ex)
@@ -332,21 +332,21 @@ public class AdminUserController : Controller
 
         foreach (var propertyId in tasinmazIds)
         {
-            _db.KullaniciYetkiKapsamlari.Add(new KullaniciYetkiKapsami
+            _db.KullaniciYetkiKapsamlari.Add(new UserPermissionScope
             {
                 UserId = userId,
                 ScopeType = ScopeType.Property,
-                KapsamId = propertyId,
+                ScopeId = propertyId,
             });
         }
 
         foreach (var unitId in birimIds)
         {
-            _db.KullaniciYetkiKapsamlari.Add(new KullaniciYetkiKapsami
+            _db.KullaniciYetkiKapsamlari.Add(new UserPermissionScope
             {
                 UserId = userId,
                 ScopeType = ScopeType.Unit,
-                KapsamId = unitId,
+                ScopeId = unitId,
             });
         }
 
@@ -367,17 +367,17 @@ public class AdminUserController : Controller
         liste.Clear();
         var roller = await _db.Roller
             .Where(r => r.Scope == RoleScope.Internal && r.IsActive && !r.IsDeleted)
-            .OrderBy(r => r.IsSystemRole ? 0 : 1).ThenBy(r => r.Ad)
+            .OrderBy(r => r.IsSystemRole ? 0 : 1).ThenBy(r => r.Name)
             .ToListAsync();
-        liste.AddRange(roller.Select(r => new RolSecenekViewModel { Id = r.Id, Ad = r.Ad }));
+        liste.AddRange(roller.Select(r => new RolSecenekViewModel { Id = r.Id, Ad = r.Name }));
     }
 
     private async Task PopulateDavetRollerAsync(DavetGonderViewModel model)
     {
         model.Roller = await _db.Roller
             .Where(r => r.Scope == RoleScope.Internal && r.IsActive && !r.IsDeleted)
-            .OrderBy(r => r.IsSystemRole ? 0 : 1).ThenBy(r => r.Ad)
-            .Select(r => new RolSecenekViewModel { Id = r.Id, Ad = r.Ad })
+            .OrderBy(r => r.IsSystemRole ? 0 : 1).ThenBy(r => r.Name)
+            .Select(r => new RolSecenekViewModel { Id = r.Id, Ad = r.Name })
             .ToListAsync();
     }
 

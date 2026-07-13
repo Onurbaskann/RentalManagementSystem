@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
@@ -20,7 +20,7 @@ public class TenantController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _ctx;
     private readonly IRoleService _rolService;
-    private readonly IInvitationService _davetiyeService;
+    private readonly IInvitationService _invitationService;
     private readonly IPermissionScopeProvider _provider;
     private readonly IDocumentService _documentService;
 
@@ -41,7 +41,7 @@ public class TenantController : Controller
         _userManager = userManager;
         _ctx = ctx;
         _rolService = roleService;
-        _davetiyeService = invitationService;
+        _invitationService = invitationService;
         _provider = provider;
         _documentService = documentService;
     }
@@ -100,8 +100,8 @@ public class TenantController : Controller
 
     private async Task PopulateKiraciViewBagAsync()
     {
-        ViewBag.Kategoriler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Tenant && k.IsActive).OrderBy(k => k.Sira).ToListAsync();
-        ViewBag.Sektorler = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Sektor && k.IsActive).OrderBy(k => k.Sira).ToListAsync();
+        ViewBag.Kategoriler = await _ctx.Kategoriler.Where(k => k.Type == CategoryType.Tenant && k.IsActive).OrderBy(k => k.Order).ToListAsync();
+        ViewBag.Sektorler = await _ctx.Kategoriler.Where(k => k.Type == CategoryType.Sector && k.IsActive).OrderBy(k => k.Order).ToListAsync();
         ViewBag.DocumentTypes = await _documentService.GetTurlerAsync(DocumentOwnerType.Tenant);
     }
 
@@ -160,9 +160,9 @@ public class TenantController : Controller
             try
             {
                 var firmaRol = await _ctx.Roller
-                    .FirstOrDefaultAsync(r => r.KiraciId == null && r.Ad == RoleNames.KiraciYoneticisi);
+                    .FirstOrDefaultAsync(r => r.TenantId == null && r.Name == RoleNames.KiraciYoneticisi);
                 if (firmaRol != null)
-                    await _davetiyeService.GonderAsync(vm.IlkYetkiliEmail, vm.IlkYetkiliAdSoyad, firmaRol.Id, currentUserId, k.Id);
+                    await _invitationService.GonderAsync(vm.IlkYetkiliEmail, vm.IlkYetkiliAdSoyad, firmaRol.Id, currentUserId, k.Id);
                 TempData["Success"] = $"'{k.DisplayName}' eklendi ve {vm.IlkYetkiliEmail} adresine davet gönderildi.";
             }
             catch

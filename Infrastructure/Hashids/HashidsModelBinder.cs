@@ -55,7 +55,7 @@ namespace KiraTakip.Infrastructure.Hashids
                     return Task.CompletedTask;
                 }
             }
-            catch
+            catch (Exception)
             {
                 bindingContext.ModelState.TryAddModelError(modelName, "Geçersiz kimlik formatı.");
             }

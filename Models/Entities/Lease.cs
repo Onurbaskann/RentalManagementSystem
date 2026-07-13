@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace KiraTakip.Models.Entities;
 
-[Table("KiraSozlesmeleri")]
+[Table("Sozlesmeler")]
 public class Lease : BaseEntity
 {
     [Column("BirimId")]
@@ -41,5 +41,5 @@ public class Lease : BaseEntity
     public Unit Unit { get; set; } = null!;
     public Tenant Tenant { get; set; } = null!;
     public List<LeaseActivityLog> ActivityLog { get; set; } = [];
-    public List<SozlesmeTarife> LeaseRateOverrides { get; set; } = [];
+    public List<LeaseRateOverride> LeaseRateOverrides { get; set; } = [];
 }

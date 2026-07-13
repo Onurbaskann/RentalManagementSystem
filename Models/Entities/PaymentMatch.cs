@@ -2,11 +2,13 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace KiraTakip.Models.Entities;
 
-[Table("PaymentMatches")]
+[Table("OdemeBankaEslesmeleri")]
 public class PaymentMatch : BaseEntity
 {
+    [Column("TahakkukOdemesiId")]
     public int PaymentAllocationId { get; set; }
 
+    [Column("BankaHareketId")]
     public int BankTransactionId { get; set; }
 
     [Column("EslesmeTipi")]

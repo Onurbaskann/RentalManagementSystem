@@ -1,4 +1,4 @@
-@model KiraTakip.Models.Entities.Tenant
+﻿@model KiraTakip.Models.Entities.Tenant
 @using System.Globalization
 @{
     Layout = "_KiraciLayout";
@@ -25,11 +25,11 @@
                 <span class="badge badge-kurumsal">Tüzel Kişi</span>
                 @if (Model.TenantCategory != null)
                 {
-                    <span class="badge badge-bos">@Model.TenantCategory.Ad</span>
+                    <span class="badge badge-bos">@Model.TenantCategory.Name</span>
                 }
                 @if (Model.Sector != null)
                 {
-                    <span class="badge badge-bos">@Model.Sector.Ad</span>
+                    <span class="badge badge-bos">@Model.Sector.Name</span>
                 }
             </div>
             @if (!string.IsNullOrEmpty(Model.TenantNo))

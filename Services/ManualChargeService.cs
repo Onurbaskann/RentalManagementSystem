@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
@@ -44,27 +44,27 @@ public class ManualChargeService : IManualChargeService, ITransactionalService
     public Task<List<BorcTipiLookupDto>> GetManuelBorcTipleriAsync()
         => _borcTipiRepo.GetManuelBorcTipleriAsync();
 
-    public Task<List<BirimLookupDto>> GetTumBirimlerAsync(IReadOnlyList<int>? tasinmazIds = null)
+    public Task<List<UnitLookupDto>> GetTumBirimlerAsync(IReadOnlyList<int>? tasinmazIds = null)
         => _tasinmazRepo.GetTumBirimlerAsync(tasinmazIds?.ToList());
 
     // ── Create ────────────────────────────────────────────────────────────
     public async Task<(bool Basarili, string? Hata, int ChargeId)> CreateAsync(
         ManuelBorcCreateViewModel model, string userId)
     {
-        if (model.KiraciId <= 0)
+        if (model.TenantId <= 0)
             return (false, "Kiracı seçilmelidir.", 0);
-        if (model.BirimId <= 0)
-            return (false, "Unit seçilmelidir.", 0);
+        if (model.UnitId <= 0)
+            return (false, "Birim seçilmelidir.", 0);
 
         int? kiraSozlesmesiId = null;
-        if (model.SozlesmeId.HasValue && model.SozlesmeId.Value > 0)
+        if (model.LeaseId.HasValue && model.LeaseId.Value > 0)
         {
-            var lease = await _sozlesmeRepo.GetByIdAsync(model.SozlesmeId.Value);
+            var lease = await _sozlesmeRepo.GetByIdAsync(model.LeaseId.Value);
             if (lease == null)
                 return (false, "Sözleşme bulunamadı.", 0);
             if (lease.Status == LeaseStatus.Terminated)
                 return (false, "Feshedilmiş sözleşme için manuel borç oluşturulamaz.", 0);
-            if (lease.TenantId != model.KiraciId)
+            if (lease.TenantId != model.TenantId)
                 return (false, "Seçilen kiracı, sözleşmenin kiracısıyla eşleşmiyor.", 0);
             kiraSozlesmesiId = lease.Id;
         }
@@ -73,19 +73,28 @@ public class ManualChargeService : IManualChargeService, ITransactionalService
         if (borcTipi == null)
             return (false, "Geçersiz borç tipi.", 0);
 
-        if (model.Amount <= 0)
+        if (model.Amount < 0.01m)
             return (false, "Amount sıfırdan büyük olmalıdır.", 0);
 
-        var kdvTutari = model.KdvUygulanacakMi
+        if (model.Description.Length > 200)
+            return (false, "Açıklama en fazla 200 karakter olabilir.", 0);
+
+        if (model.KdvRate < 0 || model.KdvRate > 100)
+            return (false, "KDV oranı 0-100 arasında olmalıdır.", 0);
+
+        if (model.Note?.Length > 500)
+            return (false, "Not en fazla 500 karakter olabilir.", 0);
+
+        var kdvTutari = model.IsKdvApplied
             ? Math.Round(model.Amount * model.KdvRate / 100, 2)
             : 0m;
         var toplamTutar = model.Amount + kdvTutari;
-        var kdvOrani = model.KdvUygulanacakMi ? model.KdvRate : 0m;
+        var kdvOrani = model.IsKdvApplied ? model.KdvRate : 0m;
 
         var kalem = new ChargeLineItem
         {
             ChargeTypeId = borcTipi.Id,
-            Description = model.Aciklama,
+            Description = model.Description,
             CalculationMethod = CalculationMethod.Fixed,
             UnitValue = model.Amount,
             Multiplier = 1m,
@@ -98,8 +107,8 @@ public class ManualChargeService : IManualChargeService, ITransactionalService
 
         var charge = new Charge
         {
-            TenantId = model.KiraciId,
-            UnitId = model.BirimId,
+            TenantId = model.TenantId,
+            UnitId = model.UnitId,
             LeaseId = kiraSozlesmesiId,
             PeriodStart = model.DueDate,
             PeriodEnd = model.DueDate.AddDays(1),
@@ -110,7 +119,7 @@ public class ManualChargeService : IManualChargeService, ITransactionalService
             PaidAmount = 0,
             Status = ChargeStatus.Pending,
             SourceType = ChargeSourceType.Manual,
-            CancellationNote = model.Not,
+            CancellationNote = model.Note,
             LineItems = new List<ChargeLineItem> { kalem }
         };
 

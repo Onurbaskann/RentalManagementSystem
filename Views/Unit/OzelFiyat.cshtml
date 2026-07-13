@@ -50,7 +50,7 @@
         <input type="hidden" name="UnitId" value="@Model.UnitId" />
         <input type="hidden" name="PropertyId" value="@Model.PropertyId" />
 
-        @if (Model.Satirlar == null || !Model.Satirlar.Any())
+        @if (Model.Rows == null || !Model.Rows.Any())
         {
             <div class="card p-6 text-center text-muted">
                 Aktif kiracı kategorisi veya borç tipi bulunamadı.
@@ -68,9 +68,9 @@
             </div>
 
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start mb-3.5">
-                @for (int i = 0; i < Model.Satirlar.Count; i++)
+                @for (int i = 0; i < Model.Rows.Count; i++)
                 {
-                    var satir = Model.Satirlar[i];
+                    var satir = Model.Rows[i];
                     <div class="card p-4 fiyat-kategori-blok">
                         <div class="flex items-center justify-between mb-4 pb-2 border-b-2 border-slate-100">
                             <span class="text-sm font-bold text-slate-800">@satir.TenantCategoryName</span>
@@ -95,16 +95,16 @@
                                      @for (int j = 0; j < satir.Hucreler.Count; j++)
                                      {
                                          var hucre = satir.Hucreler[j];
-                                         var kolon = Model.Kolonlar[j];
+                                         var kolon = Model.Columns[j];
                                          var isIlkAy = kolon.ChargeTypeBehavior == ChargeTypeBehavior.FirstMonthOneTime;
                                          var isDepozito = isIlkAy;
                                          <tr data-depozito="@(isDepozito ? "true" : "false")"
                                              x-data="{ aktif: @hucre.IsCustomRateActive.ToString().ToLower() }"
                                              class="border-t border-slate-50">
                                              <td class="py-2.5 pr-2">
-                                                 <input type="hidden" name="Satirlar[@i].Hucreler[@j].TenantCategoryId" value="@hucre.TenantCategoryId" />
-                                                 <input type="hidden" name="Satirlar[@i].Hucreler[@j].ChargeTypeId" value="@hucre.ChargeTypeId" />
-                                                 <input type="hidden" name="Satirlar[@i].Hucreler[@j].RateId" value="@hucre.RateId" />
+                                                 <input type="hidden" name="Rows[@i].Hucreler[@j].TenantCategoryId" value="@hucre.TenantCategoryId" />
+                                                 <input type="hidden" name="Rows[@i].Hucreler[@j].ChargeTypeId" value="@hucre.ChargeTypeId" />
+                                                 <input type="hidden" name="Rows[@i].Hucreler[@j].RateId" value="@hucre.RateId" />
                                                  <div class="flex items-center gap-2.5">
                                                      <span :class="aktif ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-slate-300'"
                                                            class="w-1.5 h-1.5 rounded-full flex-shrink-0 transition-all"></span>
@@ -125,7 +125,7 @@
                                                  </div>
                                              </td>
                                              <td class="text-center py-2.5">
-                                                 <input type="checkbox" name="Satirlar[@i].Hucreler[@j].IsCustomRateActive" value="true"
+                                                 <input type="checkbox" name="Rows[@i].Hucreler[@j].IsCustomRateActive" value="true"
                                                         @(hucre.IsCustomRateActive ? "checked" : "")
                                                         class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                                                         x-model="aktif" />
@@ -136,7 +136,7 @@
                                                      <span class="px-2 bg-slate-50 text-[10px] font-bold text-slate-400 border-r border-slate-200 flex items-center">₺</span>
                                                      <input type="number" step="0.01" min="0"
                                                             class="border-none outline-none p-1.5 px-2 text-xs bg-transparent flex-1 min-w-0 text-center font-bold text-slate-700"
-                                                            name="Satirlar[@i].Hucreler[@j].UnitValue"
+                                                            name="Rows[@i].Hucreler[@j].UnitValue"
                                                             value="@(hucre.IsCustomRateActive ? hucre.UnitValue.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "")"
                                                             placeholder="@hucre.DefaultUnitValue.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
                                                             :disabled="!aktif" />
@@ -145,7 +145,7 @@
                                              <td class="py-2.5 pr-2">
                                                  @if (isDepozito)
                                                  {
-                                                     <input type="hidden" name="Satirlar[@i].Hucreler[@j].CalculationMethod" value="@((int)CalculationMethod.Fixed)" />
+                                                     <input type="hidden" name="Rows[@i].Hucreler[@j].CalculationMethod" value="@((int)CalculationMethod.Fixed)" />
                                                      <select class="form-control form-control-sm w-full opacity-30 cursor-not-allowed text-[11px] font-bold uppercase tracking-tighter" disabled>
                                                          <option>Sabit</option>
                                                      </select>
@@ -153,7 +153,7 @@
                                                  else
                                                  {
                                                      <select class="form-control form-control-sm w-full text-[11px] font-bold uppercase tracking-tighter transition-all"
-                                                             name="Satirlar[@i].Hucreler[@j].CalculationMethod"
+                                                             name="Rows[@i].Hucreler[@j].CalculationMethod"
                                                              :disabled="!aktif" :class="!aktif ? 'opacity-30 grayscale pointer-events-none' : ''">
                                                          <option value="@((int)CalculationMethod.Fixed)" selected="@(hucre.CalculationMethod == CalculationMethod.Fixed)">Sabit</option>
                                                          <option value="@((int)CalculationMethod.M2)" selected="@(hucre.CalculationMethod == CalculationMethod.M2)">m²</option>
@@ -165,7 +165,7 @@
                                                       :class="!aktif ? 'opacity-30 grayscale pointer-events-none' : 'focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100'">
                                                      <input type="number" step="0.01" min="0" max="100"
                                                             class="border-none outline-none p-1.5 px-2 text-xs bg-transparent w-full min-w-0 text-right font-bold text-slate-700"
-                                                            name="Satirlar[@i].Hucreler[@j].KdvRate"
+                                                            name="Rows[@i].Hucreler[@j].KdvRate"
                                                             value="@(hucre.IsCustomRateActive ? hucre.KdvRate.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "")"
                                                             placeholder="@hucre.DefaultKdvRate.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
                                                             :disabled="!aktif" />
@@ -199,12 +199,12 @@
 }
 else if (Model.IsReservable)
 {
-    <!-- Senaryo B: Reservation birimi — RezervasyonTarifeKural formu -->
-    @if (Model.ParentRezervasyonTarife != null)
+    <!-- Senaryo B: Reservation birimi — ReservationRateOverride formu -->
+    @if (Model.ParentReservationRateOverride != null)
     {
         <div class="mb-3.5">
             <div class="text-xs text-muted mb-1">Tanımlanmamışsa geçerli olan tarife:</div>
-            <partial name="_ParentRezervasyonTarifeKart" model="Model.ParentRezervasyonTarife" />
+            <partial name="_ParentReservationRateOverrideKart" model="Model.ParentReservationRateOverride" />
         </div>
     }
 
@@ -214,12 +214,12 @@ else if (Model.IsReservable)
             @Html.AntiForgeryToken()
             <input type="hidden" name="Id" value="0" />
             @{
-                var parentSatir = Model.ParentRezervasyonTarife?.Satirlar
-                    .FirstOrDefault(s => s.UnitTypeAd == Model.UnitTypeAd);
+                var parentSatir = Model.ParentReservationRateOverride?.Rows
+                    .FirstOrDefault(s => s.UnitTypeName == Model.UnitTypeName);
                 
-                int defPeriyot = parentSatir?.UcretlendirmePeriyoduDakika ?? 60;
+                int defPeriyot = parentSatir?.BillingPeriodMinutes ?? 60;
                 int defUcretsiz = parentSatir?.FreeDurationMinutes ?? 0;
-                decimal defUcret = parentSatir?.PeriyotUcreti ?? 0;
+                decimal defUcret = parentSatir?.PeriodRate ?? 0;
                 decimal defKdv   = parentSatir?.KdvRate ?? 20;
             }
             <div class="card p-6">
@@ -235,11 +235,11 @@ else if (Model.IsReservable)
                     </div>
                     <div class="form-group">
                         <label class="form-label">Ücret Periyodu (dk)</label>
-                        <input type="number" name="UcretlendirmePeriyoduDakika" value="@defPeriyot" class="form-control" min="1" max="1440" />
+                        <input type="number" name="BillingPeriodMinutes" value="@defPeriyot" class="form-control" min="1" max="1440" />
                     </div>
                     <div class="form-group">
                         <label class="form-label">Periyot Ücreti (₺)</label>
-                        <input type="number" name="PeriyotUcreti" value="@defUcret.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" min="0" step="0.01" />
+                        <input type="number" name="PeriodRate" value="@defUcret.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" min="0" step="0.01" />
                     </div>
                     <div class="form-group">
                         <label class="form-label">KDV Oranı (%)</label>
@@ -249,7 +249,7 @@ else if (Model.IsReservable)
 
                 <div class="form-group mt-2">
                     <label class="form-label">Açıklama</label>
-                    <input type="text" name="Aciklama" class="form-control" placeholder="Opsiyonel açıklama..." maxlength="300" />
+                    <input type="text" name="Description" class="form-control" placeholder="Opsiyonel açıklama..." maxlength="300" />
                 </div>
 
                 <input type="hidden" name="Aktif" value="true" />
@@ -269,7 +269,7 @@ else if (Model.IsReservable)
             <div class="card p-6">
                 <div class="text-base font-bold text-slate-800 mb-6 flex items-center gap-2">
                     <span class="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                    Özel Reservation Kuralı
+                    Özel Rezervasyon Kuralı
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
@@ -279,11 +279,11 @@ else if (Model.IsReservable)
                     </div>
                     <div class="form-group">
                         <label class="form-label">Ücret Periyodu (dk)</label>
-                        <input type="number" name="UcretlendirmePeriyoduDakika" value="@Model.OzelRezervasyonKural.UcretlendirmePeriyoduDakika" class="form-control" min="1" max="1440" />
+                        <input type="number" name="BillingPeriodMinutes" value="@Model.OzelRezervasyonKural.BillingPeriodMinutes" class="form-control" min="1" max="1440" />
                     </div>
                     <div class="form-group">
                         <label class="form-label">Periyot Ücreti (₺)</label>
-                        <input type="number" name="PeriyotUcreti" value="@Model.OzelRezervasyonKural.PeriyotUcreti.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" min="0" step="0.01" />
+                        <input type="number" name="PeriodRate" value="@Model.OzelRezervasyonKural.PeriodRate.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" min="0" step="0.01" />
                     </div>
                     <div class="form-group">
                         <label class="form-label">KDV Oranı (%)</label>
@@ -300,7 +300,7 @@ else if (Model.IsReservable)
 
                 <div class="form-group">
                     <label class="form-label">Açıklama</label>
-                    <input type="text" name="Aciklama" value="@Model.OzelRezervasyonKural.Aciklama" class="form-control" placeholder="Opsiyonel açıklama..." maxlength="300" />
+                    <input type="text" name="Description" value="@Model.OzelRezervasyonKural.Description" class="form-control" placeholder="Opsiyonel açıklama..." maxlength="300" />
                 </div>
 
                 <div class="flex items-center gap-3 mt-8">
@@ -327,9 +327,9 @@ else
         <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         </div>
-        <div class="text-base font-bold text-red-800 mb-2">Unit Türü Hatalı Tanımlı</div>
+        <div class="text-base font-bold text-red-800 mb-2">Birim Türü Hatalı Tanımlı</div>
         <p class="text-sm text-red-700/70 leading-relaxed max-w-sm mb-6">
-            Bu unit türünde hem <b>Kiralanabilir</b> hem de <b>Reservation</b> yapılabilir işaretli değil veya her ikisi de işaretli. Lütfen yöneticiye bildirin.
+            Bu unit türünde hem <b>Kiralanabilir</b> hem de <b>Rezervasyon</b> yapılabilir işaretli değil veya her ikisi de işaretli. Lütfen yöneticiye bildirin.
         </p>
         <a href="/Property/Detay/@Model.PropertyId.ToHashId()" class="btn btn-secondary px-8">Geri Dön</a>
     </div>

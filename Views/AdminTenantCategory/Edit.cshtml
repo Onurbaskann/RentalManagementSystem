@@ -1,4 +1,4 @@
-@model KiraTakip.Models.ViewModels.KategoriFormViewModel
+﻿@model KiraTakip.Models.ViewModels.CategoryFormViewModel
 @{
     ViewData["Title"] = "Kiracı Kategorisi Düzenle";
 }
@@ -16,18 +16,18 @@
 
         <div class="form-group">
             <label class="form-label">Ad <span class="text-red-500">*</span></label>
-            <input asp-for="Ad" class="form-control" required />
-            <span asp-validation-for="Ad" class="text-red-500 text-xs mt-1"></span>
+            <input asp-for="Name" class="form-control" required />
+            <span asp-validation-for="Name" class="text-red-500 text-xs mt-1"></span>
         </div>
 
         <div class="form-group">
             <label class="form-label">Sıra</label>
-            <input asp-for="Sira" type="number" class="form-control w-24" min="1" />
+            <input asp-for="Order" type="number" class="form-control w-24" min="1" />
         </div>
 
         <div class="form-group">
             <label class="flex items-center gap-2 cursor-pointer">
-                <input asp-for="Aktif" type="checkbox" class="w-4 h-4 accent-primary cursor-pointer" />
+                <input asp-for="IsActive" type="checkbox" class="w-4 h-4 accent-primary cursor-pointer" />
                 <span class="form-label mb-0">Aktif</span>
             </label>
         </div>

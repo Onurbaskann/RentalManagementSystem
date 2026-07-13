@@ -1,4 +1,4 @@
-namespace KiraTakip.Models.ViewModels;
+﻿namespace KiraTakip.Models.ViewModels;
 
 public class KiraciOdemePortalViewModel
 {
@@ -14,7 +14,7 @@ public class KiraciOdemePortalViewModel
 public class BorcKart
 {
     public int ChargeId { get; set; }
-    public string TasinmazAdi { get; set; } = string.Empty;
+    public string PropertyName { get; set; } = string.Empty;
     public string BirimAdi { get; set; } = string.Empty;
     public DateTime PeriodStart { get; set; }
     public DateTime DueDate { get; set; }

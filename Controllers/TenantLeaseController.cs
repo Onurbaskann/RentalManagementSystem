@@ -43,7 +43,7 @@ public class TenantLeaseController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var tenantId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.TenantId!.Value;
         var sozlesmeler = await _leaseService.GetByTenantIdAsync(tenantId);
         return View(sozlesmeler);
     }
@@ -54,7 +54,7 @@ public class TenantLeaseController : Controller
         var s = await _leaseService.GetByIdAsync(id);
         if (s == null) return NotFound();
 
-        var tenantId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.TenantId!.Value;
         if (s.TenantId != tenantId) return Forbid();
 
         var lease = new Lease
@@ -70,7 +70,6 @@ public class TenantLeaseController : Controller
             {
                 Id = s.UnitId,
                 Area = s.UnitArea,
-                UnitKind = s.UnitKind,
                 PropertyId = s.PropertyId
             }
         };

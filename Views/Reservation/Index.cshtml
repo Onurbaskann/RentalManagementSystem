@@ -1,4 +1,4 @@
-@model List<KiraTakip.Models.Dtos.RezervasyonListItemDto>
+﻿@model List<KiraTakip.Models.Dtos.ReservationListItemDto>
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Rezervasyonlar";
@@ -16,7 +16,7 @@
     {
         <a href="/Reservation/Ekle" class="btn btn-primary flex items-center gap-2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Reservation Ekle
+            Rezervasyon Ekle
         </a>
     }
 </div>
@@ -39,7 +39,7 @@
         <table class="w-full">
             <thead>
                 <tr>
-                    <th>Taşınmaz / Unit</th>
+                    <th>Taşınmaz / Birim</th>
                     <th>Kiracı</th>
                     <th class="w-36">Zaman Dilimi</th>
                     <th class="w-24 cell-center">Toplam</th>
@@ -52,26 +52,26 @@
             </thead>
                      @foreach (var r in Model)
                 {
-                    string durumCls = r.Durum switch {
+                    string durumCls = r.Status switch {
                         ReservationStatus.Completed         => "badge-kirali",
                         ReservationStatus.TransferredToCharge => "badge-surek",
                         ReservationStatus.Cancelled        => "badge-gecmis",
                         _                                    => "badge-bos"
                     };
-                    string durumLabel = r.Durum switch {
+                    string durumLabel = r.Status switch {
                         ReservationStatus.Planned          => "Planlandı",
                         ReservationStatus.Completed         => "Tamamlandı",
                         ReservationStatus.Cancelled        => "İptal Edildi",
                         ReservationStatus.TransferredToCharge => "Tahakkuka Aktarıldı",
-                        _                                    => r.Durum.ToString()
+                        _                                    => r.Status.ToString()
                     };
 
                     <tr>
                         <td>
-                            @r.TasinmazAd
-                            <span class="cell-sub">@r.BirimAd</span>
+                            @r.PropertyName
+                            <span class="cell-sub">@r.UnitName</span>
                         </td>
-                        <td>@r.KiraciGosterimAdi</td>
+                        <td>@r.TenantDisplayName</td>
                         <td>
                             <div>@r.StartDate.ToString("dd.MM HH:mm")</div>
                             <span class="cell-sub">@r.EndDate.ToString("dd.MM HH:mm")</span>
@@ -80,22 +80,22 @@
                         <td class="cell-center text-muted">@r.FreeDurationMinutes dk</td>
                         <td class="cell-center">@r.PaidDurationMinutes dk</td>
                         <td class="num">
-                            @if (r.ToplamTutar > 0)
-                            { <text>@r.ToplamTutar.ToString("N2") ₺</text> }
+                            @if (r.TotalAmount > 0)
+                            { <text>@r.TotalAmount.ToString("N2") ₺</text> }
                             else
                             { <span class="text-muted italic">Ücretsiz</span> }
                         </td>
                         <td>
                             <span class="badge @durumCls">@durumLabel</span>
-                            @if (r.Durum == ReservationStatus.Cancelled && !string.IsNullOrEmpty(r.Aciklama))
+                            @if (r.Status == ReservationStatus.Cancelled && !string.IsNullOrEmpty(r.Description))
                             {
-                                var displayNeden = r.Aciklama.StartsWith("İptal:") ? r.Aciklama.Substring(6).Trim() : r.Aciklama;
+                                var displayNeden = r.Description.StartsWith("İptal:") ? r.Description.Substring(6).Trim() : r.Description;
                                 <div class="text-[10px] text-muted mt-1 italic truncate max-w-[100px]" title="@displayNeden">⤵ @displayNeden</div>
                             }
                         </td>
                         <td class="text-right">
                             <div class="flex gap-1.5 justify-end items-center">
-                                @if (canTransfer && r.Durum == ReservationStatus.Planned && r.ToplamTutar > 0 && r.ChargeId == null)
+                                @if (canTransfer && r.Status == ReservationStatus.Planned && r.TotalAmount > 0 && r.ChargeId == null)
                                 {
                                     <form method="post" action="/Reservation/TahakkukaAktar/@r.Id.ToHashId()" class="inline"
                                           data-confirm="Bu rezervasyonu tahakkuka aktarmak istediğinize emin misiniz?">
@@ -103,7 +103,7 @@
                                         <button type="submit" class="btn btn-sm btn-primary">Aktar</button>
                                     </form>
                                 }
-                                @if (canCancel && r.Durum == ReservationStatus.Planned)
+                                @if (canCancel && r.Status == ReservationStatus.Planned)
                                 {
                                     <button type="button" class="btn btn-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white"
                                         data-confirm="Bu rezervasyonu iptal etmek istediğinize emin misiniz?"
@@ -130,7 +130,7 @@
                             @if (canCreate)
                             {
                                 <div class="text-xs text-muted mt-1">
-                                    <a href="/Reservation/Ekle" class="text-primary font-semibold hover:underline">Reservation Ekle</a> butonuyla ilk kaydı oluşturun.
+                                    <a href="/Reservation/Ekle" class="text-primary font-semibold hover:underline">Rezervasyon Ekle</a> butonuyla ilk kaydı oluşturun.
                                 </div>
                             }
                         </td>

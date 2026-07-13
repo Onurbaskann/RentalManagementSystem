@@ -1,4 +1,4 @@
-@model KiraTakip.Models.Dtos.OdemeDetayDto
+﻿@model KiraTakip.Models.Dtos.PaymentDetailDto
 @using KiraTakip.Models
 @using KiraTakip.Models.Entities
 @{
@@ -7,21 +7,21 @@
     bool canReject     = User.HasPermission(PermissionCatalog.Payment.Reject);
     bool canUpload     = User.HasPermission(PermissionCatalog.Payment.UploadReceipt);
     bool canMatch      = User.HasPermission(PermissionCatalog.Payment.MatchBankTransaction);
-    bool bekliyor      = Model.Durum == PaymentStatus.PendingApproval;
+    bool bekliyor      = Model.Status == PaymentStatus.PendingApproval;
     var belgeler        = (ViewBag.Belgeler    as List<Document>)    ?? [];
     var belgeTurleri    = (ViewBag.DocumentTypes as List<DocumentType>) ?? [];
 
-    string durumCls = Model.Durum switch {
+    string durumCls = Model.Status switch {
         PaymentStatus.Approved  => "badge-kirali",
         PaymentStatus.Rejected => "badge-gecmis",
         _                      => "badge-surek"
     };
-    string durumLabel = Model.Durum switch {
+    string durumLabel = Model.Status switch {
         PaymentStatus.Approved  => "Onaylandı",
         PaymentStatus.Rejected => "Reddedildi",
         _                      => "Onay Bekliyor"
     };
-    string durumTip = Model.Durum switch {
+    string durumTip = Model.Status switch {
         PaymentStatus.Approved  => "Ödeme onaylandı; charge kapandı.",
         PaymentStatus.Rejected => "Ödeme reddedildi; charge açık kalır.",
         _                      => "Onay yetkisi olan kullanıcı bekleniyor."
@@ -41,10 +41,10 @@
             Ödemeler
         </a>
         <div class="page-title">Ödeme #@Model.Id</div>
-        <div class="page-subtitle">@Model.KiraciGosterimAdi — @Model.TahakkukDonemBaslangic.ToString("MMMM yyyy")</div>
+        <div class="page-subtitle">@Model.TenantDisplayName — @Model.ChargePeriodStart.ToString("MMMM yyyy")</div>
     </div>
     @{
-        string bgCls = Model.Durum switch {
+        string bgCls = Model.Status switch {
             PaymentStatus.Approved  => "bg-emerald-50 text-emerald-700 border-emerald-100",
             PaymentStatus.Rejected => "bg-red-50 text-red-700 border-red-100",
             _                      => "bg-amber-50 text-amber-700 border-amber-100"
@@ -89,24 +89,24 @@
                 </div>
                 <div>
                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Giriş Yapan</div>
-                    <div class="text-[14px] font-medium text-slate-600">@(Model.GirenUserGosterimAdi ?? "—")</div>
+                    <div class="text-[14px] font-medium text-slate-600">@(Model.CreatedByUserDisplayName ?? "—")</div>
                 </div>
-                @if (Model.Durum == PaymentStatus.Approved)
+                @if (Model.Status == PaymentStatus.Approved)
                 {
                     <div>
                         <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Onaylayan</div>
-                        <div class="text-[14px] font-bold text-emerald-600">@(Model.OnaylayanUserGosterimAdi ?? "—")</div>
+                        <div class="text-[14px] font-bold text-emerald-600">@(Model.ApprovedByUserDisplayName ?? "—")</div>
                     </div>
                 }
             </div>
-            @if (!string.IsNullOrEmpty(Model.Aciklama))
+            @if (!string.IsNullOrEmpty(Model.Description))
             {
                 <div class="mt-6 pt-5 border-t border-slate-100">
                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-2">Açıklama</div>
-                    <div class="text-[13.5px] text-slate-600 leading-relaxed bg-slate-50/50 p-3 rounded-lg border border-slate-100 italic">"@Model.Aciklama"</div>
+                    <div class="text-[13.5px] text-slate-600 leading-relaxed bg-slate-50/50 p-3 rounded-lg border border-slate-100 italic">"@Model.Description"</div>
                 </div>
             }
-            @if (Model.Durum == PaymentStatus.Rejected && !string.IsNullOrEmpty(Model.RejectionReason))
+            @if (Model.Status == PaymentStatus.Rejected && !string.IsNullOrEmpty(Model.RejectionReason))
             {
                 <div class="mt-5 p-4 bg-red-50 rounded-xl border border-red-100">
                     <div class="text-[10px] text-red-400 font-bold mb-2 uppercase tracking-widest flex items-center gap-1.5">

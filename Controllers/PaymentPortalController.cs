@@ -33,7 +33,7 @@ public class PaymentPortalController : Controller
         var validation = await _paymentLink.TryValidateAsync(t);
         if (!validation.Success)
             return View("Invalid", validation.Reason ?? "Geçersiz veya süresi dolmuş ödeme linki.");
-        var tenantId = validation.KiraciId;
+        var tenantId = validation.TenantId;
 
         var tenant = await _ctx.Tenants.FirstOrDefaultAsync(k => k.Id == tenantId);
         if (tenant == null) return View("Invalid", "Kiracı bulunamadı.");
@@ -71,7 +71,7 @@ public class PaymentPortalController : Controller
             Borclar = borclar.Select(b => new BorcKart
             {
                 ChargeId = b.Id,
-                TasinmazAdi = b.Lease!.Unit!.Property!.Name,
+                PropertyName = b.Lease!.Unit!.Property!.Name,
                 BirimAdi = b.Lease!.Unit!.Name,
                 PeriodStart = b.PeriodStart,
                 DueDate = b.DueDate,

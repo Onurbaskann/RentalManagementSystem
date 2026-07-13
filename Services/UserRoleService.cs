@@ -1,5 +1,6 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Entities;
 using KiraTakip.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,30 +17,30 @@ public class UserRoleService : IUserRoleService
 
     public async Task<IList<string>> GetUserRolesAsync(string userId)
         => await (from ur in _db.UserRoller
-                  join r in _db.Roller on ur.RolId equals r.Id
+                  join r in _db.Roller on ur.RoleId equals r.Id
                   where ur.UserId == userId && r.IsActive && !r.IsDeleted
-                  select r.Ad).ToListAsync();
+                  select r.Name).ToListAsync();
 
     public async Task<bool> IsInRoleAsync(string userId, string roleName)
         => await (from ur in _db.UserRoller
-                  join r in _db.Roller on ur.RolId equals r.Id
-                  where ur.UserId == userId && r.Ad == roleName && r.IsActive && !r.IsDeleted
+                  join r in _db.Roller on ur.RoleId equals r.Id
+                  where ur.UserId == userId && r.Name == roleName && r.IsActive && !r.IsDeleted
                   select ur.Id).AnyAsync();
 
     public async Task AddRoleByNameAsync(string userId, string roleName, string? atayanUserId = null)
     {
         var rol = await _db.Roller
-            .FirstOrDefaultAsync(r => r.Ad == roleName && r.Scope == RoleScope.Internal && r.IsActive && !r.IsDeleted);
+            .FirstOrDefaultAsync(r => r.Name == roleName && r.Scope == RoleScope.Internal && r.IsActive && !r.IsDeleted);
         if (rol == null)
             throw new InvalidOperationException($"Rol bulunamadı: {roleName}");
 
-        var mevcutMu = await _db.UserRoller.AnyAsync(ur => ur.UserId == userId && ur.RolId == rol.Id);
+        var mevcutMu = await _db.UserRoller.AnyAsync(ur => ur.UserId == userId && ur.RoleId == rol.Id);
         if (mevcutMu) return;
 
-        _db.UserRoller.Add(new UserRol
+        _db.UserRoller.Add(new UserRole
         {
             UserId = userId,
-            RolId = rol.Id,
+            RoleId = rol.Id,
         });
         await _db.SaveChangesAsync();
     }
@@ -47,8 +48,8 @@ public class UserRoleService : IUserRoleService
     public async Task RemoveRoleByNameAsync(string userId, string roleName)
     {
         var userRol = await (from ur in _db.UserRoller
-                             join r in _db.Roller on ur.RolId equals r.Id
-                             where ur.UserId == userId && r.Ad == roleName
+                             join r in _db.Roller on ur.RoleId equals r.Id
+                             where ur.UserId == userId && r.Name == roleName
                              select ur).FirstOrDefaultAsync();
         if (userRol == null) return;
         userRol.IsDeleted = true;
@@ -66,8 +67,8 @@ public class UserRoleService : IUserRoleService
     public async Task<IList<ApplicationUser>> GetUsersInRoleAsync(string roleName)
     {
         var userIds = await (from ur in _db.UserRoller
-                             join r in _db.Roller on ur.RolId equals r.Id
-                             where r.Ad == roleName && r.IsActive && !r.IsDeleted
+                             join r in _db.Roller on ur.RoleId equals r.Id
+                             where r.Name == roleName && r.IsActive && !r.IsDeleted
                              select ur.UserId).ToListAsync();
 
         return await _db.Users.Where(u => userIds.Contains(u.Id)).ToListAsync();
@@ -75,21 +76,21 @@ public class UserRoleService : IUserRoleService
 
     public async Task<IList<string>> GetUserPermissionsFromRolesAsync(string userId)
         => await (from ur in _db.UserRoller
-                  join r in _db.Roller on ur.RolId equals r.Id
-                  join rp in _db.RolPermissions on r.Id equals rp.RolId
+                  join r in _db.Roller on ur.RoleId equals r.Id
+                  join rp in _db.RolPermissions on r.Id equals rp.RoleId
                   where ur.UserId == userId && r.IsActive && !r.IsDeleted
                   select rp.Permission).Distinct().ToListAsync();
 
     public async Task AddRoleByRolIdAsync(string userId, int rolId, string? atayanUserId = null)
     {
         var mevcutMu = await _db.UserRoller.IgnoreQueryFilters()
-            .AnyAsync(ur => ur.UserId == userId && ur.RolId == rolId);
+            .AnyAsync(ur => ur.UserId == userId && ur.RoleId == rolId);
         if (mevcutMu) return;
 
-        _db.UserRoller.Add(new UserRol
+        _db.UserRoller.Add(new UserRole
         {
             UserId = userId,
-            RolId = rolId,
+            RoleId = rolId,
         });
         await _db.SaveChangesAsync();
     }

@@ -9,7 +9,7 @@ public class SozlesmeKalemInputDto
     public decimal VarsayilanTutar { get; set; }
     public decimal Amount { get; set; }
     public decimal UnitValue { get; set; }
-    public decimal VarsayilanBirimDeger { get; set; }
+    public decimal DefaultUnitValue { get; set; }
     public decimal KdvRate { get; set; }
     public CalculationMethod CalculationMethod { get; set; }
     public bool KullaniciDegistirdiMi { get; set; }

@@ -2,11 +2,13 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace KiraTakip.Models.Entities;
 
-[Table("ChargeLineItems")]
+[Table("TahakkukKalemleri")]
 public class ChargeLineItem : BaseEntity
 {
+    [Column("TahakkukId")]
     public int ChargeId { get; set; }
 
+    [Column("TahakkukTipiId")]
     public int ChargeTypeId { get; set; }
 
     [Column("Aciklama")]
@@ -15,12 +17,16 @@ public class ChargeLineItem : BaseEntity
     [Column("HesaplamaYontemi")]
     public CalculationMethod CalculationMethod { get; set; }
 
+    [Column("BirimDegeri")]
     public decimal UnitValue { get; set; }
 
+    [Column("Carpan")]
     public decimal Multiplier { get; set; }
 
+    [Column("Tutar")]
     public decimal Amount { get; set; }
 
+    [Column("KdvOrani")]
     public decimal KdvRate { get; set; }
 
     [Column("KdvTutari")]
@@ -29,6 +35,7 @@ public class ChargeLineItem : BaseEntity
     [Column("ToplamTutar")]
     public decimal TotalAmount { get; set; }
 
+    [Column("KaynakTipi")]
     public LineItemSourceType SourceType { get; set; }
 
     public Charge Charge { get; set; } = null!;

@@ -12,14 +12,14 @@ namespace KiraTakip.Services;
 public class ReservationService : IReservationService, ITransactionalService
 {
     private readonly IReservationRepository _repo;
-    private readonly IRezervasyonTarifeRepository _tarifeRepo;
+    private readonly IReservationRateOverrideRepository _tarifeRepo;
     private readonly IUnitRepository _birimRepo;
     private readonly ITenantRepository _kiraciRepo;
     private readonly IUnitOfWork _uow;
     private readonly ApplicationDbContext _ctx;
     public ReservationService(
         IReservationRepository repo,
-        IRezervasyonTarifeRepository tarifeRepo,
+        IReservationRateOverrideRepository tarifeRepo,
         IUnitRepository birimRepo,
         ITenantRepository kiraciRepo,
         IUnitOfWork uow,
@@ -35,12 +35,12 @@ public class ReservationService : IReservationService, ITransactionalService
 
     // ── Listeleme ──────────────────────────────────────────────────────────────
 
-    public async Task<List<RezervasyonListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null)
+    public async Task<List<ReservationListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null)
     {
         return await _repo.GetListAsync(tasinmazIds?.ToList());
     }
 
-    public async Task<RezervasyonListItemDto?> GetByIdAsync(int id)
+    public async Task<ReservationListItemDto?> GetByIdAsync(int id)
     {
         return await _repo.GetByIdAsync(id);
     }
@@ -68,8 +68,8 @@ public class ReservationService : IReservationService, ITransactionalService
         if (kural != null)
         {
             ucretsiz = kural.FreeDurationMinutes;
-            periyot = kural.UcretlendirmePeriyoduDakika;
-            ucret = kural.PeriyotUcreti;
+            periyot = kural.BillingPeriodMinutes;
+            ucret = kural.PeriodRate;
             kdv = kural.KdvRate;
             sonuc.KuralBulundu = true;
         }
@@ -80,7 +80,7 @@ public class ReservationService : IReservationService, ITransactionalService
 
             if (unit?.UnitTypeId is not int btId)
             {
-                sonuc.HataMessaji = "Unit türü tanımlanmamış.";
+                sonuc.HataMessaji = "Birim türü tanımlanmamış.";
                 return sonuc;
             }
 
@@ -94,8 +94,8 @@ public class ReservationService : IReservationService, ITransactionalService
             }
 
             ucretsiz = genel.FreeDurationMinutes;
-            periyot = genel.UcretlendirmePeriyoduDakika;
-            ucret = genel.PeriyotUcreti;
+            periyot = genel.BillingPeriodMinutes;
+            ucret = genel.PeriodRate;
             kdv = genel.KdvRate;
             sonuc.KuralBulundu = true;
         }
@@ -122,31 +122,31 @@ public class ReservationService : IReservationService, ITransactionalService
     // ── Reservation Oluşturma ─────────────────────────────────────────────────
 
     public async Task<(bool Basarili, string? Hata, int ReservationId)> CreateAsync(
-        RezervasyonCreateViewModel model, string userId)
+        ReservationCreateViewModel model, string userId)
     {
         if (model.EndDate <= model.StartDate)
             return (false, "Bitiş tarihi başlangıç tarihinden büyük olmalıdır.", 0);
 
         // 8.5.4 — Çakışma kontrolü
-        if (await _repo.IsConflictAsync(model.BirimId.Value, model.StartDate, model.EndDate))
-            return (false, "Seçilen zaman aralığında bu unit için başka bir reservation mevcut.", 0);
+        if (await _repo.IsConflictAsync(model.UnitId.Value, model.StartDate, model.EndDate))
+            return (false, "Seçilen zaman aralığında bu birim için başka bir rezervasyon mevcut.", 0);
 
-        var tenant = await _kiraciRepo.GetByIdAsync(model.KiraciId.Value);
+        var tenant = await _kiraciRepo.GetByIdAsync(model.TenantId.Value);
         if (tenant == null)
             return (false, "Kiracı bulunamadı.", 0);
 
-        var unit = await _birimRepo.GetByIdAsync(model.BirimId.Value, q => q.Include(b => b.UnitType));
+        var unit = await _birimRepo.GetByIdAsync(model.UnitId.Value, q => q.Include(b => b.UnitType));
         if (unit == null)
-            return (false, "Unit bulunamadı.", 0);
-        if (unit.UnitType == null || !unit.UnitType.CanBeReserved)
-            return (false, "Seçilen unit reservation yapılabilir türde değil.", 0);
+            return (false, "Birim bulunamadı.", 0);
+        if (unit.UnitType == null || unit.UnitType.Usage != UnitTypeUsage.Reservable)
+            return (false, "Seçilen birim rezervasyon yapılabilir türde değil.", 0);
 
-        var hesap = await HesaplaAsync(model.BirimId.Value, model.StartDate, model.EndDate);
+        var hesap = await HesaplaAsync(model.UnitId.Value, model.StartDate, model.EndDate);
 
         var reservation = new Reservation
         {
-            UnitId = model.BirimId.Value,
-            TenantId = model.KiraciId.Value,
+            UnitId = model.UnitId.Value,
+            TenantId = model.TenantId.Value,
             StartDate = model.StartDate,
             EndDate = model.EndDate,
             TotalDurationMinutes = hesap.TotalDurationMinutes,
@@ -158,7 +158,7 @@ public class ReservationService : IReservationService, ITransactionalService
             KdvAmount = hesap.KdvTutari > 0 ? hesap.KdvTutari : null,
             TotalAmount = hesap.ToplamTutar,
             Status = ReservationStatus.Planned,
-            Description = model.Aciklama,
+            Description = model.Description,
         };
 
         await _repo.AddAsync(reservation);
@@ -273,21 +273,33 @@ public class ReservationService : IReservationService, ITransactionalService
 
     // ── Ücret Kuralı CRUD ─────────────────────────────────────────────────────
 
-    public async Task<List<RezervasyonTarifeKuralListItemDto>> GetUcretKurallariAsync()
+    public async Task<List<ReservationRateOverrideListItemDto>> GetUcretKurallariAsync()
         => await _tarifeRepo.GetUcretKurallariListAsync();
 
-    public async Task<RezervasyonTarife?> GetUcretKuralByIdAsync(int id)
+    public async Task<ReservationRateOverride?> GetUcretKuralByIdAsync(int id)
         => await _repo.GetUcretKuralByIdAsync(id);
 
-    public async Task<(bool Basarili, string? Hata, int Id)> SaveUcretKuralAsync(RezervasyonTarifeKuralViewModel model)
+    public async Task<(bool Basarili, string? Hata, int Id)> SaveUcretKuralAsync(ReservationRateOverrideViewModel model)
     {
-        if (model.UcretlendirmePeriyoduDakika <= 0)
-            return (false, "Periyot süresi sıfırdan büyük olmalıdır.", 0);
+        if (model.FreeDurationMinutes < 0 || model.FreeDurationMinutes > 1440)
+            return (false, "Ücretsiz süre 0–1440 dakika arası olmalıdır.", 0);
 
-        RezervasyonTarife kural;
+        if (model.BillingPeriodMinutes < 1 || model.BillingPeriodMinutes > 1440)
+            return (false, "Periyot süresi 1–1440 dakika arası olmalıdır.", 0);
+
+        if (model.PeriodRate < 0)
+            return (false, "Amount sıfır veya daha büyük olmalıdır.", 0);
+
+        if (model.KdvRate < 0 || model.KdvRate > 100)
+            return (false, "KDV oranı 0–100 arasında olmalıdır.", 0);
+
+        if (model.Description?.Length > 300)
+            return (false, "Açıklama en fazla 300 karakter olabilir.", 0);
+
+        ReservationRateOverride kural;
         if (model.Id == 0)
         {
-            kural = new RezervasyonTarife();
+            kural = new ReservationRateOverride();
             await _repo.AddUcretKuralAsync(kural);
         }
         else
@@ -296,13 +308,13 @@ public class ReservationService : IReservationService, ITransactionalService
                     ?? throw new InvalidOperationException("Kural bulunamadı.");
         }
 
-        kural.UnitId = model.BirimId;
+        kural.UnitId = model.UnitId;
         kural.FreeDurationMinutes = model.FreeDurationMinutes;
-        kural.UcretlendirmePeriyoduDakika = model.UcretlendirmePeriyoduDakika;
-        kural.PeriyotUcreti = model.PeriyotUcreti;
+        kural.BillingPeriodMinutes = model.BillingPeriodMinutes;
+        kural.PeriodRate = model.PeriodRate;
         kural.KdvRate = model.KdvRate;
         kural.IsActive = model.IsActive;
-        kural.Aciklama = model.Aciklama;
+        kural.Description = model.Description;
 
         await _uow.SaveChangesAsync();
         return (true, null, kural.Id);

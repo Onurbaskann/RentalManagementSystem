@@ -34,7 +34,7 @@
                 <tr>
                     <th class="w-16 text-center">Sıra</th>
                     <th>Ad</th>
-                    <th class="w-56">Kiralama Şekilleri</th>
+                    <th class="w-56">Birim Yapıları</th>
                     <th class="w-24">Durum</th>
                     <th class="w-40"></th>
                 </tr>
@@ -46,15 +46,15 @@
                         <td class="text-center text-muted text-xs">@tt.Sira</td>
                         <td class="font-medium text-slate-700">@tt.Ad</td>
                         <td>
-                            @if (!tt.TekParcaDestekli && !tt.BirimBazliDestekli)
+                            @if (!tt.TekBirimDestekli && !tt.CokluBirimDestekli)
                             {
                                 <span class="text-muted text-xs">—</span>
                             }
                             else
                             {
                                 <div class="flex gap-1.5 flex-wrap">
-                                    @if (tt.TekParcaDestekli) { <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">Tek Parça</span> }
-                                    @if (tt.BirimBazliDestekli) { <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">Unit Bazlı</span> }
+                                    @if (tt.TekBirimDestekli) { <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">Tek Birim</span> }
+                                    @if (tt.CokluBirimDestekli) { <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">Çoklu Birim</span> }
                                 </div>
                             }
                         </td>

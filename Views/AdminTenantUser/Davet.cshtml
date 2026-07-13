@@ -1,7 +1,7 @@
 ﻿@model KiraTakip.Models.ViewModels.KiraciDavetViewModel
 @{
     ViewData["Title"] = "Kullanıcı Davet Et";
-    var tenantId = ViewBag.KiraciId as int? ?? 0;
+    var tenantId = ViewBag.TenantId as int? ?? 0;
     var kiraciAd = ViewBag.KiraciAd as string ?? "—";
 }
 
@@ -50,7 +50,7 @@
         @if (Model.Units.Any())
         {
             <div class="form-group">
-                <label class="form-label">Unit Erişimi <span class="text-muted font-normal">(opsiyonel — boş bırakılırsa tüm birimler)</span></label>
+                <label class="form-label">Birim Erişimi <span class="text-muted font-normal">(opsiyonel — boş bırakılırsa tüm birimler)</span></label>
                 <div class="border border-[var(--color-border)] rounded-lg p-3 flex flex-col gap-2 max-h-48 overflow-y-auto">
                     @foreach (var b in Model.Units)
                     {
@@ -58,7 +58,7 @@
                             <input type="checkbox" name="BirimIds" value="@b.Id"
                                    class="w-4 h-4 accent-primary"
                                    @(Model.BirimIds.Contains(b.Id) ? "checked" : "") />
-                            <span>@b.TasinmazAd — @b.Ad@(b.BirimNo != null ? " (" + b.BirimNo + ")" : "")</span>
+                            <span>@b.PropertyName — @b.Name@(b.UnitNo != null ? " (" + b.UnitNo + ")" : "")</span>
                         </label>
                     }
                 </div>

@@ -43,31 +43,46 @@
                 <label class="form-label">Taşınmaz Tipi *</label>
                 <select asp-for="TasinmazTipiId" class="form-control" x-model="tasinmazTipiId" @@change="onTasinmazTipiChange()">
                     <option value="">— Seçiniz —</option>
-                    @foreach (var tt in (IEnumerable<TasinmazTipi>)ViewBag.TasinmazTipleri)
+                    @foreach (var tt in (IEnumerable<PropertyType>)ViewBag.TasinmazTipleri)
                     {
-                        <option value="@tt.Id">@tt.Ad</option>
+                        <option value="@tt.Id">@tt.Name</option>
                     }
                 </select>
                 <span asp-validation-for="TasinmazTipiId" class="form-error"></span>
             </div>
 
             <div class="form-group">
-                <label class="form-label">Kiralama Şekli *</label>
+                <label class="form-label">Birim Yapısı *</label>
                 <div class="radio-group">
                     <label class="radio-option" :class="!izinli(1) ? 'opacity-40 cursor-not-allowed' : ''">
-                        <input type="radio" asp-for="RentalMode" value="1" x-model="sekli" :disabled="!izinli(1)" />
-                        <span>Tek Parça</span>
+                        <input type="radio" asp-for="UnitStructure" value="1" x-model="unitStructure" :disabled="!izinli(1)" />
+                        <span>Tek Birim</span>
                     </label>
                     <label class="radio-option" :class="!izinli(2) ? 'opacity-40 cursor-not-allowed' : ''">
-                        <input type="radio" asp-for="RentalMode" value="2" x-model="sekli" :disabled="!izinli(2)" />
-                        <span>Unit Bazlı</span>
+                        <input type="radio" asp-for="UnitStructure" value="2" x-model="unitStructure" :disabled="!izinli(2)" />
+                        <span>Çoklu Birim</span>
                     </label>
                 </div>
                 <div class="form-hint" x-show="!tasinmazTipiId">Önce taşınmaz tipi seçiniz.</div>
-                <div class="form-hint text-red-800" x-show="tasinmazTipiId && izinliSet().length === 0">Bu taşınmaz tipi için kiralama şekli tanımlanmamış. Lütfen yöneticiye bildiriniz.</div>
-                <div class="form-hint" x-show="sekli == '2' && izinli(2)">Taşınmaz içindeki birimler ayrı ayrı kiralanabilir. Birimleri aşağıda tanımlayın.</div>
-                <span asp-validation-for="RentalMode" class="form-error"></span>
+                <div class="form-hint text-red-800" x-show="tasinmazTipiId && izinliSet().length === 0">Bu taşınmaz tipi için birim yapısı tanımlanmamış. Lütfen yöneticiye bildiriniz.</div>
+                <div class="form-hint" x-show="unitStructure == '2' && izinli(2)">Taşınmaz içindeki birimler ayrı ayrı kiralanabilir. Birimleri aşağıda tanımlayın.</div>
+                <span asp-validation-for="UnitStructure" class="form-error"></span>
             </div>
+
+            <template x-if="unitStructure == '1'">
+                <div class="form-group">
+                    <label class="form-label">Birim Türü *</label>
+                    <select asp-for="KompleUnitTypeId" class="form-control">
+                        <option value="">— Seçiniz —</option>
+                        @foreach (var bt in (IEnumerable<UnitType>)ViewBag.TumBirimTurleri)
+                        {
+                            <option value="@bt.Id">@bt.Name</option>
+                        }
+                    </select>
+                    <div class="form-hint">Tek parça kiralanan taşınmazın birim türü (kira tarifesi bu türe göre belirlenir).</div>
+                    <span asp-validation-for="KompleUnitTypeId" class="form-error"></span>
+                </div>
+            </template>
 
             <div class="grid grid-cols-2 gap-3.5 mb-3">
                 <div class="form-group">
@@ -89,16 +104,16 @@
 
 
         <!-- Unit Bazlı bölümü -->
-        <template x-if="sekli == '2'">
+        <template x-if="unitStructure == '2'">
             <div class="card mt-4">
                 <div class="flex items-center justify-between mb-5 pb-3 border-b border-[var(--color-border)]">
                     <div class="text-[15px] font-bold flex items-center gap-2">
                         <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
-                        <span>Units</span>
+                        <span>Birimler</span>
                     </div>
                     <button type="button" class="btn btn-secondary btn-sm" @@click="addBirim()">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                        Unit Ekle
+                        Birim Ekle
                     </button>
                 </div>
 
@@ -112,19 +127,19 @@
 
                         <div class="grid grid-cols-3 gap-3 mb-3 mr-10">
                             <div>
-                                <div class="form-label mb-1">Unit No *</div>
-                                <input class="form-control" :name="'Units['+i+'].BirimNo'" x-model="unit.birimNo"
+                                <div class="form-label mb-1">Birim No *</div>
+                                <input class="form-control" :name="'Units['+i+'].UnitNo'" x-model="unit.birimNo"
                                        placeholder="101" @@blur="autoAd(unit)" />
                                 <span x-show="birimErrors[i]?.birimNo" x-text="birimErrors[i]?.birimNo" class="form-error"></span>
                             </div>
                             <div>
                                 <div class="form-label mb-1">Kat No *</div>
-                                <input class="form-control" type="number" :name="'Units['+i+'].KatNo'" x-model="unit.katNo" placeholder="1" />
+                                <input class="form-control" type="number" :name="'Units['+i+'].FloorNo'" x-model="unit.katNo" placeholder="1" />
                                 <span x-show="birimErrors[i]?.katNo" x-text="birimErrors[i]?.katNo" class="form-error"></span>
                             </div>
                             <div>
-                                <div class="form-label mb-1">Unit Türü *</div>
-                                <select class="form-control" :name="'Units['+i+'].UnitTypeId'" x-model="unit.unitTypeId">
+                                <div class="form-label mb-1">Birim Türü *</div>
+                                <select class="form-control" :name="'Units['+i+'].UnitTypeId'" x-model="unit.unitTypeId" @@change="autoAd(unit)">
                                     <option value="">— Seçiniz —</option>
                                     @foreach (var bt in (IEnumerable<UnitType>)ViewBag.BirimTurleri)
                                     {
@@ -138,17 +153,17 @@
                         <div class="grid grid-cols-[1fr_100px_2fr] gap-3">
                             <div>
                                 <div class="form-label mb-1">Ad *</div>
-                                <input class="form-control" :name="'Units['+i+'].Ad'" x-model="unit.ad" placeholder="Boşsa otomatik doldurulur" />
+                                <input class="form-control" :name="'Units['+i+'].Name'" x-model="unit.ad" placeholder="Boşsa otomatik doldurulur" />
                                 <span x-show="birimErrors[i]?.ad" x-text="birimErrors[i]?.ad" class="form-error"></span>
                             </div>
                             <div>
                                 <div class="form-label mb-1">m² *</div>
-                                <input class="form-control" type="number" min="1" step="0.01" :name="'Units['+i+'].Yuzolcumu'" x-model="unit.yuzolcumu" placeholder="0" />
+                                <input class="form-control" type="number" min="1" step="0.01" :name="'Units['+i+'].Area'" x-model="unit.yuzolcumu" placeholder="0" />
                                 <span x-show="birimErrors[i]?.yuzolcumu" x-text="birimErrors[i]?.yuzolcumu" class="form-error"></span>
                             </div>
                             <div>
                                 <div class="form-label mb-1">Açıklama</div>
-                                <input class="form-control" :name="'Units['+i+'].Aciklama'" x-model="unit.aciklama" placeholder="Opsiyonel" />
+                                <input class="form-control" :name="'Units['+i+'].Description'" x-model="unit.aciklama" placeholder="Opsiyonel" />
                             </div>
                         </div>
                     </div>
@@ -156,7 +171,7 @@
 
                 <template x-if="birimler.length === 0">
                     <div class="text-center py-6 text-muted text-[13.5px]">
-                        Henüz unit eklenmedi. Yukarıdaki "Unit Ekle" butonu ile unit tanımlayınız.
+                        Henüz birim eklenmedi. Yukarıdaki "Birim Ekle" butonu ile birim tanımlayınız.
                     </div>
                 </template>
 
@@ -164,7 +179,7 @@
 
                 <template x-if="birimler.length > 0">
                     <div class="text-[12.5px] text-muted mt-1">
-                        Unit No aynı bina içinde benzersiz olmalıdır. Ad boş bırakılırsa "Unit {BirimNo}" olarak oluşturulur.
+                        Birim No aynı bina içinde benzersiz olmalıdır. Ad boş bırakılırsa "Birim {BirimNo}" olarak oluşturulur.
                     </div>
                 </template>
             </div>
@@ -244,7 +259,7 @@
                                     var kolon = Model.FiyatMatrisi.Kolonlar[j];
                                     var isIlkAy = kolon.ChargeTypeBehavior == ChargeTypeBehavior.FirstMonthOneTime;
                                     var isDepozito = isIlkAy;
-                                    var parentSatir = Model.ParentTarife?.Satirlar?.FirstOrDefault(p => p.KategoriAd == satir.KiraciKategoriAd && p.ChargeTypeName == kolon.ChargeTypeName);
+                                    var parentSatir = Model.ParentTarife?.Rows?.FirstOrDefault(p => p.CategoryName == satir.KiraciKategoriAd && p.ChargeTypeName == kolon.ChargeTypeName);
                                     decimal? parentDeger = parentSatir?.UnitValue;
                                     decimal? parentKdv = parentSatir?.KdvRate;
                                     <tr data-depozito="@(isDepozito ? "true" : "false")">
@@ -331,13 +346,13 @@
             </div>
         </div>
 
-        <!-- Reservation Alanları -->
-        <div class="card mt-4">
+        <!-- Rezervasyon Alanları -->
+        <div class="card mt-4" x-show="unitStructure == '2'">
             <div class="flex items-center justify-between mb-5 pb-3 border-b border-[var(--color-border)]">
                 <div>
                     <div class="text-[15px] font-bold flex items-center gap-2">
                         <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
-                        <span>Reservation Alanları</span>
+                        <span>Rezervasyon Alanları</span>
                     </div>
                     <div class="text-[12.5px] text-muted mt-0.5">Toplantı salonu, etkinlik alanı gibi rezerve edilebilen ortak alanlar</div>
                 </div>
@@ -347,7 +362,7 @@
                 </button>
             </div>
 
-            @if (Model.ParentRezervasyonTarife != null)
+            @if (Model.ParentReservationRateOverride != null)
             {
                 <div class="mb-5 bg-slate-50 border border-slate-200 rounded-lg p-3">
                     <div class="text-xs text-muted font-semibold mb-2 flex items-center gap-1.5">
@@ -355,7 +370,7 @@
                         <span x-show="rezAlanlari.length > 0">Aşağıda tanımlama yapmazsanız genel tarife uygulanır:</span>
                         <span x-show="rezAlanlari.length === 0">Tanımlayacağınız alanlar için geçerli varsayılan genel tarife:</span>
                     </div>
-                    <partial name="_ParentRezervasyonTarifeKart" model="Model.ParentRezervasyonTarife" />
+                    <partial name="_ParentReservationRateOverrideKart" model="Model.ParentReservationRateOverride" />
                 </div>
             }
 
@@ -370,17 +385,17 @@
                     <div class="grid grid-cols-[100px_1fr_100px_1fr] gap-3 mb-3 mr-10">
                         <div>
                             <div class="form-label mb-1">No *</div>
-                            <input class="form-control" :name="'RezervasyonAlanlari['+i+'].BirimNo'" x-model="alan.birimNo" placeholder="Z01" />
+                            <input class="form-control" :name="'RezervasyonAlanlari['+i+'].UnitNo'" x-model="alan.birimNo" placeholder="Z01" />
                             <span x-show="rezErrors[i]?.birimNo" x-text="rezErrors[i]?.birimNo" class="form-error"></span>
                         </div>
                         <div>
                             <div class="form-label mb-1">Alan Adı *</div>
-                            <input class="form-control" :name="'RezervasyonAlanlari['+i+'].Ad'" x-model="alan.ad" placeholder="Toplantı Salonu A" />
+                            <input class="form-control" :name="'RezervasyonAlanlari['+i+'].Name'" x-model="alan.ad" placeholder="Toplantı Salonu A" />
                             <span x-show="rezErrors[i]?.ad" x-text="rezErrors[i]?.ad" class="form-error"></span>
                         </div>
                         <div>
                             <div class="form-label mb-1">m² *</div>
-                            <input class="form-control" type="number" min="0" :name="'RezervasyonAlanlari['+i+'].Yuzolcumu'" x-model="alan.yuzolcumu" placeholder="0" />
+                            <input class="form-control" type="number" min="0" :name="'RezervasyonAlanlari['+i+'].Area'" x-model="alan.yuzolcumu" placeholder="0" />
                             <span x-show="rezErrors[i]?.yuzolcumu" x-text="rezErrors[i]?.yuzolcumu" class="form-error"></span>
                         </div>
                         <div>
@@ -411,7 +426,7 @@
                         </div>
                         <div>
                             <div class="form-label mb-1">Açıklama</div>
-                            <input class="form-control" :name="'RezervasyonAlanlari['+i+'].Aciklama'" x-model="alan.aciklama" placeholder="Opsiyonel" />
+                            <input class="form-control" :name="'RezervasyonAlanlari['+i+'].Description'" x-model="alan.aciklama" placeholder="Opsiyonel" />
                         </div>
                     </div>
                 </div>
@@ -419,7 +434,7 @@
 
             <template x-if="rezAlanlari.length === 0">
                 <div class="text-center py-6 text-muted text-[13.5px]">
-                    Henüz reservation alanı eklenmedi. "Alan Ekle" ile tanımlayabilirsiniz.
+                    Henüz rezervasyon alanı eklenmedi. "Alan Ekle" ile tanımlayabilirsiniz.
                 </div>
             </template>
         </div>
@@ -474,11 +489,11 @@
             Model.Units.Count > 0
                 ? (IEnumerable<object>)Model.Units.Select(b => new
                 {
-                    birimNo = b.BirimNo ?? "",
-                    katNo = b.KatNo?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "",
-                    ad = b.Ad ?? "",
-                    yuzolcumu = b.Yuzolcumu.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    aciklama = b.Aciklama ?? "",
+                    birimNo = b.UnitNo ?? "",
+                    katNo = b.FloorNo?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "",
+                    ad = b.Name ?? "",
+                    yuzolcumu = b.Area.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    aciklama = b.Description ?? "",
                     unitTypeId = b.UnitTypeId?.ToString() ?? ""
                 })
                 : (IEnumerable<object>)Array.Empty<object>()
@@ -487,11 +502,11 @@
             Model.RezervasyonAlanlari.Count > 0
                 ? (IEnumerable<object>)Model.RezervasyonAlanlari.Select(r => new
                 {
-                    birimNo = r.BirimNo ?? "",
-                    ad = r.Ad ?? "",
-                    yuzolcumu = r.Yuzolcumu.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    birimNo = r.UnitNo ?? "",
+                    ad = r.Name ?? "",
+                    yuzolcumu = r.Area.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     unitTypeId = r.UnitTypeId?.ToString() ?? "",
-                    aciklama = r.Aciklama ?? "",
+                    aciklama = r.Description ?? "",
                     ucretsizSureDakika = r.FreeDurationMinutes,
                     saatlikUcret = r.SaatlikUcret.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     kdvOrani = r.KdvRate.ToString(System.Globalization.CultureInfo.InvariantCulture)
@@ -501,41 +516,44 @@
         var birimErrorsJson = System.Text.Json.JsonSerializer.Serialize(
             Enumerable.Range(0, Model.Units.Count).Select(i => new
             {
-                birimNo = ViewData.ModelState[$"Units[{i}].BirimNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
-                katNo = ViewData.ModelState[$"Units[{i}].KatNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                birimNo = ViewData.ModelState[$"Units[{i}].UnitNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                katNo = ViewData.ModelState[$"Units[{i}].FloorNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 unitTypeId = ViewData.ModelState[$"Units[{i}].UnitTypeId"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
-                ad = ViewData.ModelState[$"Units[{i}].Ad"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
-                yuzolcumu = ViewData.ModelState[$"Units[{i}].Yuzolcumu"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                ad = ViewData.ModelState[$"Units[{i}].Name"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                yuzolcumu = ViewData.ModelState[$"Units[{i}].Area"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
             }).ToList()
         );
         var rezErrorsJson = System.Text.Json.JsonSerializer.Serialize(
             Enumerable.Range(0, Model.RezervasyonAlanlari.Count).Select(i => new
             {
-                birimNo = ViewData.ModelState[$"RezervasyonAlanlari[{i}].BirimNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
-                ad = ViewData.ModelState[$"RezervasyonAlanlari[{i}].Ad"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
-                yuzolcumu = ViewData.ModelState[$"RezervasyonAlanlari[{i}].Yuzolcumu"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                birimNo = ViewData.ModelState[$"RezervasyonAlanlari[{i}].UnitNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                ad = ViewData.ModelState[$"RezervasyonAlanlari[{i}].Name"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                yuzolcumu = ViewData.ModelState[$"RezervasyonAlanlari[{i}].Area"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 unitTypeId = ViewData.ModelState[$"RezervasyonAlanlari[{i}].UnitTypeId"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
             }).ToList()
         );
-        var initSekli = (int)Model.RentalMode;
+        var initSekli = (int)Model.UnitStructure;
         var initTasinmazTipiId = Model.TasinmazTipiId?.ToString() ?? "";
-        var tipKiralamaJson = System.Text.Json.JsonSerializer.Serialize(
-            (Dictionary<int, int[]>)(ViewBag.TasinmazTipiKiralamaSekilleri ?? new Dictionary<int, int[]>())
+        var tipBirimYapisiJson = System.Text.Json.JsonSerializer.Serialize(
+            (Dictionary<int, int[]>)(ViewBag.TasinmazTipiBirimYapilari ?? new Dictionary<int, int[]>())
         );
+        var birimTurleriMap = ((IEnumerable<UnitType>)ViewBag.BirimTurleri).ToDictionary(bt => bt.Id.ToString(), bt => bt.Name);
+        var birimTurleriMapJson = System.Text.Json.JsonSerializer.Serialize(birimTurleriMap);
     }
     <script>
         function tasinmazFormData() {
             return {
-                sekli: '@initSekli',
+                unitStructure: '@initSekli',
                 tasinmazTipiId: '@initTasinmazTipiId',
-                tipKiralamaMap: @Html.Raw(tipKiralamaJson),
+                tipBirimYapisiMap: @Html.Raw(tipBirimYapisiJson),
+                birimTurleriMap: @Html.Raw(birimTurleriMapJson),
                 birimler: @Html.Raw(birimlerJson),
                 rezAlanlari: @Html.Raw(rezAlanlariJson),
                 birimErrors: @Html.Raw(birimErrorsJson),
                 rezErrors: @Html.Raw(rezErrorsJson),
                 izinliSet() {
                     if (!this.tasinmazTipiId) return [];
-                    return this.tipKiralamaMap[this.tasinmazTipiId] || [];
+                    return this.tipBirimYapisiMap[this.tasinmazTipiId] || [];
                 },
                 izinli(v) {
                     if (!this.tasinmazTipiId) return false;
@@ -544,9 +562,9 @@
                 onTasinmazTipiChange() {
                     var set = this.izinliSet();
                     if (set.length === 1) {
-                        this.sekli = set[0].toString();
-                    } else if (set.length === 0 || !set.includes(parseInt(this.sekli))) {
-                        this.sekli = '';
+                        this.unitStructure = set[0].toString();
+                    } else if (set.length === 0 || !set.includes(parseInt(this.unitStructure))) {
+                        this.unitStructure = '';
                     }
                 },
                 addBirim() {
@@ -557,7 +575,15 @@
                     this.birimler.splice(i, 1);
                     this.birimErrors.splice(i, 1);
                 },
-                autoAd(b) { if (!b.ad && b.birimNo) b.ad = 'Unit ' + b.birimNo; },
+                autoAd(b) {
+                    if (b.birimNo) {
+                        var turAd = this.birimTurleriMap[b.unitTypeId] || 'Birim';
+                        var isAutoFilled = !b.ad || b.ad === 'Birim ' + b.birimNo || Object.values(this.birimTurleriMap).some(name => b.ad === name + ' ' + b.birimNo);
+                        if (isAutoFilled) {
+                            b.ad = turAd + ' ' + b.birimNo;
+                        }
+                    }
+                },
                 addRezAlani() {
                     this.rezAlanlari.push({ birimNo: '', ad: '', yuzolcumu: '', unitTypeId: '', aciklama: '', ucretsizSureDakika: 0, saatlikUcret: 0, kdvOrani: 20 });
                     this.rezErrors.push({});
@@ -569,13 +595,19 @@
                 validate() {
                     var ok = true;
                     this.birimler.forEach(b => {
-                        if (!b.ad?.trim() && b.birimNo?.trim()) b.ad = 'Unit ' + b.birimNo;
+                        if (b.birimNo?.trim()) {
+                            var turAd = this.birimTurleriMap[b.unitTypeId] || 'Birim';
+                            var isAutoFilled = !b.ad?.trim() || b.ad === 'Birim ' + b.birimNo || Object.values(this.birimTurleriMap).some(name => b.ad === name + ' ' + b.birimNo);
+                            if (isAutoFilled) {
+                                b.ad = turAd + ' ' + b.birimNo;
+                            }
+                        }
                     });
                     this.birimErrors = this.birimler.map(b => {
                         var e = {};
-                        if (!b.birimNo?.trim()) e.birimNo = 'Unit No zorunludur.';
+                        if (!b.birimNo?.trim()) e.birimNo = 'Birim No zorunludur.';
                         if (b.katNo === '' || b.katNo === null || b.katNo === undefined) e.katNo = 'Kat No zorunludur.';
-                        if (!b.unitTypeId) e.unitTypeId = 'Unit Türü zorunludur.';
+                        if (!b.unitTypeId) e.unitTypeId = 'Birim Türü zorunludur.';
                         if (!b.ad?.trim()) e.ad = 'Ad zorunludur.';
                         if (!b.yuzolcumu || parseFloat(b.yuzolcumu) <= 0) e.yuzolcumu = 'Yüzölçümü 0\'dan büyük olmalıdır.';
                         if (Object.keys(e).length) ok = false;

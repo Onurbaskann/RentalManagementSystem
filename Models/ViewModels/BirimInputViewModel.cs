@@ -1,14 +1,11 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace KiraTakip.Models.ViewModels;
 
 public class BirimInputViewModel
 {
-    [Display(Name = "Unit No")]
-    public string BirimNo { get; set; } = string.Empty;
-    public int? KatNo { get; set; }
-    public string? Ad { get; set; }
-    public decimal Yuzolcumu { get; set; }
-    public string? Aciklama { get; set; }
+    public string UnitNo { get; set; } = string.Empty;
+    public int? FloorNo { get; set; }
+    public string? Name { get; set; }
+    public decimal Area { get; set; }
+    public string? Description { get; set; }
     public int? UnitTypeId { get; set; }
 }

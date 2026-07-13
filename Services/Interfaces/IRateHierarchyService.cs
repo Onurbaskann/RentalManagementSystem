@@ -1,4 +1,4 @@
-using KiraTakip.Models.ViewModels;
+﻿using KiraTakip.Models.ViewModels;
 
 namespace KiraTakip.Services.Interfaces;
 
@@ -11,5 +11,5 @@ public interface IRateHierarchyService
         int? tenantCategoryId = null,
         int? yil        = null);
 
-    Task<ParentRezervasyonTarifeKartViewModel?> GetRezervasyonParentForAsync(int? yil = null);
+    Task<ParentReservationRateOverrideCardViewModel?> GetRezervasyonParentForAsync(int? yil = null);
 }

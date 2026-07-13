@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace KiraTakip.Models.Entities;
 
-[Table("Charges")]
+[Table("Tahakkuklar")]
 public class Charge : BaseEntity
 {
     [Column("KiraciId")]
@@ -11,17 +11,22 @@ public class Charge : BaseEntity
     [Column("BirimId")]
     public int UnitId { get; set; }
 
-    [Column("LeaseId")]
+    [Column("SozlesmeId")]
     public int? LeaseId { get; set; }
 
+    [Column("RezervasyonId")]
     public int? ReservationId { get; set; }
 
+    [Column("DonemBaslangici")]
     public DateTime PeriodStart { get; set; }
 
+    [Column("DonemBitisi")]
     public DateTime PeriodEnd { get; set; }
 
+    [Column("SonOdemeTarihi")]
     public DateTime DueDate { get; set; }
 
+    [Column("BeklenenTutar")]
     public decimal ExpectedAmount { get; set; }
 
     [Column("KdvTutari")]
@@ -30,15 +35,19 @@ public class Charge : BaseEntity
     [Column("ToplamTutar")]
     public decimal TotalAmount { get; set; }
 
+    [Column("OdenenTutar")]
     public decimal PaidAmount { get; set; }
 
     [Column("Durum")]
     public ChargeStatus Status { get; set; } = ChargeStatus.Pending;
 
+    [Column("KaynakTipi")]
     public ChargeSourceType SourceType { get; set; } = ChargeSourceType.Lease;
 
+    [Column("IptalNotu")]
     public string? CancellationNote { get; set; }
 
+    [Column("SonHatirlatmaTarihi")]
     public DateTime? LastReminderDate { get; set; }
 
     public Tenant Tenant { get; set; } = null!;

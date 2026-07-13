@@ -24,7 +24,7 @@ public class TenantProfileController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var tenantId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.TenantId!.Value;
         var tenant = await _db.Tenants
             .Include(k => k.TenantCategory)
             .Include(k => k.Sector)

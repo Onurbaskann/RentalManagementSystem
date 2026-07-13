@@ -54,7 +54,7 @@ public class PaymentController : Controller
         var payment = await _paymentService.GetByIdAsync(id);
         if (payment == null) return NotFound();
 
-        if (payment.TasinmazId != null && !_provider.IsInScope(payment.TasinmazId.Value))
+        if (payment.PropertyId != null && !_provider.IsInScope(payment.PropertyId.Value))
             return Forbid();
 
         ViewBag.Belgeler    = await _documentService.GetListAsync(DocumentOwnerType.Payment, id);
@@ -143,7 +143,7 @@ public class PaymentController : Controller
         var payment = await _paymentService.GetByIdAsync(id);
         if (payment == null) return NotFound();
 
-        if (payment.TasinmazId != null && !_provider.IsInScope(payment.TasinmazId.Value))
+        if (payment.PropertyId != null && !_provider.IsInScope(payment.PropertyId.Value))
             return Forbid();
 
         var adaylar = await _bankaService.GetHareketAdaylariAsync(id);

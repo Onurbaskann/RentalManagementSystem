@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
@@ -18,26 +18,26 @@ public class UnitService : IUnitService
         _istatistikService = statisticsService;
     }
 
-    public async Task<List<BirimListItemDto>> GetByPropertyIdAsync(int propertyId)
+    public async Task<List<UnitListItemDto>> GetByPropertyIdAsync(int propertyId)
     {
         return await _repo.GetByPropertyIdAsync(propertyId);
     }
 
-    public async Task<BirimDetayDto?> GetByIdAsync(int id)
+    public async Task<UnitDetailDto?> GetByIdAsync(int id)
     {
         var dto = await _repo.GetDetayAsync(id);
         if (dto == null) return null;
 
-        if (dto.AktifSozlesmeId.HasValue)
+        if (dto.ActiveLeaseId.HasValue)
         {
             var lease = new Lease
             {
-                Id = dto.AktifSozlesmeId.Value,
-                TenantId = dto.AktifSozlesmeKiraciId ?? 0,
+                Id = dto.ActiveLeaseId.Value,
+                TenantId = dto.ActiveLeaseTenantId ?? 0,
                 UnitId = dto.Id,
-                Unit = new Unit { Id = dto.Id, Area = dto.Yuzolcumu }
+                Unit = new Unit { Id = dto.Id, Area = dto.Area }
             };
-            dto.AylikBedel = await _istatistikService.AylikBedelAsync(lease);
+            dto.MonthlyRent = await _istatistikService.AylikBedelAsync(lease);
         }
 
         return dto;

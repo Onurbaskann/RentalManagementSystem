@@ -24,8 +24,8 @@ public class PermissionClaimsTransformer : UserClaimsPrincipalFactory<Applicatio
         var identity = await base.GenerateClaimsAsync(user);
 
         identity.AddClaim(new Claim(AppClaimTypes.UserType, ((int)user.UserType).ToString()));
-        if (user.KiraciId.HasValue)
-            identity.AddClaim(new Claim(AppClaimTypes.KiraciId, user.KiraciId.Value.ToString()));
+        if (user.TenantId.HasValue)
+            identity.AddClaim(new Claim(AppClaimTypes.TenantId, user.TenantId.Value.ToString()));
 
         var roles = await _userRolService.GetUserRolesAsync(user.Id);
         foreach (var roleName in roles)

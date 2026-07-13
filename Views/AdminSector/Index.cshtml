@@ -1,4 +1,4 @@
-@model List<KiraTakip.Models.Dtos.KategoriListItemDto>
+﻿@model List<KiraTakip.Models.Dtos.CategoryListItemDto>
 @{
     ViewData["Title"] = "Sektörler";
 }
@@ -21,7 +21,7 @@
         <div class="page-title">Sektörler</div>
         <div class="page-subtitle">@Model.Count kayıt — kiracı sektör bilgisi</div>
     </div>
-    <a href="/Admin/Sektor/Ekle" class="btn btn-primary flex items-center gap-2">
+    <a href="/Admin/Sector/Ekle" class="btn btn-primary flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Yeni Sektör
     </a>
@@ -42,22 +42,22 @@
                 @foreach (var s in Model)
                 {
                     <tr>
-                        <td class="text-center text-muted text-xs">@s.Sira</td>
-                        <td class="font-medium text-slate-700">@s.Ad</td>
+                        <td class="text-center text-muted text-xs">@s.Order</td>
+                        <td class="font-medium text-slate-700">@s.Name</td>
                         <td>
-                            @if (s.Aktif)
+                            @if (s.IsActive)
                             { <span class="badge badge-kirali">Aktif</span> }
                             else
                             { <span class="badge badge-gecmis">Pasif</span> }
                         </td>
                         <td class="flex gap-1.5 justify-end">
-                            <a href="/Admin/Sektor/Duzenle/@s.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
-                            <form method="post" action="/Admin/Sektor/DurumDegistir/@s.Id.ToHashId()"
-                                  data-confirm="@(s.Aktif ? $"'{s.Ad}' pasif yapılsın mı?" : $"'{s.Ad}' aktif yapılsın mı?")"
+                            <a href="/Admin/Sector/Duzenle/@s.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
+                            <form method="post" action="/Admin/Sector/DurumDegistir/@s.Id.ToHashId()"
+                                  data-confirm="@(s.IsActive ? $"'{s.Name}' pasif yapılsın mı?" : $"'{s.Name}' aktif yapılsın mı?")"
                                   class="inline">
                                 @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm @(s.Aktif ? "btn-danger" : "btn-amber")">
-                                    @(s.Aktif ? "Pasif Yap" : "Aktif Yap")
+                                <button type="submit" class="btn btn-sm @(s.IsActive ? "btn-danger" : "btn-amber")">
+                                    @(s.IsActive ? "Pasif Yap" : "Aktif Yap")
                                 </button>
                             </form>
                         </td>

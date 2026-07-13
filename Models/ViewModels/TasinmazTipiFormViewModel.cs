@@ -12,6 +12,6 @@ public class TasinmazTipiFormViewModel
 
     public int Sira { get; set; } = 1;
     public bool Aktif { get; set; } = true;
-    public bool TekParcaDestekli { get; set; }
-    public bool BirimBazliDestekli { get; set; }
+    public bool TekBirimDestekli { get; set; }
+    public bool CokluBirimDestekli { get; set; }
 }

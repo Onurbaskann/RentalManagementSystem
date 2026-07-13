@@ -1,4 +1,4 @@
-namespace KiraTakip.Infrastructure;
+﻿namespace KiraTakip.Infrastructure;
 
 public static class AuditDisplayNames
 {
@@ -44,9 +44,9 @@ public static class AuditDisplayNames
     {
         // Identity
         ["ApplicationUser"]         = "Kullanıcı",
-        ["Rol"]                     = "Rol",
+        ["Role"]                    = "Rol",
         ["Davetiye"]                = "Davet",
-        ["SifreSifirlamaTalebi"]    = "Şifre sıfırlama",
+        ["PasswordResetRequest"]    = "Şifre sıfırlama",
 
         // Domain
         ["Tenant"]                  = "Kiracı",
@@ -59,19 +59,19 @@ public static class AuditDisplayNames
         ["Reservation"]             = "Reservation",
         ["UserPermission"]          = "Kullanıcı izni",
         ["UserTasinmazYetki"]       = "Taşınmaz yetkisi",
-        ["UserRol"]                 = "Kullanıcı rolü",
-        ["RolPermission"]           = "Rol izni",
+        ["UserRole"]                = "Kullanıcı rolü",
+        ["RolePermission"]          = "Rol izni",
         ["Tarife"]                  = "Tarife",
-        ["TasinmazTarife"]          = "Taşınmaz tarifesi",
+        ["PropertyRateOverride"]    = "Taşınmaz tarifesi",
         ["UnitRate"]                = "Unit tarifesi",
         ["GenelTarife"]             = "Genel tarife",
-        ["SozlesmeTarife"]          = "Sözleşme tarifesi",
-        ["RezervasyonTarife"]       = "Reservation tarifesi",
+        ["LeaseRateOverride"]       = "Sözleşme tarifesi",
+        ["ReservationRateOverride"]       = "Reservation tarifesi",
         ["PropertyPricing"]           = "Taşınmaz fiyatı",
         ["ChargeType"]                = "Borç tipi",
         ["UnitType"]               = "Unit türü",
-        ["Kategori"]                = "Kategori",
-        ["Sektor"]                  = "Sektör",
+        ["Category"]                = "Category",
+        ["Sector"]                  = "Sektör",
     };
 
     public static string EventDisplay(string key)

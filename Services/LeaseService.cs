@@ -49,6 +49,17 @@ public class LeaseService : ILeaseService, ITransactionalService
 
     public async Task<Lease> CreateAsync(Lease lease, decimal? monthlyAmount = null)
     {
+        var now = DateTime.Now;
+        bool hasActiveLease = await _repo.AnyAsync(l =>
+            l.UnitId == lease.UnitId &&
+            l.Status == LeaseStatus.Active &&
+            l.StartDate <= now &&
+            l.EndDate >= now);
+        if (hasActiveLease)
+        {
+            throw new InvalidOperationException("Seçilen birime ait halihazırda devam eden aktif bir sözleşme bulunmaktadır.");
+        }
+
         lease.ActivityLog.Add(new LeaseActivityLog
         {
             ActivityType = LeaseActivityType.Creation,

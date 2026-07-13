@@ -2,17 +2,14 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace KiraTakip.Models.Entities;
 
-[Table("Units")]
+[Table("Birimler")]
 public class Unit : BaseEntity
 {
     [Column("TasinmazId")]
     public int PropertyId { get; set; }
 
     [Column("BirimTuruId")]
-    public int? UnitTypeId { get; set; }
-
-    [Column("BirimTipi")]
-    public UnitKind UnitKind { get; set; }
+    public int UnitTypeId { get; set; }
 
     [Column("KatNo")]
     public int? FloorNo { get; set; }
@@ -30,6 +27,6 @@ public class Unit : BaseEntity
     public string? Description { get; set; }
 
     public Property Property { get; set; } = null!;
-    public UnitType? UnitType { get; set; }
+    public UnitType UnitType { get; set; } = null!;
     public List<Lease> Leases { get; set; } = [];
 }

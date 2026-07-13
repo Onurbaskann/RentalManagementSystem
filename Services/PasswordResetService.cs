@@ -53,7 +53,7 @@ public class PasswordResetService : IPasswordResetService
         var rateLimitCutoff = DateTime.UtcNow.Subtract(RateLimitWindow);
         var recentCount = await _db.SifreSifirlamaTalepleri
             .CountAsync(t => t.UserId == user.Id
-                          && t.Durum == PasswordResetStatus.Pending
+                          && t.Status == PasswordResetStatus.Pending
                           && t.CreatedAt >= rateLimitCutoff, ct);
 
         if (recentCount >= RateLimitMaxRequests)
@@ -62,12 +62,12 @@ public class PasswordResetService : IPasswordResetService
             return true;
         }
 
-        var talep = new SifreSifirlamaTalebi
+        var talep = new PasswordResetRequest
         {
             UserId = user.Id,
-            TalepEdenIp = ipAddress,
+            RequestIp = ipAddress,
             ExpiresAt = DateTime.UtcNow.Add(Ttl),
-            Durum = PasswordResetStatus.Pending,
+            Status = PasswordResetStatus.Pending,
         };
 
         _db.SifreSifirlamaTalepleri.Add(talep);
@@ -79,11 +79,11 @@ public class PasswordResetService : IPasswordResetService
         await _db.SaveChangesAsync(ct);
 
         await MailGonderAsync(user, tokenResult.RawToken, ct);
-        await _auditService.LogAsync("User.PasswordReset.Requested", "SifreSifirlamaTalebi", talep.Id.ToString(), user.Id);
+        await _auditService.LogAsync("User.PasswordReset.Requested", "PasswordResetRequest", talep.Id.ToString(), user.Id);
         return true;
     }
 
-    public async Task<(bool Success, string? Error, SifreSifirlamaTalebi? Talep)> DogrulaAsync(string rawToken, CancellationToken ct = default)
+    public async Task<(bool Success, string? Error, PasswordResetRequest? Talep)> DogrulaAsync(string rawToken, CancellationToken ct = default)
     {
         var hash = _tokenService.ComputeHash(rawToken);
         var talep = await _db.SifreSifirlamaTalepleri
@@ -93,15 +93,15 @@ public class PasswordResetService : IPasswordResetService
         if (talep is null)
             return (false, "Şifre sıfırlama linki geçersiz.", null);
 
-        if (talep.Durum == PasswordResetStatus.Used)
+        if (talep.Status == PasswordResetStatus.Used)
             return (false, "Bu link daha önce kullanılmış.", null);
 
-        if (talep.Durum == PasswordResetStatus.Cancelled)
+        if (talep.Status == PasswordResetStatus.Cancelled)
             return (false, "Bu link iptal edilmiş.", null);
 
         if (talep.ExpiresAt < DateTime.UtcNow)
         {
-            talep.Durum = PasswordResetStatus.Expired;
+            talep.Status = PasswordResetStatus.Expired;
             await _db.SaveChangesAsync(ct);
             return (false, "Şifre sıfırlama linkinin süresi dolmuş. Yeni talep oluşturun.", null);
         }
@@ -112,7 +112,7 @@ public class PasswordResetService : IPasswordResetService
         return (true, null, talep);
     }
 
-    public async Task<bool> SifreDegistirAsync(SifreSifirlamaTalebi talep, string yeniSifre, CancellationToken ct = default)
+    public async Task<bool> SifreDegistirAsync(PasswordResetRequest talep, string yeniSifre, CancellationToken ct = default)
     {
         var user = await _userManager.FindByIdAsync(talep.UserId);
         if (user is null) return false;
@@ -121,12 +121,12 @@ public class PasswordResetService : IPasswordResetService
         var result = await _userManager.ResetPasswordAsync(user, identityToken, yeniSifre);
         if (!result.Succeeded) return false;
 
-        talep.Durum = PasswordResetStatus.Used;
-        talep.KullanmaTarihi = DateTime.UtcNow;
+        talep.Status = PasswordResetStatus.Used;
+        talep.UsedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
 
         await _userManager.UpdateSecurityStampAsync(user);
-        await _auditService.LogAsync("User.PasswordReset.Completed", "SifreSifirlamaTalebi", talep.Id.ToString(), user.Id);
+        await _auditService.LogAsync("User.PasswordReset.Completed", "PasswordResetRequest", talep.Id.ToString(), user.Id);
         return true;
     }
 

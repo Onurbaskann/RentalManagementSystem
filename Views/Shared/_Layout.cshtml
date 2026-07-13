@@ -58,6 +58,43 @@
 
     @await Html.PartialAsync("_ConfirmDialog")
 
+    @{
+        var hataMesajlari = new List<string>();
+        if (TempData["Error"] is string tempHata && !string.IsNullOrWhiteSpace(tempHata))
+        {
+            hataMesajlari.Add(tempHata);
+        }
+        if (ViewData.ModelState.TryGetValue(string.Empty, out var kokHatalar))
+        {
+            hataMesajlari.AddRange(kokHatalar.Errors.Select(e => e.ErrorMessage));
+        }
+    }
+    @if (hataMesajlari.Count > 0)
+    {
+        <div x-data="{ open: true }" x-show="open" x-cloak
+             class="fixed inset-0 z-[200] flex items-center justify-center"
+             @@keydown.escape.window="open = false">
+            <div class="absolute inset-0 bg-slate-900/50" @@click="open = false"></div>
+            <div class="relative bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                    <div class="text-[15px] font-bold text-slate-800">İşlem Gerçekleştirilemedi</div>
+                </div>
+                <ul class="text-sm text-slate-600 space-y-1.5 mb-5 list-disc list-inside">
+                    @foreach (var mesaj in hataMesajlari)
+                    {
+                        <li>@mesaj</li>
+                    }
+                </ul>
+                <div class="flex justify-end">
+                    <button type="button" class="btn btn-primary px-6" @@click="open = false">Tamam</button>
+                </div>
+            </div>
+        </div>
+    }
+
     <div id="toast"></div>
 
     <script>

@@ -228,7 +228,7 @@
         {
             <button class="btn btn-secondary" type="button" @@click="showYenidenUret = true">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.43"/></svg>
-                Charge Yeniden Üret
+                Tahakkuk Yeniden Üret
             </button>
         }
         @if (canEdit && !feshedildi)
@@ -248,7 +248,9 @@
 <!-- Ana Kart -->
 <div class="card mb-4">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-              <div class="text-[11.5px] font-semibold text-muted uppercase tracking-wider mb-2.5">Kiracı</div>
+        <!-- Sol: Kiracı -->
+        <div>
+            <div class="text-[11.5px] font-semibold text-muted uppercase tracking-wider mb-2.5">Kiracı</div>
             <div class="flex items-center gap-3.5 mb-3.5">
                 <div class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center text-[17px] font-bold flex-shrink-0">
                     @(s.TenantDisplayName.Split(' ').Where(p => p.Length > 0).Take(2).Select(p => p[0].ToString().ToUpper()).Aggregate("", (a, b) => a + b))
@@ -283,9 +285,9 @@
         <div class="text-right">
             <div class="text-[11.5px] font-semibold text-muted uppercase tracking-wider mb-2.5">Taşınmaz</div>
             <div class="font-serif text-xl font-bold mb-1">@s.PropertyName</div>
-            @if (s.UnitKind == UnitKind.Unit)
+            @if (s.UnitStructure == UnitStructure.MultipleUnits)
             {
-                <div class="text-sm text-muted mb-1">Unit @s.UnitNo@(s.UnitFloorNo.HasValue ? $" • {s.UnitFloorNo}. Kat" : "") • @s.UnitArea.ToString("N0") m²</div>
+                <div class="text-sm text-muted mb-1">Birim @s.UnitNo@(s.UnitFloorNo.HasValue ? $" • {s.UnitFloorNo}. Kat" : "") • @s.UnitArea.ToString("N0") m²</div>
                 <div class="text-[13px] text-muted mb-2.5">@s.PropertyDistrict, @s.PropertyCity</div>
             }
             else
@@ -375,15 +377,15 @@
         </div>
     </div>
 
-    <!-- Charge Sağlığı -->
+    <!-- Tahakkuk Sağlığı -->
     <div class="card">
         <div class="flex items-center justify-between">
-            <div class="card-title">Charge Sağlığı</div>
-            <span class="text-[11px] text-muted">@thkToplamSayi charge</span>
+            <div class="card-title">Tahakkuk Sağlığı</div>
+            <span class="text-[11px] text-muted">@thkToplamSayi tahakkuk</span>
         </div>
         @if (thkToplamSayi == 0)
         {
-            <div class="mt-4 text-center text-muted text-[13px] italic py-6">Henüz charge üretilmedi.</div>
+            <div class="mt-4 text-center text-muted text-[13px] italic py-6">Henüz tahakkuk üretilmedi.</div>
         }
         else
         {
@@ -458,13 +460,13 @@
     }
 </div>
 
-<!-- Aylık Charge Kalemleri -->
+<!-- Aylık Tahakkuk Kalemleri -->
 @if (Model.GuncelKalemler.Any())
 {
     <div class="card mb-4">
         <div class="flex justify-between items-center mb-3.5">
             <div>
-                <span class="text-xs font-semibold text-muted uppercase tracking-wider">Aylık Charge Kalemleri</span>
+                <span class="text-xs font-semibold text-muted uppercase tracking-wider">Aylık Tahakkuk Kalemleri</span>
                 @if (Model.GuncelKalemDonemi.HasValue)
                 {
                     <span class="text-xs text-muted ml-2">— @Model.GuncelKalemDonemi.Value.ToString("MMMM yyyy", trCulture)</span>
@@ -478,7 +480,7 @@
                     <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
                         <th class="p-2 px-3 text-left">Açıklama</th>
                         <th class="p-2 px-3 text-left">Hesaplama</th>
-                        <th class="p-2 px-3 text-right">Unit</th>
+                        <th class="p-2 px-3 text-right">Birim</th>
                         <th class="p-2 px-3 text-right">Amount</th>
                         <th class="p-2 px-3 text-right text-muted">KDV</th>
                         <th class="p-2 px-3 text-right">Toplam</th>
@@ -517,7 +519,7 @@
 <div id="lease-tabs">
     <div class="tabs">
         <button class="tab">Detaylar</button>
-        <button class="tab">Unit Bilgisi</button>
+        <button class="tab">Birim Bilgisi</button>
         <button class="tab">Geçmiş Sözleşmeler (@(Model.GecmisSozlesmeler.Count + Model.KiraciSozlesmeleri.Count))</button>
         <button class="tab">İşlem Geçmişi (@s.ActivityLog.Count)</button>
         @if (Model.HasOdemeAccess)
@@ -580,7 +582,7 @@
         <div class="card">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <div class="detail-label mb-3">Unit</div>
+                    <div class="detail-label mb-3">Birim</div>
                     <div class="flex flex-col gap-2.5">
                         <div>
                             <div class="text-xs text-muted">Ad</div>
@@ -593,9 +595,9 @@
                         <div>
                             <div class="text-xs text-muted">Tip</div>
                             <div class="text-[15px] font-semibold">
-                                @if (s.UnitKind == UnitKind.Unit)
+                                @if (s.UnitStructure == UnitStructure.MultipleUnits)
                                 {
-                                    <span>Unit @s.UnitNo</span>
+                                    <span>Birim @s.UnitNo</span>
                                     if (s.UnitFloorNo.HasValue) { <span class="text-[13px] font-normal text-muted"> • @s.UnitFloorNo. Kat</span> }
                                 }
                                 else { <span>Komple</span> }
@@ -627,9 +629,9 @@
     <!-- Tab 3: Geçmiş Sözleşmeler -->
     <div class="tab-content">
         <div class="flex flex-col gap-6">
-        <!-- Bölüm 1: Bu Unit İçin Diğer Sözleşmeler -->
+        <!-- Bölüm 1: Bu Birime Ait Diğer Sözleşmeler -->
         <div>
-            <div class="text-[13px] font-semibold text-slate-700 mb-2">Bu Unit İçin Diğer Sözleşmeler <span class="text-muted font-normal">(@Model.GecmisSozlesmeler.Count)</span></div>
+            <div class="text-[13px] font-semibold text-slate-700 mb-2">Bu Birime Ait Diğer Sözleşmeler <span class="text-muted font-normal">(@Model.GecmisSozlesmeler.Count)</span></div>
             @if (!Model.GecmisSozlesmeler.Any())
             {
                 <div class="card text-center text-muted p-6 text-[13px]">Bu birime ait başka sözleşme yok.</div>
@@ -688,7 +690,7 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Unit</th>
+                                    <th>Birim</th>
                                     <th>Başlangıç</th>
                                     <th>Bitiş</th>
                                     <th class="num">Aylık Bedel</th>
@@ -752,7 +754,7 @@
                                     LeaseActivityType.Termination                => "Fesih",
                                     LeaseActivityType.TufeIncrease            => "TÜFE Artış",
                                     LeaseActivityType.KdvUpdate        => "KDV Güncelleme",
-                                    LeaseActivityType.ChargeRegeneration => "Charge Yeniden Üretim",
+                                    LeaseActivityType.ChargeRegeneration => "Tahakkuk Yeniden Üretim",
                                     _ => islem.ActivityType.ToString()
                                 };
                                 string islemBadgeCls = islem.ActivityType switch {
@@ -916,7 +918,7 @@
                                                     <thead class="bg-slate-50 border-b border-slate-200">
                                                         <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
                                                             <th class="p-2 px-3 text-left">Açıklama</th>
-                                                            <th class="p-2 px-3 text-right">Unit</th>
+                                                            <th class="p-2 px-3 text-right">Birim</th>
                                                             <th class="p-2 px-3 text-right">Amount</th>
                                                             <th class="p-2 px-3 text-right text-muted">KDV</th>
                                                             <th class="p-2 px-3 text-right">Toplam</th>
@@ -939,11 +941,11 @@
                                                             string kaynakLabel = k.SourceType switch {
                                                                 LineItemSourceType.UndefinedRate    => "Tanımsız Tarife",
                                                                 LineItemSourceType.LeaseRateOverride  => "Sözleşme Tarifesi",
-                                                                LineItemSourceType.UnitRateOverride     => "Unit Tarifesi",
+                                                                LineItemSourceType.UnitRateOverride     => "Birim Tarifesi",
                                                                 LineItemSourceType.PropertyRateOverride  => "Taşınmaz Tarifesi",
                                                                 LineItemSourceType.RateSchedule       => "Genel Tarife",
                                                                 LineItemSourceType.ManualInput       => "Manuel Giriş",
-                                                                LineItemSourceType.ReservationRule => "Reservation Kuralı",
+                                                                LineItemSourceType.ReservationRule => "Rezervasyon Kuralı",
                                                                 _                                 => "Bilinmiyor"
                                                             };
                                                             <tr class="border-t border-slate-100 last:border-0">
@@ -1253,7 +1255,7 @@
             </div>
             <div class="bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5 mb-5 text-[12.5px] text-slate-600 space-y-1">
                 <div class="flex justify-between"><span class="text-muted">Kiracı</span><span class="font-semibold">@s.TenantDisplayName</span></div>
-                <div class="flex justify-between"><span class="text-muted">Unit</span><span class="font-semibold">@s.UnitName</span></div>
+                <div class="flex justify-between"><span class="text-muted">Birim</span><span class="font-semibold">@s.UnitName</span></div>
                 <div class="flex justify-between"><span class="text-muted">Neden</span><span class="font-semibold" x-text="fesihNedeniSecim"></span></div>
             </div>
             <div class="flex gap-2.5">
@@ -1264,13 +1266,13 @@
     </div>
 </div>
 
-<!-- MODAL: Charge Yeniden Üret -->
+<!-- MODAL: Tahakkuk Yeniden Üret -->
 <div x-show="showYenidenUret" x-cloak
     class="fixed inset-0 bg-black/45 z-[1000] flex items-center justify-center p-5"
     @@click.self="showYenidenUret = false">
     <div class="bg-white rounded-2xl w-full max-w-[680px] p-7 max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center mb-5">
-            <div class="text-lg font-bold">Charge Yeniden Üret</div>
+            <div class="text-lg font-bold">Tahakkuk Yeniden Üret</div>
             <button @@click="showYenidenUret = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
         </div>
 
@@ -1291,7 +1293,7 @@
                 </span>
             </div>
             <div class="flex justify-between items-center">
-                <span class="font-medium text-slate-500">Ödenmemiş Charge Sayısı:</span>
+                <span class="font-medium text-slate-500">Ödenmemiş Tahakkuk Sayısı:</span>
                 <span class="font-semibold text-amber-600">@Model.OdenmemisTahakkukSayisi adet</span>
             </div>
         </div>
@@ -1313,7 +1315,7 @@
             <!-- Dinamik Charge Önizleme -->
             <div class="mt-4 mb-4 border border-slate-200 rounded-xl overflow-hidden text-xs" x-show="yenidenUretBaslangicTarihi">
                 <div class="bg-slate-50 border-b border-slate-200 px-3 py-2 font-semibold text-slate-700 flex justify-between items-center">
-                    <span>Charge Etki Önizlemesi</span>
+                    <span>Tahakkuk Etki Önizlemesi</span>
                     <span class="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-normal" x-text="`Toplam: ${tahakkuklar.length}`"></span>
                 </div>
                 

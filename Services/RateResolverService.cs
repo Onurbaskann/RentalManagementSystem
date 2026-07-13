@@ -9,7 +9,7 @@ public class RateResolverService : IRateResolverService
     private readonly ISozlesmeTarifeRepository _sozlesmeTarifeRepo;
     private readonly IUnitRateRepository _unitRateRepo;
     private readonly ITasinmazTarifeRepository _tasinmazTarifeRepo;
-    private readonly IGenelTarifeRepository _genelTarifeRepo;
+    private readonly IRateScheduleRepository _rateScheduleRepo;
     private readonly ILeaseRepository _sozlesmeRepo;
     private readonly IUnitRepository _birimRepo;
     private readonly ITenantRepository _kiraciRepo;
@@ -18,7 +18,7 @@ public class RateResolverService : IRateResolverService
         ISozlesmeTarifeRepository sozlesmeTarifeRepo,
         IUnitRateRepository unitRateRepo,
         ITasinmazTarifeRepository tasinmazTarifeRepo,
-        IGenelTarifeRepository genelTarifeRepo,
+        IRateScheduleRepository rateScheduleRepo,
         ILeaseRepository sozlesmeRepo,
         IUnitRepository birimRepo,
         ITenantRepository kiraciRepo)
@@ -26,7 +26,7 @@ public class RateResolverService : IRateResolverService
         _sozlesmeTarifeRepo = sozlesmeTarifeRepo;
         _unitRateRepo = unitRateRepo;
         _tasinmazTarifeRepo = tasinmazTarifeRepo;
-        _genelTarifeRepo = genelTarifeRepo;
+        _rateScheduleRepo = rateScheduleRepo;
         _sozlesmeRepo = sozlesmeRepo;
         _birimRepo = birimRepo;
         _kiraciRepo = kiraciRepo;
@@ -75,7 +75,7 @@ public class RateResolverService : IRateResolverService
 
         if (!tenantCategoryId.HasValue) return null;
 
-        var kalem = await _genelTarifeRepo.GetRateAsync(tenantCategoryId.Value, chargeTypeId, donem.Year);
+        var kalem = await _rateScheduleRepo.GetRateAsync(tenantCategoryId.Value, chargeTypeId, donem.Year);
         if (kalem == null) return null;
 
         return Wrap(kalem, LineItemSourceType.RateSchedule);

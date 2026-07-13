@@ -1,10 +1,10 @@
-@model KiraTakip.Models.ViewModels.ManuelBorcCreateViewModel
+﻿@model KiraTakip.Models.ViewModels.ManuelBorcCreateViewModel
 @using KiraTakip.Models
 @using System.Text.Json
 @{
     ViewData["Title"] = "Manuel Borç Ekle";
 
-    var sozlesmeJson = JsonSerializer.Serialize(Model.AktifSozlesmeler.Select(s => new {
+    var sozlesmeJson = JsonSerializer.Serialize(Model.ActiveLeases.Select(s => new {
         id = s.Id,
         tenantId = s.TenantId,
         unitId = s.UnitId,
@@ -32,23 +32,23 @@
                 <span>Kiracı ve Sözleşme</span>
             </div>
 
-            <input type="hidden" name="KiraciId" :value="tenantId" />
-            <input type="hidden" name="SozlesmeId" :value="leaseId || ''" />
+            <input type="hidden" name="TenantId" :value="tenantId" />
+            <input type="hidden" name="LeaseId" :value="leaseId || ''" />
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div class="form-group mb-0">
-                    <label class="form-label">Kiracı <span class="text-red-500">*</span></label>
-                    <select class="form-control" x-model="tenantId" @@change="kiraciDegisti()">
-                        <option value="0">— Kiracı seçin —</option>
-                        <template x-for="k in benzersizKiraciler" :key="k.id">
-                            <option :value="k.id" x-text="k.kiraciAdi"></option>
-                        </template>
-                    </select>
-                    <span class="form-error" x-show="@(ViewData.ModelState["KiraciId"]?.Errors.Count > 0 ? "true" : "false")">
-                        @(ViewData.ModelState["KiraciId"]?.Errors.FirstOrDefault()?.ErrorMessage)
-                    </span>
-                </div>
+            <div class="form-group mb-4">
+                <label class="form-label">Kiracı <span class="text-red-500">*</span></label>
+                <select class="form-control" x-model.number="tenantId" @@change="kiraciDegisti()">
+                    <option value="0">— Kiracı seçin —</option>
+                    <template x-for="k in benzersizKiraciler" :key="k.tenantId">
+                        <option :value="k.tenantId" x-text="k.kiraciAdi"></option>
+                    </template>
+                </select>
+                <span class="form-error" x-show="@(ViewData.ModelState["KiraciId"]?.Errors.Count > 0 ? "true" : "false")">
+                    @(ViewData.ModelState["KiraciId"]?.Errors.FirstOrDefault()?.ErrorMessage)
+                </span>
+            </div>
 
+            <template x-if="tenantId > 0 && filtreliSozlesmeler.length > 0">
                 <div class="form-group mb-0">
                     <label class="form-label">Sözleşme <span class="text-muted font-normal">(opsiyonel)</span></label>
                     <select class="form-control" x-model.number="leaseId" @@change="sozlesmeDegisti()">
@@ -57,13 +57,17 @@
                             <option :value="s.id" x-text="s.birimAdi"></option>
                         </template>
                     </select>
+                    <div class="form-hint">Sözleşme seçilirse birim otomatik dolar.</div>
                 </div>
-            </div>
+            </template>
+            <template x-if="tenantId > 0 && filtreliSozlesmeler.length === 0">
+                <div class="text-[12.5px] text-muted italic">Bu kiracının aktif sözleşmesi bulunmuyor.</div>
+            </template>
 
             <template x-if="leaseId > 0 && unitId > 0 && unitId != sozlesmeBirimId">
                 <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-[13px] text-amber-800 mb-1">
                     <svg class="w-4 h-4 mt-0.5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-                    <span>Seçilen unit, sözleşmenin unit'inden farklı. Bu doğruysa devam edebilirsiniz.</span>
+                    <span>Seçilen birim, sözleşmenin biriminden farklı. Bu doğruysa devam edebilirsiniz.</span>
                 </div>
             </template>
         </div>
@@ -71,19 +75,19 @@
         <div class="card mb-4">
             <div class="text-lg font-bold mb-5 flex items-center gap-2">
                 <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
-                <span>Unit</span>
+                <span>Birim</span>
             </div>
 
             <div class="form-group mb-0">
-                <label class="form-label">Unit <span class="text-red-500">*</span></label>
-                <select class="form-control" name="BirimId" x-model.number="unitId">
-                    <option value="0">— Unit seçin —</option>
+                <label class="form-label">Birim <span class="text-red-500">*</span></label>
+                <select class="form-control" name="UnitId" x-model.number="unitId">
+                    <option value="0">— Birim seçin —</option>
                     @foreach (var b in Model.Units)
                     {
-                        <option value="@b.Id">@b.TasinmazAd — @b.Ad@(b.BirimNo != null ? " (" + b.BirimNo + ")" : "")</option>
+                        <option value="@b.Id">@b.PropertyName — @b.Name@(b.UnitNo != null ? " (" + b.UnitNo + ")" : "")</option>
                     }
                 </select>
-                <span asp-validation-for="BirimId" class="form-error"></span>
+                <span asp-validation-for="UnitId" class="form-error"></span>
             </div>
         </div>
 
@@ -119,14 +123,14 @@
             </div>
 
             <div class="form-group mb-4">
-                <label asp-for="Aciklama" class="form-label">Açıklama <span class="text-red-500">*</span></label>
-                <input asp-for="Aciklama" type="text" class="form-control" placeholder="Ör: Anahtar bedeli, hasar tazminatı…" />
-                <span asp-validation-for="Aciklama" class="form-error"></span>
+                <label asp-for="Description" class="form-label">Açıklama <span class="text-red-500">*</span></label>
+                <input asp-for="Description" type="text" class="form-control" placeholder="Ör: Anahtar bedeli, hasar tazminatı…" />
+                <span asp-validation-for="Description" class="form-error"></span>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div class="form-group mb-0">
-                    <label asp-for="Amount" class="form-label">Amount (₺) <span class="text-red-500">*</span></label>
+                    <label asp-for="Amount" class="form-label">Tutar (₺) <span class="text-red-500">*</span></label>
                     <input asp-for="Amount" type="number" step="0.01" class="form-control"
                            placeholder="0,00" x-model.number="tutar" x-on:input="hesapla()" />
                     <span asp-validation-for="Amount" class="form-error"></span>
@@ -136,7 +140,7 @@
                     <label class="form-label">KDV</label>
                     <div class="flex items-center gap-4 pt-1">
                         <label class="flex items-center gap-2 cursor-pointer text-[13.5px] font-medium">
-                            <input asp-for="KdvUygulanacakMi" type="checkbox" x-model="kdvAktif" x-on:change="hesapla()" class="w-4 h-4 accent-primary cursor-pointer" />
+                            <input asp-for="IsKdvApplied" type="checkbox" x-model="kdvAktif" x-on:change="hesapla()" class="w-4 h-4 accent-primary cursor-pointer" />
                             KDV uygula
                         </label>
                         <template x-if="kdvAktif">
@@ -170,9 +174,9 @@
             </template>
 
             <div class="form-group mb-0">
-                <label asp-for="Not" class="form-label">Not <span class="text-muted font-normal">(opsiyonel)</span></label>
-                <textarea asp-for="Not" class="form-control" rows="2" placeholder="İç not, açıklama…"></textarea>
-                <span asp-validation-for="Not" class="form-error"></span>
+                <label asp-for="Note" class="form-label">Not <span class="text-muted font-normal">(opsiyonel)</span></label>
+                <textarea asp-for="Note" class="form-control" rows="2" placeholder="İç not, açıklama…"></textarea>
+                <span asp-validation-for="Note" class="form-error"></span>
             </div>
         </div>
 
@@ -191,11 +195,11 @@
 
     function manuelBorcForm() {
         return {
-            tenantId: @Model.KiraciId,
-            leaseId: @(Model.SozlesmeId.HasValue ? Model.SozlesmeId.Value.ToString() : "0"),
-            unitId: @Model.BirimId,
+            tenantId: @Model.TenantId,
+            leaseId: @(Model.LeaseId.HasValue ? Model.LeaseId.Value.ToString() : "0"),
+            unitId: @Model.UnitId,
             tutar: @(Model.Amount > 0 ? Model.Amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "0"),
-            kdvAktif: @(Model.KdvUygulanacakMi ? "true" : "false"),
+            kdvAktif: @(Model.IsKdvApplied ? "true" : "false"),
             kdvOrani: @Model.KdvRate.ToString("F0", System.Globalization.CultureInfo.InvariantCulture),
             kdvTutari: 0,
             toplamTutar: 0,
@@ -210,7 +214,7 @@
             },
 
             get filtreliSozlesmeler() {
-                if (!this.tenantId || this.tenantId == 0) return sozlesmeler;
+                if (!this.tenantId || this.tenantId == 0) return [];
                 return sozlesmeler.filter(s => s.tenantId == this.tenantId);
             },
 
@@ -225,12 +229,7 @@
             },
 
             kiraciDegisti() {
-                if (this.leaseId > 0) {
-                    const s = sozlesmeler.find(x => x.id == this.leaseId);
-                    if (s && s.tenantId != this.tenantId) {
-                        this.leaseId = 0;
-                    }
-                }
+                this.leaseId = 0;
             },
 
             sozlesmeDegisti() {

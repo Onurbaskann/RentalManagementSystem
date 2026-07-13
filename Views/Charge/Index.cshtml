@@ -2,7 +2,7 @@
 @using KiraTakip.Models
 @using KiraTakip.Models.Common
 @{
-    ViewData["Title"] = "Charges";
+    ViewData["Title"] = "Tahakkuklar";
     bool canCreate = User.HasPermission(PermissionCatalog.Payment.Create);
     string durum = ViewBag.Status ?? "tum";
     var q = (TableQuery)ViewBag.Query;
@@ -12,7 +12,7 @@
 
 <div class="page-header flex items-center justify-between">
     <div>
-        <div class="page-title">Charges</div>
+        <div class="page-title">Tahakkuklar</div>
         <div class="page-subtitle">@Model.Total dönem kaydı listeleniyor</div>
     </div>
 </div>
@@ -41,7 +41,7 @@
     @foreach (var (key, label) in filters)
     {
         bool isActive = durum == key;
-        var url = key == "tum" ? "/Charge" : $"/Charge?durum={key}";
+        var url = key == "tum" ? "/Charge" : $"/Charge?status={key}";
         <a href="@url" class="btn btn-sm @(isActive ? "btn-primary" : "btn-secondary text-slate-600 bg-white border-slate-200")">@label</a>
     }
 </div>
@@ -49,7 +49,7 @@
 {
     <div class="text-[12px] text-slate-400 mb-4 -mt-2">
         @cancelledCount iptal edilmiş kayıt varsayılan görünümde gizleniyor.
-        <a href="/Charge?durum=iptal" class="text-slate-500 hover:text-primary underline ml-1">Görüntüle →</a>
+        <a href="/Charge?status=iptal" class="text-slate-500 hover:text-primary underline ml-1">Görüntüle →</a>
     </div>
 }
 
@@ -84,7 +84,7 @@
 
         <select name="unitId" x-model="unitId" x-show="filtrelenmisBirimler.length > 0"
                 class="form-control w-44 text-xs font-medium" x-cloak>
-            <option value="">— Tüm Units —</option>
+            <option value="">— Tüm Birimler —</option>
             <template x-for="b in filtrelenmisBirimler" :key="b.id">
                 <option :value="b.id" x-text="b.ad" :selected="b.id.toString() === unitId"></option>
             </template>
@@ -102,7 +102,7 @@
             <option value="">— Kaynak —</option>
             <option value="lease" selected="@(q.Source == "lease" ? "selected" : null)">Sözleşme</option>
             <option value="manuel" selected="@(q.Source == "manuel" ? "selected" : null)">Manuel</option>
-            <option value="reservation" selected="@(q.Source == "reservation" ? "selected" : null)">Reservation</option>
+            <option value="reservation" selected="@(q.Source == "reservation" ? "selected" : null)">Rezervasyon</option>
         </select>
 
         <select name="year" class="form-control w-24 text-xs font-medium">
@@ -133,7 +133,7 @@
             <input type="number" name="max" value="@q.Max?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-24 text-xs font-medium" placeholder="Max ₺" />
         </div>
 
-        @if (durum != "tum") { <input type="hidden" name="durum" value="@durum" /> }
+        @if (durum != "tum") { <input type="hidden" name="status" value="@durum" /> }
         @{
             int aktifFiltreSayisi = (string.IsNullOrEmpty(q.Q) ? 0 : 1)
                 + (q.PropertyId.HasValue ? 1 : 0)
@@ -153,7 +153,7 @@
         </button>
         @if (aktifFiltreSayisi > 0)
         {
-            <a href="/Charge@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
+            <a href="/Charge@(durum != "tum" ? $"?status={durum}" : "")" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
         }
         </div>
     </form>
@@ -163,7 +163,7 @@
                 <tr>
                     <th class="w-36">Dönem</th>
                     <th>Kiracı</th>
-                    <th>Taşınmaz / Unit</th>
+                    <th>Taşınmaz / Birim</th>
                     <th class="w-28 cell-center">Vade</th>
                     <th class="w-32 num">Borç</th>
                     <th class="w-32 num">Ödenen</th>
@@ -198,7 +198,7 @@
                     };
                     string tahakkukKaynakLabel = t.SourceType switch {
                         ChargeSourceType.Manual      => "Manuel",
-                        ChargeSourceType.Reservation => "Reservation",
+                        ChargeSourceType.Reservation => "Rezervasyon",
                         _                              => "Sözleşme"
                     };
                     <tr @@click="open[@t.Id] = !open[@t.Id]" class="cursor-pointer transition-colors hover:bg-slate-50">
@@ -250,7 +250,7 @@
                                                 <thead class="bg-slate-50 border-b border-slate-200">
                                                     <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
                                                         <th class="p-2 px-3 text-left">Açıklama</th>
-                                                        <th class="p-2 px-3 text-right">Unit</th>
+                                                        <th class="p-2 px-3 text-right">Birim</th>
                                                         <th class="p-2 px-3 text-right">Amount</th>
                                                         <th class="p-2 px-3 text-right text-muted">KDV</th>
                                                         <th class="p-2 px-3 text-right">Toplam</th>
@@ -273,11 +273,11 @@
                                                         string kaynakLabel = k.SourceType switch {
                                                             LineItemSourceType.UndefinedRate    => "Tarife Yok",
                                                             LineItemSourceType.LeaseRateOverride  => "Sözleşme",
-                                                            LineItemSourceType.UnitRateOverride     => "Unit",
+                                                            LineItemSourceType.UnitRateOverride     => "Birim",
                                                             LineItemSourceType.PropertyRateOverride  => "Taşınmaz",
                                                             LineItemSourceType.RateSchedule       => "Genel",
                                                             LineItemSourceType.ManualInput       => "Manuel",
-                                                            LineItemSourceType.ReservationRule => "Reservation",
+                                                            LineItemSourceType.ReservationRule => "Rezervasyon",
                                                             _                                 => "Bilinmiyor"
                                                         };
                                                         <tr class="border-t border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
@@ -302,7 +302,7 @@
                 }
                 @if (Model.Total == 0)
                 {
-                    <tr><td colspan="10" class="text-center py-16 text-muted italic">Filtreye uygun charge kaydı bulunamadı.</td></tr>
+                    <tr><td colspan="10" class="text-center py-16 text-muted italic">Filtreye uygun tahakkuk kaydı bulunamadı.</td></tr>
                 }
             </tbody>
         </table>

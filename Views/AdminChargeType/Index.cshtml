@@ -34,7 +34,7 @@
         <button @@click="filtre='AylikSabit'" :class="filtre==='AylikSabit' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Aylık Sabit</button>
         <button @@click="filtre='IlkAyTekSeferlik'" :class="filtre==='IlkAyTekSeferlik' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">İlk Ay Tek Seferlik</button>
         <button @@click="filtre='KullaniciManuel'" :class="filtre==='KullaniciManuel' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Kullanıcı Manuel</button>
-        <button @@click="filtre='RezervasyonOzel'" :class="filtre==='RezervasyonOzel' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Reservation Özel</button>
+        <button @@click="filtre='RezervasyonOzel'" :class="filtre==='RezervasyonOzel' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Rezervasyon Özel</button>
     </div>
 
     <div class="card p-0 overflow-hidden mt-3">
@@ -58,7 +58,7 @@
                             ChargeTypeBehavior.MonthlyFixed        => ("Aylık Sabit",         "text-blue-700"),
                             ChargeTypeBehavior.FirstMonthOneTime  => ("İlk Ay Tek Seferlik", "text-purple-700"),
                             ChargeTypeBehavior.UserManual   => ("Kullanıcı Manuel",    "text-amber-700"),
-                            ChargeTypeBehavior.ReservationSpecific   => ("Reservation Özel",    "text-teal-700"),
+                            ChargeTypeBehavior.ReservationSpecific   => ("Rezervasyon Özel",    "text-teal-700"),
                             _                                   => (bt.Davranis.ToString(), "text-slate-700")
                         };
                         <tr x-show="filtre==='' || filtre==='@davranisKey'" x-cloak>

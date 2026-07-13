@@ -1,7 +1,7 @@
 @model ChargeDetailDto
 @using KiraTakip.Models
 @{
-    ViewData["Title"] = $"Charge #{Model.Id}";
+    ViewData["Title"] = $"Tahakkuk #{Model.Id}";
 
     var kalan = Model.TotalAmount - Model.PaidAmount;
 
@@ -36,7 +36,7 @@
 
 <!-- Breadcrumb -->
 <div class="flex items-center justify-between mb-5">
-    <a href="/Charge" class="text-[12.5px] text-muted no-underline hover:text-primary transition-colors">← Charges</a>
+    <a href="/Charge" class="text-[12.5px] text-muted no-underline hover:text-primary transition-colors">← Tahakkuklar</a>
     <div class="flex gap-2">
         @if (Model.LeaseId != null)
         {
@@ -83,7 +83,7 @@
             @if (Model.TenantId != null && Model.TenantId > 0) {
                 <a href="/Tenant/Detay/@Model.TenantId.ToHashId()" class="font-semibold no-underline hover:underline">@Model.TenantDisplayName</a>
             } else {
-                <span class="font-semibold">Reservation Sahibi</span>
+                <span class="font-semibold">Rezervasyon Sahibi</span>
             }
         </div>
         <div>
@@ -95,8 +95,8 @@
             }
         </div>
         <div>
-            <span class="text-muted">Unit: </span>
-            <span class="font-semibold">@(Model.UnitName ?? "Reservation")</span>
+            <span class="text-muted">Birim: </span>
+            <span class="font-semibold">@(Model.UnitName ?? "Rezervasyon")</span>
         </div>
         @if (Model.LeaseId != null) {
             <div>
@@ -111,7 +111,7 @@
 <div class="card p-0 overflow-hidden mb-4">
     <div class="p-[14px_20px] border-b border-slate-200">
         <div class="text-sm font-bold">Kalem Dökümü</div>
-        <div class="text-xs text-muted mt-0.5">Charge oluşturulma tarihi: @Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</div>
+        <div class="text-xs text-muted mt-0.5">Tahakkuk oluşturulma tarihi: @Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</div>
     </div>
     @if (Model.LineItems.Any())
     {
@@ -121,7 +121,7 @@
                     <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
                         <th class="p-2 px-3 text-left">Açıklama</th>
                         <th class="p-2 px-3 text-left">Hesaplama</th>
-                        <th class="p-2 px-3 text-right">Unit</th>
+                        <th class="p-2 px-3 text-right">Birim</th>
                         <th class="p-2 px-3 text-right">Amount</th>
                         <th class="p-2 px-3 text-right text-muted">KDV (%)</th>
                         <th class="p-2 px-3 text-right text-muted">KDV Amountı</th>
@@ -145,21 +145,21 @@
                         string kaynakLabel = k.SourceType switch {
                             LineItemSourceType.UndefinedRate    => "Tanımsız Tarife",
                             LineItemSourceType.LeaseRateOverride  => "Sözleşme Tarifesi",
-                            LineItemSourceType.UnitRateOverride     => "Unit Tarifesi",
+                            LineItemSourceType.UnitRateOverride     => "Birim Tarifesi",
                             LineItemSourceType.PropertyRateOverride  => "Taşınmaz Tarifesi",
                             LineItemSourceType.RateSchedule       => "Genel Tarife",
                             LineItemSourceType.ManualInput       => "Manuel Giriş",
-                            LineItemSourceType.ReservationRule => "Reservation Kuralı",
+                            LineItemSourceType.ReservationRule => "Rezervasyon Kuralı",
                             _                                 => "Bilinmiyor"
                         };
                         string kaynakTip = k.SourceType switch {
                             LineItemSourceType.UndefinedRate    => "Fiyat tanımı bulunamadığı için 0₺ olarak üretildi.",
                             LineItemSourceType.LeaseRateOverride  => "Sözleşmeye özel tarife fiyatı kullanıldı.",
-                            LineItemSourceType.UnitRateOverride     => "Unit düzeyinde özel fiyat kullanıldı.",
+                            LineItemSourceType.UnitRateOverride     => "Birim düzeyinde özel fiyat kullanıldı.",
                             LineItemSourceType.PropertyRateOverride  => "Taşınmaz ve kiracı kategorisine özel matris fiyatı kullanıldı.",
                             LineItemSourceType.RateSchedule       => "Genel tarife fiyatı uygulandı.",
                             LineItemSourceType.ManualInput       => "Kullanıcı tarafından manuel olarak girildi.",
-                            LineItemSourceType.ReservationRule => "Reservation kuralından aktarıldı.",
+                            LineItemSourceType.ReservationRule => "Rezervasyon kuralından aktarıldı.",
                             _                                 => ""
                         };
                         <tr class="border-t border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
@@ -189,7 +189,7 @@
     }
     else
     {
-        <div class="p-8 text-center text-muted">Kalem bilgisi yok (eski charge).</div>
+        <div class="p-8 text-center text-muted">Kalem bilgisi yok (eski tahakkuk).</div>
     }
 </div>
 

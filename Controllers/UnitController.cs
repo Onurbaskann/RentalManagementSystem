@@ -30,24 +30,24 @@ public class UnitController : Controller
     }
 
     [Authorize(Policy = PermissionCatalog.Unit.OverrideRate)]
-    [HttpGet("{id:int}/OzelFiyat")]
+    [HttpGet("{id}/OzelFiyat")]
     public async Task<IActionResult> OzelFiyat(int id)
     {
         var unit = await _birimService.GetByIdAsync(id);
 
         if (unit == null) return NotFound();
 
-        if (!_provider.IsInScope(unit.TasinmazId)) return Forbid();
+        if (!_provider.IsInScope(unit.PropertyId)) return Forbid();
 
         var vm = new BirimOzelFiyatViewModel
         {
             UnitId = unit.Id,
-            UnitName = unit.Ad,
-            PropertyId = unit.TasinmazId,
-            PropertyName = unit.TasinmazAd,
-            IsLeasable = unit.KiralanabilirMi,
-            IsReservable = unit.RezervasyonYapilabilirMi,
-            UnitTypeAd = unit.UnitTypeAd
+            UnitName = unit.Name,
+            PropertyId = unit.PropertyId,
+            PropertyName = unit.PropertyName,
+            IsLeasable = unit.CanBeRented,
+            IsReservable = unit.CanBeReserved,
+            UnitTypeName = unit.UnitTypeName
         };
 
         if (vm.IsLeasable)
@@ -58,8 +58,8 @@ public class UnitController : Controller
                 .ToListAsync();
 
             var kategoriler = await _ctx.Kategoriler
-                .Where(k => k.Tipi == KategoriTipi.Tenant && k.IsActive)
-                .OrderBy(k => k.Sira)
+                .Where(k => k.Type == CategoryType.Tenant && k.IsActive)
+                .OrderBy(k => k.Order)
                 .ToListAsync();
 
             var mevcutRateler = await _ctx.UnitRates
@@ -67,11 +67,11 @@ public class UnitController : Controller
                 .ToListAsync();
 
             var tasinmazFiyatlar = await _ctx.TasinmazTarifeler
-                .Where(f => f.PropertyId == unit.TasinmazId)
+                .Where(f => f.PropertyId == unit.PropertyId)
                 .ToListAsync();
 
             var genelFiyatlar = await _ctx.GenelTarifeler
-                .Where(g => g.Yil == DateTime.Now.Year)
+                .Where(g => g.Year == DateTime.Now.Year)
                 .ToListAsync();
 
             // Yürürlükteki tüm üst tarifeleri tek bir listede topla
@@ -80,12 +80,12 @@ public class UnitController : Controller
             {
                 foreach (var bt in aktifBorcTipleri)
                 {
-                    var tasinmazRate = tasinmazFiyatlar.FirstOrDefault(tf => tf.KiraciKategoriId == kat.Id && tf.ChargeTypeId == bt.Id);
-                    var genelRate = genelFiyatlar.FirstOrDefault(gf => gf.KiraciKategoriId == kat.Id && gf.ChargeTypeId == bt.Id);
+                    var tasinmazRate = tasinmazFiyatlar.FirstOrDefault(tf => tf.TenantCategoryId == kat.Id && tf.ChargeTypeId == bt.Id);
+                    var genelRate = genelFiyatlar.FirstOrDefault(gf => gf.TenantCategoryId == kat.Id && gf.ChargeTypeId == bt.Id);
 
                     decimal deger = 0;
                     decimal kdv = 0;
-                    CalculationMethod yontem = (bt.Code == Models.Entities.BorcTipiConsts.Kira ? CalculationMethod.M2 : CalculationMethod.Fixed);
+                    CalculationMethod yontem = (bt.Code == Models.Constants.BorcTipiConsts.Kira ? CalculationMethod.M2 : CalculationMethod.Fixed);
                     string kaynak = "Tanımsız";
 
                     if (tasinmazRate != null)
@@ -109,24 +109,24 @@ public class UnitController : Controller
 
                     parentTarifeSatirlar.Add(new ParentTarifeSatir
                     {
-                        KategoriAd = kat.Ad,
+                        CategoryName = kat.Name,
                         ChargeTypeName = bt.Name,
                         CalculationMethod = yontem,
                         UnitValue = deger,
                         KdvRate = kdv,
-                        Kaynak = kaynak
+                        Source = kaynak
                     });
                 }
             }
 
             vm.ParentTarife = new ParentTarifeKartViewModel
             {
-                KaynakAdi = "Yürürlükteki Üst Tarifeler (Varsayılanlar)",
-                Aciklama = "Taşınmaz ve Genel Tarifelerin birleşimi",
-                Satirlar = parentTarifeSatirlar
+                SourceName = "Yürürlükteki Üst Tarifeler (Varsayılanlar)",
+                Description = "Taşınmaz ve Genel Tarifelerin birleşimi",
+                Rows = parentTarifeSatirlar
             };
 
-            vm.Kolonlar = aktifBorcTipleri.Select(bt => new UnitRateColumn
+            vm.Columns = aktifBorcTipleri.Select(bt => new UnitRateColumn
             {
                 ChargeTypeId = bt.Id,
                 ChargeTypeName = bt.Name,
@@ -134,21 +134,21 @@ public class UnitController : Controller
                 ChargeTypeBehavior = bt.Behavior
             }).ToList();
 
-            vm.Satirlar = kategoriler.Select(kat => new UnitRateCategoryRow
+            vm.Rows = kategoriler.Select(kat => new UnitRateCategoryRow
             {
                 TenantCategoryId = kat.Id,
-                TenantCategoryName = kat.Ad,
+                TenantCategoryName = kat.Name,
                 Hucreler = aktifBorcTipleri.Select(bt =>
                 {
                     var rate = mevcutRateler.FirstOrDefault(r =>
                         r.TenantCategoryId == kat.Id && r.ChargeTypeId == bt.Id);
 
-                    var tasinmazRate = tasinmazFiyatlar.FirstOrDefault(tf => tf.KiraciKategoriId == kat.Id && tf.ChargeTypeId == bt.Id);
-                    var genelRate = genelFiyatlar.FirstOrDefault(gf => gf.KiraciKategoriId == kat.Id && gf.ChargeTypeId == bt.Id);
+                    var tasinmazRate = tasinmazFiyatlar.FirstOrDefault(tf => tf.TenantCategoryId == kat.Id && tf.ChargeTypeId == bt.Id);
+                    var genelRate = genelFiyatlar.FirstOrDefault(gf => gf.TenantCategoryId == kat.Id && gf.ChargeTypeId == bt.Id);
 
                     decimal varsayilanDeger = 0;
                     decimal varsayilanKdv = 0;
-                    CalculationMethod varsayilanYontem = (bt.Code == Models.Entities.BorcTipiConsts.Kira ? CalculationMethod.M2 : CalculationMethod.Fixed);
+                    CalculationMethod varsayilanYontem = (bt.Code == Models.Constants.BorcTipiConsts.Kira ? CalculationMethod.M2 : CalculationMethod.Fixed);
                     string kaynak = "Tanımsız";
 
                     if (tasinmazRate != null)
@@ -172,7 +172,7 @@ public class UnitController : Controller
                         TenantCategoryId = kat.Id,
                         ChargeTypeId = bt.Id,
                         IsCustomRateActive = rate != null,
-                        CalculationMethod = rate?.CalculationMethod ?? (bt.Code == Models.Entities.BorcTipiConsts.Kira ? CalculationMethod.M2 : CalculationMethod.Fixed),
+                        CalculationMethod = rate?.CalculationMethod ?? (bt.Code == Models.Constants.BorcTipiConsts.Kira ? CalculationMethod.M2 : CalculationMethod.Fixed),
                         UnitValue = rate?.UnitValue ?? 0,
                         KdvRate = rate?.KdvRate ?? 0,
                         DefaultUnitValue = varsayilanDeger,
@@ -188,14 +188,14 @@ public class UnitController : Controller
             vm.OzelRezervasyonKural = await _ctx.RezervasyonTarifeler
                 .FirstOrDefaultAsync(r => r.UnitId == id);
 
-            vm.ParentRezervasyonTarife = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(DateTime.Now.Year);
+            vm.ParentReservationRateOverride = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(DateTime.Now.Year);
         }
 
         return View(vm);
     }
 
     [Authorize(Policy = PermissionCatalog.Unit.OverrideRate)]
-    [HttpPost("{id:int}/OzelFiyat")]
+    [HttpPost("{id}/OzelFiyat")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> OzelFiyat(int id, BirimOzelFiyatViewModel vm)
     {
@@ -203,7 +203,7 @@ public class UnitController : Controller
             .Where(r => r.UnitId == id)
             .ToListAsync();
 
-        foreach (var satir in vm.Satirlar)
+        foreach (var satir in vm.Rows)
         {
             foreach (var hucre in satir.Hucreler)
             {
@@ -245,16 +245,11 @@ public class UnitController : Controller
     }
 
     [Authorize(Policy = PermissionCatalog.Unit.OverrideRate)]
-    [HttpPost("{id:int}/RezKuralKaydet")]
+    [HttpPost("{id}/RezKuralKaydet")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> RezKuralKaydet(int id, RezervasyonTarifeKuralViewModel vm)
+    public async Task<IActionResult> RezKuralKaydet(int id, ReservationRateOverrideViewModel vm)
     {
-        if (!ModelState.IsValid)
-        {
-            TempData["Error"] = "Form alanlarını kontrol edin.";
-            return RedirectToAction(nameof(OzelFiyat), new { id });
-        }
-        vm.BirimId = id;
+        vm.UnitId = id;
         var (basarili, hata, _) = await _reservationService.SaveUcretKuralAsync(vm);
         TempData[basarili ? "Success" : "Error"] = basarili
             ? "Özel reservation kuralı kaydedildi."
@@ -263,7 +258,7 @@ public class UnitController : Controller
     }
 
     [Authorize(Policy = PermissionCatalog.Unit.OverrideRate)]
-    [HttpPost("{id:int}/RezKuralSifirla")]
+    [HttpPost("{id}/RezKuralSifirla")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RezKuralSifirla(int id)
     {

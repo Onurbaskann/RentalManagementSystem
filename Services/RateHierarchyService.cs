@@ -8,20 +8,20 @@ public class RateHierarchyService : IRateHierarchyService
 {
     private readonly ITasinmazTarifeRepository _tasinmazTarifeRepo;
     private readonly IUnitRateRepository _unitRateRepo;
-    private readonly IGenelTarifeRepository _genelTarifeRepo;
-    private readonly IRezervasyonTarifeRepository _rezervasyonTarifeRepo;
+    private readonly IRateScheduleRepository _rateScheduleRepo;
+    private readonly IReservationRateOverrideRepository _rezervasyonTarifeRepo;
     private readonly IUnitRepository _birimRepo;
 
     public RateHierarchyService(
         ITasinmazTarifeRepository tasinmazTarifeRepo,
         IUnitRateRepository unitRateRepo,
-        IGenelTarifeRepository genelTarifeRepo,
-        IRezervasyonTarifeRepository rezervasyonTarifeRepo,
+        IRateScheduleRepository rateScheduleRepo,
+        IReservationRateOverrideRepository rezervasyonTarifeRepo,
         IUnitRepository birimRepo)
     {
         _tasinmazTarifeRepo = tasinmazTarifeRepo;
         _unitRateRepo = unitRateRepo;
-        _genelTarifeRepo = genelTarifeRepo;
+        _rateScheduleRepo = rateScheduleRepo;
         _rezervasyonTarifeRepo = rezervasyonTarifeRepo;
         _birimRepo = birimRepo;
     }
@@ -55,10 +55,10 @@ public class RateHierarchyService : IRateHierarchyService
             if (fiyatlar.Count > 0)
                 return new ParentTarifeKartViewModel
                 {
-                    KaynakAdi = "Taşınmaz Tarifesi",
-                    Satirlar = fiyatlar.Select(f => new ParentTarifeSatir
+                    SourceName = "Taşınmaz Tarifesi",
+                    Rows = fiyatlar.Select(f => new ParentTarifeSatir
                     {
-                        KategoriAd = f.KiraciKategori.Ad,
+                        CategoryName = f.TenantCategory.Name,
                         ChargeTypeName = f.ChargeType.Name,
                         CalculationMethod = f.CalculationMethod,
                         UnitValue = f.UnitValue,
@@ -68,25 +68,25 @@ public class RateHierarchyService : IRateHierarchyService
         }
 
         // Her katman için sonuç: Genel Tarife
-        var kalemler = await _genelTarifeRepo.GetByYilKategoriForKartAsync(hedefYil, tenantCategoryId);
+        var kalemler = await _rateScheduleRepo.GetByYilKategoriForKartAsync(hedefYil, tenantCategoryId);
 
         return new ParentTarifeKartViewModel
         {
-            KaynakAdi = $"Genel Tarife - {hedefYil}",
-            Satirlar = kalemler
+            SourceName = $"Genel Tarife - {hedefYil}",
+            Rows = kalemler
         };
     }
 
-    public async Task<ParentRezervasyonTarifeKartViewModel?> GetRezervasyonParentForAsync(int? yil = null)
+    public async Task<ParentReservationRateOverrideCardViewModel?> GetRezervasyonParentForAsync(int? yil = null)
     {
         int hedefYil = yil ?? DateTime.Now.Year;
 
         var satirlar = await _rezervasyonTarifeRepo.GetGenelForKartAsync(hedefYil);
 
-        return new ParentRezervasyonTarifeKartViewModel
+        return new ParentReservationRateOverrideCardViewModel
         {
-            KaynakAdi = $"Reservation Tarifesi - {hedefYil}",
-            Satirlar = satirlar
+            SourceName = $"Rezervasyon Tarifesi - {hedefYil}",
+            Rows = satirlar
         };
     }
 }

@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Entities;
@@ -23,25 +23,25 @@ public class RoleService : IRoleService
         _securityService = securityService;
     }
 
-    public Task<List<Rol>> GetInternalRollerAsync()
+    public Task<List<Role>> GetInternalRollerAsync()
         => _db.Roller
               .Where(r => r.Scope == RoleScope.Internal)
               .OrderBy(r => r.IsSystemRole ? 0 : 1)
-              .ThenBy(r => r.Ad)
+              .ThenBy(r => r.Name)
               .ToListAsync();
 
-    public Task<Rol?> GetByIdAsync(int id)
+    public Task<Role?> GetByIdAsync(int id)
         => _db.Roller.FirstOrDefaultAsync(r => r.Id == id);
 
-    public async Task<Rol> CreateAsync(string ad, string? aciklama, string createdBy)
+    public async Task<Role> CreateAsync(string ad, string? aciklama, string createdBy)
     {
-        if (await _db.Roller.AnyAsync(r => r.Ad == ad && r.Scope == RoleScope.Internal && !r.IsDeleted))
+        if (await _db.Roller.AnyAsync(r => r.Name == ad && r.Scope == RoleScope.Internal && !r.IsDeleted))
             throw new InvalidOperationException($"'{ad}' adında bir rol zaten mevcut.");
 
-        var rol = new Rol
+        var rol = new Role
         {
-            Ad = ad,
-            Aciklama = aciklama,
+            Name = ad,
+            Description = aciklama,
             Scope = RoleScope.Internal,
             IsSystemRole = false,
             IsActive = true,
@@ -50,7 +50,7 @@ public class RoleService : IRoleService
         };
         _db.Roller.Add(rol);
         await _db.SaveChangesAsync();
-        await _auditService.LogAsync("Role.Created", "Rol", rol.Id.ToString(), ad);
+        await _auditService.LogAsync("Role.Created", "Role", rol.Id.ToString(), ad);
         return rol;
     }
 
@@ -61,14 +61,14 @@ public class RoleService : IRoleService
 
         if (!rol.IsSystemRole)
         {
-            if (await _db.Roller.AnyAsync(r => r.Ad == ad && r.Id != id && r.Scope == RoleScope.Internal && !r.IsDeleted))
+            if (await _db.Roller.AnyAsync(r => r.Name == ad && r.Id != id && r.Scope == RoleScope.Internal && !r.IsDeleted))
                 throw new InvalidOperationException($"'{ad}' adında bir rol zaten mevcut.");
-            rol.Ad = ad;
+            rol.Name = ad;
         }
 
-        rol.Aciklama = aciklama;
+        rol.Description = aciklama;
         await _db.SaveChangesAsync();
-        await _auditService.LogAsync("Role.Updated", "Rol", id.ToString(), ad);
+        await _auditService.LogAsync("Role.Updated", "Role", id.ToString(), ad);
     }
 
     public async Task SilAsync(int id, string deletedBy)
@@ -79,56 +79,56 @@ public class RoleService : IRoleService
         if (rol.IsSystemRole)
             throw new InvalidOperationException("Sistem rolleri silinemez.");
 
-        if (await _db.UserRoller.AnyAsync(ur => ur.RolId == id))
+        if (await _db.UserRoller.AnyAsync(ur => ur.RoleId == id))
             throw new InvalidOperationException("Bu role atanmış kullanıcı var. Önce kullanıcıların rolünü değiştirin.");
 
         rol.IsDeleted = true;
         rol.IsActive = false;
         await _db.SaveChangesAsync();
-        await _auditService.LogAsync("Role.Deleted", "Rol", id.ToString(), rol.Ad);
+        await _auditService.LogAsync("Role.Deleted", "Role", id.ToString(), rol.Name);
     }
 
     public Task<List<string>> GetRolPermissionsAsync(int rolId)
         => _db.RolPermissions
-              .Where(rp => rp.RolId == rolId)
+              .Where(rp => rp.RoleId == rolId)
               .Select(rp => rp.Permission)
               .ToListAsync();
 
     public async Task SetRolPermissionsAsync(int rolId, IEnumerable<string> permissions, string updatedBy)
     {
-        var existing = await _db.RolPermissions.Where(rp => rp.RolId == rolId).ToListAsync();
+        var existing = await _db.RolPermissions.Where(rp => rp.RoleId == rolId).ToListAsync();
         _db.RolPermissions.RemoveRange(existing);
 
         var validPerms = permissions.Where(p => PermissionCatalog.All.Contains(p)).Distinct();
         foreach (var perm in validPerms)
-            _db.RolPermissions.Add(new RolPermission { RolId = rolId, Permission = perm });
+            _db.RolPermissions.Add(new RolePermission { RoleId = rolId, Permission = perm });
 
         await _db.SaveChangesAsync();
 
         await _securityService.UpdateStampForRoleUsersAsync(rolId);
 
-        await _auditService.LogAsync("Role.Permission.Changed", "Rol", rolId.ToString(), updatedBy);
+        await _auditService.LogAsync("Role.Permission.Changed", "Role", rolId.ToString(), updatedBy);
     }
 
-    public Task<List<Rol>> GetKiraciRollerAsync(int tenantId)
+    public Task<List<Role>> GetKiraciRollerAsync(int tenantId)
         => _db.Roller
-              .Where(r => r.Scope == RoleScope.Tenant && (r.KiraciId == null || r.KiraciId == tenantId) && r.IsActive && !r.IsDeleted)
+              .Where(r => r.Scope == RoleScope.Tenant && (r.TenantId == null || r.TenantId == tenantId) && r.IsActive && !r.IsDeleted)
               .OrderBy(r => r.IsSystemRole ? 0 : 1)
-              .ThenBy(r => r.Ad)
+              .ThenBy(r => r.Name)
               .ToListAsync();
 
     public async Task EnsureGlobalKiraciRolleriAsync(string createdBy)
     {
         var now = DateTime.UtcNow;
 
-        var kiraciYonetici = await _db.Roller.FirstOrDefaultAsync(r => r.KiraciId == null && r.Ad == RoleNames.KiraciYoneticisi);
+        var kiraciYonetici = await _db.Roller.FirstOrDefaultAsync(r => r.TenantId == null && r.Name == RoleNames.KiraciYoneticisi);
         if (kiraciYonetici == null)
         {
-            kiraciYonetici = new Rol
+            kiraciYonetici = new Role
             {
-                Ad = RoleNames.KiraciYoneticisi,
+                Name = RoleNames.KiraciYoneticisi,
                 Scope = RoleScope.Tenant,
-                KiraciId = null,
+                TenantId = null,
                 IsSystemRole = true,
                 IsActive = true,
                 CreatedBy = createdBy,
@@ -137,10 +137,10 @@ public class RoleService : IRoleService
             _db.Roller.Add(kiraciYonetici);
             await _db.SaveChangesAsync();
         }
-        var mevcutKY = await _db.RolPermissions.Where(rp => rp.RolId == kiraciYonetici.Id).ToListAsync();
+        var mevcutKY = await _db.RolPermissions.Where(rp => rp.RoleId == kiraciYonetici.Id).ToListAsync();
         _db.RolPermissions.RemoveRange(mevcutKY);
         foreach (var perm in PermissionCatalog.TenantAll)
-            _db.RolPermissions.Add(new RolPermission { RolId = kiraciYonetici.Id, Permission = perm });
+            _db.RolPermissions.Add(new RolePermission { RoleId = kiraciYonetici.Id, Permission = perm });
 
         await _db.SaveChangesAsync();
     }

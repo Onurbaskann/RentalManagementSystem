@@ -86,7 +86,7 @@
         {
             <a href="/Charge" class="nav-item @(currentController is "Charge" or "Payment" ? "nav-item-active" : "")">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                Charges
+                Tahakkuklar
             </a>
             <a href="/BankTransaction" class="nav-item nav-item-sub @(currentController == "BankTransaction" ? "nav-item-active" : "")">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
@@ -139,7 +139,7 @@
             {
                 <a href="/Admin/UnitType" class="nav-item nav-item-sub @(currentController == "AdminUnitType" ? "nav-item-active" : "")">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-                    Unit Türleri
+                    Birim Türleri
                 </a>
             }
             @if (User.HasModuleAccess("Internal.TenantCategory"))
@@ -151,7 +151,7 @@
             }
             @if (User.HasModuleAccess("Internal.Sector"))
             {
-                <a href="/Admin/Sektor" class="nav-item nav-item-sub @(currentController == "AdminSector" ? "nav-item-active" : "")">
+                <a href="/Admin/Sector" class="nav-item nav-item-sub @(currentController == "AdminSector" ? "nav-item-active" : "")">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                     Sektörler
                 </a>
@@ -223,7 +223,7 @@
             {
                 <a href="/Reservation/Ekle" class="nav-item nav-item-sub">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Reservation Ekle
+                    Rezervasyon Ekle
                 </a>
             }
         }

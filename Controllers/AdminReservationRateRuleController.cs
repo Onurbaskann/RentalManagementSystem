@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace KiraTakip.Controllers;
 
 [Authorize]
-[Route("Admin/RezervasyonTarifeKural")]
+[Route("Admin/ReservationRateOverride")]
 public class AdminReservationRateRuleController : Controller
 {
     private readonly IReservationService _service;
@@ -32,10 +32,10 @@ public class AdminReservationRateRuleController : Controller
     [Authorize(Policy = PermissionCatalog.ReservationRateRule.Module)]
     public async Task<IActionResult> Create()
     {
-        var vm = new RezervasyonTarifeKuralViewModel
+        var vm = new ReservationRateOverrideViewModel
         {
             FreeDurationMinutes = 120,
-            UcretlendirmePeriyoduDakika = 60,
+            BillingPeriodMinutes = 60,
             KdvRate = 20,
             IsActive = true
         };
@@ -46,14 +46,8 @@ public class AdminReservationRateRuleController : Controller
     [HttpPost("Ekle")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.ReservationRateRule.Create)]
-    public async Task<IActionResult> Create(RezervasyonTarifeKuralViewModel vm)
+    public async Task<IActionResult> Create(ReservationRateOverrideViewModel vm)
     {
-        if (!ModelState.IsValid)
-        {
-            await PopulateDropdownsAsync(vm);
-            return View(vm);
-        }
-
         var (basarili, hata, _) = await _service.SaveUcretKuralAsync(vm);
         if (!basarili)
         {
@@ -66,40 +60,34 @@ public class AdminReservationRateRuleController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpGet("Duzenle/{id:int}")]
+    [HttpGet("Duzenle/{id}")]
     [Authorize(Policy = PermissionCatalog.ReservationRateRule.Module)]
     public async Task<IActionResult> Edit(int id)
     {
         var kural = await _service.GetUcretKuralByIdAsync(id);
         if (kural == null) return NotFound();
 
-        var vm = new RezervasyonTarifeKuralViewModel
+        var vm = new ReservationRateOverrideViewModel
         {
             Id = kural.Id,
-            BirimId = kural.UnitId,
+            UnitId = kural.UnitId,
             FreeDurationMinutes = kural.FreeDurationMinutes,
-            UcretlendirmePeriyoduDakika = kural.UcretlendirmePeriyoduDakika,
-            PeriyotUcreti = kural.PeriyotUcreti,
+            BillingPeriodMinutes = kural.BillingPeriodMinutes,
+            PeriodRate = kural.PeriodRate,
             KdvRate = kural.KdvRate,
             IsActive = kural.IsActive,
-            Aciklama = kural.Aciklama
+            Description = kural.Description
         };
         await PopulateDropdownsAsync(vm);
         return View(vm);
     }
 
-    [HttpPost("Duzenle/{id:int}")]
+    [HttpPost("Duzenle/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.ReservationRateRule.Edit)]
-    public async Task<IActionResult> Edit(int id, RezervasyonTarifeKuralViewModel vm)
+    public async Task<IActionResult> Edit(int id, [FromForm] ReservationRateOverrideViewModel vm)
     {
         vm.Id = id;
-        if (!ModelState.IsValid)
-        {
-            await PopulateDropdownsAsync(vm);
-            return View(vm);
-        }
-
         var (basarili, hata, _) = await _service.SaveUcretKuralAsync(vm);
         if (!basarili)
         {
@@ -112,7 +100,7 @@ public class AdminReservationRateRuleController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("DurumDegistir/{id:int}")]
+    [HttpPost("DurumDegistir/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.ReservationRateRule.Edit)]
     public async Task<IActionResult> DurumDegistir(int id)
@@ -122,7 +110,7 @@ public class AdminReservationRateRuleController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task PopulateDropdownsAsync(RezervasyonTarifeKuralViewModel vm)
+    private async Task PopulateDropdownsAsync(ReservationRateOverrideViewModel vm)
     {
         vm.RezervasyonBirimleri = await _birimRepo.GetRezervasyonBirimleriAsync();
     }

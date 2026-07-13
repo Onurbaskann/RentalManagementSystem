@@ -9,7 +9,7 @@ public class TasinmazListItemDto
     public string TasinmazTipiAd { get; set; } = string.Empty;
     public decimal KapaliYuzolcumu { get; set; }
     public decimal AcikYuzolcumu { get; set; }
-    public RentalMode RentalMode { get; set; }
+    public UnitStructure UnitStructure { get; set; }
     public int BirimSayisi { get; set; }
     public int KiraliBirimSayisi { get; set; }
     public int SuresiDolmakUzereBirimSayisi { get; set; }

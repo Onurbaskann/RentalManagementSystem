@@ -89,7 +89,7 @@ public class ChargeReminderService : IChargeReminderService
                 OdemeLink = await _paymentLinkService.BuildLinkAsync(tenant.Id, ct),
                 Borclar = group.OrderBy(t => t.DueDate).Select(t => new BorcSatiri
                 {
-                    TasinmazAdi = t.Lease?.Unit?.Property?.Name ?? "-",
+                    PropertyName = t.Lease?.Unit?.Property?.Name ?? "-",
                     BirimAdi = t.Lease?.Unit?.Name ?? "-",
                     PeriodStart = t.PeriodStart,
                     DueDate = t.DueDate,

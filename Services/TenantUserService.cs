@@ -18,12 +18,12 @@ public class TenantUserService : ITenantUserService
     {
         var query = from u in _db.Users
                     join ur in _db.UserRoller on u.Id equals ur.UserId
-                    join r in _db.Roller on ur.RolId equals r.Id
-                    where u.KiraciId == tenantId
+                    join r in _db.Roller on ur.RoleId equals r.Id
+                    where u.TenantId == tenantId
                           && u.IsActive
                           && r.IsActive
                           && !r.IsDeleted
-                          && r.Ad == RoleNames.KiraciYoneticisi
+                          && r.Name == RoleNames.KiraciYoneticisi
                     select new { UserId = u.Id, RolId = r.Id };
 
         if (excludeUserId != null)

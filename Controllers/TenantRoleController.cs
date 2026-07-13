@@ -40,21 +40,21 @@ public class TenantRoleController : Controller
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Module)]
     public async Task<IActionResult> Index()
     {
-        var tenantId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.TenantId!.Value;
         var roller = await _rolService.GetKiraciRollerAsync(tenantId);
 
         var model = new List<RolListeViewModel>();
         foreach (var r in roller)
         {
             var kullaniciSayisi = await _db.UserRoller
-                .CountAsync(ur => ur.RolId == r.Id &&
-                                  _db.Users.Any(u => u.Id == ur.UserId && u.KiraciId == tenantId));
+                .CountAsync(ur => ur.RoleId == r.Id &&
+                                  _db.Users.Any(u => u.Id == ur.UserId && u.TenantId == tenantId));
             var perms = await _rolService.GetRolPermissionsAsync(r.Id);
             model.Add(new RolListeViewModel
             {
                 Id = r.Id,
-                Ad = r.Ad,
-                Aciklama = r.Aciklama,
+                Ad = r.Name,
+                Aciklama = r.Description,
                 IsSystemRole = r.IsSystemRole,
                 IsActive = r.IsActive,
                 KullaniciSayisi = kullaniciSayisi,
@@ -85,13 +85,13 @@ public class TenantRoleController : Controller
             return View(model);
         }
 
-        var tenantId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.TenantId!.Value;
         var currentUserId = _userManager.GetUserId(User)!;
 
         try
         {
             var rol = await _db.Roller
-                .Where(r => r.KiraciId == tenantId && r.Ad == model.Ad && !r.IsDeleted)
+                .Where(r => r.TenantId == tenantId && r.Name == model.Ad && !r.IsDeleted)
                 .FirstOrDefaultAsync();
 
             if (rol != null)
@@ -101,12 +101,12 @@ public class TenantRoleController : Controller
                 return View(model);
             }
 
-            var yeniRol = new Rol
+            var yeniRol = new Role
             {
-                Ad = model.Ad,
-                Aciklama = model.Aciklama,
+                Name = model.Ad,
+                Description = model.Aciklama,
                 Scope = Models.RoleScope.Tenant,
-                KiraciId = tenantId,
+                TenantId = tenantId,
                 IsSystemRole = false,
                 IsActive = true
             };
@@ -133,17 +133,17 @@ public class TenantRoleController : Controller
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Edit)]
     public async Task<IActionResult> Edit(int id)
     {
-        var tenantId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.TenantId!.Value;
         var rol = await _db.Roller
-            .FirstOrDefaultAsync(r => r.Id == id && r.KiraciId == tenantId && !r.IsDeleted);
+            .FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId && !r.IsDeleted);
         if (rol == null) return NotFound();
 
         var selected = await _rolService.GetRolPermissionsAsync(id);
         var model = new RolDuzenleViewModel
         {
             Id = rol.Id,
-            Ad = rol.Ad,
-            Aciklama = rol.Aciklama,
+            Ad = rol.Name,
+            Aciklama = rol.Description,
             IsSystemRole = rol.IsSystemRole,
             SelectedPermissions = selected
         };
@@ -156,9 +156,9 @@ public class TenantRoleController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, RolDuzenleViewModel model)
     {
-        var tenantId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.TenantId!.Value;
         var rol = await _db.Roller
-            .FirstOrDefaultAsync(r => r.Id == id && r.KiraciId == tenantId && !r.IsDeleted);
+            .FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId && !r.IsDeleted);
         if (rol == null) return NotFound();
 
         if (!ModelState.IsValid)
@@ -186,8 +186,8 @@ public class TenantRoleController : Controller
 
         if (!rol.IsSystemRole)
         {
-            rol.Ad = model.Ad;
-            rol.Aciklama = model.Aciklama;
+            rol.Name = model.Ad;
+            rol.Description = model.Aciklama;
         }
 
         var validPerms = model.SelectedPermissions
@@ -196,7 +196,7 @@ public class TenantRoleController : Controller
         await _rolService.SetRolPermissionsAsync(id, validPerms, currentUserId);
         await _db.SaveChangesAsync();
 
-        TempData["Success"] = $"'{rol.Ad}' rolü güncellendi.";
+        TempData["Success"] = $"'{rol.Name}' rolü güncellendi.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -205,9 +205,9 @@ public class TenantRoleController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
-        var tenantId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.TenantId!.Value;
         var rol = await _db.Roller
-            .FirstOrDefaultAsync(r => r.Id == id && r.KiraciId == tenantId && !r.IsDeleted);
+            .FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId && !r.IsDeleted);
         if (rol == null) return NotFound();
 
         if (rol.IsSystemRole)

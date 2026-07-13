@@ -20,6 +20,8 @@ var app = builder.Build();
 HashidsExtensions.Configure(app.Services);
 app.UseTurkishCulture();
 
+// Production: teknik detaylar gizlenir, kullanıcı dostu hata sayfası gösterilir.
+// Development: hata ayıklama için detaylı developer exception page açılır.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");

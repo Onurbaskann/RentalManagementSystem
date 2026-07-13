@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -43,12 +43,12 @@ public class ManualChargeController : Controller
         await PopulateDropdownsAsync(vm);
         if (leaseId.HasValue)
         {
-            vm.SozlesmeId = leaseId.Value;
-            var s = vm.AktifSozlesmeler.FirstOrDefault(x => x.Id == leaseId.Value);
+            vm.LeaseId = leaseId.Value;
+            var s = vm.ActiveLeases.FirstOrDefault(x => x.Id == leaseId.Value);
             if (s != null)
             {
-                vm.KiraciId = s.TenantId;
-                vm.BirimId = s.UnitId;
+                vm.TenantId = s.TenantId;
+                vm.UnitId = s.UnitId;
             }
         }
         return View(vm);
@@ -59,13 +59,13 @@ public class ManualChargeController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Ekle(ManuelBorcCreateViewModel vm)
     {
-        if (vm.KiraciId <= 0)
+        if (vm.TenantId <= 0)
             ModelState.AddModelError("KiraciId", "Kiracı seçilmelidir.");
-        if (vm.BirimId <= 0)
-            ModelState.AddModelError("BirimId", "Unit seçilmelidir.");
+        if (vm.UnitId <= 0)
+            ModelState.AddModelError("BirimId", "Birim seçilmelidir.");
         if (vm.ChargeTypeId <= 0)
             ModelState.AddModelError("ChargeTypeId", "Borç tipi seçilmelidir.");
-        if (string.IsNullOrWhiteSpace(vm.Aciklama))
+        if (string.IsNullOrWhiteSpace(vm.Description))
             ModelState.AddModelError("Aciklama", "Açıklama zorunludur.");
 
         if (!ModelState.IsValid)
@@ -113,7 +113,7 @@ public class ManualChargeController : Controller
     private async Task PopulateDropdownsAsync(ManuelBorcCreateViewModel vm)
     {
         var propertyIds = _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds;
-        vm.AktifSozlesmeler = await _service.GetAktifSozlesmelerAsync();
+        vm.ActiveLeases = await _service.GetAktifSozlesmelerAsync();
         vm.ChargeTypes = await _service.GetManuelBorcTipleriAsync();
         vm.Units = await _service.GetTumBirimlerAsync(propertyIds);
     }

@@ -45,7 +45,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
         foreach (var entry in ChangeTracker.Entries<ApplicationUser>())
         {
             if ((entry.State == EntityState.Added || entry.State == EntityState.Modified) &&
-                entry.Entity.IsSuperAdmin && entry.Entity.KiraciId != null)
+                entry.Entity.IsSuperAdmin && entry.Entity.TenantId != null)
             {
                 throw new InvalidOperationException("Bir Süper Admin aynı zamanda bir kiracıya ait olamaz!");
             }
@@ -59,22 +59,22 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
     public DbSet<Tenant> Tenants { get; set; }
     public DbSet<Lease> Leases { get; set; }
     public DbSet<LeaseActivityLog> SozlesmeIslemGecmisleri { get; set; }
-    public DbSet<KullaniciYetkiKapsami> KullaniciYetkiKapsamlari { get; set; }
+    public DbSet<UserPermissionScope> KullaniciYetkiKapsamlari { get; set; }
     public DbSet<UserPermission> UserPermissions { get; set; }
 
     public DbSet<UnitType> UnitTypes { get; set; }
-    public DbSet<TasinmazTipi> TasinmazTipleri { get; set; }
-    public DbSet<Kategori> Kategoriler { get; set; }
+    public DbSet<PropertyType> TasinmazTipleri { get; set; }
+    public DbSet<Category> Kategoriler { get; set; }
 
-    public DbSet<TasinmazTarife> TasinmazTarifeler { get; set; }
+    public DbSet<PropertyRateOverride> TasinmazTarifeler { get; set; }
 
-    public DbSet<RezervasyonTarife> RezervasyonTarifeler { get; set; }
+    public DbSet<ReservationRateOverride> RezervasyonTarifeler { get; set; }
     public DbSet<Reservation> Reservations { get; set; }
 
     public DbSet<ChargeType> ChargeTypes { get; set; }
-    public DbSet<GenelTarife> GenelTarifeler { get; set; }
+    public DbSet<RateSchedule> GenelTarifeler { get; set; }
     public DbSet<UnitRate> UnitRates { get; set; }
-    public DbSet<SozlesmeTarife> SozlesmeTarifeler { get; set; }
+    public DbSet<LeaseRateOverride> SozlesmeTarifeler { get; set; }
 
     public DbSet<Charge> Charges { get; set; }
     public DbSet<ChargeLineItem> ChargeLineItems { get; set; }
@@ -82,13 +82,13 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
     public DbSet<BankTransaction> BankTransactions { get; set; }
     public DbSet<PaymentMatch> PaymentMatches { get; set; }
     public DbSet<LookupValue> LookupValues { get; set; }
-    public DbSet<Rol> Roller { get; set; }
-    public DbSet<RolPermission> RolPermissions { get; set; }
-    public DbSet<UserRol> UserRoller { get; set; }
+    public DbSet<Role> Roller { get; set; }
+    public DbSet<RolePermission> RolPermissions { get; set; }
+    public DbSet<UserRole> UserRoller { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
-    public DbSet<Davetiye> Davetiyeler { get; set; }
-    public DbSet<SifreSifirlamaTalebi> SifreSifirlamaTalepleri { get; set; }
-    public DbSet<OdemeLinkKayit> OdemeLinkKayitlari { get; set; }
+    public DbSet<Invitation> Davetiyeler { get; set; }
+    public DbSet<PasswordResetRequest> SifreSifirlamaTalepleri { get; set; }
+    public DbSet<PaymentLinkRecord> OdemeLinkKayitlari { get; set; }
 
     public DbSet<DocumentType> DocumentTypes { get; set; }
     public DbSet<Document> Belgeler { get; set; }
@@ -115,7 +115,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.Property(t => t.Address).HasMaxLength(500);
             entity.Property(t => t.OpenArea).HasPrecision(18, 2);
             entity.Property(t => t.ClosedArea).HasPrecision(18, 2);
-            entity.Property(t => t.RentalMode).HasComment(EC<RentalMode>());
+            entity.Property(t => t.UnitStructure).HasComment(EC<UnitStructure>());
             entity.HasOne(t => t.PropertyType)
                   .WithMany()
                   .OnDelete(DeleteBehavior.SetNull);
@@ -126,13 +126,12 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.Property(b => b.Name).HasMaxLength(200);
             entity.Property(b => b.UnitNo).HasMaxLength(50);
             entity.Property(b => b.Area).HasPrecision(18, 2);
-            entity.Property(b => b.UnitKind).HasComment(EC<UnitKind>());
             entity.HasOne(b => b.Property)
                   .WithMany(t => t.Units)
                   .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(b => b.UnitType)
                   .WithMany()
-                  .OnDelete(DeleteBehavior.SetNull);
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<Tenant>(entity =>
@@ -164,12 +163,13 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.HasOne(s => s.Tenant)
                   .WithMany()
                   .OnDelete(DeleteBehavior.Restrict);
+            // Not: "Bir birimde tek devam-eden aktif sözleşme" kuralı tarih koşulu içerdiğinden
+            // filtered index ile ifade edilemez (SQL Server GETDATE() destegi yok);
+            // kontrol uygulama katmanında yapılır (LeaseController.Ekle).
             entity.HasIndex(s => s.UnitId)
-                  .IsUnique()
-                  .HasDatabaseName("UX_Sozlesmeler_BirimId_TekAktifSozlesme")
-                  .HasFilter("[Durum] = 1 AND [IsDeleted] = 0");
+                  .HasDatabaseName("IX_Sozlesmeler_BirimId");
             entity.HasIndex(s => s.TenantId)
-                  .HasDatabaseName("IX_Sozlesmeler_KiraciId_Active")
+                  .HasDatabaseName("IX_Sozlesmeler_KiraciId_Aktif")
                   .HasFilter("[IsDeleted] = 0");
             entity.ToTable(t =>
             {
@@ -201,24 +201,24 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.Property(p => p.Permission).IsRequired().HasMaxLength(100);
         });
 
-        builder.Entity<KullaniciYetkiKapsami>(entity =>
+        builder.Entity<UserPermissionScope>(entity =>
         {
             entity.Property(k => k.UserId).IsRequired().HasMaxLength(450);
-            entity.HasIndex(k => new { k.UserId, k.ScopeType, k.KapsamId }).IsUnique();
+            entity.HasIndex(k => new { k.UserId, k.ScopeType, k.ScopeId }).IsUnique();
         });
 
-        builder.Entity<TasinmazTipi>(entity =>
+        builder.Entity<PropertyType>(entity =>
         {
-            entity.Property(k => k.Ad).HasMaxLength(150);
-            entity.Property(k => k.Kod).HasMaxLength(50);
-            entity.HasIndex(k => k.Kod).IsUnique();
+            entity.Property(k => k.Name).HasMaxLength(150);
+            entity.Property(k => k.Code).HasMaxLength(50);
+            entity.HasIndex(k => k.Code).IsUnique();
         });
 
-        builder.Entity<Kategori>(entity =>
+        builder.Entity<Category>(entity =>
         {
-            entity.Property(k => k.Ad).HasMaxLength(150);
-            entity.Property(k => k.Kod).HasMaxLength(50);
-            entity.HasIndex(k => new { k.Tipi, k.Kod }).IsUnique();
+            entity.Property(k => k.Name).HasMaxLength(150);
+            entity.Property(k => k.Code).HasMaxLength(50);
+            entity.HasIndex(k => new { k.Type, k.Code }).IsUnique();
         });
 
         builder.Entity<UnitType>(entity =>
@@ -226,17 +226,20 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.Property(b => b.Name).IsRequired().HasMaxLength(100);
             entity.Property(b => b.Code).IsRequired().HasMaxLength(100);
             entity.HasIndex(b => b.Code).IsUnique();
+            entity.Property(b => b.Usage)
+                  .HasDefaultValue(UnitTypeUsage.Rentable)
+                  .HasComment(EC<UnitTypeUsage>());
 
             entity.HasOne(b => b.ChargeType)
                   .WithMany()
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        builder.Entity<TasinmazTarife>(entity =>
+        builder.Entity<PropertyRateOverride>(entity =>
         {
             entity.Property(f => f.UnitValue).HasPrecision(18, 2);
             entity.Property(f => f.KdvRate).HasPrecision(5, 2);
-            entity.HasIndex(f => new { f.PropertyId, f.KiraciKategoriId, f.ChargeTypeId })
+            entity.HasIndex(f => new { f.PropertyId, f.TenantCategoryId, f.ChargeTypeId })
                   .IsUnique()
                   .HasDatabaseName("UX_TasinmazTarifeler_TasinmazKategoriBorc")
                   .HasFilter("[IsDeleted] = 0");
@@ -247,7 +250,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.HasOne(f => f.Property)
                   .WithMany()
                   .OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(f => f.KiraciKategori)
+            entity.HasOne(f => f.TenantCategory)
                   .WithMany()
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(f => f.ChargeType)
@@ -263,20 +266,20 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.Property(b => b.Behavior).HasComment(EC<ChargeTypeBehavior>());
         });
 
-        builder.Entity<GenelTarife>(entity =>
+        builder.Entity<RateSchedule>(entity =>
         {
             entity.Property(k => k.UnitValue).HasPrecision(18, 4);
             entity.Property(k => k.KdvRate).HasPrecision(5, 2);
             entity.Property(k => k.CalculationMethod).HasComment(EC<CalculationMethod>());
-            entity.HasIndex(k => new { k.Yil, k.KiraciKategoriId, k.ChargeTypeId })
+            entity.HasIndex(k => new { k.Year, k.TenantCategoryId, k.ChargeTypeId })
                   .IsUnique()
                   .HasDatabaseName("UX_GenelTarifeler_YilKategoriBorc")
                   .HasFilter("[IsDeleted] = 0");
             entity.ToTable(t =>
             {
-                t.HasCheckConstraint("CK_GenelTarifeler_Degerler", "[UnitValue] >= 0 AND [KdvRate] BETWEEN 0 AND 100");
+                t.HasCheckConstraint("CK_GenelTarifeler_Degerler", "[BirimDeger] >= 0 AND [KdvOrani] BETWEEN 0 AND 100");
             });
-            entity.HasOne(k => k.KiraciKategori)
+            entity.HasOne(k => k.TenantCategory)
                   .WithMany()
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(k => k.ChargeType)
@@ -284,7 +287,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        builder.Entity<SozlesmeTarife>(entity =>
+        builder.Entity<LeaseRateOverride>(entity =>
         {
             entity.Property(r => r.UnitValue).HasPrecision(18, 4);
             entity.Property(r => r.KdvRate).HasPrecision(5, 2);
@@ -355,22 +358,22 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.HasIndex(t => new { t.LeaseId, t.PeriodStart })
                   .IsUnique()
                   .HasDatabaseName("UX_Tahakkuklar_SozlesmeDonem_TekTahakkuk")
-                  .HasFilter("[LeaseId] IS NOT NULL AND [SourceType] = 1 AND [IsDeleted] = 0");
+                  .HasFilter("[SozlesmeId] IS NOT NULL AND [KaynakTipi] = 1 AND [IsDeleted] = 0");
             entity.HasIndex(t => t.TenantId)
-                  .HasDatabaseName("IX_Tahakkuklar_KiraciId_Active")
+                  .HasDatabaseName("IX_Tahakkuklar_KiraciId_Aktif")
                   .HasFilter("[IsDeleted] = 0");
             entity.HasIndex(t => t.UnitId)
-                  .HasDatabaseName("IX_Tahakkuklar_BirimId_Active")
+                  .HasDatabaseName("IX_Tahakkuklar_BirimId_Aktif")
                   .HasFilter("[IsDeleted] = 0");
             entity.HasIndex(t => t.ReservationId)
                   .IsUnique()
                   .HasDatabaseName("UX_Tahakkuklar_RezervasyonId_TekTahakkuk")
-                  .HasFilter("[ReservationId] IS NOT NULL AND [IsDeleted] = 0");
+                  .HasFilter("[RezervasyonId] IS NOT NULL AND [IsDeleted] = 0");
             entity.ToTable(t =>
             {
-                t.HasCheckConstraint("CK_Tahakkuklar_TarihSirasi", "[PeriodEnd] > [PeriodStart]");
-                t.HasCheckConstraint("CK_Tahakkuklar_Tutarlar_Pozitif", "[ExpectedAmount] >= 0 AND [KdvTutari] >= 0 AND [ToplamTutar] >= 0 AND [PaidAmount] >= 0");
-                t.HasCheckConstraint("CK_Tahakkuklar_OdenenLimit", "[PaidAmount] <= [ToplamTutar]");
+                t.HasCheckConstraint("CK_Tahakkuklar_TarihSirasi", "[DonemBitisi] > [DonemBaslangici]");
+                t.HasCheckConstraint("CK_Tahakkuklar_Tutarlar_Pozitif", "[BeklenenTutar] >= 0 AND [KdvTutari] >= 0 AND [ToplamTutar] >= 0 AND [OdenenTutar] >= 0");
+                t.HasCheckConstraint("CK_Tahakkuklar_OdenenLimit", "[OdenenTutar] <= [ToplamTutar]");
             });
         });
 
@@ -393,8 +396,8 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .OnDelete(DeleteBehavior.Restrict);
             entity.ToTable(t =>
             {
-                t.HasCheckConstraint("CK_TahakkukKalemleri_Tutarlar_Pozitif", "[Amount] >= 0 AND [KdvTutari] >= 0 AND [ToplamTutar] >= 0");
-                t.HasCheckConstraint("CK_TahakkukKalemleri_KdvOrani", "[KdvRate] BETWEEN 0 AND 100");
+                t.HasCheckConstraint("CK_TahakkukKalemleri_Tutarlar_Pozitif", "[Tutar] >= 0 AND [KdvTutari] >= 0 AND [ToplamTutar] >= 0");
+                t.HasCheckConstraint("CK_TahakkukKalemleri_KdvOrani", "[KdvOrani] BETWEEN 0 AND 100");
             });
         });
 
@@ -424,7 +427,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .OnDelete(DeleteBehavior.NoAction);
             entity.ToTable(t =>
             {
-                t.HasCheckConstraint("CK_TahakkukOdemeler_Tutar_Pozitif", "[Amount] > 0");
+                t.HasCheckConstraint("CK_TahakkukOdemeler_Tutar_Pozitif", "[Tutar] > 0");
             });
         });
 
@@ -440,7 +443,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.HasIndex(b => b.BankReferenceNo)
                   .IsUnique()
                   .HasDatabaseName("UX_BankaHareketleri_BankaReferansNo")
-                  .HasFilter("[BankReferenceNo] IS NOT NULL AND [IsDeleted] = 0");
+                  .HasFilter("[BankaReferansNo] IS NOT NULL AND [IsDeleted] = 0");
         });
 
         builder.Entity<PaymentMatch>(entity =>
@@ -464,20 +467,20 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .HasFilter("[IsDeleted] = 0");
         });
 
-        builder.Entity<RezervasyonTarife>(entity =>
+        builder.Entity<ReservationRateOverride>(entity =>
         {
-            entity.Property(r => r.PeriyotUcreti).HasPrecision(18, 2);
+            entity.Property(r => r.PeriodRate).HasPrecision(18, 2);
             entity.Property(r => r.KdvRate).HasPrecision(5, 2);
-            entity.Property(r => r.Aciklama).HasMaxLength(300);
+            entity.Property(r => r.Description).HasMaxLength(300);
             entity.HasOne(r => r.Unit)
                   .WithMany()
                   .OnDelete(DeleteBehavior.SetNull);
             entity.HasOne(r => r.UnitType)
                   .WithMany()
                   .OnDelete(DeleteBehavior.Restrict);
-            entity.HasIndex(r => new { r.UnitTypeId, r.Yil })
+            entity.HasIndex(r => new { r.UnitTypeId, r.Year })
                   .IsUnique()
-                  .HasDatabaseName("UX_RezervasyonTarifeler_UnitTypeYil_GenelKural")
+                  .HasDatabaseName("UX_RezervasyonTarifeler_BirimTuruYil_GenelKural")
                   .HasFilter("[BirimId] IS NULL");
             entity.ToTable(t =>
             {
@@ -486,7 +489,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                     "[BirimId] IS NOT NULL OR ([BirimTuruId] IS NOT NULL AND [Yil] IS NOT NULL)");
                 t.HasCheckConstraint(
                     "CK_RezervasyonTarifeler_Degerler_Pozitif",
-                    "[PeriyotUcreti] >= 0 AND [FreeDurationMinutes] >= 0 AND [UcretlendirmePeriyoduDakika] > 0 AND [KdvRate] BETWEEN 0 AND 100");
+                    "[PeriyotUcreti] >= 0 AND [UcretsizSureDakika] >= 0 AND [UcretlendirmePeriyoduDakika] > 0 AND [KdvOrani] BETWEEN 0 AND 100");
             });
         });
 
@@ -509,13 +512,13 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(r => new { r.UnitId, r.StartDate });
             entity.HasIndex(r => r.TenantId)
-                  .HasDatabaseName("IX_Rezervasyonlari_KiraciId_Active")
+                  .HasDatabaseName("IX_Rezervasyonlari_KiraciId_Aktif")
                   .HasFilter("[IsDeleted] = 0");
             entity.ToTable(t =>
             {
-                t.HasCheckConstraint("CK_Rezervasyonlari_TarihSirasi", "[EndDate] > [StartDate]");
-                t.HasCheckConstraint("CK_Rezervasyonlari_Tutarlar_Pozitif", "[RateAmount] >= 0 AND [ToplamTutar] >= 0 AND ([KdvTutari] IS NULL OR [KdvTutari] >= 0)");
-                t.HasCheckConstraint("CK_Rezervasyonlari_KdvOrani", "[KdvRate] IS NULL OR [KdvRate] BETWEEN 0 AND 100");
+                t.HasCheckConstraint("CK_Rezervasyonlari_TarihSirasi", "[BitisTarihi] > [BaslangicTarihi]");
+                t.HasCheckConstraint("CK_Rezervasyonlari_Tutarlar_Pozitif", "[TarifeTutari] >= 0 AND [ToplamTutar] >= 0 AND ([KdvTutari] IS NULL OR [KdvTutari] >= 0)");
+                t.HasCheckConstraint("CK_Rezervasyonlari_KdvOrani", "[KdvOrani] IS NULL OR [KdvOrani] BETWEEN 0 AND 100");
             });
         });
 
@@ -523,41 +526,41 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
         {
             entity.HasOne<Tenant>()
                   .WithMany()
-                  .HasForeignKey(u => u.KiraciId)
+                  .HasForeignKey(u => u.TenantId)
                   .OnDelete(DeleteBehavior.Restrict);
 
             entity.ToTable(t =>
             {
-                t.HasCheckConstraint("CK_ApplicationUser_SuperAdmin_NoTenant", "[IsSuperAdmin] = 0 OR [KiraciId] IS NULL");
+                t.HasCheckConstraint("CK_ApplicationUser_SuperAdmin_KiraciYok", "[IsSuperAdmin] = 0 OR [KiraciId] IS NULL");
             });
         });
 
-        builder.Entity<Rol>(entity =>
+        builder.Entity<Role>(entity =>
         {
-            entity.Property(r => r.Ad).IsRequired().HasMaxLength(100);
-            entity.Property(r => r.Aciklama).HasMaxLength(500);
+            entity.Property(r => r.Name).IsRequired().HasMaxLength(100);
+            entity.Property(r => r.Description).HasMaxLength(500);
             entity.Property(r => r.Scope).HasComment(EC<RoleScope>());
-            entity.HasIndex(r => new { r.Scope, r.KiraciId, r.Ad }).IsUnique();
+            entity.HasIndex(r => new { r.Scope, r.TenantId, r.Name }).IsUnique();
             entity.HasOne<Tenant>()
                   .WithMany()
-                  .HasForeignKey(r => r.KiraciId)
+                  .HasForeignKey(r => r.TenantId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        builder.Entity<RolPermission>(entity =>
+        builder.Entity<RolePermission>(entity =>
         {
             entity.Property(rp => rp.Permission).IsRequired().HasMaxLength(150);
-            entity.HasIndex(rp => new { rp.RolId, rp.Permission }).IsUnique();
-            entity.HasOne(rp => rp.Rol)
-                  .WithMany(r => r.RolPermissions)
+            entity.HasIndex(rp => new { rp.RoleId, rp.Permission }).IsUnique();
+            entity.HasOne(rp => rp.Role)
+                  .WithMany(r => r.RolePermissions)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        builder.Entity<UserRol>(entity =>
+        builder.Entity<UserRole>(entity =>
         {
-            entity.HasIndex(ur => new { ur.UserId, ur.RolId }).IsUnique();
-            entity.HasOne(ur => ur.Rol)
-                  .WithMany(r => r.UserRoller)
+            entity.HasIndex(ur => new { ur.UserId, ur.RoleId }).IsUnique();
+            entity.HasOne(ur => ur.Role)
+                  .WithMany(r => r.UserRoles)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -573,34 +576,34 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.HasIndex(a => new { a.EntityType, a.EntityId });
         });
 
-        builder.Entity<Davetiye>(entity =>
+        builder.Entity<Invitation>(entity =>
         {
             entity.Property(d => d.Email).IsRequired().HasMaxLength(256);
-            entity.Property(d => d.AdSoyad).HasMaxLength(200);
+            entity.Property(d => d.FullName).HasMaxLength(200);
             entity.Property(d => d.TokenHash).IsRequired().HasMaxLength(128);
-            entity.HasIndex(d => new { d.Email, d.Durum });
-            entity.HasIndex(d => d.KiraciId)
-                  .HasDatabaseName("IX_Davetiyeler_KiraciId_Active")
+            entity.HasIndex(d => new { d.Email, d.Status });
+            entity.HasIndex(d => d.TenantId)
+                  .HasDatabaseName("IX_Davetiyeler_KiraciId_Aktif")
                   .HasFilter("[IsDeleted] = 0");
-            entity.HasOne(d => d.Rol)
+            entity.HasOne(d => d.Role)
                   .WithMany()
-                  .HasForeignKey(d => d.RolId)
+                  .HasForeignKey(d => d.RoleId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        builder.Entity<SifreSifirlamaTalebi>(entity =>
+        builder.Entity<PasswordResetRequest>(entity =>
         {
             entity.Property(t => t.UserId).IsRequired();
             entity.Property(t => t.TokenHash).IsRequired().HasMaxLength(128);
-            entity.Property(t => t.TalepEdenIp).HasMaxLength(64);
-            entity.HasIndex(t => new { t.UserId, t.Durum });
+            entity.Property(t => t.RequestIp).HasMaxLength(64);
+            entity.HasIndex(t => new { t.UserId, t.Status });
         });
 
-        builder.Entity<OdemeLinkKayit>(entity =>
+        builder.Entity<PaymentLinkRecord>(entity =>
         {
             entity.Property(o => o.TokenHash).IsRequired().HasMaxLength(128);
-            entity.Property(o => o.IptalEdenUserId).HasMaxLength(450);
-            entity.HasIndex(o => new { o.TenantId, o.Durum });
+            entity.Property(o => o.CancelledByUserId).HasMaxLength(450);
+            entity.HasIndex(o => new { o.TenantId, o.Status });
             entity.HasOne(o => o.Tenant)
                   .WithMany()
                   .HasForeignKey(o => o.TenantId)
@@ -663,25 +666,25 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
         // Kiracı portal — kiracı kullanıcısı sadece kendi verilerini görür.
         // Bu filtreler soft-delete filter'ın üzerine yazar (IsDeleted + KiraciId koşullarını birleştirir).
         builder.Entity<Tenant>().HasQueryFilter(
-            k => !k.IsDeleted && (!_currentUser.IsKiraciUser || k.Id == _currentUser.KiraciId));
+            k => !k.IsDeleted && (!_currentUser.IsKiraciUser || k.Id == _currentUser.TenantId));
 
         builder.Entity<Lease>().HasQueryFilter(
-            s => !s.IsDeleted && (!_currentUser.IsKiraciUser || s.TenantId == _currentUser.KiraciId));
+            s => !s.IsDeleted && (!_currentUser.IsKiraciUser || s.TenantId == _currentUser.TenantId));
 
         builder.Entity<Charge>().HasQueryFilter(
-            t => !t.IsDeleted && (!_currentUser.IsKiraciUser || t.TenantId == _currentUser.KiraciId));
+            t => !t.IsDeleted && (!_currentUser.IsKiraciUser || t.TenantId == _currentUser.TenantId));
 
         builder.Entity<PaymentAllocation>().HasQueryFilter(
-            o => !o.IsDeleted && (!_currentUser.IsKiraciUser || o.Charge.TenantId == _currentUser.KiraciId));
+            o => !o.IsDeleted && (!_currentUser.IsKiraciUser || o.Charge.TenantId == _currentUser.TenantId));
 
         builder.Entity<Reservation>().HasQueryFilter(
-            r => !r.IsDeleted && (!_currentUser.IsKiraciUser || r.TenantId == _currentUser.KiraciId));
+            r => !r.IsDeleted && (!_currentUser.IsKiraciUser || r.TenantId == _currentUser.TenantId));
 
         builder.Entity<LeaseActivityLog>().HasQueryFilter(
             g => !g.IsDeleted && (!_currentUser.IsKiraciUser ||
-                 g.Lease!.TenantId == _currentUser.KiraciId));
+                 g.Lease!.TenantId == _currentUser.TenantId));
 
-        builder.Entity<UserRol>().HasQueryFilter(ur => !ur.IsDeleted);
+        builder.Entity<UserRole>().HasQueryFilter(ur => !ur.IsDeleted);
         builder.Entity<UserPermission>().HasQueryFilter(p => !p.IsDeleted);
         builder.Entity<ApplicationUser>().HasQueryFilter(u => !u.IsDeleted);
 

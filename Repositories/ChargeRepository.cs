@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
@@ -284,7 +284,7 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
                           Id = t.Id,
                           LeaseId = t.LeaseId,
                           KiraciId = t.TenantId,
-                          KiraciKategoriAd = t.Tenant.TenantCategory != null ? t.Tenant.TenantCategory.Ad : null,
+                          KiraciKategoriAd = t.Tenant.TenantCategory != null ? t.Tenant.TenantCategory.Name : null,
                           KiraciGosterimAdi = t.Tenant.Name,
                           TasinmazAd = t.Unit.Property.Name,
                           BirimAd = t.Unit.Name,

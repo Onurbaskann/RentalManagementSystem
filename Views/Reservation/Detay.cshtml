@@ -1,22 +1,22 @@
-﻿@model KiraTakip.Models.Dtos.RezervasyonListItemDto
+﻿@model KiraTakip.Models.Dtos.ReservationListItemDto
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Reservation Detayı";
     bool canCancel   = User.HasPermission(PermissionCatalog.Reservation.Cancel);
     bool canTransfer = User.HasPermission(PermissionCatalog.Reservation.TransferToCharge);
 
-    string durumCls = Model.Durum switch {
+    string durumCls = Model.Status switch {
         ReservationStatus.Completed         => "badge-kirali",
         ReservationStatus.TransferredToCharge => "badge-surek",
         ReservationStatus.Cancelled        => "badge-gecmis",
         _                                    => "badge-bos"
     };
-    string durumLabel = Model.Durum switch {
+    string durumLabel = Model.Status switch {
         ReservationStatus.Planned          => "Planlandı",
         ReservationStatus.Completed         => "Tamamlandı",
         ReservationStatus.Cancelled        => "İptal Edildi",
         ReservationStatus.TransferredToCharge => "Tahakkuka Aktarıldı",
-        _                                    => Model.Durum.ToString()
+        _                                    => Model.Status.ToString()
     };
 }
 
@@ -36,7 +36,7 @@
         <div class="mt-1.5"><span class="badge @durumCls">@durumLabel</span></div>
     </div>
     <div class="flex gap-2">
-        @if (canTransfer && Model.Durum == ReservationStatus.Planned && Model.ToplamTutar > 0 && Model.ChargeId == null)
+        @if (canTransfer && Model.Status == ReservationStatus.Planned && Model.TotalAmount > 0 && Model.ChargeId == null)
         {
             <form method="post" action="/Reservation/TahakkukaAktar/@Model.Id.ToHashId()"
                   data-confirm="Bu reservation tahakkuka aktarılsın mı?">
@@ -44,7 +44,7 @@
                 <button type="submit" class="btn btn-primary">Tahakkuka Aktar</button>
             </form>
         }
-        @if (canCancel && Model.Durum == ReservationStatus.Planned)
+        @if (canCancel && Model.Status == ReservationStatus.Planned)
         {
             <button type="button" class="btn btn-danger"
                     data-confirm-prompt="İptal nedeni"
@@ -63,15 +63,15 @@
         <div class="flex flex-col gap-2.5 text-[13.5px]">
             <div class="flex justify-between">
                 <span class="text-muted">Kiracı</span>
-                <a href="/Tenant/Detay/@Model.KiraciId.ToHashId()" class="font-medium text-primary no-underline hover:underline">@Model.KiraciGosterimAdi</a>
+                <a href="/Tenant/Detay/@Model.TenantId.ToHashId()" class="font-medium text-primary no-underline hover:underline">@Model.TenantDisplayName</a>
             </div>
             <div class="flex justify-between">
                 <span class="text-muted">Taşınmaz</span>
-                <span class="font-medium">@Model.TasinmazAd</span>
+                <span class="font-medium">@Model.PropertyName</span>
             </div>
             <div class="flex justify-between">
-                <span class="text-muted">Unit</span>
-                <span class="font-medium">@Model.BirimAd</span>
+                <span class="text-muted">Birim</span>
+                <span class="font-medium">@Model.UnitName</span>
             </div>
             <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
                 <span class="text-muted">Başlangıç</span>
@@ -81,11 +81,11 @@
                 <span class="text-muted">Bitiş</span>
                 <span class="font-mono text-[13px]">@Model.EndDate.ToString("dd.MM.yyyy HH:mm")</span>
             </div>
-            @if (!string.IsNullOrEmpty(Model.Aciklama))
+            @if (!string.IsNullOrEmpty(Model.Description))
             {
                 <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
                     <span class="text-muted">Açıklama</span>
-                    <span class="text-right max-w-[60%]">@Model.Aciklama</span>
+                    <span class="text-right max-w-[60%]">@Model.Description</span>
                 </div>
             }
         </div>
@@ -109,12 +109,12 @@
             </div>
             <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
                 <span class="text-muted font-semibold">Toplam Amount</span>
-                <span class="font-bold text-primary text-base">@Model.ToplamTutar.ToString("N2") ₺</span>
+                <span class="font-bold text-primary text-base">@Model.TotalAmount.ToString("N2") ₺</span>
             </div>
             @if (Model.ChargeId.HasValue)
             {
                 <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
-                    <span class="text-muted">Charge</span>
+                    <span class="text-muted">Tahakkuk</span>
                     <a href="/Charge/Detay/@Model.ChargeId.ToHashId()" class="text-primary no-underline hover:underline font-medium">#@Model.ChargeId</a>
                 </div>
             }

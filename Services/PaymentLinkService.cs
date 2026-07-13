@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Entities;
@@ -30,22 +30,22 @@ public class PaymentLinkService : IPaymentLinkService, ITransactionalService
     public async Task<string> BuildLinkAsync(int tenantId, CancellationToken ct = default)
     {
         var ttl = TimeSpan.FromHours(_settings.TokenTtlHours);
-        var kayit = new OdemeLinkKayit
+        var record = new PaymentLinkRecord
         {
             TenantId = tenantId,
             ExpiresAt = DateTime.UtcNow.Add(ttl)
         };
-        _db.OdemeLinkKayitlari.Add(kayit);
+        _db.OdemeLinkKayitlari.Add(record);
         await _db.SaveChangesAsync(ct);
 
-        var result = _tokenService.Generate(kayit.Id.ToString(), Purpose, ttl);
-        kayit.TokenHash = result.TokenHash;
+        var result = _tokenService.Generate(record.Id.ToString(), Purpose, ttl);
+        record.TokenHash = result.TokenHash;
         await _db.SaveChangesAsync(ct);
 
         return $"{_settings.BaseUrl.TrimEnd('/')}/Payment/Portal?t={Uri.EscapeDataString(result.RawToken)}";
     }
 
-    public async Task<(bool Success, int KiraciId, string? Reason)> TryValidateAsync(string token, CancellationToken ct = default)
+    public async Task<(bool Success, int TenantId, string? Reason)> TryValidateAsync(string token, CancellationToken ct = default)
     {
         var parts = token.Split('.');
         if (parts.Length != 3)
@@ -63,45 +63,45 @@ public class PaymentLinkService : IPaymentLinkService, ITransactionalService
             return (false, 0, "Geçersiz token formatı.");
         }
 
-        if (!int.TryParse(entityId, out var kayitId))
+        if (!int.TryParse(entityId, out var recordId))
             return (false, 0, "Geçersiz token formatı.");
 
-        var kayit = await _db.OdemeLinkKayitlari
+        var record = await _db.OdemeLinkKayitlari
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(o => o.Id == kayitId, ct);
+            .FirstOrDefaultAsync(o => o.Id == recordId, ct);
 
-        if (kayit == null)
+        if (record == null)
             return (false, 0, "Ödeme linki bulunamadı.");
 
-        if (kayit.Durum == PaymentLinkStatus.Cancelled)
+        if (record.Status == PaymentLinkStatus.Cancelled)
             return (false, 0, "Bu ödeme linki iptal edilmiştir.");
 
         if (!_tokenService.TryValidate(token, entityId, Purpose, out var reason))
         {
-            if (kayit.Durum == PaymentLinkStatus.Active && kayit.ExpiresAt < DateTime.UtcNow)
+            if (record.Status == PaymentLinkStatus.Active && record.ExpiresAt < DateTime.UtcNow)
             {
-                kayit.Durum = PaymentLinkStatus.Expired;
+                record.Status = PaymentLinkStatus.Expired;
                 await _db.SaveChangesAsync(ct);
             }
             return (false, 0, reason ?? "Geçersiz ödeme linki.");
         }
 
-        return (true, kayit.TenantId, null);
+        return (true, record.TenantId, null);
     }
 
-    public async Task IptalEtAsync(int kayitId, string iptalEdenUserId, CancellationToken ct = default)
+    public async Task IptalEtAsync(int recordId, string iptalEdenUserId, CancellationToken ct = default)
     {
-        var kayit = await _db.OdemeLinkKayitlari
+        var record = await _db.OdemeLinkKayitlari
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(o => o.Id == kayitId, ct)
+            .FirstOrDefaultAsync(o => o.Id == recordId, ct)
             ?? throw new InvalidOperationException("Kayıt bulunamadı.");
 
-        if (kayit.Durum != PaymentLinkStatus.Active)
+        if (record.Status != PaymentLinkStatus.Active)
             throw new InvalidOperationException("Yalnızca aktif linkler iptal edilebilir.");
 
-        kayit.Durum = PaymentLinkStatus.Cancelled;
-        kayit.IptalEdenUserId = iptalEdenUserId;
-        kayit.IptalTarihi = DateTime.UtcNow;
+        record.Status = PaymentLinkStatus.Cancelled;
+        record.CancelledByUserId = iptalEdenUserId;
+        record.CancelledAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
     }
 }

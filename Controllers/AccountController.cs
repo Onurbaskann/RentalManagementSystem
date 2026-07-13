@@ -69,10 +69,10 @@ public class AccountController : Controller
         }
 
         // Kiracı kullanıcısı → bağlı kiracının aktif olup olmadığını kontrol et
-        if (user != null && user.UserType == UserType.Tenant && user.KiraciId.HasValue)
+        if (user != null && user.UserType == UserType.Tenant && user.TenantId.HasValue)
         {
             var tenant = await _db.Tenants.IgnoreQueryFilters()
-                .FirstOrDefaultAsync(k => k.Id == user.KiraciId.Value);
+                .FirstOrDefaultAsync(k => k.Id == user.TenantId.Value);
             if (tenant != null && !tenant.IsActive)
             {
                 ModelState.AddModelError(string.Empty, "Firmanızın hesabı pasif durumdadır. Lütfen yöneticinizle iletişime geçin.");
@@ -170,7 +170,7 @@ public class AccountController : Controller
         {
             Token = token,
             Email = davetiye.Email,
-            AdSoyad = davetiye.AdSoyad ?? string.Empty
+            AdSoyad = davetiye.FullName ?? string.Empty
         };
         return View(model);
     }

@@ -113,7 +113,6 @@ public class LeaseController : Controller
             {
                 Id = s.UnitId,
                 Area = s.UnitArea,
-                UnitKind = s.UnitKind,
                 PropertyId = s.PropertyId
             }
         };
@@ -226,10 +225,10 @@ public class LeaseController : Controller
         var bosBirimler = await _propertyService.GetBosBirimlerAsync();
         var kiraciler = await _tenantService.GetAllAsync();
         ViewBag.BirimYuzolcumular = System.Text.Json.JsonSerializer.Serialize(
-            bosBirimler.ToDictionary(b => b.Id, b => (double)b.Yuzolcumu));
+            bosBirimler.ToDictionary(b => b.Id, b => (double)b.Area));
         var vm = new SozlesmeEkleViewModel
         {
-            BirimId = unitId,
+            UnitId = unitId,
             MevcutBirimler = bosBirimler,
             Tenants = kiraciler,
             DocumentTypes = await _documentService.GetTurlerAsync(DocumentOwnerType.Lease)
@@ -245,14 +244,21 @@ public class LeaseController : Controller
         vm.Tenants = await _tenantService.GetAllAsync();
         vm.DocumentTypes = await _documentService.GetTurlerAsync(DocumentOwnerType.Lease);
 
-        if (vm.BirimId == null || vm.BirimId == 0)
-            ModelState.AddModelError("BirimId", "Lütfen bir unit seçin.");
+        var now = DateTime.Now;
+        if (vm.UnitId == null || vm.UnitId == 0)
+            ModelState.AddModelError("UnitId", "Lütfen bir birim seçin.");
+        else if (await _ctx.Leases.AnyAsync(s =>
+                     s.UnitId == vm.UnitId.Value &&
+                     s.Status == LeaseStatus.Active &&
+                     s.StartDate <= now &&
+                     s.EndDate >= now))
+            ModelState.AddModelError("UnitId", "Seçilen birimin devam eden aktif bir sözleşmesi var. Önce mevcut sözleşmeyi feshedin veya farklı bir birim seçin.");
 
         if (vm.EndDate <= vm.StartDate)
             ModelState.AddModelError("EndDate", "Bitiş tarihi başlangıç tarihinden büyük olmalıdır.");
 
-        if (vm.VadeGunu < 1 || vm.VadeGunu > 31)
-            ModelState.AddModelError("VadeGunu", "Vade günü 1-31 arasında olmalıdır.");
+        if (vm.DueDay < 1 || vm.DueDay > 31)
+            ModelState.AddModelError("DueDay", "Vade günü 1-31 arasında olmalıdır.");
 
         foreach (var bt in vm.DocumentTypes.Where(bt => bt.Required))
         {
@@ -274,15 +280,15 @@ public class LeaseController : Controller
 
         var s = new Lease
         {
-            UnitId = vm.BirimId!.Value,
-            TenantId = vm.KiraciId,
+            UnitId = vm.UnitId!.Value,
+            TenantId = vm.TenantId,
             StartDate = vm.StartDate,
             EndDate = vm.EndDate,
-            Description = vm.Aciklama,
+            Description = vm.Description,
             Status = LeaseStatus.Active,
             IsKdvApplied = kdvUygulanacakMi,
             DueDateRuleType = vm.DueDateRuleType,
-            DueDay = vm.VadeGunu,
+            DueDay = vm.DueDay,
         };
 
         await _leaseService.CreateAsync(s, kiraBedeli);
@@ -292,7 +298,7 @@ public class LeaseController : Controller
         {
             foreach (var k in vm.SozlesmeKalemleri.Where(x => x.KullaniciDegistirdiMi))
             {
-                var rate = new SozlesmeTarife
+                var rate = new LeaseRateOverride
                 {
                     LeaseId = s.Id,
                     ChargeTypeId = k.ChargeTypeId,
@@ -363,7 +369,7 @@ public class LeaseController : Controller
             _ctx.SozlesmeTarifeler.RemoveRange(eskiRateler);
             foreach (var k in vm.SozlesmeKalemleri.Where(x => x.KullaniciDegistirdiMi))
             {
-                _ctx.SozlesmeTarifeler.Add(new SozlesmeTarife
+                _ctx.SozlesmeTarifeler.Add(new LeaseRateOverride
                 {
                     LeaseId = id,
                     ChargeTypeId = k.ChargeTypeId,
@@ -459,7 +465,7 @@ public class LeaseController : Controller
             _ctx.SozlesmeTarifeler.RemoveRange(eskiRateler);
             foreach (var k in sozlesmeKalemleri.Where(x => x.KullaniciDegistirdiMi))
             {
-                _ctx.SozlesmeTarifeler.Add(new SozlesmeTarife
+                _ctx.SozlesmeTarifeler.Add(new LeaseRateOverride
                 {
                     LeaseId = id,
                     ChargeTypeId = k.ChargeTypeId,
@@ -509,7 +515,7 @@ public class LeaseController : Controller
             VarsayilanTutar = p.Amount,
             Amount = p.Amount,
             UnitValue = p.UnitValue,
-            VarsayilanBirimDeger = p.UnitValue,
+            DefaultUnitValue = p.UnitValue,
             KdvRate = p.KdvRate,
             CalculationMethod = p.CalculationMethod,
             SourceType = p.SourceType.ToString(),
@@ -552,7 +558,7 @@ public class LeaseController : Controller
         return RedirectToAction("Index");
     }
 
-    private static decimal HesaplaAylikBedelHelper(IEnumerable<SozlesmeTarife> rates, decimal yuzolcumu) =>
+    private static decimal HesaplaAylikBedelHelper(IEnumerable<LeaseRateOverride> rates, decimal yuzolcumu) =>
         rates.Where(r => r.ChargeType?.Behavior == ChargeTypeBehavior.MonthlyFixed)
              .Sum(r => r.CalculationMethod == CalculationMethod.M2 ? r.UnitValue * yuzolcumu : r.UnitValue);
 }

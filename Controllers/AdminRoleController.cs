@@ -32,13 +32,13 @@ public class AdminRoleController : Controller
 
         foreach (var r in roller)
         {
-            var kullaniciSayisi = await _db.UserRoller.CountAsync(ur => ur.RolId == r.Id);
+            var kullaniciSayisi = await _db.UserRoller.CountAsync(ur => ur.RoleId == r.Id);
             var perms = await _rolService.GetRolPermissionsAsync(r.Id);
             model.Add(new RolListeViewModel
             {
                 Id = r.Id,
-                Ad = r.Ad,
-                Aciklama = r.Aciklama,
+                Ad = r.Name,
+                Aciklama = r.Description,
                 IsSystemRole = r.IsSystemRole,
                 IsActive = r.IsActive,
                 KullaniciSayisi = kullaniciSayisi,
@@ -93,8 +93,8 @@ public class AdminRoleController : Controller
         var model = new RolDuzenleViewModel
         {
             Id = rol.Id,
-            Ad = rol.Ad,
-            Aciklama = rol.Aciklama,
+            Ad = rol.Name,
+            Aciklama = rol.Description,
             IsSystemRole = rol.IsSystemRole,
             SelectedPermissions = selected
         };

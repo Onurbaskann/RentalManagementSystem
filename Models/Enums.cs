@@ -29,10 +29,10 @@ public enum LeaseActivityType
     ChargeRegeneration = 6
 }
 
-public enum RentalMode
+public enum UnitStructure
 {
-    WholeProperty = 1,
-    UnitBased = 2
+    SingleUnit = 1,
+    MultipleUnits = 2
 }
 
 public enum OccupancyStatus
@@ -42,10 +42,11 @@ public enum OccupancyStatus
     ExpiringSoon = 3
 }
 
-public enum UnitKind
+public enum UnitTypeUsage
 {
-    Whole = 1,
-    Unit = 2
+    Rentable = 1,
+    Reservable = 2,
+    NonRentable = 3
 }
 
 public enum ChargeStatus

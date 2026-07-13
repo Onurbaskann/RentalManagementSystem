@@ -1,4 +1,4 @@
-﻿@model List<KiraTakip.Models.Dtos.RezervasyonListItemDto>
+﻿@model List<KiraTakip.Models.Dtos.ReservationListItemDto>
 @using KiraTakip.Models
 @{
     Layout = "_KiraciLayout";
@@ -21,7 +21,7 @@
         <table>
             <thead>
                 <tr>
-                    <th>Unit</th>
+                    <th>Birim</th>
                     <th>Taşınmaz</th>
                     <th>Başlangıç</th>
                     <th>Bitiş</th>
@@ -32,27 +32,27 @@
             <tbody x-ref="tbody">
                 @foreach (var r in Model)
                 {
-                    var search = $"{r.BirimAd} {r.TasinmazAd}".ToLower();
-                    var durumClass = r.Durum switch {
+                    var search = $"{r.UnitName} {r.PropertyName}".ToLower();
+                    var durumClass = r.Status switch {
                         ReservationStatus.Planned => "badge-bos",
                         ReservationStatus.Completed => "badge-kirali",
                         ReservationStatus.Cancelled => "badge-gecmis",
                         ReservationStatus.TransferredToCharge => "badge-kurumsal",
                         _ => "badge-bos"
                     };
-                    var durumLabel = r.Durum switch {
+                    var durumLabel = r.Status switch {
                         ReservationStatus.Planned => "Planlandı",
                         ReservationStatus.Completed => "Tamamlandı",
                         ReservationStatus.Cancelled => "İptal",
                         ReservationStatus.TransferredToCharge => "Faturalandı",
-                        _ => r.Durum.ToString()
+                        _ => r.Status.ToString()
                     };
                     <tr data-row data-search="@search">
-                        <td class="font-semibold">@r.BirimAd</td>
-                        <td class="text-sm text-muted">@r.TasinmazAd</td>
+                        <td class="font-semibold">@r.UnitName</td>
+                        <td class="text-sm text-muted">@r.PropertyName</td>
                         <td class="text-sm">@r.StartDate.ToString("dd.MM.yyyy HH:mm")</td>
                         <td class="text-sm">@r.EndDate.ToString("dd.MM.yyyy HH:mm")</td>
-                        <td class="text-sm font-medium">@r.ToplamTutar.ToString("N2") ₺</td>
+                        <td class="text-sm font-medium">@r.TotalAmount.ToString("N2") ₺</td>
                         <td><span class="badge @durumClass">@durumLabel</span></td>
                     </tr>
                 }

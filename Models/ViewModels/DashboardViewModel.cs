@@ -1,4 +1,4 @@
-namespace KiraTakip.Models.ViewModels;
+﻿namespace KiraTakip.Models.ViewModels;
 
 public class DashboardViewModel
 {
@@ -86,7 +86,7 @@ public class SuresiDolmakUzereSozlesme
 {
     public int SozlesmeId { get; set; }
     public string KiraciAdi { get; set; } = string.Empty;
-    public string TasinmazAdi { get; set; } = string.Empty;
+    public string PropertyName { get; set; } = string.Empty;
     public string BirimAdi { get; set; } = string.Empty;
     public int KalanGun { get; set; }
     public DateTime EndDate { get; set; }
@@ -95,7 +95,7 @@ public class SuresiDolmakUzereSozlesme
 public class BosBirimOzet
 {
     public int BirimId { get; set; }
-    public string TasinmazAdi { get; set; } = string.Empty;
+    public string PropertyName { get; set; } = string.Empty;
     public string BirimAdi { get; set; } = string.Empty;
     public string Ilce { get; set; } = string.Empty;
     public decimal Yuzolcumu { get; set; }

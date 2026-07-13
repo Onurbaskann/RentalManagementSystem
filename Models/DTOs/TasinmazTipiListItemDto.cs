@@ -7,6 +7,6 @@ public class TasinmazTipiListItemDto
     public string Kod { get; set; } = string.Empty;
     public int Sira { get; set; }
     public bool Aktif { get; set; }
-    public bool TekParcaDestekli { get; set; }
-    public bool BirimBazliDestekli { get; set; }
+    public bool TekBirimDestekli { get; set; }
+    public bool CokluBirimDestekli { get; set; }
 }

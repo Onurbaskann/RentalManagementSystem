@@ -1,4 +1,4 @@
-@model KiraTakip.Models.ViewModels.KiraciFormViewModel
+﻿@model KiraTakip.Models.ViewModels.KiraciFormViewModel
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Kiracı Düzenle";
@@ -45,9 +45,9 @@
                     <label class="form-label">Kiracı Kategorisi *</label>
                     <select asp-for="KiraciKategoriId" class="form-control">
                         <option value="">— Seçiniz —</option>
-                        @foreach (var item in (IEnumerable<Kategori>)ViewBag.Kategoriler)
+                        @foreach (var item in (IEnumerable<Category>)ViewBag.Kategoriler)
                         {
-                            <option value="@item.Id" selected="@(Model.KiraciKategoriId == item.Id ? "selected" : null)">@item.Ad</option>
+                            <option value="@item.Id" selected="@(Model.KiraciKategoriId == item.Id ? "selected" : null)">@item.Name</option>
                         }
                     </select>
                     <span x-show="errors.kiraciKategoriId" x-text="errors.kiraciKategoriId" class="form-error"></span>
@@ -56,9 +56,9 @@
                     <label class="form-label">Sektör *</label>
                     <select asp-for="SektorId" class="form-control">
                         <option value="">— Seçiniz —</option>
-                        @foreach (var item in (IEnumerable<Kategori>)ViewBag.Sektorler)
+                        @foreach (var item in (IEnumerable<Category>)ViewBag.Sektorler)
                         {
-                            <option value="@item.Id" selected="@(Model.SektorId == item.Id ? "selected" : null)">@item.Ad</option>
+                            <option value="@item.Id" selected="@(Model.SektorId == item.Id ? "selected" : null)">@item.Name</option>
                         }
                     </select>
                     <span x-show="errors.sektorId" x-text="errors.sektorId" class="form-error"></span>

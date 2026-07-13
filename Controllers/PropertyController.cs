@@ -65,21 +65,43 @@ public class PropertyController : Controller
     private async Task PopulateViewBagAsync()
     {
         var birimTurleri = await _ctx.UnitTypes.Where(b => b.IsActive).OrderBy(b => b.SortOrder).ToListAsync();
-        ViewBag.BirimTurleri = birimTurleri.Where(b => b.CanBeRented).ToList();
-        ViewBag.RezervasyonBirimTurleri = birimTurleri.Where(b => b.CanBeReserved).ToList();
-        var tipler = await _ctx.TasinmazTipleri.Where(k => k.IsActive).OrderBy(t => t.Sira).ToListAsync();
+        ViewBag.TumBirimTurleri = birimTurleri;
+        ViewBag.BirimTurleri = birimTurleri.Where(b => b.Usage != UnitTypeUsage.Reservable).ToList();
+        ViewBag.RezervasyonBirimTurleri = birimTurleri.Where(b => b.Usage == UnitTypeUsage.Reservable).ToList();
+        var tipler = await _ctx.TasinmazTipleri.Where(k => k.IsActive).OrderBy(t => t.SortOrder).ToListAsync();
         ViewBag.TasinmazTipleri = tipler;
-        ViewBag.TasinmazTipiKiralamaSekilleri = tipler.ToDictionary(
+        ViewBag.TasinmazTipiBirimYapilari = tipler.ToDictionary(
             t => t.Id,
             t =>
             {
                 var list = new List<int>();
-                if (t.TekParcaDestekli) list.Add((int)RentalMode.WholeProperty);
-                if (t.BirimBazliDestekli) list.Add((int)RentalMode.UnitBased);
+                if (t.SupportsSingleUnit) list.Add((int)UnitStructure.SingleUnit);
+                if (t.SupportsMultipleUnits) list.Add((int)UnitStructure.MultipleUnits);
                 return list.ToArray();
             });
     }
 
+    private async Task ValidateUnitTypesAsync(
+        UnitStructure structure,
+        int? singleUnitTypeId,
+        IEnumerable<int?> normalUnitTypeIds,
+        IEnumerable<int?> reservationUnitTypeIds)
+    {
+        if (structure == UnitStructure.SingleUnit)
+        {
+            if (singleUnitTypeId is > 0 && !await _ctx.UnitTypes.AnyAsync(t => t.Id == singleUnitTypeId && t.IsActive))
+                ModelState.AddModelError("KompleUnitTypeId", "Seçilen birim türü aktif değil veya bulunamadı.");
+            return;
+        }
+
+        var normalIds = normalUnitTypeIds.Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
+        if (normalIds.Count > 0 && await _ctx.UnitTypes.AnyAsync(t => normalIds.Contains(t.Id) && t.Usage == UnitTypeUsage.Reservable))
+            ModelState.AddModelError("Units", "Rezervasyon türündeki birimler rezervasyon alanları bölümünden eklenmelidir.");
+
+        var reservationIds = reservationUnitTypeIds.Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
+        if (reservationIds.Count > 0 && await _ctx.UnitTypes.AnyAsync(t => reservationIds.Contains(t.Id) && t.Usage != UnitTypeUsage.Reservable))
+            ModelState.AddModelError("RezervasyonAlanlari", "Rezervasyon alanları yalnızca rezervasyon türündeki birim türlerini kullanabilir.");
+    }
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.Property.Create)]
     public async Task<IActionResult> Ekle()
@@ -89,7 +111,7 @@ public class PropertyController : Controller
         {
             FiyatMatrisi = await _tasinmazFiyatService.GetMatrisiAsync(0, pageSize: 100),
             ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(TarifeHiyerarsiKatmani.Property, yil: DateTime.Now.Year),
-            ParentRezervasyonTarife = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(yil: DateTime.Now.Year)
+            ParentReservationRateOverride = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(yil: DateTime.Now.Year)
         };
         return View(vm);
     }
@@ -105,7 +127,7 @@ public class PropertyController : Controller
 
         vm.FiyatMatrisi = await _tasinmazFiyatService.GetMatrisiAsync(id, pageSize: 100);
         vm.ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(TarifeHiyerarsiKatmani.Property, yil: DateTime.Now.Year);
-        vm.ParentRezervasyonTarife = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(yil: DateTime.Now.Year);
+        vm.ParentReservationRateOverride = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(yil: DateTime.Now.Year);
 
         await PopulateViewBagAsync();
         return View(vm);
@@ -113,10 +135,37 @@ public class PropertyController : Controller
 
     [HttpPost]
     [Authorize(Policy = PermissionCatalog.Property.Edit)]
-    public async Task<IActionResult> Duzenle(TasinmazDuzenleViewModel vm)
+    public async Task<IActionResult> Duzenle([FromForm] TasinmazDuzenleViewModel vm)
     {
         _provider.PropertyGuard(vm.Id);
 
+        var mevcutTasinmaz = await _ctx.Properties
+            .AsNoTracking()
+            .Include(t => t.Units)
+            .FirstOrDefaultAsync(t => t.Id == vm.Id);
+        if (mevcutTasinmaz == null) return NotFound();
+
+        vm.BirimYapisiDegistirilebilir = await _tasinmazService.CanChangeUnitStructureAsync(vm.Id);
+        if (vm.UnitStructure != mevcutTasinmaz.UnitStructure && !vm.BirimYapisiDegistirilebilir)
+        {
+            ModelState.AddModelError("UnitStructure", "Sözleşme, rezervasyon veya tahakkuk geçmişi bulunan taşınmazın birim yapısı değiştirilemez.");
+            vm.UnitStructure = mevcutTasinmaz.UnitStructure;
+        }
+
+        if (vm.TasinmazTipiId is > 0)
+        {
+            var tip = await _ctx.TasinmazTipleri
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == vm.TasinmazTipiId.Value);
+            if (tip != null)
+            {
+                var secimIzinli = vm.UnitStructure == UnitStructure.SingleUnit
+                    ? tip.SupportsSingleUnit
+                    : tip.SupportsMultipleUnits;
+                if (!secimIzinli)
+                    ModelState.AddModelError("UnitStructure", "Seçilen taşınmaz tipi bu birim yapısına izin vermiyor.");
+            }
+        }
         if (string.IsNullOrWhiteSpace(vm.Ad))
             ModelState.AddModelError("Ad", "Taşınmaz adı zorunludur.");
         if (vm.TasinmazTipiId == null || vm.TasinmazTipiId <= 0)
@@ -130,54 +179,121 @@ public class PropertyController : Controller
         if (string.IsNullOrWhiteSpace(vm.AcikAdres))
             ModelState.AddModelError("AcikAdres", "Açık adres zorunludur.");
 
-        if (vm.RentalMode == RentalMode.UnitBased)
+        if (vm.UnitStructure == UnitStructure.MultipleUnits)
         {
-            if (vm.Units == null || vm.Units.Count == 0)
+            if ((vm.Units?.Count ?? 0) + (vm.RezervasyonAlanlari?.Count ?? 0) == 0)
             {
-                ModelState.AddModelError("Units", "Unit bazlı kiralama için en az bir unit eklemelisiniz.");
+                ModelState.AddModelError("Units", "Çoklu birim yapısı için en az bir birim eklemelisiniz.");
             }
             else
             {
                 for (int i = 0; i < vm.Units.Count; i++)
                 {
                     var unit = vm.Units[i];
-                    if (string.IsNullOrWhiteSpace(unit.BirimNo))
-                        ModelState.AddModelError($"Units[{i}].BirimNo", "Unit No zorunludur.");
-                    if (unit.KatNo == null)
+                    if (string.IsNullOrWhiteSpace(unit.UnitNo))
+                        ModelState.AddModelError($"Units[{i}].BirimNo", "Birim No zorunludur.");
+                    if (unit.FloorNo == null)
                         ModelState.AddModelError($"Units[{i}].KatNo", "Kat No zorunludur.");
                     if (unit.UnitTypeId == null || unit.UnitTypeId <= 0)
-                        ModelState.AddModelError($"Units[{i}].UnitTypeId", "Unit Türü zorunludur.");
-                    if (string.IsNullOrWhiteSpace(unit.Ad) && !string.IsNullOrWhiteSpace(unit.BirimNo))
-                        unit.Ad = "Unit " + unit.BirimNo;
-                    if (string.IsNullOrWhiteSpace(unit.Ad))
+                        ModelState.AddModelError($"Units[{i}].UnitTypeId", "Birim Türü zorunludur.");
+                    if (string.IsNullOrWhiteSpace(unit.Name) && !string.IsNullOrWhiteSpace(unit.UnitNo))
+                        unit.Name = "Birim " + unit.UnitNo;
+                    if (string.IsNullOrWhiteSpace(unit.Name))
                         ModelState.AddModelError($"Units[{i}].Ad", "Ad zorunludur.");
-                    if (unit.Yuzolcumu <= 0)
+                    if (unit.Area <= 0)
                         ModelState.AddModelError($"Units[{i}].Yuzolcumu", "Yüzölçümü 0'dan büyük olmalıdır.");
                 }
 
                 var tekrarlayanBirimNo = vm.Units
-                    .Where(b => !string.IsNullOrWhiteSpace(b.BirimNo))
-                    .GroupBy(b => b.BirimNo.Trim().ToUpper())
+                    .Where(b => !string.IsNullOrWhiteSpace(b.UnitNo))
+                    .GroupBy(b => b.UnitNo.Trim().ToUpper())
                     .Where(g => g.Count() > 1)
                     .Select(g => g.Key)
                     .FirstOrDefault();
 
                 if (tekrarlayanBirimNo != null)
-                    ModelState.AddModelError("Units", $"Unit No '{tekrarlayanBirimNo}' aynı taşınmaz içinde tekrar kullanılamaz.");
+                    ModelState.AddModelError("Units", $"Birim No '{tekrarlayanBirimNo}' aynı taşınmaz içinde tekrar kullanılamaz.");
             }
+        }
+        else
+        {
+            if (vm.KompleUnitTypeId is null or <= 0)
+                ModelState.AddModelError("KompleUnitTypeId", "Tek birim yapısı için birim türü zorunludur.");
+            vm.Units.Clear();
+            vm.RezervasyonAlanlari.Clear();
         }
 
         for (int i = 0; i < vm.RezervasyonAlanlari.Count; i++)
         {
             var alan = vm.RezervasyonAlanlari[i];
-            if (string.IsNullOrWhiteSpace(alan.BirimNo))
-                ModelState.AddModelError($"RezervasyonAlanlari[{i}].BirimNo", "Unit No zorunludur.");
-            if (string.IsNullOrWhiteSpace(alan.Ad))
+            if (string.IsNullOrWhiteSpace(alan.UnitNo))
+                ModelState.AddModelError($"RezervasyonAlanlari[{i}].BirimNo", "Birim No zorunludur.");
+            if (string.IsNullOrWhiteSpace(alan.Name))
                 ModelState.AddModelError($"RezervasyonAlanlari[{i}].Ad", "Alan Adı zorunludur.");
-            if (alan.Yuzolcumu <= 0)
+            if (alan.Area <= 0)
                 ModelState.AddModelError($"RezervasyonAlanlari[{i}].Yuzolcumu", "Yüzölçümü 0'dan büyük olmalıdır.");
             if (alan.UnitTypeId == null || alan.UnitTypeId <= 0)
                 ModelState.AddModelError($"RezervasyonAlanlari[{i}].UnitTypeId", "Alan Türü zorunludur.");
+        }
+
+        await ValidateUnitTypesAsync(vm.UnitStructure, vm.KompleUnitTypeId,
+            vm.Units.Select(u => u.UnitTypeId),
+            vm.RezervasyonAlanlari.Select(r => r.UnitTypeId));
+
+        if (!ModelState.IsValid)
+        {
+            await PopulateViewBagAsync();
+            var freshMatris = await _tasinmazFiyatService.GetMatrisiAsync(vm.Id, pageSize: 100);
+            if (vm.FiyatMatrisi?.Satirlar != null)
+            {
+                foreach (var freshSatir in freshMatris.Satirlar)
+                {
+                    var userSatir = vm.FiyatMatrisi.Satirlar.FirstOrDefault(s => s.KiraciKategoriId == freshSatir.KiraciKategoriId);
+                    if (userSatir != null)
+                    {
+                        foreach (var freshHucre in freshSatir.Hucreler)
+                        {
+                            var userHucre = userSatir.Hucreler.FirstOrDefault(h => h.ChargeTypeId == freshHucre.ChargeTypeId);
+                            if (userHucre != null)
+                            {
+                                freshHucre.UnitValue = userHucre.UnitValue;
+                                freshHucre.CalculationMethod = userHucre.CalculationMethod;
+                                freshHucre.KdvRate = userHucre.KdvRate;
+                            }
+                        }
+                    }
+                }
+            }
+            vm.FiyatMatrisi = freshMatris;
+
+            vm.ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(TarifeHiyerarsiKatmani.Property, yil: DateTime.Now.Year);
+            vm.ParentReservationRateOverride = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(yil: DateTime.Now.Year);
+
+            // AktifSozlesmesiVar flag'leri POST round-trip'te sıfırlanıyor, DB'den tekrar doldur
+            await RestoreAktifFlaglarAsync(vm);
+
+            return View(vm);
+        }
+
+        // Silinen birimlerde kayıtlı rezervasyon kontrolü
+        var databaseBirimler = await _ctx.Units
+            .Where(b => b.PropertyId == vm.Id)
+            .Select(b => new { b.Id, b.Name })
+            .ToListAsync();
+
+        var gelenBirimIds = vm.Units?.Where(u => u.Id.HasValue).Select(u => u.Id!.Value).ToHashSet() ?? new HashSet<int>();
+        var gelenRezIds = vm.RezervasyonAlanlari?.Where(a => a.Id.HasValue).Select(a => a.Id!.Value).ToHashSet() ?? new HashSet<int>();
+
+        foreach (var dbBirim in databaseBirimler)
+        {
+            if (!gelenBirimIds.Contains(dbBirim.Id) && !gelenRezIds.Contains(dbBirim.Id))
+            {
+                var hasReservations = await _ctx.Reservations.AnyAsync(r => r.UnitId == dbBirim.Id);
+                if (hasReservations)
+                {
+                    ModelState.AddModelError("Units", $"Silinmeye çalışılan '{dbBirim.Name}' biriminin/alanının kayıtlı rezervasyonları bulunmaktadır. Rezervasyonu olan bir birim silinemez.");
+                }
+            }
         }
 
         if (!ModelState.IsValid)
@@ -207,9 +323,8 @@ public class PropertyController : Controller
             vm.FiyatMatrisi = freshMatris;
 
             vm.ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(TarifeHiyerarsiKatmani.Property, yil: DateTime.Now.Year);
-            vm.ParentRezervasyonTarife = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(yil: DateTime.Now.Year);
+            vm.ParentReservationRateOverride = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(yil: DateTime.Now.Year);
 
-            // AktifSozlesmesiVar flag'leri POST round-trip'te sıfırlanıyor, DB'den tekrar doldur
             await RestoreAktifFlaglarAsync(vm);
 
             return View(vm);
@@ -271,17 +386,17 @@ public class PropertyController : Controller
             var tip = await _ctx.TasinmazTipleri.FirstOrDefaultAsync(k => k.Id == vm.TasinmazTipiId.Value);
             if (tip != null)
             {
-                var secimIzinli = vm.RentalMode == RentalMode.WholeProperty ? tip.TekParcaDestekli : tip.BirimBazliDestekli;
+                var secimIzinli = vm.UnitStructure == UnitStructure.SingleUnit ? tip.SupportsSingleUnit : tip.SupportsMultipleUnits;
                 if (!secimIzinli)
-                    ModelState.AddModelError("RentalMode", "Seçilen taşınmaz tipi bu kiralama şekline izin vermiyor.");
+                    ModelState.AddModelError("UnitStructure", "Seçilen taşınmaz tipi bu birim yapısına izin vermiyor.");
             }
         }
 
-        if (vm.RentalMode == RentalMode.UnitBased)
+        if (vm.UnitStructure == UnitStructure.MultipleUnits)
         {
-            if (vm.Units == null || vm.Units.Count == 0)
+            if ((vm.Units?.Count ?? 0) + (vm.RezervasyonAlanlari?.Count ?? 0) == 0)
             {
-                ModelState.AddModelError("Units", "Unit bazlı kiralama için en az bir unit eklemelisiniz.");
+                ModelState.AddModelError("Units", "Çoklu birim yapısı için en az bir birim eklemelisiniz.");
             }
             else
             {
@@ -289,52 +404,59 @@ public class PropertyController : Controller
                 {
                     var unit = vm.Units[i];
 
-                    if (string.IsNullOrWhiteSpace(unit.BirimNo))
-                        ModelState.AddModelError($"Units[{i}].BirimNo", "Unit No zorunludur.");
+                    if (string.IsNullOrWhiteSpace(unit.UnitNo))
+                        ModelState.AddModelError($"Units[{i}].BirimNo", "Birim No zorunludur.");
 
-                    if (unit.KatNo == null)
+                    if (unit.FloorNo == null)
                         ModelState.AddModelError($"Units[{i}].KatNo", "Kat No zorunludur.");
 
                     if (unit.UnitTypeId == null || unit.UnitTypeId <= 0)
-                        ModelState.AddModelError($"Units[{i}].UnitTypeId", "Unit Türü zorunludur.");
+                        ModelState.AddModelError($"Units[{i}].UnitTypeId", "Birim Türü zorunludur.");
 
-                    if (string.IsNullOrWhiteSpace(unit.Ad) && !string.IsNullOrWhiteSpace(unit.BirimNo))
-                        unit.Ad = "Unit " + unit.BirimNo;
-                    if (string.IsNullOrWhiteSpace(unit.Ad))
+                    if (string.IsNullOrWhiteSpace(unit.Name) && !string.IsNullOrWhiteSpace(unit.UnitNo))
+                        unit.Name = "Birim " + unit.UnitNo;
+                    if (string.IsNullOrWhiteSpace(unit.Name))
                         ModelState.AddModelError($"Units[{i}].Ad", "Ad zorunludur.");
 
-                    if (unit.Yuzolcumu <= 0)
+                    if (unit.Area <= 0)
                         ModelState.AddModelError($"Units[{i}].Yuzolcumu", "Yüzölçümü 0'dan büyük olmalıdır.");
                 }
 
                 var tekrarlayanBirimNo = vm.Units
-                    .Where(b => !string.IsNullOrWhiteSpace(b.BirimNo))
-                    .GroupBy(b => b.BirimNo.Trim().ToUpper())
+                    .Where(b => !string.IsNullOrWhiteSpace(b.UnitNo))
+                    .GroupBy(b => b.UnitNo.Trim().ToUpper())
                     .Where(g => g.Count() > 1)
                     .Select(g => g.Key)
                     .FirstOrDefault();
 
                 if (tekrarlayanBirimNo != null)
-                    ModelState.AddModelError("Units", $"Unit No '{tekrarlayanBirimNo}' aynı taşınmaz içinde tekrar kullanılamaz.");
+                    ModelState.AddModelError("Units", $"Birim No '{tekrarlayanBirimNo}' aynı taşınmaz içinde tekrar kullanılamaz.");
             }
         }
         else
         {
+            if (vm.KompleUnitTypeId is null or <= 0)
+                ModelState.AddModelError("KompleUnitTypeId", "Tek birim yapısı için birim türü zorunludur.");
             vm.Units.Clear();
+            vm.RezervasyonAlanlari.Clear();
         }
 
         for (int i = 0; i < vm.RezervasyonAlanlari.Count; i++)
         {
             var alan = vm.RezervasyonAlanlari[i];
-            if (string.IsNullOrWhiteSpace(alan.BirimNo))
-                ModelState.AddModelError($"RezervasyonAlanlari[{i}].BirimNo", "Unit No zorunludur.");
-            if (string.IsNullOrWhiteSpace(alan.Ad))
+            if (string.IsNullOrWhiteSpace(alan.UnitNo))
+                ModelState.AddModelError($"RezervasyonAlanlari[{i}].BirimNo", "Birim No zorunludur.");
+            if (string.IsNullOrWhiteSpace(alan.Name))
                 ModelState.AddModelError($"RezervasyonAlanlari[{i}].Ad", "Alan Adı zorunludur.");
-            if (alan.Yuzolcumu <= 0)
+            if (alan.Area <= 0)
                 ModelState.AddModelError($"RezervasyonAlanlari[{i}].Yuzolcumu", "Yüzölçümü 0'dan büyük olmalıdır.");
             if (alan.UnitTypeId == null || alan.UnitTypeId <= 0)
                 ModelState.AddModelError($"RezervasyonAlanlari[{i}].UnitTypeId", "Alan Türü zorunludur.");
         }
+
+        await ValidateUnitTypesAsync(vm.UnitStructure, vm.KompleUnitTypeId,
+            vm.Units.Select(u => u.UnitTypeId),
+            vm.RezervasyonAlanlari.Select(r => r.UnitTypeId));
 
         if (!ModelState.IsValid)
         {
@@ -364,7 +486,7 @@ public class PropertyController : Controller
             vm.FiyatMatrisi = freshMatris;
 
             vm.ParentTarife = await _tarifeHiyerarsisi.GetParentForAsync(TarifeHiyerarsiKatmani.Property, yil: DateTime.Now.Year);
-            vm.ParentRezervasyonTarife = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(yil: DateTime.Now.Year);
+            vm.ParentReservationRateOverride = await _tarifeHiyerarsisi.GetRezervasyonParentForAsync(yil: DateTime.Now.Year);
 
             return View(vm);
         }
@@ -373,7 +495,7 @@ public class PropertyController : Controller
         {
             Name = vm.Ad,
             PropertyTypeId = vm.TasinmazTipiId,
-            RentalMode = vm.RentalMode,
+            UnitStructure = vm.UnitStructure,
             City = vm.Il,
             District = vm.Ilce,
             Neighborhood = vm.Mahalle,
@@ -386,7 +508,8 @@ public class PropertyController : Controller
 
         await _tasinmazService.CreateAsync(t,
             vm.Units.Count > 0 ? vm.Units : null,
-            vm.RezervasyonAlanlari.Count > 0 ? vm.RezervasyonAlanlari : null);
+            vm.RezervasyonAlanlari.Count > 0 ? vm.RezervasyonAlanlari : null,
+            vm.KompleUnitTypeId);
 
         // Fiyat Matrisini Kaydet
         var userId = _userManager.GetUserId(User);

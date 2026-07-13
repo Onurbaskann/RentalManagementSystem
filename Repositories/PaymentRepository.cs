@@ -108,11 +108,11 @@ public class PaymentRepository : BaseRepository<PaymentAllocation>, IPaymentRepo
         };
     }
 
-    public async Task<OdemeDetayDto?> GetDetayAsync(int id)
+    public async Task<PaymentDetailDto?> GetDetayAsync(int id)
     {
         return await _dbSet.AsNoTracking()
             .Where(o => o.Id == id)
-            .Select(o => new OdemeDetayDto
+            .Select(o => new PaymentDetailDto
             {
                 Id = o.Id,
                 ChargeId = o.ChargeId,
@@ -122,16 +122,16 @@ public class PaymentRepository : BaseRepository<PaymentAllocation>, IPaymentRepo
                 PaymentChannel = o.PaymentChannel,
                 PaymentSourceType = o.PaymentSourceType,
                 PosReferenceNo = o.PosReferenceNo,
-                Aciklama = o.Description,
-                Durum = o.Status,
+                Description = o.Description,
+                Status = o.Status,
                 EntryDate = o.EntryDate,
                 ApprovalDate = o.ApprovalDate,
                 RejectionReason = o.RejectionReason,
-                TasinmazId = o.Charge.Lease != null && o.Charge.Lease.Unit != null ? (int?)o.Charge.Lease.Unit.PropertyId : null,
-                KiraciGosterimAdi = o.Charge.Tenant.Name,
-                TahakkukDonemBaslangic = o.Charge.PeriodStart,
-                GirenUserGosterimAdi = o.GirenUser != null ? (o.GirenUser.AdSoyad ?? o.GirenUser.Email) : null,
-                OnaylayanUserGosterimAdi = o.OnaylayanUser != null ? o.OnaylayanUser.AdSoyad : null,
+                PropertyId = o.Charge.Lease != null && o.Charge.Lease.Unit != null ? (int?)o.Charge.Lease.Unit.PropertyId : null,
+                TenantDisplayName = o.Charge.Tenant.Name,
+                ChargePeriodStart = o.Charge.PeriodStart,
+                CreatedByUserDisplayName = o.GirenUser != null ? (o.GirenUser.AdSoyad ?? o.GirenUser.Email) : null,
+                ApprovedByUserDisplayName = o.OnaylayanUser != null ? o.OnaylayanUser.AdSoyad : null,
                 BankMatches = o.BankMatches.Select(e => new OdemeBankaEslesmeDto
                 {
                     Id = e.Id,

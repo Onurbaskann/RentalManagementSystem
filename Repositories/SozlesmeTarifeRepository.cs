@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class SozlesmeTarifeRepository : BaseRepository<SozlesmeTarife>, ISozlesmeTarifeRepository
+public class SozlesmeTarifeRepository : BaseRepository<LeaseRateOverride>, ISozlesmeTarifeRepository
 {
     public SozlesmeTarifeRepository(ApplicationDbContext ctx) : base(ctx) { }
 

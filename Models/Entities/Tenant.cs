@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using KiraTakip.Infrastructure;
 
 namespace KiraTakip.Models.Entities;
@@ -47,6 +47,6 @@ public class Tenant : BaseEntity
 
     public string DisplayName => Name;
 
-    public Kategori? TenantCategory { get; set; }
-    public Kategori? Sector { get; set; }
+    public Category? TenantCategory { get; set; }
+    public Category? Sector { get; set; }
 }

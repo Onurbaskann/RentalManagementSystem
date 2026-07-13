@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Helpers;
 using KiraTakip.Models.ViewModels;
@@ -72,7 +72,7 @@ public class AdminChargeTypeController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpGet("Duzenle/{id:int}")]
+    [HttpGet("Duzenle/{id}")]
     [Authorize(Policy = PermissionCatalog.ChargeType.Module)]
     public async Task<IActionResult> Edit(int id)
     {
@@ -83,10 +83,10 @@ public class AdminChargeTypeController : Controller
         return View(vm);
     }
 
-    [HttpPost("Duzenle/{id:int}")]
+    [HttpPost("Duzenle/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.ChargeType.Edit)]
-    public async Task<IActionResult> Edit(int id, BorcTipiFormViewModel model)
+    public async Task<IActionResult> Edit(int id, [FromForm] BorcTipiFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
 
@@ -114,7 +114,7 @@ public class AdminChargeTypeController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("DurumDegistir/{id:int}")]
+    [HttpPost("DurumDegistir/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.ChargeType.Edit)]
     public async Task<IActionResult> DurumDegistir(int id)
@@ -132,7 +132,7 @@ public class AdminChargeTypeController : Controller
 
             if (await _birimTuruRepo.AnyAktifByBorcTipiIdAsync(id))
             {
-                TempData["Error"] = "Bu borç tipi aktif bir unit türüne bağlı. Önce ilgili unit türünü pasif yapın.";
+                TempData["Error"] = "Bu borç tipi aktif bir birim türüne bağlı. Önce ilgili birim türünü pasif yapın.";
                 return RedirectToAction(nameof(Index));
             }
         }
@@ -143,7 +143,7 @@ public class AdminChargeTypeController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("SiraDegistir/{id:int}")]
+    [HttpPost("SiraDegistir/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.ChargeType.Edit)]
     public async Task<IActionResult> SiraDegistir(int id, int yeniSira)

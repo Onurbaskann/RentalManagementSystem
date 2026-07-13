@@ -4,7 +4,7 @@
 @{
     Layout = "_KiraciLayout";
     var odemeBelgeleri = (ViewBag.OdemeBelgeleri as Dictionary<int, List<Document>>) ?? new();
-    ViewData["Title"] = $"Charge #{Model.Id}";
+    ViewData["Title"] = $"Tahakkuk #{Model.Id}";
 
     var kalan = Model.TotalAmount - Model.PaidAmount;
 
@@ -41,7 +41,7 @@
 
 <!-- Breadcrumb -->
 <div class="flex items-center justify-between mb-5">
-    <a href="/Tenant/Tahakkuklarim" class="text-[12.5px] text-muted no-underline hover:text-primary transition-colors">← Chargesım</a>
+    <a href="/Tenant/Tahakkuklarim" class="text-[12.5px] text-muted no-underline hover:text-primary transition-colors">← Tahakkuklarım</a>
     <div class="flex gap-2">
         @if (odeyebilir)
         {
@@ -84,7 +84,7 @@
             <span class="font-semibold">@(Model.PropertyName ?? "—")</span>
         </div>
         <div>
-            <span class="text-muted">Unit: </span>
+            <span class="text-muted">Birim: </span>
             <span class="font-semibold">@(Model.UnitName ?? "—")</span>
         </div>
     </div>
@@ -102,7 +102,7 @@
                 <thead class="bg-slate-50 border-b border-slate-200">
                     <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
                         <th class="p-2 px-3 text-left">Açıklama</th>
-                        <th class="p-2 px-3 text-right">Unit</th>
+                        <th class="p-2 px-3 text-right">Birim</th>
                         <th class="p-2 px-3 text-right">Amount</th>
                         <th class="p-2 px-3 text-right text-muted">KDV (%)</th>
                         <th class="p-2 px-3 text-right text-muted">KDV Amountı</th>

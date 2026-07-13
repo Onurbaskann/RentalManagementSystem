@@ -3,32 +3,32 @@
 @model KiraTakip.Models.ViewModels.ParentTarifeKartViewModel
 
 @{
-    var gruplar = Model.Satirlar.GroupBy(s => s.KategoriAd).ToList();
+    var gruplar = Model.Rows.GroupBy(s => s.CategoryName).ToList();
     bool isOpen = ViewData["IsOpen"] as bool? ?? true;
 }
 
 <details class="parent-tarife-kart mb-3 group" @(isOpen ? "open" : "")>
     <summary class="list-none cursor-pointer flex items-center gap-2.5 p-2 px-3 bg-slate-50 border border-slate-200 rounded-lg select-none group-open:rounded-b-none transition-all hover:bg-slate-100/50">
         <span class="text-[9px] font-bold tracking-widest uppercase bg-indigo-50 text-indigo-600 border border-indigo-100 rounded px-1.5 py-0.5">
-            @Model.KaynakAdi
+            @Model.SourceName
         </span>
-        @if (!Model.Satirlar.Any())
+        @if (!Model.Rows.Any())
         {
             <span class="text-[11px] text-muted italic">tarife tanımlanmamış</span>
         }
         else
         {
-            <span class="text-[11px] text-slate-500 font-medium">@gruplar.Count kategori · @Model.Satirlar.Count kalem</span>
+            <span class="text-[11px] text-slate-500 font-medium">@gruplar.Count kategori · @Model.Rows.Count kalem</span>
         }
-        @if (Model.Aciklama != null)
+        @if (Model.Description != null)
         {
-            <span class="text-[11px] text-muted truncate max-w-[200px]" title="@Model.Aciklama">— @Model.Aciklama</span>
+            <span class="text-[11px] text-muted truncate max-w-[200px]" title="@Model.Description">— @Model.Description</span>
         }
         <span class="ml-auto text-[10px] text-slate-300 group-open:rotate-180 transition-transform">▼</span>
     </summary>
 
     <div class="border border-slate-200 border-t-0 rounded-b-lg bg-white p-3">
-        @if (!Model.Satirlar.Any())
+        @if (!Model.Rows.Any())
         {
             <p class="text-[11px] text-muted italic text-center py-2">
                 Bu kaynak için tarife tanımlanmamış.
@@ -50,9 +50,9 @@
                             <span class="text-right font-bold text-slate-600 font-mono">@satir.UnitValue.ToString("N2") ₺</span>
                             <span class="text-right text-slate-400 text-[10px] font-bold">%@satir.KdvRate.ToString("N0") KDV</span>
                             <span class="text-right">
-                                @if (!string.IsNullOrEmpty(satir.Kaynak))
+                                @if (!string.IsNullOrEmpty(satir.Source))
                                 {
-                                    <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-semibold border border-slate-200">@satir.Kaynak</span>
+                                    <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-semibold border border-slate-200">@satir.Source</span>
                                 }
                             </span>
                         }

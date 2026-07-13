@@ -5,18 +5,18 @@ namespace KiraTakip.Repositories.Interfaces;
 public interface IReservationRepository : IBaseRepository<Reservation>
 {
     // Listeleme (DTO)
-    Task<List<RezervasyonListItemDto>> GetListAsync(List<int>? yetkiliPropertyIds);
-    Task<RezervasyonListItemDto?> GetByIdAsync(int id);
+    Task<List<ReservationListItemDto>> GetListAsync(List<int>? yetkiliPropertyIds);
+    Task<ReservationListItemDto?> GetByIdAsync(int id);
 
     // Çakışma kontrolü
     Task<bool> IsConflictAsync(int unitId, DateTime baslangic, DateTime bitis);
 
-    // RezervasyonTarife — Reservation domain
-    Task<RezervasyonTarife?> GetAktifTarifeForBirimAsync(int unitId);
-    Task<RezervasyonTarife?> GetGenelTarifeAsync(int unitTypeId, int yil);
-    Task<List<RezervasyonTarife>> GetUcretKurallariAsync();
-    Task<RezervasyonTarife?> GetUcretKuralByIdAsync(int id);
-    Task AddUcretKuralAsync(RezervasyonTarife kural);
+    // ReservationRateOverride — Reservation domain
+    Task<ReservationRateOverride?> GetAktifTarifeForBirimAsync(int unitId);
+    Task<ReservationRateOverride?> GetGenelTarifeAsync(int unitTypeId, int yil);
+    Task<List<ReservationRateOverride>> GetUcretKurallariAsync();
+    Task<ReservationRateOverride?> GetUcretKuralByIdAsync(int id);
+    Task AddUcretKuralAsync(ReservationRateOverride kural);
 
     // ChargeType — reservation charge üretimi için
     Task<ChargeType?> ResolveRezervasyonBorcTipiAsync(int? preferredBorcTipiId);

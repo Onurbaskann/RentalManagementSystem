@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
@@ -34,7 +34,7 @@ public class PaymentService : IPaymentService, ITransactionalService
         return await _repo.GetPagedListAsync(q, chargeId, propertyIds?.ToList());
     }
 
-    public async Task<OdemeDetayDto?> GetByIdAsync(int id)
+    public async Task<PaymentDetailDto?> GetByIdAsync(int id)
     {
         return await _repo.GetDetayAsync(id);
     }

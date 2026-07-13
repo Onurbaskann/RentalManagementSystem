@@ -1,4 +1,4 @@
-namespace KiraTakip.Models.ViewModels;
+﻿namespace KiraTakip.Models.ViewModels;
 
 public class BirimDetayViewModel
 {
@@ -6,5 +6,5 @@ public class BirimDetayViewModel
     public OccupancyStatus Durum { get; set; }
     public Lease? AktifSozlesme { get; set; }
     public decimal AylikBedel { get; set; }
-    public RezervasyonTarife? RezKural { get; set; }
+    public ReservationRateOverride? RezKural { get; set; }
 }

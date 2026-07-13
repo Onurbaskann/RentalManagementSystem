@@ -138,7 +138,7 @@
                                 {
                                     <tr>
                                         <td>@d.Email</td>
-                                        <td class="text-sm text-muted">@(d.AdSoyad ?? "—")</td>
+                                        <td class="text-sm text-muted">@(d.FullName ?? "—")</td>
                                         <td class="text-sm text-muted">@d.ExpiresAt.ToString("dd.MM.yyyy HH:mm")</td>
                                         <td class="flex gap-1.5 justify-end">
                                             <form method="post" action="/Admin/Kullanicilar/DavetYenidenGonder/@d.Id" class="inline">
@@ -188,7 +188,7 @@
                                 <td class="font-semibold">@u.AdSoyad</td>
                                 <td class="text-sm text-muted">@u.Email</td>
                                 <td>
-                                    <a href="/Admin/Kiracilar/@u.KiraciId/Kullanicilar" class="text-sm text-primary hover:underline">@u.KiraciAd</a>
+                                    <a href="/Admin/Kiracilar/@u.KiraciId.ToHashId()/Kullanicilar" class="text-sm text-primary hover:underline">@u.KiraciAd</a>
                                 </td>
                                 <td><span class="badge badge-bos">@u.RolAd</span></td>
                                 <td>
@@ -198,7 +198,7 @@
                                     { <span class="badge badge-gecmis">Pasif</span> }
                                 </td>
                                 <td class="text-right">
-                                    <a href="/Admin/Kiracilar/@u.KiraciId/Kullanicilar" class="btn btn-sm btn-secondary">Yönet</a>
+                                    <a href="/Admin/Kiracilar/@u.KiraciId.ToHashId()/Kullanicilar" class="btn btn-sm btn-secondary">Yönet</a>
                                 </td>
                             </tr>
                         }

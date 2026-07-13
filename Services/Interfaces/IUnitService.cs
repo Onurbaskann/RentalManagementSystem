@@ -7,8 +7,8 @@ namespace KiraTakip.Services.Interfaces;
 
 public interface IUnitService
 {
-    Task<List<BirimListItemDto>> GetByPropertyIdAsync(int propertyId);
-    Task<BirimDetayDto?> GetByIdAsync(int id);
+    Task<List<UnitListItemDto>> GetByPropertyIdAsync(int propertyId);
+    Task<UnitDetailDto?> GetByIdAsync(int id);
     Task CreateAsync(Unit b);
     Task UpdateAsync(Unit b);
 }

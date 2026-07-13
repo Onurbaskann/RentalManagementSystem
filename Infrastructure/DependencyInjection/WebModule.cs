@@ -12,6 +12,7 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddControllersWithViews(options =>
             {
                 options.Filters.AddService<YetkiKapsamiActionFilter>();
+                options.Filters.Add<BusinessRuleExceptionFilter>();
                 options.ModelBinderProviders.Insert(0, new HashidsModelBinderProvider());
                 options.ModelBinderProviders.Insert(1, new InvariantDecimalModelBinderProvider());
                 options.ModelBindingMessageProvider.SetAttemptedValueIsInvalidAccessor((x, y) => $"'{x}' değeri '{y}' alanı için geçersizdir.");

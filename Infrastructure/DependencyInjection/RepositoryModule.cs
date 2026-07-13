@@ -1,4 +1,4 @@
-using KiraTakip.Data;
+﻿using KiraTakip.Data;
 using KiraTakip.Repositories;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,11 +21,11 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<IChargeTypeRepository, ChargeTypeRepository>();
             services.AddScoped<ISozlesmeTarifeRepository, SozlesmeTarifeRepository>();
             services.AddScoped<IUnitRateRepository, UnitRateRepository>();
-            services.AddScoped<IGenelTarifeRepository, GenelTarifeRepository>();
-            services.AddScoped<IRezervasyonTarifeRepository, RezervasyonTarifeRepository>();
+            services.AddScoped<IRateScheduleRepository, RateScheduleRepository>();
+            services.AddScoped<IReservationRateOverrideRepository, ReservationRateOverrideRepository>();
             services.AddScoped<IUnitTypeRepository, UnitTypeRepository>();
             services.AddScoped<IDocumentTypeRepository, DocumentTypeRepository>();
-            services.AddScoped<IKategoriRepository, KategoriRepository>();
+            services.AddScoped<ICategoryRepository, CategoryRepository>();
             services.AddScoped<ITasinmazTipiRepository, TasinmazTipiRepository>();
             services.AddScoped<IReservationRepository, ReservationRepository>();
             services.AddScoped<IUserPermissionRepository, UserPermissionRepository>();

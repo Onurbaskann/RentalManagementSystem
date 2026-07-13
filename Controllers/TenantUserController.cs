@@ -46,12 +46,12 @@ public class TenantUserController : Controller
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Module)]
     public async Task<IActionResult> Index()
     {
-        var tenantId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.TenantId!.Value;
         var currentUserId = _userManager.GetUserId(User)!;
 
         var kullanicilar = await _db.Users
             .IgnoreQueryFilters()
-            .Where(u => u.KiraciId == tenantId)
+            .Where(u => u.TenantId == tenantId)
             .OrderBy(u => u.AdSoyad)
             .ToListAsync();
 
@@ -60,7 +60,7 @@ public class TenantUserController : Controller
         {
             var roller = await _db.UserRoller
                 .Where(ur => ur.UserId == u.Id)
-                .Join(_db.Roller, ur => ur.RolId, r => r.Id, (ur, r) => new { r.Ad, r.Id })
+                .Join(_db.Roller, ur => ur.RoleId, r => r.Id, (ur, r) => new { r.Name, r.Id })
                 .FirstOrDefaultAsync();
 
             items.Add(new KiraciKullaniciItem
@@ -68,7 +68,7 @@ public class TenantUserController : Controller
                 Id = u.Id,
                 AdSoyad = u.AdSoyad ?? u.Email ?? "—",
                 Email = u.Email ?? "—",
-                RolAd = roller?.Ad ?? "—",
+                RolAd = roller?.Name ?? "—",
                 RolId = roller?.Id ?? 0,
                 IsActive = u.IsActive,
                 IsCurrentUser = u.Id == currentUserId
@@ -77,8 +77,8 @@ public class TenantUserController : Controller
 
         var bekleyen = await _db.Davetiyeler
             .IgnoreQueryFilters()
-            .Where(d => d.KiraciId == tenantId && d.Durum == InvitationStatus.Pending)
-            .Include(d => d.Rol)
+            .Where(d => d.TenantId == tenantId && d.Status == InvitationStatus.Pending)
+            .Include(d => d.Role)
             .OrderByDescending(d => d.CreatedAt)
             .ToListAsync();
 
@@ -86,8 +86,8 @@ public class TenantUserController : Controller
         {
             Id = d.Id,
             Email = d.Email,
-            AdSoyad = d.AdSoyad,
-            RolAd = d.Rol?.Ad ?? "—",
+            AdSoyad = d.FullName,
+            RolAd = d.Role?.Name ?? "—",
             GonderimTarihi = d.CreatedAt,
             ExpiresAt = d.ExpiresAt
         }).ToList();
@@ -108,7 +108,7 @@ public class TenantUserController : Controller
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Invite)]
     public async Task<IActionResult> Davet()
     {
-        var tenantId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.TenantId!.Value;
         var model = new KiraciDavetViewModel();
         await PopulateRollerAsync(model.Roller);
         model.Units = await GetKiraciBirimleriAsync(tenantId);
@@ -120,7 +120,7 @@ public class TenantUserController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Davet(KiraciDavetViewModel model)
     {
-        var tenantId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.TenantId!.Value;
 
         if (!ModelState.IsValid)
         {
@@ -131,7 +131,7 @@ public class TenantUserController : Controller
 
         var currentUserId = _userManager.GetUserId(User)!;
 
-        var rol = await _db.Roller.FirstOrDefaultAsync(r => r.Id == model.RolId && r.KiraciId == tenantId && !r.IsSystemRole);
+        var rol = await _db.Roller.FirstOrDefaultAsync(r => r.Id == model.RolId && r.TenantId == tenantId && !r.IsSystemRole);
         if (rol == null)
         {
             ModelState.AddModelError("RolId", "Geçersiz rol seçildi.");
@@ -156,20 +156,20 @@ public class TenantUserController : Controller
         }
     }
 
-    private async Task<List<BirimLookupDto>> GetKiraciBirimleriAsync(int tenantId)
+    private async Task<List<UnitLookupDto>> GetKiraciBirimleriAsync(int tenantId)
     {
         return await _db.Leases
             .AsNoTracking()
             .Where(s => s.TenantId == tenantId && s.Status == LeaseStatus.Active)
-            .Select(s => new BirimLookupDto
+            .Select(s => new UnitLookupDto
             {
                 Id = s.UnitId,
-                Ad = s.Unit.Name,
-                TasinmazAd = s.Unit.Property.Name,
-                BirimNo = s.Unit.UnitNo,
+                Name = s.Unit.Name,
+                PropertyName = s.Unit.Property.Name,
+                UnitNo = s.Unit.UnitNo,
             })
             .Distinct()
-            .OrderBy(b => b.TasinmazAd).ThenBy(b => b.Ad)
+            .OrderBy(b => b.PropertyName).ThenBy(b => b.Name)
             .ToListAsync();
     }
 
@@ -180,7 +180,7 @@ public class TenantUserController : Controller
     {
         var davetiye = await _db.Davetiyeler
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(d => d.Id == id && d.KiraciId == _currentUser.KiraciId);
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == _currentUser.TenantId);
 
         if (davetiye == null) return NotFound();
 
@@ -203,7 +203,7 @@ public class TenantUserController : Controller
     {
         var davetiye = await _db.Davetiyeler
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(d => d.Id == id && d.KiraciId == _currentUser.KiraciId);
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == _currentUser.TenantId);
 
         if (davetiye == null) return NotFound();
 
@@ -224,15 +224,15 @@ public class TenantUserController : Controller
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Edit)]
     public async Task<IActionResult> Duzenle(string id)
     {
-        var tenantId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.TenantId!.Value;
         var user = await _db.Users.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.Id == id && u.KiraciId == tenantId);
+            .FirstOrDefaultAsync(u => u.Id == id && u.TenantId == tenantId);
         if (user == null) return NotFound();
 
         var currentUserId = _userManager.GetUserId(User)!;
         var mevcutRolId = await _db.UserRoller
             .Where(ur => ur.UserId == id)
-            .Select(ur => (int?)ur.RolId)
+            .Select(ur => (int?)ur.RoleId)
             .FirstOrDefaultAsync() ?? 0;
 
         var model = new KiraciKullaniciDuzenleViewModel
@@ -254,9 +254,9 @@ public class TenantUserController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Duzenle(string id, KiraciKullaniciDuzenleViewModel model)
     {
-        var tenantId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.TenantId!.Value;
         var user = await _db.Users.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.Id == id && u.KiraciId == tenantId);
+            .FirstOrDefaultAsync(u => u.Id == id && u.TenantId == tenantId);
         if (user == null) return NotFound();
 
         var currentUserId = _userManager.GetUserId(User)!;
@@ -276,7 +276,7 @@ public class TenantUserController : Controller
         }
 
         var yeniRol = await _db.Roller
-            .FirstOrDefaultAsync(r => r.Id == model.RolId && r.KiraciId == tenantId && !r.IsSystemRole);
+            .FirstOrDefaultAsync(r => r.Id == model.RolId && r.TenantId == tenantId && !r.IsSystemRole);
         if (yeniRol == null)
         {
             ModelState.AddModelError("RolId", "Geçersiz rol seçildi.");
@@ -311,9 +311,9 @@ public class TenantUserController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleActive(string id)
     {
-        var tenantId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.TenantId!.Value;
         var user = await _db.Users.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.Id == id && u.KiraciId == tenantId);
+            .FirstOrDefaultAsync(u => u.Id == id && u.TenantId == tenantId);
         if (user == null) return NotFound();
 
         var currentUserId = _userManager.GetUserId(User)!;
@@ -349,12 +349,12 @@ public class TenantUserController : Controller
 
     private async Task PopulateRollerAsync(List<RolSecenekViewModel> target)
     {
-        var tenantId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.TenantId!.Value;
         var roller = await _db.Roller
-            .Where(r => r.KiraciId == tenantId && !r.IsSystemRole && r.IsActive && !r.IsDeleted)
-            .OrderBy(r => r.Ad)
+            .Where(r => r.TenantId == tenantId && !r.IsSystemRole && r.IsActive && !r.IsDeleted)
+            .OrderBy(r => r.Name)
             .ToListAsync();
 
-        target.AddRange(roller.Select(r => new RolSecenekViewModel { Id = r.Id, Ad = r.Ad }));
+        target.AddRange(roller.Select(r => new RolSecenekViewModel { Id = r.Id, Ad = r.Name }));
     }
 }

@@ -6,6 +6,6 @@ public interface ICurrentUserContext
 {
     string? UserId { get; }
     UserType? UserType { get; }
-    int? KiraciId { get; }
+    int? TenantId { get; }
     bool IsKiraciUser { get; }
 }

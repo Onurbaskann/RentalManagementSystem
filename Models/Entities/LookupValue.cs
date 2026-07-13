@@ -5,10 +5,10 @@ namespace KiraTakip.Models.Entities;
 [Table("EnumDegerleri")]
 public class LookupValue : BaseEntity
 {
-    [Column("EnumName")]
+    [Column("EnumAdi")]
     public string EnumName { get; set; } = null!;
 
-    [Column("Value")]
+    [Column("Deger")]
     public int Value { get; set; }
 
     [Column("Ad")]

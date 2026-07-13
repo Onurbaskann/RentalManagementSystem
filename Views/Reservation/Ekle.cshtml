@@ -1,14 +1,14 @@
-﻿@model KiraTakip.Models.ViewModels.RezervasyonCreateViewModel
+﻿@model KiraTakip.Models.ViewModels.ReservationCreateViewModel
 @using KiraTakip.Models
 @{
-    ViewData["Title"] = "Reservation Ekle";
+    ViewData["Title"] = "Rezervasyon Ekle";
 }
 
 <div class="max-w-[1000px] mx-auto">
     <div class="page-header">
         <a href="/Reservation" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Rezervasyonlar</a>
-        <div class="page-title">Reservation Ekle</div>
-        <div class="page-subtitle">Seçilen unit için tarih ve saat belirleyin</div>
+        <div class="page-title">Rezervasyon Ekle</div>
+        <div class="page-subtitle">Seçilen birim için tarih ve saat belirleyin</div>
     </div>
 
     <div x-data="rezervasyonForm()" @@datechanged="onPickerChanged($event)">
@@ -20,30 +20,30 @@
         <div class="card mb-4">
             <div class="text-lg font-bold mb-5 flex items-center gap-2">
                 <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
-                <span>Unit ve Kiracı</span>
+                <span>Birim ve Kiracı</span>
             </div>
 
             <div class="form-group mb-5">
-                <label asp-for="BirimId" class="form-label">Taşınmaz Birimi <span class="text-red-500">*</span></label>
-                <select asp-for="BirimId" class="form-control" x-on:change="birimSecildi($event)">
-                    <option value="">— Unit seçin —</option>
-                    @foreach (var b in Model.RezervasyonBirimleri)
+                <label asp-for="UnitId" class="form-label">Taşınmaz Birimi <span class="text-red-500">*</span></label>
+                <select asp-for="UnitId" class="form-control" x-on:change="birimSecildi($event)">
+                    <option value="">— Birim seçin —</option>
+                    @foreach (var b in Model.Units)
                     {
                         <option value="@b.Id"
-                            data-property="@b.TasinmazAd"
-                            data-tur="@b.UnitTypeAd">
-                            @b.TasinmazAd — @b.Ad
-                            @if (!string.IsNullOrEmpty(b.UnitTypeAd)) { <text>(@b.UnitTypeAd)</text> }
+                            data-property="@b.PropertyName"
+                            data-tur="@b.UnitTypeName">
+                            @b.PropertyName — @b.Name
+                            @if (!string.IsNullOrEmpty(b.UnitTypeName)) { <text>(@b.UnitTypeName)</text> }
                         </option>
                     }
                 </select>
-                <span asp-validation-for="BirimId" class="form-error"></span>
+                <span asp-validation-for="UnitId" class="form-error"></span>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="form-group mb-0">
-                    <label asp-for="KiraciId" class="form-label">Kiracı <span class="text-red-500">*</span></label>
-                    <select asp-for="KiraciId" class="form-control" x-model="tenantId" x-on:change="kiraciSecildi($event)">
+                    <label asp-for="TenantId" class="form-label">Kiracı <span class="text-red-500">*</span></label>
+                    <select asp-for="TenantId" class="form-control" x-model="tenantId" x-on:change="kiraciSecildi($event)">
                         <option value="">— Kiracı seçin —</option>
                         @foreach (var k in Model.Tenants)
                         {
@@ -51,7 +51,7 @@
                         }
 
                     </select>
-                    <span asp-validation-for="KiraciId" class="form-error"></span>
+                    <span asp-validation-for="TenantId" class="form-error"></span>
                 </div>
 
             </div>
@@ -132,14 +132,14 @@
 
         <div class="card mb-4">
             <div class="form-group mb-0">
-                <label asp-for="Aciklama" class="form-label">Açıklama <span class="text-muted font-normal">(opsiyonel)</span></label>
-                <textarea asp-for="Aciklama" class="form-control" rows="2" placeholder="Reservation konusu, katılımcılar vb."></textarea>
+                <label asp-for="Description" class="form-label">Açıklama <span class="text-muted font-normal">(opsiyonel)</span></label>
+                <textarea asp-for="Description" class="form-control" rows="2" placeholder="Rezervasyon konusu, katılımcılar vb."></textarea>
             </div>
         </div>
 
         <div class="flex justify-end gap-3 mt-6">
             <a href="/Reservation" class="btn btn-secondary px-6">İptal</a>
-            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.Reservation.Create">Reservation Oluştur</button>
+            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.Reservation.Create">Rezervasyon Oluştur</button>
         </div>
     </form>
 </div>
@@ -149,8 +149,8 @@
 <script>
 function rezervasyonForm() {
     return {
-        unitId: @(Model.BirimId > 0 ? Model.BirimId.ToString() : "0"),
-        tenantId: @(Model.KiraciId > 0 ? Model.KiraciId.ToString() : "0"),
+        unitId: @(Model.UnitId > 0 ? Model.UnitId.ToString() : "0"),
+        tenantId: @(Model.TenantId > 0 ? Model.TenantId.ToString() : "0"),
         baslangic: '@Model.StartDate.ToString("yyyy-MM-ddTHH:mm")',
         bitis: '@Model.EndDate.ToString("yyyy-MM-ddTHH:mm")',
         hesapSonucu: null,

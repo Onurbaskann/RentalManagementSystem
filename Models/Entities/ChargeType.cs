@@ -11,7 +11,6 @@ public class ChargeType : BaseEntity
     [Column("Kod")]
     public string Code { get; set; } = string.Empty;
 
-
     [Column("Sira")]
     public int SortOrder { get; set; }
 

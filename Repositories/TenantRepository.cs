@@ -34,7 +34,7 @@ public class TenantRepository : BaseRepository<Tenant>, ITenantRepository
                 KiraciNo = k.TenantNo,
                 GosterimAdi = k.Name,
                 VergiNo = k.TaxNo,
-                KiraciKategoriAd = k.TenantCategory != null ? k.TenantCategory.Ad : null,
+                KiraciKategoriAd = k.TenantCategory != null ? k.TenantCategory.Name : null,
                 Telefon = k.Phone,
                 Email = k.Email,
                 KayitTarihi = k.RegistrationDate
@@ -50,9 +50,9 @@ public class TenantRepository : BaseRepository<Tenant>, ITenantRepository
             {
                 Id = k.Id,
                 KiraciKategoriId = k.TenantCategoryId,
-                KiraciKategoriAd = k.TenantCategory != null ? k.TenantCategory.Ad : null,
+                KiraciKategoriAd = k.TenantCategory != null ? k.TenantCategory.Name : null,
                 SektorId = k.SectorId,
-                SektorAd = k.Sector != null ? k.Sector.Ad : null,
+                SektorAd = k.Sector != null ? k.Sector.Name : null,
                 KiraciNo = k.TenantNo,
                 Ad = k.Name,
                 TicaretSicilNo = k.TradeRegistryNo,

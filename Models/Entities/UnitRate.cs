@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
 namespace KiraTakip.Models.Entities;
 
@@ -24,6 +24,6 @@ public class UnitRate : BaseEntity
     public decimal KdvRate { get; set; }
 
     public Unit Unit { get; set; } = null!;
-    public Kategori TenantCategory { get; set; } = null!;
+    public Category TenantCategory { get; set; } = null!;
     public ChargeType ChargeType { get; set; } = null!;
 }

@@ -21,7 +21,7 @@ public class YetkiKapsamiActionFilter : IAsyncActionFilter
         var user = context.HttpContext.User;
 
         if (user.Identity?.IsAuthenticated == true
-            && !user.HasClaim(c => c.Type == AppClaimTypes.KiraciId))
+            && !user.HasClaim(c => c.Type == AppClaimTypes.TenantId))
         {
             var isScopeAware = context.ActionDescriptor.EndpointMetadata
                 .OfType<AuthorizeAttribute>()

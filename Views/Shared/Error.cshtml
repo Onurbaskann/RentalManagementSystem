@@ -1,26 +1,37 @@
 @model ErrorViewModel
 @{
-    ViewData["Title"] = "Error";
+    ViewData["Title"] = "Hata";
+    Layout = null;
 }
-
-<h1 class="text-danger">Error.</h1>
-<h2 class="text-danger">An error occurred while processing your request.</h2>
-
-@if (Model.ShowRequestId)
-{
-    <p>
-        <strong>Request ID:</strong> <code>@Model.RequestId</code>
-    </p>
-}
-
-<h3>Development Mode</h3>
-<p>
-    Swapping to <strong>Development</strong> environment will display more detailed information about the error that occurred.
-</p>
-<p>
-    <strong>The Development environment shouldn't be enabled for deployed applications.</strong>
-    It can result in displaying sensitive information from exceptions to end users.
-    For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>
-    and restarting the app.
-</p>
-
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hata — Kira Takip</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Plus Jakarta Sans', sans-serif; }</style>
+</head>
+<body class="bg-slate-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-8 text-center">
+        <div class="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div class="text-lg font-bold text-slate-800 mb-2">Beklenmeyen Bir Hata Oluştu</div>
+        <p class="text-sm text-slate-500 mb-6">
+            İşleminiz gerçekleştirilirken bir sorun yaşandı. Lütfen tekrar deneyin;
+            sorun devam ederse sistem yöneticinize başvurun.
+        </p>
+        @if (Model.ShowRequestId)
+        {
+            <p class="text-[11px] text-slate-400 mb-6">Referans: <code>@Model.RequestId</code></p>
+        }
+        <div class="flex justify-center gap-3">
+            <button type="button" onclick="history.back()" class="px-5 py-2 text-sm font-semibold rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors">← Geri Dön</button>
+            <a href="/" class="px-5 py-2 text-sm font-semibold rounded-lg bg-[#1a6b5c] text-white hover:bg-[#155549] transition-colors no-underline">Ana Sayfa</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,6 +1,7 @@
 ﻿using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Entities;
+using KiraTakip.Models.Constants;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
 
@@ -54,12 +55,12 @@ public class PropertyPricingService : Interfaces.IPropertyPricingService
             var satir = new KiraciKategoriFiyatSatiriViewModel
             {
                 KiraciKategoriId = kk.Id,
-                KiraciKategoriAd = kk.Ad,
+                KiraciKategoriAd = kk.Name,
                 Hucreler = new List<TasinmazFiyatHucreViewModel>()
             };
             foreach (var bt in borcTipleri)
             {
-                var fiyat = mevcutFiyatlar.FirstOrDefault(f => f.KiraciKategoriId == kk.Id && f.ChargeTypeId == bt.Id);
+                var fiyat = mevcutFiyatlar.FirstOrDefault(f => f.TenantCategoryId == kk.Id && f.ChargeTypeId == bt.Id);
                 if (fiyat != null)
                 {
                     satir.Hucreler.Add(new TasinmazFiyatHucreViewModel
@@ -129,10 +130,10 @@ public class PropertyPricingService : Interfaces.IPropertyPricingService
                 {
                     if (hucre.UnitValue.HasValue)
                     {
-                        var newEntity = new TasinmazTarife
+                        var newEntity = new PropertyRateOverride
                         {
                             PropertyId = propertyId,
-                            KiraciKategoriId = hucre.KiraciKategoriId,
+                            TenantCategoryId = hucre.KiraciKategoriId,
                             ChargeTypeId = hucre.ChargeTypeId,
                             UnitValue = hucre.UnitValue.Value,
                             CalculationMethod = hucre.CalculationMethod,

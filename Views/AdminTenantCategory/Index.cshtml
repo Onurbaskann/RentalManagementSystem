@@ -1,4 +1,4 @@
-@model List<KiraTakip.Models.Dtos.KategoriListItemDto>
+﻿@model List<KiraTakip.Models.Dtos.CategoryListItemDto>
 @{
     ViewData["Title"] = "Kiracı Kategorileri";
 }
@@ -42,10 +42,10 @@
                 @foreach (var k in Model)
                 {
                     <tr>
-                        <td class="text-center text-muted text-xs">@k.Sira</td>
-                        <td class="font-medium text-slate-700">@k.Ad</td>
+                        <td class="text-center text-muted text-xs">@k.Order</td>
+                        <td class="font-medium text-slate-700">@k.Name</td>
                         <td>
-                            @if (k.Aktif)
+                            @if (k.IsActive)
                             { <span class="badge badge-kirali">Aktif</span> }
                             else
                             { <span class="badge badge-gecmis">Pasif</span> }
@@ -53,11 +53,11 @@
                         <td class="flex gap-1.5 justify-end">
                             <a href="/Admin/KiraciKategori/Duzenle/@k.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
                             <form method="post" action="/Admin/KiraciKategori/DurumDegistir/@k.Id.ToHashId()"
-                                  data-confirm="@(k.Aktif ? $"'{k.Ad}' pasif yapılsın mı?" : $"'{k.Ad}' aktif yapılsın mı?")"
+                                  data-confirm="@(k.IsActive ? $"'{k.Name}' pasif yapılsın mı?" : $"'{k.Name}' aktif yapılsın mı?")"
                                   class="inline">
                                 @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm @(k.Aktif ? "btn-danger" : "btn-amber")">
-                                    @(k.Aktif ? "Pasif Yap" : "Aktif Yap")
+                                <button type="submit" class="btn btn-sm @(k.IsActive ? "btn-danger" : "btn-amber")">
+                                    @(k.IsActive ? "Pasif Yap" : "Aktif Yap")
                                 </button>
                             </form>
                         </td>

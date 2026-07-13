@@ -2,6 +2,7 @@ using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Entities;
+using KiraTakip.Models.Constants;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -37,7 +38,7 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
                 Id = s.Id,
                 TenantId = s.TenantId,
                 TenantDisplayName = s.Tenant.DisplayName,
-                TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Ad : string.Empty,
+                TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Name : string.Empty,
                 UnitId = s.UnitId,
                 UnitName = s.Unit.Name,
                 PropertyId = s.Unit.PropertyId,
@@ -63,13 +64,13 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
                 TenantPhone = s.Tenant.Phone,
                 TenantEmail = s.Tenant.Email,
                 TenantCategoryId = s.Tenant.TenantCategoryId,
-                TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Ad : string.Empty,
+                TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Name : string.Empty,
                 UnitId = s.UnitId,
                 UnitName = s.Unit.Name,
                 UnitNo = s.Unit.UnitNo,
                 UnitFloorNo = s.Unit.FloorNo,
                 UnitArea = s.Unit.Area,
-                UnitKind = s.Unit.UnitKind,
+                UnitStructure = s.Unit.Property.UnitStructure,
                 PropertyId = s.Unit.PropertyId,
                 PropertyName = s.Unit.Property.Name,
                 PropertyCity = s.Unit.Property.City,
@@ -129,7 +130,7 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
                 Id = s.Id,
                 TenantId = s.TenantId,
                 TenantDisplayName = s.Tenant.DisplayName,
-                TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Ad : string.Empty,
+                TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Name : string.Empty,
                 UnitId = s.UnitId,
                 UnitName = s.Unit.Name,
                 PropertyId = s.Unit.PropertyId,
@@ -153,7 +154,7 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
                 Id = s.Id,
                 TenantId = s.TenantId,
                 TenantDisplayName = s.Tenant.DisplayName,
-                TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Ad : string.Empty,
+                TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Name : string.Empty,
                 UnitId = s.UnitId,
                 UnitName = s.Unit.Name,
                 PropertyId = s.Unit.PropertyId,

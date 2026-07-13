@@ -12,8 +12,7 @@ public class UnitTypeFormViewModel
     public string Name { get; set; } = string.Empty;
 
     public int SortOrder { get; set; } = 1;
-    public bool CanBeRented { get; set; } = true;
-    public bool CanBeReserved { get; set; }
+    public UnitTypeUsage Usage { get; set; } = UnitTypeUsage.Rentable;
     public int? ChargeTypeId { get; set; }
     public bool IsActive { get; set; } = true;
 

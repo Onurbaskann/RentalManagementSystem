@@ -6,7 +6,7 @@ public class TarifeMatrisRezervasyonSatir
     public int UnitTypeId { get; set; }
     public string UnitTypeAd { get; set; } = string.Empty;
     public int FreeDurationMinutes { get; set; }
-    public int UcretlendirmePeriyoduDakika { get; set; }
+    public int BillingPeriodMinutes { get; set; }
     public decimal PeriyotUcreti { get; set; }
     public decimal KdvRate { get; set; }
 }

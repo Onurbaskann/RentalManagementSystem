@@ -1,12 +1,15 @@
 using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace KiraTakip.Models.Entities;
 
 public class ApplicationUser : IdentityUser, IAuditable
 {
-    public string? AdSoyad { get; set; }    
+    public string? AdSoyad { get; set; }
     public UserType UserType { get; set; } = UserType.Internal;
-    public int? KiraciId { get; set; }
+
+    [Column("KiraciId")]
+    public int? TenantId { get; set; }
     public bool TumTasinmazlaraErisim { get; set; } = false;
     public bool IsSuperAdmin { get; set; } = false;
     public DateTime CreatedAt { get; set; }

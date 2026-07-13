@@ -42,7 +42,7 @@
         <div class="text-xs text-white/70 mt-2">
             @if (hasTahakkuk && Model.GecikmisTahakkukAdet > 0)
             {
-                <span>⚠ @Model.GecikmisTahakkukAdet gecikmiş charge var (@Model.GecikmisTutarToplam.ToString("N2") ₺)</span>
+                <span>⚠ @Model.GecikmisTahakkukAdet gecikmiş tahakkuk var (@Model.GecikmisTutarToplam.ToString("N2") ₺)</span>
             }
             else if (hasOdeme && Model.OnayBekleyenOdemeAdet > 0)
             {
@@ -154,11 +154,11 @@
                 <i data-lucide="alarm-clock" class="w-5 h-5"></i>
             </div>
             <div>
-                <div class="text-sm font-bold text-amber-900">Bugün vade dolan @Model.BugunVadeDolanAdet charge</div>
+                <div class="text-sm font-bold text-amber-900">Bugün vade dolan @Model.BugunVadeDolanAdet tahakkuk</div>
                 <div class="text-xs text-amber-700 mt-0.5">Toplam kalan: <strong>@Model.BugunVadeDolanTutar.ToString("N2") ₺</strong> — Bugün takip et</div>
             </div>
         </div>
-        <a href="/Charge?vade=bugun" class="text-xs font-semibold text-amber-800 hover:underline shrink-0">İncele →</a>
+        <a href="/Charge?from=@DateTime.Today.ToString("yyyy-MM-dd")&to=@DateTime.Today.ToString("yyyy-MM-dd")" class="text-xs font-semibold text-amber-800 hover:underline shrink-0">İncele →</a>
     </div>
 }
 
@@ -203,8 +203,8 @@
                 <span class="text-[10px] font-bold uppercase tracking-wider text-red-700 bg-red-50 border border-red-100 px-2 py-0.5 rounded-md">@Model.GecikmisTutarToplam.ToString("N2") ₺</span>
             </div>
             <div class="text-3xl font-bold text-slate-800" data-countup="@Model.GecikmisTahakkukAdet" data-decimals="0">0</div>
-            <div class="text-[12px] text-slate-500 mt-1">Gecikmiş Charge</div>
-            <a href="/Charge?durum=gecikti" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-1 block">Görüntüle →</a>
+            <div class="text-[12px] text-slate-500 mt-1">Gecikmiş Tahakkuk</div>
+            <a href="/Charge?status=gecikti" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-1 block">Görüntüle →</a>
         </div>
 
         <!-- C: Onay Bekleyen -->
@@ -219,7 +219,7 @@
             </div>
             <div class="text-3xl font-bold text-slate-800" data-countup="@Model.OnayBekleyenOdemeAdet" data-decimals="0">0</div>
             <div class="text-[12px] text-slate-500 mt-1">Onay Bekleyen Ödeme</div>
-            <a href="/Payment?durum=onaybekliyor" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-1 block">İncele →</a>
+            <a href="/Payment?status=onaybekliyor" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-1 block">İncele →</a>
         </div>
 
         <!-- D: Eşleşmemiş Banka Hareketi -->
@@ -268,7 +268,7 @@
     {
     <div class="bg-white rounded-2xl border border-slate-200 p-5">
         <div class="text-sm font-bold text-slate-800 mb-1">Doluluk Dağılımı</div>
-        <div class="text-xs text-slate-500 mb-4">Unit bazında (Kiralı / Dolmak Üzere / Boş)</div>
+        <div class="text-xs text-slate-500 mb-4">Birim bazında (Kiralı / Dolmak Üzere / Boş)</div>
         @if (Model.ToplamBirim > 0)
         {
             <div id="chart-doluluk"></div>
@@ -289,7 +289,7 @@
         }
         else
         {
-            <div class="text-center py-10 text-slate-400 text-sm">Henüz unit yok</div>
+            <div class="text-center py-10 text-slate-400 text-sm">Henüz birim yok</div>
         }
     </div>
     }
@@ -324,7 +324,7 @@
                     <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50/50 border-l-4 @borderCls hover:translate-x-0.5 transition-all">
                         <div class="flex-1 min-w-0">
                             <div class="text-sm font-semibold text-slate-800 truncate">@s.KiraciAdi</div>
-                            <div class="text-xs text-slate-500 truncate mt-0.5">@s.TasinmazAdi · @s.BirimAdi</div>
+                            <div class="text-xs text-slate-500 truncate mt-0.5">@s.PropertyName · @s.BirimAdi</div>
                         </div>
                         <div class="ml-3 shrink-0 text-right">
                             <span class="px-2 py-1 rounded text-[11px] font-bold @rozetCls">@s.KalanGun gün</span>
@@ -342,7 +342,7 @@
     {
     <div class="bg-white rounded-2xl border border-slate-200 p-5">
         <div class="flex items-center justify-between mb-4">
-            <div class="text-sm font-bold text-slate-800">Boş Units</div>
+            <div class="text-sm font-bold text-slate-800">Boş Birimler</div>
             <a href="/Lease/Ekle" class="text-xs font-semibold text-[#1a6b5c] hover:underline">Kiraya Ver →</a>
         </div>
         @if (!Model.BosBirimler.Any())
@@ -356,7 +356,7 @@
                 {
                     <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50/50 border-l-4 border-slate-300 hover:translate-x-0.5 transition-all">
                         <div class="flex-1 min-w-0">
-                            <div class="text-sm font-semibold text-slate-800 truncate">@b.TasinmazAdi</div>
+                            <div class="text-sm font-semibold text-slate-800 truncate">@b.PropertyName</div>
                             <div class="text-xs text-slate-500 truncate mt-0.5">@b.BirimAdi · @b.Ilce</div>
                         </div>
                         <div class="ml-3 shrink-0 text-right">
@@ -450,7 +450,7 @@
                             <div class="h-full bg-gradient-to-r from-[#1a6b5c] to-emerald-500"
                                  style="width:@pct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
                         </div>
-                        <div class="text-[10px] text-slate-500 mt-1">@g.BirimSayisi unit</div>
+                        <div class="text-[10px] text-slate-500 mt-1">@g.BirimSayisi birim</div>
                     </a>
                 }
             </div>
@@ -465,7 +465,7 @@
 <!-- ─── §3.7 REZERVASYON & MANUEL BORÇ İNCE SATIR ─── -->
 @if (hasOdeme && (Model.BuAyManuelBorcToplami > 0 || Model.BuAyRezervasyonGeliri > 0 || Model.TahakkukaAktarilmamisRezervasyonAdet > 0))
 {
-    <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Reservation & Manuel Borç</div>
+    <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Rezervasyon & Manuel Borç</div>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 
         <!-- Bu Ay Manuel Borç -->
@@ -481,7 +481,7 @@
             <div class="text-[12px] text-slate-500 mt-1">Bu Ay Manuel Borç</div>
         </div>
 
-        <!-- Bu Ay Reservation Geliri -->
+        <!-- Bu Ay Rezervasyon Geliri -->
         <div class="bg-white rounded-2xl border border-slate-200 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
             <div class="flex items-start justify-between mb-3">
                 <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-sm">
@@ -491,10 +491,10 @@
             <div class="text-2xl font-bold text-slate-800"
                  data-countup="@Model.BuAyRezervasyonGeliri.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                  data-decimals="2" data-suffix=" ₺">0</div>
-            <div class="text-[12px] text-slate-500 mt-1">Bu Ay Reservation Geliri</div>
+            <div class="text-[12px] text-slate-500 mt-1">Bu Ay Rezervasyon Geliri</div>
         </div>
 
-        <!-- Aktarılmamış Ücretli Reservation -->
+        <!-- Aktarılmamış Ücretli Rezervasyon -->
         @{
             var rezervasyonBorderCls = Model.TahakkukaAktarilmamisRezervasyonAdet > 0 ? "border-amber-200 bg-amber-50/40" : "border-slate-200 bg-white";
         }
@@ -505,7 +505,7 @@
                 </div>
             </div>
             <div class="text-2xl font-bold text-slate-800" data-countup="@Model.TahakkukaAktarilmamisRezervasyonAdet" data-decimals="0">0</div>
-            <div class="text-[12px] text-slate-500 mt-1">Aktarılmamış Ücretli Reservation</div>
+            <div class="text-[12px] text-slate-500 mt-1">Aktarılmamış Ücretli Rezervasyon</div>
         </div>
     </div>
 }
@@ -533,8 +533,8 @@
             <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-sm">
                 <i data-lucide="calendar-plus" class="w-6 h-6"></i>
             </div>
-            <div class="text-sm font-bold text-slate-800 mt-3">Yeni Reservation</div>
-            <div class="text-xs text-slate-600 mt-0.5">Salon/unit rezervasyonu</div>
+            <div class="text-sm font-bold text-slate-800 mt-3">Yeni Rezervasyon</div>
+            <div class="text-xs text-slate-600 mt-0.5">Salon/birim rezervasyonu</div>
         </a>
     }
 
@@ -641,7 +641,7 @@
                                         show: true,
                                         total: {
                                             show: true,
-                                            label: 'Unit',
+                                            label: 'Birim',
                                             formatter: function (w) {
                                                 return w.globals.seriesTotals.reduce(function (a, b) { return a + b; }, 0);
                                             }
@@ -653,7 +653,7 @@
                         dataLabels: { enabled: false },
                         legend: { position: 'bottom', fontSize: '11px', markers: { width: 8, height: 8 } },
                         stroke: { width: 2, colors: ['#fff'] },
-                        tooltip: { y: { formatter: function (v) { return v + ' unit'; } } }
+                        tooltip: { y: { formatter: function (v) { return v + ' birim'; } } }
                     }).render();
                 }
             }

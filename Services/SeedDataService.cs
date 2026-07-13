@@ -2,6 +2,7 @@ using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Entities;
+using KiraTakip.Models.Constants;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -84,7 +85,7 @@ public class SeedDataService
         await _ctx.ChargeTypes.Where(b => b.Code == "ETKINLIK").ExecuteUpdateAsync(s => s.SetProperty(b => b.Behavior, ChargeTypeBehavior.ReservationSpecific));
     }
 
-    public async Task EnsureVarsayilanRezervasyonTarifeAsync()
+    public async Task EnsureVarsayilanReservationRateOverrideAsync()
     {
         var cariYil = DateTime.Now.Year;
         var varsayilanUcret = 500m;
@@ -93,26 +94,26 @@ public class SeedDataService
         var varsayilanKdv = 20m;
 
         var rezBirimTurleri = await _ctx.UnitTypes
-            .Where(t => t.IsActive && t.CanBeReserved)
+            .Where(t => t.IsActive && t.Usage == UnitTypeUsage.Reservable)
             .ToListAsync();
         if (!rezBirimTurleri.Any()) return;
 
         var mevcut = await _ctx.RezervasyonTarifeler
-            .Where(r => r.UnitId == null && r.Yil == cariYil)
+            .Where(r => r.UnitId == null && r.Year == cariYil)
             .Select(r => r.UnitTypeId)
             .ToListAsync();
 
         foreach (var bt in rezBirimTurleri.Where(b => !mevcut.Contains(b.Id)))
         {
-            _ctx.RezervasyonTarifeler.Add(new RezervasyonTarife
+            _ctx.RezervasyonTarifeler.Add(new ReservationRateOverride
             {
-                Yil = cariYil,
+                Year = cariYil,
                 UnitTypeId = bt.Id,
                 FreeDurationMinutes = varsayilanUcretsizSure,
-                UcretlendirmePeriyoduDakika = varsayilanPeriyot,
-                PeriyotUcreti = varsayilanUcret,
+                BillingPeriodMinutes = varsayilanPeriyot,
+                PeriodRate = varsayilanUcret,
                 KdvRate = varsayilanKdv,
-                Aciklama = $"{cariYil} varsayılan — {bt.Name}"
+                Description = $"{cariYil} varsayılan — {bt.Name}"
             });
         }
         await _ctx.SaveChangesAsync();
@@ -120,10 +121,10 @@ public class SeedDataService
 
     public async Task SeedTasinmazTipleriAsync()
     {
-        var existingCodes = await _ctx.TasinmazTipleri.Select(k => k.Kod).ToListAsync();
-        var toAdd = new List<TasinmazTipi>();
+        var existingCodes = await _ctx.TasinmazTipleri.Select(t => t.Code).ToListAsync();
+        var toAdd = new List<PropertyType>();
 
-        if (!existingCodes.Contains("BINA")) toAdd.Add(new TasinmazTipi { Ad = "Bina", Kod = "BINA", IsActive = true, Sira = 1, OlusturmaTarihi = DateTime.UtcNow, TekParcaDestekli = true, BirimBazliDestekli = true });
+        if (!existingCodes.Contains("BINA")) toAdd.Add(new PropertyType { Name = "Bina", Code = "BINA", IsActive = true, SortOrder = 1, SupportsSingleUnit = true, SupportsMultipleUnits = true });
 
         if (toAdd.Any())
         {
@@ -147,9 +148,9 @@ public class SeedDataService
             .FirstOrDefaultAsync();
 
         var toAdd = new List<UnitType>();
-        if (!existingCodes.Contains("OFIS")) toAdd.Add(new UnitType { Name = "Ofis", Code = "OFIS", IsActive = true, CanBeRented = true, CanBeReserved = false, SortOrder = 1, CreatedDate = DateTime.UtcNow });
-        if (!existingCodes.Contains("TOPLANTI")) toAdd.Add(new UnitType { Name = "Toplantı Salonu", Code = "TOPLANTI", IsActive = true, CanBeRented = false, CanBeReserved = true, SortOrder = 10, CreatedDate = DateTime.UtcNow, ChargeTypeId = toplantiBorcTipiId });
-        if (!existingCodes.Contains("ETKINLIK")) toAdd.Add(new UnitType { Name = "Etkinlik Alanı", Code = "ETKINLIK", IsActive = true, CanBeRented = false, CanBeReserved = true, SortOrder = 11, CreatedDate = DateTime.UtcNow, ChargeTypeId = etkinliBorcTipiId });
+        if (!existingCodes.Contains("OFIS")) toAdd.Add(new UnitType { Name = "Ofis", Code = "OFIS", IsActive = true, Usage = UnitTypeUsage.Rentable, SortOrder = 1 });
+        if (!existingCodes.Contains("TOPLANTI")) toAdd.Add(new UnitType { Name = "Toplantı Salonu", Code = "TOPLANTI", IsActive = true, Usage = UnitTypeUsage.Reservable, SortOrder = 10, ChargeTypeId = toplantiBorcTipiId });
+        if (!existingCodes.Contains("ETKINLIK")) toAdd.Add(new UnitType { Name = "Etkinlik Alanı", Code = "ETKINLIK", IsActive = true, Usage = UnitTypeUsage.Reservable, SortOrder = 11, ChargeTypeId = etkinliBorcTipiId });
 
         if (toAdd.Any())
         {
@@ -174,11 +175,11 @@ public class SeedDataService
 
     public async Task SeedKiraciKategorileriAsync()
     {
-        var existingCodes = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Tenant).Select(k => k.Kod).ToListAsync();
-        var toAdd = new List<Kategori>();
+        var existingCodes = await _ctx.Kategoriler.Where(k => k.Type == CategoryType.Tenant).Select(k => k.Code).ToListAsync();
+        var toAdd = new List<Category>();
 
-        if (!existingCodes.Contains("AKADEMIK")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Tenant, Ad = "Akademik", Kod = "AKADEMIK", IsActive = true, Sira = 1, OlusturmaTarihi = DateTime.UtcNow });
-        if (!existingCodes.Contains("AKADEMIK_OLMAYAN")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Tenant, Ad = "Akademik Olmayan", Kod = "AKADEMIK_OLMAYAN", IsActive = true, Sira = 2, OlusturmaTarihi = DateTime.UtcNow });
+        if (!existingCodes.Contains("AKADEMIK")) toAdd.Add(new Category { Type = CategoryType.Tenant, Name = "Akademik", Code = "AKADEMIK", IsActive = true, Order = 1, CreatedAt = DateTime.UtcNow });
+        if (!existingCodes.Contains("AKADEMIK_OLMAYAN")) toAdd.Add(new Category { Type = CategoryType.Tenant, Name = "Akademik Olmayan", Code = "AKADEMIK_OLMAYAN", IsActive = true, Order = 2, CreatedAt = DateTime.UtcNow });
 
         if (toAdd.Any())
         {
@@ -189,14 +190,14 @@ public class SeedDataService
 
     public async Task SeedSektorlerAsync()
     {
-        var existingCodes = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Sektor).Select(k => k.Kod).ToListAsync();
-        var toAdd = new List<Kategori>();
+        var existingCodes = await _ctx.Kategoriler.Where(k => k.Type == CategoryType.Sector).Select(k => k.Code).ToListAsync();
+        var toAdd = new List<Category>();
 
-        if (!existingCodes.Contains("YAZILIM")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Sektor, Ad = "Yazılım", Kod = "YAZILIM", IsActive = true, Sira = 1, OlusturmaTarihi = DateTime.UtcNow });
-        if (!existingCodes.Contains("LOJISTIK")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Sektor, Ad = "Lojistik", Kod = "LOJISTIK", IsActive = true, Sira = 2, OlusturmaTarihi = DateTime.UtcNow });
-        if (!existingCodes.Contains("GIDA")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Sektor, Ad = "Gıda", Kod = "GIDA", IsActive = true, Sira = 3, OlusturmaTarihi = DateTime.UtcNow });
-        if (!existingCodes.Contains("TARIM")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Sektor, Ad = "Tarım", Kod = "TARIM", IsActive = true, Sira = 4, OlusturmaTarihi = DateTime.UtcNow });
-        if (!existingCodes.Contains("FINANS")) toAdd.Add(new Kategori { Tipi = KategoriTipi.Sektor, Ad = "Finans", Kod = "FINANS", IsActive = true, Sira = 5, OlusturmaTarihi = DateTime.UtcNow });
+        if (!existingCodes.Contains("YAZILIM")) toAdd.Add(new Category { Type = CategoryType.Sector, Name = "Yazılım", Code = "YAZILIM", IsActive = true, Order = 1, CreatedAt = DateTime.UtcNow });
+        if (!existingCodes.Contains("LOJISTIK")) toAdd.Add(new Category { Type = CategoryType.Sector, Name = "Lojistik", Code = "LOJISTIK", IsActive = true, Order = 2, CreatedAt = DateTime.UtcNow });
+        if (!existingCodes.Contains("GIDA")) toAdd.Add(new Category { Type = CategoryType.Sector, Name = "Gıda", Code = "GIDA", IsActive = true, Order = 3, CreatedAt = DateTime.UtcNow });
+        if (!existingCodes.Contains("TARIM")) toAdd.Add(new Category { Type = CategoryType.Sector, Name = "Tarım", Code = "TARIM", IsActive = true, Order = 4, CreatedAt = DateTime.UtcNow });
+        if (!existingCodes.Contains("FINANS")) toAdd.Add(new Category { Type = CategoryType.Sector, Name = "Finans", Code = "FINANS", IsActive = true, Order = 5, CreatedAt = DateTime.UtcNow });
 
         if (toAdd.Any())
         {
@@ -208,11 +209,11 @@ public class SeedDataService
     public async Task SeedTarifelerAsync()
     {
         var cariYil = DateTime.Now.Year;
-        if (await _ctx.GenelTarifeler.AnyAsync(k => k.Yil == cariYil)) return;
+        if (await _ctx.GenelTarifeler.AnyAsync(k => k.Year == cariYil)) return;
 
         var kategoriler = await _ctx.Kategoriler
-            .Where(k => k.Tipi == KategoriTipi.Tenant && k.IsActive)
-            .OrderBy(k => k.Sira)
+            .Where(k => k.Type == CategoryType.Tenant && k.IsActive)
+            .OrderBy(k => k.Order)
             .ToListAsync();
 
         var borcTipleri = await _ctx.ChargeTypes
@@ -226,18 +227,18 @@ public class SeedDataService
         {
             foreach (var bt in borcTipleri)
             {
-                _ctx.GenelTarifeler.Add(new GenelTarife
+                _ctx.GenelTarifeler.Add(new RateSchedule
                 {
-                    Yil = cariYil,
-                    KiraciKategoriId = kat.Id,
+                    Year = cariYil,
+                    TenantCategoryId = kat.Id,
                     ChargeTypeId = bt.Id,
                     CalculationMethod = (bt.Code == BorcTipiConsts.Kira || bt.Code == "ORTAK") ? CalculationMethod.M2 : CalculationMethod.Fixed,
                     UnitValue = bt.Code switch
                     {
-                        BorcTipiConsts.Kira => kat.Kod == "AKADEMIK" ? 300m : 450m,
-                        "ORTAK" => kat.Kod == "AKADEMIK" ? 100m : 150m,
-                        "PORTAL" => kat.Kod == "AKADEMIK" ? 300m : 500m,
-                        BorcTipiConsts.Depozito => kat.Kod == "AKADEMIK" ? 8000m : 15000m,
+                        BorcTipiConsts.Kira => kat.Code == "AKADEMIK" ? 300m : 450m,
+                        "ORTAK" => kat.Code == "AKADEMIK" ? 100m : 150m,
+                        "PORTAL" => kat.Code == "AKADEMIK" ? 300m : 500m,
+                        BorcTipiConsts.Depozito => kat.Code == "AKADEMIK" ? 8000m : 15000m,
                         _ => 0m
                     },
                     KdvRate = 20m
@@ -253,10 +254,10 @@ public class SeedDataService
         if (await _ctx.Properties.AnyAsync()) return;
 
         var now = DateTime.Now;
-        var tipiMap = await _ctx.TasinmazTipleri.ToDictionaryAsync(k => k.Kod, k => k.Id);
+        var tipiMap = await _ctx.TasinmazTipleri.ToDictionaryAsync(t => t.Code, k => k.Id);
         var birimTuruMap = await _ctx.UnitTypes.ToDictionaryAsync(t => t.Code, t => t.Id);
-        var katMap = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Tenant).ToDictionaryAsync(k => k.Kod, k => k.Id);
-        var sekMap = await _ctx.Kategoriler.Where(k => k.Tipi == KategoriTipi.Sektor).ToDictionaryAsync(k => k.Kod, k => k.Id);
+        var katMap = await _ctx.Kategoriler.Where(k => k.Type == CategoryType.Tenant).ToDictionaryAsync(k => k.Code, k => k.Id);
+        var sekMap = await _ctx.Kategoriler.Where(k => k.Type == CategoryType.Sector).ToDictionaryAsync(k => k.Code, k => k.Id);
 
         // --- Kiracılar ---
         var yzCozum = Tenant("KRC-000001", katMap["AKADEMIK_OLMAYAN"], sekMap["YAZILIM"], "Yapay Zeka Çözümleri A.Ş.",
@@ -276,7 +277,7 @@ public class SeedDataService
         {
             Name = "Teknokent A Blok",
             PropertyTypeId = tipiMap.GetValueOrDefault("BINA"),
-            RentalMode = RentalMode.UnitBased,
+            UnitStructure = UnitStructure.MultipleUnits,
             City = "İzmir",
             District = "Bornova",
             Neighborhood = "Ege Üniversitesi",
@@ -293,7 +294,6 @@ public class SeedDataService
             var ofisNo = $"10{ofis}";
             teknokent.Units.Add(new Unit
             {
-                UnitKind = UnitKind.Unit,
                 UnitNo = ofisNo,
                 FloorNo = 1,
                 Name = $"Ofis {ofisNo}",
@@ -305,7 +305,6 @@ public class SeedDataService
         // 2 Rezerve Edilebilir Toplantı Odası Ekleme
         var toplantiZ01 = new Unit
         {
-            UnitKind = UnitKind.Unit,
             UnitNo = "Z01",
             FloorNo = 0,
             Name = "Toplantı Salonu Z01",
@@ -315,7 +314,6 @@ public class SeedDataService
         };
         var toplantiZ02 = new Unit
         {
-            UnitKind = UnitKind.Unit,
             UnitNo = "Z02",
             FloorNo = 0,
             Name = "Toplantı Odası Z02",
@@ -352,43 +350,43 @@ public class SeedDataService
             KdvRate = 20
         });
 
-        // Reservation Tarifesi - Genel (BirimId = null)
+        // Reservation Tarifesi - Genel (UnitId = null)
         var mevcutGenelRez = await _ctx.RezervasyonTarifeler
-            .FirstOrDefaultAsync(r => r.UnitId == null && r.UnitTypeId == toplantiTuruId && r.Yil == now.Year);
+            .FirstOrDefaultAsync(r => r.UnitId == null && r.UnitTypeId == toplantiTuruId && r.Year == now.Year);
         if (mevcutGenelRez != null)
         {
             mevcutGenelRez.FreeDurationMinutes = 60;
-            mevcutGenelRez.UcretlendirmePeriyoduDakika = 60;
-            mevcutGenelRez.PeriyotUcreti = 400m;
+            mevcutGenelRez.BillingPeriodMinutes = 60;
+            mevcutGenelRez.PeriodRate = 400m;
             mevcutGenelRez.KdvRate = 20m;
-            mevcutGenelRez.Aciklama = "Genel Toplantı Salonu fiyatlandırma kuralı";
+            mevcutGenelRez.Description = "Genel Toplantı Salonu fiyatlandırma kuralı";
         }
         else
         {
-            _ctx.RezervasyonTarifeler.Add(new RezervasyonTarife
+            _ctx.RezervasyonTarifeler.Add(new ReservationRateOverride
             {
-                Yil = now.Year,
+                Year = now.Year,
                 UnitTypeId = toplantiTuruId,
                 UnitId = null,
                 FreeDurationMinutes = 60,
-                UcretlendirmePeriyoduDakika = 60,
-                PeriyotUcreti = 400m,
+                BillingPeriodMinutes = 60,
+                PeriodRate = 400m,
                 KdvRate = 20m,
-                Aciklama = "Genel Toplantı Salonu fiyatlandırma kuralı"
+                Description = "Genel Toplantı Salonu fiyatlandırma kuralı"
             });
         }
 
-        // Reservation Tarifesi - Unit (BirimId = Z01.Id)
-        _ctx.RezervasyonTarifeler.Add(new RezervasyonTarife
+        // Reservation Tarifesi - Unit (UnitId = Z01.Id)
+        _ctx.RezervasyonTarifeler.Add(new ReservationRateOverride
         {
-            Yil = now.Year,
+            Year = now.Year,
             UnitTypeId = toplantiTuruId,
             UnitId = toplantiZ01.Id,
             FreeDurationMinutes = 30,
-            UcretlendirmePeriyoduDakika = 60,
-            PeriyotUcreti = 600m,
+            BillingPeriodMinutes = 60,
+            PeriodRate = 600m,
             KdvRate = 20m,
-            Aciklama = "Toplantı Salonu Z01 için özel fiyatlandırma kuralı"
+            Description = "Toplantı Salonu Z01 için özel fiyatlandırma kuralı"
         });
 
         // Kullanıcı tanımlı Belge Türlerini ekle
@@ -710,10 +708,10 @@ public class SeedDataService
 
         // --- 6. Sözleşme Tarifesi (Özel Oran) Uygulaması ---
         _ctx.SozlesmeTarifeler.AddRange(
-            new SozlesmeTarife { LeaseId = sozlesmeler[0].Id, ChargeTypeId = btKiraId, UnitValue = rate101, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-            new SozlesmeTarife { LeaseId = sozlesmeler[1].Id, ChargeTypeId = btKiraId, UnitValue = rate102, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-            new SozlesmeTarife { LeaseId = sozlesmeler[2].Id, ChargeTypeId = btKiraId, UnitValue = rate103, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-            new SozlesmeTarife { LeaseId = sozlesmeler[3].Id, ChargeTypeId = btKiraId, UnitValue = rate104, CalculationMethod = CalculationMethod.M2, KdvRate = 20 }
+            new LeaseRateOverride { LeaseId = sozlesmeler[0].Id, ChargeTypeId = btKiraId, UnitValue = rate101, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
+            new LeaseRateOverride { LeaseId = sozlesmeler[1].Id, ChargeTypeId = btKiraId, UnitValue = rate102, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
+            new LeaseRateOverride { LeaseId = sozlesmeler[2].Id, ChargeTypeId = btKiraId, UnitValue = rate103, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
+            new LeaseRateOverride { LeaseId = sozlesmeler[3].Id, ChargeTypeId = btKiraId, UnitValue = rate104, CalculationMethod = CalculationMethod.M2, KdvRate = 20 }
         );
         await _ctx.SaveChangesAsync();
 
@@ -766,11 +764,11 @@ public class SeedDataService
                     var hasScope = await _ctx.KullaniciYetkiKapsamlari.AnyAsync(s => s.UserId == mehmetUser.Id);
                     if (!hasScope)
                     {
-                        _ctx.KullaniciYetkiKapsamlari.Add(new KullaniciYetkiKapsami
+                        _ctx.KullaniciYetkiKapsamlari.Add(new UserPermissionScope
                         {
                             UserId = mehmetUser.Id,
                             ScopeType = ScopeType.Unit,
-                            KapsamId = ofis101.Id
+                            ScopeId = ofis101.Id
                         });
                         await _ctx.SaveChangesAsync();
                     }
@@ -784,8 +782,8 @@ public class SeedDataService
         var teknokent = await _ctx.Properties.FirstOrDefaultAsync(t => t.Name == "Teknokent A Blok");
         if (teknokent != null && !await _ctx.TasinmazTarifeler.AnyAsync(f => f.PropertyId == teknokent.Id))
         {
-            var katAkademik = await _ctx.Kategoriler.FirstAsync(k => k.Tipi == KategoriTipi.Tenant && k.Kod == "AKADEMIK");
-            var katAkadOlmayan = await _ctx.Kategoriler.FirstAsync(k => k.Tipi == KategoriTipi.Tenant && k.Kod == "AKADEMIK_OLMAYAN");
+            var katAkademik = await _ctx.Kategoriler.FirstAsync(k => k.Type == CategoryType.Tenant && k.Code == "AKADEMIK");
+            var katAkadOlmayan = await _ctx.Kategoriler.FirstAsync(k => k.Type == CategoryType.Tenant && k.Code == "AKADEMIK_OLMAYAN");
 
             var btKira = await _ctx.ChargeTypes.FirstAsync(b => b.Code == BorcTipiConsts.Kira);
             var btOrtak = await _ctx.ChargeTypes.FirstAsync(b => b.Code == "ORTAK");
@@ -794,16 +792,16 @@ public class SeedDataService
 
             _ctx.TasinmazTarifeler.AddRange(
                 // Akademik için (m2 bazlı kira ve ortak gider) - Taşınmaz Tarifesi
-                new TasinmazTarife { PropertyId = teknokent.Id, KiraciKategoriId = katAkademik.Id, ChargeTypeId = btKira.Id, UnitValue = 320, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new TasinmazTarife { PropertyId = teknokent.Id, KiraciKategoriId = katAkademik.Id, ChargeTypeId = btOrtak.Id, UnitValue = 95, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new TasinmazTarife { PropertyId = teknokent.Id, KiraciKategoriId = katAkademik.Id, ChargeTypeId = btPortal.Id, UnitValue = 480, CalculationMethod = CalculationMethod.Fixed, KdvRate = 20 },
-                new TasinmazTarife { PropertyId = teknokent.Id, KiraciKategoriId = katAkademik.Id, ChargeTypeId = btDepozito.Id, UnitValue = 9000, CalculationMethod = CalculationMethod.Fixed, KdvRate = 20 },
+                new PropertyRateOverride { PropertyId = teknokent.Id, TenantCategoryId = katAkademik.Id, ChargeTypeId = btKira.Id, UnitValue = 320, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
+                new PropertyRateOverride { PropertyId = teknokent.Id, TenantCategoryId = katAkademik.Id, ChargeTypeId = btOrtak.Id, UnitValue = 95, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
+                new PropertyRateOverride { PropertyId = teknokent.Id, TenantCategoryId = katAkademik.Id, ChargeTypeId = btPortal.Id, UnitValue = 480, CalculationMethod = CalculationMethod.Fixed, KdvRate = 20 },
+                new PropertyRateOverride { PropertyId = teknokent.Id, TenantCategoryId = katAkademik.Id, ChargeTypeId = btDepozito.Id, UnitValue = 9000, CalculationMethod = CalculationMethod.Fixed, KdvRate = 20 },
 
                 // Akademik Olmayan için - Taşınmaz Tarifesi
-                new TasinmazTarife { PropertyId = teknokent.Id, KiraciKategoriId = katAkadOlmayan.Id, ChargeTypeId = btKira.Id, UnitValue = 430, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new TasinmazTarife { PropertyId = teknokent.Id, KiraciKategoriId = katAkadOlmayan.Id, ChargeTypeId = btOrtak.Id, UnitValue = 140, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new TasinmazTarife { PropertyId = teknokent.Id, KiraciKategoriId = katAkadOlmayan.Id, ChargeTypeId = btPortal.Id, UnitValue = 700, CalculationMethod = CalculationMethod.Fixed, KdvRate = 20 },
-                new TasinmazTarife { PropertyId = teknokent.Id, KiraciKategoriId = katAkadOlmayan.Id, ChargeTypeId = btDepozito.Id, UnitValue = 22000, CalculationMethod = CalculationMethod.Fixed, KdvRate = 20 }
+                new PropertyRateOverride { PropertyId = teknokent.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btKira.Id, UnitValue = 430, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
+                new PropertyRateOverride { PropertyId = teknokent.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btOrtak.Id, UnitValue = 140, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
+                new PropertyRateOverride { PropertyId = teknokent.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btPortal.Id, UnitValue = 700, CalculationMethod = CalculationMethod.Fixed, KdvRate = 20 },
+                new PropertyRateOverride { PropertyId = teknokent.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btDepozito.Id, UnitValue = 22000, CalculationMethod = CalculationMethod.Fixed, KdvRate = 20 }
             );
 
             await _ctx.SaveChangesAsync();
@@ -1184,7 +1182,7 @@ public class SeedDataService
             await _userManager.DeleteAsync(ku);
         }
 
-        var kiraciRoller = await _ctx.Roller.IgnoreQueryFilters().Where(r => r.Scope == RoleScope.Tenant && r.KiraciId != null).ToListAsync();
+        var kiraciRoller = await _ctx.Roller.IgnoreQueryFilters().Where(r => r.Scope == RoleScope.Tenant && r.TenantId != null).ToListAsync();
         _ctx.Roller.RemoveRange(kiraciRoller);
         await _ctx.SaveChangesAsync();
 
@@ -1214,7 +1212,7 @@ public class SeedDataService
                 EmailConfirmed = true,
                 IsActive = true,
                 UserType = UserType.Tenant,
-                KiraciId = tenantId
+                TenantId = tenantId
             };
             var result = await _userManager.CreateAsync(user, password);
             if (!result.Succeeded)
@@ -1225,15 +1223,15 @@ public class SeedDataService
         else
         {
             user.UserType = UserType.Tenant;
-            user.KiraciId = tenantId;
+            user.TenantId = tenantId;
             user.IsActive = true;
             await _userManager.UpdateAsync(user);
         }
 
-        var firmaRol = await _ctx.Roller.FirstOrDefaultAsync(r => r.KiraciId == null && r.Ad == RoleNames.KiraciYoneticisi);
+        var firmaRol = await _ctx.Roller.FirstOrDefaultAsync(r => r.TenantId == null && r.Name == RoleNames.KiraciYoneticisi);
         if (firmaRol != null)
         {
-            var hasRole = await _ctx.UserRoller.AnyAsync(ur => ur.UserId == user.Id && ur.RolId == firmaRol.Id);
+            var hasRole = await _ctx.UserRoller.AnyAsync(ur => ur.UserId == user.Id && ur.RoleId == firmaRol.Id);
             if (!hasRole)
             {
                 await _userRolService.AddRoleByRolIdAsync(user.Id, firmaRol.Id, "system");

@@ -1,6 +1,6 @@
 @model List<KiraTakip.Models.Dtos.UnitTypeListItemDto>
 @{
-    ViewData["Title"] = "Unit Türleri";
+    ViewData["Title"] = "Birim Türleri";
 }
 
 @if (TempData["Success"] != null)
@@ -18,12 +18,12 @@
 
 <div class="page-header flex items-center justify-between">
     <div>
-        <div class="page-title">Unit Türleri</div>
+        <div class="page-title">Birim Türleri</div>
         <div class="page-subtitle">@Model.Count kayıt</div>
     </div>
     <a href="/Admin/UnitType/Ekle" class="btn btn-primary flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Yeni Unit Türü
+        Yeni Birim Türü
     </a>
 </div>
 
@@ -34,8 +34,7 @@
                 <tr>
                     <th class="w-16 text-center">Sıra</th>
                     <th>Ad</th>
-                    <th class="w-24 text-center">Kiralama</th>
-                    <th class="w-24 text-center">Reservation</th>
+                    <th>Kullanım Türü</th>
                     <th class="w-24">Durum</th>
                     <th class="w-40"></th>
                 </tr>
@@ -46,11 +45,19 @@
                     <tr>
                         <td class="text-center text-muted text-xs">@bt.SortOrder</td>
                         <td class="font-medium text-slate-700">@bt.Name</td>
-                        <td class="text-center">
-                            @if (bt.CanBeRented) { <span class="badge badge-kirali">✓</span> }
-                        </td>
-                        <td class="text-center">
-                            @if (bt.CanBeReserved) { <span class="badge badge-surek">✓</span> }
+                        <td>
+                            @if (bt.CanBeRented)
+                            {
+                                <span class="badge badge-kirali">Kiralanabilir</span>
+                            }
+                            else if (bt.CanBeReserved)
+                            {
+                                <span class="badge badge-surek">Rezervasyon Yapılabilir</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-bos">Kiralanamaz</span>
+                            }
                         </td>
                         <td>
                             @if (bt.IsActive)

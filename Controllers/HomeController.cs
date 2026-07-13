@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 using KiraTakip.Authorization;
 using KiraTakip.Models;
@@ -98,7 +98,7 @@ public class HomeController : Controller
             {
                 SozlesmeId = s.Id,
                 KiraciAdi = s.TenantDisplayName,
-                TasinmazAdi = s.PropertyName,
+                PropertyName = s.PropertyName,
                 BirimAdi = s.UnitName,
                 KalanGun = s.KalanGun,
                 EndDate = s.EndDate
@@ -109,10 +109,10 @@ public class HomeController : Controller
             .Select(b => new BosBirimOzet
             {
                 BirimId = b.Id,
-                TasinmazAdi = b.TasinmazAd,
-                BirimAdi = b.Ad,
-                Ilce = b.Ilce,
-                Yuzolcumu = b.Yuzolcumu
+                PropertyName = b.PropertyName,
+                BirimAdi = b.Name,
+                Ilce = b.District,
+                Yuzolcumu = b.Area
             }).ToList();
 
         if (User.HasModuleAccess("Internal.Payment"))
@@ -142,7 +142,7 @@ public class HomeController : Controller
 
             var rezervasyonlar = await _reservationService.GetAllAsync(propertyIds);
             vm.TahakkukaAktarilmamisRezervasyonAdet = rezervasyonlar
-                .Count(r => r.Durum == ReservationStatus.Planned && r.ToplamTutar > 0 && r.ChargeId == null);
+                .Count(r => r.Status == ReservationStatus.Planned && r.TotalAmount > 0 && r.ChargeId == null);
 
             // --- Redesign metrikleri ---
             // Son 6 ay nakit akışı + tahsilat oranı sparkline

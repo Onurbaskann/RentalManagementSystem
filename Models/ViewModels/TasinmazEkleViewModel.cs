@@ -4,9 +4,10 @@ public class TasinmazEkleViewModel
 {
     public string Ad { get; set; } = string.Empty;
     public ParentTarifeKartViewModel? ParentTarife { get; set; }
-    public ParentRezervasyonTarifeKartViewModel? ParentRezervasyonTarife { get; set; }
+    public ParentReservationRateOverrideCardViewModel? ParentReservationRateOverride { get; set; }
     public int? TasinmazTipiId { get; set; }
-    public RentalMode RentalMode { get; set; } = RentalMode.WholeProperty;
+    public UnitStructure UnitStructure { get; set; } = UnitStructure.SingleUnit;
+    public int? KompleUnitTypeId { get; set; }
     public string Il { get; set; } = string.Empty;
     public string Ilce { get; set; } = string.Empty;
     public string Mahalle { get; set; } = string.Empty;

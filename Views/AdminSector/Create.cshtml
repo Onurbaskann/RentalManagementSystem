@@ -1,4 +1,4 @@
-@model KiraTakip.Models.ViewModels.KategoriFormViewModel
+﻿@model KiraTakip.Models.ViewModels.CategoryFormViewModel
 @{
     ViewData["Title"] = "Yeni Sektör";
 }
@@ -10,30 +10,30 @@
 </div>
 
 <div class="card">
-    <form method="post" action="/Admin/Sektor/Ekle" asp-form-write-permission="@PermissionCatalog.Sector.Create">
+    <form method="post" action="/Admin/Sector/Ekle" asp-form-write-permission="@PermissionCatalog.Sector.Create">
         @Html.AntiForgeryToken()
 
         <div class="form-group">
             <label class="form-label">Ad <span class="text-red-500">*</span></label>
-            <input asp-for="Ad" class="form-control" placeholder="Teknoloji" required />
-            <span asp-validation-for="Ad" class="text-red-500 text-xs mt-1"></span>
+            <input asp-for="Name" class="form-control" placeholder="Teknoloji" required />
+            <span asp-validation-for="Name" class="text-red-500 text-xs mt-1"></span>
         </div>
 
         <div class="form-group">
             <label class="form-label">Sıra</label>
-            <input asp-for="Sira" type="number" class="form-control w-24" min="1" />
+            <input asp-for="Order" type="number" class="form-control w-24" min="1" />
         </div>
 
         <div class="form-group">
             <label class="flex items-center gap-2 cursor-pointer">
-                <input asp-for="Aktif" type="checkbox" class="w-4 h-4 accent-primary cursor-pointer" />
+                <input asp-for="IsActive" type="checkbox" class="w-4 h-4 accent-primary cursor-pointer" />
                 <span class="form-label mb-0">Aktif</span>
             </label>
         </div>
 
         <div class="flex gap-2 mt-4">
             <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.Sector.Create">Kaydet</button>
-            <a href="/Admin/Sektor" class="btn btn-secondary px-6">İptal</a>
+            <a href="/Admin/Sector" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>
 </div>

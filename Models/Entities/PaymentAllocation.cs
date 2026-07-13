@@ -2,20 +2,25 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace KiraTakip.Models.Entities;
 
-[Table("PaymentAllocations")]
+[Table("TahakkukOdemeleri")]
 public class PaymentAllocation : BaseEntity
 {
+    [Column("TahakkukId")]
     public int ChargeId { get; set; }
 
-    [Column("LeaseId")]
+    [Column("SozlesmeId")]
     public int? LeaseId { get; set; }
 
+    [Column("GirenKullaniciId")]
     public string CreatedByUserId { get; set; } = string.Empty;
 
+    [Column("OnaylayanKullaniciId")]
     public string? ApprovedByUserId { get; set; }
 
+    [Column("OdemeTarihi")]
     public DateTime PaymentDate { get; set; }
 
+    [Column("Tutar")]
     public decimal Amount { get; set; }
 
     [Column("OdemeKanali")]
@@ -24,6 +29,7 @@ public class PaymentAllocation : BaseEntity
     [Column("OdemeKaynakTipi")]
     public PaymentSourceType PaymentSourceType { get; set; } = PaymentSourceType.Manual;
 
+    [Column("PosReferansNo")]
     public string? PosReferenceNo { get; set; }
 
     [Column("Aciklama")]
@@ -32,10 +38,13 @@ public class PaymentAllocation : BaseEntity
     [Column("Durum")]
     public PaymentStatus Status { get; set; } = PaymentStatus.PendingApproval;
 
+    [Column("GirisTarihi")]
     public DateTime EntryDate { get; set; } = DateTime.Now;
 
+    [Column("OnayTarihi")]
     public DateTime? ApprovalDate { get; set; }
 
+    [Column("RedNedeni")]
     public string? RejectionReason { get; set; }
 
     public Charge Charge { get; set; } = null!;

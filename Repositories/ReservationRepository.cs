@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
@@ -10,7 +10,7 @@ public class ReservationRepository : BaseRepository<Reservation>, IReservationRe
 {
     public ReservationRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<List<RezervasyonListItemDto>> GetListAsync(List<int>? yetkiliPropertyIds)
+    public async Task<List<ReservationListItemDto>> GetListAsync(List<int>? yetkiliPropertyIds)
     {
         var query = _dbSet.AsNoTracking().AsQueryable();
 
@@ -19,50 +19,50 @@ public class ReservationRepository : BaseRepository<Reservation>, IReservationRe
 
         return await query
             .OrderByDescending(r => r.CreatedAt)
-            .Select(r => new RezervasyonListItemDto
+            .Select(r => new ReservationListItemDto
             {
                 Id = r.Id,
-                BirimId = r.UnitId,
-                BirimAd = r.Unit.Name,
-                TasinmazId = r.Unit.PropertyId,
-                TasinmazAd = r.Unit.Property.Name,
-                KiraciId = r.TenantId,
-                KiraciGosterimAdi = r.Tenant.DisplayName,
+                UnitId = r.UnitId,
+                UnitName = r.Unit.Name,
+                PropertyId = r.Unit.PropertyId,
+                PropertyName = r.Unit.Property.Name,
+                TenantId = r.TenantId,
+                TenantDisplayName = r.Tenant.DisplayName,
                 ChargeId = _ctx.Charges.Where(t => t.ReservationId == r.Id).Select(t => (int?)t.Id).FirstOrDefault(),
                 StartDate = r.StartDate,
                 EndDate = r.EndDate,
                 TotalDurationMinutes = r.TotalDurationMinutes,
                 FreeDurationMinutes = r.FreeDurationMinutes,
                 PaidDurationMinutes = r.PaidDurationMinutes,
-                ToplamTutar = r.TotalAmount,
-                Durum = r.Status,
-                Aciklama = r.Description
+                TotalAmount = r.TotalAmount,
+                Status = r.Status,
+                Description = r.Description
             })
             .ToListAsync();
     }
 
-    public async Task<RezervasyonListItemDto?> GetByIdAsync(int id)
+    public async Task<ReservationListItemDto?> GetByIdAsync(int id)
     {
         return await _dbSet.AsNoTracking()
             .Where(r => r.Id == id)
-            .Select(r => new RezervasyonListItemDto
+            .Select(r => new ReservationListItemDto
             {
                 Id = r.Id,
-                BirimId = r.UnitId,
-                BirimAd = r.Unit.Name,
-                TasinmazId = r.Unit.PropertyId,
-                TasinmazAd = r.Unit.Property.Name,
-                KiraciId = r.TenantId,
-                KiraciGosterimAdi = r.Tenant.DisplayName,
+                UnitId = r.UnitId,
+                UnitName = r.Unit.Name,
+                PropertyId = r.Unit.PropertyId,
+                PropertyName = r.Unit.Property.Name,
+                TenantId = r.TenantId,
+                TenantDisplayName = r.Tenant.DisplayName,
                 ChargeId = _ctx.Charges.Where(t => t.ReservationId == r.Id).Select(t => (int?)t.Id).FirstOrDefault(),
                 StartDate = r.StartDate,
                 EndDate = r.EndDate,
                 TotalDurationMinutes = r.TotalDurationMinutes,
                 FreeDurationMinutes = r.FreeDurationMinutes,
                 PaidDurationMinutes = r.PaidDurationMinutes,
-                ToplamTutar = r.TotalAmount,
-                Durum = r.Status,
-                Aciklama = r.Description
+                TotalAmount = r.TotalAmount,
+                Status = r.Status,
+                Description = r.Description
             })
             .FirstOrDefaultAsync();
     }
@@ -76,21 +76,21 @@ public class ReservationRepository : BaseRepository<Reservation>, IReservationRe
             r.EndDate > baslangic);
     }
 
-    public async Task<RezervasyonTarife?> GetAktifTarifeForBirimAsync(int unitId)
+    public async Task<ReservationRateOverride?> GetAktifTarifeForBirimAsync(int unitId)
     {
         return await _ctx.RezervasyonTarifeler
             .Where(k => k.IsActive && k.UnitId == unitId)
             .FirstOrDefaultAsync();
     }
 
-    public async Task<RezervasyonTarife?> GetGenelTarifeAsync(int unitTypeId, int yil)
+    public async Task<ReservationRateOverride?> GetGenelTarifeAsync(int unitTypeId, int yil)
     {
         return await _ctx.RezervasyonTarifeler
-            .Where(g => g.UnitId == null && g.UnitTypeId == unitTypeId && g.IsActive && g.Yil == yil)
+            .Where(g => g.UnitId == null && g.UnitTypeId == unitTypeId && g.IsActive && g.Year == yil)
             .FirstOrDefaultAsync();
     }
 
-    public async Task<List<RezervasyonTarife>> GetUcretKurallariAsync()
+    public async Task<List<ReservationRateOverride>> GetUcretKurallariAsync()
     {
         return await _ctx.RezervasyonTarifeler
             .Include(k => k.Unit!).ThenInclude(b => b!.Property)
@@ -99,14 +99,14 @@ public class ReservationRepository : BaseRepository<Reservation>, IReservationRe
             .ToListAsync();
     }
 
-    public async Task<RezervasyonTarife?> GetUcretKuralByIdAsync(int id)
+    public async Task<ReservationRateOverride?> GetUcretKuralByIdAsync(int id)
     {
         return await _ctx.RezervasyonTarifeler
             .Include(k => k.Unit)
             .FirstOrDefaultAsync(k => k.Id == id);
     }
 
-    public async Task AddUcretKuralAsync(RezervasyonTarife kural)
+    public async Task AddUcretKuralAsync(ReservationRateOverride kural)
     {
         await _ctx.RezervasyonTarifeler.AddAsync(kural);
     }

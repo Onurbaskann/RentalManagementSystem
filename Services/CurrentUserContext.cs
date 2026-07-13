@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Models;
 using KiraTakip.Services.Interfaces;
 using System.Security.Claims;
@@ -23,16 +23,16 @@ public class CurrentUserContext : ICurrentUserContext
         }
     }
 
-    public int? KiraciId
+    public int? TenantId
     {
         get
         {
-            var s = Principal?.FindFirstValue(AppClaimTypes.KiraciId);
+            var s = Principal?.FindFirstValue(AppClaimTypes.TenantId);
             return int.TryParse(s, out var v) ? v : null;
         }
     }
 
-    public bool IsKiraciUser => UserType == Models.UserType.Tenant && KiraciId.HasValue;
+    public bool IsKiraciUser => UserType == Models.UserType.Tenant && TenantId.HasValue;
 
     public CurrentUserContext(IHttpContextAccessor httpContextAccessor)
     {

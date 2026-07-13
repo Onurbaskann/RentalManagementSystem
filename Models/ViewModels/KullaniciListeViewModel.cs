@@ -24,5 +24,5 @@ public class AdminKullaniciIndexViewModel
 {
     public List<KullaniciListeViewModel> IcKullanicilar { get; set; } = [];
     public List<KiraciKullaniciListItemViewModel> KiraciKullanicilar { get; set; } = [];
-    public List<Entities.Davetiye> BekleyenDavetler { get; set; } = [];
+    public List<Entities.Invitation> BekleyenDavetler { get; set; } = [];
 }

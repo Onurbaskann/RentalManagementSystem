@@ -7,5 +7,5 @@ public interface IPaymentRepository : IBaseRepository<PaymentAllocation>
 {
     Task<List<OdemeListItemDto>> GetListAsync(int? tahakkukId, List<int>? yetkiliPropertyIds);
     Task<PagedResult<OdemeListItemDto>> GetPagedListAsync(TableQuery q, int? tahakkukId, List<int>? yetkiliPropertyIds);
-    Task<OdemeDetayDto?> GetDetayAsync(int id);
+    Task<PaymentDetailDto?> GetDetayAsync(int id);
 }

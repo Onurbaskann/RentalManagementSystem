@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace KiraTakip.Models.Entities;
 
-[Table("Reservations")]
+[Table("Rezervasyonlar")]
 public class Reservation : BaseEntity
 {
     [Column("BirimId")]
@@ -11,20 +11,28 @@ public class Reservation : BaseEntity
     [Column("KiraciId")]
     public int TenantId { get; set; }
 
+    [Column("BaslangicTarihi")]
     public DateTime StartDate { get; set; }
 
+    [Column("BitisTarihi")]
     public DateTime EndDate { get; set; }
 
+    [Column("ToplamSureDakika")]
     public int TotalDurationMinutes { get; set; }
 
+    [Column("UcretsizSureDakika")]
     public int FreeDurationMinutes { get; set; }
 
+    [Column("UcretliSureDakika")]
     public int PaidDurationMinutes { get; set; }
 
+    [Column("BirimUcreti")]
     public decimal UnitRate { get; set; }
 
+    [Column("TarifeTutari")]
     public decimal RateAmount { get; set; }
 
+    [Column("KdvOrani")]
     public decimal? KdvRate { get; set; }
 
     [Column("KdvTutari")]

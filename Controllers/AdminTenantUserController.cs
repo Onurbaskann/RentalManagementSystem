@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 namespace KiraTakip.Controllers;
 
 [Authorize(Policy = "System.User")]
-[Route("Admin/Kiracilar/{tenantId:int}/Kullanicilar")]
+[Route("Admin/Kiracilar/{tenantId}/Kullanicilar")]
 public class AdminTenantUserController : Controller
 {
     private readonly ApplicationDbContext _db;
@@ -42,10 +42,10 @@ public class AdminTenantUserController : Controller
     private async Task PopulateRollerAsync(List<RolSecenekViewModel> liste, int tenantId)
     {
         var roller = await _db.Roller.IgnoreQueryFilters()
-            .Where(r => r.Scope == RoleScope.Tenant && (r.KiraciId == null || r.KiraciId == tenantId) && r.IsActive && !r.IsDeleted)
-            .OrderBy(r => r.Ad)
+            .Where(r => r.Scope == RoleScope.Tenant && (r.TenantId == null || r.TenantId == tenantId) && r.IsActive && !r.IsDeleted)
+            .OrderBy(r => r.Name)
             .ToListAsync();
-        liste.AddRange(roller.Select(r => new RolSecenekViewModel { Id = r.Id, Ad = r.Ad }));
+        liste.AddRange(roller.Select(r => new RolSecenekViewModel { Id = r.Id, Ad = r.Name }));
     }
 
     [HttpGet("")]
@@ -56,7 +56,7 @@ public class AdminTenantUserController : Controller
 
         var kullanicilar = await _db.Users
             .IgnoreQueryFilters()
-            .Where(u => u.KiraciId == tenantId)
+            .Where(u => u.TenantId == tenantId)
             .OrderBy(u => u.AdSoyad)
             .ToListAsync();
 
@@ -65,7 +65,7 @@ public class AdminTenantUserController : Controller
         {
             var roller = await _db.UserRoller
                 .Where(ur => ur.UserId == u.Id)
-                .Join(_db.Roller, ur => ur.RolId, r => r.Id, (ur, r) => new { r.Ad, r.Id })
+                .Join(_db.Roller, ur => ur.RoleId, r => r.Id, (ur, r) => new { r.Name, r.Id })
                 .FirstOrDefaultAsync();
 
             items.Add(new KiraciKullaniciItem
@@ -73,7 +73,7 @@ public class AdminTenantUserController : Controller
                 Id = u.Id,
                 AdSoyad = u.AdSoyad ?? u.Email ?? "—",
                 Email = u.Email ?? "—",
-                RolAd = roller?.Ad ?? "—",
+                RolAd = roller?.Name ?? "—",
                 RolId = roller?.Id ?? 0,
                 IsActive = u.IsActive
             });
@@ -81,8 +81,8 @@ public class AdminTenantUserController : Controller
 
         var bekleyen = await _db.Davetiyeler
             .IgnoreQueryFilters()
-            .Where(d => d.KiraciId == tenantId && d.Durum == InvitationStatus.Pending)
-            .Include(d => d.Rol)
+            .Where(d => d.TenantId == tenantId && d.Status == InvitationStatus.Pending)
+            .Include(d => d.Role)
             .OrderByDescending(d => d.CreatedAt)
             .ToListAsync();
 
@@ -90,13 +90,13 @@ public class AdminTenantUserController : Controller
         {
             Id = d.Id,
             Email = d.Email,
-            AdSoyad = d.AdSoyad,
-            RolAd = d.Rol?.Ad ?? "—",
+            AdSoyad = d.FullName,
+            RolAd = d.Role?.Name ?? "—",
             GonderimTarihi = d.CreatedAt,
             ExpiresAt = d.ExpiresAt
         }).ToList();
 
-        ViewBag.KiraciId = tenantId;
+        ViewBag.TenantId = tenantId;
         ViewBag.KiraciAd = tenant.DisplayName;
 
         return View(new KiraciKullaniciListeViewModel
@@ -113,7 +113,7 @@ public class AdminTenantUserController : Controller
     public async Task<IActionResult> ToggleActive(int tenantId, string id)
     {
         var user = await _db.Users.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.Id == id && u.KiraciId == tenantId);
+            .FirstOrDefaultAsync(u => u.Id == id && u.TenantId == tenantId);
         if (user == null) return NotFound();
 
         user.IsActive = !user.IsActive;
@@ -131,7 +131,7 @@ public class AdminTenantUserController : Controller
     public async Task<IActionResult> DavetIptal(int tenantId, int id)
     {
         var davetiye = await _db.Davetiyeler.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(d => d.Id == id && d.KiraciId == tenantId);
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId);
         if (davetiye == null) return NotFound();
 
         try
@@ -151,7 +151,7 @@ public class AdminTenantUserController : Controller
     public async Task<IActionResult> DavetYenidenGonder(int tenantId, int id)
     {
         var davetiye = await _db.Davetiyeler.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(d => d.Id == id && d.KiraciId == tenantId);
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId);
         if (davetiye == null) return NotFound();
 
         try
@@ -177,7 +177,7 @@ public class AdminTenantUserController : Controller
         await PopulateRollerAsync(model.Roller, tenantId);
         model.Units = await GetKiraciBirimleriAsync(tenantId);
 
-        ViewBag.KiraciId = tenantId;
+        ViewBag.TenantId = tenantId;
         ViewBag.KiraciAd = tenant.DisplayName;
         return View(model);
     }
@@ -190,18 +190,18 @@ public class AdminTenantUserController : Controller
         {
             await PopulateRollerAsync(model.Roller, tenantId);
             model.Units = await GetKiraciBirimleriAsync(tenantId);
-            ViewBag.KiraciId = tenantId;
+            ViewBag.TenantId = tenantId;
             return View(model);
         }
 
         var rol = await _db.Roller.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(r => r.Id == model.RolId && (r.KiraciId == null || r.KiraciId == tenantId));
+            .FirstOrDefaultAsync(r => r.Id == model.RolId && (r.TenantId == null || r.TenantId == tenantId));
         if (rol == null)
         {
             ModelState.AddModelError("RolId", "Geçersiz rol seçildi.");
             await PopulateRollerAsync(model.Roller, tenantId);
             model.Units = await GetKiraciBirimleriAsync(tenantId);
-            ViewBag.KiraciId = tenantId;
+            ViewBag.TenantId = tenantId;
             return View(model);
         }
 
@@ -218,25 +218,25 @@ public class AdminTenantUserController : Controller
             ModelState.AddModelError(string.Empty, ex.Message);
             await PopulateRollerAsync(model.Roller, tenantId);
             model.Units = await GetKiraciBirimleriAsync(tenantId);
-            ViewBag.KiraciId = tenantId;
+            ViewBag.TenantId = tenantId;
             return View(model);
         }
     }
 
-    private async Task<List<BirimLookupDto>> GetKiraciBirimleriAsync(int tenantId)
+    private async Task<List<UnitLookupDto>> GetKiraciBirimleriAsync(int tenantId)
     {
         return await _db.Leases
             .AsNoTracking()
             .Where(s => s.TenantId == tenantId && s.Status == LeaseStatus.Active)
-            .Select(s => new BirimLookupDto
+            .Select(s => new UnitLookupDto
             {
                 Id = s.UnitId,
-                Ad = s.Unit.Name,
-                TasinmazAd = s.Unit.Property.Name,
-                BirimNo = s.Unit.UnitNo,
+                Name = s.Unit.Name,
+                PropertyName = s.Unit.Property.Name,
+                UnitNo = s.Unit.UnitNo,
             })
             .Distinct()
-            .OrderBy(b => b.TasinmazAd).ThenBy(b => b.Ad)
+            .OrderBy(b => b.PropertyName).ThenBy(b => b.Name)
             .ToListAsync();
     }
 

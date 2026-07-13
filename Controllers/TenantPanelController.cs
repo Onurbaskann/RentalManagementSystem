@@ -30,7 +30,7 @@ public class TenantPanelController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var tenantId = _currentUser.KiraciId!.Value;
+        var tenantId = _currentUser.TenantId!.Value;
         var today = DateTime.Today;
         var trCulture = CultureInfo.GetCultureInfo("tr-TR");
 
