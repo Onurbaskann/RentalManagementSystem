@@ -1,10 +1,12 @@
+using KiraTakip.Models.Dtos;
+
 namespace KiraTakip.Services.Interfaces;
 
 public interface IChargeGenerationService
 {
-    Task GenerateForLeaseAsync(int leaseId);
-    Task RegenerateAsync(int leaseId, DateTime startDate);
-    Task CancelFutureChargesAsync(int leaseId, DateTime terminationDate);
-    Task RecalculatePendingDueDatesAsync(int leaseId);
-    Task<IList<Models.DTOs.ChargeLineItemPreview>> ComposeLineItemsAsync(int unitId, int tenantId, DateTime period, int? leaseId = null);
+    Task GenerateForLeaseAsync(GenerateLeaseChargesInput input);
+    Task RegenerateAsync(RegenerateLeaseChargesInput input);
+    Task CancelFutureChargesAsync(CancelFutureLeaseChargesInput input);
+    Task RecalculatePendingDueDatesAsync(RecalculateLeaseDueDatesInput input);
+    Task<IList<ChargeLineItemPreview>> ComposeLineItemsAsync(ComposeLeaseLineItemsInput input);
 }

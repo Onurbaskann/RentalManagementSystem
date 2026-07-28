@@ -1,0 +1,32 @@
+@model KiraTakip.Models.ViewModels.TenantInvitationFormViewModel
+@{
+    Layout = "_KiraciLayout";
+    ViewData["Title"] = "Kullanıcı Davet Et";
+    ViewData["UseCentralFeedback"] = true;
+    var controllerName = nameof(KiraTakip.Controllers.TenantUserController).Replace("Controller", "");
+}
+<div class="page-header"><div>
+    <a asp-controller="@controllerName" asp-action="@nameof(KiraTakip.Controllers.TenantUserController.Index)" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">← Kullanıcılar</a>
+    <div class="page-title">Kullanıcı Davet Et</div><div class="page-subtitle">Yeni bir kullanıcıyı sisteme davet edin</div>
+</div></div>
+<div class="card">
+<form method="post" asp-controller="@controllerName" asp-action="@nameof(KiraTakip.Controllers.TenantUserController.Invite)">
+    @Html.AntiForgeryToken()
+
+    <div class="form-group"><label class="form-label">E-posta *</label><input asp-for="Email" class="form-control" type="email" placeholder="ornek@sirket.com" /><span asp-validation-for="Email" class="form-error"></span></div>
+    <div class="form-group"><label class="form-label">Ad Soyad</label><input asp-for="FullName" class="form-control" placeholder="Opsiyonel" /><span asp-validation-for="FullName" class="form-error"></span></div>
+    <div class="form-group"><label class="form-label">Rol *</label><select asp-for="RoleId" class="form-control"><option value="0">— Seçin —</option>@foreach (var role in Model.Roles) { <option value="@role.Id">@role.Name</option> }</select><span asp-validation-for="RoleId" class="form-error"></span></div>
+    @if (Model.Units.Any())
+    {
+        <div class="form-group"><label class="form-label">Birim Erişimi <span class="text-muted font-normal">(opsiyonel — boş bırakılırsa tüm birimler)</span></label>
+            <div class="border border-[var(--color-border)] rounded-lg p-3 flex flex-col gap-2 max-h-48 overflow-y-auto">
+            @foreach (var unit in Model.Units)
+            {
+                <label class="flex items-center gap-2 text-[13.5px] cursor-pointer"><input type="checkbox" name="UnitIds" value="@unit.Id" class="w-4 h-4 accent-primary" @(Model.UnitIds.Contains(unit.Id) ? "checked" : "") /><span>@unit.PropertyName — @unit.Name@(unit.UnitNo != null ? " (" + unit.UnitNo + ")" : "")</span></label>
+            }
+            </div>
+        </div>
+    }
+    <div class="flex gap-2.5 mt-6"><button type="submit" class="btn btn-primary px-6">Davet Gönder</button><a asp-controller="@controllerName" asp-action="@nameof(KiraTakip.Controllers.TenantUserController.Index)" class="btn btn-secondary px-6">İptal</a></div>
+</form>
+</div>

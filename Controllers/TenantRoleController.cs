@@ -1,245 +1,154 @@
-﻿using KiraTakip.Authorization;
-using KiraTakip.Data;
-using KiraTakip.Models;
-using KiraTakip.Models.Entities;
+using KiraTakip.Authorization;
+using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
 [Authorize(Policy = "TenantUser")]
 [RequireKiraciId]
-[Route("Tenant/Roller")]
-public class TenantRoleController : Controller
+[Route("Tenant/Roles")]
+public class TenantRoleController(
+    ICurrentUserContext currentUser,
+    IRoleService roleService) : Controller
 {
-    private readonly ApplicationDbContext _db;
-    private readonly ICurrentUserContext _currentUser;
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IRoleService _rolService;
-    private readonly ITenantUserService _kullaniciService;
-
-    public TenantRoleController(
-        ApplicationDbContext db,
-        ICurrentUserContext currentUser,
-        UserManager<ApplicationUser> userManager,
-        IRoleService roleService,
-        ITenantUserService kullaniciService)
-    {
-        _db = db;
-        _currentUser = currentUser;
-        _userManager = userManager;
-        _rolService = roleService;
-        _kullaniciService = kullaniciService;
-    }
-
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Module)]
     public async Task<IActionResult> Index()
     {
-        var tenantId = _currentUser.TenantId!.Value;
-        var roller = await _rolService.GetKiraciRollerAsync(tenantId);
+        var tenantId = currentUser.TenantId!.Value;
+        var roles = await roleService.GetTenantRolesWithDetailsAsync(
+            new GetTenantRolesWithDetailsInput(tenantId));
 
-        var model = new List<RolListeViewModel>();
-        foreach (var r in roller)
+        var model = roles.Select(role => new RoleListViewModel
         {
-            var kullaniciSayisi = await _db.UserRoller
-                .CountAsync(ur => ur.RoleId == r.Id &&
-                                  _db.Users.Any(u => u.Id == ur.UserId && u.TenantId == tenantId));
-            var perms = await _rolService.GetRolPermissionsAsync(r.Id);
-            model.Add(new RolListeViewModel
-            {
-                Id = r.Id,
-                Ad = r.Name,
-                Aciklama = r.Description,
-                IsSystemRole = r.IsSystemRole,
-                IsActive = r.IsActive,
-                KullaniciSayisi = kullaniciSayisi,
-                IzinSayisi = perms.Count
-            });
-        }
+            Id = role.Id,
+            Name = role.Name,
+            Description = role.Description,
+            IsSystemRole = role.IsSystemRole,
+            IsActive = role.IsActive,
+            UserCount = role.UserCount,
+            PermissionCount = role.PermissionCount
+        }).ToList();
 
         return View(model);
     }
 
-    [HttpGet("Ekle")]
+    [HttpGet("Create")]
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Create)]
     public IActionResult Create()
     {
-        var model = new RolOlusturViewModel();
-        PopulateKiraciPermissions(model.Permissions, []);
+        var model = new TenantRoleFormViewModel();
+        PopulateTenantPermissions(model.Permissions, []);
+
         return View(model);
     }
 
-    [HttpPost("Ekle")]
+    [HttpPost("Create")]
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Create)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(RolOlusturViewModel model)
+    public async Task<IActionResult> Create(TenantRoleFormViewModel model)
     {
         if (!ModelState.IsValid)
         {
-            PopulateKiraciPermissions(model.Permissions, model.SelectedPermissions);
+            PopulateTenantPermissions(model.Permissions, model.SelectedPermissions);
             return View(model);
         }
 
-        var tenantId = _currentUser.TenantId!.Value;
-        var currentUserId = _userManager.GetUserId(User)!;
+        var tenantId = currentUser.TenantId!.Value;
 
         try
         {
-            var rol = await _db.Roller
-                .Where(r => r.TenantId == tenantId && r.Name == model.Ad && !r.IsDeleted)
-                .FirstOrDefaultAsync();
+            await roleService.CreateTenantRoleAsync(new CreateTenantRoleInput(
+                tenantId,
+                model.Name,
+                model.Description,
+                model.SelectedPermissions,
+                currentUser.UserId!));
 
-            if (rol != null)
-            {
-                ModelState.AddModelError("Ad", "Bu isimde bir rol zaten var.");
-                PopulateKiraciPermissions(model.Permissions, model.SelectedPermissions);
-                return View(model);
-            }
-
-            var yeniRol = new Role
-            {
-                Name = model.Ad,
-                Description = model.Aciklama,
-                Scope = Models.RoleScope.Tenant,
-                TenantId = tenantId,
-                IsSystemRole = false,
-                IsActive = true
-            };
-            _db.Roller.Add(yeniRol);
-            await _db.SaveChangesAsync();
-
-            var validPerms = model.SelectedPermissions
-                .Where(p => PermissionCatalog.TenantAll.Contains(p))
-                .ToList();
-            await _rolService.SetRolPermissionsAsync(yeniRol.Id, validPerms, currentUserId);
-
-            TempData["Success"] = $"'{model.Ad}' rolü oluşturuldu.";
             return RedirectToAction(nameof(Index));
         }
-        catch (Exception ex)
+        catch (BusinessValidationException ex)
         {
-            ModelState.AddModelError(string.Empty, ex.Message);
-            PopulateKiraciPermissions(model.Permissions, model.SelectedPermissions);
+            ModelState.AddModelError(ex.Field, ex.Message);
+            PopulateTenantPermissions(model.Permissions, model.SelectedPermissions);
+
             return View(model);
         }
     }
 
-    [HttpGet("Duzenle/{id:int}")]
+    [HttpGet("Edit/{id}")]
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Edit)]
     public async Task<IActionResult> Edit(int id)
     {
-        var tenantId = _currentUser.TenantId!.Value;
-        var rol = await _db.Roller
-            .FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId && !r.IsDeleted);
-        if (rol == null) return NotFound();
-
-        var selected = await _rolService.GetRolPermissionsAsync(id);
-        var model = new RolDuzenleViewModel
+        var tenantId = currentUser.TenantId!.Value;
+        var role = await roleService.GetTenantRoleForEditAsync(
+            new GetTenantRoleForEditInput(id, tenantId));
+        var model = new TenantRoleFormViewModel
         {
-            Id = rol.Id,
-            Ad = rol.Name,
-            Aciklama = rol.Description,
-            IsSystemRole = rol.IsSystemRole,
-            SelectedPermissions = selected
+            Id = role.Id,
+            Name = role.Name,
+            Description = role.Description,
+            SelectedPermissions = role.SelectedPermissions
         };
-        PopulateKiraciPermissions(model.Permissions, selected);
+        PopulateTenantPermissions(model.Permissions, role.SelectedPermissions);
+
         return View(model);
     }
 
-    [HttpPost("Duzenle/{id:int}")]
+    [HttpPost("Edit/{id}")]
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Edit)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, RolDuzenleViewModel model)
+    public async Task<IActionResult> Edit(int id, TenantRoleFormViewModel model)
     {
-        var tenantId = _currentUser.TenantId!.Value;
-        var rol = await _db.Roller
-            .FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId && !r.IsDeleted);
-        if (rol == null) return NotFound();
-
+        model.Id = id;
         if (!ModelState.IsValid)
         {
-            PopulateKiraciPermissions(model.Permissions, model.SelectedPermissions);
+            PopulateTenantPermissions(model.Permissions, model.SelectedPermissions);
             return View(model);
         }
 
-        var removingManage = !model.SelectedPermissions.Contains(PermissionCatalog.TenantPortal.System.User.Invite);
-        if (removingManage)
+        var tenantId = currentUser.TenantId!.Value;
+
+        try
         {
-            try
-            {
-                await _kullaniciService.EnsureSonYetkiliAsync(tenantId, excludeRolId: id);
-            }
-            catch (InvalidOperationException ex)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                PopulateKiraciPermissions(model.Permissions, model.SelectedPermissions);
-                return View(model);
-            }
+            await roleService.UpdateTenantRoleAsync(new UpdateTenantRoleInput(
+                id,
+                tenantId,
+                model.Name,
+                model.Description,
+                model.SelectedPermissions,
+                currentUser.UserId!));
+
+            return RedirectToAction(nameof(Index));
         }
-
-        var currentUserId = _userManager.GetUserId(User)!;
-
-        if (!rol.IsSystemRole)
+        catch (BusinessValidationException ex)
         {
-            rol.Name = model.Ad;
-            rol.Description = model.Aciklama;
+            ModelState.AddModelError(ex.Field, ex.Message);
+            PopulateTenantPermissions(model.Permissions, model.SelectedPermissions);
+
+            return View(model);
         }
-
-        var validPerms = model.SelectedPermissions
-            .Where(p => PermissionCatalog.TenantAll.Contains(p))
-            .ToList();
-        await _rolService.SetRolPermissionsAsync(id, validPerms, currentUserId);
-        await _db.SaveChangesAsync();
-
-        TempData["Success"] = $"'{rol.Name}' rolü güncellendi.";
-        return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("Sil/{id:int}")]
+    [HttpPost("Delete/{id}")]
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Delete)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
-        var tenantId = _currentUser.TenantId!.Value;
-        var rol = await _db.Roller
-            .FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId && !r.IsDeleted);
-        if (rol == null) return NotFound();
+        var tenantId = currentUser.TenantId!.Value;
+        await roleService.DeleteTenantRoleAsync(
+            new DeleteTenantRoleInput(id, tenantId, currentUser.UserId!));
 
-        if (rol.IsSystemRole)
-        {
-            TempData["Error"] = "Sistem rolleri silinemez.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        try
-        {
-            await _kullaniciService.EnsureSonYetkiliAsync(tenantId, excludeRolId: id);
-        }
-        catch (InvalidOperationException ex)
-        {
-            TempData["Error"] = ex.Message;
-            return RedirectToAction(nameof(Index));
-        }
-
-        var currentUserId = _userManager.GetUserId(User)!;
-        try
-        {
-            await _rolService.SilAsync(id, currentUserId);
-            TempData["Success"] = "Rol silindi.";
-        }
-        catch (Exception ex)
-        {
-            TempData["Error"] = ex.Message;
-        }
         return RedirectToAction(nameof(Index));
     }
 
-    private static void PopulateKiraciPermissions(List<PermissionGrupViewModel> target, List<string> selected)
+    private static void PopulateTenantPermissions(
+        List<PermissionGroupViewModel> target,
+        List<string> selected)
     {
         target.Clear();
         target.AddRange(
@@ -249,27 +158,17 @@ public class TenantRoleController : Controller
                 {
                     var items = new List<PermissionCheckboxViewModel>
                     {
-                        new() { Value = m.Path, Etiket = "Görüntüle", Selected = selected.Contains(m.Path) }
+                        new() { Value = m.Path, Label = m.AccessDisplayName, Selected = selected.Contains(m.Path) }
                     };
-                    items.AddRange(m.Actions.Select(a => new PermissionCheckboxViewModel
+                    items.AddRange(m.ActionDefinitions.Select(action => new PermissionCheckboxViewModel
                     {
-                        Value = a,
-                        Etiket = GetActionLabel(a.Split('.').Last()),
-                        Selected = selected.Contains(a)
+                        Value = action.Path,
+                        Label = action.DisplayName,
+                        Selected = selected.Contains(action.Path)
                     }));
-                    return new PermissionGrupViewModel { GrupAdi = m.DisplayName, Permissions = items };
+                    return new PermissionGroupViewModel { GroupName = m.DisplayName, Permissions = items };
                 })
         );
     }
 
-    private static string GetActionLabel(string action) => action switch
-    {
-        "Create"     => "Ekle",
-        "Edit"       => "Düzenle",
-        "Delete"     => "Sil",
-        "Cancel"     => "İptal Et",
-        "Invite"     => "Davet Et",
-        "Deactivate" => "Pasifleştir",
-        _            => action
-    };
 }

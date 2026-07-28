@@ -1,4 +1,4 @@
-@model List<KiraTakip.Models.Dtos.TasinmazListItemDto>
+@model List<KiraTakip.Models.Dtos.PropertyListItemDto>
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Taşınmazlar";
@@ -13,7 +13,7 @@
     </div>
     @if (canEdit)
     {
-        <a href="/Property/Ekle" class="btn btn-primary flex items-center gap-2">
+        <a href="/Property/Create" class="btn btn-primary flex items-center gap-2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Yeni Taşınmaz
         </a>
@@ -23,40 +23,40 @@
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
     @foreach (var t in Model)
     {
-        var kiraliSayi = t.KiraliBirimSayisi;
-        var surekSayi = t.SuresiDolmakUzereBirimSayisi;
-        var bosSayi = t.BosBirimSayisi;
+        var kiraliSayi = t.LeasedUnitCount;
+        var surekSayi = t.ExpiringSoonUnitCount;
+        var bosSayi = t.VacantUnitCount;
 
-        <a href="/Property/Detay/@t.Id.ToHashId()" class="group">
+        <a href="/Property/Details/@t.Id.ToHashId()" class="group">
             <div class="card cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
                 <div class="flex items-start justify-between mb-3">
                     <div>
-                        <div class="text-[15px] font-bold text-slate-800 group-hover:text-primary transition-colors">@t.Ad</div>
-                        <div class="text-xs text-muted mt-0.5">@t.Ilce, @t.Il</div>
+                        <div class="text-[15px] font-bold text-slate-800 group-hover:text-primary transition-colors">@t.Name</div>
+                        <div class="text-xs text-muted mt-0.5">@t.District, @t.City</div>
                     </div>
-                    <span class="badge badge-bos text-[10px] font-bold">@(string.IsNullOrEmpty(t.TasinmazTipiAd) ? "—" : t.TasinmazTipiAd)</span>
+                    <span class="badge badge-bos text-[10px] font-bold">@(string.IsNullOrEmpty(t.PropertyTypeName) ? "—" : t.PropertyTypeName)</span>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2.5 mb-4">
-                    @if (t.KapaliYuzolcumu > 0)
+                    @if (t.ClosedArea > 0)
                     {
                         <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
                             <div class="text-[10px] text-muted font-bold uppercase tracking-wider mb-0.5">Kapalı Alan</div>
-                            <div class="text-sm font-bold text-slate-700">@t.KapaliYuzolcumu.ToString("N0") m²</div>
+                            <div class="text-sm font-bold text-slate-700">@t.ClosedArea.M2()</div>
                         </div>
                     }
-                    @if (t.AcikYuzolcumu > 0)
+                    @if (t.OpenArea > 0)
                     {
                         <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
                             <div class="text-[10px] text-muted font-bold uppercase tracking-wider mb-0.5">Açık Alan</div>
-                            <div class="text-sm font-bold text-slate-700">@t.AcikYuzolcumu.ToString("N0") m²</div>
+                            <div class="text-sm font-bold text-slate-700">@t.OpenArea.M2()</div>
                         </div>
                     }
                     @if (t.UnitStructure == UnitStructure.MultipleUnits)
                     {
                         <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
                             <div class="text-[10px] text-muted font-bold uppercase tracking-wider mb-0.5">Ofis Sayısı</div>
-                            <div class="text-sm font-bold text-slate-700">@t.BirimSayisi Ofis</div>
+                            <div class="text-sm font-bold text-slate-700">@t.UnitCount Ofis</div>
                         </div>
                     }
                 </div>
@@ -68,7 +68,7 @@
                         @if (bosSayi > 0) { <span class="badge badge-bos text-[10px] font-bold px-1.5 py-0.5">@bosSayi Boş</span> }
                     </div>
                     <span class="text-[11px] font-semibold text-slate-400 group-hover:text-primary transition-colors flex items-center gap-1">
-                        @t.BirimSayisi Birim
+                        @t.UnitCount Birim
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="transition-transform group-hover:translate-x-0.5"><path d="M9 18l6-6-6-6"/></svg>
                     </span>
                 </div>

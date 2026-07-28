@@ -1,20 +1,23 @@
-﻿using KiraTakip.Models.Dtos;
-using KiraTakip.Models.ViewModels;
+using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Services.Interfaces;
 
 public interface IReservationService
 {
-    Task<List<ReservationListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null);
-    Task<ReservationListItemDto?> GetByIdAsync(int id);
-    Task<RezervasyonHesapSonucu> HesaplaAsync(int unitId, DateTime baslangic, DateTime bitis);
-    Task<(bool Basarili, string? Hata, int ReservationId)> CreateAsync(ReservationCreateViewModel model, string userId);
-    Task<(bool Basarili, string? Hata)> CancelAsync(int id, string userId, string neden);
-    Task<(bool Basarili, string? Hata, int? ChargeId)> TransferToChargeAsync(int id, string userId);
+    Task<List<ReservationListItemDto>> GetAllAsync(GetReservationsInput input);
+    Task<List<ReservationListItemDto>> GetTenantReservationsAsync(GetTenantReservationsInput input);
+    Task<ReservationListItemDto> GetByIdAsync(GetReservationByIdInput input);
+    Task<ReservationCalculationResultDto> CalculateAsync(CalculateReservationInput input);
+    Task<int> CreateAsync(CreateReservationInput input);
+    Task CancelAsync(CancelReservationInput input);
+    Task<int> TransferToChargeAsync(TransferReservationToChargeInput input);
+    Task<ReservationFormOptionsDto> GetFormOptionsAsync(GetReservationFormOptionsInput input);
 
     // Ücret kuralları (birime özel)
-    Task<List<ReservationRateOverrideListItemDto>> GetUcretKurallariAsync();
-    Task<ReservationRateOverride?> GetUcretKuralByIdAsync(int id);
-    Task<(bool Basarili, string? Hata, int Id)> SaveUcretKuralAsync(ReservationRateOverrideViewModel model);
-    Task<(bool Basarili, string? Hata)> ToggleUcretKuralAktifAsync(int id);
+    Task<List<ReservationRateOverrideListItemDto>> GetRateRulesAsync();
+    Task<ReservationRateOverride?> GetRateRuleByIdAsync(GetRateRuleByIdInput input);
+    Task SaveRateRuleAsync(SaveReservationRateRuleInput input);
+    Task SaveUnitReservationRateRuleAsync(SaveUnitReservationRateRuleInput input);
+    Task ToggleRateRuleStatusAsync(ToggleRateRuleStatusInput input);
+    Task ClearUnitReservationRateRuleAsync(ClearUnitReservationRateRuleInput input);
 }

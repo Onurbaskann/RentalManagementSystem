@@ -7,5 +7,5 @@ public class UnitCustomRateDto
     public string ChargeTypeName { get; set; } = string.Empty;
     public CalculationMethod CalculationMethod { get; set; }
     public decimal UnitValue { get; set; }
-    public decimal KdvRate { get; set; }
+    public decimal VatRate { get; set; }
 }

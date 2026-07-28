@@ -6,3 +6,6 @@ public class UserScopeDto
     public List<int> PropertyIds { get; set; } = new();
     public List<int> UnitIds { get; set; } = new();
 }
+
+
+public record UserScopeAccountDto(bool HasGlobalAccess);

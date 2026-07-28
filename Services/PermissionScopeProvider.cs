@@ -5,26 +5,17 @@ namespace KiraTakip.Services;
 
 public class PermissionScopeProvider : IPermissionScopeProvider
 {
-    private bool _globalAccess = true;
-    private List<int> _propertyIds = new();
-    private List<int> _unitIds = new();
+    private List<int> _propertyIds = [];
+    private List<int> _unitIds = [];
 
-    public bool GlobalAccess => _globalAccess;
+    public bool GlobalAccess { get; private set; } = true;
     public IReadOnlyList<int> AccessiblePropertyIds => _propertyIds;
     public IReadOnlyList<int> AccessibleUnitIds => _unitIds;
-
-    public bool IsInScope(int propertyId) =>
-        _globalAccess || _propertyIds.Contains(propertyId);
-
-    public void PropertyGuard(int propertyId)
-    {
-        if (!IsInScope(propertyId))
-            throw new UnauthorizedAccessException($"Property {propertyId} is out of permission scope.");
-    }
+    public bool IsInScope(int propertyId) => GlobalAccess || _propertyIds.Contains(propertyId);
 
     public void Initialize(UserScopeDto dto)
     {
-        _globalAccess = dto.GlobalAccess;
+        GlobalAccess = dto.GlobalAccess;
         _propertyIds = dto.PropertyIds;
         _unitIds = dto.UnitIds;
     }

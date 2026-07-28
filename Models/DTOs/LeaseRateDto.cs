@@ -9,5 +9,5 @@ public class LeaseRateDto
     public ChargeTypeBehavior ChargeTypeBehavior { get; set; }
     public decimal UnitValue { get; set; }
     public CalculationMethod CalculationMethod { get; set; }
-    public decimal KdvRate { get; set; }
+    public decimal VatRate { get; set; }
 }

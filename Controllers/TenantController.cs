@@ -1,278 +1,291 @@
-﻿using KiraTakip.Authorization;
-using KiraTakip.Data;
+using KiraTakip.Authorization;
+using KiraTakip.Extensions;
+using KiraTakip.Infrastructure;
+using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
 [Authorize]
-public class TenantController : Controller
+[Route("Tenant")]
+public class TenantController(
+    ITenantService tenantService,
+    ILeaseService leaseService,
+    IPermissionScopeProvider permissionScopeProvider,
+    IDocumentService documentService,
+    ITenantUserService tenantUserService,
+    ITenantCategoryService tenantCategoryService,
+    ISectorService sectorService,
+    ICurrentUserContext currentUserContext) : Controller
 {
-    private readonly ITenantService _tenantService;
-    private readonly ILeaseService _leaseService;
-    private readonly IStatisticsService _istatistik;
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly ApplicationDbContext _ctx;
-    private readonly IRoleService _rolService;
-    private readonly IInvitationService _invitationService;
-    private readonly IPermissionScopeProvider _provider;
-    private readonly IDocumentService _documentService;
-
-    public TenantController(
-        ITenantService tenantService,
-        ILeaseService leaseService,
-        IStatisticsService istatistik,
-        UserManager<ApplicationUser> userManager,
-        ApplicationDbContext ctx,
-        IRoleService roleService,
-        IInvitationService invitationService,
-        IPermissionScopeProvider provider,
-        IDocumentService documentService)
-    {
-        _tenantService = tenantService;
-        _leaseService = leaseService;
-        _istatistik = istatistik;
-        _userManager = userManager;
-        _ctx = ctx;
-        _rolService = roleService;
-        _invitationService = invitationService;
-        _provider = provider;
-        _documentService = documentService;
-    }
-
+    [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.Tenant.Module)]
     public async Task<IActionResult> Index()
     {
-        var propertyIds = _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds;
-        var kiraciler = await _tenantService.GetAllAsync(propertyIds);
-        var sozlesmeler = await _leaseService.GetAllAsync(propertyIds: propertyIds);
-        ViewBag.AktifSozlesme = sozlesmeler
-            .Where(s => s.Aktif)
-            .GroupBy(s => s.TenantId)
-            .ToDictionary(g => g.Key, g => g.Count());
-        return View(kiraciler);
+        var accessScope = BuildAccessScope();
+        var tenants = await tenantService.GetAllAsync(
+            new GetTenantsInput(accessScope.PropertyIds, accessScope.UnitIds));
+        var leases = await leaseService.GetAllAsync(new GetLeasesInput(
+            PropertyIds: accessScope.PropertyIds,
+            UnitIds: accessScope.UnitIds));
+        var now = DateTime.Now;
+
+        return View(new TenantIndexViewModel
+        {
+            Tenants = tenants,
+            ActiveLeaseCounts = leases
+                .Where(lease => lease.Status == LeaseStatus.Active
+                    && lease.StartDate <= now
+                    && lease.EndDate >= now)
+                .GroupBy(lease => lease.TenantId)
+                .ToDictionary(group => group.Key, group => group.Count()),
+            CanCreate = permissionScopeProvider.GlobalAccess
+                && User.HasPermission(PermissionCatalog.Tenant.Create),
+            CanEdit = User.HasPermission(PermissionCatalog.Tenant.Edit)
+        });
     }
 
+    [HttpGet("Details/{id}")]
     [Authorize(Policy = PermissionCatalog.Tenant.Module)]
-    public async Task<IActionResult> Detay(int id)
+    public async Task<IActionResult> Details(int id)
     {
-        var propertyIds = _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds;
-        if (!_provider.GlobalAccess)
-        {
-            var kiraciler = await _tenantService.GetAllAsync(propertyIds);
-            if (!kiraciler.Any(k => k.Id == id)) return Forbid();
-        }
+        var accessScope = BuildAccessScope();
+        var tenant = await tenantService.GetDetailsAsync(
+            new GetTenantDetailsInput(id, accessScope));
+        if (tenant == null)
+            return permissionScopeProvider.GlobalAccess ? NotFound() : Forbid();
 
-        var k = await _tenantService.GetDetayAsync(id);
-        if (k == null) return NotFound();
+        var leases = await leaseService.GetByTenantAsync(new GetLeasesByTenantInput(
+            id,
+            new LeaseAccessScopeInput(accessScope.PropertyIds, accessScope.UnitIds)));
 
-        List<LeaseListItemDto> sozlesmeler;
-        if (!_provider.GlobalAccess)
-        {
-            var all = await _leaseService.GetAllAsync(propertyIds: propertyIds);
-            sozlesmeler = all.Where(s => s.TenantId == id).ToList();
-        }
-        else
-        {
-            sozlesmeler = await _leaseService.GetByTenantIdAsync(id);
-        }
+        var depositAmounts = await leaseService.GetDepositsAsync(
+            new GetLeaseDepositsInput(leases.Select(lease => lease.Id).ToList()));
+        var documents = await documentService.GetListAsync(
+            new GetDocumentsInput(
+                DocumentOwnerType.Tenant,
+                id,
+                new DocumentAccessScopeInput(
+                    [DocumentOwnerType.Tenant],
+                    accessScope.PropertyIds,
+                    accessScope.UnitIds)));
+        var documentTypes = await documentService.GetTypesAsync(
+            new GetDocumentTypesInput(DocumentOwnerType.Tenant));
 
-        var depozitoTutarlari = await _leaseService.GetDepozitoTutarlariAsync(sozlesmeler.Select(s => s.Id));
-        var belgeler = await _documentService.GetListAsync(DocumentOwnerType.Tenant, id);
-        var belgeTurleri = await _documentService.GetTurlerAsync(DocumentOwnerType.Tenant);
-
-        var vm = new KiraciDetayViewModel
+        return View(new TenantDetailsViewModel
         {
-            Tenant = k,
-            Leases = sozlesmeler,
-            DepozitoTutarlari = depozitoTutarlari,
-            Belgeler = belgeler,
-            DocumentTypes = belgeTurleri
-        };
-        return View(vm);
+            Tenant = tenant,
+            Leases = leases,
+            DepositAmounts = depositAmounts,
+            Documents = documents,
+            DocumentTypes = documentTypes
+        });
     }
 
-    private async Task PopulateKiraciViewBagAsync()
-    {
-        ViewBag.Kategoriler = await _ctx.Kategoriler.Where(k => k.Type == CategoryType.Tenant && k.IsActive).OrderBy(k => k.Order).ToListAsync();
-        ViewBag.Sektorler = await _ctx.Kategoriler.Where(k => k.Type == CategoryType.Sector && k.IsActive).OrderBy(k => k.Order).ToListAsync();
-        ViewBag.DocumentTypes = await _documentService.GetTurlerAsync(DocumentOwnerType.Tenant);
-    }
-
-    [HttpGet]
+    [HttpGet("Create")]
     [Authorize(Policy = PermissionCatalog.Tenant.Create)]
-    public async Task<IActionResult> Ekle()
+    public async Task<IActionResult> Create()
     {
-        await PopulateKiraciViewBagAsync();
-        var vm = new KiraciFormViewModel
+        if (!permissionScopeProvider.GlobalAccess) return Forbid();
+
+        var viewModel = new TenantFormViewModel
         {
-            KiraciNo = await _tenantService.GenerateKiraciNoAsync()
+            TenantNo = await tenantService.GenerateTenantNoAsync()
         };
-        return View(vm);
+        await PopulateTenantFormOptionsAsync(viewModel);
+
+        return View(viewModel);
     }
 
-    [HttpPost]
+    [HttpPost("Create")]
     [Authorize(Policy = PermissionCatalog.Tenant.Create)]
-    public async Task<IActionResult> Ekle(KiraciFormViewModel vm)
+    public async Task<IActionResult> Create(TenantFormViewModel viewModel)
     {
-        await ValidateKiraciAsync(vm);
+        if (!permissionScopeProvider.GlobalAccess) return Forbid();
 
-        var belgeTurleri = await _documentService.GetTurlerAsync(DocumentOwnerType.Tenant);
-        foreach (var bt in belgeTurleri.Where(bt => bt.Required))
-        {
-            var f = Request.Form.Files.GetFile($"dosya_{bt.Id}");
-            if (f == null || f.Length == 0)
-                ModelState.AddModelError($"dosya_{bt.Id}", $"'{bt.Name}' belgesi zorunludur.");
-        }
+        await PopulateDocumentTypesAsync(viewModel);
 
         if (!ModelState.IsValid)
         {
-            await PopulateKiraciViewBagAsync();
-            return View(vm);
+            await PopulateCategoryAndSectorOptionsAsync(viewModel);
+            return View(viewModel);
         }
 
-        var k = BuildKiraciFromVm(vm);
-        await _tenantService.CreateAsync(k);
-
-        // Yüklenen belgeleri kaydet
-        foreach (var bt in belgeTurleri)
+        var documents = new List<TenantDocumentUploadInput>();
+        foreach (var documentType in viewModel.DocumentTypes)
         {
-            var file = Request.Form.Files.GetFile($"dosya_{bt.Id}");
+            var file = Request.Form.Files.GetFile($"dosya_{documentType.Id}");
             if (file == null || file.Length == 0) continue;
-            using var ms = new MemoryStream();
-            await file.CopyToAsync(ms);
-            await _documentService.UploadAsync(
-                DocumentOwnerType.Tenant, k.Id, bt.Id,
-                file.FileName, file.ContentType, ms.ToArray());
+
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            documents.Add(new TenantDocumentUploadInput(documentType.Id, file.FileName, file.ContentType, stream.ToArray()));
         }
 
-        var currentUserId = _userManager.GetUserId(User)!;
-
-        // İlk firma yetkilisine otomatik davet gönder (e-posta girilmişse)
-        if (!string.IsNullOrWhiteSpace(vm.IlkYetkiliEmail))
+        CreatedTenantDto result;
+        try
         {
-            try
-            {
-                var firmaRol = await _ctx.Roller
-                    .FirstOrDefaultAsync(r => r.TenantId == null && r.Name == RoleNames.KiraciYoneticisi);
-                if (firmaRol != null)
-                    await _invitationService.GonderAsync(vm.IlkYetkiliEmail, vm.IlkYetkiliAdSoyad, firmaRol.Id, currentUserId, k.Id);
-                TempData["Success"] = $"'{k.DisplayName}' eklendi ve {vm.IlkYetkiliEmail} adresine davet gönderildi.";
-            }
-            catch
-            {
-                TempData["Success"] = $"'{k.DisplayName}' başarıyla eklendi.";
-                TempData["Error"] = "İlk yetkili daveti gönderilemedi; Kiracı > Kullanıcılar ekranından tekrar deneyebilirsiniz.";
-            }
+            result = await tenantService.CreateAsync(
+                ToCreateInput(viewModel, documents, BuildAccessScope()));
         }
-        else
+        catch (BusinessValidationException exception)
         {
-            TempData["Success"] = $"'{k.DisplayName}' başarıyla eklendi.";
+            ModelState.AddModelError(exception.Field, exception.Message);
+            await PopulateTenantFormOptionsAsync(viewModel);
+            return View(viewModel);
+        }
+        catch (BusinessException exception) when (
+            exception.ErrorType is ErrorType.Failure or ErrorType.Conflict)
+        {
+            ModelState.AddModelError(string.Empty, exception.Message);
+            await PopulateTenantFormOptionsAsync(viewModel);
+            return View(viewModel);
         }
 
-        return RedirectToAction("Detay", new { id = k.Id });
+        if (!string.IsNullOrWhiteSpace(viewModel.InitialRepresentativeEmail))
+        {
+            var invitationResult = await tenantUserService.TrySendInitialRepresentativeInvitationAsync(
+                new SendInitialTenantRepresentativeInput(
+                    result.TenantId,
+                    viewModel.InitialRepresentativeEmail,
+                    viewModel.InitialRepresentativeFullName,
+                    currentUserContext.UserId!));
+
+            if (!invitationResult.Sent)
+            {
+                TempData[FeedbackTempDataKeys.SuccessMessage] =
+                    $"'{result.DisplayName}' kiracı kaydı başarıyla oluşturuldu.";
+                TempData["Error"] = invitationResult.Error;
+            }
+        }
+
+        return RedirectToAction(nameof(Details), new { id = result.TenantId });
     }
 
-    [HttpGet]
+    [HttpGet("Edit/{id}")]
     [Authorize(Policy = PermissionCatalog.Tenant.Edit)]
-    public async Task<IActionResult> Duzenle(int id)
+    public async Task<IActionResult> Edit(int id)
     {
-        var k = await _tenantService.GetDetayAsync(id);
-        if (k == null) return NotFound();
+        var tenant = await tenantService.GetDetailsAsync(
+            new GetTenantDetailsInput(id, BuildAccessScope()));
+        if (tenant == null)
+            return permissionScopeProvider.GlobalAccess ? NotFound() : Forbid();
 
-        await PopulateKiraciViewBagAsync();
-        var vm = new KiraciFormViewModel
+        var viewModel = new TenantFormViewModel
         {
-            Id = k.Id,
-            KiraciNo = k.KiraciNo,
-            Ad = k.Ad,
-            TicaretSicilNo = k.TicaretSicilNo,
-            VergiNo = k.VergiNo,
-            VergiDairesi = k.VergiDairesi,
-            MersisNo = k.MersisNo,
-            Telefon = k.Telefon,
-            Email = k.Email,
-            Adres = k.Adres,
-            KiraciKategoriId = k.KiraciKategoriId,
-            SektorId = k.SektorId
+            Id = tenant.Id,
+            TenantNo = tenant.TenantNo,
+            Name = tenant.Name,
+            TradeRegistryNo = tenant.TradeRegistryNo,
+            TaxNo = tenant.TaxNo,
+            TaxOffice = tenant.TaxOffice,
+            MersisNo = tenant.MersisNo,
+            Phone = tenant.Phone,
+            Email = tenant.Email,
+            Address = tenant.Address,
+            TenantCategoryId = tenant.TenantCategoryId,
+            SectorId = tenant.SectorId
         };
-        return View(vm);
+        await PopulateTenantFormOptionsAsync(viewModel);
+
+        return View(viewModel);
     }
 
-    [HttpPost]
+    [HttpPost("Edit/{id}")]
     [Authorize(Policy = PermissionCatalog.Tenant.Edit)]
-    public async Task<IActionResult> Duzenle(int id, KiraciFormViewModel vm)
+    public async Task<IActionResult> Edit(int id, TenantFormViewModel viewModel)
     {
-        if (id != vm.Id) return BadRequest();
-
-        await ValidateKiraciAsync(vm, excludeId: id);
+        if (id != viewModel.Id) return BadRequest();
 
         if (!ModelState.IsValid)
         {
-            await PopulateKiraciViewBagAsync();
-            return View(vm);
+            await PopulateTenantFormOptionsAsync(viewModel);
+            return View(viewModel);
         }
 
-        var k = BuildKiraciFromVm(vm);
-        k.Id = id;
-        await _tenantService.UpdateAsync(k);
-        TempData["Success"] = "Kiracı bilgileri güncellendi.";
-        return RedirectToAction("Detay", new { id });
-    }
-
-    private async Task ValidateKiraciAsync(KiraciFormViewModel vm, int? excludeId = null)
-    {
-        if (string.IsNullOrWhiteSpace(vm.KiraciNo))
-            ModelState.AddModelError("KiraciNo", "Kiracı No zorunludur.");
-        else if (await _tenantService.KiraciNoExistsAsync(vm.KiraciNo, excludeId))
-            ModelState.AddModelError("KiraciNo", "Bu Kiracı No zaten kullanımda.");
-
-        if (!vm.KiraciKategoriId.HasValue || vm.KiraciKategoriId <= 0)
-            ModelState.AddModelError("KiraciKategoriId", "Kiracı kategorisi seçilmelidir.");
-
-        if (!vm.SektorId.HasValue || vm.SektorId <= 0)
-            ModelState.AddModelError("SektorId", "Sektör seçilmelidir.");
-
-        if (string.IsNullOrWhiteSpace(vm.Ad))
-            ModelState.AddModelError("Ad", "Firma / Kurum Adı zorunludur.");
-
-        if (string.IsNullOrWhiteSpace(vm.VergiNo))
-            ModelState.AddModelError("VergiNo", "Vergi No zorunludur.");
-        else if (vm.VergiNo.Length != 10 || !vm.VergiNo.All(char.IsDigit))
-            ModelState.AddModelError("VergiNo", "Vergi No 10 haneli rakamdan oluşmalıdır.");
-
-        if (string.IsNullOrWhiteSpace(vm.VergiDairesi))
-            ModelState.AddModelError("VergiDairesi", "Vergi Dairesi zorunludur.");
-
-        if (string.IsNullOrWhiteSpace(vm.Telefon))
-            ModelState.AddModelError("Telefon", "Telefon zorunludur.");
-        if (string.IsNullOrWhiteSpace(vm.Email))
-            ModelState.AddModelError("Email", "E-posta zorunludur.");
-        if (string.IsNullOrWhiteSpace(vm.Adres))
-            ModelState.AddModelError("Adres", "Adres zorunludur.");
-    }
-
-    private static Tenant BuildKiraciFromVm(KiraciFormViewModel vm)
-    {
-        return new Tenant
+        try
         {
-            TenantNo = vm.KiraciNo,
-            Name = vm.Ad,
-            TradeRegistryNo = vm.TicaretSicilNo,
-            TaxNo = vm.VergiNo,
-            TaxOffice = vm.VergiDairesi,
-            MersisNo = vm.MersisNo,
-            Phone = vm.Telefon,
-            Email = vm.Email,
-            Address = vm.Adres,
-            TenantCategoryId = vm.KiraciKategoriId,
-            SectorId = vm.SektorId
-        };
+            await tenantService.UpdateAsync(
+                ToUpdateInput(id, viewModel, BuildAccessScope()));
+        }
+        catch (BusinessValidationException exception)
+        {
+            ModelState.AddModelError(exception.Field, exception.Message);
+            await PopulateTenantFormOptionsAsync(viewModel);
+            return View(viewModel);
+        }
+        return RedirectToAction(nameof(Details), new { id });
     }
+
+    private async Task PopulateTenantFormOptionsAsync(TenantFormViewModel viewModel)
+    {
+        await PopulateCategoryAndSectorOptionsAsync(viewModel);
+        await PopulateDocumentTypesAsync(viewModel);
+    }
+
+    private async Task PopulateCategoryAndSectorOptionsAsync(TenantFormViewModel viewModel)
+    {
+        viewModel.TenantCategories = (await tenantCategoryService.GetTenantCategoriesAsync())
+            .Where(category => category.IsActive)
+            .ToList();
+        viewModel.Sectors = (await sectorService.GetSectorsAsync())
+            .Where(sector => sector.IsActive)
+            .ToList();
+    }
+
+    private async Task PopulateDocumentTypesAsync(TenantFormViewModel viewModel)
+    {
+        viewModel.DocumentTypes = await documentService.GetTypesAsync(
+            new GetDocumentTypesInput(DocumentOwnerType.Tenant));
+    }
+
+    private static CreateTenantInput ToCreateInput(
+        TenantFormViewModel viewModel,
+        IReadOnlyList<TenantDocumentUploadInput> documents,
+        TenantAccessScopeInput accessScope)
+        => new(
+            viewModel.TenantNo,
+            viewModel.Name!,
+            viewModel.TradeRegistryNo,
+            viewModel.TaxNo,
+            viewModel.TaxOffice,
+            viewModel.MersisNo,
+            viewModel.Phone,
+            viewModel.Email,
+            viewModel.Address,
+            viewModel.TenantCategoryId,
+            viewModel.SectorId,
+            documents,
+            accessScope);
+
+    private static UpdateTenantInput ToUpdateInput(
+        int id,
+        TenantFormViewModel viewModel,
+        TenantAccessScopeInput accessScope)
+        => new(
+            id,
+            viewModel.TenantNo,
+            viewModel.Name!,
+            viewModel.TradeRegistryNo,
+            viewModel.TaxNo,
+            viewModel.TaxOffice,
+            viewModel.MersisNo,
+            viewModel.Phone,
+            viewModel.Email,
+            viewModel.Address,
+            viewModel.TenantCategoryId,
+            viewModel.SectorId,
+            accessScope);
+
+    private TenantAccessScopeInput BuildAccessScope()
+        => permissionScopeProvider.GlobalAccess
+            ? new TenantAccessScopeInput()
+            : new TenantAccessScopeInput(
+                permissionScopeProvider.AccessiblePropertyIds,
+                permissionScopeProvider.AccessibleUnitIds);
 }

@@ -1,4 +1,4 @@
-﻿using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Models.ViewModels;
 
@@ -12,5 +12,5 @@ public class ReservationRateOverrideViewModel
     public decimal KdvRate { get; set; } = 20;
     public string? Description { get; set; }
     public bool IsActive { get; set; } = true;
-    public List<UnitListItemDto> RezervasyonBirimleri { get; set; } = [];
+    public List<UnitListItemDto> ReservableUnits { get; set; } = [];
 }

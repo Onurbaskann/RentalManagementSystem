@@ -1,156 +1,201 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
+using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
-using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-public class ManualChargeService : IManualChargeService, ITransactionalService
+public class ManualChargeService(
+    IChargeRepository chargeRepository,
+    ILeaseRepository leaseRepository,
+    IChargeTypeRepository chargeTypeRepository,
+    IUnitRepository unitRepository,
+    ITenantRepository tenantRepository,
+    IUnitOfWork unitOfWork) : IManualChargeService, ITransactionalService
 {
-    private readonly IChargeRepository _tahakkukRepo;
-    private readonly ILeaseRepository _sozlesmeRepo;
-    private readonly IChargeTypeRepository _borcTipiRepo;
-    private readonly IPropertyRepository _tasinmazRepo;
-    private readonly IUnitOfWork _uow;
+    public Task<List<ManualChargeListItemDto>> GetAllAsync(GetManualChargesInput input)
+        => chargeRepository.GetManualChargeListAsync(
+            input.PropertyIds?.ToList(),
+            input.Status,
+            input.Relation,
+            input.LeaseId,
+            input.UnitIds?.ToList());
 
-    public ManualChargeService(
-        IChargeRepository tahakkukRepo,
-        ILeaseRepository sozlesmeRepo,
-        IChargeTypeRepository borcTipiRepo,
-        IPropertyRepository tasinmazRepo,
-        IUnitOfWork uow)
+    public Task<int> GetCancelledCountAsync(GetCancelledManualChargeCountInput input)
+        => chargeRepository.GetCancelledManualChargeCountAsync(
+            input.PropertyIds?.ToList(),
+            input.UnitIds?.ToList());
+
+    public Task<List<LeaseDropdownDto>> GetActiveLeasesAsync(GetActiveManualChargeLeasesInput input)
+        => leaseRepository.GetActiveDropdownAsync(
+            input.AccessScope.PropertyIds?.ToList(),
+            input.AccessScope.UnitIds?.ToList());
+
+    public Task<List<ChargeTypeLookupDto>> GetManualChargeTypesAsync()
+        => chargeTypeRepository.GetManualChargeTypesAsync();
+
+    public Task<List<UnitLookupDto>> GetAllUnitsAsync(GetManualChargeUnitsInput input)
+        => unitRepository.GetAllOptionsAsync(
+            input.PropertyIds?.ToList(),
+            input.UnitIds?.ToList());
+
+    public async Task CreateAsync(CreateManualChargeInput input)
     {
-        _tahakkukRepo = tahakkukRepo;
-        _sozlesmeRepo = sozlesmeRepo;
-        _borcTipiRepo = borcTipiRepo;
-        _tasinmazRepo = tasinmazRepo;
-        _uow = uow;
-    }
+        var propertyIds = input.AccessScope.PropertyIds?.ToList();
+        var unitIds = input.AccessScope.UnitIds?.ToList();
 
-    // ── Listeleme (DTO) ───────────────────────────────────────────────────
-    public async Task<List<ManuelBorcListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null, string? durum = null, string? baglanti = null, int? leaseId = null, IReadOnlyList<int>? birimIds = null)
-        => await _tahakkukRepo.GetManuelBorcListAsync(tasinmazIds?.ToList(), durum, baglanti, leaseId, birimIds?.ToList());
+        var unitContext = await unitRepository.GetLeaseContextAsync(input.UnitId);
+        Guard.InvalidField(
+            unitContext == null,
+            nameof(input.UnitId),
+            "Birim bulunamadı.",
+            "MANUAL_CHARGE_UNIT_NOT_FOUND");
+        var selectedUnit = unitContext!;
 
-    public async Task<int> GetIptalSayisiAsync(IReadOnlyList<int>? tasinmazIds = null, IReadOnlyList<int>? birimIds = null)
-        => await _tahakkukRepo.GetManuelBorcIptalSayisiAsync(tasinmazIds?.ToList(), birimIds?.ToList());
+        Guard.Forbidden(
+            IsOutsideScope(selectedUnit.PropertyId, selectedUnit.UnitId, propertyIds, unitIds),
+            "Bu birim için işlem yetkiniz bulunmuyor.",
+            "MANUAL_CHARGE_UNIT_FORBIDDEN");
 
-    // ── Dropdown verileri ────────────────────────────────────────────────
-    public Task<List<LeaseDropdownDto>> GetAktifSozlesmelerAsync()
-        => _sozlesmeRepo.GetAktifDropdownAsync();
+        var tenant = await tenantRepository.GetByIdAsync(input.TenantId);
+        Guard.InvalidField(
+            tenant == null,
+            nameof(input.TenantId),
+            "Kiracı bulunamadı.",
+            "MANUAL_CHARGE_TENANT_NOT_FOUND");
+        var selectedTenant = tenant!;
 
-    public Task<List<BorcTipiLookupDto>> GetManuelBorcTipleriAsync()
-        => _borcTipiRepo.GetManuelBorcTipleriAsync();
+        Guard.Forbidden(
+            !await tenantRepository.IsInScopeAsync(selectedTenant.Id, propertyIds, unitIds),
+            "Bu kiracı için işlem yetkiniz bulunmuyor.",
+            "MANUAL_CHARGE_TENANT_FORBIDDEN");
 
-    public Task<List<UnitLookupDto>> GetTumBirimlerAsync(IReadOnlyList<int>? tasinmazIds = null)
-        => _tasinmazRepo.GetTumBirimlerAsync(tasinmazIds?.ToList());
-
-    // ── Create ────────────────────────────────────────────────────────────
-    public async Task<(bool Basarili, string? Hata, int ChargeId)> CreateAsync(
-        ManuelBorcCreateViewModel model, string userId)
-    {
-        if (model.TenantId <= 0)
-            return (false, "Kiracı seçilmelidir.", 0);
-        if (model.UnitId <= 0)
-            return (false, "Birim seçilmelidir.", 0);
-
-        int? kiraSozlesmesiId = null;
-        if (model.LeaseId.HasValue && model.LeaseId.Value > 0)
+        int? leaseId = null;
+        if (input.LeaseId.HasValue && input.LeaseId.Value > 0)
         {
-            var lease = await _sozlesmeRepo.GetByIdAsync(model.LeaseId.Value);
-            if (lease == null)
-                return (false, "Sözleşme bulunamadı.", 0);
-            if (lease.Status == LeaseStatus.Terminated)
-                return (false, "Feshedilmiş sözleşme için manuel borç oluşturulamaz.", 0);
-            if (lease.TenantId != model.TenantId)
-                return (false, "Seçilen kiracı, sözleşmenin kiracısıyla eşleşmiyor.", 0);
-            kiraSozlesmesiId = lease.Id;
+            var lease = await leaseRepository.GetByIdAsync(input.LeaseId.Value);
+            Guard.InvalidField(
+                lease == null,
+                nameof(input.LeaseId),
+                "Sözleşme bulunamadı.",
+                "MANUAL_CHARGE_LEASE_NOT_FOUND");
+            var selectedLease = lease!;
+
+            Guard.InvalidField(
+                selectedLease.Status == LeaseStatus.Terminated,
+                nameof(input.LeaseId),
+                "Feshedilmiş sözleşme için manuel borç oluşturulamaz.",
+                "MANUAL_CHARGE_LEASE_TERMINATED");
+            Guard.InvalidField(
+                selectedLease.Status != LeaseStatus.Active,
+                nameof(input.LeaseId),
+                "Sona ermiş sözleşme için manuel borç oluşturulamaz.",
+                "MANUAL_CHARGE_LEASE_ENDED");
+            Guard.InvalidField(
+                selectedLease.TenantId != input.TenantId,
+                nameof(input.LeaseId),
+                "Seçilen kiracı, sözleşmenin kiracısıyla eşleşmiyor.",
+                "MANUAL_CHARGE_LEASE_TENANT_MISMATCH");
+            Guard.InvalidField(
+                selectedLease.UnitId != input.UnitId,
+                nameof(input.LeaseId),
+                "Seçilen birim, sözleşmenin birimiyle eşleşmiyor.",
+                "MANUAL_CHARGE_LEASE_UNIT_MISMATCH");
+            leaseId = selectedLease.Id;
         }
 
-        var borcTipi = await _borcTipiRepo.GetActiveManuelByIdAsync(model.ChargeTypeId);
-        if (borcTipi == null)
-            return (false, "Geçersiz borç tipi.", 0);
+        var chargeType = await chargeTypeRepository.GetActiveManualByIdAsync(input.ChargeTypeId);
+        Guard.InvalidField(
+            chargeType == null,
+            nameof(input.ChargeTypeId),
+            "Geçersiz borç tipi.",
+            "MANUAL_CHARGE_TYPE_INVALID");
 
-        if (model.Amount < 0.01m)
-            return (false, "Amount sıfırdan büyük olmalıdır.", 0);
-
-        if (model.Description.Length > 200)
-            return (false, "Açıklama en fazla 200 karakter olabilir.", 0);
-
-        if (model.KdvRate < 0 || model.KdvRate > 100)
-            return (false, "KDV oranı 0-100 arasında olmalıdır.", 0);
-
-        if (model.Note?.Length > 500)
-            return (false, "Not en fazla 500 karakter olabilir.", 0);
-
-        var kdvTutari = model.IsKdvApplied
-            ? Math.Round(model.Amount * model.KdvRate / 100, 2)
+        var vatAmount = input.IsVatApplied
+            ? Math.Round(input.Amount * input.VatRate / 100, 2)
             : 0m;
-        var toplamTutar = model.Amount + kdvTutari;
-        var kdvOrani = model.IsKdvApplied ? model.KdvRate : 0m;
+        var totalAmount = input.Amount + vatAmount;
+        var vatRate = input.IsVatApplied ? input.VatRate : 0m;
 
-        var kalem = new ChargeLineItem
+        var lineItem = new ChargeLineItem
         {
-            ChargeTypeId = borcTipi.Id,
-            Description = model.Description,
+            ChargeTypeId = chargeType!.Id,
+            Description = input.Description,
             CalculationMethod = CalculationMethod.Fixed,
-            UnitValue = model.Amount,
+            UnitValue = input.Amount,
             Multiplier = 1m,
-            Amount = model.Amount,
-            KdvRate = kdvOrani,
-            KdvAmount = kdvTutari,
-            TotalAmount = toplamTutar,
+            Amount = input.Amount,
+            KdvRate = vatRate,
+            KdvAmount = vatAmount,
+            TotalAmount = totalAmount,
             SourceType = LineItemSourceType.ManualInput
         };
 
         var charge = new Charge
         {
-            TenantId = model.TenantId,
-            UnitId = model.UnitId,
-            LeaseId = kiraSozlesmesiId,
-            PeriodStart = model.DueDate,
-            PeriodEnd = model.DueDate.AddDays(1),
-            DueDate = model.DueDate,
-            ExpectedAmount = model.Amount,
-            KdvAmount = kdvTutari,
-            TotalAmount = toplamTutar,
+            TenantId = input.TenantId,
+            UnitId = input.UnitId,
+            LeaseId = leaseId,
+            PeriodStart = input.DueDate,
+            PeriodEnd = input.DueDate.AddDays(1),
+            DueDate = input.DueDate,
+            ExpectedAmount = input.Amount,
+            KdvAmount = vatAmount,
+            TotalAmount = totalAmount,
             PaidAmount = 0,
             Status = ChargeStatus.Pending,
             SourceType = ChargeSourceType.Manual,
-            CancellationNote = model.Note,
-            LineItems = new List<ChargeLineItem> { kalem }
+            CancellationNote = input.Note,
+            LineItems = new List<ChargeLineItem> { lineItem }
         };
 
-        await _tahakkukRepo.AddAsync(charge);
-        await _uow.SaveChangesAsync();
-
-        return (true, null, charge.Id);
+        await chargeRepository.AddAsync(charge);
+        await unitOfWork.SaveChangesAsync();
     }
 
-    // ── Cancel ────────────────────────────────────────────────────────────
-    public async Task<(bool Basarili, string? Hata)> CancelAsync(int tahakkukId, string userId, string neden)
+    public async Task CancelAsync(CancelManualChargeInput input)
     {
-        var charge = await _tahakkukRepo.GetManuelBorcByIdAsync(tahakkukId);
+        var charge = Guard.NotFound(
+            await chargeRepository.GetManualChargeByIdAsync(
+                input.ChargeId,
+                input.AccessScope.PropertyIds?.ToList(),
+                input.AccessScope.UnitIds?.ToList()),
+            "Manuel borç kaydı bulunamadı.",
+            "MANUAL_CHARGE_NOT_FOUND");
 
-        if (charge == null)
-            return (false, "Manuel borç kaydı bulunamadı.");
+        Guard.Conflict(
+            charge.Status == ChargeStatus.Cancelled,
+            "Bu kayıt zaten iptal edilmiş.",
+            "MANUAL_CHARGE_ALREADY_CANCELLED");
 
-        if (charge.Status == ChargeStatus.Cancelled)
-            return (false, "Bu kayıt zaten iptal edilmiş.");
-
-        var odemeVar = charge.Allocations.Any(o => o.Status == PaymentStatus.Approved);
-        if (odemeVar)
-            return (false, "Ödemesi alınmış manuel borç iptal edilemez.");
+        var hasPayment = charge.Allocations.Any(
+            allocation => allocation.Status == PaymentStatus.Approved);
+        Guard.Conflict(
+            hasPayment,
+            "Ödemesi alınmış manuel borç iptal edilemez.",
+            "MANUAL_CHARGE_HAS_PAYMENT");
 
         charge.Status = ChargeStatus.Cancelled;
         charge.CancellationNote = string.IsNullOrEmpty(charge.CancellationNote)
-            ? neden
-            : $"{charge.CancellationNote} | İptal: {neden}";
+            ? input.Reason
+            : $"{charge.CancellationNote} | İptal: {input.Reason}";
 
-        await _uow.SaveChangesAsync();
+        await unitOfWork.SaveChangesAsync();
+    }
 
-        return (true, null);
+    private static bool IsOutsideScope(
+        int propertyId,
+        int unitId,
+        IReadOnlyCollection<int>? propertyIds,
+        IReadOnlyCollection<int>? unitIds)
+    {
+        if (propertyIds == null && unitIds == null)
+            return false;
+
+        return propertyIds?.Contains(propertyId) != true
+            && unitIds?.Contains(unitId) != true;
     }
 }

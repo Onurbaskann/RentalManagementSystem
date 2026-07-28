@@ -2,22 +2,11 @@
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Sözleşmeler";
-    string filtre = ViewBag.Filtre ?? "tum";
+    ViewData["UseCentralFeedback"] = true;
+    string filtre = ViewBag.Filter ?? "tum";
     bool canEdit = User.HasPermission(PermissionCatalog.Lease.Create);
 }
 
-@if (TempData["Success"] != null)
-{
-    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
-        ✓ @TempData["Success"]
-    </div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
-        ⚠ @TempData["Error"]
-    </div>
-}
 
 <div class="page-header flex flex-wrap items-center justify-between gap-3">
     <div>
@@ -26,22 +15,22 @@
     </div>
     <div class="flex items-center gap-2 flex-wrap">
         @{
-            int borcluSayisi = ViewBag.BorcluSayisi ?? 0;
+            int borcluSayisi = ViewBag.DebtorCount ?? 0;
         }
         @if (borcluSayisi > 0 && User.HasPermission(PermissionCatalog.Notification.BorcHatirlatma))
         {
-            <form asp-controller="Lease" asp-action="BorclularaMailGonder" method="post"
-                  data-confirm="@borcluSayisi kiracıya borç hatırlatma maili gönderilsin mi?">
+            <form asp-controller="ChargeReminder" asp-action="SendDebtorEmails" method="post"
+                  data-confirm="@borcluSayisi kiracıya borç hatırlatma e-postası gönderilsin mi?">
                 @Html.AntiForgeryToken()
                 <button type="submit" class="btn btn-secondary flex items-center gap-2">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                    Borçlulara Mail (@borcluSayisi)
+                    Borçlulara E-posta (@borcluSayisi)
                 </button>
             </form>
         }
         @if (canEdit)
         {
-            <a href="/Lease/Ekle" class="btn btn-primary flex items-center gap-2">
+            <a href="/Lease/Create" class="btn btn-primary flex items-center gap-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Yeni Sözleşme
             </a>
@@ -91,31 +80,31 @@
             <tbody>
                 @foreach (var s in Model)
                 {
-                    bool aktif = s.Aktif;
-                    int kalanGun = s.KalanGun;
+                    bool aktif = s.IsActive;
+                    int kalanGun = s.RemainingDays;
                     bool surek = aktif && kalanGun <= 30;
                     bool feshedildi = s.Status == LeaseStatus.Terminated;
                     string dayBadgeClass = kalanGun <= 10 ? "bg-red-50 text-red-700 border-red-200" : kalanGun <= 30 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200";
                     var search = $"{s.Id} {s.TenantDisplayName} {s.PropertyName} {s.UnitName}".ToLower();
 
-                    <tr data-row data-search="@search" data-href="/Lease/Detay/@s.Id.ToHashId()"
+                    <tr data-row data-search="@search" data-href="/Lease/Details/@s.Id.ToHashId()"
                         class="cursor-pointer hover:bg-slate-50 transition-colors"
                         @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
                         <td class="text-xs text-muted font-mono">@s.Id</td>
                         <td>
-                            <a href="/Tenant/Detay/@s.TenantId.ToHashId()" class="font-semibold text-primary hover:underline">@s.TenantDisplayName</a>
+                            <a href="/Tenant/Details/@s.TenantId.ToHashId()" class="font-semibold text-primary hover:underline">@s.TenantDisplayName</a>
                             @if (!string.IsNullOrEmpty(s.TenantCategoryName))
                             {
                                 <div class="cell-sub">@s.TenantCategoryName</div>
                             }
                         </td>
                         <td>
-                            <a href="/Property/Detay/@s.PropertyId.ToHashId()" class="font-medium hover:text-primary transition-colors">@s.PropertyName</a>
+                            <a href="/Property/Details/@s.PropertyId.ToHashId()" class="font-medium hover:text-primary transition-colors">@s.PropertyName</a>
                             <span class="cell-sub">@s.UnitName</span>
                         </td>
-                        <td class="cell-center">@s.StartDate.ToString("dd.MM.yyyy")</td>
-                        <td class="cell-center">@s.EndDate.ToString("dd.MM.yyyy")</td>
-                        <td class="num">@s.MonthlyAmount.ToString("N2") ₺</td>
+                        <td class="cell-center">@s.StartDate.Tarih()</td>
+                        <td class="cell-center">@s.EndDate.Tarih()</td>
+                        <td class="num">@s.MonthlyAmount.Tl()</td>
                         <td class="cell-center">
                             @if (feshedildi)
                             { <span class="text-muted text-[11px] italic" title="Durum: Feshedildi">Feshedildi</span> }

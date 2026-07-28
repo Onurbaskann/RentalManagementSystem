@@ -16,6 +16,6 @@ public class LeaseListItemDto
     public LeaseStatus Status { get; set; }
     public decimal UnitArea { get; set; }
 
-    public int KalanGun => (int)(EndDate - DateTime.Now).TotalDays;
-    public bool Aktif => Status == LeaseStatus.Active && StartDate <= DateTime.Now && EndDate >= DateTime.Now;
+    public int RemainingDays => (int)(EndDate - DateTime.Now).TotalDays;
+    public bool IsActive => Status == LeaseStatus.Active && StartDate <= DateTime.Now && EndDate >= DateTime.Now;
 }

@@ -1,6 +1,7 @@
 using KiraTakip.Authorization;
+using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
-using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,26 +10,19 @@ namespace KiraTakip.Controllers;
 
 [Authorize]
 [Route("Admin/ReservationRateOverride")]
-public class AdminReservationRateRuleController : Controller
+public class AdminReservationRateRuleController(
+    IReservationService reservationService,
+    IUnitService unitService) : Controller
 {
-    private readonly IReservationService _service;
-    private readonly IUnitRepository _birimRepo;
-
-    public AdminReservationRateRuleController(IReservationService service, IUnitRepository birimRepo)
-    {
-        _service = service;
-        _birimRepo = birimRepo;
-    }
-
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.ReservationRateRule.Module)]
     public async Task<IActionResult> Index()
     {
-        var liste = await _service.GetUcretKurallariAsync();
+        var liste = await reservationService.GetRateRulesAsync();
         return View(liste);
     }
 
-    [HttpGet("Ekle")]
+    [HttpGet("Create")]
     [Authorize(Policy = PermissionCatalog.ReservationRateRule.Module)]
     public async Task<IActionResult> Create()
     {
@@ -43,28 +37,44 @@ public class AdminReservationRateRuleController : Controller
         return View(vm);
     }
 
-    [HttpPost("Ekle")]
+    [HttpPost("Create")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.ReservationRateRule.Create)]
     public async Task<IActionResult> Create(ReservationRateOverrideViewModel vm)
     {
-        var (basarili, hata, _) = await _service.SaveUcretKuralAsync(vm);
-        if (!basarili)
+        if (!ModelState.IsValid)
         {
-            ModelState.AddModelError(string.Empty, hata!);
             await PopulateDropdownsAsync(vm);
             return View(vm);
         }
 
-        TempData["Success"] = "Ücret kuralı eklendi.";
+        try
+        {
+            await reservationService.SaveRateRuleAsync(new SaveReservationRateRuleInput(
+                vm.Id,
+                vm.UnitId,
+                vm.FreeDurationMinutes,
+                vm.BillingPeriodMinutes,
+                vm.PeriodRate,
+                vm.KdvRate,
+                vm.Description,
+                vm.IsActive
+            ));
+        }
+        catch (BusinessValidationException exception)
+        {
+            ModelState.AddModelError(exception.Field, exception.Message);
+            await PopulateDropdownsAsync(vm);
+            return View(vm);
+        }
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpGet("Duzenle/{id}")]
+    [HttpGet("Edit/{id}")]
     [Authorize(Policy = PermissionCatalog.ReservationRateRule.Module)]
     public async Task<IActionResult> Edit(int id)
     {
-        var kural = await _service.GetUcretKuralByIdAsync(id);
+        var kural = await reservationService.GetRateRuleByIdAsync(new GetRateRuleByIdInput(id));
         if (kural == null) return NotFound();
 
         var vm = new ReservationRateOverrideViewModel
@@ -82,36 +92,52 @@ public class AdminReservationRateRuleController : Controller
         return View(vm);
     }
 
-    [HttpPost("Duzenle/{id}")]
+    [HttpPost("Edit/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.ReservationRateRule.Edit)]
     public async Task<IActionResult> Edit(int id, [FromForm] ReservationRateOverrideViewModel vm)
     {
         vm.Id = id;
-        var (basarili, hata, _) = await _service.SaveUcretKuralAsync(vm);
-        if (!basarili)
+
+        if (!ModelState.IsValid)
         {
-            ModelState.AddModelError(string.Empty, hata!);
             await PopulateDropdownsAsync(vm);
             return View(vm);
         }
 
-        TempData["Success"] = "Ücret kuralı güncellendi.";
+        try
+        {
+            await reservationService.SaveRateRuleAsync(new SaveReservationRateRuleInput(
+                vm.Id,
+                vm.UnitId,
+                vm.FreeDurationMinutes,
+                vm.BillingPeriodMinutes,
+                vm.PeriodRate,
+                vm.KdvRate,
+                vm.Description,
+                vm.IsActive
+            ));
+        }
+        catch (BusinessValidationException exception)
+        {
+            ModelState.AddModelError(exception.Field, exception.Message);
+            await PopulateDropdownsAsync(vm);
+            return View(vm);
+        }
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("DurumDegistir/{id}")]
+    [HttpPost("ToggleStatus/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.ReservationRateRule.Edit)]
-    public async Task<IActionResult> DurumDegistir(int id)
+    public async Task<IActionResult> ToggleStatus(int id)
     {
-        await _service.ToggleUcretKuralAktifAsync(id);
-        TempData["Success"] = "Kural durumu değiştirildi.";
+        await reservationService.ToggleRateRuleStatusAsync(new ToggleRateRuleStatusInput(id));
         return RedirectToAction(nameof(Index));
     }
 
     private async Task PopulateDropdownsAsync(ReservationRateOverrideViewModel vm)
     {
-        vm.RezervasyonBirimleri = await _birimRepo.GetRezervasyonBirimleriAsync();
+        vm.ReservableUnits = await unitService.GetReservableUnitsAsync();
     }
 }

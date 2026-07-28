@@ -1,4 +1,4 @@
-using KiraTakip.Models;
+﻿using KiraTakip.Models;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -165,7 +165,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .OnDelete(DeleteBehavior.Restrict);
             // Not: "Bir birimde tek devam-eden aktif sözleşme" kuralı tarih koşulu içerdiğinden
             // filtered index ile ifade edilemez (SQL Server GETDATE() destegi yok);
-            // kontrol uygulama katmanında yapılır (LeaseController.Ekle).
+            // kontrol uygulama katmanında yapılır (LeaseController.Create).
             entity.HasIndex(s => s.UnitId)
                   .HasDatabaseName("IX_Sozlesmeler_BirimId");
             entity.HasIndex(s => s.TenantId)
@@ -173,7 +173,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .HasFilter("[IsDeleted] = 0");
             entity.ToTable(t =>
             {
-                t.HasCheckConstraint("CK_Sozlesmeler_TarihSirasi", "[EndDate] > [StartDate]");
+                t.HasCheckConstraint("CK_Sozlesmeler_TarihSirasi", "[BitisTarihi] > [BaslangicTarihi]");
                 t.HasCheckConstraint("CK_Sozlesmeler_VadeGunu", "[VadeGunu] BETWEEN 1 AND 31");
             });
         });
@@ -245,7 +245,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .HasFilter("[IsDeleted] = 0");
             entity.ToTable(t =>
             {
-                t.HasCheckConstraint("CK_TasinmazTarifeler_Degerler", "[UnitValue] >= 0 AND [KdvRate] BETWEEN 0 AND 100");
+                t.HasCheckConstraint("CK_TasinmazTarifeler_Degerler", "[BirimDeger] >= 0 AND [KdvOrani] BETWEEN 0 AND 100");
             });
             entity.HasOne(f => f.Property)
                   .WithMany()
@@ -297,7 +297,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .HasFilter("[IsDeleted] = 0");
             entity.ToTable(t =>
             {
-                t.HasCheckConstraint("CK_SozlesmeTarifeler_Degerler", "[UnitValue] >= 0 AND [KdvRate] BETWEEN 0 AND 100");
+                t.HasCheckConstraint("CK_SozlesmeTarifeler_Degerler", "[BirimDeger] >= 0 AND [KdvOrani] BETWEEN 0 AND 100");
             });
             entity.HasOne(r => r.Lease)
                   .WithMany(s => s.LeaseRateOverrides)

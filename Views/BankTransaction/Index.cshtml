@@ -1,14 +1,15 @@
-@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.BankaHareketiListItemDto>
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.BankTransactionListItemDto>
 @using KiraTakip.Models
 @using KiraTakip.Models.Common
 @using KiraTakip.Models.Dtos
 @{
     ViewData["Title"] = "Banka Hareketleri";
-    string durum = ViewBag.Durum ?? "tum";
-    var q = (TableQuery)ViewBag.Query;
+    ViewData["UseCentralFeedback"] = true;
+    string status = ViewBag.Status ?? "tum";
+    var query = (TableQuery)ViewBag.Query;
     bool canImport = User.HasPermission(PermissionCatalog.Payment.ImportBankStatement);
     bool canMatch  = User.HasPermission(PermissionCatalog.Payment.MatchBankTransaction);
-    var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/BankTransaction", Extra = q.ToQueryDict() };
+    var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/BankTransaction", Extra = query.ToQueryDict() };
 }
 
 <div class="page-header flex items-center justify-between">
@@ -25,12 +26,6 @@
     }
 </div>
 
-@if (TempData["Success"] != null)
-{
-    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
-        ✓ @TempData["Success"]
-    </div>
-}
 
 <!-- Filtreler -->
 <div class="flex gap-1.5 flex-wrap mb-5">
@@ -39,35 +34,35 @@
     }
     @foreach (var (key, label) in filters)
     {
-        bool isActive = durum == key;
-        var url = key == "tum" ? "/BankTransaction" : $"/BankTransaction?durum={key}";
+        bool isActive = status == key;
+        var url = key == "tum" ? "/BankTransaction" : $"/BankTransaction?status={key}";
         <a href="@url" class="btn btn-sm @(isActive ? "btn-primary" : "btn-secondary text-slate-600 bg-white border-slate-200")">@label</a>
     }
 </div>
 
 <div class="card p-0 overflow-hidden">
     <form method="get" class="flex flex-wrap items-center gap-3 p-3 bg-slate-50/50 border-b border-slate-200" action="/BankTransaction">
-        <input type="search" name="q" value="@q.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: açıklama, karşı taraf…" />
+        <input type="search" name="q" value="@query.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: açıklama, karşı taraf…" />
         <div class="flex items-center gap-2">
             @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
-                { "Name", "from" }, { "Value", q.From?.ToString("yyyy-MM-dd") ?? "" },
+                { "Name", "from" }, { "Value", query.From?.ToString("yyyy-MM-dd") ?? "" },
                 { "Mode", "date" }, { "Field", "from" }, { "Compact", true }, { "WrapperClass", "w-36" }
             })
             <span class="text-muted">–</span>
             @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
-                { "Name", "to" }, { "Value", q.To?.ToString("yyyy-MM-dd") ?? "" },
+                { "Name", "to" }, { "Value", query.To?.ToString("yyyy-MM-dd") ?? "" },
                 { "Mode", "date" }, { "Field", "to" }, { "Compact", true }, { "WrapperClass", "w-36" }
             })
         </div>
         <div class="flex items-center gap-2">
-            <input type="number" name="min" value="@q.Min" step="0.01" class="form-control w-24 text-xs font-medium" placeholder="Min ₺" />
-            <input type="number" name="max" value="@q.Max" step="0.01" class="form-control w-24 text-xs font-medium" placeholder="Max ₺" />
+            <input type="number" name="min" value="@query.Min" step="0.01" class="form-control w-24 text-xs font-medium" placeholder="Min ₺" />
+            <input type="number" name="max" value="@query.Max" step="0.01" class="form-control w-24 text-xs font-medium" placeholder="Max ₺" />
         </div>
-        @if (durum != "tum") { <input type="hidden" name="durum" value="@durum" /> }
+        @if (status != "tum") { <input type="hidden" name="status" value="@status" /> }
         <button type="submit" class="btn btn-primary btn-sm px-4">Filtrele</button>
-        @if (!string.IsNullOrEmpty(q.Q) || q.From.HasValue || q.To.HasValue || q.Min.HasValue || q.Max.HasValue)
+        @if (!string.IsNullOrEmpty(query.Q) || query.From.HasValue || query.To.HasValue || query.Min.HasValue || query.Max.HasValue)
         {
-            <a href="/BankTransaction@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
+            <a href="/BankTransaction@(status != "tum" ? $"?status={status}" : "")" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
         }
     </form>
     <div class="table-wrapper">
@@ -84,31 +79,31 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var b in Model.Items)
+                @foreach (var transaction in Model.Items)
                 {
-                    string eslesmeCls = b.MatchStatus switch {
+                    string matchClass = transaction.MatchStatus switch {
                         BankMatchStatus.Matched        => "badge-kirali",
                         BankMatchStatus.ManuallyMatched  => "badge-kirali",
                         _                                 => "badge-bos"
                     };
-                    string eslesmeLabel = b.MatchStatus switch {
+                    string matchLabel = transaction.MatchStatus switch {
                         BankMatchStatus.Matched        => "Eşleşti",
                         BankMatchStatus.ManuallyMatched  => "Manuel",
                         _                                 => "Bekliyor"
                     };
                     <tr>
-                        <td>@b.TransactionDate.ToString("dd.MM.yyyy")</td>
-                        <td class="max-w-[300px] truncate" title="@b.Aciklama">@b.Aciklama</td>
-                        <td class="text-muted truncate max-w-[150px]">@(b.SenderInfo ?? b.SenderIban ?? "—")</td>
-                        <td class="num">@b.TransactionAmount.ToString("N2") ₺</td>
-                        <td class="cell-center">@b.BankCode</td>
-                        <td><span class="badge @eslesmeCls">@eslesmeLabel</span></td>
+                        <td>@transaction.TransactionDate.ToString("dd.MM.yyyy")</td>
+                        <td class="max-w-[300px] truncate" title="@transaction.Description">@transaction.Description</td>
+                        <td class="text-muted truncate max-w-[150px]">@(transaction.SenderInfo ?? transaction.SenderIban ?? "—")</td>
+                        <td class="num">@transaction.TransactionAmount.ToString("N2") ₺</td>
+                        <td class="cell-center">@transaction.BankCode</td>
+                        <td><span class="badge @matchClass">@matchLabel</span></td>
                         @if (canMatch)
                         {
                             <td class="text-right">
-                                @if (b.MatchStatus == BankMatchStatus.Unmatched)
+                                @if (transaction.MatchStatus == BankMatchStatus.Unmatched)
                                 {
-                                    <a href="/BankTransaction/EslestirSec/@b.Id.ToHashId()" class="btn btn-sm btn-primary">Eşleştir</a>
+                                    <a href="/BankTransaction/SelectMatch/@transaction.Id.ToHashId()" class="btn btn-sm btn-primary">Eşleştir</a>
                                 }
                             </td>
                         }

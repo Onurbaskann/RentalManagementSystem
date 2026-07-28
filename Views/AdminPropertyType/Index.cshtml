@@ -1,19 +1,7 @@
-@model List<KiraTakip.Models.Dtos.TasinmazTipiListItemDto>
+@model List<KiraTakip.Models.Dtos.PropertyType.PropertyTypeListItemDto>
 @{
     ViewData["Title"] = "Taşınmaz Tipleri";
-}
-
-@if (TempData["Success"] != null)
-{
-    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
-        ✓ @TempData["Success"]
-    </div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
-        ✕ @TempData["Error"]
-    </div>
+    ViewData["UseCentralFeedback"] = true;
 }
 
 <div class="page-header flex items-center justify-between">
@@ -21,7 +9,7 @@
         <div class="page-title">Taşınmaz Tipleri</div>
         <div class="page-subtitle">@Model.Count kayıt</div>
     </div>
-    <a href="/Admin/TasinmazTipi/Ekle" class="btn btn-primary flex items-center gap-2">
+    <a href="/Admin/PropertyType/Create" class="btn btn-primary flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Yeni Taşınmaz Tipi
     </a>
@@ -40,38 +28,38 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var tt in Model)
+                @foreach (var pt in Model)
                 {
                     <tr>
-                        <td class="text-center text-muted text-xs">@tt.Sira</td>
-                        <td class="font-medium text-slate-700">@tt.Ad</td>
+                        <td class="text-center text-muted text-xs">@pt.SortOrder</td>
+                        <td class="font-medium text-slate-700">@pt.Name</td>
                         <td>
-                            @if (!tt.TekBirimDestekli && !tt.CokluBirimDestekli)
+                            @if (!pt.SupportsSingleUnit && !pt.SupportsMultipleUnits)
                             {
                                 <span class="text-muted text-xs">—</span>
                             }
                             else
                             {
                                 <div class="flex gap-1.5 flex-wrap">
-                                    @if (tt.TekBirimDestekli) { <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">Tek Birim</span> }
-                                    @if (tt.CokluBirimDestekli) { <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">Çoklu Birim</span> }
+                                    @if (pt.SupportsSingleUnit) { <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">Tek Birim</span> }
+                                    @if (pt.SupportsMultipleUnits) { <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">Çoklu Birim</span> }
                                 </div>
                             }
                         </td>
                         <td>
-                            @if (tt.Aktif)
+                            @if (pt.IsActive)
                             { <span class="badge badge-kirali">Aktif</span> }
                             else
                             { <span class="badge badge-gecmis">Pasif</span> }
                         </td>
                         <td class="flex gap-1.5 justify-end">
-                            <a href="/Admin/TasinmazTipi/Duzenle/@tt.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
-                            <form method="post" action="/Admin/TasinmazTipi/DurumDegistir/@tt.Id.ToHashId()"
-                                  data-confirm="@(tt.Aktif ? $"'{tt.Ad}' pasif yapılsın mı?" : $"'{tt.Ad}' aktif yapılsın mı?")"
+                            <a href="/Admin/PropertyType/Edit/@pt.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
+                            <form method="post" action="/Admin/PropertyType/ToggleStatus/@pt.Id.ToHashId()"
+                                  data-confirm="@(pt.IsActive ? $"'{pt.Name}' pasif yapılsın mı?" : $"'{pt.Name}' aktif yapılsın mı?")"
                                   class="inline">
                                 @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm @(tt.Aktif ? "btn-danger" : "btn-amber")">
-                                    @(tt.Aktif ? "Pasif Yap" : "Aktif Yap")
+                                <button type="submit" class="btn btn-sm @(pt.IsActive ? "btn-danger" : "btn-amber")">
+                                    @(pt.IsActive ? "Pasif Yap" : "Aktif Yap")
                                 </button>
                             </form>
                         </td>
@@ -85,4 +73,3 @@
         </table>
     </div>
 </div>
-

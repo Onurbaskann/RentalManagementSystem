@@ -27,7 +27,7 @@ public class LeaseDetailDto
     public LeaseStatus Status { get; set; }
     public DateTime? TerminationDate { get; set; }
     public string? TerminationReason { get; set; }
-    public bool IsKdvApplied { get; set; }
+    public bool IsVatApplied { get; set; }
     public DueDateRuleType DueDateRuleType { get; set; }
     public int DueDay { get; set; }
     public List<LeaseActivityLogDto> ActivityLog { get; set; } = [];

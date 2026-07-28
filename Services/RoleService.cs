@@ -1,127 +1,297 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
+using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
-using KiraTakip.Models.Entities;
+using KiraTakip.Models.Dtos;
+using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Services;
 
-public class RoleService : IRoleService
+public class RoleService(
+    IRoleRepository roleRepository,
+    IRolePermissionRepository rolePermissionRepository,
+    IUserRoleRepository userRoleRepository,
+    IAuditService auditService,
+    IUserSecurityService securityService,
+    ITenantUserService tenantUserService,
+    IUnitOfWork uow
+) : IRoleService, ITransactionalService
 {
-    private readonly ApplicationDbContext _db;
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IAuditService _auditService;
-    private readonly IUserSecurityService _securityService;
+    public Task<List<Role>> GetInternalRolesAsync()
+        => roleRepository.GetAllAsync(r => r.Scope == RoleScope.Internal && !r.IsDeleted,
+                                q => q.OrderBy(r => r.IsSystemRole ? 0 : 1).ThenBy(r => r.Name));
 
-    public RoleService(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IAuditService auditService, IUserSecurityService securityService)
+    public async Task<List<RoleListItemDto>> GetInternalRolesWithDetailsAsync()
     {
-        _db = db;
-        _userManager = userManager;
-        _auditService = auditService;
-        _securityService = securityService;
+        var roller = await GetInternalRolesAsync();
+        var list = new List<RoleListItemDto>();
+
+        foreach (var r in roller)
+        {
+            var userCount = await userRoleRepository.CountUsersInRoleAsync(r.Id);
+            var permissions = await rolePermissionRepository.GetPermissionsForRoleAsync(r.Id);
+            list.Add(new RoleListItemDto(
+                r.Id,
+                r.Name,
+                r.Description,
+                r.IsSystemRole,
+                r.IsActive,
+                userCount,
+                permissions.Count
+            ));
+        }
+
+        return list;
     }
 
-    public Task<List<Role>> GetInternalRollerAsync()
-        => _db.Roller
-              .Where(r => r.Scope == RoleScope.Internal)
-              .OrderBy(r => r.IsSystemRole ? 0 : 1)
-              .ThenBy(r => r.Name)
-              .ToListAsync();
+    public Task<Role?> GetRoleByIdAsync(GetRoleByIdInput input)
+        => roleRepository.GetAsync(r =>
+            r.Id == input.Id &&
+            r.Scope == RoleScope.Internal &&
+            !r.IsDeleted);
 
-    public Task<Role?> GetByIdAsync(int id)
-        => _db.Roller.FirstOrDefaultAsync(r => r.Id == id);
-
-    public async Task<Role> CreateAsync(string ad, string? aciklama, string createdBy)
+    public async Task<Role> CreateRoleAsync(CreateRoleInput input)
     {
-        if (await _db.Roller.AnyAsync(r => r.Name == ad && r.Scope == RoleScope.Internal && !r.IsDeleted))
-            throw new InvalidOperationException($"'{ad}' adında bir rol zaten mevcut.");
+        Guard.InvalidField(
+            await roleRepository.AnyAsync(r => r.Name == input.Name && r.Scope == RoleScope.Internal && !r.IsDeleted),
+            nameof(input.Name),
+            $"'{input.Name}' adında bir rol zaten mevcut.");
 
         var rol = new Role
         {
-            Name = ad,
-            Description = aciklama,
+            Name = input.Name,
+            Description = input.Description,
             Scope = RoleScope.Internal,
             IsSystemRole = false,
             IsActive = true,
-            CreatedBy = createdBy,
+            CreatedBy = input.CreatedBy,
             CreatedAt = DateTime.UtcNow
         };
-        _db.Roller.Add(rol);
-        await _db.SaveChangesAsync();
-        await _auditService.LogAsync("Role.Created", "Role", rol.Id.ToString(), ad);
+        await roleRepository.AddAsync(rol);
+        await uow.SaveChangesAsync();
+        await auditService.LogAsync("Role.Created", "Role", rol.Id.ToString(), input.Name);
+
         return rol;
     }
 
-    public async Task UpdateAsync(int id, string ad, string? aciklama, string updatedBy)
+    public async Task UpdateRoleAsync(UpdateRoleInput input)
     {
-        var rol = await _db.Roller.FindAsync(id)
-            ?? throw new InvalidOperationException("Rol bulunamadı.");
+        var rol = Guard.NotFound(
+            await roleRepository.GetAsync(r =>
+                r.Id == input.Id &&
+                r.Scope == RoleScope.Internal &&
+                !r.IsDeleted),
+            "Rol bulunamadı.");
 
         if (!rol.IsSystemRole)
         {
-            if (await _db.Roller.AnyAsync(r => r.Name == ad && r.Id != id && r.Scope == RoleScope.Internal && !r.IsDeleted))
-                throw new InvalidOperationException($"'{ad}' adında bir rol zaten mevcut.");
-            rol.Name = ad;
+            Guard.InvalidField(
+                await roleRepository.AnyAsync(r =>
+                    r.Name == input.Name &&
+                    r.Id != input.Id &&
+                    r.Scope == RoleScope.Internal &&
+                    !r.IsDeleted),
+                nameof(input.Name),
+                $"'{input.Name}' adında bir rol zaten mevcut.");
+
+            rol.Name = input.Name;
         }
 
-        rol.Description = aciklama;
-        await _db.SaveChangesAsync();
-        await _auditService.LogAsync("Role.Updated", "Role", id.ToString(), ad);
+        rol.Description = input.Description;
+
+        await uow.SaveChangesAsync();
+        await auditService.LogAsync("Role.Updated", "Role", input.Id.ToString(), rol.Name);
     }
 
-    public async Task SilAsync(int id, string deletedBy)
+    public async Task DeleteRoleAsync(DeleteRoleInput input)
     {
-        var rol = await _db.Roller.FindAsync(id)
-            ?? throw new InvalidOperationException("Rol bulunamadı.");
+        var rol = Guard.NotFound(
+            await roleRepository.GetAsync(r =>
+                r.Id == input.Id &&
+                r.Scope == RoleScope.Internal &&
+                !r.IsDeleted),
+            "Rol bulunamadı.");
 
-        if (rol.IsSystemRole)
-            throw new InvalidOperationException("Sistem rolleri silinemez.");
+        Guard.Conflict(rol.IsSystemRole, "Sistem rolleri silinemez.");
 
-        if (await _db.UserRoller.AnyAsync(ur => ur.RoleId == id))
-            throw new InvalidOperationException("Bu role atanmış kullanıcı var. Önce kullanıcıların rolünü değiştirin.");
+        Guard.Conflict(
+            await userRoleRepository.HasAnyUsersInRoleAsync(input.Id),
+            "Bu role atanmış kullanıcı var. Önce kullanıcıların rolünü değiştirin.");
 
-        rol.IsDeleted = true;
-        rol.IsActive = false;
-        await _db.SaveChangesAsync();
-        await _auditService.LogAsync("Role.Deleted", "Role", id.ToString(), rol.Name);
+        await roleRepository.DeleteAsync(input.Id);
+        await uow.SaveChangesAsync();
+        await auditService.LogAsync("Role.Deleted", "Role", input.Id.ToString(), rol.Name);
     }
 
-    public Task<List<string>> GetRolPermissionsAsync(int rolId)
-        => _db.RolPermissions
-              .Where(rp => rp.RoleId == rolId)
-              .Select(rp => rp.Permission)
-              .ToListAsync();
+    public Task<List<string>> GetRolePermissionsAsync(GetRolePermissionsInput input)
+        => rolePermissionRepository.GetPermissionsForRoleAsync(input.RoleId);
 
-    public async Task SetRolPermissionsAsync(int rolId, IEnumerable<string> permissions, string updatedBy)
+    public async Task SetRolePermissionsAsync(SetRolePermissionsInput input)
     {
-        var existing = await _db.RolPermissions.Where(rp => rp.RoleId == rolId).ToListAsync();
-        _db.RolPermissions.RemoveRange(existing);
+        var rol = Guard.NotFound(
+            await roleRepository.GetAsync(r => r.Id == input.RoleId && !r.IsDeleted),
+            "Rol bulunamadı.");
 
-        var validPerms = permissions.Where(p => PermissionCatalog.All.Contains(p)).Distinct();
-        foreach (var perm in validPerms)
-            _db.RolPermissions.Add(new RolePermission { RoleId = rolId, Permission = perm });
+        var existing = await rolePermissionRepository.GetForRoleAsync(input.RoleId);
+        await rolePermissionRepository.RemoveRangeAsync(existing);
 
-        await _db.SaveChangesAsync();
+        var allowedPermissions = rol.Scope == RoleScope.Internal
+            ? PermissionCatalog.All
+            : PermissionCatalog.TenantAll;
+        var validPerms = input.Permissions.Where(allowedPermissions.Contains).Distinct();
+        var toAdd = validPerms.Select(perm => new RolePermission { RoleId = input.RoleId, Permission = perm });
 
-        await _securityService.UpdateStampForRoleUsersAsync(rolId);
+        await rolePermissionRepository.AddRangeAsync(toAdd);
+        await uow.SaveChangesAsync();
 
-        await _auditService.LogAsync("Role.Permission.Changed", "Role", rolId.ToString(), updatedBy);
+        await securityService.UpdateStampForRoleUsersAsync(input.RoleId);
+
+        await auditService.LogAsync("Role.Permission.Changed", "Role", input.RoleId.ToString(), input.UpdatedBy);
     }
 
-    public Task<List<Role>> GetKiraciRollerAsync(int tenantId)
-        => _db.Roller
-              .Where(r => r.Scope == RoleScope.Tenant && (r.TenantId == null || r.TenantId == tenantId) && r.IsActive && !r.IsDeleted)
-              .OrderBy(r => r.IsSystemRole ? 0 : 1)
-              .ThenBy(r => r.Name)
-              .ToListAsync();
+    public Task<List<RoleListItemDto>> GetTenantRolesWithDetailsAsync(
+        GetTenantRolesWithDetailsInput input)
+        => roleRepository.GetTenantRolesWithDetailsAsync(input.TenantId);
 
-    public async Task EnsureGlobalKiraciRolleriAsync(string createdBy)
+    public async Task<TenantRoleEditDto> GetTenantRoleForEditAsync(
+        GetTenantRoleForEditInput input)
+        => Guard.NotFound(
+            await roleRepository.GetTenantRoleForEditAsync(input.Id, input.TenantId),
+            "Rol bulunamadı.",
+            "TENANT_ROLE_NOT_FOUND");
+
+    public async Task CreateTenantRoleAsync(CreateTenantRoleInput input)
+    {
+        EnsureValidTenantPermissions(input.SelectedPermissions);
+
+        Guard.InvalidField(
+            await roleRepository.AnyAsync(r => r.TenantId == input.TenantId && r.Name == input.Name && !r.IsDeleted),
+            nameof(input.Name),
+            $"'{input.Name}' adında bir rol zaten mevcut.",
+            "TENANT_ROLE_NAME_CONFLICT");
+
+        var role = new Role
+        {
+            Name = input.Name,
+            Description = input.Description,
+            Scope = RoleScope.Tenant,
+            TenantId = input.TenantId,
+            IsSystemRole = false,
+            IsActive = true,
+            CreatedBy = input.ActorUserId,
+            CreatedAt = DateTime.UtcNow
+        };
+        await roleRepository.AddAsync(role);
+        await uow.SaveChangesAsync();
+
+        await ReplaceRolePermissionsAsync(role.Id, input.SelectedPermissions);
+        await uow.SaveChangesAsync();
+
+        await auditService.LogAsync("Role.Created", "Role", role.Id.ToString(), input.Name);
+    }
+
+    public async Task UpdateTenantRoleAsync(UpdateTenantRoleInput input)
+    {
+        EnsureValidTenantPermissions(input.SelectedPermissions);
+
+        var role = Guard.NotFound(
+            await roleRepository.GetTenantOwnedByIdAsync(input.Id, input.TenantId),
+            "Rol bulunamadı.",
+            "TENANT_ROLE_NOT_FOUND");
+
+        Guard.Conflict(
+            role.IsSystemRole,
+            "Sistem rolleri düzenlenemez.",
+            "TENANT_ROLE_SYSTEM_EDIT_FORBIDDEN");
+
+        Guard.InvalidField(
+            await roleRepository.AnyAsync(r =>
+                r.TenantId == input.TenantId &&
+                r.Name == input.Name &&
+                r.Id != input.Id &&
+                !r.IsDeleted),
+            nameof(input.Name),
+            $"'{input.Name}' adında bir rol zaten mevcut.",
+            "TENANT_ROLE_NAME_CONFLICT");
+
+        role.Name = input.Name;
+        role.Description = input.Description;
+        role.UpdatedBy = input.ActorUserId;
+        role.UpdatedAt = DateTime.UtcNow;
+
+        await ReplaceRolePermissionsAsync(role.Id, input.SelectedPermissions);
+
+        await uow.SaveChangesAsync();
+        await securityService.UpdateStampForRoleUsersAsync(input.Id);
+        await auditService.LogAsync("Role.Updated", "Role", input.Id.ToString(), role.Name);
+    }
+
+    public async Task DeleteTenantRoleAsync(DeleteTenantRoleInput input)
+    {
+        var role = Guard.NotFound(
+            await roleRepository.GetTenantOwnedByIdAsync(input.Id, input.TenantId),
+            "Rol bulunamadı.",
+            "TENANT_ROLE_NOT_FOUND");
+
+        Guard.Conflict(
+            role.IsSystemRole,
+            "Sistem rolleri silinemez.",
+            "TENANT_ROLE_SYSTEM_DELETE_FORBIDDEN");
+
+        await tenantUserService.EnsureTenantManagerExistsAsync(
+            new EnsureTenantManagerExistsInput(
+                input.TenantId,
+                ExcludedRoleId: input.Id));
+
+        Guard.Conflict(
+            await userRoleRepository.HasAnyUsersInRoleAsync(input.Id),
+            "Bu role atanmış kullanıcı var. Önce kullanıcıların rolünü değiştirin.",
+            "TENANT_ROLE_HAS_USERS");
+
+        await roleRepository.DeleteAsync(input.Id);
+        await uow.SaveChangesAsync();
+        await auditService.LogAsync("Role.Deleted", "Role", input.Id.ToString(), role.Name);
+    }
+
+    private static void EnsureValidTenantPermissions(IReadOnlyCollection<string> permissions)
+        => Guard.InvalidField(
+            permissions.Any(permission => !PermissionCatalog.TenantAll.Contains(permission)),
+            "SelectedPermissions",
+            "Geçersiz izin seçimi.",
+            "TENANT_ROLE_INVALID_PERMISSION");
+
+    private async Task ReplaceRolePermissionsAsync(
+        int roleId,
+        IReadOnlyCollection<string> permissions)
+    {
+        var existing = await rolePermissionRepository.GetForRoleAsync(roleId);
+        await rolePermissionRepository.RemoveRangeAsync(existing);
+
+        var replacements = permissions
+            .Distinct()
+            .Select(permission => new RolePermission
+            {
+                RoleId = roleId,
+                Permission = permission
+            });
+        await rolePermissionRepository.AddRangeAsync(replacements);
+    }
+
+    public async Task<int?> GetGlobalTenantManagerRoleIdAsync()
+    {
+        var role = await roleRepository.GetAsync(item =>
+            item.TenantId == null && item.Name == RoleNames.KiraciYoneticisi);
+
+        return role?.Id;
+    }
+
+    public async Task EnsureGlobalTenantRolesAsync(EnsureGlobalTenantRolesInput input)
     {
         var now = DateTime.UtcNow;
 
-        var kiraciYonetici = await _db.Roller.FirstOrDefaultAsync(r => r.TenantId == null && r.Name == RoleNames.KiraciYoneticisi);
+        var kiraciYonetici = await roleRepository.GetAsync(r => r.TenantId == null && r.Name == RoleNames.KiraciYoneticisi);
         if (kiraciYonetici == null)
         {
             kiraciYonetici = new Role
@@ -131,17 +301,19 @@ public class RoleService : IRoleService
                 TenantId = null,
                 IsSystemRole = true,
                 IsActive = true,
-                CreatedBy = createdBy,
+                CreatedBy = input.CreatedBy,
                 CreatedAt = now
             };
-            _db.Roller.Add(kiraciYonetici);
-            await _db.SaveChangesAsync();
+            await roleRepository.AddAsync(kiraciYonetici);
+            await uow.SaveChangesAsync();
         }
-        var mevcutKY = await _db.RolPermissions.Where(rp => rp.RoleId == kiraciYonetici.Id).ToListAsync();
-        _db.RolPermissions.RemoveRange(mevcutKY);
-        foreach (var perm in PermissionCatalog.TenantAll)
-            _db.RolPermissions.Add(new RolePermission { RoleId = kiraciYonetici.Id, Permission = perm });
 
-        await _db.SaveChangesAsync();
+        var mevcutKY = await rolePermissionRepository.GetForRoleAsync(kiraciYonetici.Id);
+        await rolePermissionRepository.RemoveRangeAsync(mevcutKY);
+
+        var toAdd = PermissionCatalog.TenantAll.Select(perm => new RolePermission { RoleId = kiraciYonetici.Id, Permission = perm });
+        await rolePermissionRepository.AddRangeAsync(toAdd);
+
+        await uow.SaveChangesAsync();
     }
 }

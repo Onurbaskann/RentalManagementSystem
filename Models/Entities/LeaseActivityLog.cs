@@ -5,12 +5,13 @@ namespace KiraTakip.Models.Entities;
 [Table("SozlesmeIslemGecmisleri")]
 public class LeaseActivityLog : BaseEntity
 {
-    [Column("LeaseId")]
-    public int LeaseId { get; set; }    
+    [Column("SozlesmeId")]
+    public int LeaseId { get; set; }
 
     [Column("IslemTipi")]
     public LeaseActivityType ActivityType { get; set; }
 
+    [Column("IslemTarihi")]
     public DateTime TransactionDate { get; set; }
 
     [Column("Aciklama")]
@@ -34,6 +35,7 @@ public class LeaseActivityLog : BaseEntity
     [Column("KdvUygulandiMi")]
     public bool? IsKdvApplied { get; set; }
 
+    [Column("KdvOrani")]
     public decimal? KdvRate { get; set; }
 
     [Column("KdvTutari")]

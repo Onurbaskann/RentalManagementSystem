@@ -1,0 +1,134 @@
+@model KiraTakip.Models.Dtos.ReservationListItemDto
+@using KiraTakip.Models
+@{
+    ViewData["Title"] = "Rezervasyon Detayı";
+    ViewData["UseCentralFeedback"] = true;
+    bool canCancel   = User.HasPermission(PermissionCatalog.Reservation.Cancel);
+    bool canTransfer = User.HasPermission(PermissionCatalog.Reservation.TransferToCharge);
+
+    string statusClass = Model.Status switch {
+        ReservationStatus.Completed         => "badge-kirali",
+        ReservationStatus.TransferredToCharge => "badge-surek",
+        ReservationStatus.Cancelled        => "badge-gecmis",
+        _                                    => "badge-bos"
+    };
+    string statusLabel = Model.Status switch {
+        ReservationStatus.Planned          => "Planlandı",
+        ReservationStatus.Completed         => "Tamamlandı",
+        ReservationStatus.Cancelled        => "İptal Edildi",
+        ReservationStatus.TransferredToCharge => "Tahakkuka Aktarıldı",
+        _                                    => Model.Status.ToString()
+    };
+}
+
+<div class="page-header flex flex-wrap items-start justify-between mb-2.5 gap-4">
+    <div>
+        <a href="@Url.Action(
+                nameof(KiraTakip.Controllers.ReservationController.Index),
+                nameof(KiraTakip.Controllers.ReservationController).Replace("Controller", ""))"
+           class="text-[12.5px] text-muted no-underline mb-2 inline-block hover:text-primary transition-colors">← Rezervasyonlar</a>
+        <div class="page-title">Rezervasyon #@Model.Id</div>
+        <div class="mt-1.5"><span class="badge @statusClass">@statusLabel</span></div>
+    </div>
+    <div class="flex gap-2">
+        @if (canTransfer && Model.Status == ReservationStatus.Planned && Model.TotalAmount > 0 && Model.ChargeId == null)
+        {
+            <form method="post"
+                  action="@Url.Action(
+                      nameof(KiraTakip.Controllers.ReservationController.TransferToCharge),
+                      nameof(KiraTakip.Controllers.ReservationController).Replace("Controller", ""),
+                      new { id = Model.Id.ToHashId() })"
+                  data-confirm="Bu rezervasyon tahakkuka aktarılsın mı?">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary">Tahakkuka Aktar</button>
+            </form>
+        }
+        @if (canCancel && Model.Status == ReservationStatus.Planned)
+        {
+            <button type="button" class="btn btn-danger"
+                    data-confirm-prompt="İptal nedeni"
+                    data-confirm-action="@Url.Action(
+                        nameof(KiraTakip.Controllers.ReservationController.Cancel),
+                        nameof(KiraTakip.Controllers.ReservationController).Replace("Controller", ""),
+                        new { id = Model.Id.ToHashId() })"
+                    data-confirm-field="reason">
+                İptal Et
+            </button>
+        }
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+    <!-- Genel Bilgiler -->
+    <div class="card">
+        <div class="card-title mb-3">Rezervasyon Bilgileri</div>
+        <div class="flex flex-col gap-2.5 text-[13.5px]">
+            <div class="flex justify-between">
+                <span class="text-muted">Kiracı</span>
+                <a href="@Url.Action(
+                        nameof(KiraTakip.Controllers.TenantController.Details),
+                        nameof(KiraTakip.Controllers.TenantController).Replace("Controller", ""),
+                        new { id = Model.TenantId.ToHashId() })"
+                   class="font-medium text-primary no-underline hover:underline">@Model.TenantDisplayName</a>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-muted">Taşınmaz</span>
+                <span class="font-medium">@Model.PropertyName</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-muted">Birim</span>
+                <span class="font-medium">@Model.UnitName</span>
+            </div>
+            <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
+                <span class="text-muted">Başlangıç</span>
+                <span class="font-mono text-[13px]">@Model.StartDate.ToString("dd.MM.yyyy HH:mm")</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-muted">Bitiş</span>
+                <span class="font-mono text-[13px]">@Model.EndDate.ToString("dd.MM.yyyy HH:mm")</span>
+            </div>
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
+                    <span class="text-muted">Açıklama</span>
+                    <span class="text-right max-w-[60%]">@Model.Description</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Ücret Detayı -->
+    <div class="card">
+        <div class="card-title mb-3">Ücret Detayı</div>
+        <div class="flex flex-col gap-2.5 text-[13.5px]">
+            <div class="flex justify-between">
+                <span class="text-muted">Toplam Süre</span>
+                <span>@(Model.TotalDurationMinutes / 60) sa @(Model.TotalDurationMinutes % 60) dk</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-muted">Ücretsiz Süre</span>
+                <span>@(Model.FreeDurationMinutes / 60) sa @(Model.FreeDurationMinutes % 60) dk</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-muted">Ücretli Süre</span>
+                <span>@(Model.PaidDurationMinutes / 60) sa @(Model.PaidDurationMinutes % 60) dk</span>
+            </div>
+            <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
+                <span class="text-muted font-semibold">Toplam Tutar</span>
+                <span class="font-bold text-primary text-base">@Model.TotalAmount.Tl()</span>
+            </div>
+            @if (Model.ChargeId.HasValue)
+            {
+                <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
+                    <span class="text-muted">Tahakkuk</span>
+                    <a href="@Url.Action(
+                            nameof(KiraTakip.Controllers.ChargeController.Details),
+                            nameof(KiraTakip.Controllers.ChargeController).Replace("Controller", ""),
+                            new { id = Model.ChargeId.Value.ToHashId() })"
+                       class="text-primary no-underline hover:underline font-medium">#@Model.ChargeId</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+

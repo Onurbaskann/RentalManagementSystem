@@ -1,135 +1,184 @@
-﻿using KiraTakip.Models;
+using KiraTakip.Models;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-// NOT: Bu servis cross-aggregate hesaplama yapar. Tek bir entity aggregate'ine ait değildir.
-// Kullanılan repolar: IChargeRepository (ChargeTypes lookup)
-public class StatisticsService : IStatisticsService
+public class StatisticsService(
+    IChargeTypeRepository chargeTypeRepository,
+    IRateResolverService rateResolver) : IStatisticsService
 {
-    private readonly IChargeRepository _tahakkukRepo;
-    private readonly IRateResolverService _rateResolver;
-
-    public StatisticsService(IChargeRepository tahakkukRepo, IRateResolverService rateResolver)
+    public OccupancyStatus GetUnitStatus(Unit unit)
     {
-        _tahakkukRepo = tahakkukRepo;
-        _rateResolver = rateResolver;
-    }
-
-    public OccupancyStatus GetBirimDurumu(Unit unit)
-    {
-        var aktif = unit.Leases
-            .Where(s =>
-                s.Status == LeaseStatus.Active &&
-                s.StartDate <= DateTime.Now &&
-                s.EndDate >= DateTime.Now)
-            .OrderByDescending(s => s.EndDate)
+        var activeLease = unit.Leases
+            .Where(lease =>
+                lease.Status == LeaseStatus.Active
+                && lease.StartDate <= DateTime.Now
+                && lease.EndDate >= DateTime.Now)
+            .OrderByDescending(lease => lease.EndDate)
             .FirstOrDefault();
 
-        if (aktif == null) return OccupancyStatus.Vacant;
+        if (activeLease == null) return OccupancyStatus.Vacant;
 
-        var kalanGun = (aktif.EndDate - DateTime.Now).Days;
-        return kalanGun <= 30 ? OccupancyStatus.ExpiringSoon : OccupancyStatus.Leased;
+        var remainingDays = (activeLease.EndDate - DateTime.Now).Days;
+        return remainingDays <= 30 ? OccupancyStatus.ExpiringSoon : OccupancyStatus.Leased;
     }
 
-    public Lease? GetAktifSozlesme(Unit unit)
-    {
-        return unit.Leases
-            .Where(s =>
-                s.Status == LeaseStatus.Active &&
-                s.StartDate <= DateTime.Now &&
-                s.EndDate >= DateTime.Now)
-            .OrderByDescending(s => s.EndDate)
+    public Lease? GetActiveLease(Unit unit)
+        => unit.Leases
+            .Where(lease =>
+                lease.Status == LeaseStatus.Active
+                && lease.StartDate <= DateTime.Now
+                && lease.EndDate >= DateTime.Now)
+            .OrderByDescending(lease => lease.EndDate)
             .FirstOrDefault();
+
+    public bool IsActive(Lease lease)
+        => lease.Status == LeaseStatus.Active
+            && lease.StartDate <= DateTime.Now
+            && lease.EndDate >= DateTime.Now;
+
+    public async Task<decimal> GetMonthlyAmountAsync(Lease lease)
+        => await GetMonthlyAmountAsync(
+            lease.Id,
+            lease.TenantId,
+            lease.UnitId,
+            lease.Unit?.Area ?? 0m,
+            DateTime.Today);
+
+    public async Task<LeaseSummaryDto> GetLeaseSummaryAsync(GetLeaseSummaryInput input)
+    {
+        var monthlyAmount = await GetMonthlyAmountAsync(
+            input.LeaseId,
+            input.TenantId,
+            input.UnitId,
+            input.UnitArea,
+            input.CurrentTime.Date);
+        var isActive = input.Status == LeaseStatus.Active
+            && input.StartDate <= input.CurrentTime
+            && input.EndDate >= input.CurrentTime;
+        var remainingDays = (int)(input.EndDate - input.CurrentTime).TotalDays;
+        var totalDays = (input.EndDate - input.StartDate).TotalDays;
+        var elapsedDays = (input.CurrentTime - input.StartDate).TotalDays;
+        var durationPercentage = totalDays <= 0
+            ? 100
+            : Math.Min(100, Math.Max(0, elapsedDays / totalDays * 100));
+        var unitStatus = !isActive
+            ? OccupancyStatus.Vacant
+            : remainingDays <= 30
+                ? OccupancyStatus.ExpiringSoon
+                : OccupancyStatus.Leased;
+
+        return new LeaseSummaryDto(
+            remainingDays,
+            monthlyAmount,
+            monthlyAmount * 12,
+            isActive,
+            durationPercentage,
+            unitStatus);
     }
 
-    public bool Aktif(Lease s) =>
-        s.Status == LeaseStatus.Active &&
-        s.StartDate <= DateTime.Now &&
-        s.EndDate >= DateTime.Now;
-
-    public async Task<decimal> AylikBedelAsync(Lease s)
+    private async Task<decimal> GetMonthlyAmountAsync(
+        int leaseId,
+        int tenantId,
+        int unitId,
+        decimal area,
+        DateTime period)
     {
-        var yuzolcumu = s.Unit?.Area ?? 0m;
-        var tumBorcTipleri = await _tahakkukRepo.GetAktifUretimBorcTipleriAsync();
-        var borcTipleri = tumBorcTipleri.Where(b => b.Behavior == ChargeTypeBehavior.MonthlyFixed).ToList();
+        var allChargeTypes = await chargeTypeRepository.GetActiveGenerationTypesAsync();
+        var chargeTypes = allChargeTypes
+            .Where(chargeType => chargeType.Behavior == ChargeTypeBehavior.MonthlyFixed)
+            .ToList();
 
-        decimal toplam = 0m;
-        var donem = DateTime.Today;
-        foreach (var bt in borcTipleri)
+        decimal total = 0m;
+        foreach (var chargeType in chargeTypes)
         {
-            var snap = await _rateResolver.ResolveAsync(s.Id, s.TenantId, s.UnitId, bt.Id, donem);
-            if (snap == null) continue;
-            toplam += snap.CalculationMethod == CalculationMethod.M2
-                ? snap.UnitValue * yuzolcumu
-                : snap.UnitValue;
+            var snapshot = await rateResolver.ResolveAsync(
+                leaseId,
+                tenantId,
+                unitId,
+                chargeType.Id,
+                period);
+            if (snapshot == null) continue;
+
+            total += snapshot.CalculationMethod == CalculationMethod.M2
+                ? snapshot.UnitValue * area
+                : snapshot.UnitValue;
         }
-        return toplam;
+
+        return total;
     }
 
-    public async Task<decimal> YillikBedelAsync(Lease s) => await AylikBedelAsync(s) * 12;
+    public async Task<decimal> GetAnnualAmountAsync(Lease lease)
+        => await GetMonthlyAmountAsync(lease) * 12;
 
-    public int KalanGun(Lease s) => (int)(s.EndDate - DateTime.Now).TotalDays;
+    public int GetRemainingDays(Lease lease)
+        => (int)(lease.EndDate - DateTime.Now).TotalDays;
 
-    public double SureYuzdesi(Lease s)
+    public double GetDurationPercentage(Lease lease)
     {
-        var toplam = (s.EndDate - s.StartDate).TotalDays;
-        var gecen = (DateTime.Now - s.StartDate).TotalDays;
-        if (toplam <= 0) return 100;
-        return Math.Min(100, Math.Max(0, gecen / toplam * 100));
+        var total = (lease.EndDate - lease.StartDate).TotalDays;
+        var elapsed = (DateTime.Now - lease.StartDate).TotalDays;
+        if (total <= 0) return 100;
+
+        return Math.Min(100, Math.Max(0, elapsed / total * 100));
     }
 
-    public decimal TufeArtisliBedel(decimal mevcutBedel, decimal tufeOrani)
+    public decimal CalculateInflationAdjustedAmount(CalculateInflationAdjustedAmountInput input)
     {
-        if (tufeOrani < 0) throw new ArgumentException("TÜFE oranı negatif olamaz.");
-        return mevcutBedel + (mevcutBedel * tufeOrani / 100);
+        Guard.Against(
+            input.InflationRate < 0,
+            "TÜFE oranı negatif olamaz.",
+            "Lease.InvalidInflationRate");
+        return input.CurrentAmount + (input.CurrentAmount * input.InflationRate / 100);
     }
 
-    public decimal KdvTutari(decimal kdvHaricBedel, decimal kdvOrani)
+    public decimal CalculateVatAmount(CalculateVatAmountInput input)
     {
-        if (kdvOrani < 0) throw new ArgumentException("KDV oranı negatif olamaz.");
-        return kdvHaricBedel * kdvOrani / 100;
+        Guard.Against(
+            input.VatRate < 0,
+            "KDV oranı negatif olamaz.",
+            "Lease.InvalidVatRate");
+        return input.AmountExcludingVat * input.VatRate / 100;
     }
 
-    public decimal KdvDahilTutar(decimal kdvHaricBedel, decimal kdvOrani) =>
-        kdvHaricBedel + KdvTutari(kdvHaricBedel, kdvOrani);
+    public decimal CalculateVatIncludedAmount(CalculateVatIncludedAmountInput input)
+        => input.AmountExcludingVat
+            + CalculateVatAmount(new CalculateVatAmountInput(input.AmountExcludingVat, input.VatRate));
 
-    public KiraHesaplamaSonucu HesaplaKiraArtisi(
-        decimal mevcutKiraBedeli,
-        decimal? tufeOrani,
-        bool kdvUygulanacakMi,
-        decimal? kdvOrani)
+    public RentIncreaseCalculationResult CalculateRentIncrease(CalculateRentIncreaseInput input)
     {
-        var sonuc = new KiraHesaplamaSonucu
+        var result = new RentIncreaseCalculationResult
         {
-            MevcutKiraBedeli = mevcutKiraBedeli,
-            TufeOrani = tufeOrani,
-            KdvUygulandiMi = kdvUygulanacakMi,
-            KdvRate = kdvUygulanacakMi ? (kdvOrani ?? 20) : null
+            CurrentRentAmount = input.CurrentRentAmount,
+            InflationRate = input.InflationRate,
+            IsVatApplied = input.ApplyVat,
+            VatRate = input.ApplyVat ? (input.VatRate ?? 20) : null
         };
 
-        var tufeArtisTutari = tufeOrani.HasValue
-            ? mevcutKiraBedeli * tufeOrani.Value / 100
+        var inflationIncreaseAmount = input.InflationRate.HasValue
+            ? input.CurrentRentAmount * input.InflationRate.Value / 100
             : 0;
 
-        var tufeSonrasiBedel = mevcutKiraBedeli + tufeArtisTutari;
-        sonuc.TufeArtisTutari = tufeArtisTutari;
-        sonuc.TufeSonrasiKiraBedeli = tufeSonrasiBedel;
+        var rentAfterInflation = input.CurrentRentAmount + inflationIncreaseAmount;
+        result.InflationIncreaseAmount = inflationIncreaseAmount;
+        result.RentAfterInflation = rentAfterInflation;
 
-        if (kdvUygulanacakMi)
+        if (input.ApplyVat)
         {
-            var oran = kdvOrani ?? 20;
-            sonuc.KdvTutari = tufeSonrasiBedel * oran / 100;
-            sonuc.KdvDahilToplam = tufeSonrasiBedel + sonuc.KdvTutari;
+            var rate = input.VatRate ?? 20;
+            result.VatAmount = rentAfterInflation * rate / 100;
+            result.TotalIncludingVat = rentAfterInflation + result.VatAmount;
         }
         else
         {
-            sonuc.KdvTutari = 0;
-            sonuc.KdvDahilToplam = tufeSonrasiBedel;
+            result.VatAmount = 0;
+            result.TotalIncludingVat = rentAfterInflation;
         }
 
-        return sonuc;
+        return result;
     }
 }

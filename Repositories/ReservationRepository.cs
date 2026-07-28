@@ -10,36 +10,77 @@ public class ReservationRepository : BaseRepository<Reservation>, IReservationRe
 {
     public ReservationRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<List<ReservationListItemDto>> GetListAsync(List<int>? yetkiliPropertyIds)
+    public async Task<List<ReservationListItemDto>> GetListAsync(
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null)
     {
         var query = _dbSet.AsNoTracking().AsQueryable();
 
-        if (yetkiliPropertyIds != null)
-            query = query.Where(r => yetkiliPropertyIds.Contains(r.Unit.PropertyId));
+        if (authorizedPropertyIds != null || authorizedUnitIds != null)
+        {
+            var propertyIds = authorizedPropertyIds ?? [];
+            var unitIds = authorizedUnitIds ?? [];
+            query = query.Where(reservation =>
+                propertyIds.Contains(reservation.Unit.PropertyId)
+                || unitIds.Contains(reservation.UnitId));
+        }
 
-        return await query
-            .OrderByDescending(r => r.CreatedAt)
-            .Select(r => new ReservationListItemDto
-            {
-                Id = r.Id,
-                UnitId = r.UnitId,
-                UnitName = r.Unit.Name,
-                PropertyId = r.Unit.PropertyId,
-                PropertyName = r.Unit.Property.Name,
-                TenantId = r.TenantId,
-                TenantDisplayName = r.Tenant.DisplayName,
-                ChargeId = _ctx.Charges.Where(t => t.ReservationId == r.Id).Select(t => (int?)t.Id).FirstOrDefault(),
-                StartDate = r.StartDate,
-                EndDate = r.EndDate,
-                TotalDurationMinutes = r.TotalDurationMinutes,
-                FreeDurationMinutes = r.FreeDurationMinutes,
-                PaidDurationMinutes = r.PaidDurationMinutes,
-                TotalAmount = r.TotalAmount,
-                Status = r.Status,
-                Description = r.Description
-            })
-            .ToListAsync();
+        return await ProjectList(query).ToListAsync();
     }
+
+    public async Task<List<ReservationListItemDto>> GetTenantListAsync(
+        int tenantId,
+        DateTime currentTime,
+        List<int>? authorizedPropertyIds = null,
+        List<int>? authorizedUnitIds = null)
+    {
+        var query = _dbSet
+            .AsNoTracking()
+            .Where(reservation => reservation.TenantId == tenantId);
+
+        if (authorizedPropertyIds != null || authorizedUnitIds != null)
+        {
+            var propertyIds = authorizedPropertyIds ?? [];
+            var unitIds = authorizedUnitIds ?? [];
+            query = query.Where(reservation =>
+                propertyIds.Contains(reservation.Unit.PropertyId)
+                || unitIds.Contains(reservation.UnitId));
+        }
+
+        return await ProjectList(query, currentTime).ToListAsync();
+    }
+
+    private IQueryable<ReservationListItemDto> ProjectList(
+        IQueryable<Reservation> query,
+        DateTime? currentTime = null)
+        => query
+            .OrderByDescending(reservation => reservation.CreatedAt)
+            .Select(reservation => new ReservationListItemDto
+            {
+                Id = reservation.Id,
+                UnitId = reservation.UnitId,
+                UnitName = reservation.Unit.Name,
+                PropertyId = reservation.Unit.PropertyId,
+                PropertyName = reservation.Unit.Property.Name,
+                TenantId = reservation.TenantId,
+                TenantDisplayName = reservation.Tenant.DisplayName,
+                ChargeId = _ctx.Charges
+                    .Where(charge => charge.ReservationId == reservation.Id)
+                    .Select(charge => (int?)charge.Id)
+                    .FirstOrDefault(),
+                StartDate = reservation.StartDate,
+                EndDate = reservation.EndDate,
+                TotalDurationMinutes = reservation.TotalDurationMinutes,
+                FreeDurationMinutes = reservation.FreeDurationMinutes,
+                PaidDurationMinutes = reservation.PaidDurationMinutes,
+                TotalAmount = reservation.TotalAmount,
+                Status = currentTime.HasValue
+                    && reservation.Status == ReservationStatus.Planned
+                    && reservation.EndDate <= currentTime.Value
+                        ? ReservationStatus.Completed
+                        : reservation.Status,
+                Description = reservation.Description
+            });
 
     public async Task<ReservationListItemDto?> GetByIdAsync(int id)
     {
@@ -67,65 +108,36 @@ public class ReservationRepository : BaseRepository<Reservation>, IReservationRe
             .FirstOrDefaultAsync();
     }
 
-    public async Task<bool> IsConflictAsync(int unitId, DateTime baslangic, DateTime bitis)
+    public Task<Reservation?> GetForOperationAsync(int id)
+        => _dbSet
+            .Include(reservation => reservation.Unit)
+                .ThenInclude(unit => unit.UnitType)
+            .FirstOrDefaultAsync(reservation => reservation.Id == id);
+
+    public async Task<bool> IsConflictAsync(int unitId, DateTime startDate, DateTime endDate)
     {
         return await _dbSet.AnyAsync(r =>
             r.UnitId == unitId &&
             r.Status != ReservationStatus.Cancelled &&
-            r.StartDate < bitis &&
-            r.EndDate > baslangic);
+            r.StartDate < endDate &&
+            r.EndDate > startDate);
     }
 
-    public async Task<ReservationRateOverride?> GetAktifTarifeForBirimAsync(int unitId)
-    {
-        return await _ctx.RezervasyonTarifeler
-            .Where(k => k.IsActive && k.UnitId == unitId)
-            .FirstOrDefaultAsync();
-    }
-
-    public async Task<ReservationRateOverride?> GetGenelTarifeAsync(int unitTypeId, int yil)
-    {
-        return await _ctx.RezervasyonTarifeler
-            .Where(g => g.UnitId == null && g.UnitTypeId == unitTypeId && g.IsActive && g.Year == yil)
-            .FirstOrDefaultAsync();
-    }
-
-    public async Task<List<ReservationRateOverride>> GetUcretKurallariAsync()
-    {
-        return await _ctx.RezervasyonTarifeler
-            .Include(k => k.Unit!).ThenInclude(b => b!.Property)
-            .Where(k => k.UnitId != null)
-            .OrderBy(k => k.Id)
+    public Task<List<int>> GetActiveUnitIdsAsync(IReadOnlyCollection<int> unitIds, DateTime now)
+        => _dbSet
+            .Where(reservation => unitIds.Contains(reservation.UnitId)
+                && reservation.Status == ReservationStatus.Planned
+                && reservation.EndDate >= now)
+            .Select(reservation => reservation.UnitId)
+            .Distinct()
             .ToListAsync();
-    }
 
-    public async Task<ReservationRateOverride?> GetUcretKuralByIdAsync(int id)
-    {
-        return await _ctx.RezervasyonTarifeler
-            .Include(k => k.Unit)
-            .FirstOrDefaultAsync(k => k.Id == id);
-    }
+    public Task<bool> HasPlannedForUnitTypeAsync(int unitTypeId)
+        => _dbSet.AsNoTracking().AnyAsync(reservation =>
+            reservation.Status == ReservationStatus.Planned
+            && _ctx.Units.Any(unit => unit.UnitTypeId == unitTypeId && unit.Id == reservation.UnitId));
 
-    public async Task AddUcretKuralAsync(ReservationRateOverride kural)
-    {
-        await _ctx.RezervasyonTarifeler.AddAsync(kural);
-    }
+    public Task<bool> ExistsForUnitAsync(int unitId)
+        => _dbSet.AsNoTracking().AnyAsync(reservation => reservation.UnitId == unitId);
 
-    public async Task AddTahakkukAsync(Charge charge)
-    {
-        await _ctx.Charges.AddAsync(charge);
-    }
-
-    public async Task<ChargeType?> ResolveRezervasyonBorcTipiAsync(int? preferredBorcTipiId)
-    {
-        if (preferredBorcTipiId.HasValue)
-        {
-            var bt = await _ctx.ChargeTypes
-                .FirstOrDefaultAsync(b => b.Id == preferredBorcTipiId.Value && b.IsActive);
-            if (bt != null) return bt;
-        }
-
-        return await _ctx.ChargeTypes
-            .FirstOrDefaultAsync(b => b.Behavior == ChargeTypeBehavior.ReservationSpecific && b.IsActive);
-    }
 }

@@ -10,56 +10,85 @@ public class ChargeTypeRepository : BaseRepository<ChargeType>, IChargeTypeRepos
 {
     public ChargeTypeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<List<BorcTipiLookupDto>> GetManuelBorcTipleriAsync()
+    public async Task<List<ChargeTypeLookupDto>> GetManualChargeTypesAsync()
         => await _dbSet.AsNoTracking()
             .Where(b => b.IsActive && b.Behavior == ChargeTypeBehavior.UserManual)
             .OrderBy(b => b.SortOrder)
-            .Select(b => new BorcTipiLookupDto
+            .Select(b => new ChargeTypeLookupDto
             {
                 Id = b.Id,
-                Ad = b.Name,
-                Kod = b.Code,
-                Davranis = b.Behavior
+                Name = b.Name,
+                Code = b.Code,
+                Behavior = b.Behavior
             })
             .ToListAsync();
 
-    public async Task<ChargeType?> GetActiveManuelByIdAsync(int id)
+    public async Task<ChargeType?> GetActiveManualByIdAsync(int id)
         => await _dbSet
             .FirstOrDefaultAsync(b => b.Id == id && b.IsActive && b.Behavior == ChargeTypeBehavior.UserManual);
 
-    public async Task<List<BorcTipiListItemDto>> GetListAsync()
+    public async Task<List<ChargeTypeListItemDto>> GetListAsync()
         => await _dbSet.AsNoTracking()
             .OrderBy(b => b.SortOrder)
             .ThenBy(b => b.Name)
-            .Select(b => new BorcTipiListItemDto
+            .Select(b => new ChargeTypeListItemDto
             {
                 Id = b.Id,
-                Ad = b.Name,
-                Kod = b.Code,
-                Davranis = b.Behavior,
-                Sira = b.SortOrder,
-                Sistem = b.IsSystem,
-                Aktif = b.IsActive
+                Name = b.Name,
+                Code = b.Code,
+                Behavior = b.Behavior,
+                SortOrder = b.SortOrder,
+                IsSystem = b.IsSystem,
+                IsActive = b.IsActive
             })
             .ToListAsync();
 
-    public async Task<int> GetMaxSiraAsync()
+    public async Task<int> GetMaxSortOrderAsync()
         => await _dbSet.AsNoTracking().MaxAsync(b => (int?)b.SortOrder) ?? 0;
 
-    public async Task<bool> KodExistsAsync(string kod, int? excludeId = null)
+    public async Task<bool> CodeExistsAsync(string code, int? excludeId = null)
         => await _dbSet.AsNoTracking()
-            .AnyAsync(b => b.Code == kod && (excludeId == null || b.Id != excludeId));
+            .AnyAsync(b => b.Code == code && (excludeId == null || b.Id != excludeId));
 
-    public async Task<List<BorcTipiLookupDto>> GetRezervasyonAdaylariAsync()
+    public async Task<List<ChargeTypeLookupDto>> GetRezervasyonAdaylariAsync()
         => await _dbSet.AsNoTracking()
             .Where(b => b.Behavior == ChargeTypeBehavior.ReservationSpecific && b.IsActive)
             .OrderBy(b => b.SortOrder).ThenBy(b => b.Name)
-            .Select(b => new BorcTipiLookupDto
+            .Select(b => new ChargeTypeLookupDto
             {
                 Id = b.Id,
-                Ad = b.Name,
-                Kod = b.Code,
-                Davranis = b.Behavior
+                Name = b.Name,
+                Code = b.Code,
+                Behavior = b.Behavior
             })
             .ToListAsync();
+
+    public Task<bool> IsActiveReservationSpecificAsync(int id)
+        => _dbSet.AsNoTracking().AnyAsync(type =>
+            type.Id == id &&
+            type.IsActive &&
+            type.Behavior == ChargeTypeBehavior.ReservationSpecific);
+
+    public Task<List<ChargeType>> GetActiveGenerationTypesAsync()
+        => _dbSet.AsNoTracking()
+            .Where(type => type.IsActive && (type.Behavior == ChargeTypeBehavior.MonthlyFixed || type.Behavior == ChargeTypeBehavior.FirstMonthOneTime))
+            .OrderBy(type => type.SortOrder)
+            .ToListAsync();
+
+    public Task<List<ChargeType>> GetPricingMatrixTypesAsync()
+        => _dbSet.AsNoTracking()
+            .Where(type => type.Behavior != ChargeTypeBehavior.UserManual && type.Behavior != ChargeTypeBehavior.ReservationSpecific)
+            .OrderBy(type => type.SortOrder)
+            .ToListAsync();
+
+    public async Task<ChargeType?> ResolveReservationTypeAsync(int? preferredChargeTypeId)
+    {
+        if (preferredChargeTypeId.HasValue)
+        {
+            var preferred = await _dbSet.FirstOrDefaultAsync(type => type.Id == preferredChargeTypeId.Value && type.IsActive);
+            if (preferred != null) return preferred;
+        }
+
+        return await _dbSet.FirstOrDefaultAsync(type => type.Behavior == ChargeTypeBehavior.ReservationSpecific && type.IsActive);
+    }
 }

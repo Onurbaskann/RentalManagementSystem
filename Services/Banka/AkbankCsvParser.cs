@@ -1,6 +1,6 @@
+using KiraTakip.Models;
 using System.Globalization;
 using System.Text;
-using KiraTakip.Models;
 
 namespace KiraTakip.Services.Banka;
 
@@ -20,10 +20,10 @@ public class AkbankCsvParser : IBankaHareketiParser
 
         var headers = headerLine.Split(';').Select(h => h.Trim().ToLowerInvariant()).ToArray();
 
-        int idxTarih      = FindIndex(headers, "tarih", "işlem tarihi", "islem tarihi");
-        int idxAciklama   = FindIndex(headers, "açıklama", "aciklama", "işlem açıklaması");
-        int idxBorc       = FindIndex(headers, "borç", "borc");
-        int idxAlacak     = FindIndex(headers, "alacak");
+        int idxTarih = FindIndex(headers, "tarih", "işlem tarihi", "islem tarihi");
+        int idxAciklama = FindIndex(headers, "açıklama", "aciklama", "işlem açıklaması");
+        int idxBorc = FindIndex(headers, "borç", "borc");
+        int idxAlacak = FindIndex(headers, "alacak");
         int idxGonderenIban = FindIndex(headers, "karşı hesap no", "karsi hesap", "karşı hesap");
         int idxGonderenBilgi = FindIndex(headers, "karşı hesap adı", "karsi unvan", "karşı unvan");
 
@@ -39,18 +39,18 @@ public class AkbankCsvParser : IBankaHareketiParser
             if (tarih == null) continue;
 
             var alacak = ParseDecimal(Get(cols, idxAlacak));
-            var borc   = ParseDecimal(Get(cols, idxBorc));
-            var tutar  = alacak > 0 ? alacak : -borc;
+            var borc = ParseDecimal(Get(cols, idxBorc));
+            var tutar = alacak > 0 ? alacak : -borc;
 
             yield return new BankTransaction
             {
-                TransactionDate     = tarih.Value,
-                TransactionAmount     = tutar,
-                Description        = Get(cols, idxAciklama),
-                SenderIban    = Get(cols, idxGonderenIban) is { Length: > 0 } gi ? gi : null,
+                TransactionDate = tarih.Value,
+                TransactionAmount = tutar,
+                Description = Get(cols, idxAciklama),
+                SenderIban = Get(cols, idxGonderenIban) is { Length: > 0 } gi ? gi : null,
                 SenderInfo = Get(cols, idxGonderenBilgi) is { Length: > 0 } gb ? gb : null,
-                BankCode       = BankCode,
-                MatchStatus   = BankMatchStatus.Unmatched,
+                BankCode = BankCode,
+                MatchStatus = BankMatchStatus.Unmatched,
             };
         }
     }

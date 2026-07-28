@@ -1,4 +1,4 @@
-namespace KiraTakip.Models.DTOs;
+namespace KiraTakip.Models.Dtos;
 
 public class ChargeLineItemPreview
 {

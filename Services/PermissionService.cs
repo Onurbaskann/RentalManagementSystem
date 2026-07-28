@@ -4,30 +4,23 @@ using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-public class PermissionService : IPermissionService
+public class PermissionService(
+    IUserPermissionRepository userPermissionRepository,
+    IUnitOfWork uow) : IPermissionService
 {
-    private readonly IUserPermissionRepository _repo;
-    private readonly IUnitOfWork _uow;
-
-    public PermissionService(IUserPermissionRepository repo, IUnitOfWork uow)
-    {
-        _repo = repo;
-        _uow = uow;
-    }
-
     public async Task<IList<string>> GetUserPermissionsAsync(string userId)
-        => await _repo.GetUserPermissionsAsync(userId);
+        => await userPermissionRepository.GetUserPermissionsAsync(userId);
 
     public async Task<bool> HasPermissionAsync(string userId, string permission)
-        => await _repo.HasPermissionAsync(userId, permission);
+        => await userPermissionRepository.HasPermissionAsync(userId, permission);
 
     public async Task SetUserPermissionsAsync(string userId, IEnumerable<string> permissions)
     {
         var permissionList = permissions.ToList();
 
-        var existing = await _repo.GetForUserAsync(userId);
-        await _repo.RemoveRangeAsync(existing);
-        await _uow.SaveChangesAsync();
+        var existing = await userPermissionRepository.GetForUserAsync(userId);
+        await userPermissionRepository.RemoveRangeAsync(existing);
+        await uow.SaveChangesAsync();
 
         var newPermissions = permissionList.Select(p => new UserPermission
         {
@@ -35,7 +28,7 @@ public class PermissionService : IPermissionService
             Permission = p,
         });
 
-        await _repo.AddRangeAsync(newPermissions);
-        await _uow.SaveChangesAsync();
+        await userPermissionRepository.AddRangeAsync(newPermissions);
+        await uow.SaveChangesAsync();
     }
 }

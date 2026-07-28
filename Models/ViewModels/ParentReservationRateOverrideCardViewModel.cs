@@ -13,5 +13,5 @@ public class ParentReservationRateOverrideRow
     public int FreeDurationMinutes { get; set; }
     public int BillingPeriodMinutes { get; set; }
     public decimal PeriodRate { get; set; }
-    public decimal KdvRate { get; set; }
+    public decimal VatRate { get; set; }
 }

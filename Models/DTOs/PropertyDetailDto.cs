@@ -17,5 +17,5 @@ public class PropertyDetailDto
     public List<PropertyReservationDto> Reservations { get; set; } = [];
     public List<UnitReservationRateOverrideDto> UnitReservationRateOverrides { get; set; } = [];
     public List<UnitCustomRateSummaryDto> UnitCustomRates { get; set; } = [];
-    public List<TasinmazSozlesmeGecmisiDto> LeaseHistory { get; set; } = [];
+    public List<PropertyLeaseHistoryDto> LeaseHistory { get; set; } = [];
 }

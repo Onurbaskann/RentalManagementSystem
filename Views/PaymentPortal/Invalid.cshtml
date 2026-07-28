@@ -1,7 +1,7 @@
 @model string
 @{
     Layout = "_PortalLayout";
-    ViewData["Title"] = "Geçersiz Link";
+    ViewData["Title"] = "Geçersiz Bağlantı";
 }
 
 <div class="bg-white rounded-2xl shadow-xl border border-slate-200/60 overflow-hidden">
@@ -15,14 +15,14 @@
         </div>
         <h1 class="text-xl font-bold text-slate-800 mb-2">Bağlantı doğrulanamadı</h1>
         <p class="text-sm text-slate-600 leading-relaxed mb-1">
-            @(Model ?? "Bu ödeme linki geçerli değil.")
+            @(Model ?? "Bu ödeme bağlantısı geçerli değil.")
         </p>
         <p class="text-sm text-slate-500 leading-relaxed">
-            Link süresi dolmuş veya değiştirilmiş olabilir.
+            Bağlantının süresi dolmuş veya bağlantı değiştirilmiş olabilir.
         </p>
     </div>
     <div class="px-8 py-4 bg-slate-50 border-t border-slate-100 text-center">
-        <span class="text-xs text-slate-500">Yeni bir ödeme linki için lütfen yönetiminizle iletişime geçin.</span>
+        <span class="text-xs text-slate-500">Yeni bir ödeme bağlantısı için lütfen yönetiminizle iletişime geçin.</span>
     </div>
 </div>
 

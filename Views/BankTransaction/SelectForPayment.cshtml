@@ -1,0 +1,108 @@
+@model KiraTakip.Models.ViewModels.SelectPaymentBankTransactionViewModel
+@using KiraTakip.Models
+@{
+    ViewData["Title"] = "Banka Hareketi Eşleştir";
+    ViewData["UseCentralFeedback"] = true;
+    var payment = Model.Payment;
+}
+
+<div class="page-header flex items-center justify-between">
+    <div>
+        <a href="/Payment/Details/@payment.Id.ToHashId()" class="text-xs text-muted no-underline inline-flex items-center gap-1 mb-2">← Ödeme #@payment.Id</a>
+        <div class="page-title">Banka Hareketi Eşleştir</div>
+        <div class="page-subtitle">Bu ödemeye karşılık gelen banka hareketini seçin</div>
+    </div>
+</div>
+
+<!-- Ödeme bilgileri -->
+<div class="card mb-5">
+    <div class="section-title mb-3">Ödeme</div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: 0.875rem;">
+        <div>
+            <div class="detail-label">Kiracı</div>
+            <div class="font-semibold">@payment.TenantDisplayName</div>
+        </div>
+        <div>
+            <div class="detail-label">Dönem</div>
+            <div>@payment.ChargePeriodStart.ToString("MMMM yyyy")</div>
+        </div>
+        <div>
+            <div class="detail-label">Ödeme Tarihi</div>
+            <div class="font-semibold">@payment.PaymentDate.Tarih()</div>
+        </div>
+        <div>
+            <div class="detail-label">Tutar</div>
+            <div style="font-size: 1.125rem; font-family: 'Fraunces', Georgia, serif;" class="font-bold">@payment.Amount.Tl(0)</div>
+        </div>
+    </div>
+</div>
+
+<!-- Aday hareketler -->
+<div class="card p-0 overflow-hidden">
+    <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--color-border);">
+        <div class="section-title m-0">Eşleşmemiş Banka Hareketleri (@Model.TransactionCandidates.Count)</div>
+    </div>
+    @if (Model.TransactionCandidates.Any())
+    {
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>Açıklama</th>
+                        <th>Karşı Taraf</th>
+                        <th>Tutar</th>
+                        <th>Uyum</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        int rowNumber = 0;
+                        foreach (var transaction in Model.TransactionCandidates)
+                        {
+                            bool exactAmount = transaction.TransactionAmount == payment.Amount;
+                            bool closeAmount = Math.Abs(transaction.TransactionAmount - payment.Amount) <= payment.Amount * 0.02m;
+                            int dayDifference = Math.Abs((transaction.TransactionDate - payment.PaymentDate).Days);
+
+                            string matchLabel, matchClass, matchTooltip;
+                            if (exactAmount && dayDifference <= 15)      { matchLabel = "Yüksek"; matchClass = "badge-kirali"; matchTooltip = $"Tutar birebir eşleşiyor • Tarih farkı {dayDifference} gün (≤15)"; }
+                            else if (exactAmount)                   { matchLabel = "Orta";   matchClass = "badge-surek";  matchTooltip = $"Tutar birebir eşleşiyor • Tarih farkı {dayDifference} gün (>15)"; }
+                            else if (closeAmount && dayDifference <= 15)  { matchLabel = "Zayıf";  matchClass = "badge-bos";    matchTooltip = $"Tutar %2 toleransta • Tarih farkı {dayDifference} gün"; }
+                            else                                   { matchLabel = "Düşük";  matchClass = "badge-gecmis"; matchTooltip = $"Tutar farkı %2'den fazla veya tarih uzak ({dayDifference} gün)"; }
+                            rowNumber++;
+                        <tr class="@(rowNumber == 1 ? "bg-green-50" : "")">
+                            <td class="font-semibold">@transaction.TransactionDate.Tarih()</td>
+                            <td style="max-width: 13.75rem; font-size: 0.8125rem;" class="truncate">@transaction.Description</td>
+                            <td class="text-xs text-muted">@(transaction.SenderInfo ?? transaction.SenderIban ?? "—")</td>
+                            <td class="@(exactAmount ? "font-bold" : "font-normal")">
+                                @transaction.TransactionAmount.Tl(0)
+                                @if (!exactAmount)
+                                {
+                                    <span class="text-muted-sm"> (fark: @Math.Abs(transaction.TransactionAmount - payment.Amount).Tl(0))</span>
+                                }
+                            </td>
+                            <td><span class="badge @matchClass" data-tip="@matchTooltip">@matchLabel</span></td>
+                            <td>
+                                <form method="post" action="/BankTransaction/Match">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="PaymentId" value="@payment.Id" />
+                                    <input type="hidden" name="BankTransactionId" value="@transaction.Id" />
+                                    <button type="submit" class="btn btn-primary btn-sm">Eşleştir</button>
+                                </form>
+                            </td>
+                        </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="p-8 text-center text-muted text-sm">
+            Eşleştirilmemiş banka hareketi bulunamadı. CSV içe aktarın ve tekrar deneyin.
+        </div>
+    }
+</div>
+

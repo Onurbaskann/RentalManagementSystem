@@ -36,4 +36,10 @@ public class CategoryRepository : BaseRepository<Category>, ICategoryRepository
     public async Task<bool> KodExistsByTipiAsync(CategoryType tipi, string kod, int? excludeId = null)
         => await _dbSet.AsNoTracking()
             .AnyAsync(k => k.Type == tipi && k.Code == kod && (excludeId == null || k.Id != excludeId));
+
+    public Task<List<Category>> GetTenantPricingCategoriesAsync()
+        => _dbSet.AsNoTracking()
+            .Where(category => category.Type == CategoryType.Tenant)
+            .OrderBy(category => category.Name)
+            .ToListAsync();
 }

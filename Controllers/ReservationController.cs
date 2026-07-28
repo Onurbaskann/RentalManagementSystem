@@ -1,161 +1,149 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
+using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
-using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KiraTakip.Controllers;
 
 [Authorize]
-public class ReservationController : Controller
+[Route("Reservation")]
+public class ReservationController(
+    IReservationService reservationService,
+    IPermissionScopeProvider permissionScopeProvider) : Controller
 {
-    private readonly IReservationService _service;
-    private readonly IUnitRepository _birimRepo;
-    private readonly ITenantRepository _kiraciRepo;
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IPermissionScopeProvider _provider;
-
-    public ReservationController(
-        IReservationService service,
-        IUnitRepository birimRepo,
-        ITenantRepository kiraciRepo,
-        UserManager<ApplicationUser> userManager,
-        IPermissionScopeProvider provider)
-    {
-        _service = service;
-        _birimRepo = birimRepo;
-        _kiraciRepo = kiraciRepo;
-        _userManager = userManager;
-        _provider = provider;
-    }
-
+    [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.Reservation.Module)]
     public async Task<IActionResult> Index()
     {
-        var liste = await _service.GetAllAsync(_provider.GlobalAccess ? null : _provider.AccessiblePropertyIds);
-        return View(liste);
+        var reservations = await reservationService.GetAllAsync(
+            new GetReservationsInput(
+                permissionScopeProvider.GlobalAccess
+                    ? null
+                    : permissionScopeProvider.AccessiblePropertyIds,
+                permissionScopeProvider.GlobalAccess
+                    ? null
+                    : permissionScopeProvider.AccessibleUnitIds));
+        return View(reservations);
     }
 
-    [HttpGet("Reservation/Detay/{id:int}")]
+    [HttpGet("Details/{id}")]
     [Authorize(Policy = PermissionCatalog.Reservation.Module)]
-    public async Task<IActionResult> Detay(int id)
+    public async Task<IActionResult> Details(int id)
     {
-        var reservation = await _service.GetByIdAsync(id);
-        if (reservation == null) return NotFound();
-
-        if (!_provider.GlobalAccess &&
-            !_provider.AccessiblePropertyIds.Contains(reservation.PropertyId))
-            return Forbid();
+        var reservation = await reservationService.GetByIdAsync(
+            new GetReservationByIdInput(id, GetAccessScope()));
 
         return View(reservation);
     }
 
-    [HttpGet]
+    [HttpGet("Create")]
     [Authorize(Policy = PermissionCatalog.Reservation.Create)]
-    public async Task<IActionResult> Ekle(int? unitId)
+    public async Task<IActionResult> Create(ReservationCreateQueryViewModel query)
     {
-        var vm = new ReservationCreateViewModel
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var viewModel = new ReservationCreateViewModel
         {
-            UnitId = unitId,
+            UnitId = query.UnitId,
             StartDate = DateTime.Today.AddHours(9),
             EndDate = DateTime.Today.AddHours(11)
         };
-        await PopulateDropdownsAsync(vm);
-        return View(vm);
+        await PopulateFormOptionsAsync(viewModel);
+
+        return View(viewModel);
     }
 
-    [HttpPost]
+    [HttpPost("Create")]
     [Authorize(Policy = PermissionCatalog.Reservation.Create)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Ekle(ReservationCreateViewModel vm)
+    public async Task<IActionResult> Create(ReservationCreateViewModel viewModel)
     {
-        if (!vm.UnitId.HasValue || vm.UnitId.Value <= 0)
-            ModelState.AddModelError("UnitId", "Taşınmaz birimi seçilmelidir.");
-        if (!vm.TenantId.HasValue || vm.TenantId.Value <= 0)
-            ModelState.AddModelError("TenantId", "Kiracı seçilmelidir.");
-        if (vm.StartDate == default)
-            ModelState.AddModelError("StartDate", "Başlangıç tarihi zorunludur.");
-        if (vm.EndDate == default)
-            ModelState.AddModelError("EndDate", "Bitiş tarihi zorunludur.");
-        if (vm.EndDate <= vm.StartDate)
-            ModelState.AddModelError("EndDate", "Bitiş tarihi başlangıçtan sonra olmalıdır.");
-        if (vm.Description?.Length > 500)
-            ModelState.AddModelError("Description", "Açıklama en fazla 500 karakter olabilir.");
-
         if (!ModelState.IsValid)
         {
-            await PopulateDropdownsAsync(vm);
-            return View(vm);
+            await PopulateFormOptionsAsync(viewModel);
+
+            return View(viewModel);
         }
 
-        var userId = _userManager.GetUserId(User)!;
-        var (basarili, hata, _) = await _service.CreateAsync(vm, userId);
-
-        if (!basarili)
+        try
         {
-            ModelState.AddModelError(string.Empty, hata!);
-            await PopulateDropdownsAsync(vm);
-            return View(vm);
-        }
+            await reservationService.CreateAsync(new CreateReservationInput(
+                viewModel.UnitId!.Value,
+                viewModel.TenantId!.Value,
+                viewModel.StartDate,
+                viewModel.EndDate,
+                viewModel.Description,
+                GetAccessScope()));
 
-        TempData["Success"] = "Reservation başarıyla oluşturuldu.";
-        return RedirectToAction(nameof(Index));
-    }
-
-    [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Reservation.Cancel)]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Iptal(int id, string neden)
-    {
-        if (string.IsNullOrWhiteSpace(neden))
-        {
-            TempData["Error"] = "İptal nedeni zorunludur.";
             return RedirectToAction(nameof(Index));
         }
+        catch (BusinessValidationException exception)
+        {
+            ModelState.AddModelError(exception.Field, exception.Message);
+            await PopulateFormOptionsAsync(viewModel);
 
-        var userId = _userManager.GetUserId(User)!;
-        var (basarili, hata) = await _service.CancelAsync(id, userId, neden);
+            return View(viewModel);
+        }
+    }
 
-        if (!basarili)
-            TempData["Error"] = hata;
-        else
-            TempData["Success"] = "Reservation iptal edildi.";
+
+    [HttpPost("Cancel/{id}")]
+    [Authorize(Policy = PermissionCatalog.Reservation.Cancel)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Cancel(int id, CancelReservationViewModel viewModel)
+    {
+        if (!ModelState.IsValid)
+            return RedirectToAction(nameof(Index));
+
+        await reservationService.CancelAsync(new CancelReservationInput(
+            id,
+            viewModel.Reason,
+            GetAccessScope()));
 
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost]
+    [HttpPost("TransferToCharge/{id}")]
     [Authorize(Policy = PermissionCatalog.Reservation.TransferToCharge)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> TahakkukaAktar(int id)
+    public async Task<IActionResult> TransferToCharge(int id)
     {
-        var userId = _userManager.GetUserId(User)!;
-        var (basarili, hata, _) = await _service.TransferToChargeAsync(id, userId);
-
-        if (!basarili)
-            TempData["Error"] = hata;
-        else
-            TempData["Success"] = "Reservation tahakkuka aktarıldı.";
+        await reservationService.TransferToChargeAsync(
+            new TransferReservationToChargeInput(id, GetAccessScope()));
 
         return RedirectToAction(nameof(Index));
     }
 
     // AJAX: ücret önizleme
-    [HttpGet]
-    public async Task<IActionResult> Hesapla(int unitId, string baslangic, string bitis)
+    [HttpGet("Calculate")]
+    [Authorize(Policy = PermissionCatalog.Reservation.Create)]
+    public async Task<IActionResult> Calculate(ReservationCalculationQueryViewModel query)
     {
-        if (!DateTime.TryParse(baslangic, out var bas) || !DateTime.TryParse(bitis, out var bit))
-            return BadRequest("Geçersiz tarih formatı.");
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
 
-        var sonuc = await _service.HesaplaAsync(unitId, bas, bit);
-        return Json(sonuc);
+        var result = await reservationService.CalculateAsync(query.ToInput(GetAccessScope()));
+
+        return Json(result);
     }
 
-    private async Task PopulateDropdownsAsync(ReservationCreateViewModel vm)
+    private async Task PopulateFormOptionsAsync(ReservationCreateViewModel viewModel)
     {
-        vm.Units = await _birimRepo.GetRezervasyonBirimleriAsync();
-        vm.Tenants = await _kiraciRepo.GetListAsync(null);
+        var options = await reservationService.GetFormOptionsAsync(
+            new GetReservationFormOptionsInput(GetAccessScope()));
+
+        viewModel.Units = options.Units;
+        viewModel.Tenants = options.Tenants;
     }
+
+    private ReservationAccessScopeInput GetAccessScope()
+        => permissionScopeProvider.GlobalAccess
+            ? new ReservationAccessScopeInput()
+            : new ReservationAccessScopeInput(
+                permissionScopeProvider.AccessiblePropertyIds,
+                permissionScopeProvider.AccessibleUnitIds);
 }

@@ -1,120 +1,139 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
+using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KiraTakip.Controllers;
 
 [Authorize]
-public class ManualChargeController : Controller
+public class ManualChargeController(
+    IManualChargeService manualChargeService,
+    IPermissionScopeProvider permissionScopeProvider) : Controller
 {
-    private readonly IManualChargeService _service;
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IPermissionScopeProvider _provider;
-
-    public ManualChargeController(IManualChargeService service, UserManager<ApplicationUser> userManager, IPermissionScopeProvider provider)
-    {
-        _service = service;
-        _userManager = userManager;
-        _provider = provider;
-    }
-
     [Authorize(Policy = PermissionCatalog.ManualCharge.Module)]
-    public async Task<IActionResult> Index(string? durum, string? baglanti, int? leaseId)
+    public async Task<IActionResult> Index(string? status, string? relation, int? leaseId)
     {
-        var propertyIds = _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds;
-        var unitIds = (!_provider.GlobalAccess && _provider.AccessibleUnitIds.Count > 0)
-            ? _provider.AccessibleUnitIds : null;
-        var liste = await _service.GetAllAsync(propertyIds, durum, baglanti, leaseId, unitIds);
-        ViewBag.IptalSayisi = await _service.GetIptalSayisiAsync(propertyIds, unitIds);
-        ViewBag.Durum = durum ?? "tum";
-        ViewBag.Baglanti = baglanti ?? "";
-        ViewBag.SozlesmeId = leaseId;
-        return View(liste);
+        var accessScope = GetAccessScope();
+
+        var manualCharges = await manualChargeService.GetAllAsync(new GetManualChargesInput(
+            accessScope.PropertyIds,
+            status,
+            relation,
+            leaseId,
+            accessScope.UnitIds));
+
+        ViewBag.CancelledCount = await manualChargeService.GetCancelledCountAsync(
+            new GetCancelledManualChargeCountInput(
+                accessScope.PropertyIds,
+                accessScope.UnitIds));
+
+        ViewBag.Status = status ?? "tum";
+        ViewBag.Relation = relation ?? "";
+        ViewBag.LeaseId = leaseId;
+
+        return View(manualCharges);
     }
 
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.ManualCharge.Create)]
-    public async Task<IActionResult> Ekle(int? leaseId)
+    public async Task<IActionResult> Create(int? leaseId)
     {
-        var vm = new ManuelBorcCreateViewModel { DueDate = DateTime.Today };
-        await PopulateDropdownsAsync(vm);
+        var viewModel = new CreateManualChargeViewModel { DueDate = DateTime.Today };
+        await PopulateOptionsAsync(viewModel);
+
         if (leaseId.HasValue)
         {
-            vm.LeaseId = leaseId.Value;
-            var s = vm.ActiveLeases.FirstOrDefault(x => x.Id == leaseId.Value);
-            if (s != null)
+            var lease = viewModel.ActiveLeases.FirstOrDefault(item => item.Id == leaseId.Value);
+            if (lease != null)
             {
-                vm.TenantId = s.TenantId;
-                vm.UnitId = s.UnitId;
+                viewModel.LeaseId = lease.Id;
+                viewModel.TenantId = lease.TenantId;
+                viewModel.UnitId = lease.UnitId;
             }
         }
-        return View(vm);
+
+        return View(viewModel);
     }
 
     [HttpPost]
     [Authorize(Policy = PermissionCatalog.ManualCharge.Create)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Ekle(ManuelBorcCreateViewModel vm)
+    public async Task<IActionResult> Create(CreateManualChargeViewModel viewModel)
     {
-        if (vm.TenantId <= 0)
-            ModelState.AddModelError("KiraciId", "Kiracı seçilmelidir.");
-        if (vm.UnitId <= 0)
-            ModelState.AddModelError("BirimId", "Birim seçilmelidir.");
-        if (vm.ChargeTypeId <= 0)
-            ModelState.AddModelError("ChargeTypeId", "Borç tipi seçilmelidir.");
-        if (string.IsNullOrWhiteSpace(vm.Description))
-            ModelState.AddModelError("Aciklama", "Açıklama zorunludur.");
-
         if (!ModelState.IsValid)
         {
-            await PopulateDropdownsAsync(vm);
-            return View(vm);
+            await PopulateOptionsAsync(viewModel);
+            return View(viewModel);
         }
 
-        var userId = _userManager.GetUserId(User)!;
-        var (basarili, hata, tahakkukId) = await _service.CreateAsync(vm, userId);
-
-        if (!basarili)
+        try
         {
-            ModelState.AddModelError(string.Empty, hata!);
-            await PopulateDropdownsAsync(vm);
-            return View(vm);
+            await manualChargeService.CreateAsync(new CreateManualChargeInput(
+                viewModel.TenantId,
+                viewModel.LeaseId,
+                viewModel.UnitId,
+                viewModel.ChargeTypeId,
+                viewModel.Description,
+                viewModel.Amount,
+                viewModel.IsVatApplied,
+                viewModel.VatRate,
+                viewModel.DueDate,
+                viewModel.Note,
+                GetAccessScope()));
+        }
+        catch (BusinessValidationException exception)
+        {
+            ModelState.AddModelError(exception.Field, exception.Message);
+            await PopulateOptionsAsync(viewModel);
+            return View(viewModel);
         }
 
-        TempData["Success"] = "Manuel borç başarıyla oluşturuldu.";
         return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
     [Authorize(Policy = PermissionCatalog.ManualCharge.Cancel)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Iptal(int id, string neden)
+    public async Task<IActionResult> Cancel(int id, CancelManualChargeViewModel viewModel)
     {
-        if (string.IsNullOrWhiteSpace(neden))
+        if (!ModelState.IsValid)
         {
-            TempData["Error"] = "İptal nedeni zorunludur.";
-            return RedirectToAction(nameof(Index));
+            var message = ModelState.Values
+                .SelectMany(value => value.Errors)
+                .Select(error => error.ErrorMessage)
+                .FirstOrDefault(error => !string.IsNullOrWhiteSpace(error))
+                ?? "İptal nedeni geçersizdir.";
+            throw new BusinessException(message);
         }
 
-        var userId = _userManager.GetUserId(User)!;
-        var (basarili, hata) = await _service.CancelAsync(id, userId, neden);
-
-        if (!basarili)
-            TempData["Error"] = hata;
-        else
-            TempData["Success"] = "Manuel borç iptal edildi.";
+        await manualChargeService.CancelAsync(new CancelManualChargeInput(
+            id,
+            viewModel.Reason,
+            GetAccessScope()));
 
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task PopulateDropdownsAsync(ManuelBorcCreateViewModel vm)
+    private async Task PopulateOptionsAsync(CreateManualChargeViewModel viewModel)
     {
-        var propertyIds = _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds;
-        vm.ActiveLeases = await _service.GetAktifSozlesmelerAsync();
-        vm.ChargeTypes = await _service.GetManuelBorcTipleriAsync();
-        vm.Units = await _service.GetTumBirimlerAsync(propertyIds);
+        var accessScope = GetAccessScope();
+
+        viewModel.ActiveLeases = await manualChargeService.GetActiveLeasesAsync(
+            new GetActiveManualChargeLeasesInput(accessScope));
+        viewModel.ChargeTypes = await manualChargeService.GetManualChargeTypesAsync();
+        viewModel.Units = await manualChargeService.GetAllUnitsAsync(
+            new GetManualChargeUnitsInput(
+                accessScope.PropertyIds,
+                accessScope.UnitIds));
     }
+
+    private ManualChargeAccessScopeInput GetAccessScope()
+        => permissionScopeProvider.GlobalAccess
+            ? new ManualChargeAccessScopeInput()
+            : new ManualChargeAccessScopeInput(
+                permissionScopeProvider.AccessiblePropertyIds,
+                permissionScopeProvider.AccessibleUnitIds);
 }

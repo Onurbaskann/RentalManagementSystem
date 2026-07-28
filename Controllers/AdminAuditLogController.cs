@@ -1,87 +1,46 @@
 ﻿using KiraTakip.Authorization;
-using KiraTakip.Data;
+using KiraTakip.Models.Dtos.AuditLog;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
 [Authorize(Policy = PermissionCatalog.Audit.Module)]
-[Route("Admin/HareketGecmisi")]
-public class AdminAuditLogController : Controller
+[Route("Admin/AuditLog")]
+public class AdminAuditLogController(IAuditService auditService) : Controller
 {
-    private readonly ApplicationDbContext _db;
-    private readonly UserManager<ApplicationUser> _userManager;
-
-    public AdminAuditLogController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
-    {
-        _db = db;
-        _userManager = userManager;
-    }
-
     [HttpGet("")]
     public async Task<IActionResult> Index([FromQuery] AuditLogFilterViewModel filter)
     {
-        filter.Sayfa = Math.Max(1, filter.Sayfa);
+        filter.Page = Math.Max(1, filter.Page);
 
-        var query = _db.AuditLogs.AsNoTracking();
+        var input = new QueryInput(
+            filter.EventType,
+            filter.EntityType,
+            filter.StartDate,
+            filter.EndDate,
+            filter.UserEmail,
+            filter.Page,
+            AuditLogFilterViewModel.PageSize);
 
-        if (!string.IsNullOrWhiteSpace(filter.EventType))
-            query = query.Where(a => a.EventType == filter.EventType);
+        var result = await auditService.QueryAsync(input);
 
-        if (!string.IsNullOrWhiteSpace(filter.EntityType))
-            query = query.Where(a => a.EntityType == filter.EntityType);
-
-        if (filter.StartDate.HasValue)
-            query = query.Where(a => a.CreatedAt >= filter.StartDate.Value.ToUniversalTime());
-
-        if (filter.EndDate.HasValue)
-            query = query.Where(a => a.CreatedAt < filter.EndDate.Value.AddDays(1).ToUniversalTime());
-
-        if (!string.IsNullOrWhiteSpace(filter.KullaniciEmail))
+        filter.TotalCount = result.TotalCount;
+        filter.AvailableEventTypes = result.AvailableEventTypes;
+        filter.AvailableEntityTypes = result.AvailableEntityTypes;
+        filter.UserNotFoundMessage = result.UserNotFoundMessage;
+        filter.Records = result.Rows.Select(r => new AuditLogRowViewModel
         {
-            var user = await _userManager.FindByEmailAsync(filter.KullaniciEmail);
-            if (user != null)
-            {
-                query = query.Where(a => a.UserId == user.Id);
-            }
-            else
-            {
-                query = query.Where(_ => false);
-                filter.KullaniciBulunamadiMesaji = $"\"{filter.KullaniciEmail}\" adresine sahip bir kullanıcı bulunamadı.";
-            }
-        }
-
-        filter.ToplamKayit = await query.CountAsync();
-        filter.MevcutEventTypes = await _db.AuditLogs.Select(a => a.EventType).Distinct().OrderBy(e => e).ToListAsync();
-        filter.MevcutEntityTypes = await _db.AuditLogs.Where(a => a.EntityType != null).Select(a => a.EntityType!).Distinct().OrderBy(e => e).ToListAsync();
-
-        var kayitlar = await query
-            .OrderByDescending(a => a.CreatedAt)
-            .Skip((filter.Sayfa - 1) * AuditLogFilterViewModel.SayfaBoyutu)
-            .Take(AuditLogFilterViewModel.SayfaBoyutu)
-            .ToListAsync();
-
-        var userIds = kayitlar.Where(k => k.UserId != null).Select(k => k.UserId!).Distinct().ToList();
-        var userMap = await _userManager.Users
-            .Where(u => userIds.Contains(u.Id))
-            .Select(u => new { u.Id, u.AdSoyad, u.Email })
-            .ToDictionaryAsync(u => u.Id);
-
-        filter.Kayitlar = kayitlar.Select(k => new AuditLogSatirViewModel
-        {
-            Id = k.Id,
-            EventType = k.EventType,
-            EntityType = k.EntityType,
-            EntityId = k.EntityId,
-            KullaniciAdSoyad = k.UserId != null && userMap.TryGetValue(k.UserId, out var u)
-                ? (u.AdSoyad ?? u.Email ?? k.UserId)
-                : k.UserId,
-            IpAddress = k.IpAddress,
-            Details = k.Details,
-            CreatedAt = k.CreatedAt
+            Id = r.Id,
+            EventType = r.EventType,
+            EntityType = r.EntityType,
+            EntityId = r.EntityId,
+            UserFullName = r.UserFullName,
+            IpAddress = r.IpAddress,
+            Details = r.Details,
+            CreatedAt = r.CreatedAt
         }).ToList();
 
         return View(filter);

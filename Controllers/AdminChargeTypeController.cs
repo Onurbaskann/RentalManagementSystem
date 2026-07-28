@@ -1,8 +1,8 @@
 using KiraTakip.Authorization;
-using KiraTakip.Data;
-using KiraTakip.Helpers;
+using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Models.Dtos.ChargeType;
 using KiraTakip.Models.ViewModels;
-using KiraTakip.Repositories.Interfaces;
+using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,158 +10,121 @@ namespace KiraTakip.Controllers;
 
 [Authorize]
 [Route("Admin/ChargeType")]
-public class AdminChargeTypeController : Controller
+public class AdminChargeTypeController(IChargeTypeService chargeTypeService) : Controller
 {
-    private readonly IChargeTypeRepository _repo;
-    private readonly IUnitTypeRepository _birimTuruRepo;
-    private readonly IUnitOfWork _uow;
-
-    public AdminChargeTypeController(
-        IChargeTypeRepository repo,
-        IUnitTypeRepository birimTuruRepo,
-        IUnitOfWork uow)
-    {
-        _repo = repo;
-        _birimTuruRepo = birimTuruRepo;
-        _uow = uow;
-    }
-
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.ChargeType.Module)]
     public async Task<IActionResult> Index()
     {
-        var list = await _repo.GetListAsync();
+        var list = await chargeTypeService.GetListAsync();
         return View(list);
     }
 
-    [HttpGet("Ekle")]
+    [HttpGet("Create")]
     [Authorize(Policy = PermissionCatalog.ChargeType.Module)]
     public async Task<IActionResult> Create()
     {
-        var nextSira = (await _repo.GetMaxSiraAsync()) + 1;
-        return View(new BorcTipiFormViewModel { Sira = nextSira });
+        var nextSortOrder = await chargeTypeService.GetNextSortOrderAsync();
+        return View(new ChargeTypeFormViewModel { SortOrder = nextSortOrder });
     }
 
-    [HttpPost("Ekle")]
+    [HttpPost("Create")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.ChargeType.Create)]
-    public async Task<IActionResult> Create(BorcTipiFormViewModel model)
+    public async Task<IActionResult> Create(ChargeTypeFormViewModel model)
     {
         if (!ModelState.IsValid) return View(model);
 
-        var kod = CodeSlugger.ToCode(model.Ad);
-        if (await _repo.KodExistsAsync(kod))
+        try
         {
-            ModelState.AddModelError(nameof(model.Ad), "Bu ad zaten kullanılıyor. Farklı bir ad girin.");
+            await chargeTypeService.CreateAsync(
+                new CreateInput(model.Name, model.Behavior, model.SortOrder, model.IsActive));
+        }
+        catch (BusinessValidationException exception)
+        {
+            ModelState.AddModelError(exception.Field, exception.Message);
             return View(model);
         }
 
-        var entity = new ChargeType
-        {
-            Name = model.Ad,
-            Code = kod,
-            Behavior = model.Davranis,
-            SortOrder = model.Sira,
-            IsActive = model.Aktif,
-            IsSystem = false
-        };
-
-        await _repo.AddAsync(entity);
-        await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Name}' borç tipi eklendi.";
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpGet("Duzenle/{id}")]
+    [HttpGet("Edit/{id}")]
     [Authorize(Policy = PermissionCatalog.ChargeType.Module)]
     public async Task<IActionResult> Edit(int id)
     {
-        var entity = await _repo.GetByIdAsync(id);
+        var entity = await chargeTypeService.GetByIdAsync(id);
         if (entity == null) return NotFound();
 
         var vm = ToFormVm(entity);
         return View(vm);
     }
 
-    [HttpPost("Duzenle/{id}")]
+    [HttpPost("Edit/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.ChargeType.Edit)]
-    public async Task<IActionResult> Edit(int id, [FromForm] BorcTipiFormViewModel model)
+    public async Task<IActionResult> Edit(int id, [FromForm] ChargeTypeFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
 
-        var entity = await _repo.GetByIdAsync(id);
+        var entity = await chargeTypeService.GetByIdAsync(id);
         if (entity == null) return NotFound();
 
         // Sistem tiplerinde Davranış değiştirilemez
         if (entity.IsSystem)
-            model.Davranis = entity.Behavior;
+            model.Behavior = entity.Behavior;
 
         if (!ModelState.IsValid)
         {
-            model.Sistem = entity.IsSystem;
+            model.IsSystem = entity.IsSystem;
             return View(model);
         }
 
-        entity.Name = model.Ad;
-        entity.Behavior = model.Davranis;
-        entity.SortOrder = model.Sira;
-        entity.IsActive = model.Aktif;
-        // entity.Kod ve entity.Sistem hiç değiştirilmez
-
-        await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Name}' güncellendi.";
-        return RedirectToAction(nameof(Index));
-    }
-
-    [HttpPost("DurumDegistir/{id}")]
-    [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.ChargeType.Edit)]
-    public async Task<IActionResult> DurumDegistir(int id)
-    {
-        var entity = await _repo.GetByIdAsync(id);
-        if (entity == null) return NotFound();
-
-        if (entity.IsActive)
+        try
         {
-            if (entity.IsSystem)
-            {
-                TempData["Error"] = $"'{entity.Name}' bir sistem kaydıdır ve pasif yapılamaz.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            if (await _birimTuruRepo.AnyAktifByBorcTipiIdAsync(id))
-            {
-                TempData["Error"] = "Bu borç tipi aktif bir birim türüne bağlı. Önce ilgili birim türünü pasif yapın.";
-                return RedirectToAction(nameof(Index));
-            }
+            await chargeTypeService.UpdateAsync(id,
+                new EditInput(model.Name, model.Behavior, model.SortOrder, model.IsActive));
+        }
+        catch (BusinessValidationException exception)
+        {
+            ModelState.AddModelError(exception.Field, exception.Message);
+            model.IsSystem = entity.IsSystem;
+            return View(model);
         }
 
-        entity.IsActive = !entity.IsActive;
-        await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Name}' {(entity.IsActive ? "aktif" : "pasif")} yapıldı.";
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("SiraDegistir/{id}")]
+    [HttpPost("ToggleStatus/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.ChargeType.Edit)]
-    public async Task<IActionResult> SiraDegistir(int id, int yeniSira)
+    public async Task<IActionResult> ToggleStatus(int id)
     {
-        var entity = await _repo.GetByIdAsync(id);
+        var entity = await chargeTypeService.GetByIdAsync(id);
         if (entity == null) return NotFound();
-        entity.SortOrder = yeniSira;
-        await _uow.SaveChangesAsync();
+
+        await chargeTypeService.ToggleStatusAsync(id);
         return RedirectToAction(nameof(Index));
     }
 
-    private static BorcTipiFormViewModel ToFormVm(ChargeType e) => new()
+    [HttpPost("ChangeSortOrder/{id}")]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.ChargeType.Edit)]
+    public async Task<IActionResult> ChangeSortOrder(int id, int newSortOrder)
+    {
+        var entity = await chargeTypeService.GetByIdAsync(id);
+        if (entity == null) return NotFound();
+        await chargeTypeService.ChangeSortOrderAsync(id, newSortOrder);
+        return RedirectToAction(nameof(Index));
+    }
+
+    private static ChargeTypeFormViewModel ToFormVm(KiraTakip.Models.Entities.ChargeType e) => new()
     {
         Id = e.Id,
-        Ad = e.Name,
-        Davranis = e.Behavior,
-        Sira = e.SortOrder,
-        Aktif = e.IsActive,
-        Sistem = e.IsSystem
+        Name = e.Name,
+        Behavior = e.Behavior,
+        SortOrder = e.SortOrder,
+        IsActive = e.IsActive,
+        IsSystem = e.IsSystem
     };
 }

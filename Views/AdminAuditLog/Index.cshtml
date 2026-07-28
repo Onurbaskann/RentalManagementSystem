@@ -5,7 +5,7 @@
     ViewData["Title"] = "Hareket Geçmişi";
     var baslangicStr = Model.StartDate.HasValue ? Model.StartDate.Value.ToString("yyyy-MM-dd") : string.Empty;
     var bitisStr     = Model.EndDate.HasValue     ? Model.EndDate.Value.ToString("yyyy-MM-dd")     : string.Empty;
-    var emailStr     = Model.KullaniciEmail ?? string.Empty;
+    var emailStr     = Model.UserEmail ?? string.Empty;
 }
 
 <div x-data="auditModal()" @@keydown.escape.window="close()">
@@ -13,17 +13,17 @@
 <div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Hareket Geçmişi</div>
-        <div class="page-subtitle">@Model.ToplamKayit kayıt</div>
+        <div class="page-subtitle">@Model.TotalCount kayıt</div>
     </div>
 </div>
 
 <div class="card mb-4">
-    <form method="get" action="/Admin/HareketGecmisi" class="flex flex-wrap gap-3 items-end">
+    <form method="get" action="/Admin/AuditLog" class="flex flex-wrap gap-3 items-end">
         <div class="flex-1 min-w-[180px]">
             <label class="form-label">Olay Türü</label>
             <select name="EventType" class="form-control">
                 <option value="">— Tümü —</option>
-                @foreach (var et in Model.MevcutEventTypes)
+                @foreach (var et in Model.AvailableEventTypes)
                 {
                     <option value="@et" selected="@(Model.EventType == et ? "selected" : null)">@AuditDisplayNames.EventDisplay(et)</option>
                 }
@@ -33,7 +33,7 @@
             <label class="form-label">Varlık Türü</label>
             <select name="EntityType" class="form-control">
                 <option value="">— Tümü —</option>
-                @foreach (var et in Model.MevcutEntityTypes)
+                @foreach (var et in Model.AvailableEntityTypes)
                 {
                     <option value="@et" selected="@(Model.EntityType == et ? "selected" : null)">@AuditDisplayNames.EntityDisplay(et)</option>
                 }
@@ -49,18 +49,18 @@
         </div>
         <div class="flex-1 min-w-[180px]">
             <label class="form-label">Kullanıcı E-posta</label>
-            <input type="text" name="KullaniciEmail" class="form-control" placeholder="ornek@@..."
+            <input type="text" name="UserEmail" class="form-control" placeholder="ornek@@..."
                    value="@emailStr" />
         </div>
         <div class="flex gap-2">
             <button type="submit" class="btn btn-primary">Filtrele</button>
-            <a href="/Admin/HareketGecmisi" class="btn btn-secondary">Temizle</a>
+            <a href="/Admin/AuditLog" class="btn btn-secondary">Temizle</a>
         </div>
     </form>
-    @if (!string.IsNullOrEmpty(Model.KullaniciBulunamadiMesaji))
+    @if (!string.IsNullOrEmpty(Model.UserNotFoundMessage))
     {
         <div class="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            @Model.KullaniciBulunamadiMesaji
+            @Model.UserNotFoundMessage
         </div>
     }
 </div>
@@ -80,23 +80,23 @@
                 </tr>
             </thead>
             <tbody>
-                @if (!Model.Kayitlar.Any())
+                @if (!Model.Records.Any())
                 {
                     <tr><td colspan="7" class="text-center text-muted py-6">Kayıt bulunamadı.</td></tr>
                 }
-                @foreach (var k in Model.Kayitlar)
+                @foreach (var k in Model.Records)
                 {
                     var payload = new
                     {
-                        tarih      = k.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss"),
-                        olay       = AuditDisplayNames.EventDisplay(k.EventType),
-                        olayRaw    = k.EventType,
-                        varlik     = AuditDisplayNames.EntityDisplay(k.EntityType),
-                        varlikRaw  = k.EntityType,
-                        id         = k.EntityId,
-                        kullanici  = k.KullaniciAdSoyad ?? "—",
-                        ip         = k.IpAddress ?? "—",
-                        details    = k.Details
+                        date      = k.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss"),
+                        @event    = AuditDisplayNames.EventDisplay(k.EventType),
+                        eventRaw  = k.EventType,
+                        entity    = AuditDisplayNames.EntityDisplay(k.EntityType),
+                        entityRaw = k.EntityType,
+                        id        = k.EntityId,
+                        user      = k.UserFullName ?? "—",
+                        ip        = k.IpAddress ?? "—",
+                        details   = k.Details
                     };
                     var payloadJson = JsonSerializer.Serialize(payload);
                     <tr>
@@ -108,7 +108,7 @@
                         </td>
                         <td class="text-sm text-muted">@AuditDisplayNames.EntityDisplay(k.EntityType)</td>
                         <td class="text-sm text-muted font-mono">@(k.EntityId ?? "—")</td>
-                        <td class="text-sm">@(k.KullaniciAdSoyad ?? "—")</td>
+                        <td class="text-sm">@(k.UserFullName ?? "—")</td>
                         <td class="text-sm text-muted font-mono">@(k.IpAddress ?? "—")</td>
                         <td class="text-sm">
                             @if (!string.IsNullOrWhiteSpace(k.Details))
@@ -131,61 +131,61 @@
         </table>
     </div>
 
-    @if (Model.ToplamSayfa > 1)
+    @if (Model.TotalPages > 1)
     {
         var _et  = Uri.EscapeDataString(Model.EventType ?? string.Empty);
         var _ent = Uri.EscapeDataString(Model.EntityType ?? string.Empty);
-        var _em  = Uri.EscapeDataString(Model.KullaniciEmail ?? string.Empty);
-        Func<int, string> SayfaUrl = s =>
-            $"?EventType={_et}&EntityType={_ent}&StartDate={baslangicStr}&EndDate={bitisStr}&KullaniciEmail={_em}&Sayfa={s}";
+        var _em  = Uri.EscapeDataString(Model.UserEmail ?? string.Empty);
+        Func<int, string> PageUrl = s =>
+            $"?EventType={_et}&EntityType={_ent}&StartDate={baslangicStr}&EndDate={bitisStr}&UserEmail={_em}&Page={s}";
 
-        var pencereBas = Math.Max(1, Model.Sayfa - 2);
-        var pencereSon = Math.Min(Model.ToplamSayfa, Model.Sayfa + 2);
+        var windowStart = Math.Max(1, Model.Page - 2);
+        var windowEnd = Math.Min(Model.TotalPages, Model.Page + 2);
 
         <div class="pagination-wrap">
             <div class="pagination-info">
-                Sayfa @Model.Sayfa / @Model.ToplamSayfa
-                <span class="ml-2">(@Model.ToplamKayit kayıt)</span>
+                Sayfa @Model.Page / @Model.TotalPages
+                <span class="ml-2">(@Model.TotalCount kayıt)</span>
             </div>
             <nav class="pagination">
-                @if (Model.Sayfa > 1)
+                @if (Model.Page > 1)
                 {
-                    <a href="@SayfaUrl(Model.Sayfa - 1)" class="page-btn">‹</a>
+                    <a href="@PageUrl(Model.Page - 1)" class="page-btn">‹</a>
                 }
 
-                @if (pencereBas > 1)
+                @if (windowStart > 1)
                 {
-                    <a href="@SayfaUrl(1)" class="page-btn">1</a>
-                    if (pencereBas > 2)
+                    <a href="@PageUrl(1)" class="page-btn">1</a>
+                    if (windowStart > 2)
                     {
                         <span class="page-btn page-btn-disabled">…</span>
                     }
                 }
 
-                @for (var s = pencereBas; s <= pencereSon; s++)
+                @for (var s = windowStart; s <= windowEnd; s++)
                 {
-                    if (s == Model.Sayfa)
+                    if (s == Model.Page)
                     {
                         <span class="page-btn page-btn-active">@s</span>
                     }
                     else
                     {
-                        <a href="@SayfaUrl(s)" class="page-btn">@s</a>
+                        <a href="@PageUrl(s)" class="page-btn">@s</a>
                     }
                 }
 
-                @if (pencereSon < Model.ToplamSayfa)
+                @if (windowEnd < Model.TotalPages)
                 {
-                    if (pencereSon < Model.ToplamSayfa - 1)
+                    if (windowEnd < Model.TotalPages - 1)
                     {
                         <span class="page-btn page-btn-disabled">…</span>
                     }
-                    <a href="@SayfaUrl(Model.ToplamSayfa)" class="page-btn">@Model.ToplamSayfa</a>
+                    <a href="@PageUrl(Model.TotalPages)" class="page-btn">@Model.TotalPages</a>
                 }
 
-                @if (Model.Sayfa < Model.ToplamSayfa)
+                @if (Model.Page < Model.TotalPages)
                 {
-                    <a href="@SayfaUrl(Model.Sayfa + 1)" class="page-btn">›</a>
+                    <a href="@PageUrl(Model.Page + 1)" class="page-btn">›</a>
                 }
             </nav>
         </div>
@@ -205,11 +205,11 @@
                 <button type="button" class="text-slate-400 hover:text-slate-700 text-xl leading-none" @@click="close()" aria-label="Kapat">×</button>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 mt-4 text-xs">
-                <div><span class="text-muted">Tarih:</span> <span class="font-medium" x-text="row.tarih"></span></div>
-                <div><span class="text-muted">Olay:</span> <span class="font-medium" x-text="row.olay"></span></div>
-                <div><span class="text-muted">Varlık:</span> <span class="font-medium" x-text="row.varlik"></span></div>
+                <div><span class="text-muted">Tarih:</span> <span class="font-medium" x-text="row.date"></span></div>
+                <div><span class="text-muted">Olay:</span> <span class="font-medium" x-text="row.event"></span></div>
+                <div><span class="text-muted">Varlık:</span> <span class="font-medium" x-text="row.entity"></span></div>
                 <div><span class="text-muted">ID:</span> <span class="font-mono" x-text="row.id || '—'"></span></div>
-                <div><span class="text-muted">Kullanıcı:</span> <span class="font-medium" x-text="row.kullanici"></span></div>
+                <div><span class="text-muted">Kullanıcı:</span> <span class="font-medium" x-text="row.user"></span></div>
                 <div><span class="text-muted">IP:</span> <span class="font-mono" x-text="row.ip"></span></div>
             </div>
         </div>
@@ -272,7 +272,7 @@
 function auditModal() {
     return {
         isOpen: false,
-        row: { tarih: '', olay: '', varlik: '', id: '', kullanici: '', ip: '' },
+        row: { date: '', event: '', entity: '', id: '', user: '', ip: '' },
         details: { type: 'empty', items: [], raw: null, valueHeader: '', valueKey: '' },
         open(payload) {
             this.row = payload;

@@ -1,12 +1,13 @@
-@model KiraTakip.Models.ViewModels.KullaniciDuzenleViewModel
+@model KiraTakip.Models.ViewModels.AdminUserEditViewModel
 @{
     ViewData["Title"] = "Kullanıcı Düzenle";
-    var adminRolId = Model.Roller.FirstOrDefault(r => r.Ad == "Sistem Yöneticisi")?.Id.ToString() ?? "0";
+    ViewData["UseCentralFeedback"] = true;
+    var systemAdminRoleId = Model.Roles.FirstOrDefault(role => role.Name == "Sistem Yöneticisi")?.Id.ToString() ?? "0";
 }
 
 <div class="page-header">
     <div>
-        <a href="/Admin/Kullanicilar" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
+        <a href="/Admin/Users" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
             ← Kullanıcı Yönetimi
         </a>
         <div class="page-title">Kullanıcı Düzenle</div>
@@ -21,14 +22,10 @@
     </div>
 }
 
-<div class="card" x-data="{ seciliRolId: '@Model.RolId', globalErisim: @(Model.TumTasinmazlaraErisim ? "true" : "false") }">
-    <form method="post" action="/Admin/Kullanicilar/Duzenle/@Model.Id">
+<div class="card" x-data="{ seciliRolId: '@Model.RoleId', globalErisim: @(Model.HasAccessToAllProperties ? "true" : "false") }">
+    <form method="post" action="/Admin/Users/Edit/@Model.Id">
         @Html.AntiForgeryToken()
 
-        @if (!ViewData.ModelState.IsValid)
-        {
-            <div asp-validation-summary="All" class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-5 text-sm"></div>
-        }
 
         <input type="hidden" asp-for="Id" />
         <input type="hidden" asp-for="IsCurrentUser" />
@@ -41,41 +38,41 @@
 
         <div class="form-group">
             <label class="form-label">Ad Soyad</label>
-            <input asp-for="AdSoyad" class="form-control" />
-            <span asp-validation-for="AdSoyad" class="form-error"></span>
+            <input asp-for="FullName" class="form-control" />
+            <span asp-validation-for="FullName" class="form-error"></span>
         </div>
 
         <div class="form-group">
             <label class="form-label">Rol</label>
             @if (Model.IsCurrentUser)
             {
-                var mevcutRolAd = Model.Roller.FirstOrDefault(r => r.Id == Model.RolId)?.Ad ?? "—";
+                var currentRoleName = Model.Roles.FirstOrDefault(role => role.Id == Model.RoleId)?.Name ?? "—";
                 <div class="form-control bg-slate-50 text-muted cursor-default">
-                    @mevcutRolAd
+                    @currentRoleName
                 </div>
-                <input type="hidden" asp-for="RolId" />
+                <input type="hidden" asp-for="RoleId" />
             }
             else
             {
-                <select asp-for="RolId" class="form-control" x-model="seciliRolId">
+                <select asp-for="RoleId" class="form-control" x-model="seciliRolId">
                     <option value="0">— Seçin —</option>
-                    @foreach (var r in Model.Roller)
+                    @foreach (var role in Model.Roles)
                     {
-                        <option value="@r.Id">@r.Ad</option>
+                        <option value="@role.Id">@role.Name</option>
                     }
                 </select>
-                <span asp-validation-for="RolId" class="form-error"></span>
+                <span asp-validation-for="RoleId" class="form-error"></span>
             }
         </div>
 
         <div class="bg-slate-50 border border-slate-100 rounded-lg p-3 mt-1 text-[13px] text-slate-500"
              x-show="seciliRolId != '0'" x-cloak>
             İzinler bu rol için rol yönetiminde tanımlanır.
-            <a href="/Admin/Roller" class="text-primary underline">Rolleri yönet →</a>
+            <a href="/Admin/Roles" class="text-primary underline">Rolleri yönet →</a>
         </div>
 
         <!-- Kapsam ayarları: Admin rolünde gizli -->
-        <div x-show="seciliRolId !== '@adminRolId'" x-cloak class="mt-5">
+        <div x-show="seciliRolId !== '@systemAdminRoleId'" x-cloak class="mt-5">
             <div class="bg-slate-50 border border-slate-100 rounded-xl p-4">
                 <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                     <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full"></span>
@@ -83,11 +80,11 @@
                 </div>
 
                 <label class="flex items-center gap-2.5 cursor-pointer">
-                    <input type="checkbox" name="TumTasinmazlaraErisim" value="true"
-                           @(Model.TumTasinmazlaraErisim ? "checked" : "")
+                    <input type="checkbox" name="HasAccessToAllProperties" value="true"
+                           @(Model.HasAccessToAllProperties ? "checked" : "")
                            @@change="globalErisim = $event.target.checked"
                            class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
-                    <input type="hidden" name="TumTasinmazlaraErisim" value="false" />
+                    <input type="hidden" name="HasAccessToAllProperties" value="false" />
                     <span class="text-[13.5px] font-semibold text-slate-700">Tüm Taşınmazlara Erişim</span>
                 </label>
                 <p class="text-[11.5px] text-slate-400 mt-1.5 ml-6" x-show="globalErisim">
@@ -97,7 +94,7 @@
                 <!-- Spesifik taşınmaz / unit kapsamı: global toggle kapalıyken -->
                 @if (Model.Properties.Any() || Model.Units.Any())
                 {
-                    <div x-show="seciliRolId !== '@adminRolId' && seciliRolId !== '0' && !globalErisim" x-cloak class="mt-3">
+                    <div x-show="seciliRolId !== '@systemAdminRoleId' && seciliRolId !== '0' && !globalErisim" x-cloak class="mt-3">
                         @if (Model.Properties.Any())
                         {
                             <div class="text-[11.5px] font-semibold text-slate-500 mb-2">Taşınmaz Bazlı</div>
@@ -105,13 +102,13 @@
                                 @for (int i = 0; i < Model.Properties.Count; i++)
                                 {
                                     <label class="flex items-center gap-2.5 text-[13.5px] cursor-pointer group">
-                                        <input type="checkbox" name="SelectedTasinmazIds"
-                                               value="@Model.Properties[i].TasinmazId"
+                                        <input type="checkbox" name="SelectedPropertyIds"
+                                               value="@Model.Properties[i].PropertyId"
                                                @(Model.Properties[i].Selected ? "checked" : "")
                                                class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                                         <div class="flex flex-col">
-                                            <span class="font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors">@Model.Properties[i].Ad</span>
-                                            <span class="text-[11px] text-slate-400">@Model.Properties[i].Konum</span>
+                                            <span class="font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors">@Model.Properties[i].Name</span>
+                                            <span class="text-[11px] text-slate-400">@Model.Properties[i].Location</span>
                                         </div>
                                     </label>
                                 }
@@ -125,13 +122,13 @@
                                     @for (int i = 0; i < Model.Units.Count; i++)
                                     {
                                         <label class="flex items-center gap-2.5 text-[13.5px] cursor-pointer group">
-                                            <input type="checkbox" name="SelectedBirimIds"
-                                                   value="@Model.Units[i].BirimId"
+                                            <input type="checkbox" name="SelectedUnitIds"
+                                                   value="@Model.Units[i].UnitId"
                                                    @(Model.Units[i].Selected ? "checked" : "")
                                                    class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                                             <div class="flex flex-col">
-                                                <span class="font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors">@Model.Units[i].Ad</span>
-                                                <span class="text-[11px] text-slate-400">@Model.Units[i].TasinmazAd</span>
+                                                <span class="font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors">@Model.Units[i].Name</span>
+                                                <span class="text-[11px] text-slate-400">@Model.Units[i].PropertyName</span>
                                             </div>
                                         </label>
                                     }
@@ -149,7 +146,7 @@
 
         <div class="flex gap-2.5 mt-6">
             <button type="submit" class="btn btn-primary px-6">Kaydet</button>
-            <a href="/Admin/Kullanicilar" class="btn btn-secondary px-6">İptal</a>
+            <a href="/Admin/Users" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>
 </div>

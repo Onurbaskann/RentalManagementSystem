@@ -1,31 +1,23 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-public class UnitService : IUnitService
+public class UnitService(
+    IUnitRepository unitRepository,
+    IUnitOfWork uow,
+    IStatisticsService statisticsService) : IUnitService
 {
-    private readonly IUnitRepository _repo;
-    private readonly IUnitOfWork _uow;
-    private readonly IStatisticsService _istatistikService;
-
-    public UnitService(IUnitRepository repo, IUnitOfWork uow, IStatisticsService statisticsService)
-    {
-        _repo = repo;
-        _uow = uow;
-        _istatistikService = statisticsService;
-    }
-
     public async Task<List<UnitListItemDto>> GetByPropertyIdAsync(int propertyId)
     {
-        return await _repo.GetByPropertyIdAsync(propertyId);
+        return await unitRepository.GetByPropertyIdAsync(propertyId);
     }
 
     public async Task<UnitDetailDto?> GetByIdAsync(int id)
     {
-        var dto = await _repo.GetDetayAsync(id);
+        var dto = await unitRepository.GetDetayAsync(id);
         if (dto == null) return null;
 
         if (dto.ActiveLeaseId.HasValue)
@@ -37,7 +29,7 @@ public class UnitService : IUnitService
                 UnitId = dto.Id,
                 Unit = new Unit { Id = dto.Id, Area = dto.Area }
             };
-            dto.MonthlyRent = await _istatistikService.AylikBedelAsync(lease);
+            dto.MonthlyRent = await statisticsService.GetMonthlyAmountAsync(lease);
         }
 
         return dto;
@@ -45,13 +37,18 @@ public class UnitService : IUnitService
 
     public async Task CreateAsync(Unit b)
     {
-        await _repo.AddAsync(b);
-        await _uow.SaveChangesAsync();
+        await unitRepository.AddAsync(b);
+        await uow.SaveChangesAsync();
     }
 
     public async Task UpdateAsync(Unit b)
     {
-        await _repo.UpdateAsync(b);
-        await _uow.SaveChangesAsync();
+        await unitRepository.UpdateAsync(b);
+        await uow.SaveChangesAsync();
+    }
+
+    public async Task<List<UnitListItemDto>> GetReservableUnitsAsync()
+    {
+        return await unitRepository.GetReservableUnitsAsync();
     }
 }

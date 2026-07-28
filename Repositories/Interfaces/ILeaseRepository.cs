@@ -4,18 +4,32 @@ namespace KiraTakip.Repositories.Interfaces;
 
 public interface ILeaseRepository : IBaseRepository<Lease>
 {
-    Task<List<LeaseListItemDto>> GetListAsync(string? filter, List<int>? authorizedPropertyIds);
-    Task<LeaseDetailDto?> GetDetayAsync(int id);
-    Task<List<LeaseListItemDto>> GetByTenantIdAsync(int tenantId);
+    Task<List<LeaseListItemDto>> GetListAsync(
+        string? filter,
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null);
+    Task<LeaseDetailDto?> GetDetailsAsync(int id);
+    Task<LeaseDetailDto?> GetTenantDetailsAsync(int leaseId, int tenantId, List<int>? authorizedPropertyIds = null, List<int>? authorizedUnitIds = null);
+    Task<List<LeaseListItemDto>> GetByTenantIdAsync(
+        int tenantId,
+        List<int>? authorizedPropertyIds = null,
+        List<int>? authorizedUnitIds = null);
     Task<List<LeaseListItemDto>> GetByUnitIdAsync(int unitId);
-    Task<Dictionary<int, decimal?>> GetDepozitoTutarlariAsync(IEnumerable<int> leaseIds);
+    Task<int> CountActiveByTenantAsync(int tenantId, DateTime currentTime, List<int>? authorizedPropertyIds = null, List<int>? authorizedUnitIds = null);
 
     // Dropdown — entity döner (Tenant + Unit + Property yüklü)
     Task<List<Lease>> GetAktiflerAsync();
 
     // Dropdown — DTO döner (Manuel Borç ekleme ekranı)
-    Task<List<LeaseDropdownDto>> GetAktifDropdownAsync();
+    Task<List<LeaseDropdownDto>> GetActiveDropdownAsync(
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null);
 
     // RateResolver için projeksiyon: TasinmazId + KiraciKategoriId
     Task<(int TasinmazId, int? KategoriId)?> GetPropertyAndCategoryAsync(int leaseId);
+
+    Task<List<UnitLookupDto>> GetActiveLeaseUnitsByTenantIdAsync(int tenantId, CancellationToken ct = default);
+    Task<bool> HasActiveLeaseForUnitAsync(int unitId, DateTime currentTime);
+    Task<Lease?> GetWithActivityLogAsync(int leaseId);
+    Task<DocumentOwnerContextDto?> GetDocumentOwnerContextAsync(int leaseId);
 }

@@ -1,7 +1,8 @@
-@model KiraTakip.Models.ViewModels.RolOlusturViewModel
+@model KiraTakip.Models.ViewModels.RoleCreateViewModel
 @using System.Text.Json
 @{
     ViewData["Title"] = "Yeni Rol";
+    ViewData["UseCentralFeedback"] = true;
 
     var riskSegments = new HashSet<string> { "Delete", "Cancel", "Terminate", "OverrideRate", "Approve", "Reject" };
 
@@ -11,12 +12,12 @@
         return new
         {
             path = moduleItem?.Value ?? "",
-            name = g.GrupAdi,
+            name = g.GroupName,
             @checked = moduleItem?.Selected ?? false,
             actions = g.Permissions.Skip(1).Select(p => new
             {
                 value = p.Value,
-                label = p.Etiket,
+                label = p.Label,
                 @checked = p.Selected,
                 danger = riskSegments.Contains(p.Value.Split('.').LastOrDefault() ?? "")
             }).ToList()
@@ -28,7 +29,7 @@
 
 <div class="page-header">
     <div>
-        <a href="/Admin/Roller" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
+        <a href="/Admin/Roles" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
             ← Rol Yönetimi
         </a>
         <div class="page-title">Yeni Rol Oluştur</div>
@@ -36,23 +37,19 @@
 </div>
 
 <div class="card">
-    <form method="post" action="/Admin/Roller/Ekle" asp-form-write-permission="@PermissionCatalog.Role.Create">
+    <form method="post" action="/Admin/Roles/Create" asp-form-write-permission="@PermissionCatalog.Role.Create">
         @Html.AntiForgeryToken()
 
-        @if (!ViewData.ModelState.IsValid)
-        {
-            <div asp-validation-summary="All" class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-5 text-sm"></div>
-        }
 
         <div class="form-group">
             <label class="form-label">Rol Adı <span class="text-red-500">*</span></label>
-            <input asp-for="Ad" class="form-control" placeholder="Örn: Muhasebe Yöneticisi" />
-            <span asp-validation-for="Ad" class="form-error"></span>
+            <input asp-for="Name" class="form-control" placeholder="Örn: Muhasebe Yöneticisi" />
+            <span asp-validation-for="Name" class="form-error"></span>
         </div>
 
         <div class="form-group">
             <label class="form-label">Açıklama</label>
-            <input asp-for="Aciklama" class="form-control" placeholder="Opsiyonel" />
+            <input asp-for="Description" class="form-control" placeholder="Opsiyonel" />
         </div>
 
         <div class="mt-5">
@@ -62,8 +59,7 @@
 
         <div class="flex gap-2 mt-6">
             <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Role.Create">Oluştur</button>
-            <a href="/Admin/Roller" class="btn btn-secondary">İptal</a>
+            <a href="/Admin/Roles" class="btn btn-secondary">İptal</a>
         </div>
     </form>
 </div>
-

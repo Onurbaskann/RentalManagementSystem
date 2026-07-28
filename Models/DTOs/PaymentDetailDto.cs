@@ -20,5 +20,5 @@ public class PaymentDetailDto
     public DateTime ChargePeriodStart { get; set; }
     public string? CreatedByUserDisplayName { get; set; }
     public string? ApprovedByUserDisplayName { get; set; }
-    public List<OdemeBankaEslesmeDto> BankMatches { get; set; } = [];
+    public List<PaymentBankMatchDto> BankMatches { get; set; } = [];
 }

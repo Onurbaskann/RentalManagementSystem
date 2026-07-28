@@ -7,5 +7,7 @@ namespace KiraTakip.Repositories.Interfaces;
 public interface IUnitRateRepository : IBaseRepository<UnitRate>
 {
     Task<RateValueDto?> GetRateAsync(int unitId, int tenantCategoryId, int chargeTypeId);
-    Task<List<ParentTarifeKartViewModel>> GetByBirimForKartAsync(int unitId, int? tenantCategoryId);
+    Task<List<ParentRateCardViewModel>> GetCardsByUnitAsync(int unitId, int? tenantCategoryId);
+    Task<UnitPricingContextDto> GetPricingContextAsync(int unitId, int year);
+    Task<List<UnitRate>> GetForUpdateAsync(int unitId);
 }

@@ -1,86 +1,63 @@
-﻿using KiraTakip.Data;
-using KiraTakip.Models;
-using KiraTakip.Models.Settings;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace KiraTakip.Controllers;
 
 [AllowAnonymous]
-public class PaymentPortalController : Controller
+public class PaymentPortalController(
+    IPaymentPortalService paymentPortalService) : Controller
 {
-    private readonly IPaymentLinkService _paymentLink;
-    private readonly ApplicationDbContext _ctx;
-    private readonly PaymentLinkSettings _paymentLinkSettings;
-
-    public PaymentPortalController(
-        IPaymentLinkService paymentLink,
-        ApplicationDbContext ctx,
-        IOptions<PaymentLinkSettings> paymentLinkOptions)
-    {
-        _paymentLink = paymentLink;
-        _ctx = ctx;
-        _paymentLinkSettings = paymentLinkOptions.Value;
-    }
-
     [Route("Payment/Portal")]
-    public async Task<IActionResult> Index(string t)
+    public async Task<IActionResult> Index(
+        [FromQuery] PaymentPortalRequestViewModel request,
+        CancellationToken cancellationToken)
     {
-        var validation = await _paymentLink.TryValidateAsync(t);
-        if (!validation.Success)
-            return View("Invalid", validation.Reason ?? "Geçersiz veya süresi dolmuş ödeme linki.");
-        var tenantId = validation.TenantId;
-
-        var tenant = await _ctx.Tenants.FirstOrDefaultAsync(k => k.Id == tenantId);
-        if (tenant == null) return View("Invalid", "Kiracı bulunamadı.");
-
-        var vadeEsigi = DateTime.Today.AddDays(_paymentLinkSettings.ReminderDaysBefore);
-
-        var borclar = await _ctx.Charges
-            .Include(x => x.Lease!).ThenInclude(s => s!.Unit).ThenInclude(b => b.Property)
-            .Include(x => x.Allocations)
-            .Where(x => x.Lease!.TenantId == tenantId
-                     && x.Status != ChargeStatus.Paid
-                     && x.Status != ChargeStatus.Cancelled
-                     && x.DueDate <= vadeEsigi)
-            .OrderBy(x => x.DueDate)
-            .ToListAsync();
-
-        if (borclar.Count == 0)
+        if (!ModelState.IsValid)
         {
-            var noDebtModel = new KiraciOdemePortalViewModel
-            {
-                KiraciId = tenant.Id,
-                Ad = tenant.Name,
-                Soyad = "",
-                Email = tenant.Email ?? ""
-            };
-            return View("NoDebt", noDebtModel);
+            var failureReason = ModelState[nameof(request.Token)]?.Errors
+                .FirstOrDefault()?.ErrorMessage
+                ?? "Geçersiz veya süresi dolmuş ödeme bağlantısı.";
+
+            return View(nameof(PaymentPortalViews.Invalid), failureReason);
         }
 
-        var vm = new KiraciOdemePortalViewModel
+        var result = await paymentPortalService.GetAsync(
+            new GetPaymentPortalInput(request.Token),
+            cancellationToken);
+
+        if (!result.Success)
+            return View(nameof(PaymentPortalViews.Invalid), result.FailureReason);
+
+        var viewModel = new TenantPaymentPortalViewModel
         {
-            KiraciId = tenant.Id,
-            Ad = tenant.Name,
-            Soyad = "",
-            Email = tenant.Email ?? "",
-            Borclar = borclar.Select(b => new BorcKart
-            {
-                ChargeId = b.Id,
-                PropertyName = b.Lease!.Unit!.Property!.Name,
-                BirimAdi = b.Lease!.Unit!.Name,
-                PeriodStart = b.PeriodStart,
-                DueDate = b.DueDate,
-                ToplamTutar = b.TotalAmount,
-                PaidAmount = b.Allocations.Where(o => o.Status == PaymentStatus.Approved).Sum(o => o.Amount)
-            }).ToList(),
-            DefaultSelectedId = borclar.First().Id
+            TenantName = result.TenantName,
+            ChargeCards = result.Charges
+                .Select(charge => new PaymentPortalChargeCardViewModel
+                {
+                    ChargeId = charge.ChargeId,
+                    PropertyName = charge.PropertyName,
+                    UnitName = charge.UnitName,
+                    PeriodStart = charge.PeriodStart,
+                    DueDate = charge.DueDate,
+                    TotalAmount = charge.TotalAmount,
+                    PaidAmount = charge.PaidAmount
+                })
+                .ToList(),
+            DefaultSelectedId = result.Charges.FirstOrDefault()?.ChargeId ?? 0
         };
 
-        return View(vm);
+        if (viewModel.ChargeCards.Count == 0)
+            return View(nameof(PaymentPortalViews.NoDebt), viewModel);
+
+        return View(nameof(Index), viewModel);
+    }
+
+    private enum PaymentPortalViews
+    {
+        Invalid,
+        NoDebt
     }
 }

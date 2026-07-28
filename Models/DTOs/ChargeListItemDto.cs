@@ -17,5 +17,6 @@ public class ChargeListItemDto
     public ChargeStatus Status { get; set; }
     public ChargeSourceType SourceType { get; set; }
     public int PendingPaymentCount { get; set; }
+    public decimal PendingPaymentAmount { get; set; }
     public List<ChargeLineItemDto> LineItems { get; set; } = [];
 }

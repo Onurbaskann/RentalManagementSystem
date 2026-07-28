@@ -1,0 +1,550 @@
+@model KiraTakip.Models.ViewModels.EditPropertyViewModel
+@using KiraTakip.Models
+@using KiraTakip.Models.Entities
+@{
+    ViewData["Title"] = "Taşınmazı Düzenle";
+    ViewData["UseCentralFeedback"] = true;
+}
+
+<div class="max-w-[1000px] mx-auto">
+    <div class="page-header">
+        <a href="/Property/@Model.Id.ToHashId()" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">← Detay</a>
+        <div class="page-title">Taşınmazı Düzenle</div>
+    </div>
+
+    <div x-data="tasinmazDuzenleData()" x-cloak>
+
+        <form asp-action="Edit" method="post" asp-form-write-permission="@PermissionCatalog.Property.Edit">
+        <input type="hidden" asp-for="Id" />
+
+        <div class="card">
+            <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                <span>Temel Bilgiler</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Taşınmaz Adı *</label>
+                <input asp-for="Name" class="form-control" placeholder="Örn: Teknokent A Blok" />
+                <span asp-validation-for="Name" class="form-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Taşınmaz Tipi *</label>
+                <select asp-for="PropertyTypeId" class="form-control" x-model="tasinmazTipiId">
+                    <option value="">— Seçiniz —</option>
+                    @foreach (var tt in (IEnumerable<KiraTakip.Models.Dtos.PropertyTypeOptionDto>)ViewBag.PropertyTypes)
+                    {
+                        <option value="@tt.Id">@tt.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="PropertyTypeId" class="form-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Birim Yapısı</label>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" asp-for="UnitStructure" value="1" x-model="unitStructure"
+                               />
+                        <span>Tek Birim</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" asp-for="UnitStructure" value="2" x-model="unitStructure"
+                               />
+                        <span>Çoklu Birim</span>
+                    </label>
+                </div>
+                <span asp-validation-for="UnitStructure" class="form-error"></span>
+            </div>
+            <div class="form-group" x-show="unitStructure === '1'">
+                <label class="form-label">Birim Türü *</label>
+                <select asp-for="SingleUnitTypeId" class="form-control">
+                    <option value="">— Seçiniz —</option>
+                    @foreach (var bt in (IEnumerable<KiraTakip.Models.Dtos.UnitTypeOptionDto>)ViewBag.AllUnitTypes)
+                    {
+                        <option value="@bt.Id">@bt.Name</option>
+                    }
+                </select>
+                <div class="form-hint">Tek parça kiralanan taşınmazın birim türü (kira tarifesi bu türe göre belirlenir).</div>
+                <span asp-validation-for="SingleUnitTypeId" class="form-error"></span>
+            </div>
+            <div class="grid grid-cols-2 gap-3.5 mb-3">
+                <div class="form-group">
+                    <label class="form-label">Kapalı Alan (m²)</label>
+                    <input asp-for="ClosedArea" type="number" min="0" step="0.01" class="form-control" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Açık Alan (m²)</label>
+                    <input asp-for="OpenArea" type="number" min="0" step="0.01" class="form-control" placeholder="0" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Açıklama</label>
+                <textarea asp-for="Description" class="form-control" rows="2" placeholder="Opsiyonel not..."></textarea>
+            </div>
+        </div>
+
+        <!-- Unit Bazlı bölümü -->
+            <div class="card mt-4" x-show="unitStructure === '2'">
+                <div class="flex items-center justify-between mb-5 pb-3 border-b border-[var(--color-border)]">
+                    <div class="text-[15px] font-bold flex items-center gap-2">
+                        <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                        <span>Birimler</span>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" @@click="addBirim()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                        Birim Ekle
+                    </button>
+                </div>
+
+                <template x-for="(unit, i) in birimler" :key="i">
+                    <div class="bg-[#fafbfc] border border-[var(--color-border)] rounded-lg p-3.5 px-4 mb-3 relative">
+                        <input type="hidden" :name="'Units['+i+'].Id'" :value="unit.id ?? ''" />
+                        <input type="hidden" :name="'Units['+i+'].HasActiveLease'" :value="unit.aktifSozlesmesiVar" />
+
+                        <button type="button" class="btn btn-sm text-red-600 border-red-200 bg-red-50 hover:bg-red-100 transition-colors absolute top-2.5 right-2.5"
+                            @@click="removeBirim(i)">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></svg>
+                        </button>
+
+                        <div class="grid grid-cols-3 gap-3 mb-3 mr-28">
+                            <div>
+                                <div class="form-label mb-1">Birim No *</div>
+                                <input class="form-control" :name="'Units['+i+'].UnitNo'" x-model="unit.birimNo"
+                                       placeholder="101" @@blur="autoAd(unit)" />
+                                <span x-show="birimErrors[i]?.birimNo" x-text="birimErrors[i]?.birimNo" class="form-error"></span>
+                            </div>
+                            <div>
+                                <div class="form-label mb-1">Kat No *</div>
+                                <input class="form-control" type="number" :name="'Units['+i+'].FloorNo'" x-model="unit.katNo" placeholder="1" />
+                                <span x-show="birimErrors[i]?.katNo" x-text="birimErrors[i]?.katNo" class="form-error"></span>
+                            </div>
+                            <div>
+                                <div class="form-label mb-1">Birim Türü *</div>
+                                <select class="form-control" :name="'Units['+i+'].UnitTypeId'" x-model="unit.unitTypeId" @@change="autoAd(unit)">
+                                    <option value="">— Seçiniz —</option>
+                                    @foreach (var bt in (IEnumerable<KiraTakip.Models.Dtos.UnitTypeOptionDto>)ViewBag.UnitTypes)
+                                    {
+                                        <option value="@bt.Id">@bt.Name</option>
+                                    }
+                                </select>
+                                <span x-show="birimErrors[i]?.unitTypeId" x-text="birimErrors[i]?.unitTypeId" class="form-error"></span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-[1fr_100px_2fr] gap-3">
+                            <div>
+                                <div class="form-label mb-1">Ad *</div>
+                                <input class="form-control" :name="'Units['+i+'].Name'" x-model="unit.ad" placeholder="Boşsa otomatik doldurulur" />
+                                <span x-show="birimErrors[i]?.ad" x-text="birimErrors[i]?.ad" class="form-error"></span>
+                            </div>
+                            <div>
+                                <div class="form-label mb-1">m² *</div>
+                                <input class="form-control" type="number" min="1" step="0.01" :name="'Units['+i+'].Area'" x-model="unit.yuzolcumu" placeholder="0" />
+                                <span x-show="birimErrors[i]?.yuzolcumu" x-text="birimErrors[i]?.yuzolcumu" class="form-error"></span>
+                            </div>
+                            <div>
+                                <div class="form-label mb-1">Açıklama</div>
+                                <input class="form-control" :name="'Units['+i+'].Description'" x-model="unit.aciklama" placeholder="Opsiyonel" />
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="birimler.length === 0">
+                    <div class="text-center py-6 text-muted text-[13.5px]">
+                        Henüz birim eklenmedi. Yukarıdaki "Birim Ekle" butonu ile birim tanımlayınız.
+                    </div>
+                </template>
+
+                <span asp-validation-for="Units" class="form-error block mt-1"></span>
+            </div>
+
+        <!-- Fiyat Parametreleri Kartı -->
+        <div class="card mt-4">
+            <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                <span>Taşınmaz Tarifesi</span>
+            </div>
+
+            @if (Model.ParentRate != null)
+            {
+                <div class="mb-5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <div class="text-xs text-muted font-semibold mb-2 flex items-center gap-1.5">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        Aşağıda tanımlama yapmazsanız genel tarife uygulanır:
+                    </div>
+                    @await Html.PartialAsync("_ParentRateCard", Model.ParentRate)
+                </div>
+            }
+
+            <div class="bg-indigo-50 border border-indigo-200 text-indigo-900 p-3.5 px-4 rounded-xl mb-5 flex items-start gap-3 shadow-sm">
+                <svg class="text-indigo-600 mt-0.5 flex-shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                <div class="text-[13.5px] leading-relaxed">
+                    <strong>Bilgi:</strong> Sözleşme eklerken bu matristeki fiyatlar otomatik olarak getirilir. Tanımlanmayan kalemler için ise yukarıdaki varsayılan tarifeler uygulanır.
+                </div>
+            </div>
+
+            <div>
+                @if (Model.PricingMatrix?.Rows == null || Model.PricingMatrix.Rows.Count == 0)
+                {
+                    <div class="bg-amber-50 border border-amber-200 text-amber-900 p-3.5 px-4 rounded-xl mb-5 flex items-start gap-3 shadow-sm">
+                        <svg class="text-amber-600 mt-0.5 flex-shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                            <line x1="12" y1="9" x2="12" y2="13"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        <div class="text-[13.5px] leading-relaxed">
+                            <strong>Uyarı:</strong> Sistemde tanımlı kiracı kategorisi veya borç tipi bulunmadığı için taşınmaz tarifesi (fiyat matrisi) boş. Lütfen önce sistem tanımlarından en az bir kiracı kategorisi ve borç tipi ekleyiniz.
+                        </div>
+                    </div>
+                }
+                
+                @if (Model.PricingMatrix?.Rows != null && Model.PricingMatrix.Rows.Count > 0)
+                {
+                    for (int i = 0; i < Model.PricingMatrix.Rows.Count; i++)
+                    {
+                        var row = Model.PricingMatrix.Rows[i];
+                        <div class="fiyat-kategori-blok mb-5">
+                            <div class="flex justify-between items-center py-1.5 mb-2 border-b border-[var(--color-border)]">
+                                <div class="text-[13px] font-bold text-[var(--color-text)]">@row.TenantCategoryName</div>
+                                <button type="button" onclick="topluKdvAta(this, 20)"
+                                        class="text-[11px] text-muted bg-transparent border border-[var(--color-border)] rounded-md cursor-pointer p-1 px-2.5 leading-tight hover:bg-primary-light transition-colors">
+                                    Tüm KDV'leri 20 yap
+                                </button>
+                            </div>
+                            <input type="hidden" name="PricingMatrix.Rows[@i].TenantCategoryId" value="@row.Cells[0].TenantCategoryId" />
+                            <div class="overflow-x-auto">
+                                <table class="w-full min-w-[520px] border-collapse">
+                                <thead>
+                                    <tr>
+                                        <th class="text-left text-[11px] text-muted font-medium p-1 pr-3 pb-1.5">Borç Tipi</th>
+                                        <th class="text-left text-[11px] text-muted font-medium p-1 px-3 pb-1.5 w-[145px]">Tutar</th>
+                                        <th class="text-left text-[11px] text-muted font-medium p-1 px-3 pb-1.5 w-[110px]">Yöntem</th>
+                                        <th class="text-left text-[11px] text-muted font-medium p-1 pl-3 pb-1.5 w-[125px]">KDV %</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int j = 0; j < row.Cells.Count; j++)
+                                    {
+                                        var cell = row.Cells[j];
+                                        var column = Model.PricingMatrix.Columns[j];
+                                        var isFirstMonth = column.ChargeTypeBehavior == ChargeTypeBehavior.FirstMonthOneTime;
+                                        var isDeposit = isFirstMonth;
+                                        var parentRow = Model.ParentRate?.Rows?.FirstOrDefault(p => p.CategoryName == row.TenantCategoryName && p.ChargeTypeName == column.ChargeTypeName);
+                                        decimal? parentValue = parentRow?.UnitValue;
+                                        decimal? parentVatRate = parentRow?.VatRate;
+                                        <tr data-depozito="@(isDeposit ? "true" : "false")">
+                                            <td class="p-1.5 pr-3 align-middle">
+                                                <input type="hidden" name="PricingMatrix.Rows[@i].Cells[@j].PropertyRateOverrideId" value="@cell.PropertyRateOverrideId" />
+                                                <input type="hidden" name="PricingMatrix.Rows[@i].Cells[@j].TenantCategoryId" value="@cell.TenantCategoryId" />
+                                                <input type="hidden" name="PricingMatrix.Rows[@i].Cells[@j].ChargeTypeId" value="@cell.ChargeTypeId" />
+                                                <div class="flex items-center gap-2">
+                                                    <span title="@(cell.HasRate ? "Kayıtlı fiyat" : "Varsayılan — henüz kaydedilmedi")"
+                                                          class="w-2 h-2 rounded-full flex-shrink-0 @(cell.HasRate ? "bg-green-500" : "bg-gray-300")"></span>
+                                                    <div>
+                                                        <div class="flex items-center gap-1.5 mb-0.5">
+                                                            <span class="text-[10px] text-muted uppercase">@column.ChargeTypeCode</span>
+                                                            @if (isFirstMonth)
+                                                            {
+                                                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-800">İlk Ay</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">Aylık</span>
+                                                            }
+                                                        </div>
+                                                        <div class="text-[12.5px] font-semibold">@column.ChargeTypeName</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="p-1.5 px-3 align-middle">
+                                                <div class="flex items-stretch border border-[#ced4da] rounded-md overflow-hidden bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+                                                    <span class="px-2 bg-[#f8f9fa] text-xs text-[#6c757d] border-r border-[#ced4da] flex items-center">₺</span>
+                                                    <input type="number" step="0.01" min="0"
+                                                           class="border-none outline-none p-1.5 px-2 w-[85px] text-[13px] bg-transparent"
+                                                           name="PricingMatrix.Rows[@i].Cells[@j].UnitValue"
+                                                           value="@(cell.UnitValue?.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                                                           placeholder="@(parentValue?.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) ?? "0.00")" />
+                                                </div>
+                                            </td>
+                                            <td class="p-1.5 px-3 align-middle">
+                                                @if (isDeposit)
+                                                {
+                                                    <input type="hidden" name="PricingMatrix.Rows[@i].Cells[@j].CalculationMethod" value="@((int)CalculationMethod.Fixed)" />
+                                                    <select class="form-control form-control-sm w-[90px] opacity-50 cursor-not-allowed" disabled>
+                                                        <option>Sabit</option>
+                                                    </select>
+                                                }
+                                                else
+                                                {
+                                                    <select class="form-control form-control-sm w-[90px]"
+                                                            name="PricingMatrix.Rows[@i].Cells[@j].CalculationMethod">
+                                                        <option value="@((int)CalculationMethod.Fixed)" selected="@(cell.CalculationMethod == CalculationMethod.Fixed)">Sabit</option>
+                                                        <option value="@((int)CalculationMethod.M2)" selected="@(cell.CalculationMethod == CalculationMethod.M2)">m²</option>
+                                                    </select>
+                                                }
+                                            </td>
+                                            <td class="p-1.5 pl-3 align-middle">
+                                                <div class="flex items-stretch border border-[#ced4da] rounded-md overflow-hidden bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+                                                    <input type="number" step="0.01" min="0" max="100"
+                                                           class="border-none outline-none p-1.5 px-2 w-[80px] text-[13px] bg-transparent text-right"
+                                                           name="PricingMatrix.Rows[@i].Cells[@j].VatRate"
+                                                           value="@(cell.VatRate?.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                                                           placeholder="@(parentVatRate?.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) ?? "20")" />
+                                                    <span class="px-2 bg-[#f8f9fa] text-xs text-[#6c757d] border-l border-[#ced4da] flex items-center">%</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                            </div>
+                        </div>
+                    }
+                }
+                <script>
+                    function topluKdvAta(btn, value) {
+                        const blok = btn.closest('.fiyat-kategori-blok');
+                        blok.querySelectorAll('tr[data-depozito="false"] input[name*="VatRate"]').forEach(function(inp) {
+                            inp.value = value;
+                        });
+                    }
+                </script>
+            </div>
+        </div>
+
+        <!-- Rezervasyon Alanları -->
+        <div class="card mt-4" x-show="unitStructure == '2'">
+            <div class="flex items-center justify-between mb-5 pb-3 border-b border-[var(--color-border)]">
+                <div>
+                    <div class="text-[15px] font-bold flex items-center gap-2">
+                        <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                        <span>Rezervasyon Alanları</span>
+                    </div>
+                    <div class="text-[12.5px] text-muted mt-0.5">Toplantı salonu, etkinlik alanı gibi rezerve edilebilen ortak alanlar</div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" @@click="addRezAlani()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                    Alan Ekle
+                </button>
+            </div>
+
+            @if (Model.ParentReservationRateOverride != null)
+            {
+                <div class="mb-5 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <div class="text-xs text-muted font-semibold mb-2 flex items-center gap-1.5">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        <span x-show="rezAlanlari.length > 0">Aşağıda tanımlama yapmazsanız genel tarife uygulanır:</span>
+                        <span x-show="rezAlanlari.length === 0">Tanımlayacağınız alanlar için geçerli varsayılan genel tarife:</span>
+                    </div>
+                    <partial name="_ParentReservationRateOverrideCard" model="Model.ParentReservationRateOverride" />
+                </div>
+            }
+
+            <template x-for="(alan, i) in rezAlanlari" :key="i">
+                <div class="bg-[#fafbfc] border border-[var(--color-border)] rounded-lg p-3.5 px-4 mb-3 relative">
+                    <input type="hidden" :name="'ReservationAreas['+i+'].Id'" :value="alan.id ?? ''" />
+                    <input type="hidden" :name="'ReservationAreas['+i+'].HasActiveReservation'" :value="alan.aktifRezervasyonuVar" />
+
+                    <button type="button" class="btn btn-sm text-red-600 border-red-200 bg-red-50 hover:bg-red-100 transition-colors absolute top-2.5 right-2.5"
+                        @@click="removeRezAlani(i)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></svg>
+                    </button>
+
+                    <div class="grid grid-cols-[100px_1fr_100px_1fr] gap-3 mb-3 mr-28">
+                        <div>
+                            <div class="form-label mb-1">No *</div>
+                            <input class="form-control" :name="'ReservationAreas['+i+'].UnitNo'" x-model="alan.birimNo" placeholder="Z01" />
+                            <span x-show="rezErrors[i]?.birimNo" x-text="rezErrors[i]?.birimNo" class="form-error"></span>
+                        </div>
+                        <div>
+                            <div class="form-label mb-1">Alan Adı *</div>
+                            <input class="form-control" :name="'ReservationAreas['+i+'].Name'" x-model="alan.ad" placeholder="Toplantı Salonu A" />
+                            <span x-show="rezErrors[i]?.ad" x-text="rezErrors[i]?.ad" class="form-error"></span>
+                        </div>
+                        <div>
+                            <div class="form-label mb-1">m² *</div>
+                            <input class="form-control" type="number" min="0" :name="'ReservationAreas['+i+'].Area'" x-model="alan.yuzolcumu" placeholder="0" />
+                            <span x-show="rezErrors[i]?.yuzolcumu" x-text="rezErrors[i]?.yuzolcumu" class="form-error"></span>
+                        </div>
+                        <div>
+                            <div class="form-label mb-1">Alan Türü *</div>
+                            <select class="form-control" :name="'ReservationAreas['+i+'].UnitTypeId'" x-model="alan.unitTypeId">
+                                <option value="">— Seçiniz —</option>
+                                @foreach (var bt in (IEnumerable<KiraTakip.Models.Dtos.UnitTypeOptionDto>)ViewBag.ReservationUnitTypes)
+                                {
+                                    <option value="@bt.Id">@bt.Name</option>
+                                }
+                            </select>
+                            <span x-show="rezErrors[i]?.unitTypeId" x-text="rezErrors[i]?.unitTypeId" class="form-error"></span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-[120px_120px_80px_1fr] gap-3">
+                        <div>
+                            <div class="form-label mb-1">Ücretsiz Süre (Dk)</div>
+                            <input class="form-control" type="number" min="0" :name="'ReservationAreas['+i+'].FreeDurationMinutes'" x-model="alan.ucretsizSureDakika" placeholder="60" />
+                        </div>
+                        <div>
+                            <div class="form-label mb-1">Saatlik Ücret (₺)</div>
+                            <input class="form-control" type="number" min="0" step="0.01" :name="'ReservationAreas['+i+'].HourlyRate'" x-model="alan.saatlikUcret" placeholder="500" />
+                        </div>
+                        <div>
+                            <div class="form-label mb-1">KDV %</div>
+                            <input class="form-control" type="number" min="0" max="100" step="0.01" :name="'ReservationAreas['+i+'].VatRate'" x-model="alan.kdvOrani" placeholder="20" />
+                        </div>
+                        <div>
+                            <div class="form-label mb-1">Açıklama</div>
+                            <input class="form-control" :name="'ReservationAreas['+i+'].Description'" x-model="alan.aciklama" placeholder="Opsiyonel" />
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <template x-if="rezAlanlari.length === 0">
+                <div class="text-center py-6 text-muted text-[13.5px]">
+                    Henüz rezervasyon alanı eklenmedi. "Alan Ekle" ile tanımlayabilirsiniz.
+                </div>
+            </template>
+        </div>
+
+        <!-- Adres Kartı -->
+        <div class="card mt-4">
+            <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                <span>Adres Bilgileri</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3.5 mb-3.5">
+                <div class="form-group">
+                    <label class="form-label">İl *</label>
+                    <input asp-for="City" class="form-control" placeholder="Örn: İstanbul" />
+                    <span asp-validation-for="City" class="form-error"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">İlçe *</label>
+                    <input asp-for="District" class="form-control" placeholder="Örn: Şişli" />
+                    <span asp-validation-for="District" class="form-error"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Mahalle *</label>
+                <input asp-for="Neighborhood" class="form-control" placeholder="Örn: Cumhuriyet Mah." />
+                <span asp-validation-for="Neighborhood" class="form-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Açık Adres *</label>
+                <textarea asp-for="Address" class="form-control" rows="2" placeholder="Sokak, Bina No, Kapı No..."></textarea>
+                <span asp-validation-for="Address" class="form-error"></span>
+            </div>
+        </div>
+
+        <div class="flex gap-3 mt-5">
+            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Property.Edit">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>
+                Kaydet
+            </button>
+            <a href="/Property/@Model.Id.ToHashId()" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+</div>
+
+@section Scripts {
+    @{
+        var birimlerJson = System.Text.Json.JsonSerializer.Serialize(
+            Model.Units.Select(b => new
+            {
+                id = b.Id,
+                birimNo = b.UnitNo ?? "",
+                katNo = b.FloorNo?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "",
+                ad = b.Name ?? "",
+                yuzolcumu = b.Area.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                aciklama = b.Description ?? "",
+                unitTypeId = b.UnitTypeId?.ToString() ?? "",
+                aktifSozlesmesiVar = b.HasActiveLease
+            })
+        );
+        var rezAlanlariJson = System.Text.Json.JsonSerializer.Serialize(
+            Model.ReservationAreas.Select(r => new
+            {
+                id = r.Id,
+                birimNo = r.UnitNo ?? "",
+                ad = r.Name ?? "",
+                yuzolcumu = r.Area.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                unitTypeId = r.UnitTypeId?.ToString() ?? "",
+                aciklama = r.Description ?? "",
+                ucretsizSureDakika = r.FreeDurationMinutes,
+                saatlikUcret = r.HourlyRate.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                kdvOrani = r.VatRate.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                aktifRezervasyonuVar = r.HasActiveReservation
+            })
+        );
+        var birimErrorsJson = System.Text.Json.JsonSerializer.Serialize(
+            Enumerable.Range(0, Model.Units.Count).Select(i => new
+            {
+                birimNo = ViewData.ModelState[$"Units[{i}].UnitNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                katNo = ViewData.ModelState[$"Units[{i}].FloorNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                unitTypeId = ViewData.ModelState[$"Units[{i}].UnitTypeId"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                ad = ViewData.ModelState[$"Units[{i}].Name"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                yuzolcumu = ViewData.ModelState[$"Units[{i}].Area"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+            }).ToList()
+        );
+        var rezErrorsJson = System.Text.Json.JsonSerializer.Serialize(
+            Enumerable.Range(0, Model.ReservationAreas.Count).Select(i => new
+            {
+                birimNo = ViewData.ModelState[$"ReservationAreas[{i}].UnitNo"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                ad = ViewData.ModelState[$"ReservationAreas[{i}].Name"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                yuzolcumu = ViewData.ModelState[$"ReservationAreas[{i}].Area"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                unitTypeId = ViewData.ModelState[$"ReservationAreas[{i}].UnitTypeId"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+            }).ToList()
+        );
+        var birimTurleriMap = ((IEnumerable<KiraTakip.Models.Dtos.UnitTypeOptionDto>)ViewBag.UnitTypes).ToDictionary(bt => bt.Id.ToString(), bt => bt.Name);
+        var birimTurleriMapJson = System.Text.Json.JsonSerializer.Serialize(birimTurleriMap);
+    }
+    <script>
+        function tasinmazDuzenleData() {
+            return {
+                birimler: @Html.Raw(birimlerJson),
+                rezAlanlari: @Html.Raw(rezAlanlariJson),
+                birimErrors: @Html.Raw(birimErrorsJson),
+                rezErrors: @Html.Raw(rezErrorsJson),
+                birimTurleriMap: @Html.Raw(birimTurleriMapJson),
+                tasinmazTipiId: '@(Model.PropertyTypeId?.ToString() ?? "")',
+                unitStructure: '@((int)Model.UnitStructure)',
+                addBirim() {
+                    this.birimler.push({ id: null, birimNo: '', katNo: '', ad: '', yuzolcumu: '', aciklama: '', unitTypeId: '', aktifSozlesmesiVar: false });
+                    this.birimErrors.push({});
+                },
+                removeBirim(i) {
+                    this.birimler.splice(i, 1);
+                    this.birimErrors.splice(i, 1);
+                },
+                autoAd(b) {
+                    if (b.birimNo) {
+                        var turAd = this.birimTurleriMap[b.unitTypeId] || 'Birim';
+                        var isAutoFilled = !b.ad || b.ad === 'Birim ' + b.birimNo || Object.values(this.birimTurleriMap).some(name => b.ad === name + ' ' + b.birimNo);
+                        if (isAutoFilled) {
+                            b.ad = turAd + ' ' + b.birimNo;
+                        }
+                    }
+                },
+                addRezAlani() {
+                    this.rezAlanlari.push({ id: null, birimNo: '', ad: '', yuzolcumu: '', unitTypeId: '', aciklama: '', ucretsizSureDakika: 0, saatlikUcret: 0, kdvOrani: 20, aktifRezervasyonuVar: false });
+                    this.rezErrors.push({});
+                },
+                removeRezAlani(i) {
+                    this.rezAlanlari.splice(i, 1);
+                    this.rezErrors.splice(i, 1);
+                },
+            };
+        }
+    </script>
+}
+

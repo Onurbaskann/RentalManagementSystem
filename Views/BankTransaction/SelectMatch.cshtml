@@ -1,0 +1,123 @@
+@model KiraTakip.Models.ViewModels.BankTransactionMatchSelectionViewModel
+@using KiraTakip.Models
+@using KiraTakip.Models.Dtos
+@{
+    ViewData["Title"] = "Ödeme Eşleştir";
+    ViewData["UseCentralFeedback"] = true;
+    var transaction = Model.BankTransaction;
+}
+
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+        <a href="/BankTransaction" style="font-size:12.5px;color:var(--color-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">← Banka Hareketleri</a>
+        <div class="page-title">Ödeme Eşleştir</div>
+        <div class="page-subtitle">Banka hareketine karşılık gelen ödemeyi seçin</div>
+    </div>
+</div>
+
+<!-- Hareketi bilgileri -->
+<div class="card" style="margin-bottom:20px;">
+    <div class="section-title" style="margin-bottom:12px;">Banka Hareketi</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;">
+        <div>
+            <div style="font-size:11.5px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:3px;">Tarih</div>
+            <div style="font-weight:600;">@transaction.TransactionDate.ToString("dd.MM.yyyy")</div>
+        </div>
+        <div>
+            <div style="font-size:11.5px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:3px;">Tutar</div>
+            <div style="font-size:18px;font-weight:700;font-family:'Fraunces',serif;">@transaction.TransactionAmount.ToString("N0") ₺</div>
+        </div>
+        <div>
+            <div style="font-size:11.5px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:3px;">Karşı Taraf</div>
+            <div>@(transaction.SenderInfo ?? transaction.SenderIban ?? "—")</div>
+        </div>
+        <div>
+            <div style="font-size:11.5px;color:var(--color-muted);font-weight:600;text-transform:uppercase;margin-bottom:3px;">Açıklama</div>
+            <div style="font-size:13px;color:var(--color-muted);">@transaction.Description</div>
+        </div>
+    </div>
+</div>
+
+<!-- Aday ödemeler -->
+<div class="card" style="padding:0;overflow:hidden;">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--color-border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="section-title" style="margin:0;">Aday Ödemeler (@Model.PaymentCandidates.Count)</div>
+        @if (!Model.PaymentCandidates.Any())
+        {
+            <span style="font-size:13px;color:var(--color-muted);">Eşleştirilebilecek onaylı/bekleyen ödeme bulunamadı.</span>
+        }
+    </div>
+    @if (Model.PaymentCandidates.Any())
+    {
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ödeme</th>
+                        <th>Kiracı</th>
+                        <th>Dönem</th>
+                        <th>Tutar</th>
+                        <th>Ödeme Tarihi</th>
+                        <th>Durum</th>
+                        <th>Uyum</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        int rowNumber = 0;
+                        foreach (var payment in Model.PaymentCandidates)
+                        {
+                            bool isExactAmount = payment.Amount == transaction.TransactionAmount;
+                            bool isCloseAmount = Math.Abs(payment.Amount - transaction.TransactionAmount) <= transaction.TransactionAmount * 0.02m;
+                            int dayDifference = Math.Abs((payment.PaymentDate - transaction.TransactionDate).Days);
+
+                            string compatibilityLabel, compatibilityClass, compatibilityTooltip;
+                            if (isExactAmount && dayDifference <= 15)      { compatibilityLabel = "Yüksek"; compatibilityClass = "badge-kirali"; compatibilityTooltip = $"Tutar birebir eşleşiyor • Tarih farkı {dayDifference} gün (≤15)"; }
+                            else if (isExactAmount)                         { compatibilityLabel = "Orta";   compatibilityClass = "badge-surek";  compatibilityTooltip = $"Tutar birebir eşleşiyor • Tarih farkı {dayDifference} gün (>15)"; }
+                            else if (isCloseAmount && dayDifference <= 15)  { compatibilityLabel = "Zayıf";  compatibilityClass = "badge-bos";    compatibilityTooltip = $"Tutar %2 toleransta • Tarih farkı {dayDifference} gün"; }
+                            else                                            { compatibilityLabel = "Düşük";  compatibilityClass = "badge-gecmis"; compatibilityTooltip = $"Tutar farkı %2'den fazla veya tarih uzak ({dayDifference} gün)"; }
+
+                            string statusClass = payment.Status == PaymentStatus.Approved ? "badge-kirali" : "badge-surek";
+                            string statusLabel = payment.Status == PaymentStatus.Approved ? "Onaylandı" : "Onay Bekliyor";
+                            rowNumber++;
+                        <tr style="@(rowNumber == 1 ? "background:#f0fdf4;" : "")">
+                            <td style="color:var(--color-muted);font-size:12.5px;">#@payment.Id</td>
+                            <td style="font-weight:600;">@(string.IsNullOrEmpty(payment.TenantDisplayName) ? "Rezervasyon Ödemesi" : payment.TenantDisplayName)</td>
+                            <td style="font-size:13px;">@payment.PeriodStart.ToString("MMMM yyyy")</td>
+                            <td style="font-weight:@(isExactAmount ? "700" : "400");">
+                                @payment.Amount.ToString("N0") ₺
+                                @if (!isExactAmount)
+                                {
+                                    <span style="font-size:11px;color:var(--color-muted);"> (fark: @Math.Abs(payment.Amount - transaction.TransactionAmount).ToString("N0") ₺)</span>
+                                }
+                            </td>
+                            <td>
+                                @payment.PaymentDate.ToString("dd.MM.yyyy")
+                                <span style="font-size:11px;color:var(--color-muted);"> (@dayDifference gün)</span>
+                            </td>
+                            <td><span class="badge @statusClass">@statusLabel</span></td>
+                            <td><span class="badge @compatibilityClass" data-tip="@compatibilityTooltip">@compatibilityLabel</span></td>
+                            <td>
+                                <form method="post" action="/BankTransaction/Match">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="PaymentId" value="@payment.Id" />
+                                    <input type="hidden" name="BankTransactionId" value="@transaction.Id" />
+                                    <button type="submit" class="btn btn-primary btn-sm">Eşleştir</button>
+                                </form>
+                            </td>
+                        </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div style="padding:32px;text-align:center;color:var(--color-muted);font-size:13.5px;">
+            Eşleştirilebilecek ödeme bulunamadı. Önce ilgili tahakkuk için ödeme girilmeli ve onaylanmalıdır.
+        </div>
+    }
+</div>
+

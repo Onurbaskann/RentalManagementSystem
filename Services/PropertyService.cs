@@ -1,273 +1,267 @@
-using KiraTakip.Data;
+using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
-using KiraTakip.Models.ViewModels;
+using KiraTakip.Data;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Services;
 
-public class PropertyService : IPropertyService
+public class PropertyService(
+    IPropertyRepository propertyRepository,
+    IPropertyTypeRepository propertyTypeRepository,
+    IUnitRepository unitRepository,
+    IUnitTypeRepository unitTypeRepository,
+    IReservationRepository reservationRepository,
+    IReservationRateOverrideRepository reservationRateOverrideRepository,
+    IPropertyPricingService propertyPricingService,
+    IUnitOfWork unitOfWork,
+    IStatisticsService statisticsService) : IPropertyService, ITransactionalService
 {
-    private readonly IPropertyRepository _repo;
-    private readonly IUnitOfWork _uow;
-    private readonly IStatisticsService _istatistikService;
-    private readonly ApplicationDbContext _ctx;
-    private readonly IUnitRepository _unitRepository;
-    private readonly IReservationRateOverrideRepository _rezervasyonTarifeRepository;
+    public Task<List<PropertyListItemDto>> GetAllAsync(GetPropertiesInput input)
+        => propertyRepository.GetListAsync(
+            input.PropertyIds?.ToList(),
+            input.UnitIds?.ToList());
 
-    public PropertyService(
-        IPropertyRepository repo,
-        IUnitOfWork uow,
-        IStatisticsService statisticsService,
-        ApplicationDbContext ctx,
-        IUnitRepository unitRepository,
-        IReservationRateOverrideRepository rezervasyonTarifeRepository)
+    public async Task<PropertyDetailDto?> GetDetailsAsync(GetPropertyDetailsInput input)
     {
-        _repo = repo;
-        _uow = uow;
-        _istatistikService = statisticsService;
-        _ctx = ctx;
-        _unitRepository = unitRepository;
-        _rezervasyonTarifeRepository = rezervasyonTarifeRepository;
-    }
+        var details = await propertyRepository.GetDetailsAsync(input.PropertyId);
+        if (details == null) return null;
 
-    public async Task<List<TasinmazListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null)
-    {
-        return await _repo.GetListAsync(tasinmazIds?.ToList());
-    }
-
-    public async Task<PropertyDetailDto?> GetByIdAsync(int id)
-    {
-        var dto = await _repo.GetDetayAsync(id);
-        if (dto == null) return null;
-
-        // Birimlerin aktif sözleşmelerinin aylık bedellerini hesapla
-        foreach (var b in dto.Units)
+        foreach (var unit in details.Units)
         {
-            if (b.ActiveLeaseId.HasValue)
+            if (unit.ActiveLeaseId.HasValue)
             {
                 var lease = new Lease
                 {
-                    Id = b.ActiveLeaseId.Value,
-                    TenantId = b.ActiveLeaseTenantId ?? 0,
-                    UnitId = b.Id,
-                    Unit = new Unit { Id = b.Id, Area = b.Area }
+                    Id = unit.ActiveLeaseId.Value,
+                    TenantId = unit.ActiveLeaseTenantId ?? 0,
+                    UnitId = unit.Id,
+                    Unit = new Unit { Id = unit.Id, Area = unit.Area }
                 };
-                b.MonthlyRent = await _istatistikService.AylikBedelAsync(lease);
+                unit.MonthlyRent = await statisticsService.GetMonthlyAmountAsync(lease);
             }
         }
 
-        // Sözleşme geçmişindeki sözleşmelerin aylık bedellerini hesapla
-        foreach (var s in dto.LeaseHistory)
+        foreach (var leaseHistory in details.LeaseHistory)
         {
-            var birimYuzolcumu = dto.Units.FirstOrDefault(b => b.Id == s.UnitId)?.Area ?? 0m;
+            var unitArea = details.Units.FirstOrDefault(unit => unit.Id == leaseHistory.UnitId)?.Area ?? 0m;
             var lease = new Lease
             {
-                Id = s.Id,
-                TenantId = s.TenantId,
-                UnitId = s.UnitId,
-                Unit = new Unit { Id = s.UnitId, Area = birimYuzolcumu }
+                Id = leaseHistory.Id,
+                TenantId = leaseHistory.TenantId,
+                UnitId = leaseHistory.UnitId,
+                Unit = new Unit { Id = leaseHistory.UnitId, Area = unitArea }
             };
-            s.AylikBedel = await _istatistikService.AylikBedelAsync(lease);
+            leaseHistory.MonthlyAmount = await statisticsService.GetMonthlyAmountAsync(lease);
         }
 
-        return dto;
+        return details;
     }
 
-    public async Task<Property> CreateAsync(Property t, List<BirimInputViewModel>? birimler = null, List<RezervasyonAlaniInputViewModel>? rezervasyonAlanlari = null, int? singleUnitTypeId = null)
-    {
-        if (t.UnitStructure == UnitStructure.SingleUnit)
-        {
-            if (!singleUnitTypeId.HasValue)
-                throw new InvalidOperationException("Tek birim yapısı için birim türü zorunludur.");
+    public async Task<PropertyFormOptionsDto> GetFormOptionsAsync()
+        => new(await propertyTypeRepository.GetActiveOptionsAsync(), 
+               await unitTypeRepository.GetActiveOptionsAsync());
 
-            t.Units.Add(new Unit
+    public async Task<CreatedPropertyDto> CreateAsync(CreatePropertyInput input)
+    {
+        await ValidateDatabaseRulesAsync(input);
+
+        var property = new Property
+        {
+            Name = input.Name,
+            PropertyTypeId = input.PropertyTypeId,
+            UnitStructure = input.UnitStructure,
+            City = input.City,
+            District = input.District,
+            Neighborhood = input.Neighborhood,
+            Address = input.Address,
+            OpenArea = input.OpenArea,
+            ClosedArea = input.ClosedArea,
+            FloorCount = input.FloorCount,
+            Description = input.Description
+        };
+
+        if (property.UnitStructure == UnitStructure.SingleUnit)
+        {
+            Guard.Against(!input.SingleUnitTypeId.HasValue, "Tek birim yapısı için birim türü zorunludur.");
+
+            property.Units.Add(new Unit
             {
-                Name = t.Name,
-                Area = t.ClosedArea > 0 ? t.ClosedArea : t.OpenArea,
-                UnitTypeId = singleUnitTypeId.Value
+                Name = property.Name,
+                Area = property.ClosedArea > 0 ? property.ClosedArea : property.OpenArea,
+                UnitTypeId = input.SingleUnitTypeId.Value
             });
         }
         else
         {
-            foreach (var b in birimler ?? [])
+            foreach (var unitInput in input.Units)
             {
-                t.Units.Add(new Unit
+                property.Units.Add(new Unit
                 {
-                    UnitNo = b.UnitNo,
-                    FloorNo = b.FloorNo,
-                    Name = string.IsNullOrWhiteSpace(b.Name) ? $"Birim {b.UnitNo}" : b.Name,
-                    Area = b.Area,
-                    Description = b.Description,
-                    UnitTypeId = b.UnitTypeId!.Value
+                    UnitNo = unitInput.UnitNo,
+                    FloorNo = unitInput.FloorNo,
+                    Name = string.IsNullOrWhiteSpace(unitInput.Name)
+                        ? $"Birim {unitInput.UnitNo}"
+                        : unitInput.Name,
+                    Area = unitInput.Area,
+                    Description = unitInput.Description,
+                    UnitTypeId = unitInput.UnitTypeId!.Value
                 });
             }
 
-            foreach (var r in rezervasyonAlanlari ?? [])
+            foreach (var reservationInput in input.ReservationAreas)
             {
                 var unit = new Unit
                 {
-                    UnitNo = r.UnitNo,
-                    Name = string.IsNullOrWhiteSpace(r.Name) ? "Rezervasyon Alanı" : r.Name,
-                    Area = r.Area,
-                    Description = r.Description,
-                    UnitTypeId = r.UnitTypeId!.Value
+                    UnitNo = reservationInput.UnitNo,
+                    Name = string.IsNullOrWhiteSpace(reservationInput.Name)
+                        ? "Rezervasyon Alanı"
+                        : reservationInput.Name,
+                    Area = reservationInput.Area,
+                    Description = reservationInput.Description,
+                    UnitTypeId = reservationInput.UnitTypeId!.Value
                 };
-                t.Units.Add(unit);
-                await _repo.AddReservationRateOverrideAsync(new ReservationRateOverride
+                property.Units.Add(unit);
+                await reservationRateOverrideRepository.AddAsync(new ReservationRateOverride
                 {
                     Unit = unit,
-                    FreeDurationMinutes = r.FreeDurationMinutes,
+                    FreeDurationMinutes = reservationInput.FreeDurationMinutes,
                     BillingPeriodMinutes = 60,
-                    PeriodRate = r.SaatlikUcret,
-                    KdvRate = r.KdvRate,
-                    Description = $"{r.Name} için otomatik oluşturuldu"
+                    PeriodRate = reservationInput.HourlyRate,
+                    KdvRate = reservationInput.VatRate,
+                    Description = $"{reservationInput.Name} için otomatik oluşturuldu"
                 });
             }
         }
 
-        await _repo.AddAsync(t);
-        await _uow.SaveChangesAsync();
-        return t;
-    }
-    public async Task UpdateAsync(Property t)
-    {
-        await _repo.UpdateAsync(t);
-        await _uow.SaveChangesAsync();
-    }
+        await propertyRepository.AddAsync(property);
+        await unitOfWork.SaveChangesAsync();
 
-    public async Task<bool> CanChangeUnitStructureAsync(int propertyId)
-    {
-        var unitIds = await _ctx.Units.IgnoreQueryFilters()
-            .Where(u => u.PropertyId == propertyId)
-            .Select(u => u.Id)
-            .ToListAsync();
+        input.PricingMatrix.PropertyId = property.Id;
+        await propertyPricingService.SaveMatrixAsync(input.PricingMatrix);
 
-        if (unitIds.Count == 0) return true;
-
-        return !await _ctx.Leases.IgnoreQueryFilters().AnyAsync(x => unitIds.Contains(x.UnitId))
-            && !await _ctx.Reservations.IgnoreQueryFilters().AnyAsync(x => unitIds.Contains(x.UnitId))
-            && !await _ctx.Charges.IgnoreQueryFilters().AnyAsync(x => unitIds.Contains(x.UnitId));
+        return new CreatedPropertyDto(property.Id, property.Name);
     }
 
-    public async Task<TasinmazDuzenleViewModel?> GetForEditAsync(int id)
+    public async Task<PropertyEditDto?> GetForEditAsync(GetPropertyForEditInput input)
     {
-        var t = await _repo.GetWithBirimlerTrackedAsync(id);
-        if (t == null) return null;
+        var property = await propertyRepository.GetWithUnitsTrackedAsync(input.PropertyId);
+        if (property == null) return null;
 
         var now = DateTime.Now;
-        var unitIds = t.Units.Select(b => b.Id).ToList();
-        var reservationRates = await _ctx.RezervasyonTarifeler
-            .Where(rt => rt.UnitId != null && unitIds.Contains(rt.UnitId.Value) && rt.IsActive)
-            .ToDictionaryAsync(rt => rt.UnitId!.Value);
-        var activeReservationUnitIds = await _ctx.Reservations
-            .Where(r => unitIds.Contains(r.UnitId) && r.Status == ReservationStatus.Planned && r.EndDate >= now)
-            .Select(r => r.UnitId)
-            .Distinct()
-            .ToListAsync();
+        var unitIds = property.Units.Select(unit => unit.Id).ToList();
+        var reservationRates = await reservationRateOverrideRepository.GetByUnitIdsAsync(
+            unitIds,
+            activeOnly: true);
+        var activeReservationUnitIds = await reservationRepository.GetActiveUnitIdsAsync(unitIds, now);
 
-        var units = new List<BirimDuzenleViewModel>();
-        var reservationAreas = new List<RezervasyonAlaniDuzenleViewModel>();
-
-        if (t.UnitStructure == UnitStructure.MultipleUnits)
+        var result = new PropertyEditDto
         {
-            foreach (var unit in t.Units)
+            PropertyId = property.Id,
+            Name = property.Name,
+            PropertyTypeId = property.PropertyTypeId,
+            UnitStructure = property.UnitStructure,
+            CanChangeUnitStructure = await propertyRepository.CanChangeUnitStructureAsync(property.Id),
+            SingleUnitTypeId = property.UnitStructure == UnitStructure.SingleUnit
+                ? property.Units.SingleOrDefault()?.UnitTypeId
+                : null,
+            City = property.City,
+            District = property.District,
+            Neighborhood = property.Neighborhood,
+            Address = property.Address,
+            OpenArea = property.OpenArea,
+            ClosedArea = property.ClosedArea,
+            FloorCount = property.FloorCount,
+            Description = property.Description
+        };
+
+        if (property.UnitStructure != UnitStructure.MultipleUnits) return result;
+
+        foreach (var unit in property.Units)
+        {
+            if (unit.UnitType.Usage == UnitTypeUsage.Reservable)
             {
-                if (unit.UnitType.Usage == UnitTypeUsage.Reservable)
+                reservationRates.TryGetValue(unit.Id, out var rate);
+                result.ReservationAreas.Add(new ReservationAreaInputDto
                 {
-                    reservationRates.TryGetValue(unit.Id, out var rate);
-                    reservationAreas.Add(new RezervasyonAlaniDuzenleViewModel
-                    {
-                        Id = unit.Id,
-                        UnitNo = unit.UnitNo ?? string.Empty,
-                        Name = unit.Name,
-                        Area = unit.Area,
-                        UnitTypeId = unit.UnitTypeId,
-                        Description = unit.Description,
-                        FreeDurationMinutes = rate?.FreeDurationMinutes ?? 0,
-                        SaatlikUcret = rate?.PeriodRate ?? 0,
-                        KdvRate = rate?.KdvRate ?? 20,
-                        AktifRezervasyonuVar = activeReservationUnitIds.Contains(unit.Id)
-                    });
-                }
-                else
+                    Id = unit.Id,
+                    UnitNo = unit.UnitNo ?? string.Empty,
+                    Name = unit.Name,
+                    Area = unit.Area,
+                    UnitTypeId = unit.UnitTypeId,
+                    Description = unit.Description,
+                    FreeDurationMinutes = rate?.FreeDurationMinutes ?? 0,
+                    HourlyRate = rate?.PeriodRate ?? 0,
+                    VatRate = rate?.KdvRate ?? 20
+                });
+                if (activeReservationUnitIds.Contains(unit.Id))
+                    result.ActiveReservationUnitIds.Add(unit.Id);
+            }
+            else
+            {
+                result.Units.Add(new PropertyUnitInputDto
                 {
-                    units.Add(new BirimDuzenleViewModel
-                    {
-                        Id = unit.Id,
-                        UnitNo = unit.UnitNo ?? string.Empty,
-                        FloorNo = unit.FloorNo,
-                        Name = unit.Name,
-                        Area = unit.Area,
-                        Description = unit.Description,
-                        UnitTypeId = unit.UnitTypeId,
-                        AktifSozlesmesiVar = unit.Leases.Any()
-                    });
-                }
+                    Id = unit.Id,
+                    UnitNo = unit.UnitNo ?? string.Empty,
+                    FloorNo = unit.FloorNo,
+                    Name = unit.Name,
+                    Area = unit.Area,
+                    Description = unit.Description,
+                    UnitTypeId = unit.UnitTypeId
+                });
+                if (unit.Leases.Any())
+                    result.ActiveLeaseUnitIds.Add(unit.Id);
             }
         }
 
-        var singleUnit = t.UnitStructure == UnitStructure.SingleUnit ? t.Units.SingleOrDefault() : null;
-        return new TasinmazDuzenleViewModel
-        {
-            Id = t.Id,
-            Ad = t.Name,
-            TasinmazTipiId = t.PropertyTypeId,
-            UnitStructure = t.UnitStructure,
-            BirimYapisiDegistirilebilir = await CanChangeUnitStructureAsync(t.Id),
-            KompleUnitTypeId = singleUnit?.UnitTypeId,
-            Il = t.City,
-            Ilce = t.District,
-            Mahalle = t.Neighborhood,
-            AcikAdres = t.Address,
-            AcikYuzolcumu = t.OpenArea,
-            KapaliYuzolcumu = t.ClosedArea,
-            KatSayisi = t.FloorCount,
-            Aciklama = t.Description,
-            Units = units,
-            RezervasyonAlanlari = reservationAreas
-        };
+        return result;
     }
-    public async Task UpdateWithChildrenAsync(TasinmazDuzenleViewModel vm)
+
+    public async Task UpdateWithChildrenAsync(UpdatePropertyInput input)
     {
-        var property = await _repo.GetWithBirimlerTrackedAsync(vm.Id);
-        if (property == null) return;
+        var property = Guard.NotFound(
+            await propertyRepository.GetWithUnitsTrackedAsync(input.PropertyId),
+            "Taşınmaz bulunamadı.",
+            "Property.NotFound");
+        Guard.Forbidden(
+            input.AccessiblePropertyIds != null && !input.AccessiblePropertyIds.Contains(property.Id),
+            "Bu taşınmaz üzerinde işlem yapma yetkiniz bulunmuyor.",
+            "Property.OutOfScope");
 
-        var structureChanged = property.UnitStructure != vm.UnitStructure;
-        if (structureChanged && !await CanChangeUnitStructureAsync(property.Id))
-            throw new InvalidOperationException("Sözleşme, rezervasyon veya tahakkuk geçmişi bulunan taşınmazın birim yapısı değiştirilemez.");
+        var structureChanged = property.UnitStructure != input.UnitStructure;
+        Guard.InvalidField(
+            structureChanged && !await propertyRepository.CanChangeUnitStructureAsync(property.Id),
+            nameof(input.UnitStructure),
+            "Sözleşme, rezervasyon veya tahakkuk geçmişi bulunan taşınmazın birim yapısı değiştirilemez.",
+            "Property.UnitStructureHasHistory");
 
-        property.Name = vm.Ad;
-        property.PropertyTypeId = vm.TasinmazTipiId;
-        property.City = vm.Il;
-        property.District = vm.Ilce;
-        property.Neighborhood = vm.Mahalle;
-        property.Address = vm.AcikAdres;
-        property.OpenArea = vm.AcikYuzolcumu;
-        property.ClosedArea = vm.KapaliYuzolcumu;
-        property.FloorCount = vm.KatSayisi;
-        property.Description = vm.Aciklama;
+        await ValidateDatabaseRulesAsync(input);
+        if (!structureChanged && property.UnitStructure == UnitStructure.MultipleUnits)
+            await ValidateSubmittedUnitsAsync(property, input);
+
+        property.Name = input.Name;
+        property.PropertyTypeId = input.PropertyTypeId;
+        property.City = input.City;
+        property.District = input.District;
+        property.Neighborhood = input.Neighborhood;
+        property.Address = input.Address;
+        property.OpenArea = input.OpenArea;
+        property.ClosedArea = input.ClosedArea;
+        property.FloorCount = input.FloorCount;
+        property.Description = input.Description;
 
         if (structureChanged)
         {
-            var oldUnitIds = property.Units.Select(u => u.Id).ToList();
-            var oldUnitRates = await _ctx.UnitRates.IgnoreQueryFilters()
-                .Where(r => oldUnitIds.Contains(r.UnitId)).ToListAsync();
-            var oldReservationRates = await _ctx.RezervasyonTarifeler.IgnoreQueryFilters()
-                .Where(r => r.UnitId.HasValue && oldUnitIds.Contains(r.UnitId.Value)).ToListAsync();
-            _ctx.UnitRates.RemoveRange(oldUnitRates);
-            _ctx.RezervasyonTarifeler.RemoveRange(oldReservationRates);
-            _ctx.Units.RemoveRange(property.Units);
+            await unitRepository.RemoveStructureDataAsync(property.Units);
             property.Units.Clear();
-            property.UnitStructure = vm.UnitStructure;
+            property.UnitStructure = input.UnitStructure;
         }
 
         if (property.UnitStructure == UnitStructure.SingleUnit)
         {
-            if (!vm.KompleUnitTypeId.HasValue)
-                throw new InvalidOperationException("Tek birim yapısı için birim türü zorunludur.");
+            Guard.Against(!input.SingleUnitTypeId.HasValue, "Tek birim yapısı için birim türü zorunludur.");
 
             var unit = property.Units.SingleOrDefault();
             if (unit == null)
@@ -279,103 +273,212 @@ public class PropertyService : IPropertyService
             unit.Name = property.Name;
             unit.UnitNo = null;
             unit.FloorNo = null;
-            unit.Area = vm.KapaliYuzolcumu > 0 ? vm.KapaliYuzolcumu : vm.AcikYuzolcumu;
-            unit.Description = vm.Aciklama;
-            unit.UnitTypeId = vm.KompleUnitTypeId.Value;
+            unit.Area = input.ClosedArea > 0 ? input.ClosedArea : input.OpenArea;
+            unit.Description = input.Description;
+            unit.UnitTypeId = input.SingleUnitTypeId.Value;
         }
         else
         {
-            await UpdateMultipleUnitsAsync(property, vm);
+            await UpdateMultipleUnitsAsync(property, input);
         }
 
-        await _uow.SaveChangesAsync();
+        await unitOfWork.SaveChangesAsync();
+        input.PricingMatrix.PropertyId = property.Id;
+        await propertyPricingService.SaveMatrixAsync(input.PricingMatrix);
     }
 
-    private async Task UpdateMultipleUnitsAsync(Property property, TasinmazDuzenleViewModel vm)
+    private async Task UpdateMultipleUnitsAsync(Property property, UpdatePropertyInput input)
     {
-        var unitIds = property.Units.Select(u => u.Id).ToList();
-        var reservationRates = await _ctx.RezervasyonTarifeler
-            .Where(r => r.UnitId.HasValue && unitIds.Contains(r.UnitId.Value))
-            .ToDictionaryAsync(r => r.UnitId!.Value);
-        var normalUnits = property.Units.Where(u => u.UnitType.Usage != UnitTypeUsage.Reservable).ToList();
-        var reservationUnits = property.Units.Where(u => u.UnitType.Usage == UnitTypeUsage.Reservable).ToList();
+        var unitIds = property.Units.Select(unit => unit.Id).ToList();
+        var reservationRates = await reservationRateOverrideRepository.GetByUnitIdsAsync(
+            unitIds,
+            activeOnly: false);
+        var normalUnits = property.Units
+            .Where(unit => unit.UnitType.Usage != UnitTypeUsage.Reservable)
+            .ToList();
+        var reservationUnits = property.Units
+            .Where(unit => unit.UnitType.Usage == UnitTypeUsage.Reservable)
+            .ToList();
 
-        var incomingNormalIds = vm.Units.Where(u => u.Id.HasValue).Select(u => u.Id!.Value).ToHashSet();
-        foreach (var existing in normalUnits.Where(u => !incomingNormalIds.Contains(u.Id)))
+        var incomingNormalIds = input.Units
+            .Where(unit => unit.Id.HasValue)
+            .Select(unit => unit.Id!.Value)
+            .ToHashSet();
+        foreach (var existing in normalUnits.Where(unit => !incomingNormalIds.Contains(unit.Id)))
         {
-            if (await HasHistoricalDependencyAsync(existing.Id))
-                throw new InvalidOperationException($"'{existing.Name}' biriminin işlem geçmişi bulunduğu için silinemez.");
-            var rates = await _ctx.UnitRates.Where(r => r.UnitId == existing.Id).ToListAsync();
-            _ctx.UnitRates.RemoveRange(rates);
-            _ctx.Units.Remove(existing);
+            await unitRepository.RemoveWithRatesAsync(existing);
         }
 
-        foreach (var input in vm.Units)
+        foreach (var unitInput in input.Units)
         {
-            var name = string.IsNullOrWhiteSpace(input.Name) ? $"Birim {input.UnitNo}" : input.Name;
-            var unit = input.Id.HasValue
-                ? property.Units.FirstOrDefault(u => u.Id == input.Id.Value)
+            var name = string.IsNullOrWhiteSpace(unitInput.Name)
+                ? $"Birim {unitInput.UnitNo}"
+                : unitInput.Name;
+            var unit = unitInput.Id.HasValue
+                ? property.Units.FirstOrDefault(item => item.Id == unitInput.Id.Value)
                 : null;
+            Guard.Forbidden(
+                unitInput.Id.HasValue && unit == null,
+                "Gönderilen birim bu taşınmaza ait değil.",
+                "Property.ForeignUnit");
             if (unit == null)
             {
                 unit = new Unit();
                 property.Units.Add(unit);
             }
-            unit.UnitNo = input.UnitNo;
-            unit.FloorNo = input.FloorNo;
+            unit.UnitNo = unitInput.UnitNo;
+            unit.FloorNo = unitInput.FloorNo;
             unit.Name = name;
-            unit.Area = input.Area;
-            unit.Description = input.Description;
-            unit.UnitTypeId = input.UnitTypeId!.Value;
+            unit.Area = unitInput.Area;
+            unit.Description = unitInput.Description;
+            unit.UnitTypeId = unitInput.UnitTypeId!.Value;
         }
 
-        var incomingReservationIds = vm.RezervasyonAlanlari.Where(r => r.Id.HasValue).Select(r => r.Id!.Value).ToHashSet();
-        foreach (var existing in reservationUnits.Where(u => !incomingReservationIds.Contains(u.Id)))
+        var incomingReservationIds = input.ReservationAreas
+            .Where(area => area.Id.HasValue)
+            .Select(area => area.Id!.Value)
+            .ToHashSet();
+        foreach (var existing in reservationUnits.Where(unit => !incomingReservationIds.Contains(unit.Id)))
         {
-            if (await HasHistoricalDependencyAsync(existing.Id))
-                throw new InvalidOperationException($"'{existing.Name}' rezervasyon biriminin işlem geçmişi bulunduğu için silinemez.");
             if (reservationRates.TryGetValue(existing.Id, out var rate))
-                _ctx.RezervasyonTarifeler.Remove(rate);
-            _ctx.Units.Remove(existing);
+                reservationRateOverrideRepository.Remove(rate);
+            unitRepository.Remove(existing);
         }
 
-        foreach (var input in vm.RezervasyonAlanlari)
+        foreach (var reservationInput in input.ReservationAreas)
         {
-            var unit = input.Id.HasValue
-                ? property.Units.FirstOrDefault(u => u.Id == input.Id.Value)
+            var unit = reservationInput.Id.HasValue
+                ? property.Units.FirstOrDefault(item => item.Id == reservationInput.Id.Value)
                 : null;
+            Guard.Forbidden(
+                reservationInput.Id.HasValue && unit == null,
+                "Gönderilen rezervasyon birimi bu taşınmaza ait değil.",
+                "Property.ForeignReservationUnit");
             if (unit == null)
             {
                 unit = new Unit();
                 property.Units.Add(unit);
             }
-            unit.UnitNo = input.UnitNo;
+
+            unit.UnitNo = reservationInput.UnitNo;
             unit.FloorNo = null;
-            unit.Name = input.Name ?? "Rezervasyon Alanı";
-            unit.Area = input.Area;
-            unit.Description = input.Description;
-            unit.UnitTypeId = input.UnitTypeId!.Value;
+            unit.Name = reservationInput.Name ?? "Rezervasyon Alanı";
+            unit.Area = reservationInput.Area;
+            unit.Description = reservationInput.Description;
+            unit.UnitTypeId = reservationInput.UnitTypeId!.Value;
 
             if (!reservationRates.TryGetValue(unit.Id, out var rate))
             {
                 rate = new ReservationRateOverride { Unit = unit, BillingPeriodMinutes = 60 };
-                await _ctx.RezervasyonTarifeler.AddAsync(rate);
+                await reservationRateOverrideRepository.AddAsync(rate);
             }
-            rate.FreeDurationMinutes = input.FreeDurationMinutes;
-            rate.PeriodRate = input.SaatlikUcret;
-            rate.KdvRate = input.KdvRate;
-            rate.Description = $"{input.Name} için otomatik oluşturuldu";
+
+            rate.FreeDurationMinutes = reservationInput.FreeDurationMinutes;
+            rate.PeriodRate = reservationInput.HourlyRate;
+            rate.KdvRate = reservationInput.VatRate;
+            rate.Description = $"{reservationInput.Name} için otomatik oluşturuldu";
         }
     }
 
-    private async Task<bool> HasHistoricalDependencyAsync(int unitId)
+    private async Task ValidateDatabaseRulesAsync(CreatePropertyInput input)
     {
-        return await _ctx.Leases.IgnoreQueryFilters().AnyAsync(x => x.UnitId == unitId)
-            || await _ctx.Reservations.IgnoreQueryFilters().AnyAsync(x => x.UnitId == unitId)
-            || await _ctx.Charges.IgnoreQueryFilters().AnyAsync(x => x.UnitId == unitId);
+        Guard.InvalidField(
+            input.PropertyTypeId is null or <= 0,
+            nameof(input.PropertyTypeId),
+            "Taşınmaz tipi zorunludur.");
+
+        var support = await propertyTypeRepository.GetStructureSupportAsync(input.PropertyTypeId!.Value);
+        Guard.InvalidField(
+            support == null,
+            nameof(input.PropertyTypeId),
+            "Seçilen taşınmaz tipi aktif değil veya bulunamadı.",
+            "Property.PropertyTypeUnavailable");
+        Guard.InvalidField(
+            input.UnitStructure == UnitStructure.SingleUnit
+                ? !support!.SupportsSingleUnit
+                : !support!.SupportsMultipleUnits,
+            nameof(input.UnitStructure),
+            "Seçilen taşınmaz tipi bu birim yapısına izin vermiyor.",
+            "Property.UnsupportedUnitStructure");
+
+        var normalIds = input.Units.Where(unit => unit.UnitTypeId.HasValue)
+            .Select(unit => unit.UnitTypeId!.Value).Distinct().ToList();
+        var reservationIds = input.ReservationAreas.Where(area => area.UnitTypeId.HasValue)
+            .Select(area => area.UnitTypeId!.Value).Distinct().ToList();
+        var requestedIds = input.UnitStructure == UnitStructure.SingleUnit
+            ? input.SingleUnitTypeId.HasValue ? new List<int> { input.SingleUnitTypeId.Value } : []
+            : normalIds.Concat(reservationIds).Distinct().ToList();
+        var usages = await unitTypeRepository.GetActiveUsagesAsync(requestedIds);
+        var usageMap = usages.ToDictionary(item => item.UnitTypeId, item => item.Usage);
+
+        if (input.UnitStructure == UnitStructure.SingleUnit)
+        {
+            Guard.InvalidField(
+                !input.SingleUnitTypeId.HasValue || !usageMap.ContainsKey(input.SingleUnitTypeId.Value),
+                nameof(input.SingleUnitTypeId),
+                "Seçilen birim türü aktif değil veya bulunamadı.",
+                "Property.UnitTypeUnavailable");
+            return;
+        }
+
+        Guard.InvalidField(
+            normalIds.Any(id => !usageMap.TryGetValue(id, out var usage) || usage == UnitTypeUsage.Reservable),
+            nameof(input.Units),
+            "Birimler için aktif ve rezervasyon dışı bir birim türü seçilmelidir.",
+            "Property.InvalidNormalUnitType");
+        Guard.InvalidField(
+            reservationIds.Any(id => !usageMap.TryGetValue(id, out var usage) || usage != UnitTypeUsage.Reservable),
+            nameof(input.ReservationAreas),
+            "Rezervasyon alanları için aktif bir rezervasyon birim türü seçilmelidir.",
+            "Property.InvalidReservationUnitType");
     }
-    public async Task<List<UnitLookupDto>> GetBosBirimlerAsync(IReadOnlyList<int>? tasinmazIds = null)
+
+    private async Task ValidateSubmittedUnitsAsync(Property property, UpdatePropertyInput input)
     {
-        return await _repo.GetBosBirimlerAsync(tasinmazIds?.ToList());
+        var existing = property.Units.ToDictionary(unit => unit.Id);
+        foreach (var unit in input.Units.Where(unit => unit.Id.HasValue))
+        {
+            Guard.Forbidden(
+                !existing.TryGetValue(unit.Id!.Value, out var entity)
+                    || entity.UnitType.Usage == UnitTypeUsage.Reservable,
+                "Gönderilen birim kaydı bu taşınmaza veya bölüme ait değil.",
+                "Property.InvalidUnitOwnership");
+        }
+
+        foreach (var area in input.ReservationAreas.Where(area => area.Id.HasValue))
+        {
+            Guard.Forbidden(
+                !existing.TryGetValue(area.Id!.Value, out var entity)
+                    || entity.UnitType.Usage != UnitTypeUsage.Reservable,
+                "Gönderilen rezervasyon kaydı bu taşınmaza veya bölüme ait değil.",
+                "Property.InvalidReservationOwnership");
+        }
+
+        var incomingNormalIds = input.Units.Where(unit => unit.Id.HasValue)
+            .Select(unit => unit.Id!.Value).ToHashSet();
+        var incomingReservationIds = input.ReservationAreas.Where(area => area.Id.HasValue)
+            .Select(area => area.Id!.Value).ToHashSet();
+
+        foreach (var unit in property.Units)
+        {
+            var isReservationUnit = unit.UnitType.Usage == UnitTypeUsage.Reservable;
+            var isRemoved = isReservationUnit
+                ? !incomingReservationIds.Contains(unit.Id)
+                : !incomingNormalIds.Contains(unit.Id);
+            if (!isRemoved) continue;
+
+            Guard.InvalidField(
+                await unitRepository.HasHistoricalDependencyAsync(unit.Id),
+                isReservationUnit ? nameof(input.ReservationAreas) : nameof(input.Units),
+                $"'{unit.Name}' biriminin işlem geçmişi bulunduğu için silinemez.",
+                isReservationUnit
+                    ? "Property.ReservationUnitHasHistory"
+                    : "Property.UnitHasHistory");
+        }
     }
+
+    public Task<List<UnitLookupDto>> GetAvailableUnitsAsync(GetAvailableUnitsInput input)
+        => unitRepository.GetAvailableAsync(
+            input.PropertyIds?.ToList(),
+            input.UnitIds?.ToList());
 }

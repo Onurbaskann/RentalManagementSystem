@@ -25,25 +25,25 @@ public class RateScheduleRepository : BaseRepository<RateSchedule>, IRateSchedul
             })
             .FirstOrDefaultAsync();
 
-    public async Task<List<ParentTarifeSatir>> GetByYilKategoriForKartAsync(int yil, int? kategoriId)
+    public async Task<List<ParentRateRowViewModel>> GetRowsByYearAndCategoryAsync(int year, int? tenantCategoryId)
     {
         var q = _dbSet.AsNoTracking()
-            .Where(k => k.Year == yil && k.IsActive
+            .Where(k => k.Year == year && k.IsActive
                      && k.ChargeType.Behavior != ChargeTypeBehavior.UserManual
                      && k.ChargeType.Behavior != ChargeTypeBehavior.ReservationSpecific);
-        if (kategoriId.HasValue)
-            q = q.Where(k => k.TenantCategoryId == kategoriId.Value);
+        if (tenantCategoryId.HasValue)
+            q = q.Where(k => k.TenantCategoryId == tenantCategoryId.Value);
 
         return await q
             .OrderBy(k => k.TenantCategory.Order)
             .ThenBy(k => k.ChargeType.SortOrder)
-            .Select(k => new ParentTarifeSatir
+            .Select(k => new ParentRateRowViewModel
             {
                 CategoryName = k.TenantCategory.Name,
                 ChargeTypeName = k.ChargeType.Name,
                 CalculationMethod = k.CalculationMethod,
                 UnitValue = k.UnitValue,
-                KdvRate = k.KdvRate
+                VatRate = k.KdvRate
             })
             .ToListAsync();
     }

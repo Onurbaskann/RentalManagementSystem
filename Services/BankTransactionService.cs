@@ -1,4 +1,5 @@
 using KiraTakip.Data;
+using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
@@ -9,75 +10,140 @@ using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-public class BankTransactionService : IBankTransactionService, ITransactionalService
+public class BankTransactionService(
+    IBankTransactionRepository bankTransactionRepository,
+    IPaymentAllocationRepository paymentAllocationRepository,
+    IPaymentMatchRepository paymentMatchRepository,
+    IEnumerable<IBankaHareketiParser> parsers,
+    IUnitOfWork unitOfWork) : IBankTransactionService, ITransactionalService
 {
-    private readonly IBankTransactionRepository _repo;
-    private readonly IEnumerable<IBankaHareketiParser> _parsers;
-    private readonly IUnitOfWork _uow;
-
-    public BankTransactionService(IBankTransactionRepository repo, IEnumerable<IBankaHareketiParser> parsers, IUnitOfWork uow)
+    public async Task ImportAsync(ImportBankTransactionsInput input)
     {
-        _repo = repo;
-        _parsers = parsers;
-        _uow = uow;
+        var parser = parsers.FirstOrDefault(item =>
+            item.BankCode.Equals(input.BankCode, StringComparison.OrdinalIgnoreCase));
+        Guard.InvalidField(
+            parser == null,
+            nameof(input.BankCode),
+            $"'{input.BankCode}' için parser bulunamadı.");
+
+        var transactions = parser!.Parse(input.File).ToList();
+
+        await bankTransactionRepository.AddRangeAsync(transactions);
+        await unitOfWork.SaveChangesAsync();
     }
 
-    public async Task<int> ImportAsync(Stream dosya, string bankaKodu)
+    public Task<List<BankTransactionListItemDto>> GetAllAsync(GetBankTransactionsInput input)
+        => bankTransactionRepository.GetListAsync(input.Status);
+
+    public Task<PagedResult<BankTransactionListItemDto>> GetPagedAsync(TableQuery query)
+        => bankTransactionRepository.GetPagedListAsync(query);
+
+    public Task<BankTransactionDetailDto?> GetByIdAsync(GetBankTransactionByIdInput input)
+        => bankTransactionRepository.GetDetailAsync(input.Id);
+
+    public async Task MatchAsync(MatchBankTransactionInput input)
     {
-        var parser = _parsers.FirstOrDefault(p =>
-            p.BankCode.Equals(bankaKodu, StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidOperationException($"'{bankaKodu}' için parser bulunamadı.");
+        var payment = Guard.NotFound(
+            await paymentAllocationRepository.GetMatchingContextAsync(input.PaymentId),
+            "Ödeme bulunamadı.");
 
-        var hareketler = parser.Parse(dosya).ToList();
-        await _repo.AddRangeAsync(hareketler);
-        await _uow.SaveChangesAsync();
-        return hareketler.Count;
-    }
+        Guard.Forbidden(
+            IsOutsideScope(
+                payment.PropertyId,
+                payment.UnitId,
+                input.PropertyIds,
+                input.UnitIds),
+            "Bu ödeme için banka eşleştirmesi yapma yetkiniz bulunmuyor.");
 
-    public Task<List<BankaHareketiListItemDto>> GetAllAsync(BankMatchStatus? durum = null)
-        => _repo.GetListAsync(durum);
+        Guard.Conflict(
+            payment.Status is not PaymentStatus.PendingApproval and not PaymentStatus.Approved,
+            "Yalnızca onay bekleyen veya onaylanmış ödemeler banka hareketiyle eşleştirilebilir.");
 
-    public Task<PagedResult<BankaHareketiListItemDto>> GetPagedAsync(TableQuery q)
-        => _repo.GetPagedListAsync(q);
+        Guard.Conflict(
+            await paymentMatchRepository.ExistsForPaymentAsync(input.PaymentId),
+            "Ödeme başka bir banka hareketiyle zaten eşleştirilmiş.");
 
-    public Task<BankaHareketiDetayDto?> GetByIdAsync(int id)
-        => _repo.GetDetayAsync(id);
+        var transaction = Guard.NotFound(
+            await bankTransactionRepository.GetByIdAsync(input.BankTransactionId),
+            "Banka hareketi bulunamadı.");
 
-    public async Task EslestirAsync(int odemeId, int bankaHareketiId)
-    {
-        if (await _repo.EslesmeVarMiAsync(odemeId, bankaHareketiId)) return;
+        Guard.Conflict(
+            transaction.MatchStatus != BankMatchStatus.Unmatched
+                || await paymentMatchRepository.ExistsForBankTransactionAsync(input.BankTransactionId),
+            "Banka hareketi başka bir ödemeyle zaten eşleştirilmiş.");
 
-        var hareketi = await _repo.GetByIdAsync(bankaHareketiId)
-            ?? throw new InvalidOperationException("Banka hareketi bulunamadı.");
-
-        var eslesme = new PaymentMatch
+        var match = new PaymentMatch
         {
-            PaymentAllocationId = odemeId,
-            BankTransactionId = bankaHareketiId,
-            MatchType = KiraTakip.Models.MatchType.Manual,
+            PaymentAllocationId = input.PaymentId,
+            BankTransactionId = input.BankTransactionId,
+            MatchType = Models.MatchType.Manual,
         };
 
-        hareketi.MatchStatus = BankMatchStatus.ManuallyMatched;
-        await _repo.AddEslesmeAsync(eslesme);
-        await _uow.SaveChangesAsync();
+        transaction.MatchStatus = BankMatchStatus.ManuallyMatched;
+
+        await paymentMatchRepository.AddAsync(match);
+        await unitOfWork.SaveChangesAsync();
     }
 
-    public async Task EslesmeCozAsync(int eslesmeId)
+    public async Task<int> UnmatchAsync(UnmatchBankTransactionInput input)
     {
-        var eslesme = await _repo.GetEslesmeWithBankaHareketiAsync(eslesmeId);
-        if (eslesme == null) return;
+        var match = Guard.NotFound(
+            await paymentMatchRepository.GetWithDetailsAsync(input.MatchId),
+            "Banka eşleşmesi bulunamadı.");
 
-        await _repo.RemoveEslesmeAsync(eslesme);
+        Guard.Forbidden(
+            IsOutsideScope(
+                match.PaymentAllocation.Charge.Unit.PropertyId,
+                match.PaymentAllocation.Charge.UnitId,
+                input.PropertyIds,
+                input.UnitIds),
+            "Bu banka eşleşmesini kaldırma yetkiniz bulunmuyor.");
 
-        if (!await _repo.KalanEslesmeVarMiAsync(eslesme.BankTransactionId, eslesmeId))
-            eslesme.BankTransaction.MatchStatus = BankMatchStatus.Unmatched;
+        var paymentId = match.PaymentAllocationId;
 
-        await _uow.SaveChangesAsync();
+        await paymentMatchRepository.RemoveAsync(match);
+        match.BankTransaction.MatchStatus = BankMatchStatus.Unmatched;
+
+        await unitOfWork.SaveChangesAsync();
+
+        return paymentId;
     }
 
-    public Task<List<OdemeAdayDto>> GetOdemeAdaylariAsync(int bankaHareketiId, IReadOnlyList<int>? tasinmazIds = null)
-        => _repo.GetOdemeAdaylariAsync(bankaHareketiId, tasinmazIds);
+    public async Task<List<PaymentCandidateDto>> GetPaymentCandidatesAsync(GetBankTransactionPaymentCandidatesInput input)
+    {
+        if (await paymentMatchRepository.ExistsForBankTransactionAsync(input.BankTransactionId))
+            return [];
 
-    public Task<List<BankaHareketiListItemDto>> GetHareketAdaylariAsync(int odemeId)
-        => _repo.GetHareketAdaylariAsync(odemeId);
+        var basis = await bankTransactionRepository.GetMatchingBasisAsync(input.BankTransactionId);
+        return basis == null
+            ? []
+            : await paymentAllocationRepository.GetCandidatesAsync(
+                basis,
+                input.PropertyIds,
+                input.UnitIds);
+    }
+
+    public async Task<List<BankTransactionListItemDto>> GetTransactionCandidatesAsync(GetBankTransactionCandidatesInput input)
+    {
+        if (await paymentMatchRepository.ExistsForPaymentAsync(input.PaymentId))
+            return [];
+
+        var basis = await paymentAllocationRepository.GetMatchingBasisAsync(input.PaymentId);
+        return basis == null
+            ? []
+            : await bankTransactionRepository.GetTransactionCandidatesAsync(basis);
+    }
+
+    private static bool IsOutsideScope(
+        int propertyId,
+        int unitId,
+        IReadOnlyCollection<int>? propertyIds,
+        IReadOnlyCollection<int>? unitIds)
+    {
+        if (propertyIds == null && unitIds == null)
+            return false;
+
+        return propertyIds?.Contains(propertyId) != true
+            && unitIds?.Contains(unitId) != true;
+    }
 }

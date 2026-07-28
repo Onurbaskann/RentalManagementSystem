@@ -52,24 +52,49 @@
 
     @await Html.PartialAsync("_Sidebar")
 
+    @{
+        var useCentralFeedback = ViewData["UseCentralFeedback"] is true;
+        var operationSucceeded = TempData[KiraTakip.Infrastructure.FeedbackTempDataKeys.OperationSucceeded] is true;
+        var customSuccessMessage = useCentralFeedback
+            ? TempData[KiraTakip.Infrastructure.FeedbackTempDataKeys.SuccessMessage] as string
+            : null;
+        var showSuccessFeedback = useCentralFeedback
+            && (operationSucceeded || !string.IsNullOrWhiteSpace(customSuccessMessage));
+        var successFeedbackMessage = !string.IsNullOrWhiteSpace(customSuccessMessage)
+            ? customSuccessMessage
+            : "İşlem başarılı.";
+        var errorMessages = new List<string>();
+        if (TempData["Error"] is string tempError && !string.IsNullOrWhiteSpace(tempError))
+        {
+            errorMessages.Add(tempError);
+        }
+        if (useCentralFeedback)
+        {
+            errorMessages.AddRange(ViewData.ModelState.Values
+                .SelectMany(value => value.Errors)
+                .Select(error => error.ErrorMessage)
+                .Where(message => !string.IsNullOrWhiteSpace(message)));
+        }
+        else if (ViewData.ModelState.TryGetValue(string.Empty, out var rootErrors))
+        {
+            errorMessages.AddRange(rootErrors.Errors.Select(error => error.ErrorMessage));
+        }
+        errorMessages = errorMessages.Distinct().ToList();
+    }
+
     <main class="main-content">
+        @if (showSuccessFeedback)
+        {
+            <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 px-4 rounded-lg mb-4 text-[13.5px] font-medium">
+                ✓ @successFeedbackMessage
+            </div>
+        }
         @RenderBody()
     </main>
 
     @await Html.PartialAsync("_ConfirmDialog")
 
-    @{
-        var hataMesajlari = new List<string>();
-        if (TempData["Error"] is string tempHata && !string.IsNullOrWhiteSpace(tempHata))
-        {
-            hataMesajlari.Add(tempHata);
-        }
-        if (ViewData.ModelState.TryGetValue(string.Empty, out var kokHatalar))
-        {
-            hataMesajlari.AddRange(kokHatalar.Errors.Select(e => e.ErrorMessage));
-        }
-    }
-    @if (hataMesajlari.Count > 0)
+    @if (errorMessages.Count > 0)
     {
         <div x-data="{ open: true }" x-show="open" x-cloak
              class="fixed inset-0 z-[200] flex items-center justify-center"
@@ -83,9 +108,9 @@
                     <div class="text-[15px] font-bold text-slate-800">İşlem Gerçekleştirilemedi</div>
                 </div>
                 <ul class="text-sm text-slate-600 space-y-1.5 mb-5 list-disc list-inside">
-                    @foreach (var mesaj in hataMesajlari)
+                    @foreach (var message in errorMessages)
                     {
-                        <li>@mesaj</li>
+                        <li>@message</li>
                     }
                 </ul>
                 <div class="flex justify-end">
@@ -93,9 +118,7 @@
                 </div>
             </div>
         </div>
-    }
-
-    <div id="toast"></div>
+    }    <div id="toast"></div>
 
     <script>
         function showToast(msg, type) {

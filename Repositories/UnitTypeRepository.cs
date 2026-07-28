@@ -38,14 +38,16 @@ public class UnitTypeRepository : BaseRepository<UnitType>, IUnitTypeRepository
         => await _dbSet.AsNoTracking()
             .AnyAsync(b => b.ChargeTypeId == chargeTypeId && b.IsActive && (excludeId == null || b.Id != excludeId));
 
-    public async Task<bool> HasAktifTahakkukForUnitTypeAsync(int unitTypeId)
-        => await _ctx.Charges.AsNoTracking()
-            .AnyAsync(t => t.Status != ChargeStatus.Paid
-                        && t.Status != ChargeStatus.Cancelled
-                        && t.Unit.UnitTypeId == unitTypeId);
+    public Task<List<UnitTypeOptionDto>> GetActiveOptionsAsync()
+        => _dbSet.AsNoTracking()
+            .Where(unitType => unitType.IsActive)
+            .OrderBy(unitType => unitType.SortOrder)
+            .Select(unitType => new UnitTypeOptionDto(unitType.Id, unitType.Name, unitType.Usage))
+            .ToListAsync();
 
-    public async Task<bool> HasPlanlanmisRezervasyonForUnitTypeAsync(int unitTypeId)
-        => await _ctx.Reservations.AsNoTracking()
-            .AnyAsync(r => r.Status == ReservationStatus.Planned
-                        && _ctx.Units.Any(b => b.UnitTypeId == unitTypeId && b.Id == r.UnitId));
+    public Task<List<UnitTypeUsageDto>> GetActiveUsagesAsync(IReadOnlyCollection<int> unitTypeIds)
+        => _dbSet.AsNoTracking()
+            .Where(unitType => unitTypeIds.Contains(unitType.Id) && unitType.IsActive)
+            .Select(unitType => new UnitTypeUsageDto(unitType.Id, unitType.Usage))
+            .ToListAsync();
 }

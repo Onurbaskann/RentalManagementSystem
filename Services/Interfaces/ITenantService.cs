@@ -1,13 +1,14 @@
-﻿using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Services.Interfaces;
 
 public interface ITenantService
 {
-    Task<List<KiraciListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null);
-    Task<KiraciDetayDto?> GetDetayAsync(int id);
-    Task<Tenant> CreateAsync(Tenant k);
-    Task UpdateAsync(Tenant k);
-    Task<string> GenerateKiraciNoAsync();
-    Task<bool> KiraciNoExistsAsync(string kiraciNo, int? excludeId = null);
+    Task<List<TenantListItemDto>> GetAllAsync(GetTenantsInput input);
+    Task<TenantDetailsDto?> GetDetailsAsync(GetTenantDetailsInput input);
+    Task<TenantDetailsDto> GetProfileAsync(GetTenantProfileInput input);
+    Task<CreatedTenantDto> CreateAsync(CreateTenantInput input);
+    Task UpdateAsync(UpdateTenantInput input);
+    Task<string> GenerateTenantNoAsync();
+    Task<bool> IsInactiveAsync(CheckTenantInactiveInput input, CancellationToken ct = default);
 }

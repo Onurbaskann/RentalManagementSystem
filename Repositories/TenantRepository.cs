@@ -1,82 +1,183 @@
-﻿using KiraTakip.Data;
-using KiraTakip.Models;
+using KiraTakip.Data;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class TenantRepository : BaseRepository<Tenant>, ITenantRepository
+public class TenantRepository(ApplicationDbContext context)
+    : BaseRepository<Tenant>(context), ITenantRepository
 {
-    public TenantRepository(ApplicationDbContext ctx) : base(ctx)
+    public async Task<List<TenantListItemDto>> GetListAsync(
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null)
     {
-    }
+        IQueryable<Tenant> query = _dbSet.AsNoTracking();
 
-    public async Task<List<KiraciListItemDto>> GetListAsync(List<int>? yetkiliPropertyIds)
-    {
-        IQueryable<Tenant> q = _dbSet.AsNoTracking();
-
-        if (yetkiliPropertyIds != null)
+        if (authorizedPropertyIds != null || authorizedUnitIds != null)
         {
-            var yetkiliKiraciIds = _ctx.Leases
-                .Where(s => yetkiliPropertyIds.Contains(s.Unit.PropertyId))
-                .Select(s => s.TenantId)
+            var propertyIds = authorizedPropertyIds ?? [];
+            var unitIds = authorizedUnitIds ?? [];
+            var authorizedTenantIds = _ctx.Leases
+                .Where(lease => propertyIds.Contains(lease.Unit.PropertyId)
+                    || unitIds.Contains(lease.UnitId))
+                .Select(lease => lease.TenantId)
                 .Distinct();
 
-            q = q.Where(k => yetkiliKiraciIds.Contains(k.Id));
+            query = query.Where(tenant => authorizedTenantIds.Contains(tenant.Id));
         }
 
-        return await q
-            .OrderBy(k => k.TenantNo)
-            .Select(k => new KiraciListItemDto
+        return await query
+            .OrderBy(tenant => tenant.TenantNo)
+            .Select(tenant => new TenantListItemDto
             {
-                Id = k.Id,
-                KiraciNo = k.TenantNo,
-                GosterimAdi = k.Name,
-                VergiNo = k.TaxNo,
-                KiraciKategoriAd = k.TenantCategory != null ? k.TenantCategory.Name : null,
-                Telefon = k.Phone,
-                Email = k.Email,
-                KayitTarihi = k.RegistrationDate
+                Id = tenant.Id,
+                TenantNo = tenant.TenantNo,
+                DisplayName = tenant.Name,
+                TaxNo = tenant.TaxNo,
+                TenantCategoryName = tenant.TenantCategory != null ? tenant.TenantCategory.Name : null,
+                Phone = tenant.Phone,
+                Email = tenant.Email,
+                RegistrationDate = tenant.RegistrationDate
             })
             .ToListAsync();
     }
 
-    public async Task<KiraciDetayDto?> GetDetayAsync(int id)
+    public Task<bool> IsInScopeAsync(
+        int tenantId,
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null)
     {
-        return await _dbSet.AsNoTracking()
-            .Where(k => k.Id == id)
-            .Select(k => new KiraciDetayDto
+        if (authorizedPropertyIds == null && authorizedUnitIds == null)
+            return _dbSet.AsNoTracking().AnyAsync(tenant => tenant.Id == tenantId);
+
+        var propertyIds = authorizedPropertyIds ?? [];
+        var unitIds = authorizedUnitIds ?? [];
+        return _ctx.Leases.AsNoTracking().AnyAsync(lease =>
+            lease.TenantId == tenantId
+            && (propertyIds.Contains(lease.Unit.PropertyId)
+                || unitIds.Contains(lease.UnitId)));
+    }
+
+    public Task<List<ReservationTenantOptionDto>> GetReservationOptionsAsync()
+        => _dbSet.AsNoTracking()
+            .Where(tenant => tenant.IsActive)
+            .OrderBy(tenant => tenant.TenantNo)
+            .Select(tenant => new ReservationTenantOptionDto(tenant.Id, tenant.Name))
+            .ToListAsync();
+
+    public Task<TenantDetailsDto?> GetDetailsAsync(
+        int id,
+        List<int>? authorizedPropertyIds = null,
+        List<int>? authorizedUnitIds = null)
+        => ApplyScope(_dbSet.AsNoTracking(), authorizedPropertyIds, authorizedUnitIds)
+            .Where(tenant => tenant.Id == id)
+            .Select(tenant => new TenantDetailsDto
             {
-                Id = k.Id,
-                KiraciKategoriId = k.TenantCategoryId,
-                KiraciKategoriAd = k.TenantCategory != null ? k.TenantCategory.Name : null,
-                SektorId = k.SectorId,
-                SektorAd = k.Sector != null ? k.Sector.Name : null,
-                KiraciNo = k.TenantNo,
-                Ad = k.Name,
-                TicaretSicilNo = k.TradeRegistryNo,
-                VergiNo = k.TaxNo,
-                VergiDairesi = k.TaxOffice,
-                MersisNo = k.MersisNo,
-                Telefon = k.Phone,
-                Email = k.Email,
-                Adres = k.Address,
-                KayitTarihi = k.RegistrationDate
+                Id = tenant.Id,
+                TenantCategoryId = tenant.TenantCategoryId,
+                TenantCategoryName = tenant.TenantCategory != null ? tenant.TenantCategory.Name : null,
+                SectorId = tenant.SectorId,
+                SectorName = tenant.Sector != null ? tenant.Sector.Name : null,
+                TenantNo = tenant.TenantNo,
+                Name = tenant.Name,
+                TradeRegistryNo = tenant.TradeRegistryNo,
+                TaxNo = tenant.TaxNo,
+                TaxOffice = tenant.TaxOffice,
+                MersisNo = tenant.MersisNo,
+                Phone = tenant.Phone,
+                Email = tenant.Email,
+                Address = tenant.Address,
+                RegistrationDate = tenant.RegistrationDate
             })
             .FirstOrDefaultAsync();
-    }
 
-    public async Task<List<string>> GetExistingTenantNosAsync()
-    {
-        return await _dbSet.AsNoTracking()
-            .Select(k => k.TenantNo)
+    public Task<Tenant?> GetForUpdateAsync(
+        int id,
+        List<int>? authorizedPropertyIds = null,
+        List<int>? authorizedUnitIds = null)
+        => ApplyScope(_dbSet, authorizedPropertyIds, authorizedUnitIds)
+            .FirstOrDefaultAsync(tenant => tenant.Id == id);
+
+    public Task<bool> TenantNoExistsAsync(string tenantNo, int? excludeTenantId = null)
+        => _dbSet
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .AnyAsync(tenant => tenant.TenantNo == tenantNo
+                && (excludeTenantId == null || tenant.Id != excludeTenantId));
+
+    public Task<bool> TaxNoExistsAsync(string taxNo, int? excludeTenantId = null)
+        => _dbSet
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .AnyAsync(tenant => tenant.TaxNo == taxNo
+                && (excludeTenantId == null || tenant.Id != excludeTenantId));
+
+    public Task<List<string>> GetExistingTenantNosAsync()
+        => _dbSet
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Select(tenant => tenant.TenantNo)
             .ToListAsync();
+
+    public Task<int?> GetCategoryIdAsync(int tenantId)
+        => _dbSet.AsNoTracking()
+            .Where(tenant => tenant.Id == tenantId)
+            .Select(tenant => tenant.TenantCategoryId)
+            .FirstOrDefaultAsync();
+
+    public async Task<bool> IsInactiveAsync(int tenantId, CancellationToken ct = default)
+    {
+        var tenant = await _dbSet
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == tenantId, ct);
+
+        return tenant is not null && !tenant.IsActive;
     }
 
-    public async Task<int?> GetKategoriIdAsync(int tenantId)
-        => await _dbSet.AsNoTracking()
-            .Where(k => k.Id == tenantId)
-            .Select(k => k.TenantCategoryId)
-            .FirstOrDefaultAsync();
+    public Task<Tenant?> GetByIdIgnoreQueryFiltersAsync(int id, CancellationToken ct = default)
+        => _dbSet
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(tenant => tenant.Id == id, ct);
+
+    public Task<Tenant?> GetActiveByIdAsync(int id, CancellationToken ct = default)
+        => _dbSet.FirstOrDefaultAsync(
+            tenant => tenant.Id == id && tenant.IsActive,
+            ct);
+    public async Task<DocumentOwnerContextDto?> GetDocumentOwnerContextAsync(int tenantId)
+    {
+        if (!await _dbSet.AsNoTracking().AnyAsync(tenant => tenant.Id == tenantId))
+            return null;
+
+        var leaseScopes = await _ctx.Leases
+            .AsNoTracking()
+            .Where(lease => lease.TenantId == tenantId)
+            .Select(lease => new { lease.Unit.PropertyId, lease.UnitId })
+            .ToListAsync();
+
+        return new DocumentOwnerContextDto(
+            tenantId,
+            leaseScopes.Select(scope => scope.PropertyId).Distinct().ToList(),
+            leaseScopes.Select(scope => scope.UnitId).Distinct().ToList());
+    }
+
+    private IQueryable<Tenant> ApplyScope(
+        IQueryable<Tenant> query,
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds)
+    {
+        if (authorizedPropertyIds == null && authorizedUnitIds == null)
+            return query;
+
+        var propertyIds = authorizedPropertyIds ?? [];
+        var unitIds = authorizedUnitIds ?? [];
+        var authorizedTenantIds = _ctx.Leases
+            .Where(lease => propertyIds.Contains(lease.Unit.PropertyId)
+                || unitIds.Contains(lease.UnitId))
+            .Select(lease => lease.TenantId)
+            .Distinct();
+
+        return query.Where(tenant => authorizedTenantIds.Contains(tenant.Id));
+    }
 }

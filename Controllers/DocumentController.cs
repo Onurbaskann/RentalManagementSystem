@@ -1,7 +1,9 @@
 using KiraTakip.Authorization;
 using KiraTakip.Extensions;
+using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models;
-using KiraTakip.Models.Entities;
+using KiraTakip.Models.Dtos;
+using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,94 +11,110 @@ using Microsoft.AspNetCore.Mvc;
 namespace KiraTakip.Controllers;
 
 [Authorize]
-[Route("Belge")]
-public class DocumentController : Controller
+[Route("Document")]
+public class DocumentController(
+    IDocumentService documentService,
+    IPermissionScopeCache permissionScopeCache,
+    ICurrentUserContext currentUserContext) : Controller
 {
-    private readonly IDocumentService _documentService;
-    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
-        { "pdf", "jpg", "jpeg", "png", "doc", "docx", "xls", "xlsx" };
-
-    public DocumentController(IDocumentService documentService)
+    [HttpGet("Download/{id}")]
+    public async Task<IActionResult> Download(int id)
     {
-        _documentService = documentService;
+        var result = await documentService.DownloadAsync(
+            new DownloadDocumentInput(id, await BuildAccessScopeAsync(canEdit: false)));
+
+        return File(result.Content, result.Metadata.MimeType, result.Metadata.FileName);
     }
 
-    [HttpGet("Indir/{id:int}")]
-    public async Task<IActionResult> Indir(int id)
-    {
-        try
-        {
-            var (meta, content) = await _documentService.DownloadAsync(id);
-            return File(content, meta.MimeType, meta.FileName);
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-    }
-
-    [HttpPost("Yukle")]
+    [HttpPost("Upload")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Yukle(DocumentOwnerType ownerType, int ownerId, int documentTypeId, IFormFile dosya, string? aciklama)
+    public async Task<IActionResult> Upload(DocumentUploadViewModel viewModel)
     {
-        if (!User.HasPermission(GetRequiredPermission(ownerType)))
-            return Forbid();
-
-        if (dosya == null || dosya.Length == 0)
+        if (!ModelState.IsValid)
         {
-            TempData["Error"] = "Dosya seçilmedi.";
-            return RedirectToEntity(ownerType, ownerId);
+            var message = ModelState.Values
+                .SelectMany(value => value.Errors)
+                .Select(error => error.ErrorMessage)
+                .FirstOrDefault(error => !string.IsNullOrWhiteSpace(error))
+                ?? "Belge bilgileri geçersiz.";
+            throw new BusinessException(message);
         }
 
-        var ext = Path.GetExtension(dosya.FileName).TrimStart('.').ToLowerInvariant();
-        if (!AllowedExtensions.Contains(ext))
-        {
-            TempData["Error"] = "Desteklenmeyen dosya türü.";
-            return RedirectToEntity(ownerType, ownerId);
-        }
+        using var memoryStream = new MemoryStream();
+        await viewModel.File!.CopyToAsync(memoryStream);
 
-        if (dosya.Length > 20 * 1024 * 1024)
-        {
-            TempData["Error"] = "Dosya boyutu 20 MB sınırını aşıyor.";
-            return RedirectToEntity(ownerType, ownerId);
-        }
+        await documentService.UploadAsync(new UploadDocumentInput(
+            viewModel.OwnerType,
+            viewModel.OwnerId,
+            viewModel.DocumentTypeId,
+            viewModel.File.FileName,
+            viewModel.File.ContentType,
+            memoryStream.ToArray(),
+            viewModel.Description,
+            InvalidateOld: true,
+            AccessScope: await BuildAccessScopeAsync(canEdit: true)));
 
-        using var ms = new MemoryStream();
-        await dosya.CopyToAsync(ms);
-
-        await _documentService.UploadAsync(
-            ownerType, ownerId, documentTypeId,
-            dosya.FileName, dosya.ContentType, ms.ToArray(), aciklama, invalidateOld: true);
-
-        TempData["Success"] = "Belge yüklendi.";
-        return RedirectToEntity(ownerType, ownerId);
+        return RedirectToEntity(viewModel.OwnerType, viewModel.OwnerId);
     }
 
-    [HttpPost("Sil/{id:int}")]
+    [HttpPost("Delete/{id}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Sil(int id, DocumentOwnerType ownerType, int ownerId)
+    public async Task<IActionResult> Delete(int id)
     {
-        if (!User.HasPermission(GetRequiredPermission(ownerType)))
-            return Forbid();
+        var result = await documentService.DeleteAsync(
+            new DeleteDocumentInput(id, await BuildAccessScopeAsync(canEdit: true)));
 
-        await _documentService.DeleteAsync(id);
-        TempData["Success"] = "Belge silindi.";
-        return RedirectToEntity(ownerType, ownerId);
+        return RedirectToEntity(result.OwnerType, result.OwnerId);
     }
 
-    private static string GetRequiredPermission(DocumentOwnerType ownerType) => ownerType switch
+    private async Task<DocumentAccessScopeInput> BuildAccessScopeAsync(bool canEdit)
     {
-        DocumentOwnerType.Tenant   => PermissionCatalog.Tenant.Edit,
-        DocumentOwnerType.Lease => PermissionCatalog.Lease.Edit,
-        DocumentOwnerType.Payment    => PermissionCatalog.Payment.UploadReceipt,
-        _ => throw new ArgumentOutOfRangeException(nameof(ownerType))
-    };
+        var allowedOwnerTypes = new List<DocumentOwnerType>();
+
+        if (canEdit
+            ? User.HasPermission(PermissionCatalog.Tenant.Edit)
+            : User.HasModuleAccess(PermissionCatalog.Tenant.Module))
+            allowedOwnerTypes.Add(DocumentOwnerType.Tenant);
+
+        if ((canEdit
+                ? User.HasPermission(PermissionCatalog.Lease.Edit)
+                : User.HasModuleAccess(PermissionCatalog.Lease.Module))
+            || (!canEdit && User.HasModuleAccess(PermissionCatalog.TenantPortal.Lease.Module)))
+            allowedOwnerTypes.Add(DocumentOwnerType.Lease);
+
+        if ((canEdit
+                ? User.HasPermission(PermissionCatalog.Payment.UploadReceipt)
+                : User.HasModuleAccess(PermissionCatalog.Payment.Module))
+            || (!canEdit && (User.HasModuleAccess(PermissionCatalog.TenantPortal.Payment.Module)
+                || User.HasModuleAccess(PermissionCatalog.TenantPortal.Charge.Module))))
+            allowedOwnerTypes.Add(DocumentOwnerType.Payment);
+
+        IReadOnlyList<int>? propertyIds = null;
+        IReadOnlyList<int>? unitIds = null;
+        if (!currentUserContext.IsKiraciUser)
+        {
+            var scope = await permissionScopeCache.GetAsync(currentUserContext.UserId!);
+            if (!scope.GlobalAccess)
+            {
+                propertyIds = scope.PropertyIds;
+                unitIds = scope.UnitIds;
+            }
+        }
+
+        return new DocumentAccessScopeInput(
+            allowedOwnerTypes,
+            propertyIds,
+            unitIds,
+            TenantId: currentUserContext.IsKiraciUser
+                ? currentUserContext.TenantId
+                : null);
+    }
 
     private IActionResult RedirectToEntity(DocumentOwnerType ownerType, int ownerId) => ownerType switch
     {
-        DocumentOwnerType.Tenant   => RedirectToAction("Detay", "Tenant",   new { id = ownerId }),
-        DocumentOwnerType.Lease => RedirectToAction("Detay", "Lease", new { id = ownerId }),
-        DocumentOwnerType.Payment    => RedirectToAction("Detay", "Payment",    new { id = ownerId }),
-        _ => RedirectToAction("Index", "Home")
+        DocumentOwnerType.Tenant => RedirectToAction(nameof(TenantController.Details), "Tenant", new { id = ownerId }),
+        DocumentOwnerType.Lease => RedirectToAction(nameof(LeaseController.Details), "Lease", new { id = ownerId }),
+        DocumentOwnerType.Payment => RedirectToAction(nameof(PaymentController.Details), "Payment", new { id = ownerId }),
+        _ => RedirectToAction(nameof(HomeController.Index), "Home")
     };
 }

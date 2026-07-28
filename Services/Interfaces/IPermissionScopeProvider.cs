@@ -8,6 +8,5 @@ public interface IPermissionScopeProvider
     IReadOnlyList<int> AccessiblePropertyIds { get; }
     IReadOnlyList<int> AccessibleUnitIds { get; }
     bool IsInScope(int propertyId);
-    void PropertyGuard(int propertyId);
     void Initialize(UserScopeDto dto);
 }

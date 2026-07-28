@@ -1,8 +1,16 @@
-﻿namespace KiraTakip.Services.Interfaces;
+using KiraTakip.Models.Dtos;
+
+namespace KiraTakip.Services.Interfaces;
 
 public interface IPaymentLinkService
 {
-    Task<string> BuildLinkAsync(int tenantId, CancellationToken ct = default);
-    Task<(bool Success, int TenantId, string? Reason)> TryValidateAsync(string token, CancellationToken ct = default);
-    Task IptalEtAsync(int kayitId, string iptalEdenUserId, CancellationToken ct = default);
+    Task<string> CreateAsync(
+        CreatePaymentLinkInput input,
+        CancellationToken cancellationToken = default);
+    Task<PaymentLinkValidationResultDto> ValidateAsync(
+        ValidatePaymentLinkInput input,
+        CancellationToken cancellationToken = default);
+    Task CancelAsync(
+        CancelPaymentLinkInput input,
+        CancellationToken cancellationToken = default);
 }

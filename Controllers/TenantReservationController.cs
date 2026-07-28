@@ -1,5 +1,5 @@
-﻿using KiraTakip.Authorization;
-using KiraTakip.Data;
+using KiraTakip.Authorization;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,22 +8,26 @@ namespace KiraTakip.Controllers;
 
 [Authorize(Policy = "TenantUser")]
 [Authorize(Policy = PermissionCatalog.TenantPortal.Reservation.Module)]
-[Route("Tenant/Rezervasyonum")]
-public class TenantReservationController : Controller
+[RequireKiraciId]
+[Route("Tenant/MyReservations")]
+public class TenantReservationController(
+    IReservationService reservationService,
+    ICurrentUserContext currentUserContext,
+    IPermissionScopeProvider permissionScopeProvider) : Controller
 {
-    private readonly IReservationService _reservationService;
-    private readonly ICurrentUserContext _currentUser;
-
-    public TenantReservationController(IReservationService rezervasyonService, ICurrentUserContext currentUser)
-    {
-        _reservationService = rezervasyonService;
-        _currentUser = currentUser;
-    }
-
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var list = await _reservationService.GetAllAsync();
+        var tenantId = currentUserContext.TenantId!.Value;
+        var list = await reservationService.GetTenantReservationsAsync(
+            new GetTenantReservationsInput(
+                tenantId,
+                DateTime.Now,
+                permissionScopeProvider.GlobalAccess
+                    ? new ReservationAccessScopeInput()
+                    : new ReservationAccessScopeInput(
+                        permissionScopeProvider.AccessiblePropertyIds,
+                        permissionScopeProvider.AccessibleUnitIds)));
         return View(list);
     }
 }

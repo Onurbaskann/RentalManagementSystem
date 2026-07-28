@@ -16,11 +16,11 @@ public class UnitDetailDto
     public string? ActiveLeaseTenantDisplayName { get; set; }
     public DateTime? ActiveLeaseEndDate { get; set; }
     public decimal MonthlyRent { get; set; }
-    public int? RezKuralId { get; set; }
-    public decimal? RezKuralPeriyotUcreti { get; set; }
-    public int? RezKuralUcretlendirmePeriyoduDakika { get; set; }
-    public int? RezKuralUcretsizSureDakika { get; set; }
-    public decimal? RezKuralKdvOrani { get; set; }
+    public int? ReservationRateOverrideId { get; set; }
+    public decimal? ReservationPeriodRate { get; set; }
+    public int? ReservationBillingPeriodMinutes { get; set; }
+    public int? ReservationFreeDurationMinutes { get; set; }
+    public decimal? ReservationVatRate { get; set; }
     public int PropertyId { get; set; }
     public string PropertyName { get; set; } = string.Empty;
 }

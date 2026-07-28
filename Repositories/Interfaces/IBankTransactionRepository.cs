@@ -7,21 +7,15 @@ namespace KiraTakip.Repositories.Interfaces;
 public interface IBankTransactionRepository : IBaseRepository<BankTransaction>
 {
     // Listeleme (DTO)
-    Task<List<BankaHareketiListItemDto>> GetListAsync(BankMatchStatus? durum = null);
-    Task<PagedResult<BankaHareketiListItemDto>> GetPagedListAsync(TableQuery q);
-    Task<BankaHareketiDetayDto?> GetDetayAsync(int id);
+    Task<List<BankTransactionListItemDto>> GetListAsync(BankMatchStatus? status = null);
+    Task<PagedResult<BankTransactionListItemDto>> GetPagedListAsync(TableQuery query);
+    Task<BankTransactionDetailDto?> GetDetailAsync(int id);
 
     // Eşleştirme adayları (DTO)
-    Task<List<OdemeAdayDto>> GetOdemeAdaylariAsync(int bankaHareketiId, IReadOnlyList<int>? tasinmazIds = null);
-    Task<List<BankaHareketiListItemDto>> GetHareketAdaylariAsync(int odemeId);
+    Task<PaymentMatchingBasisDto?> GetMatchingBasisAsync(int bankTransactionId);
+    Task<List<BankTransactionListItemDto>> GetTransactionCandidatesAsync(PaymentMatchingBasisDto basis);
 
     // Eşleştirme yazma işlemleri
-    Task<bool> EslesmeVarMiAsync(int tahakkukOdemeId, int bankaHareketiId);
-    Task AddEslesmeAsync(PaymentMatch eslesme);
-    Task<PaymentMatch?> GetEslesmeWithBankaHareketiAsync(int eslesmeId);
-    Task RemoveEslesmeAsync(PaymentMatch eslesme);
-    Task<bool> KalanEslesmeVarMiAsync(int bankaHareketiId, int excludeEslesmeId);
-
     // CSV import için toplu ekleme
     Task AddRangeAsync(IEnumerable<BankTransaction> entities);
 }

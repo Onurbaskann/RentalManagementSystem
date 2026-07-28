@@ -1,9 +1,9 @@
 using KiraTakip.Authorization;
+using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
-using KiraTakip.Models.Entities;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
-using KiraTakip.Services;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -12,152 +12,134 @@ using Microsoft.AspNetCore.Mvc;
 namespace KiraTakip.Controllers;
 
 [Authorize]
-public class PaymentController : Controller
+public class PaymentController(
+    IPaymentService paymentService,
+    IDocumentService documentService,
+    UserManager<ApplicationUser> userManager,
+    IPermissionScopeProvider permissionScopeProvider) : Controller
 {
-    private readonly IPaymentService _paymentService;
-    private readonly IChargeService _chargeService;
-    private readonly IDocumentService _documentService;
-    private readonly IBankTransactionService _bankaService;
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IPermissionScopeProvider _provider;
-
-    public PaymentController(
-        IPaymentService odemeService,
-        IChargeService tahakkukService,
-        IDocumentService documentService,
-        IBankTransactionService bankaService,
-        UserManager<ApplicationUser> userManager,
-        IPermissionScopeProvider provider)
-    {
-        _paymentService = odemeService;
-        _chargeService = tahakkukService;
-        _documentService = documentService;
-        _bankaService = bankaService;
-        _userManager = userManager;
-        _provider = provider;
-    }
-
     [Authorize(Policy = PermissionCatalog.Payment.Module)]
     public async Task<IActionResult> Index([FromQuery] TableQuery query, int? chargeId = null)
     {
-        var paged = await _paymentService.GetPagedAsync(query, chargeId, _provider.GlobalAccess ? null : _provider.AccessiblePropertyIds);
+        var accessScope = GetAccessScope();
+        var pagedResult = await paymentService.GetPagedAsync(new GetPagedPaymentsInput(
+            query,
+            chargeId,
+            accessScope.PropertyIds,
+            accessScope.UnitIds));
 
         ViewBag.ChargeId = chargeId;
         ViewBag.Query = query;
         ViewBag.Status = query.Status ?? "tum";
-        return View(paged);
+
+        return View(pagedResult);
     }
 
     [Authorize(Policy = PermissionCatalog.Payment.Module)]
-    public async Task<IActionResult> Detay(int id)
+    public async Task<IActionResult> Details(int id)
     {
-        var payment = await _paymentService.GetByIdAsync(id);
+        var payment = await paymentService.GetByIdAsync(
+            new GetPaymentByIdInput(id, GetAccessScope()));
         if (payment == null) return NotFound();
 
-        if (payment.PropertyId != null && !_provider.IsInScope(payment.PropertyId.Value))
-            return Forbid();
+        ViewBag.Documents = await documentService.GetListAsync(
+            new GetDocumentsInput(DocumentOwnerType.Payment, id));
+        ViewBag.DocumentTypes = await documentService.GetTypesAsync(
+            new GetDocumentTypesInput(DocumentOwnerType.Payment));
 
-        ViewBag.Belgeler    = await _documentService.GetListAsync(DocumentOwnerType.Payment, id);
-        ViewBag.DocumentTypes = await _documentService.GetTurlerAsync(DocumentOwnerType.Payment);
         return View(payment);
     }
 
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.Payment.Create)]
-    public async Task<IActionResult> Ekle(int chargeId)
+    public async Task<IActionResult> Create(int chargeId)
     {
-        var charge = await _chargeService.GetDetailsAsync(chargeId);
-        if (charge == null) return NotFound();
+        var charge = await paymentService.GetCreationContextAsync(
+            new GetPaymentCreationContextInput(chargeId, GetAccessScope()));
 
-        var vm = new OdemeEkleViewModel
+        return View(new CreatePaymentViewModel
         {
             ChargeId = chargeId,
-            LeaseId = charge.LeaseId,
             Amount = charge.TotalAmount - charge.PaidAmount,
             Charge = charge
-        };
-        return View(vm);
+        });
     }
 
     [HttpPost]
     [Authorize(Policy = PermissionCatalog.Payment.Create)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Ekle(OdemeEkleViewModel vm)
+    public async Task<IActionResult> Create(CreatePaymentViewModel viewModel)
     {
         if (!ModelState.IsValid)
         {
-            vm.Charge = await _chargeService.GetDetailsAsync(vm.ChargeId);
-            return View(vm);
+            viewModel.Charge = await paymentService.GetCreationContextAsync(
+                new GetPaymentCreationContextInput(viewModel.ChargeId, GetAccessScope()));
+
+            return View(viewModel);
         }
 
-        var userId = _userManager.GetUserId(User)!;
-        var payment = new PaymentAllocation
+        int paymentId;
+        try
         {
-            ChargeId = vm.ChargeId,
-            LeaseId = vm.LeaseId,
-            PaymentDate = vm.PaymentDate,
-            Amount = vm.Amount,
-            PaymentChannel = vm.PaymentChannel,
-            PaymentSourceType = PaymentSourceType.Manual,
-            Description = vm.Aciklama,
-            CreatedByUserId = userId
-        };
+            paymentId = await paymentService.CreateAsync(new CreatePaymentInput(
+                viewModel.ChargeId,
+                viewModel.PaymentDate,
+                viewModel.Amount,
+                viewModel.PaymentChannel,
+                PaymentSourceType.Manual,
+                viewModel.Description,
+                userManager.GetUserId(User)!,
+                GetAccessScope()));
+        }
+        catch (BusinessValidationException exception)
+        {
+            ModelState.AddModelError(exception.Field, exception.Message);
+            viewModel.Charge = await paymentService.GetCreationContextAsync(
+                new GetPaymentCreationContextInput(viewModel.ChargeId, GetAccessScope()));
+            return View(viewModel);
+        }
 
-        await _paymentService.EkleAsync(payment);
-        TempData["Success"] = "Ödeme kaydedildi, onay bekleniyor.";
-        return RedirectToAction(nameof(Detay), new { id = payment.Id });
+        return RedirectToAction(nameof(Details), new { id = paymentId });
     }
 
     [HttpPost]
     [Authorize(Policy = PermissionCatalog.Payment.Approve)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Onayla(int id)
+    public async Task<IActionResult> Approve(int id)
     {
-        var userId = _userManager.GetUserId(User)!;
-        var basarili = await _paymentService.OnaylaAsync(id, userId);
-        TempData[basarili ? "Success" : "Error"] = basarili ? "Ödeme onaylandı." : "Ödeme onaylanamadı.";
-        return RedirectToAction(nameof(Detay), new { id });
+        await paymentService.ApproveAsync(new ApprovePaymentInput(
+            id,
+            userManager.GetUserId(User)!,
+            GetAccessScope()));
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     [HttpPost]
     [Authorize(Policy = PermissionCatalog.Payment.Reject)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Reddet(OdemeRedViewModel vm)
+    public async Task<IActionResult> Reject(RejectPaymentViewModel viewModel)
     {
-        if (string.IsNullOrWhiteSpace(vm.Neden))
+        if (!ModelState.IsValid)
         {
-            TempData["Error"] = "Red nedeni zorunludur.";
-            return RedirectToAction(nameof(Detay), new { id = vm.OdemeId });
+            var message = ModelState.Values
+                .SelectMany(value => value.Errors)
+                .Select(error => error.ErrorMessage)
+                .FirstOrDefault(error => !string.IsNullOrWhiteSpace(error))
+                ?? "Red bilgileri geçersizdir.";
+            throw new BusinessException(message);
         }
 
-        var basarili = await _paymentService.ReddetAsync(vm.OdemeId, vm.Neden);
-        TempData[basarili ? "Success" : "Error"] = basarili ? "Ödeme reddedildi." : "Ödeme reddedilemedi.";
-        return RedirectToAction(nameof(Detay), new { id = vm.OdemeId });
+        await paymentService.RejectAsync(new RejectPaymentInput(
+            viewModel.PaymentId,
+            viewModel.Reason,
+            GetAccessScope()));
+        return RedirectToAction(nameof(Details), new { id = viewModel.PaymentId });
     }
 
-
-    [HttpGet]
-    [Authorize(Policy = PermissionCatalog.Payment.MatchBankTransaction)]
-    public async Task<IActionResult> HareketSec(int id)
-    {
-        var payment = await _paymentService.GetByIdAsync(id);
-        if (payment == null) return NotFound();
-
-        if (payment.PropertyId != null && !_provider.IsInScope(payment.PropertyId.Value))
-            return Forbid();
-
-        var adaylar = await _bankaService.GetHareketAdaylariAsync(id);
-        return View(new OdemeHareketSecViewModel { Payment = payment, HareketAdaylari = adaylar });
-    }
-
-    [HttpPost]
-    [Authorize(Policy = PermissionCatalog.Payment.MatchBankTransaction)]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> BankaEslesmeKaldir(int eslesmeId, int odemeId)
-    {
-        await _bankaService.EslesmeCozAsync(eslesmeId);
-        TempData["Success"] = "Banka eşleşmesi kaldırıldı.";
-        return RedirectToAction(nameof(Detay), new { id = odemeId });
-    }
-
+    private PaymentAccessScopeInput GetAccessScope()
+        => permissionScopeProvider.GlobalAccess
+            ? new PaymentAccessScopeInput()
+            : new PaymentAccessScopeInput(
+                permissionScopeProvider.AccessiblePropertyIds,
+                permissionScopeProvider.AccessibleUnitIds);
 }

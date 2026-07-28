@@ -1,0 +1,220 @@
+@model KiraTakip.Models.ViewModels.TenantDetailsViewModel
+@using KiraTakip.Authorization
+@using KiraTakip.Models
+@using KiraTakip.Extensions
+@{
+    ViewData["Title"] = Model.Tenant.DisplayName;
+    ViewData["UseCentralFeedback"] = true;
+    var tenant = Model.Tenant;
+    bool canEdit    = User.HasPermission(PermissionCatalog.Tenant.Edit);
+    bool hasLeaseModule = User.HasModuleAccess(PermissionCatalog.Lease.Module);
+    var tenantControllerName = nameof(KiraTakip.Controllers.TenantController).Replace("Controller", "");
+    var leaseControllerName = nameof(KiraTakip.Controllers.LeaseController).Replace("Controller", "");
+    var tenantUserControllerName = nameof(KiraTakip.Controllers.AdminTenantUserController).Replace("Controller", "");
+    var tenantIndexUrl = Url.Action(nameof(KiraTakip.Controllers.TenantController.Index), tenantControllerName)!;
+    var tenantEditUrl = Url.Action(nameof(KiraTakip.Controllers.TenantController.Edit), tenantControllerName, new { id = tenant.Id.ToHashId() })!;
+    var tenantUsersUrl = Url.Action(nameof(KiraTakip.Controllers.AdminTenantUserController.Index), tenantUserControllerName, new { tenantId = tenant.Id.ToHashId() })!;
+    var leaseCreateUrl = Url.Action(nameof(KiraTakip.Controllers.LeaseController.Create), leaseControllerName)!;
+}
+
+<div class="page-header flex flex-wrap items-start justify-between mb-2.5 gap-4">
+    <div>
+        <a href="@tenantIndexUrl" class="text-[12.5px] text-muted no-underline mb-2.5 inline-block transition-colors hover:text-primary">← Kiracılar</a>
+        <div class="flex items-center gap-3">
+            <div class="page-title m-0">@tenant.DisplayName</div>
+            <span class="text-[12px] text-muted font-mono bg-[var(--color-surface-muted)] p-0.5 px-2 rounded border border-[var(--color-border)]">@tenant.TenantNo</span>
+        </div>
+        <div class="mt-2.5 flex gap-2 items-center">
+            <span class="badge badge-kurumsal p-1 px-3 text-[12px]">Tüzel Kişi</span>
+            
+            @if (!string.IsNullOrEmpty(tenant.TenantCategoryName))
+            {
+                <div class="w-1 h-1 rounded-full bg-slate-300"></div>
+                <span class="badge bg-slate-50 text-slate-600 border border-slate-200 p-1 px-3 text-[12px] font-semibold">@tenant.TenantCategoryName</span>
+            }
+        </div>
+    </div>
+    <div class="flex gap-2">
+        @if (User.HasModuleAccess(PermissionCatalog.User.Module))
+        {
+            <a href="@tenantUsersUrl" class="btn btn-secondary">Kullanıcılar</a>
+        }
+        @if (canEdit)
+        {
+            <a href="@tenantEditUrl" class="btn btn-secondary">Düzenle</a>
+        }
+        @if (hasLeaseModule && User.HasPermission(PermissionCatalog.Lease.Create))
+        {
+            <a href="@leaseCreateUrl" class="btn btn-primary">Sözleşme Ekle</a>
+        }
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
+    <!-- İletişim -->
+    <div class="card">
+        <div class="card-title">İletişim</div>
+        <div class="flex flex-col gap-2 mt-2">
+            <div class="flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-muted shrink-0"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.1 19.79 19.79 0 0 1 1.61 4.59 2 2 0 0 1 3.58 2.41h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.52 17z"/></svg>
+                <span class="text-[13.5px]">@tenant.Phone</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-muted shrink-0"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                <span class="text-[13.5px]">@tenant.Email</span>
+            </div>
+            @if (!string.IsNullOrEmpty(tenant.Address))
+            {
+                <div class="flex items-start gap-2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-muted shrink-0 mt-1"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span class="text-[13.5px]">@tenant.Address</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Kimlik Bilgisi -->
+    <div class="card">
+        <div class="card-title">Kurum Bilgisi</div>
+        <div class="mt-2 flex flex-col gap-2.5">
+            @if (!string.IsNullOrEmpty(tenant.TaxNo))
+            {
+                <div>
+                    <div class="text-[11.5px] text-muted mb-0.5">Vergi No</div>
+                    <div class="text-sm font-bold font-mono tracking-wider">@tenant.TaxNo</div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(tenant.TaxOffice))
+            {
+                <div>
+                    <div class="text-[11.5px] text-muted mb-0.5">Vergi Dairesi</div>
+                    <div class="text-sm font-medium">@tenant.TaxOffice</div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(tenant.TradeRegistryNo))
+            {
+                <div>
+                    <div class="text-[11.5px] text-muted mb-0.5">Ticaret Sicil No</div>
+                    <div class="text-sm font-medium font-mono">@tenant.TradeRegistryNo</div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(tenant.MersisNo))
+            {
+                <div>
+                    <div class="text-[11.5px] text-muted mb-0.5">Mersis No</div>
+                    <div class="text-[13px] font-mono">@tenant.MersisNo</div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(tenant.TenantCategoryName))
+            {
+                <div>
+                    <div class="text-[11.5px] text-muted mb-0.5">Kategori</div>
+                    <div class="text-[13px] font-medium">@tenant.TenantCategoryName</div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(tenant.SectorName))
+            {
+                <div>
+                    <div class="text-[11.5px] text-muted mb-0.5">Sektör</div>
+                    <div class="text-[13px] font-medium">@tenant.SectorName</div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Sözleşme Özeti -->
+    @if (hasLeaseModule)
+    {
+    <div class="card">
+        <div class="card-title">Sözleşme Özeti</div>
+        @{
+            var now = DateTime.Now;
+            var activeLeases = Model.Leases.Where(lease => lease.Status == LeaseStatus.Active && lease.StartDate <= now && lease.EndDate >= now).ToList();
+            decimal totalMonthlyAmount = 0m;
+            foreach (var activeLease in activeLeases)
+                totalMonthlyAmount += activeLease.MonthlyAmount;
+        }
+        <div class="card-value text-2xl mt-2 font-bold">@activeLeases.Count</div>
+        <div class="card-sub text-muted text-xs">Aktif sözleşme</div>
+        @if (totalMonthlyAmount > 0)
+        {
+            <div class="mt-2.5 pt-2.5 border-t border-[var(--color-border)] text-[13.5px] font-bold text-primary">
+                @totalMonthlyAmount.Tl(0)/ay
+            </div>
+        }
+    </div>
+    }
+</div>
+
+<!-- Belgeler -->
+@await Html.PartialAsync("_DocumentPanel", new KiraTakip.Models.ViewModels.DocumentPanelViewModel
+{
+    OwnerType   = KiraTakip.Models.DocumentOwnerType.Tenant,
+    OwnerId     = tenant.Id,
+    DocumentTypes = Model.DocumentTypes,
+    Documents = Model.Documents,
+    CanEdit     = canEdit
+})
+
+<!-- Sözleşmeler tablosu -->
+@if (hasLeaseModule)
+{
+<div class="card p-0 overflow-hidden">
+    <div class="p-[18px_20px_14px] border-b border-[var(--color-border)]">
+        <div class="section-title">Sözleşmeler</div>
+    </div>
+    @if (!Model.Leases.Any())
+    {
+        <div class="p-8 text-center text-muted">Bu kiracıya ait sözleşme yok.</div>
+    }
+    else
+    {
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Taşınmaz / Birim</th>
+                        <th>Başlangıç</th>
+                        <th>Bitiş</th>
+                        <th>Aylık Bedel</th>
+                        <th>Depozito</th>
+                        <th>Durum</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var lease in Model.Leases)
+                    {
+                        var leaseDetailsUrl = Url.Action(nameof(KiraTakip.Controllers.LeaseController.Details), leaseControllerName, new { id = lease.Id.ToHashId() })!;
+                        bool isActive = lease.Status == LeaseStatus.Active && lease.StartDate <= DateTime.Now && lease.EndDate >= DateTime.Now;
+                        int remainingDays = (int)(lease.EndDate - DateTime.Now).TotalDays;
+                        bool expiresSoon = isActive && remainingDays <= 30;
+                        bool isTerminated = lease.Status == LeaseStatus.Terminated;
+                        <tr>
+                            <td>
+                                <div class="font-semibold">@lease.PropertyName</div>
+                                <div class="text-xs text-muted">@lease.UnitName</div>
+                            </td>
+                            <td>@lease.StartDate.Tarih()</td>
+                            <td>
+                                @lease.EndDate.Tarih()
+                                @if (expiresSoon) { <span class="day-badge day-badge-amber ml-1.5 text-[11px]">@remainingDays g</span> }
+                            </td>
+                            <td class="font-bold">@lease.MonthlyAmount.Tl(0)</td>
+                            <td>@(Model.DepositAmounts.TryGetValue(lease.Id, out var depositAmount) && depositAmount.HasValue ? depositAmount.Value.Tl(0) : "—")</td>
+                            <td>
+                                @if (isTerminated) { <span class="badge badge-gecmis">Feshedildi</span> }
+                                else if (expiresSoon) { <span class="badge badge-surek">Dolmak Üzere</span> }
+                                else if (isActive) { <span class="badge badge-kirali">Aktif</span> }
+                                else { <span class="badge badge-gecmis">Geçmiş</span> }
+                            </td>
+                            <td><a href="@leaseDetailsUrl" class="btn btn-sm btn-secondary">Detay</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+}
+

@@ -1,10 +1,19 @@
-﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Identity
 @using KiraTakip.Models
 @using KiraTakip.Authorization
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @{
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var tenantProfileControllerName = nameof(KiraTakip.Controllers.TenantProfileController)
+        .Replace("Controller", string.Empty);
+    var tenantProfileActionName = nameof(KiraTakip.Controllers.TenantProfileController.Index);
+    var tenantReservationControllerName = nameof(KiraTakip.Controllers.TenantReservationController)
+        .Replace("Controller", string.Empty);
+    var tenantReservationActionName = nameof(KiraTakip.Controllers.TenantReservationController.Index);
+    var tenantRoleControllerName = nameof(KiraTakip.Controllers.TenantRoleController)
+        .Replace("Controller", string.Empty);
+    var tenantRoleActionName = nameof(KiraTakip.Controllers.TenantRoleController.Index);
     ApplicationUser? currentUser = null;
     string userInitials = "KT";
     string userAdSoyad = "Kullanıcı";
@@ -69,16 +78,16 @@
         @if (User.HasPermission(PermissionCatalog.TenantPortal.Reservation.Module))
         {
             <div class="nav-separator"></div>
-            <a asp-controller="TenantReservation" asp-action="Index"
-               class="nav-item @(currentController == "TenantReservation" ? "nav-item-active" : "")">
+            <a asp-controller="@tenantReservationControllerName" asp-action="@tenantReservationActionName"
+               class="nav-item @(currentController == tenantReservationControllerName ? "nav-item-active" : "")">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 Rezervasyonlarım
             </a>
         }
 
         <div class="nav-separator"></div>
-        <a asp-controller="TenantProfile" asp-action="Index"
-           class="nav-item @(currentController == "TenantProfile" ? "nav-item-active" : "")">
+        <a asp-controller="@tenantProfileControllerName" asp-action="@tenantProfileActionName"
+           class="nav-item @(currentController == tenantProfileControllerName ? "nav-item-active" : "")">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2v-5a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
             Firma Profili
         </a>
@@ -98,8 +107,8 @@
             }
             @if (User.HasPermission(PermissionCatalog.TenantPortal.System.Role.Module))
             {
-                <a asp-controller="TenantRole" asp-action="Index"
-                   class="nav-item @(currentController == "TenantRole" ? "nav-item-active" : "")">
+                <a asp-controller="@tenantRoleControllerName" asp-action="@tenantRoleActionName"
+                   class="nav-item @(currentController == tenantRoleControllerName ? "nav-item-active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><polyline points="15 11 17 13 21 9"/></svg>
                     Roller
                 </a>
@@ -124,7 +133,7 @@
 
             <div x-show="open" @@click.outside="open = false" x-cloak
                  class="absolute bottom-full left-0 right-0 mb-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden z-50">
-                <a href="/Account/SifreDegistir"
+                <a href="/Account/ChangePassword"
                    class="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>

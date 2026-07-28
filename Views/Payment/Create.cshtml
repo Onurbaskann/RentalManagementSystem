@@ -1,0 +1,92 @@
+@model KiraTakip.Models.ViewModels.CreatePaymentViewModel
+@using KiraTakip.Models
+@{
+    ViewData["Title"] = "Ödeme Ekle";
+    ViewData["UseCentralFeedback"] = true;
+    var charge = Model.Charge;
+    var remainingAmount = charge != null ? charge.TotalAmount - charge.PaidAmount : 0;
+}
+
+<div class="max-w-[600px] mx-auto">
+    <div class="page-header">
+        <div>
+            <a href="/Charge" class="text-xs text-muted no-underline inline-flex items-center gap-1 mb-2">← Tahakkuklar</a>
+            <div class="page-title">Ödeme Ekle</div>
+            @if (charge != null)
+            {
+                <div class="page-subtitle">@charge.TenantDisplayName — @charge.PeriodStart.ToString("MMMM yyyy")</div>
+            }
+        </div>
+    </div>
+
+    @if (charge != null)
+    {
+        <div class="flex gap-3 mb-5 flex-wrap">
+            <div class="card card-sm flex-1 min-w-[9.375rem]">
+                <div class="card-title">Toplam Tahakkuk</div>
+                <div class="card-value" style="font-size: 1.375rem;">@charge.TotalAmount.Tl(0)</div>
+            </div>
+            <div class="card card-sm flex-1 min-w-[9.375rem]">
+                <div class="card-title">Ödenen</div>
+                <div class="card-value" style="font-size: 1.375rem; color: #065f46;">@charge.PaidAmount.Tl(0)</div>
+            </div>
+            <div class="card card-sm flex-1 min-w-[9.375rem]">
+                <div class="card-title">Kalan</div>
+                <div class="card-value" style="font-size: 1.375rem; @(remainingAmount > 0 ? "color: #991b1b;" : "color: #065f46;")">@remainingAmount.Tl(0)</div>
+            </div>
+        </div>
+    }
+
+    <div>
+    <div class="card">
+        <form method="post" action="/Payment/Create" asp-form-write-permission="@PermissionCatalog.Payment.Create">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="ChargeId" />
+
+
+            <div class="form-group">
+                <label class="form-label">Ödeme Tarihi</label>
+                @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
+                    { "Name",  "PaymentDate" },
+                    { "Value", Model.PaymentDate.ToString("yyyy-MM-dd") },
+                    { "Mode",  "date" },
+                    { "Field", "odemeTarihi" }
+                })
+                <span asp-validation-for="PaymentDate" class="form-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Tutar (₺)</label>
+                <input asp-for="Amount" type="number" step="0.01" class="form-control" />
+                <span asp-validation-for="Amount" class="form-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Ödeme Kanalı</label>
+                <select asp-for="PaymentChannel" class="form-control">
+                    <option value="@((int)PaymentChannel.Eft)">EFT</option>
+                    <option value="@((int)PaymentChannel.BankTransfer)">Havale</option>
+                    <option value="@((int)PaymentChannel.Cash)">Nakit</option>
+                    <option value="@((int)PaymentChannel.Other)">Diğer</option>
+                </select>
+                <span asp-validation-for="PaymentChannel" class="form-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Açıklama <span class="text-muted font-normal">(opsiyonel)</span></label>
+                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+            </div>
+
+            <div style="background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 0.625rem 0.875rem; border-radius: 0.5rem; margin-bottom: 1.125rem; font-size: 0.8125rem;">
+                Ödeme kaydedildikten sonra yetkilinin onayı beklenecektir.
+            </div>
+
+            <div class="flex gap-2.5">
+                <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Payment.Create">Kaydet</button>
+                <a href="/Charge" class="btn btn-secondary">İptal</a>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+

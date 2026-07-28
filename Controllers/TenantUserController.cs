@@ -1,360 +1,216 @@
-﻿using KiraTakip.Authorization;
-using KiraTakip.Data;
-using KiraTakip.Models;
+using KiraTakip.Authorization;
+using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Infrastructure.Hashids;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
 [Authorize(Policy = "TenantUser")]
 [RequireKiraciId]
-[Route("Tenant/Kullanicilar")]
-public class TenantUserController : Controller
+[Route("Tenant/Users")]
+public class TenantUserController(
+    ICurrentUserContext currentUser,
+    ITenantUserService tenantUserService) : Controller
 {
-    private readonly ApplicationDbContext _db;
-    private readonly ICurrentUserContext _currentUser;
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IUserRoleService _userRolService;
-    private readonly IInvitationService _davetiyeService;
-    private readonly ITenantUserService _kullaniciService;
-    private readonly IAuditService _auditService;
-
-    public TenantUserController(
-        ApplicationDbContext db,
-        ICurrentUserContext currentUser,
-        UserManager<ApplicationUser> userManager,
-        IUserRoleService userRoleService,
-        IInvitationService invitationService,
-        ITenantUserService kullaniciService,
-        IAuditService auditService)
-    {
-        _db = db;
-        _currentUser = currentUser;
-        _userManager = userManager;
-        _userRolService = userRoleService;
-        _davetiyeService = invitationService;
-        _kullaniciService = kullaniciService;
-        _auditService = auditService;
-    }
-
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Module)]
     public async Task<IActionResult> Index()
     {
-        var tenantId = _currentUser.TenantId!.Value;
-        var currentUserId = _userManager.GetUserId(User)!;
+        var currentUserId = currentUser.UserId!;
+        var data = await tenantUserService.GetTenantUsersListAsync(
+            new GetTenantUsersListInput(currentUser.TenantId!.Value));
 
-        var kullanicilar = await _db.Users
-            .IgnoreQueryFilters()
-            .Where(u => u.TenantId == tenantId)
-            .OrderBy(u => u.AdSoyad)
-            .ToListAsync();
-
-        var items = new List<KiraciKullaniciItem>();
-        foreach (var u in kullanicilar)
+        return View(new TenantUserListViewModel
         {
-            var roller = await _db.UserRoller
-                .Where(ur => ur.UserId == u.Id)
-                .Join(_db.Roller, ur => ur.RoleId, r => r.Id, (ur, r) => new { r.Name, r.Id })
-                .FirstOrDefaultAsync();
-
-            items.Add(new KiraciKullaniciItem
+            Users = data.Users.Select(user => new TenantUserListItemViewModel
             {
-                Id = u.Id,
-                AdSoyad = u.AdSoyad ?? u.Email ?? "—",
-                Email = u.Email ?? "—",
-                RolAd = roller?.Name ?? "—",
-                RolId = roller?.Id ?? 0,
-                IsActive = u.IsActive,
-                IsCurrentUser = u.Id == currentUserId
-            });
-        }
-
-        var bekleyen = await _db.Davetiyeler
-            .IgnoreQueryFilters()
-            .Where(d => d.TenantId == tenantId && d.Status == InvitationStatus.Pending)
-            .Include(d => d.Role)
-            .OrderByDescending(d => d.CreatedAt)
-            .ToListAsync();
-
-        var davetItems = bekleyen.Select(d => new KiraciDavetItem
-        {
-            Id = d.Id,
-            Email = d.Email,
-            AdSoyad = d.FullName,
-            RolAd = d.Role?.Name ?? "—",
-            GonderimTarihi = d.CreatedAt,
-            ExpiresAt = d.ExpiresAt
-        }).ToList();
-
-        var canInvite = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.TenantPortal.System.User.Invite);
-        var canManage = User.HasClaim(AppClaimTypes.Permission, PermissionCatalog.TenantPortal.System.User.Invite);
-
-        return View(new KiraciKullaniciListeViewModel
-        {
-            Kullanicilar = items,
-            BekleyenDavetler = davetItems,
-            CanInvite = canInvite,
-            CanManage = canManage
+                Id = user.Id,
+                FullName = user.FullName,
+                Email = user.Email,
+                RoleName = user.RoleName,
+                RoleId = user.RoleId,
+                IsActive = user.IsActive,
+                IsCurrentUser = user.Id == currentUserId
+            }).ToList(),
+            PendingInvitations = data.PendingInvitations.Select(invitation =>
+                new TenantInvitationListItemViewModel
+                {
+                    Id = invitation.Id,
+                    Email = invitation.Email,
+                    FullName = invitation.FullName,
+                    RoleName = invitation.RoleName,
+                    SentAt = invitation.SentAt,
+                    ExpiresAt = invitation.ExpiresAt
+                }).ToList(),
+            CanInvite = User.HasClaim(
+                AppClaimTypes.Permission,
+                PermissionCatalog.TenantPortal.System.User.Invite),
+            CanEdit = User.HasClaim(
+                AppClaimTypes.Permission,
+                PermissionCatalog.TenantPortal.System.User.Edit),
+            CanDeactivate = User.HasClaim(
+                AppClaimTypes.Permission,
+                PermissionCatalog.TenantPortal.System.User.Deactivate)
         });
     }
 
-    [HttpGet("Davet")]
+    [HttpGet("Invite")]
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Invite)]
-    public async Task<IActionResult> Davet()
+    public async Task<IActionResult> Invite()
     {
-        var tenantId = _currentUser.TenantId!.Value;
-        var model = new KiraciDavetViewModel();
-        await PopulateRollerAsync(model.Roller);
-        model.Units = await GetKiraciBirimleriAsync(tenantId);
+        var model = new TenantInvitationFormViewModel();
+        await PopulateInviteOptionsAsync(model);
         return View(model);
     }
 
-    [HttpPost("Davet")]
+    [HttpPost("Invite")]
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Invite)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Davet(KiraciDavetViewModel model)
+    public async Task<IActionResult> Invite(TenantInvitationFormViewModel model)
     {
-        var tenantId = _currentUser.TenantId!.Value;
-
         if (!ModelState.IsValid)
         {
-            await PopulateRollerAsync(model.Roller);
-            model.Units = await GetKiraciBirimleriAsync(tenantId);
-            return View(model);
-        }
-
-        var currentUserId = _userManager.GetUserId(User)!;
-
-        var rol = await _db.Roller.FirstOrDefaultAsync(r => r.Id == model.RolId && r.TenantId == tenantId && !r.IsSystemRole);
-        if (rol == null)
-        {
-            ModelState.AddModelError("RolId", "Geçersiz rol seçildi.");
-            await PopulateRollerAsync(model.Roller);
-            model.Units = await GetKiraciBirimleriAsync(tenantId);
+            await PopulateInviteOptionsAsync(model);
             return View(model);
         }
 
         try
         {
-            var birimIds = model.BirimIds.Count > 0 ? model.BirimIds : null;
-            await _davetiyeService.GonderAsync(model.Email, model.AdSoyad, model.RolId, currentUserId, tenantId, birimIds: birimIds);
-            TempData["Success"] = $"{model.Email} adresine davet gönderildi.";
-            return RedirectToAction(nameof(Index));
+            await tenantUserService.SendInvitationAsync(new SendTenantInvitationInput(
+                currentUser.TenantId!.Value,
+                model.Email,
+                model.FullName,
+                model.RoleId,
+                currentUser.UserId!,
+                model.UnitIds.Count > 0 ? model.UnitIds : null));
         }
-        catch (Exception ex)
+        catch (BusinessValidationException exception)
         {
-            ModelState.AddModelError(string.Empty, ex.Message);
-            await PopulateRollerAsync(model.Roller);
-            model.Units = await GetKiraciBirimleriAsync(tenantId);
+            ModelState.AddModelError(exception.Field, exception.Message);
+            await PopulateInviteOptionsAsync(model);
             return View(model);
         }
-    }
 
-    private async Task<List<UnitLookupDto>> GetKiraciBirimleriAsync(int tenantId)
-    {
-        return await _db.Leases
-            .AsNoTracking()
-            .Where(s => s.TenantId == tenantId && s.Status == LeaseStatus.Active)
-            .Select(s => new UnitLookupDto
-            {
-                Id = s.UnitId,
-                Name = s.Unit.Name,
-                PropertyName = s.Unit.Property.Name,
-                UnitNo = s.Unit.UnitNo,
-            })
-            .Distinct()
-            .OrderBy(b => b.PropertyName).ThenBy(b => b.Name)
-            .ToListAsync();
-    }
-
-    [HttpPost("Davet/Iptal/{id:int}")]
-    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Invite)]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DavetIptal(int id)
-    {
-        var davetiye = await _db.Davetiyeler
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == _currentUser.TenantId);
-
-        if (davetiye == null) return NotFound();
-
-        try
-        {
-            await _davetiyeService.IptalEtAsync(id);
-            TempData["Success"] = "Davet iptal edildi.";
-        }
-        catch (Exception ex)
-        {
-            TempData["Error"] = ex.Message;
-        }
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("Davet/YenidenGonder/{id:int}")]
+    [HttpPost("Invite/Cancel/{id}")]
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Invite)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DavetYenidenGonder(int id)
+    public async Task<IActionResult> CancelInvite(int id)
     {
-        var davetiye = await _db.Davetiyeler
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == _currentUser.TenantId);
-
-        if (davetiye == null) return NotFound();
-
-        try
-        {
-            var currentUserId = _userManager.GetUserId(User)!;
-            await _davetiyeService.YenidenGonderAsync(id, currentUserId);
-            TempData["Success"] = $"{davetiye.Email} adresine davet yeniden gönderildi.";
-        }
-        catch (Exception ex)
-        {
-            TempData["Error"] = ex.Message;
-        }
+        await tenantUserService.CancelInvitationAsync(
+            new CancelTenantInvitationInput(currentUser.TenantId!.Value, id));
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpGet("Duzenle/{id}")]
-    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Edit)]
-    public async Task<IActionResult> Duzenle(string id)
+    [HttpPost("Invite/Resend/{id}")]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Invite)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResendInvite(int id)
     {
-        var tenantId = _currentUser.TenantId!.Value;
-        var user = await _db.Users.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.Id == id && u.TenantId == tenantId);
-        if (user == null) return NotFound();
-
-        var currentUserId = _userManager.GetUserId(User)!;
-        var mevcutRolId = await _db.UserRoller
-            .Where(ur => ur.UserId == id)
-            .Select(ur => (int?)ur.RoleId)
-            .FirstOrDefaultAsync() ?? 0;
-
-        var model = new KiraciKullaniciDuzenleViewModel
-        {
-            Id = user.Id,
-            AdSoyad = user.AdSoyad ?? string.Empty,
-            Email = user.Email ?? string.Empty,
-            IsActive = user.IsActive,
-            IsCurrentUser = user.Id == currentUserId,
-            RolId = mevcutRolId
-        };
-
-        await PopulateRollerAsync(model.Roller);
-        return View(model);
+        await tenantUserService.ResendInvitationAsync(new ResendTenantInvitationInput(
+            currentUser.TenantId!.Value,
+            id,
+            currentUser.UserId!));
+        return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("Duzenle/{id}")]
+    [HttpGet("Edit/{id}")]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Edit)]
+    public async Task<IActionResult> Edit(string id)
+    {
+        var data = await tenantUserService.GetTenantUserForEditAsync(
+            new GetTenantUserForEditInput(
+                currentUser.TenantId!.Value,
+                id,
+                currentUser.UserId!));
+
+        return View(ToEditViewModel(data));
+    }
+
+    [HttpPost("Edit/{id}")]
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Edit)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Duzenle(string id, KiraciKullaniciDuzenleViewModel model)
+    public async Task<IActionResult> Edit(string id, TenantUserEditViewModel model)
     {
-        var tenantId = _currentUser.TenantId!.Value;
-        var user = await _db.Users.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.Id == id && u.TenantId == tenantId);
-        if (user == null) return NotFound();
-
-        var currentUserId = _userManager.GetUserId(User)!;
-        model.IsCurrentUser = user.Id == currentUserId;
-
-        if (user.Id == currentUserId)
-        {
-            ModelState.AddModelError(string.Empty, "Kendi hesabınızı bu ekrandan değiştiremezsiniz.");
-            await PopulateRollerAsync(model.Roller);
-            return View(model);
-        }
-
+        model.Id = id;
         if (!ModelState.IsValid)
         {
-            await PopulateRollerAsync(model.Roller);
-            return View(model);
-        }
-
-        var yeniRol = await _db.Roller
-            .FirstOrDefaultAsync(r => r.Id == model.RolId && r.TenantId == tenantId && !r.IsSystemRole);
-        if (yeniRol == null)
-        {
-            ModelState.AddModelError("RolId", "Geçersiz rol seçildi.");
-            await PopulateRollerAsync(model.Roller);
+            await PopulateEditOptionsAsync(model, id);
             return View(model);
         }
 
         try
         {
-            await _kullaniciService.EnsureSonYetkiliAsync(tenantId, excludeUserId: user.Id);
+            await tenantUserService.EditTenantUserAsync(new EditTenantUserInput(
+                currentUser.TenantId!.Value,
+                id,
+                model.FullName,
+                model.RoleId,
+                currentUser.UserId!));
         }
-        catch (InvalidOperationException ex)
+        catch (BusinessValidationException exception)
         {
-            ModelState.AddModelError(string.Empty, ex.Message);
-            await PopulateRollerAsync(model.Roller);
+            ModelState.AddModelError(exception.Field, exception.Message);
+            await PopulateEditOptionsAsync(model, id);
             return View(model);
         }
 
-        await _userRolService.RemoveAllRolesAsync(user.Id);
-        await _userRolService.AddRoleByRolIdAsync(user.Id, model.RolId, currentUserId);
-
-        user.AdSoyad = model.AdSoyad;
-        await _userManager.UpdateAsync(user);
-
-        await _auditService.LogAsync("User.RoleChanged", "ApplicationUser", user.Id, $"KiraciId:{tenantId}");
-        TempData["Success"] = $"{user.AdSoyad ?? user.Email} güncellendi.";
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("DurumDegistir/{id}")]
+    [HttpPost("ToggleStatus/{id}")]
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Deactivate)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ToggleActive(string id)
+    public async Task<IActionResult> ToggleStatus(string id)
     {
-        var tenantId = _currentUser.TenantId!.Value;
-        var user = await _db.Users.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.Id == id && u.TenantId == tenantId);
-        if (user == null) return NotFound();
-
-        var currentUserId = _userManager.GetUserId(User)!;
-
-        if (user.Id == currentUserId)
-        {
-            TempData["Error"] = "Kendi hesabınızı pasif hale getiremezsiniz.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        if (user.IsActive)
-        {
-            try
-            {
-                await _kullaniciService.EnsureSonYetkiliAsync(tenantId, excludeUserId: user.Id);
-            }
-            catch (InvalidOperationException ex)
-            {
-                TempData["Error"] = ex.Message;
-                return RedirectToAction(nameof(Index));
-            }
-        }
-
-        user.IsActive = !user.IsActive;
-        await _userManager.UpdateAsync(user);
-
-        var eventType = user.IsActive ? "User.Activated" : "User.Deactivated";
-        await _auditService.LogAsync(eventType, "ApplicationUser", user.Id, user.Email);
-
-        TempData["Success"] = user.IsActive ? "Kullanıcı aktifleştirildi." : "Kullanıcı pasifleştirildi.";
+        await tenantUserService.ToggleUserActiveAsync(
+            new ToggleTenantUserActiveInput(
+                currentUser.TenantId!.Value,
+                id,
+                currentUser.UserId!));
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task PopulateRollerAsync(List<RolSecenekViewModel> target)
+    private async Task PopulateInviteOptionsAsync(TenantInvitationFormViewModel model)
     {
-        var tenantId = _currentUser.TenantId!.Value;
-        var roller = await _db.Roller
-            .Where(r => r.TenantId == tenantId && !r.IsSystemRole && r.IsActive && !r.IsDeleted)
-            .OrderBy(r => r.Name)
-            .ToListAsync();
-
-        target.AddRange(roller.Select(r => new RolSecenekViewModel { Id = r.Id, Ad = r.Name }));
+        var data = await tenantUserService.GetInviteDataAsync(
+            new GetInviteDataInput(currentUser.TenantId!.Value));
+        model.Roles = data.Roles
+            .Select(role => new RoleOptionViewModel { Id = role.Id, Name = role.Name })
+            .ToList();
+        model.Units = data.Units;
     }
+
+    private async Task PopulateEditOptionsAsync(TenantUserEditViewModel model, string userId)
+    {
+        var data = await tenantUserService.GetTenantUserForEditAsync(
+            new GetTenantUserForEditInput(
+                currentUser.TenantId!.Value,
+                userId,
+                currentUser.UserId!));
+        model.Email = data.Email;
+        model.IsActive = data.IsActive;
+        model.Roles = data.Roles
+            .Select(role => new RoleOptionViewModel { Id = role.Id, Name = role.Name })
+            .ToList();
+    }
+
+    private static TenantUserEditViewModel ToEditViewModel(TenantUserEditDataDto data)
+        => new()
+        {
+            Id = data.Id,
+            FullName = data.FullName,
+            Email = data.Email,
+            IsActive = data.IsActive,
+            RoleId = data.RoleId,
+            Roles = data.Roles
+                .Select(role => new RoleOptionViewModel { Id = role.Id, Name = role.Name })
+                .ToList()
+        };
 }

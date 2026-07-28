@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Entities;
@@ -37,7 +37,7 @@ public class IdentitySeedService
         await EnsureUser("admin@kiratakip.local", "Admin123!", null, "Sistem Yöneticisi", tumTasinmazlaraErisim: true, isSuperAdmin: true);
 
         // Global Kiracı Yöneticisi rolünü seed et
-        await _rolService.EnsureGlobalKiraciRolleriAsync("system");
+        await _rolService.EnsureGlobalTenantRolesAsync(new KiraTakip.Models.Dtos.EnsureGlobalTenantRolesInput("system"));
     }
 
 

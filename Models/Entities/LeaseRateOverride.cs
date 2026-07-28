@@ -5,19 +5,19 @@ namespace KiraTakip.Models.Entities;
 [Table("SozlesmeTarifeler")]
 public class LeaseRateOverride : BaseEntity
 {
-    [Column("LeaseId")]
+    [Column("SozlesmeId")]
     public int LeaseId { get; set; }
 
-    [Column("ChargeTypeId")]
+    [Column("BorcTipiId")]
     public int ChargeTypeId { get; set; }
 
     [Column("HesaplamaYontemi")]
     public CalculationMethod CalculationMethod { get; set; } = CalculationMethod.Fixed;
 
-    [Column("UnitValue")]
+    [Column("BirimDeger")]
     public decimal UnitValue { get; set; }
 
-    [Column("KdvRate")]
+    [Column("KdvOrani")]
     public decimal KdvRate { get; set; }
 
     public Lease Lease { get; set; } = null!;

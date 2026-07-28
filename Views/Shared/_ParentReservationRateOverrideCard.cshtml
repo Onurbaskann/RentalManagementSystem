@@ -1,0 +1,55 @@
+﻿@model KiraTakip.Models.ViewModels.ParentReservationRateOverrideCardViewModel
+
+@{
+    bool isOpen = ViewData["IsOpen"] as bool? ?? true;
+}
+
+<details class="parent-reservation-tarife-kart mb-3 group" @(isOpen ? "open" : "")>
+    <summary class="list-none cursor-pointer flex items-center gap-2.5 p-2 px-3 bg-fuchsia-50/50 border border-fuchsia-100 rounded-lg select-none group-open:rounded-b-none transition-all hover:bg-fuchsia-100/50">
+        <span class="text-[9px] font-bold tracking-widest uppercase bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200 rounded px-1.5 py-0.5">
+            @Model.SourceName
+        </span>
+        @if (!Model.Rows.Any())
+        {
+            <span class="text-[11px] text-fuchsia-400 italic">rezervasyon tarifesi tanımlanmamış</span>
+        }
+        else
+        {
+            <span class="text-[11px] text-fuchsia-700/70 font-medium">@Model.Rows.Count alan türü tanımlı</span>
+        }
+        @if (Model.Description != null)
+        {
+            <span class="text-[11px] text-fuchsia-400/60 truncate max-w-[200px]" title="@Model.Description">— @Model.Description</span>
+        }
+        <span class="ml-auto text-[10px] text-fuchsia-300 group-open:rotate-180 transition-transform">▼</span>
+    </summary>
+
+    <div class="border border-fuchsia-100 border-t-0 rounded-b-lg bg-white p-3">
+        @if (!Model.Rows.Any())
+        {
+            <p class="text-[11px] text-fuchsia-400 italic text-center py-2">
+                Bu yıl için rezervasyon tarifesi bulunamadı.
+            </p>
+        }
+        else
+        {
+            <div class="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 gap-y-1 text-xs">
+                <div class="text-[9px] font-bold text-fuchsia-400 uppercase tracking-widest pb-1 border-b border-fuchsia-50 mb-1">Alan Türü</div>
+                <div class="text-[9px] font-bold text-fuchsia-400 uppercase tracking-widest pb-1 border-b border-fuchsia-50 mb-1">Ücretsiz</div>
+                <div class="text-[9px] font-bold text-fuchsia-400 uppercase tracking-widest pb-1 border-b border-fuchsia-50 mb-1">Periyot</div>
+                <div class="text-[9px] font-bold text-fuchsia-400 uppercase tracking-widest pb-1 border-b border-fuchsia-50 mb-1 text-right">Ücret</div>
+                <div class="text-[9px] font-bold text-fuchsia-400 uppercase tracking-widest pb-1 border-b border-fuchsia-50 mb-1 text-right">KDV</div>
+
+                @foreach (var satir in Model.Rows)
+                {
+                    <span class="font-bold text-slate-700">@satir.UnitTypeName</span>
+                    <span class="text-slate-400">@satir.FreeDurationMinutes dk</span>
+                    <span class="text-slate-400">@satir.BillingPeriodMinutes dk</span>
+                    <span class="text-right font-bold text-fuchsia-700 font-mono">@satir.PeriodRate.ToString("N2") ₺</span>
+                    <span class="text-right text-fuchsia-400 text-[10px] font-bold">%@satir.VatRate.ToString("N0")</span>
+                }
+            </div>
+        }
+    </div>
+</details>
+

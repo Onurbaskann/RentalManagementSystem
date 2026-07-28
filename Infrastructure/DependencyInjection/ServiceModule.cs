@@ -1,4 +1,4 @@
-﻿using KiraTakip.Services;
+using KiraTakip.Services;
 using KiraTakip.Services.Banka;
 using KiraTakip.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +17,7 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<IUserRoleService, UserRoleService>();
             services.AddScoped<IUserSecurityService, UserSecurityService>();
             services.AddScoped<IRoleService, RoleService>();
+            services.AddScoped<IAdminUserService, AdminUserService>();
             services.AddScoped<ITenantUserService, TenantUserService>();
             services.AddScoped<IAuditService, AuditService>();
             services.AddScoped<IPropertyService, PropertyService>();
@@ -36,17 +37,27 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<IManualChargeService, ManualChargeService>();
             services.AddScoped<IReservationService, ReservationService>();
             services.AddScoped<IPropertyPricingService, PropertyPricingService>();
+            services.AddScoped<IUnitPricingService, UnitPricingService>();
             services.AddScoped<IRateHierarchyService, RateHierarchyService>();
+            services.AddScoped<IChargeTypeService, ChargeTypeService>();
+            services.AddScoped<IUnitTypeService, UnitTypeService>();
 
             // Notification, Payment & Integration Services
             services.AddScoped<IMailService, SmtpMailService>();
             services.AddScoped<IPaymentLinkService, PaymentLinkService>();
+            services.AddScoped<IPaymentPortalService, PaymentPortalService>();
             services.AddScoped<IChargeReminderService, ChargeReminderService>();
             services.AddSingleton<ISecureTokenService, SecureTokenService>();
             services.AddScoped<IInvitationService, InvitationService>();
             services.AddScoped<IPasswordResetService, PasswordResetService>();
             services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
             services.AddScoped<IDocumentService, DocumentService>();
+            services.AddScoped<IDocumentTypeService, DocumentTypeService>();
+            services.AddScoped<IPropertyTypeService, PropertyTypeService>();
+            services.AddScoped<IRateScheduleService, RateScheduleService>();
+            services.AddScoped<ISectorService, SectorService>();
+            services.AddScoped<ITenantCategoryService, TenantCategoryService>();
+            services.AddScoped<ITenantPanelService, TenantPanelService>();
 
             return services;
         }

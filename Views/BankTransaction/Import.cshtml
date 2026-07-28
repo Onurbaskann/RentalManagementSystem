@@ -1,6 +1,7 @@
-@model KiraTakip.Models.ViewModels.BankaImportViewModel
+@model KiraTakip.Models.ViewModels.BankTransactionImportViewModel
 @{
     ViewData["Title"] = "Banka Hareketi İçe Aktar";
+    ViewData["UseCentralFeedback"] = true;
 }
 
 <div class="max-w-[600px] mx-auto">
@@ -17,21 +18,19 @@
         <form method="post" action="/BankTransaction/Import" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
 
-            @if (!ViewData.ModelState.IsValid)
-            {
-                <div asp-validation-summary="All" style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 14px;border-radius:8px;margin-bottom:18px;font-size:13px;"></div>
-            }
 
             <div class="form-group">
                 <label class="form-label">Banka</label>
                 <select asp-for="BankCode" class="form-control">
                     <option value="AKBANK">Akbank</option>
                 </select>
+                <span asp-validation-for="BankCode" class="text-red-600 text-xs"></span>
             </div>
 
             <div class="form-group">
                 <label class="form-label">CSV Dosyası</label>
-                <input type="file" asp-for="Dosya" class="form-control" accept=".csv,.txt" />
+                <input type="file" asp-for="File" class="form-control" accept=".csv,.txt" />
+                <span asp-validation-for="File" class="text-red-600 text-xs"></span>
                 <div class="form-hint">Noktalı virgülle (;) ayrılmış CSV formatı. Başlık satırı içermeli.</div>
             </div>
 

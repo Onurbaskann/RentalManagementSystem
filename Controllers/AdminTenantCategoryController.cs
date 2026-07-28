@@ -1,124 +1,100 @@
 using KiraTakip.Authorization;
-using KiraTakip.Data;
-using KiraTakip.Helpers;
-using KiraTakip.Models;
+using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
-using KiraTakip.Repositories.Interfaces;
+using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KiraTakip.Controllers;
 
 [Authorize]
-[Route("Admin/KiraciKategori")]
-public class AdminTenantCategoryController : Controller
+[Route("Admin/TenantCategory")]
+public class AdminTenantCategoryController(ITenantCategoryService tenantCategoryService) : Controller
 {
     private const CategoryType Type = CategoryType.Tenant;
-    private readonly ICategoryRepository _repo;
-    private readonly IUnitOfWork _uow;
-
-    public AdminTenantCategoryController(ICategoryRepository repo, IUnitOfWork uow)
-    {
-        _repo = repo;
-        _uow = uow;
-    }
 
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.TenantCategory.Module)]
     public async Task<IActionResult> Index()
     {
-        var list = await _repo.GetListByTipiAsync(Type);
+        var list = await tenantCategoryService.GetTenantCategoriesAsync();
         return View(list);
     }
 
-    [HttpGet("Ekle")]
+    [HttpGet("Create")]
     [Authorize(Policy = PermissionCatalog.TenantCategory.Module)]
     public async Task<IActionResult> Create()
     {
-        var nextSira = (await _repo.GetMaxSiraByTipiAsync(Type)) + 1;
+        var nextSira = await tenantCategoryService.GetNextOrderAsync();
         return View(new CategoryFormViewModel { Type = Type, Order = nextSira });
     }
 
-    [HttpPost("Ekle")]
-    [ValidateAntiForgeryToken]
+    [HttpPost("Create")]
     [Authorize(Policy = PermissionCatalog.TenantCategory.Create)]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CategoryFormViewModel model)
     {
         model.Type = Type;
         if (!ModelState.IsValid) return View(model);
 
-        var kod = CodeSlugger.ToCode(model.Name);
-        if (await _repo.KodExistsByTipiAsync(Type, kod))
+        try
         {
-            ModelState.AddModelError(nameof(model.Name), "Bu ad zaten kullanılıyor. Farklı bir ad girin.");
+            await tenantCategoryService.CreateAsync(new CreateTenantCategoryInput(model.Name, model.Order, model.IsActive));
+        }
+        catch (BusinessValidationException exception)
+        {
+            ModelState.AddModelError(exception.Field, exception.Message);
             return View(model);
         }
-
-        var entity = new Category
-        {
-            Type = Type,
-            Name = model.Name,
-            Code = kod,
-            Order = model.Order,
-            IsActive = model.IsActive,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        await _repo.AddAsync(entity);
-        await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Name}' kiracı kategorisi eklendi.";
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpGet("Duzenle/{id}")]
+    [HttpGet("Edit/{id}")]
     [Authorize(Policy = PermissionCatalog.TenantCategory.Module)]
     public async Task<IActionResult> Edit(int id)
     {
-        var entity = await _repo.GetByIdAndTipiAsync(id, Type);
+        var entity = await tenantCategoryService.GetByIdAsync(new GetTenantCategoryByIdInput(id));
         if (entity == null) return NotFound();
-        return View(ToFormVm(entity));
+
+        return View(new CategoryFormViewModel
+        {
+            Id = entity.Id,
+            Type = entity.Type,
+            Name = entity.Name,
+            Order = entity.Order,
+            IsActive = entity.IsActive
+        });
     }
 
-    [HttpPost("Duzenle/{id}")]
+    [HttpPost("Edit/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.TenantCategory.Edit)]
     public async Task<IActionResult> Edit(int id, [FromForm] CategoryFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
+        
         model.Type = Type;
         if (!ModelState.IsValid) return View(model);
 
-        var entity = await _repo.GetByIdAndTipiAsync(id, Type);
-        if (entity == null) return NotFound();
-
-        entity.Name = model.Name;
-        entity.Order = model.Order;
-        entity.IsActive = model.IsActive;
-
-        await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Name}' güncellendi.";
+        try
+        {
+            await tenantCategoryService.UpdateAsync(new EditTenantCategoryInput(id, model.Name, model.Order, model.IsActive));
+        }
+        catch (BusinessValidationException exception)
+        {
+            ModelState.AddModelError(exception.Field, exception.Message);
+            return View(model);
+        }
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("DurumDegistir/{id}")]
+    [HttpPost("ToggleStatus/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.TenantCategory.Edit)]
-    public async Task<IActionResult> DurumDegistir(int id)
+    public async Task<IActionResult> ToggleStatus(int id)
     {
-        var entity = await _repo.GetByIdAndTipiAsync(id, Type);
-        if (entity == null) return NotFound();
-        entity.IsActive = !entity.IsActive;
-        await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Name}' {(entity.IsActive ? "aktif" : "pasif")} yapıldı.";
+        await tenantCategoryService.ToggleStatusAsync(new ToggleTenantCategoryStatusInput(id));
         return RedirectToAction(nameof(Index));
     }
-
-    private static CategoryFormViewModel ToFormVm(Category e) => new()
-    {
-        Id = e.Id,
-        Type = e.Type,
-        Name = e.Name,
-        Order = e.Order,
-        IsActive = e.IsActive
-    };
 }

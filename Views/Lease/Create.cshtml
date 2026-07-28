@@ -1,0 +1,351 @@
+@model KiraTakip.Models.ViewModels.CreateLeaseViewModel
+@using KiraTakip.Models
+@{
+    ViewData["Title"] = "Yeni Sözleşme";
+    ViewData["UseCentralFeedback"] = true;
+}
+
+<div class="max-w-[1000px] mx-auto">
+    <div class="page-header">
+        <a href="/Lease" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Sözleşmeler</a>
+        <div class="page-title">Yeni Sözleşme Oluştur</div>
+    </div>
+
+    <div x-data="sozlesmeForm()" x-init="init()" x-cloak @@datechanged="onPickerChanged($event)">
+    <form asp-action="Create" method="post" enctype="multipart/form-data" id="sozlesmeForm" asp-form-write-permission="@PermissionCatalog.Lease.Create">
+        <div class="card">
+            <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                <span>Taşınmaz ve Kiracı</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Birim *</label>
+                <select asp-for="UnitId" class="form-control" x-model="unitId" id="birimSelect">
+                    <option value="">— Boş birim seçin —</option>
+                    @foreach (var b in Model.AvailableUnits)
+                    {
+                        string birimLabel = b.UnitStructure == KiraTakip.Models.UnitStructure.MultipleUnits
+                            ? $"{b.PropertyName} — Birim {b.UnitNo}{(b.FloorNo.HasValue ? $" • {b.FloorNo}. Kat" : "")} • {b.Area.M2()}"
+                            : $"{b.PropertyName} — Komple • {b.Area.M2()} • {b.District}";
+                        <option value="@b.Id">@birimLabel</option>
+                    }
+                </select>
+                <span asp-validation-for="UnitId" class="form-error"></span>
+            </div>
+
+            <!-- Unit info card -->
+            <div x-show="unitId && birimler[unitId]" class="mb-4" x-cloak>
+                <div class="info-card bg-primary/5 border border-primary/10 rounded-lg p-3">
+                    <div class="text-[13.5px] font-medium text-primary" 
+                         x-text="birimler[unitId] ? `${birimler[unitId].ad} • ${birimler[unitId].m2} • ${birimler[unitId].ilce}, ${birimler[unitId].il}` : ''"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Kiracı *</label>
+                <select asp-for="TenantId" class="form-control" x-model="tenantId">
+                    <option value="">— Kiracı seçin —</option>
+                    @foreach (var tenant in Model.Tenants)
+                    {
+                        <option value="@tenant.Id">@tenant.DisplayName</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                <span>Süre ve Bedel</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <div class="form-group mb-0">
+                    <label class="form-label">Başlangıç Tarihi *</label>
+                    @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
+                        { "Name",  "StartDate" },
+                        { "Value", Model.StartDate.ToString("yyyy-MM-dd") },
+                        { "Mode",  "date" },
+                        { "Field", "baslangic" }
+                    })
+                </div>
+                <div class="form-group mb-0">
+                    <label class="form-label">Bitiş Tarihi *</label>
+                    @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
+                        { "Name",  "EndDate" },
+                        { "Value", Model.EndDate.ToString("yyyy-MM-dd") },
+                        { "Mode",  "date" },
+                        { "Field", "bitis" }
+                    })
+                    <span asp-validation-for="EndDate" class="form-error"></span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-3.5">
+                <div class="form-group mb-0">
+                    <label class="form-label">Vade Kuralı</label>
+                    <select asp-for="DueDateRuleType" class="form-control" x-model.number="vadeKuraliTipi">
+                        <option value="1">Sabit Ay Günü (ayın N'i)</option>
+                        <option value="2">Dönem Başı + N Gün</option>
+                    </select>
+                    <div class="text-[11px] text-slate-500 mt-2 bg-slate-50 p-2.5 border border-slate-100 rounded-lg">
+                        <span x-show="vadeKuraliTipi == 1" class="block leading-relaxed">
+                            <strong>Sabit Gün:</strong> Her takvim ayının doğrudan seçtiğiniz gününü son ödeme tarihi yapar. 31 gün çekmeyen aylarda otomatik olarak ayın son gününe uyarlanır.
+                        </span>
+                        <span x-show="vadeKuraliTipi == 2" class="block leading-relaxed">
+                            <strong>Dönem Başından Sonra:</strong> Kira döneminin başladığı tarihe girdiğiniz gün sayısını ekleyerek vadeyi belirler.
+                        </span>
+                    </div>
+                </div>
+                <div class="form-group mb-0">
+                    <label class="form-label">Vade Günü *</label>
+                    <input asp-for="DueDay" type="number" class="form-control" x-model.number="vadeGunu" />
+                    <span asp-validation-for="DueDay" class="form-error"></span>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Sözleşme Kalemleri Bölümü -->
+        <div class="card mt-4" x-show="unitId && tenantId && baslangicTarihi" x-cloak>
+            <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex justify-between items-center">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                        <span>Sözleşme Tarifesi</span>
+                    </div>
+                    <!-- Kiracı Kategori Rozeti -->
+                    <template x-if="tenantId && kiraciler[tenantId]">
+                        <span class="text-[11px] font-semibold bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full border border-indigo-100/80 shadow-sm flex items-center gap-1.5 transition-all duration-300">
+                            <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
+                            <span x-text="'Kategori: ' + kiraciler[tenantId].kategori"></span>
+                        </span>
+                    </template>
+                </div>
+                <div x-show="loading" class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Yükleniyor...</span>
+                </div>
+            </div>
+
+            <div x-show="error" class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-sm" x-text="error"></div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <template x-for="(k, index) in kalemler" :key="k.chargeTypeId">
+                    <div class="bg-slate-50/50 border border-[var(--color-border)] rounded-xl p-4 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="text-sm font-bold text-slate-800" x-text="k.chargeTypeName"></div>
+                                <div class="flex gap-1.5 flex-wrap justify-end max-w-[150px]">
+                                    <!-- Kaynak Tipi Rozeti -->
+                                    <span class="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-tight"
+                                          :class="k.sourceType === 'LeaseRateOverride' ? 'bg-primary text-white' :
+                                                  k.sourceType === 'UnitRateOverride' ? 'bg-emerald-600 text-white' :
+                                                  k.sourceType === 'PropertyRateOverride' ? 'bg-sky-500 text-white' :
+                                                  k.sourceType === 'RateSchedule' ? 'bg-amber-500 text-white' : 'bg-slate-500 text-white'"
+                                          x-text="getKaynakTipiLabel(k.sourceType)"></span>
+                                    <!-- Durum Rozeti -->
+                                    <span class="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-tight"
+                                          :class="k.isUserModified ? 'bg-rose-600 text-white' : 'bg-slate-800 text-white'"
+                                          x-text="k.isUserModified ? 'Elle Müdahale' : 'Otomatik'"></span>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-2 items-end mb-2">
+                                <div>
+                                    <label class="text-[10px] text-muted font-bold mb-1 block">
+                                        <span x-show="k.calculationMethod != 2">Tutar (₺)</span>
+                                        <span x-show="k.calculationMethod == 2">₺ / m²</span>
+                                    </label>
+                                    <input type="number" step="0.01" min="0" class="form-control form-control-sm"
+                                           x-model.number="k.unitValue"
+                                           @@input="k.isUserModified = true">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-muted font-bold mb-1 block">Yöntem</label>
+                                    <select class="form-control form-control-sm"
+                                            x-model.number="k.calculationMethod"
+                                            @@change="k.isUserModified = true">
+                                        <option value="1">Sabit</option>
+                                        <option value="2">m²</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-muted font-bold mb-1 block">KDV (%)</label>
+                                    <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm"
+                                           x-model.number="k.vatRate"
+                                           @@input="k.isUserModified = true"
+                                           :name="`LeaseLineItems[${index}].VatRate`">
+                                </div>
+                            </div>
+
+                            <div x-show="k.calculationMethod == 2" class="mt-2.5 p-2 bg-indigo-50/50 border border-indigo-100 rounded-lg text-[11px] transition-all">
+                                <div x-show="getBirimYuzolcumu() > 0" class="flex justify-between items-center text-slate-700 font-medium">
+                                    <span class="flex items-center gap-1.5 text-slate-500">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-indigo-500"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+                                        <span>Hesaplanan Net Bedel:</span>
+                                    </span>
+                                    <span class="flex items-center gap-1">
+                                        <span class="font-normal text-slate-400" x-text="Number(k.unitValue || 0).toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ₺/m² × ' + getBirimYuzolcumu() + ' m²'"></span>
+                                        <span class="text-slate-400 font-normal">=</span>
+                                        <strong class="text-indigo-700 text-xs font-extrabold" x-text="hesaplaTutar(k).toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ₺'"></strong>
+                                    </span>
+                                </div>
+                                <div x-show="getBirimYuzolcumu() === 0" class="flex items-center gap-1 text-rose-600 font-semibold">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                    <span>Birim m² tanımlı değil!</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center mt-auto pt-3 border-t border-slate-200/50">
+                            <div></div>
+                            
+                            <!-- Sıfırla Butonu -->
+                            <button type="button" class="px-2.5 py-1 text-[11px] font-bold text-slate-600 border border-slate-300 rounded bg-white hover:bg-slate-50 transition-colors"
+                                    x-show="k.isUserModified"
+                                    @@click="resetKalem(k)">Sıfırla</button>
+                        </div>
+
+                        <!-- Gizli Alanlar -->
+                        <input type="hidden" :name="`LeaseLineItems[${index}].ChargeTypeId`" :value="k.chargeTypeId">
+                        <input type="hidden" :name="`LeaseLineItems[${index}].ChargeTypeName`" :value="k.chargeTypeName">
+                        <input type="hidden" :name="`LeaseLineItems[${index}].ChargeTypeCode`" :value="k.chargeTypeCode">
+                        <input type="hidden" :name="`LeaseLineItems[${index}].Behavior`" :value="k.behavior">
+                        <input type="hidden" :name="`LeaseLineItems[${index}].UnitValue`" :value="k.unitValue">
+                        <input type="hidden" :name="`LeaseLineItems[${index}].CalculationMethod`" :value="k.calculationMethod">
+                        <input type="hidden" :name="`LeaseLineItems[${index}].Amount`" :value="hesaplaTutar(k)">
+                        <input type="hidden" :name="`LeaseLineItems[${index}].DefaultAmount`" :value="k.defaultAmount">
+                        <input type="hidden" :name="`LeaseLineItems[${index}].IsUserModified`" :value="k.isUserModified">
+                        <input type="hidden" :name="`LeaseLineItems[${index}].IsRateFound`" :value="k.isRateFound">
+                        <input type="hidden" :name="`LeaseLineItems[${index}].SourceType`" :value="k.sourceType">
+                    </div>
+                </template>
+            </div>
+            
+            <div x-show="!loading && kalemler.length === 0" class="text-muted text-sm mt-2 italic">
+                Bu seçimlere uygun varsayılan kalem bulunamadı.
+            </div>
+        </div>
+
+        @await Html.PartialAsync("_BelgeEkleForm", Model.DocumentTypes)
+
+        <div class="card mt-4">
+            <div class="form-group mb-0">
+                <label class="form-label">Açıklama</label>
+                <textarea asp-for="Description" class="form-control" rows="3" placeholder="Sözleşmeye ait ek açıklama..."></textarea>
+            </div>
+        </div>
+
+        <div class="flex gap-3 mt-6">
+            <button type="submit" class="btn btn-primary px-6 flex items-center gap-2" asp-permission="@PermissionCatalog.Lease.Create">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Sözleşme Oluştur
+            </button>
+            <a href="/Lease" class="btn btn-secondary px-6">İptal</a>
+        </div>
+    </form>
+</div>
+</div>
+
+@section Scripts {
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('sozlesmeForm', () => ({
+            unitId: @(Model.UnitId.HasValue ? Model.UnitId.Value.ToString() : "null"),
+            tenantId: @(Model.TenantId != 0 ? Model.TenantId.ToString() : "null"),
+            baslangicTarihi: '@Model.StartDate.ToString("yyyy-MM-dd")',
+            bitisTarihi: '@Model.EndDate.ToString("yyyy-MM-dd")',
+            onPickerChanged(e) {
+                if (e.detail.field === 'baslangic') this.baslangicTarihi = e.detail.value;
+                else if (e.detail.field === 'bitis') this.bitisTarihi = e.detail.value;
+            },
+            vadeKuraliTipi: @((int)Model.DueDateRuleType),
+            vadeGunu: @Model.DueDay,
+            kalemler: [],
+            loading: false,
+            error: null,
+            birimler: {
+                @foreach (var b in Model.AvailableUnits)
+                {
+                    string birimAd = b.UnitStructure == KiraTakip.Models.UnitStructure.MultipleUnits
+                        ? $"{b.PropertyName} — Birim {b.UnitNo}"
+                        : $"{b.PropertyName} — Komple";
+                    string meta = b.UnitStructure == KiraTakip.Models.UnitStructure.MultipleUnits && b.FloorNo.HasValue
+                        ? $"{b.FloorNo}. Kat • {b.Area.M2()}"
+                        : b.Area.M2();
+                    @Html.Raw($"{b.Id}: {{ad: '{birimAd.Replace("'", "\\'")}', m2: '{meta.Replace("'", "\\'")}', ilce: '{b.District.Replace("'", "\\'")}', il: '{b.City.Replace("'", "\\'")}'}},")
+                }
+            },
+            kiraciler: {
+                @foreach (var tenant in Model.Tenants)
+                {
+                    @Html.Raw($"{tenant.Id}: {{ad: '{tenant.DisplayName.Replace("'", "\\'")}', no: '{tenant.TenantNo}', kategori: '{tenant.TenantCategoryName?.Replace("'", "\\'") ?? "Kategori Belirtilmemiş"}'}},")
+                }
+            },
+            birimYuzolcumular: @Html.Raw(ViewBag.UnitAreas ?? "{}"),
+            init() {
+                this.$watch('unitId', () => this.fetchKalemler());
+                this.$watch('tenantId', () => this.fetchKalemler());
+                this.$watch('baslangicTarihi', () => this.fetchKalemler());
+                
+                if (this.unitId && this.tenantId && this.baslangicTarihi) {
+                    this.fetchKalemler();
+                }
+            },
+            async fetchKalemler() {
+                console.log('fetchKalemler tetiklendi:', { unitId: this.unitId, tenantId: this.tenantId, baslangic: this.baslangicTarihi });
+                if (!this.unitId || !this.tenantId || !this.baslangicTarihi) {
+                    this.kalemler = [];
+                    return;
+                }
+                this.loading = true;
+                this.error = null;
+                try {
+                    const url = `/Lease/GetDefaultLineItems?unitId=${this.unitId}&tenantId=${this.tenantId}&startDate=${this.baslangicTarihi}`;
+                    console.log('API çağrılıyor:', url);
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Tarife kalemleri alınırken hata oluştu.');
+                    const data = await response.json();
+                    console.log('API cevabı:', data);
+                    this.kalemler = data.map(k => ({
+                        ...k,
+                        defaultCalculationMethod: k.calculationMethod
+                    }));
+                    
+
+
+
+                } catch (err) {
+                    console.error('Hata:', err);
+                    this.error = err.message;
+                } finally {
+                    this.loading = false;
+                }
+            },
+            getBirimYuzolcumu() {
+                return this.birimYuzolcumular[this.unitId] ?? 0;
+            },
+            hesaplaTutar(k) {
+                return k.calculationMethod == 2 ? k.unitValue * this.getBirimYuzolcumu() : k.unitValue;
+            },
+            resetKalem(k) {
+                k.unitValue = k.defaultUnitValue;
+                k.calculationMethod = k.defaultCalculationMethod;
+                k.isUserModified = false;
+            },
+            getKaynakTipiLabel(val) {
+                const map = {
+                    'LeaseRateOverride':    'Sözleşme Tarifesi',
+                    'UnitRateOverride':     'Birim Tarifesi',
+                    'PropertyRateOverride': 'Taşınmaz Tarifesi',
+                    'RateSchedule':         'Genel Tarife',
+                    'ManualInput':          'Manuel Giriş',
+                };
+                return map[val] || 'Fiyat Tanımı Yok';
+            }
+        }));
+    });
+</script>
+}
+

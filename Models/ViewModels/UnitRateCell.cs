@@ -2,7 +2,6 @@ namespace KiraTakip.Models.ViewModels;
 
 public class UnitRateCell
 {
-    public int RateId { get; set; }
     public int TenantCategoryId { get; set; }
     public int ChargeTypeId { get; set; }
     public bool IsCustomRateActive { get; set; }

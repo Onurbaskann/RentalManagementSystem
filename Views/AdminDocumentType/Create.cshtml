@@ -1,8 +1,9 @@
-@model KiraTakip.Models.ViewModels.BelgeTuruFormViewModel
+@model KiraTakip.Models.ViewModels.DocumentTypeFormViewModel
 @using KiraTakip.Models.Entities
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Belge Türü Ekle";
+    ViewData["UseCentralFeedback"] = true;
 }
 
 <div class="max-w-[680px] mx-auto">
@@ -13,7 +14,6 @@
 
     <form asp-action="Create" method="post" asp-form-write-permission="@PermissionCatalog.DocumentType.Create">
         @Html.AntiForgeryToken()
-        <div asp-validation-summary="ModelOnly" class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-[13.5px]"></div>
 
         <div class="card mb-4">
             <div class="text-[15px] font-bold mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
@@ -23,14 +23,14 @@
 
             <div class="form-group mb-0">
                 <label class="form-label">Ad *</label>
-                <input asp-for="Ad" class="form-control" placeholder="KVKK Onay Belgesi" />
-                <span asp-validation-for="Ad" class="form-error"></span>
+                <input asp-for="Name" class="form-control" placeholder="KVKK Onay Belgesi" />
+                <span asp-validation-for="Name" class="form-error"></span>
             </div>
 
             <div class="form-group mt-4 mb-0">
                 <label class="form-label">Açıklama</label>
-                <textarea asp-for="Aciklama" class="form-control" rows="2" placeholder="Opsiyonel açıklama"></textarea>
-                <span asp-validation-for="Aciklama" class="form-error"></span>
+                <textarea asp-for="Description" class="form-control" rows="2" placeholder="Opsiyonel açıklama"></textarea>
+                <span asp-validation-for="Description" class="form-error"></span>
             </div>
         </div>
 
@@ -43,35 +43,35 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-4">
                 <div class="form-group mb-0">
                     <label class="form-label">Hedef Kayıt Tipi *</label>
-                    <select asp-for="HedefEntite" class="form-control">
+                    <select asp-for="TargetEntity" class="form-control">
                         <option value="@((int)DocumentOwnerType.Tenant)">Kiracı</option>
                         <option value="@((int)DocumentOwnerType.Lease)">Sözleşme</option>
                         <option value="@((int)DocumentOwnerType.Payment)">Ödeme</option>
                     </select>
-                    <span asp-validation-for="HedefEntite" class="form-error"></span>
+                    <span asp-validation-for="TargetEntity" class="form-error"></span>
                 </div>
                 <div class="form-group mb-0">
                     <label class="form-label">İzin Verilen Uzantılar *</label>
-                    <input asp-for="IzinVerilenUzantilar" class="form-control font-mono" placeholder="pdf,jpg,png" />
-                    <span asp-validation-for="IzinVerilenUzantilar" class="form-error"></span>
+                    <input asp-for="AllowedExtensions" class="form-control font-mono" placeholder="pdf,jpg,png" />
+                    <span asp-validation-for="AllowedExtensions" class="form-error"></span>
                     <div class="text-xs text-muted mt-1">Virgülle ayırın. Küçük harf.</div>
                 </div>
                 <div class="form-group mb-0">
                     <label class="form-label">Maks. Boyut (MB) *</label>
-                    <input asp-for="MaxBoyutMb" type="number" min="1" max="100" class="form-control" />
-                    <span asp-validation-for="MaxBoyutMb" class="form-error"></span>
+                    <input asp-for="MaxSizeMb" type="number" min="1" max="100" class="form-control" />
+                    <span asp-validation-for="MaxSizeMb" class="form-error"></span>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4 mt-4">
                 <div class="form-group mb-0">
                     <label class="form-label">Sıra *</label>
-                    <input asp-for="Sira" type="number" min="1" class="form-control" />
-                    <span asp-validation-for="Sira" class="form-error"></span>
+                    <input asp-for="SortOrder" type="number" min="1" class="form-control" />
+                    <span asp-validation-for="SortOrder" class="form-error"></span>
                 </div>
                 <div class="flex flex-col gap-2 mt-auto pb-1">
                     <label class="flex items-center gap-2 cursor-pointer select-none text-sm">
-                        <input asp-for="Zorunlu" type="checkbox" class="w-4 h-4 rounded" />
+                        <input asp-for="Required" type="checkbox" class="w-4 h-4 rounded" />
                         Zorunlu belge
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer select-none text-sm">
@@ -91,4 +91,3 @@
         </div>
     </form>
 </div>
-

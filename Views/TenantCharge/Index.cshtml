@@ -1,28 +1,25 @@
-@model KiraTakip.Models.Common.PagedResult<ChargeListItemDto>
+@model KiraTakip.Models.ViewModels.TenantChargeIndexViewModel
 @using KiraTakip.Models
 @using KiraTakip.Models.Entities
 @using KiraTakip.Models.Common
 @{
     Layout = "_KiraciLayout";
     ViewData["Title"] = "Tahakkuklarım";
-    string durum = ViewBag.Status ?? "tum";
-    var q = (TableQuery)ViewBag.Query;
-    var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/Tenant/Tahakkuklarim", Extra = q.ToQueryDict() };
+    ViewData["UseCentralFeedback"] = true;
+    string status = Model.Status;
+    var query = Model.Query;
+    var charges = Model.Charges;
+    var controllerName = nameof(KiraTakip.Controllers.TenantChargeController).Replace("Controller", "");
+    var indexUrl = Url.Action(nameof(KiraTakip.Controllers.TenantChargeController.Index), controllerName)!;
+    var reportPaymentUrl = Url.Action(nameof(KiraTakip.Controllers.TenantChargeController.ReportPayment), controllerName)!;
+    var pagination = new PaginationModel { Page = charges.Page, Size = charges.Size, Total = charges.Total, BasePath = indexUrl, Extra = query.ToQueryDict() };
 
-    decimal toplamTahakkuk = ViewBag.ToplamTahakkuk ?? 0m;
-    decimal tahsilEdilen = ViewBag.TahsilEdilen ?? 0m;
-    decimal kalanBorc = ViewBag.KalanBorc ?? 0m;
-    decimal gecikmisKalan = ViewBag.GecikmisKalan ?? 0m;
+    decimal totalChargeAmount = Model.TotalChargeAmount;
+    decimal collectedAmount = Model.CollectedAmount;
+    decimal remainingDebtAmount = Model.RemainingDebtAmount;
+    decimal overdueRemainingAmount = Model.OverdueRemainingAmount;
 }
 
-@if (TempData["Success"] != null)
-{
-    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 px-4 rounded-lg mb-4 text-[13.5px]">✓ @TempData["Success"]</div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="bg-red-50 border border-red-200 text-red-800 p-3 px-4 rounded-lg mb-4 text-[13.5px]">✕ @TempData["Error"]</div>
-}
 
 <div class="page-header">
     <div class="page-title">Tahakkuklarım</div>
@@ -33,23 +30,23 @@
 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 mb-5">
     <div class="card bg-gradient-to-br from-slate-50 to-white border-slate-200">
         <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-2">Toplam Tahakkuk</div>
-        <div class="text-2xl font-bold text-slate-800">@toplamTahakkuk.ToString("N2") ₺</div>
+        <div class="text-2xl font-bold text-slate-800">@totalChargeAmount.Tl()</div>
         <div class="text-[11px] text-muted mt-1">Tüm dönemlerin brüt yükümlülüğü</div>
     </div>
     <div class="card bg-gradient-to-br from-emerald-50/60 to-white border-emerald-100">
         <div class="text-[11.5px] font-bold text-emerald-700 uppercase tracking-wider mb-2">Ödenen</div>
-        <div class="text-2xl font-bold text-emerald-700">@tahsilEdilen.ToString("N2") ₺</div>
+        <div class="text-2xl font-bold text-emerald-700">@collectedAmount.Tl()</div>
         <div class="text-[11px] text-muted mt-1">Onaylanmış toplam ödeme</div>
     </div>
-    <div class="card bg-gradient-to-br @(kalanBorc > 0 ? "from-slate-50 to-white border-slate-200" : "from-emerald-50/60 to-white border-emerald-100")">
+    <div class="card bg-gradient-to-br @(remainingDebtAmount > 0 ? "from-slate-50 to-white border-slate-200" : "from-emerald-50/60 to-white border-emerald-100")">
         <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-2">Kalan Borç</div>
-        <div class="text-2xl font-bold @(kalanBorc > 0 ? "text-slate-800" : "text-emerald-700")">@kalanBorc.ToString("N2") ₺</div>
-        <div class="text-[11px] text-muted mt-1">@(kalanBorc > 0 ? "Toplam tahakkuk − tahsil edilen" : "Tüm tahakkuklar karşılandı")</div>
+        <div class="text-2xl font-bold @(remainingDebtAmount > 0 ? "text-slate-800" : "text-emerald-700")">@remainingDebtAmount.Tl()</div>
+        <div class="text-[11px] text-muted mt-1">@(remainingDebtAmount > 0 ? "Toplam tahakkuk − tahsil edilen" : "Tüm tahakkuklar karşılandı")</div>
     </div>
-    <div class="card bg-gradient-to-br @(gecikmisKalan > 0 ? "from-red-50/60 to-white border-red-100" : "from-emerald-50/60 to-white border-emerald-100")">
-        <div class="text-[11.5px] font-bold uppercase tracking-wider mb-2 @(gecikmisKalan > 0 ? "text-red-700" : "text-emerald-700")">Gecikmiş Bakiye</div>
-        <div class="text-2xl font-bold @(gecikmisKalan > 0 ? "text-red-700" : "text-emerald-700")">@gecikmisKalan.ToString("N2") ₺</div>
-        <div class="text-[11px] text-muted mt-1">@(gecikmisKalan > 0 ? "Vadesi geçmiş ödenmemiş tutar" : "Gecikmiş borç yok")</div>
+    <div class="card bg-gradient-to-br @(overdueRemainingAmount > 0 ? "from-red-50/60 to-white border-red-100" : "from-emerald-50/60 to-white border-emerald-100")">
+        <div class="text-[11.5px] font-bold uppercase tracking-wider mb-2 @(overdueRemainingAmount > 0 ? "text-red-700" : "text-emerald-700")">Gecikmiş Bakiye</div>
+        <div class="text-2xl font-bold @(overdueRemainingAmount > 0 ? "text-red-700" : "text-emerald-700")">@overdueRemainingAmount.Tl()</div>
+        <div class="text-[11px] text-muted mt-1">@(overdueRemainingAmount > 0 ? "Vadesi geçmiş ödenmemiş tutar" : "Gecikmiş borç yok")</div>
     </div>
 </div>
 
@@ -67,8 +64,10 @@
     }
     @foreach (var (key, label) in filters)
     {
-        bool isActive = durum == key;
-        var url = key == "tum" ? "/Tenant/Tahakkuklarim" : $"/Tenant/Tahakkuklarim?durum={key}";
+        bool isActive = status == key;
+        var url = key == "tum"
+            ? indexUrl
+            : Url.Action(nameof(KiraTakip.Controllers.TenantChargeController.Index), controllerName, new { status = key });
         <a href="@url" class="btn btn-sm @(isActive ? "btn-primary" : "btn-secondary text-slate-600 bg-white border-slate-200")">@label</a>
     }
 </div>
@@ -76,36 +75,36 @@
 <div x-data="{ open: {}, odemeYapModal: false, modalCtx: null, odemeTab: 'havale' }">
 
 <div class="card p-0 overflow-hidden">
-    <form method="get" class="flex flex-col gap-2.5 p-3 bg-slate-50/50 border-b border-slate-200" action="/Tenant/Tahakkuklarim">
-        <input type="search" name="q" value="@q.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: dönem, taşınmaz…" />
+    <form method="get" class="flex flex-col gap-2.5 p-3 bg-slate-50/50 border-b border-slate-200" action="@indexUrl">
+        <input type="search" name="q" value="@query.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: dönem, taşınmaz…" />
 
         <div class="flex flex-wrap items-center gap-2.5">
         <select name="unitId" class="form-control w-44 text-xs font-medium">
             <option value="">— Tüm Birimler —</option>
-            @foreach (var b in (List<Unit>)ViewBag.Units)
+            @foreach (var unit in Model.Units)
             {
-                <option value="@b.Id" selected="@(q.UnitId == b.Id ? "selected" : null)">@b.Name</option>
+                <option value="@unit.Id" selected="@(query.UnitId == unit.Id ? "selected" : null)">@unit.Name</option>
             }
         </select>
 
         <select name="source" class="form-control w-32 text-xs font-medium">
             <option value="">— Kaynak —</option>
-            <option value="lease" selected="@(q.Source == "lease" ? "selected" : null)">Sözleşme</option>
-            <option value="manuel" selected="@(q.Source == "manuel" ? "selected" : null)">Manuel</option>
-            <option value="reservation" selected="@(q.Source == "reservation" ? "selected" : null)">Rezervasyon</option>
+            <option value="lease" selected="@(query.Source == "lease" ? "selected" : null)">Sözleşme</option>
+            <option value="manuel" selected="@(query.Source == "manuel" ? "selected" : null)">Manuel</option>
+            <option value="reservation" selected="@(query.Source == "reservation" ? "selected" : null)">Rezervasyon</option>
         </select>
 
         <select name="year" class="form-control w-24 text-xs font-medium">
             <option value="">— Yıl —</option>
-            @foreach (var y in (List<int>)ViewBag.AvailableYears)
+            @foreach (var year in Model.AvailableYears)
             {
-                <option value="@y" selected="@(q.Year == y ? "selected" : null)">@y</option>
+                <option value="@year" selected="@(query.Year == year ? "selected" : null)">@year</option>
             }
         </select>
 
-        @if (durum != "tum") { <input type="hidden" name="durum" value="@durum" /> }
+        @if (status != "tum") { <input type="hidden" name="status" value="@status" /> }
         <button type="submit" class="btn btn-primary btn-sm px-4">Filtrele</button>
-        <a href="/Tenant/Tahakkuklarim@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
+        <a href="@Url.Action(nameof(KiraTakip.Controllers.TenantChargeController.Index), controllerName, status != "tum" ? new { status } : null)" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
         </div>
     </form>
 
@@ -125,82 +124,83 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var t in Model.Items)
+                @foreach (var charge in charges.Items)
                 {
-                    var kalan = t.TotalAmount - t.PaidAmount;
-                    bool odeyebilir = kalan > 0 && t.Status != ChargeStatus.Cancelled;
-                    string durumCls = t.Status switch {
+                    var remainingAmount = charge.TotalAmount - charge.PaidAmount;
+                    var availablePaymentAmount = Math.Max(0, remainingAmount - charge.PendingPaymentAmount);
+                    bool canPay = Model.CanReportPayment && availablePaymentAmount > 0 && charge.Status != ChargeStatus.Cancelled;
+                    string statusCssClass = charge.Status switch {
                         ChargeStatus.Paid    => "badge-kirali",
                         ChargeStatus.PartiallyPaid => "badge-surek",
                         ChargeStatus.Overdue      => "badge-gecmis",
                         ChargeStatus.Cancelled  => "badge-bos",
                         _                           => "badge-bos"
                     };
-                    string durumLabel = t.Status switch {
+                    string statusLabel = charge.Status switch {
                         ChargeStatus.Paid    => "Tam Ödendi",
                         ChargeStatus.PartiallyPaid => "Kısmi Ödendi",
                         ChargeStatus.Overdue      => "Gecikti",
                         ChargeStatus.Cancelled  => "İptal Edildi",
                         _                           => "Bekleniyor"
                     };
-                    string kaynakCls = t.SourceType switch {
+                    string sourceCssClass = charge.SourceType switch {
                         ChargeSourceType.Manual      => "badge-surek",
                         ChargeSourceType.Reservation => "badge-bireysel",
                         _                              => "badge-bos"
                     };
-                    string kaynakLabel = t.SourceType switch {
+                    string sourceLabel = charge.SourceType switch {
                         ChargeSourceType.Manual      => "Manuel",
                         ChargeSourceType.Reservation => "Rezervasyon",
                         _                              => "Sözleşme"
                     };
-                    <tr @@click="open[@t.Id] = !open[@t.Id]" class="cursor-pointer transition-colors hover:bg-slate-50">
+                    <tr @@click="open[@charge.Id] = !open[@charge.Id]" class="cursor-pointer transition-colors hover:bg-slate-50">
                         <td>
                             <div class="flex items-center gap-2">
-                                <span class="text-slate-300 transition-transform duration-200" :class="open[@t.Id] ? 'rotate-180' : ''">
+                                <span class="text-slate-300 transition-transform duration-200" :class="open[@charge.Id] ? 'rotate-180' : ''">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
                                 </span>
-                                @t.PeriodStart.ToString("MMMM yyyy")
+                                @charge.PeriodStart.ToString("MMMM yyyy")
                             </div>
                         </td>
                         <td>
-                            @(t.PropertyName ?? "—")
-                            @if (!string.IsNullOrEmpty(t.UnitName))
+                            @(charge.PropertyName ?? "—")
+                            @if (!string.IsNullOrEmpty(charge.UnitName))
                             {
-                                <span class="cell-sub">@t.UnitName</span>
+                                <span class="cell-sub">@charge.UnitName</span>
                             }
                         </td>
-                        <td class="cell-center">@t.DueDate.ToString("dd.MM.yyyy")</td>
-                        <td class="num">@t.TotalAmount.ToString("N2") ₺</td>
-                        <td class="num num-positive">@t.PaidAmount.ToString("N2") ₺</td>
-                        <td class="num @(kalan > 0 ? "num-negative" : "num-positive")">@kalan.ToString("N2") ₺</td>
+                        <td class="cell-center">@charge.DueDate.Tarih()</td>
+                        <td class="num">@charge.TotalAmount.Tl()</td>
+                        <td class="num num-positive">@charge.PaidAmount.Tl()</td>
+                        <td class="num @(remainingAmount > 0 ? "num-negative" : "num-positive")">@remainingAmount.Tl()</td>
                         <td>
-                            @if (t.PendingPaymentCount > 0)
+                            @if (charge.PendingPaymentCount > 0)
                             {
                                 <span class="badge badge-surek">Ödeme Onayı Bekleniyor</span>
                             }
                             else
                             {
-                                <span class="badge @durumCls">@durumLabel</span>
+                                <span class="badge @statusCssClass">@statusLabel</span>
                             }
                         </td>
-                        <td><span class="badge @kaynakCls">@kaynakLabel</span></td>
+                        <td><span class="badge @sourceCssClass">@sourceLabel</span></td>
                         <td @@click.stop="" class="num">
                             <div class="flex gap-1 justify-end">
-                                <a href="/Tenant/Tahakkuklarim/Details/@t.Id.ToHashId()" class="btn btn-sm btn-secondary p-1" title="Detay">
+                                <a href="@Url.Action(nameof(KiraTakip.Controllers.TenantChargeController.Details), controllerName, new { id = charge.Id.ToHashId() })" class="btn btn-sm btn-secondary p-1" title="Detay">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                 </a>
-                                @if (odeyebilir)
+                                @if (canPay)
                                 {
                                     <button type="button"
-                                            @@click='odemeYapModal = true; odemeTab = "havale"; modalCtx = { chargeId: @t.Id, kalan: @kalan.ToString(System.Globalization.CultureInfo.InvariantCulture), kalanLabel: "@kalan.ToString("N2") ₺", donem: "@t.PeriodStart.ToString("MMMM yyyy")" }'
+                                            @@click='odemeYapModal = true; odemeTab = "havale"; modalCtx = { chargeId: @charge.Id, kalan: @availablePaymentAmount.ToString(System.Globalization.CultureInfo.InvariantCulture), kalanLabel: "@availablePaymentAmount.Tl()", donem: "@charge.PeriodStart.ToString("MMMM yyyy")" }'
                                             class="btn btn-sm btn-primary">Ödeme Yap</button>
                                 }
                             </div>
                         </td>
                     </tr>
-                    <tr x-show="open[@t.Id]" x-cloak class="bg-slate-50/80 border-b border-slate-200">
+                    <tr x-show="open[@charge.Id]" x-cloak class="bg-slate-50/80 border-b border-slate-200">
                         <td colspan="9" class="p-4 px-12">
-                            @if (t.LineItems.Any())
+                            @if (charge.LineItems.Any())
                             {
                                 <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Kalem Detayları</div>
                                 <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
@@ -209,20 +209,20 @@
                                             <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
                                                 <th class="p-2 px-3 text-left">Açıklama</th>
                                                 <th class="p-2 px-3 text-right">Birim</th>
-                                                <th class="p-2 px-3 text-right">Amount</th>
+                                                <th class="p-2 px-3 text-right">Tutar</th>
                                                 <th class="p-2 px-3 text-right text-muted">KDV</th>
                                                 <th class="p-2 px-3 text-right">Toplam</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach (var k in t.LineItems.OrderBy(k => k.ChargeTypeSortOrder))
+                                            @foreach (var lineItem in charge.LineItems.OrderBy(lineItem => lineItem.ChargeTypeSortOrder))
                                             {
                                                 <tr class="border-t border-slate-100 last:border-0">
-                                                    <td class="p-2 px-3 text-slate-600">@k.Description</td>
-                                                    <td class="p-2 px-3 text-right text-slate-500">@k.UnitValue.ToString("N2") ₺</td>
-                                                    <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Amount.ToString("N2") ₺</td>
-                                                    <td class="p-2 px-3 text-right text-slate-400/60">@k.VatAmount.ToString("N2") ₺</td>
-                                                    <td class="p-2 px-3 text-right font-bold text-slate-700">@k.TotalAmount.ToString("N2") ₺</td>
+                                                    <td class="p-2 px-3 text-slate-600">@lineItem.Description</td>
+                                                    <td class="p-2 px-3 text-right text-slate-500">@lineItem.UnitValue.Tl()</td>
+                                                    <td class="p-2 px-3 text-right font-semibold text-slate-600">@lineItem.Amount.Tl()</td>
+                                                    <td class="p-2 px-3 text-right text-slate-400/60">@lineItem.VatAmount.Tl()</td>
+                                                    <td class="p-2 px-3 text-right font-bold text-slate-700">@lineItem.TotalAmount.Tl()</td>
                                                 </tr>
                                             }
                                         </tbody>
@@ -236,7 +236,7 @@
                         </td>
                     </tr>
                 }
-                @if (Model.Total == 0)
+                @if (charges.Total == 0)
                 {
                     <tr><td colspan="9" class="text-center py-16 text-muted italic">Filtreye uygun tahakkuk kaydı bulunamadı.</td></tr>
                 }
@@ -279,18 +279,18 @@
         <div class="p-6 overflow-y-auto">
             <!-- HAVALE TAB -->
             <div x-show="odemeTab === 'havale'">
-                <form method="post" action="/Tenant/Tahakkuklarim/OdemeBildir" enctype="multipart/form-data">
+                <form method="post" action="@reportPaymentUrl" enctype="multipart/form-data">
                     @Html.AntiForgeryToken()
-                    <input type="hidden" name="chargeId" :value="modalCtx?.chargeId" />
+                    <input type="hidden" name="ChargeId" :value="modalCtx?.chargeId" />
 
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Amount (₺) *</label>
-                            <input type="number" name="tutar" step="0.01" min="0.01" :max="modalCtx?.kalan" :value="modalCtx?.kalan" required class="form-control w-full" />
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Tutar (₺) *</label>
+                            <input type="number" name="Amount" step="0.01" :value="modalCtx?.kalan" class="form-control w-full" />
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Ödeme Tarihi *</label>
-                            <input type="date" name="odemeTarihi" value="@DateTime.Today.ToString("yyyy-MM-dd")" required class="form-control w-full" />
+                            <input type="date" name="PaymentDate" value="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control w-full" />
                         </div>
                     </div>
 
@@ -298,19 +298,19 @@
                         <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Ödeme Kanalı *</label>
                         <div class="grid grid-cols-4 gap-2">
                             <label class="flex items-center gap-2 cursor-pointer border border-slate-200 rounded-lg px-3 py-2 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/40 transition-colors">
-                                <input type="radio" name="odemeKanali" value="@((int)PaymentChannel.BankTransfer)" checked class="accent-blue-600" />
+                                <input type="radio" name="PaymentChannel" value="@((int)PaymentChannel.BankTransfer)" checked class="accent-blue-600" />
                                 <span class="text-[13px] font-medium">Havale</span>
                             </label>
                             <label class="flex items-center gap-2 cursor-pointer border border-slate-200 rounded-lg px-3 py-2 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/40 transition-colors">
-                                <input type="radio" name="odemeKanali" value="@((int)PaymentChannel.Eft)" class="accent-blue-600" />
+                                <input type="radio" name="PaymentChannel" value="@((int)PaymentChannel.Eft)" class="accent-blue-600" />
                                 <span class="text-[13px] font-medium">EFT</span>
                             </label>
                             <label class="flex items-center gap-2 cursor-pointer border border-slate-200 rounded-lg px-3 py-2 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/40 transition-colors">
-                                <input type="radio" name="odemeKanali" value="@((int)PaymentChannel.Cash)" class="accent-blue-600" />
+                                <input type="radio" name="PaymentChannel" value="@((int)PaymentChannel.Cash)" class="accent-blue-600" />
                                 <span class="text-[13px] font-medium">Nakit</span>
                             </label>
                             <label class="flex items-center gap-2 cursor-pointer border border-slate-200 rounded-lg px-3 py-2 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/40 transition-colors">
-                                <input type="radio" name="odemeKanali" value="@((int)PaymentChannel.Other)" class="accent-blue-600" />
+                                <input type="radio" name="PaymentChannel" value="@((int)PaymentChannel.Other)" class="accent-blue-600" />
                                 <span class="text-[13px] font-medium">Diğer</span>
                             </label>
                         </div>
@@ -318,13 +318,13 @@
 
                     <div class="mb-4">
                         <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Dekont *</label>
-                        <input type="file" name="dekont" accept=".pdf,.jpg,.jpeg,.png" required class="form-control w-full" />
+                        <input type="file" name="Receipt" accept=".pdf,.jpg,.jpeg,.png" class="form-control w-full" />
                         <div class="text-[11px] text-muted mt-1">PDF, JPG veya PNG (zorunlu)</div>
                     </div>
 
                     <div class="mb-5">
                         <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Açıklama</label>
-                        <textarea name="aciklama" rows="2" class="form-control w-full" placeholder="Opsiyonel not"></textarea>
+                        <textarea name="Description" rows="2" class="form-control w-full" placeholder="Opsiyonel not"></textarea>
                     </div>
 
                     <div class="bg-blue-50/60 border border-blue-100 text-blue-800 p-3 rounded-lg text-[12px] mb-5 flex items-start gap-2">

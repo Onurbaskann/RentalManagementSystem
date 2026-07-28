@@ -3,19 +3,7 @@
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Belge Türleri";
-}
-
-@if (TempData["Success"] != null)
-{
-    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
-        ✓ @TempData["Success"]
-    </div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
-        ✕ @TempData["Error"]
-    </div>
+    ViewData["UseCentralFeedback"] = true;
 }
 
 <div class="page-header flex items-center justify-between">
@@ -23,7 +11,7 @@
         <div class="page-title">Belge Türleri</div>
         <div class="page-subtitle">@Model.Count kayıt</div>
     </div>
-    <a href="/Admin/DocumentType/Ekle" class="btn btn-primary flex items-center gap-2">
+    <a href="/Admin/DocumentType/Create" class="btn btn-primary flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Yeni Belge Türü
     </a>
@@ -44,45 +32,45 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var bt in Model)
+                @foreach (var dt in Model)
                 {
                     <tr>
-                        <td class="text-center text-muted text-xs">@bt.SortOrder</td>
+                        <td class="text-center text-muted text-xs">@dt.SortOrder</td>
                         <td>
-                            <span class="font-medium text-slate-700">@bt.Name</span>
-                            @if (bt.IsSystem)
+                            <span class="font-medium text-slate-700">@dt.Name</span>
+                            @if (dt.IsSystem)
                             {
                                 <span class="ml-1.5 text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded align-middle" title="Sistem kaydı: kod ve pasifleştirme kilitli">Sistem</span>
                             }
-                            @if (!string.IsNullOrEmpty(bt.Description))
+                            @if (!string.IsNullOrEmpty(dt.Description))
                             {
-                                <div class="text-xs text-muted mt-0.5">@bt.Description</div>
+                                <div class="text-xs text-muted mt-0.5">@dt.Description</div>
                             }
                         </td>
                         <td class="text-[13px]">
-                            @(bt.TargetEntity == DocumentOwnerType.Tenant ? "Kiracı" : bt.TargetEntity == DocumentOwnerType.Lease ? "Sözleşme" : bt.TargetEntity == DocumentOwnerType.Payment ? "Ödeme" : bt.TargetEntity.ToString())
+                            @(dt.TargetEntity == DocumentOwnerType.Tenant ? "Kiracı" : dt.TargetEntity == DocumentOwnerType.Lease ? "Sözleşme" : dt.TargetEntity == DocumentOwnerType.Payment ? "Ödeme" : dt.TargetEntity.ToString())
                         </td>
                         <td class="text-center">
-                            @if (bt.Required) { <span class="badge badge-kirali">Zorunlu</span> }
+                            @if (dt.Required) { <span class="badge badge-kirali">Zorunlu</span> }
                             else { <span class="text-muted text-xs">—</span> }
                         </td>
-                        <td class="text-[12.5px] text-muted font-mono">@bt.AllowedExtensions (max @bt.MaxSizeMb MB)</td>
+                        <td class="text-[12.5px] text-muted font-mono">@dt.AllowedExtensions (max @dt.MaxSizeMb MB)</td>
                         <td>
-                            @if (bt.IsActive)
+                            @if (dt.IsActive)
                             { <span class="badge badge-kirali">Aktif</span> }
                             else
                             { <span class="badge badge-gecmis">Pasif</span> }
                         </td>
                         <td class="flex gap-1.5 justify-end">
-                            <a href="/Admin/DocumentType/Duzenle/@bt.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
-                            @if (!bt.IsSystem)
+                            <a href="/Admin/DocumentType/Edit/@dt.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
+                            @if (!dt.IsSystem)
                             {
-                                <form method="post" action="/Admin/DocumentType/DurumDegistir/@bt.Id.ToHashId()"
-                                      data-confirm="@(bt.IsActive ? $"'{bt.Name}' pasif yapılsın mı?" : $"'{bt.Name}' aktif yapılsın mı?")"
+                                <form method="post" action="/Admin/DocumentType/ToggleStatus/@dt.Id.ToHashId()"
+                                      data-confirm="@(dt.IsActive ? $"'{dt.Name}' pasif yapılsın mı?" : $"'{dt.Name}' aktif yapılsın mı?")"
                                       class="inline">
                                     @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-sm @(bt.IsActive ? "btn-danger" : "btn-amber")">
-                                        @(bt.IsActive ? "Pasif Yap" : "Aktif Yap")
+                                    <button type="submit" class="btn btn-sm @(dt.IsActive ? "btn-danger" : "btn-amber")">
+                                        @(dt.IsActive ? "Pasif Yap" : "Aktif Yap")
                                     </button>
                                 </form>
                             }
@@ -101,4 +89,3 @@
         </table>
     </div>
 </div>
-

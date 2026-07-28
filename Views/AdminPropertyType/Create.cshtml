@@ -1,41 +1,32 @@
-@model KiraTakip.Models.ViewModels.TasinmazTipiFormViewModel
+@model KiraTakip.Models.ViewModels.PropertyTypeFormViewModel
 @{
     ViewData["Title"] = "Yeni Taşınmaz Tipi";
+    ViewData["UseCentralFeedback"] = true;
 }
 
 <div class="max-w-[600px] mx-auto"><div class="page-header">
     <div class="page-title">Yeni Taşınmaz Tipi</div>
 </div>
 
-@if (!ViewData.ModelState.IsValid)
-{
-    <div class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-5 max-w-[480px]">
-        <ul class="list-disc pl-5 m-0 text-[13px]">
-            @foreach (var e in ViewData.ModelState.Values.SelectMany(v => v.Errors))
-            { <li>@e.ErrorMessage</li> }
-        </ul>
-    </div>
-}
-
 <div class="card">
-    <form method="post" action="/Admin/TasinmazTipi/Ekle" asp-form-write-permission="@PermissionCatalog.PropertyType.Create">
+    <form method="post" action="/Admin/PropertyType/Create" asp-form-write-permission="@PermissionCatalog.PropertyType.Create">
         @Html.AntiForgeryToken()
 
         <div class="form-group">
             <label class="form-label">Ad <span class="text-red-500">*</span></label>
-            <input asp-for="Ad" class="form-control" placeholder="Bina" />
-            <span asp-validation-for="Ad" class="text-red-500 text-xs mt-1"></span>
+            <input asp-for="Name" class="form-control" placeholder="Bina" />
+            <span asp-validation-for="Name" class="text-red-500 text-xs mt-1"></span>
         </div>
 
         <div class="form-group">
             <label class="form-label">İzinli Birim Yapıları <span class="text-red-500">*</span></label>
             <div class="flex flex-col gap-2 p-3 border border-[var(--color-border)] rounded-lg bg-slate-50/50">
                 <label class="flex items-center gap-2 cursor-pointer text-[13.5px]">
-                    <input asp-for="TekBirimDestekli" type="checkbox" class="w-4 h-4 accent-primary cursor-pointer" />
+                    <input asp-for="SupportsSingleUnit" type="checkbox" class="w-4 h-4 accent-primary cursor-pointer" />
                     <span>Tek Birim</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer text-[13.5px]">
-                    <input asp-for="CokluBirimDestekli" type="checkbox" class="w-4 h-4 accent-primary cursor-pointer" />
+                    <input asp-for="SupportsMultipleUnits" type="checkbox" class="w-4 h-4 accent-primary cursor-pointer" />
                     <span>Çoklu Birim</span>
                 </label>
             </div>
@@ -44,19 +35,19 @@
 
         <div class="form-group">
             <label class="form-label">Sıra</label>
-            <input asp-for="Sira" type="number" class="form-control w-24" min="1" />
+            <input asp-for="SortOrder" type="number" class="form-control w-24" min="1" />
         </div>
 
         <div class="form-group">
             <label class="flex items-center gap-2 cursor-pointer">
-                <input asp-for="Aktif" type="checkbox" class="w-4 h-4 accent-primary cursor-pointer" />
+                <input asp-for="IsActive" type="checkbox" class="w-4 h-4 accent-primary cursor-pointer" />
                 <span class="form-label mb-0">Aktif</span>
             </label>
         </div>
 
         <div class="flex gap-2 mt-4">
             <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.PropertyType.Create">Kaydet</button>
-            <a href="/Admin/TasinmazTipi" class="btn btn-secondary px-6">İptal</a>
+            <a href="/Admin/PropertyType" class="btn btn-secondary px-6">İptal</a>
         </div>
     </form>
 </div>
@@ -65,4 +56,3 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
-

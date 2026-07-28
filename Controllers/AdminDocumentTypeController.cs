@@ -1,9 +1,9 @@
 using KiraTakip.Authorization;
-using KiraTakip.Data;
-using KiraTakip.Helpers;
+using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Models.Dtos.DocumentType;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.ViewModels;
-using KiraTakip.Repositories.Interfaces;
+using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,164 +11,143 @@ namespace KiraTakip.Controllers;
 
 [Authorize]
 [Route("Admin/DocumentType")]
-public class AdminDocumentTypeController : Controller
+public class AdminDocumentTypeController(IDocumentTypeService documentTypeService) : Controller
 {
-    private readonly IDocumentTypeRepository _repo;
-    private readonly IUnitOfWork _uow;
-
-    public AdminDocumentTypeController(IDocumentTypeRepository repo, IUnitOfWork uow)
-    {
-        _repo = repo;
-        _uow = uow;
-    }
-
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.DocumentType.Module)]
     public async Task<IActionResult> Index()
     {
-        var list = await _repo.GetListAsync();
+        var list = await documentTypeService.GetListAsync();
         return View(list);
     }
 
-    [HttpGet("Ekle")]
+    [HttpGet("Create")]
     [Authorize(Policy = PermissionCatalog.DocumentType.Module)]
     public async Task<IActionResult> Create()
     {
-        var vm = new BelgeTuruFormViewModel
+        var maxSortOrder = await documentTypeService.GetMaxSortOrderAsync();
+        var vm = new DocumentTypeFormViewModel
         {
-            Sira = (await _repo.GetMaxSiraAsync()) + 1
+            SortOrder = maxSortOrder + 1
         };
         return View(vm);
     }
 
-    [HttpPost("Ekle")]
+    [HttpPost("Create")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.DocumentType.Create)]
-    public async Task<IActionResult> Create(BelgeTuruFormViewModel model)
+    public async Task<IActionResult> Create(DocumentTypeFormViewModel model)
     {
         if (!ModelState.IsValid) return View(model);
 
-        var kod = CodeSlugger.ToCode(model.Ad);
-        if (await _repo.KodExistsAsync(kod))
+        try
         {
-            ModelState.AddModelError(nameof(model.Ad), "Bu ad zaten kullanılıyor. Farklı bir ad girin.");
+            await documentTypeService.CreateAsync(new CreateInput(
+                model.Name,
+                model.Description,
+                model.TargetEntity,
+                model.Required,
+                model.AllowedExtensions,
+                model.MaxSizeMb,
+                model.SortOrder,
+                model.IsActive
+            ));
+        }
+        catch (BusinessValidationException exception)
+        {
+            ModelState.AddModelError(exception.Field, exception.Message);
             return View(model);
         }
 
-        var entity = new DocumentType
-        {
-            Code = kod,
-            Name = model.Ad.Trim(),
-            Description = model.Aciklama?.Trim(),
-            TargetEntity = model.HedefEntite,
-            Required = model.Zorunlu,
-            AllowedExtensions = model.IzinVerilenUzantilar.Trim().ToLowerInvariant(),
-            MaxSizeMb = model.MaxBoyutMb,
-            SortOrder = model.Sira,
-            IsActive = model.IsActive,
-            IsSystem = false
-        };
-
-        await _repo.AddAsync(entity);
-        await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Name}' belge türü eklendi.";
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpGet("Duzenle/{id}")]
+    [HttpGet("Edit/{id}")]
     [Authorize(Policy = PermissionCatalog.DocumentType.Module)]
     public async Task<IActionResult> Edit(int id)
     {
-        var entity = await _repo.GetByIdAsync(id);
+        var entity = await documentTypeService.GetByIdAsync(id);
         if (entity == null || entity.IsDeleted) return NotFound();
         return View(ToFormVm(entity));
     }
 
-    [HttpPost("Duzenle/{id}")]
+    [HttpPost("Edit/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.DocumentType.Edit)]
-    public async Task<IActionResult> Edit(int id, [FromForm] BelgeTuruFormViewModel model)
+    public async Task<IActionResult> Edit(int id, [FromForm] DocumentTypeFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
 
-        var entity = await _repo.GetByIdAsync(id);
+        var entity = await documentTypeService.GetByIdAsync(id);
         if (entity == null || entity.IsDeleted) return NotFound();
 
-        // Sistem tiplerinde HedefEntite değiştirilemez
         if (entity.IsSystem)
-            model.HedefEntite = entity.TargetEntity;
+            model.TargetEntity = entity.TargetEntity;
 
         if (!ModelState.IsValid)
         {
-            model.Sistem = entity.IsSystem;
+            model.IsSystem = entity.IsSystem;
             return View(model);
         }
 
-        entity.Name = model.Ad.Trim();
-        entity.Description = model.Aciklama?.Trim();
-        entity.TargetEntity = model.HedefEntite;
-        entity.Required = model.Zorunlu;
-        entity.AllowedExtensions = model.IzinVerilenUzantilar.Trim().ToLowerInvariant();
-        entity.MaxSizeMb = model.MaxBoyutMb;
-        entity.SortOrder = model.Sira;
-        entity.IsActive = model.IsActive;
-
-        await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Name}' güncellendi.";
-        return RedirectToAction(nameof(Index));
-    }
-
-    [HttpPost("DurumDegistir/{id}")]
-    [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.DocumentType.Edit)]
-    public async Task<IActionResult> DurumDegistir(int id)
-    {
-        var entity = await _repo.GetByIdAsync(id);
-        if (entity == null || entity.IsDeleted) return NotFound();
-
-        if (entity.IsActive && entity.IsSystem)
+        try
         {
-            TempData["Error"] = $"'{entity.Name}' bir sistem kaydıdır ve pasif yapılamaz.";
-            return RedirectToAction(nameof(Index));
+            await documentTypeService.UpdateAsync(id, new EditInput(
+                model.Name,
+                model.Description,
+                model.TargetEntity,
+                model.Required,
+                model.AllowedExtensions,
+                model.MaxSizeMb,
+                model.SortOrder,
+                model.IsActive
+            ));
+        }
+        catch (BusinessValidationException exception)
+        {
+            ModelState.AddModelError(exception.Field, exception.Message);
+            model.IsSystem = entity.IsSystem;
+            return View(model);
         }
 
-        entity.IsActive = !entity.IsActive;
-        await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Name}' {(entity.IsActive ? "aktif" : "pasif")} yapıldı.";
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("Sil/{id}")]
+    [HttpPost("ToggleStatus/{id}")]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.DocumentType.Edit)]
+    public async Task<IActionResult> ToggleStatus(int id)
+    {
+        var entity = await documentTypeService.GetByIdAsync(id);
+        if (entity == null || entity.IsDeleted) return NotFound();
+
+        await documentTypeService.ToggleStatusAsync(id);
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost("Delete/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.DocumentType.Delete)]
     public async Task<IActionResult> Delete(int id)
     {
-        var entity = await _repo.GetByIdAsync(id);
+        var entity = await documentTypeService.GetByIdAsync(id);
         if (entity == null || entity.IsDeleted) return NotFound();
 
-        if (entity.IsSystem)
-        {
-            TempData["Error"] = $"'{entity.Name}' bir sistem kaydıdır ve silinemez.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        entity.IsDeleted = true;
-        await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Name}' silindi.";
+        await documentTypeService.DeleteAsync(id);
         return RedirectToAction(nameof(Index));
     }
 
-    private static BelgeTuruFormViewModel ToFormVm(DocumentType e) => new()
+    private static DocumentTypeFormViewModel ToFormVm(DocumentType e) => new()
     {
         Id = e.Id,
-        Ad = e.Name,
-        Aciklama = e.Description,
-        HedefEntite = e.TargetEntity,
-        Zorunlu = e.Required,
-        IzinVerilenUzantilar = e.AllowedExtensions,
-        MaxBoyutMb = e.MaxSizeMb,
-        Sira = e.SortOrder,
+        Name = e.Name,
+        Description = e.Description,
+        TargetEntity = e.TargetEntity,
+        Required = e.Required,
+        AllowedExtensions = e.AllowedExtensions,
+        MaxSizeMb = e.MaxSizeMb,
+        SortOrder = e.SortOrder,
         IsActive = e.IsActive,
-        Sistem = e.IsSystem
+        IsSystem = e.IsSystem
     };
 }

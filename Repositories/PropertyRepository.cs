@@ -10,37 +10,59 @@ public class PropertyRepository : BaseRepository<Property>, IPropertyRepository
 {
     public PropertyRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<List<TasinmazListItemDto>> GetListAsync(List<int>? yetkiliPropertyIds)
+    public async Task<List<PropertyListItemDto>> GetListAsync(
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null)
     {
         var now = DateTime.Now;
         var query = _dbSet.AsNoTracking().AsQueryable();
+        var hasScopeFilter = authorizedPropertyIds != null || authorizedUnitIds != null;
+        var propertyIds = authorizedPropertyIds ?? [];
+        var unitIds = authorizedUnitIds ?? [];
 
-        if (yetkiliPropertyIds != null)
+        if (hasScopeFilter)
         {
-            query = query.Where(t => yetkiliPropertyIds.Contains(t.Id));
+            query = query.Where(property =>
+                propertyIds.Contains(property.Id)
+                || property.Units.Any(unit => unitIds.Contains(unit.Id)));
         }
 
         return await query
             .OrderBy(t => t.Name)
-            .Select(t => new TasinmazListItemDto
+            .Select(t => new PropertyListItemDto
             {
                 Id = t.Id,
-                Ad = t.Name,
-                Il = t.City,
-                Ilce = t.District,
-                TasinmazTipiAd = t.PropertyType != null ? t.PropertyType.Name : string.Empty,
-                KapaliYuzolcumu = t.ClosedArea,
-                AcikYuzolcumu = t.OpenArea,
+                Name = t.Name,
+                City = t.City,
+                District = t.District,
+                PropertyTypeName = t.PropertyType != null ? t.PropertyType.Name : string.Empty,
+                ClosedArea = t.ClosedArea,
+                OpenArea = t.OpenArea,
                 UnitStructure = t.UnitStructure,
-                BirimSayisi = t.Units.Count,
-                KiraliBirimSayisi = t.Units.Count(b => b.Leases.Any(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now && s.EndDate > now.AddDays(30))),
-                SuresiDolmakUzereBirimSayisi = t.Units.Count(b => b.Leases.Any(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now && s.EndDate <= now.AddDays(30))),
-                BosBirimSayisi = t.Units.Count(b => !b.Leases.Any(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now))
+                UnitCount = t.Units.Count(unit =>
+                    !hasScopeFilter || propertyIds.Contains(t.Id) || unitIds.Contains(unit.Id)),
+                LeasedUnitCount = t.Units.Count(unit =>
+                    (!hasScopeFilter || propertyIds.Contains(t.Id) || unitIds.Contains(unit.Id))
+                    && unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
+                        && lease.StartDate <= now
+                        && lease.EndDate >= now
+                        && lease.EndDate > now.AddDays(30))),
+                ExpiringSoonUnitCount = t.Units.Count(unit =>
+                    (!hasScopeFilter || propertyIds.Contains(t.Id) || unitIds.Contains(unit.Id))
+                    && unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
+                        && lease.StartDate <= now
+                        && lease.EndDate >= now
+                        && lease.EndDate <= now.AddDays(30))),
+                VacantUnitCount = t.Units.Count(unit =>
+                    (!hasScopeFilter || propertyIds.Contains(t.Id) || unitIds.Contains(unit.Id))
+                    && !unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
+                        && lease.StartDate <= now
+                        && lease.EndDate >= now))
             })
             .ToListAsync();
     }
 
-    public async Task<PropertyDetailDto?> GetDetayAsync(int id)
+    public async Task<PropertyDetailDto?> GetDetailsAsync(int id)
     {
         var now = DateTime.Now;
         return await _ctx.Properties.AsNoTracking()
@@ -93,23 +115,23 @@ public class PropertyRepository : BaseRepository<Property>, IPropertyRepository
                             ? OccupancyStatus.ExpiringSoon
                             : OccupancyStatus.Leased)
                         : OccupancyStatus.Vacant,
-                    RezKuralId = _ctx.RezervasyonTarifeler
+                    ReservationRateOverrideId = _ctx.RezervasyonTarifeler
                         .Where(rt => rt.UnitId == b.Id && rt.IsActive)
                         .Select(rt => (int?)rt.Id)
                         .FirstOrDefault(),
-                    RezKuralPeriyotUcreti = _ctx.RezervasyonTarifeler
+                    ReservationPeriodRate = _ctx.RezervasyonTarifeler
                         .Where(rt => rt.UnitId == b.Id && rt.IsActive)
                         .Select(rt => (decimal?)rt.PeriodRate)
                         .FirstOrDefault(),
-                    RezKuralUcretlendirmePeriyoduDakika = _ctx.RezervasyonTarifeler
+                    ReservationBillingPeriodMinutes = _ctx.RezervasyonTarifeler
                         .Where(rt => rt.UnitId == b.Id && rt.IsActive)
                         .Select(rt => (int?)rt.BillingPeriodMinutes)
                         .FirstOrDefault(),
-                    RezKuralUcretsizSureDakika = _ctx.RezervasyonTarifeler
+                    ReservationFreeDurationMinutes = _ctx.RezervasyonTarifeler
                         .Where(rt => rt.UnitId == b.Id && rt.IsActive)
                         .Select(rt => (int?)rt.FreeDurationMinutes)
                         .FirstOrDefault(),
-                    RezKuralKdvOrani = _ctx.RezervasyonTarifeler
+                    ReservationVatRate = _ctx.RezervasyonTarifeler
                         .Where(rt => rt.UnitId == b.Id && rt.IsActive)
                         .Select(rt => (decimal?)rt.KdvRate)
                         .FirstOrDefault()
@@ -141,7 +163,7 @@ public class PropertyRepository : BaseRepository<Property>, IPropertyRepository
                         PeriodRate = rt.PeriodRate,
                         BillingPeriodMinutes = rt.BillingPeriodMinutes,
                         FreeDurationMinutes = rt.FreeDurationMinutes,
-                        KdvRate = rt.KdvRate
+                        VatRate = rt.KdvRate
                     }).ToList(),
                 UnitCustomRates = t.Units
                     .Where(b => b.UnitType != null && b.UnitType.Usage == UnitTypeUsage.Rentable)
@@ -150,7 +172,7 @@ public class PropertyRepository : BaseRepository<Property>, IPropertyRepository
                         UnitId = b.Id,
                         UnitName = b.Name,
                         UnitNo = b.UnitNo,
-                        Rateler = _ctx.UnitRates
+                        Rates = _ctx.UnitRates
                             .Where(r => r.UnitId == b.Id)
                             .OrderBy(r => r.TenantCategory.Order)
                             .ThenBy(r => r.ChargeType.SortOrder)
@@ -161,14 +183,14 @@ public class PropertyRepository : BaseRepository<Property>, IPropertyRepository
                                 ChargeTypeName = r.ChargeType.Name,
                                 CalculationMethod = r.CalculationMethod,
                                 UnitValue = r.UnitValue,
-                                KdvRate = r.KdvRate
+                                VatRate = r.KdvRate
                             }).ToList()
                     })
-                    .Where(b => b.Rateler.Any())
+                    .Where(b => b.Rates.Any())
                     .ToList(),
                 LeaseHistory = t.Units.SelectMany(b => b.Leases)
                     .OrderByDescending(s => s.StartDate)
-                    .Select(s => new TasinmazSozlesmeGecmisiDto
+                    .Select(s => new PropertyLeaseHistoryDto
                     {
                         Id = s.Id,
                         UnitId = s.UnitId,
@@ -177,75 +199,14 @@ public class PropertyRepository : BaseRepository<Property>, IPropertyRepository
                         TenantDisplayName = s.Tenant.DisplayName,
                         StartDate = s.StartDate,
                         EndDate = s.EndDate,
-                        Durum = s.Status,
-                        AylikBedel = 0
+                        Status = s.Status,
+                        MonthlyAmount = 0
                     }).ToList()
             })
             .FirstOrDefaultAsync();
     }
 
-    public async Task<List<UnitLookupDto>> GetBosBirimlerAsync(List<int>? yetkiliPropertyIds)
-    {
-        var now = DateTime.Now;
-        var query = _ctx.Units.AsNoTracking().AsQueryable();
-
-        if (yetkiliPropertyIds != null)
-        {
-            query = query.Where(b => yetkiliPropertyIds.Contains(b.PropertyId));
-        }
-
-        return await query
-            .Where(b => b.UnitType != null && b.UnitType.Usage == UnitTypeUsage.Rentable)
-            .Where(b => !b.Leases.Any(s =>
-                s.Status == LeaseStatus.Active &&
-                s.StartDate <= now &&
-                s.EndDate >= now))
-            .OrderBy(b => b.Property.Name)
-            .ThenBy(b => b.Name)
-            .Select(b => new UnitLookupDto
-            {
-                Id = b.Id,
-                Name = b.Name,
-                PropertyName = b.Property.Name,
-                District = b.Property.District,
-                City = b.Property.City,
-                Area = b.Area,
-                UnitStructure = b.Property.UnitStructure,
-                UnitNo = b.UnitNo,
-                FloorNo = b.FloorNo
-            })
-            .ToListAsync();
-    }
-
-    public async Task<List<UnitLookupDto>> GetTumBirimlerAsync(List<int>? yetkiliPropertyIds)
-    {
-        var query = _ctx.Units.AsNoTracking().AsQueryable();
-        if (yetkiliPropertyIds != null)
-            query = query.Where(b => yetkiliPropertyIds.Contains(b.PropertyId));
-        return await query
-            .OrderBy(b => b.Property.Name)
-            .ThenBy(b => b.Name)
-            .Select(b => new UnitLookupDto
-            {
-                Id = b.Id,
-                Name = b.Name,
-                PropertyName = b.Property.Name,
-                District = b.Property.District,
-                City = b.Property.City,
-                Area = b.Area,
-                UnitStructure = b.Property.UnitStructure,
-                UnitNo = b.UnitNo,
-                FloorNo = b.FloorNo
-            })
-            .ToListAsync();
-    }
-
-    public async Task AddReservationRateOverrideAsync(ReservationRateOverride tarife)
-    {
-        await _ctx.RezervasyonTarifeler.AddAsync(tarife);
-    }
-
-    public async Task<Property?> GetWithBirimlerTrackedAsync(int id)
+    public async Task<Property?> GetWithUnitsTrackedAsync(int id)
     {
         return await _dbSet
             .Include(t => t.Units)
@@ -254,4 +215,20 @@ public class PropertyRepository : BaseRepository<Property>, IPropertyRepository
                 .ThenInclude(b => b.Leases)
             .FirstOrDefaultAsync(t => t.Id == id);
     }
+
+    public async Task<bool> CanChangeUnitStructureAsync(int propertyId)
+    {
+        var unitIds = await _ctx.Units
+            .IgnoreQueryFilters()
+            .Where(unit => unit.PropertyId == propertyId)
+            .Select(unit => unit.Id)
+            .ToListAsync();
+
+        if (unitIds.Count == 0) return true;
+
+        return !await _ctx.Leases.IgnoreQueryFilters().AnyAsync(lease => unitIds.Contains(lease.UnitId))
+            && !await _ctx.Reservations.IgnoreQueryFilters().AnyAsync(reservation => unitIds.Contains(reservation.UnitId))
+            && !await _ctx.Charges.IgnoreQueryFilters().AnyAsync(charge => unitIds.Contains(charge.UnitId));
+    }
+
 }

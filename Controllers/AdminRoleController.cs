@@ -1,65 +1,49 @@
-﻿using KiraTakip.Authorization;
-using KiraTakip.Data;
+using KiraTakip.Authorization;
+using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
 [Authorize(Policy = "System.Role")]
-[Route("Admin/Roller")]
-public class AdminRoleController : Controller
+[Route("Admin/Roles")]
+public class AdminRoleController(
+    IRoleService roleService,
+    UserManager<ApplicationUser> userManager) : Controller
 {
-    private readonly IRoleService _rolService;
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly ApplicationDbContext _db;
-
-    public AdminRoleController(IRoleService roleService, UserManager<ApplicationUser> userManager, ApplicationDbContext db)
-    {
-        _rolService = roleService;
-        _userManager = userManager;
-        _db = db;
-    }
-
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var roller = await _rolService.GetInternalRollerAsync();
-        var model = new List<RolListeViewModel>();
-
-        foreach (var r in roller)
+        var roller = await roleService.GetInternalRolesWithDetailsAsync();
+        var model = roller.Select(r => new RoleListViewModel
         {
-            var kullaniciSayisi = await _db.UserRoller.CountAsync(ur => ur.RoleId == r.Id);
-            var perms = await _rolService.GetRolPermissionsAsync(r.Id);
-            model.Add(new RolListeViewModel
-            {
-                Id = r.Id,
-                Ad = r.Name,
-                Aciklama = r.Description,
-                IsSystemRole = r.IsSystemRole,
-                IsActive = r.IsActive,
-                KullaniciSayisi = kullaniciSayisi,
-                IzinSayisi = perms.Count
-            });
-        }
+            Id = r.Id,
+            Name = r.Name,
+            Description = r.Description,
+            IsSystemRole = r.IsSystemRole,
+            IsActive = r.IsActive,
+            UserCount = r.UserCount,
+            PermissionCount = r.PermissionCount
+        }).ToList();
 
         return View(model);
     }
 
-    [HttpGet("Ekle")]
+    [HttpGet("Create")]
     public IActionResult Create()
     {
-        var model = new RolOlusturViewModel();
+        var model = new RoleCreateViewModel();
         PopulatePermissions(model.Permissions, new List<string>());
         return View(model);
     }
 
-    [HttpPost("Ekle")]
+    [HttpPost("Create")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(RolOlusturViewModel model)
+    public async Task<IActionResult> Create(RoleCreateViewModel model)
     {
         if (!ModelState.IsValid)
         {
@@ -69,32 +53,31 @@ public class AdminRoleController : Controller
 
         try
         {
-            var currentUserId = _userManager.GetUserId(User)!;
-            var rol = await _rolService.CreateAsync(model.Ad, model.Aciklama, currentUserId);
-            await _rolService.SetRolPermissionsAsync(rol.Id, model.SelectedPermissions, currentUserId);
-            TempData["Success"] = $"'{model.Ad}' rolü oluşturuldu.";
+            var currentUserId = userManager.GetUserId(User)!;
+            var rol = await roleService.CreateRoleAsync(new CreateRoleInput(model.Name, model.Description, currentUserId));
+            await roleService.SetRolePermissionsAsync(new SetRolePermissionsInput(rol.Id, model.SelectedPermissions, currentUserId));
             return RedirectToAction(nameof(Index));
         }
-        catch (Exception ex)
+        catch (BusinessValidationException ex)
         {
-            ModelState.AddModelError(string.Empty, ex.Message);
+            ModelState.AddModelError(ex.Field, ex.Message);
             PopulatePermissions(model.Permissions, model.SelectedPermissions);
             return View(model);
         }
     }
 
-    [HttpGet("Duzenle/{id}")]
+    [HttpGet("Edit/{id}")]
     public async Task<IActionResult> Edit(int id)
     {
-        var rol = await _rolService.GetByIdAsync(id);
+        var rol = await roleService.GetRoleByIdAsync(new GetRoleByIdInput(id));
         if (rol == null) return NotFound();
 
-        var selected = await _rolService.GetRolPermissionsAsync(id);
-        var model = new RolDuzenleViewModel
+        var selected = await roleService.GetRolePermissionsAsync(new GetRolePermissionsInput(id));
+        var model = new RoleEditViewModel
         {
             Id = rol.Id,
-            Ad = rol.Name,
-            Aciklama = rol.Description,
+            Name = rol.Name,
+            Description = rol.Description,
             IsSystemRole = rol.IsSystemRole,
             SelectedPermissions = selected
         };
@@ -102,9 +85,9 @@ public class AdminRoleController : Controller
         return View(model);
     }
 
-    [HttpPost("Duzenle/{id}")]
+    [HttpPost("Edit/{id}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, RolDuzenleViewModel model)
+    public async Task<IActionResult> Edit(int id, RoleEditViewModel model)
     {
         if (!ModelState.IsValid)
         {
@@ -114,38 +97,29 @@ public class AdminRoleController : Controller
 
         try
         {
-            var currentUserId = _userManager.GetUserId(User)!;
-            await _rolService.UpdateAsync(id, model.Ad, model.Aciklama, currentUserId);
-            await _rolService.SetRolPermissionsAsync(id, model.SelectedPermissions, currentUserId);
-            TempData["Success"] = $"'{model.Ad}' rolü güncellendi.";
+            var currentUserId = userManager.GetUserId(User)!;
+            await roleService.UpdateRoleAsync(new UpdateRoleInput(id, model.Name, model.Description, currentUserId));
+            await roleService.SetRolePermissionsAsync(new SetRolePermissionsInput(id, model.SelectedPermissions, currentUserId));
             return RedirectToAction(nameof(Index));
         }
-        catch (Exception ex)
+        catch (BusinessValidationException ex)
         {
-            ModelState.AddModelError(string.Empty, ex.Message);
+            ModelState.AddModelError(ex.Field, ex.Message);
             PopulatePermissions(model.Permissions, model.SelectedPermissions);
             return View(model);
         }
     }
 
-    [HttpPost("Sil/{id}")]
+    [HttpPost("Delete/{id}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
-        try
-        {
-            var currentUserId = _userManager.GetUserId(User)!;
-            await _rolService.SilAsync(id, currentUserId);
-            TempData["Success"] = "Rol silindi.";
-        }
-        catch (Exception ex)
-        {
-            TempData["Error"] = ex.Message;
-        }
+        var currentUserId = userManager.GetUserId(User)!;
+        await roleService.DeleteRoleAsync(new DeleteRoleInput(id, currentUserId));
         return RedirectToAction(nameof(Index));
     }
 
-    private static void PopulatePermissions(List<PermissionGrupViewModel> target, List<string> selected)
+    private static void PopulatePermissions(List<PermissionGroupViewModel> target, List<string> selected)
     {
         target.Clear();
         target.AddRange(
@@ -155,38 +129,17 @@ public class AdminRoleController : Controller
                 {
                     var items = new List<PermissionCheckboxViewModel>
                     {
-                        new() { Value = m.Path, Etiket = "Görüntüle", Selected = selected.Contains(m.Path) }
+                        new() { Value = m.Path, Label = m.AccessDisplayName, Selected = selected.Contains(m.Path) }
                     };
-                    items.AddRange(m.Actions.Select(a => new PermissionCheckboxViewModel
+                    items.AddRange(m.ActionDefinitions.Select(action => new PermissionCheckboxViewModel
                     {
-                        Value = a,
-                        Etiket = GetActionLabel(a.Split('.').Last()),
-                        Selected = selected.Contains(a)
+                        Value = action.Path,
+                        Label = action.DisplayName,
+                        Selected = selected.Contains(action.Path)
                     }));
-                    return new PermissionGrupViewModel { GrupAdi = m.DisplayName, Permissions = items };
+                    return new PermissionGroupViewModel { GroupName = m.DisplayName, Permissions = items };
                 })
         );
     }
 
-    private static string GetActionLabel(string action) => action switch
-    {
-        "Create"               => "Ekle",
-        "Edit"                 => "Düzenle",
-        "Delete"               => "Sil",
-        "Cancel"               => "İptal Et",
-        "Extend"               => "Süre Uzat",
-        "Terminate"            => "Feshet",
-        "OverrideRate"         => "Elle Müdahale",
-        "Approve"              => "Onayla",
-        "Reject"               => "Reddet",
-        "UploadReceipt"         => "Dekont Yükle",
-        "ImportBankStatement"  => "Banka Hareketleri İçe Aktar",
-        "MatchBankTransaction" => "Banka Hareketi Eşleştir",
-        "AssignPermission"     => "Yetki Ata",
-        "TransferToCharge"   => "Tahakkuka Aktar",
-        "Regenerate"           => "Yeniden Üret",
-        "Resend"               => "Yeniden Gönder",
-        "BorcHatirlatma"       => "Borç Hatırlatma",
-        _                      => action
-    };
 }

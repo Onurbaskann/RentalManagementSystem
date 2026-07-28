@@ -1,21 +1,29 @@
-@model ChargeDetailDto
+@model KiraTakip.Models.ViewModels.TenantChargeDetailsViewModel
 @using KiraTakip.Models
 @using KiraTakip.Models.Entities
 @{
     Layout = "_KiraciLayout";
-    var odemeBelgeleri = (ViewBag.OdemeBelgeleri as Dictionary<int, List<Document>>) ?? new();
-    ViewData["Title"] = $"Tahakkuk #{Model.Id}";
+    var paymentDocuments = Model.PaymentDocuments;
+    ViewData["Title"] = $"Tahakkuk #{Model.Charge.Id}";
+    ViewData["UseCentralFeedback"] = true;
 
-    var kalan = Model.TotalAmount - Model.PaidAmount;
+    var remainingAmount = Model.Charge.TotalAmount - Model.Charge.PaidAmount;
+    var pendingPaymentAmount = Model.Charge.Allocations
+        .Where(allocation => allocation.Status == PaymentStatus.PendingApproval)
+        .Sum(allocation => allocation.Amount);
+    var availablePaymentAmount = Math.Max(0, remainingAmount - pendingPaymentAmount);
+    var tenantChargeControllerName = nameof(KiraTakip.Controllers.TenantChargeController).Replace("Controller", "");
+    var indexUrl = Url.Action(nameof(KiraTakip.Controllers.TenantChargeController.Index), tenantChargeControllerName)!;
+    var reportPaymentUrl = Url.Action(nameof(KiraTakip.Controllers.TenantChargeController.ReportPayment), tenantChargeControllerName)!;
 
-    string durumCls = Model.Status switch {
+    string statusCssClass = Model.Charge.Status switch {
         ChargeStatus.Paid    => "badge-kirali",
         ChargeStatus.PartiallyPaid => "badge-surek",
         ChargeStatus.Overdue      => "badge-gecmis",
         ChargeStatus.Cancelled  => "badge-bos",
         _                           => "badge-bos"
     };
-    string durumLabel = Model.Status switch {
+    string statusLabel = Model.Charge.Status switch {
         ChargeStatus.Paid    => "Tam Ödendi",
         ChargeStatus.PartiallyPaid => "Kısmi Ödendi",
         ChargeStatus.Overdue      => "Gecikti",
@@ -23,27 +31,19 @@
         _                           => "Bekleniyor"
     };
 
-    bool iptal = Model.Status == ChargeStatus.Cancelled;
-    bool tamOdendi = Model.Status == ChargeStatus.Paid;
-    bool odeyebilir = !iptal && !tamOdendi && kalan > 0;
+    bool isCancelled = Model.Charge.Status == ChargeStatus.Cancelled;
+    bool isFullyPaid = Model.Charge.Status == ChargeStatus.Paid;
+    bool canPay = Model.CanReportPayment && !isCancelled && !isFullyPaid && availablePaymentAmount > 0;
 }
 
-@if (TempData["Success"] != null)
-{
-    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 px-4 rounded-lg mb-4 text-[13.5px]">✓ @TempData["Success"]</div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="bg-red-50 border border-red-200 text-red-800 p-3 px-4 rounded-lg mb-4 text-[13.5px]">✕ @TempData["Error"]</div>
-}
 
 <div x-data="{ odemeYapModal: false, odemeDetayModal: null, odemeTab: 'havale' }">
 
 <!-- Breadcrumb -->
 <div class="flex items-center justify-between mb-5">
-    <a href="/Tenant/Tahakkuklarim" class="text-[12.5px] text-muted no-underline hover:text-primary transition-colors">← Tahakkuklarım</a>
+    <a href="@indexUrl" class="text-[12.5px] text-muted no-underline hover:text-primary transition-colors">← Tahakkuklarım</a>
     <div class="flex gap-2">
-        @if (odeyebilir)
+        @if (canPay)
         {
             <button type="button" @@click="odemeYapModal = true; odemeTab = 'havale'" class="btn btn-sm btn-primary">Ödeme Yap</button>
         }
@@ -55,25 +55,25 @@
     <div class="flex items-start justify-between flex-wrap gap-5">
         <div>
             <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-1.5">Dönem</div>
-            <div class="font-serif text-[28px] font-bold leading-tight">@Model.PeriodStart.ToString("MMMM yyyy")</div>
+            <div class="font-serif text-[28px] font-bold leading-tight">@Model.Charge.PeriodStart.ToString("MMMM yyyy")</div>
             <div class="text-[13px] text-muted mt-1">
-                @Model.PeriodStart.ToString("dd.MM.yyyy") — @Model.PeriodEnd.ToString("dd.MM.yyyy")
-                &nbsp;•&nbsp; Vade: @Model.DueDate.ToString("dd.MM.yyyy")
+                @Model.Charge.PeriodStart.Tarih() — @Model.Charge.PeriodEnd.Tarih()
+                &nbsp;•&nbsp; Vade: @Model.Charge.DueDate.Tarih()
             </div>
-            <div class="mt-2"><span class="badge @durumCls text-[12.5px] px-3.5 py-1.5">@durumLabel</span></div>
+            <div class="mt-2"><span class="badge @statusCssClass text-[12.5px] px-3.5 py-1.5">@statusLabel</span></div>
         </div>
         <div class="flex gap-6 flex-wrap">
             <div class="text-center">
                 <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Beklenen</div>
-                <div class="text-xl font-bold">@Model.TotalAmount.ToString("N2") ₺</div>
+                <div class="text-xl font-bold">@Model.Charge.TotalAmount.Tl()</div>
             </div>
             <div class="text-center">
                 <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Ödenen</div>
-                <div class="text-xl font-bold text-emerald-800">@Model.PaidAmount.ToString("N2") ₺</div>
+                <div class="text-xl font-bold text-emerald-800">@Model.Charge.PaidAmount.Tl()</div>
             </div>
             <div class="text-center">
                 <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Kalan</div>
-                <div class="text-xl font-bold @(kalan > 0 ? "text-red-500" : "text-emerald-800")">@kalan.ToString("N2") ₺</div>
+                <div class="text-xl font-bold @(remainingAmount > 0 ? "text-red-500" : "text-emerald-800")">@remainingAmount.Tl()</div>
             </div>
         </div>
     </div>
@@ -81,11 +81,11 @@
     <div class="mt-4 pt-3.5 border-t border-slate-200 flex gap-8 flex-wrap text-[13px]">
         <div>
             <span class="text-muted">Taşınmaz: </span>
-            <span class="font-semibold">@(Model.PropertyName ?? "—")</span>
+            <span class="font-semibold">@(Model.Charge.PropertyName ?? "—")</span>
         </div>
         <div>
             <span class="text-muted">Birim: </span>
-            <span class="font-semibold">@(Model.UnitName ?? "—")</span>
+            <span class="font-semibold">@(Model.Charge.UnitName ?? "—")</span>
         </div>
     </div>
 </div>
@@ -95,7 +95,7 @@
     <div class="p-[14px_20px] border-b border-slate-200">
         <div class="text-sm font-bold">Kalem Dökümü</div>
     </div>
-    @if (Model.LineItems.Any())
+    @if (Model.Charge.LineItems.Any())
     {
         <div class="overflow-hidden rounded-lg border border-slate-200 bg-white m-4">
             <table class="w-full text-xs">
@@ -103,32 +103,32 @@
                     <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
                         <th class="p-2 px-3 text-left">Açıklama</th>
                         <th class="p-2 px-3 text-right">Birim</th>
-                        <th class="p-2 px-3 text-right">Amount</th>
+                        <th class="p-2 px-3 text-right">Tutar</th>
                         <th class="p-2 px-3 text-right text-muted">KDV (%)</th>
-                        <th class="p-2 px-3 text-right text-muted">KDV Amountı</th>
+                        <th class="p-2 px-3 text-right text-muted">KDV Tutarı</th>
                         <th class="p-2 px-3 text-right">Toplam</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var k in Model.LineItems.OrderBy(k => k.ChargeTypeSortOrder))
+                    @foreach (var lineItem in Model.Charge.LineItems.OrderBy(lineItem => lineItem.ChargeTypeSortOrder))
                     {
                         <tr class="border-t border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
-                            <td class="p-2 px-3 text-slate-600 font-medium">@k.Description</td>
-                            <td class="p-2 px-3 text-right text-slate-500">@k.UnitValue.ToString("N2") ₺@(k.CalculationMethod == CalculationMethod.M2 ? "/m²" : "")</td>
-                            <td class="p-2 px-3 text-right font-semibold text-slate-600">@k.Amount.ToString("N2") ₺</td>
-                            <td class="p-2 px-3 text-right text-slate-400/60">%@k.KdvRate.ToString("G")</td>
-                            <td class="p-2 px-3 text-right text-slate-400/60">@k.VatAmount.ToString("N2") ₺</td>
-                            <td class="p-2 px-3 text-right font-bold text-slate-700">@k.TotalAmount.ToString("N2") ₺</td>
+                            <td class="p-2 px-3 text-slate-600 font-medium">@lineItem.Description</td>
+                            <td class="p-2 px-3 text-right text-slate-500">@lineItem.UnitValue.Tl()@(lineItem.CalculationMethod == CalculationMethod.M2 ? "/m²" : "")</td>
+                            <td class="p-2 px-3 text-right font-semibold text-slate-600">@lineItem.Amount.Tl()</td>
+                            <td class="p-2 px-3 text-right text-slate-400/60">@lineItem.KdvRate.Yuzde(0)</td>
+                            <td class="p-2 px-3 text-right text-slate-400/60">@lineItem.VatAmount.Tl()</td>
+                            <td class="p-2 px-3 text-right font-bold text-slate-700">@lineItem.TotalAmount.Tl()</td>
                         </tr>
                     }
                 </tbody>
                 <tfoot class="bg-slate-50 border-t-2 border-slate-200">
                     <tr class="font-bold text-[9px] uppercase tracking-wider text-slate-500">
                         <td colspan="2" class="p-2 px-3">Toplam</td>
-                        <td class="p-2 px-3 text-right text-slate-600">@Model.ExpectedAmount.ToString("N2") ₺</td>
+                        <td class="p-2 px-3 text-right text-slate-600">@Model.Charge.ExpectedAmount.Tl()</td>
                         <td></td>
-                        <td class="p-2 px-3 text-right text-slate-400/60">@Model.VatAmount.ToString("N2") ₺</td>
-                        <td class="p-2 px-3 text-right text-slate-700">@Model.TotalAmount.ToString("N2") ₺</td>
+                        <td class="p-2 px-3 text-right text-slate-400/60">@Model.Charge.VatAmount.Tl()</td>
+                        <td class="p-2 px-3 text-right text-slate-700">@Model.Charge.TotalAmount.Tl()</td>
                     </tr>
                 </tfoot>
             </table>
@@ -145,14 +145,14 @@
     <div class="p-[14px_20px] border-b border-slate-200">
         <div class="text-sm font-bold">Ödeme Geçmişi</div>
     </div>
-    @if (Model.Allocations.Any())
+    @if (Model.Charge.Allocations.Any())
     {
         <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
                         <th>Ödeme Tarihi</th>
-                        <th class="text-right">Amount</th>
+                        <th class="text-right">Tutar</th>
                         <th>Kanal</th>
                         <th>Durum</th>
                         <th>Dekont</th>
@@ -160,49 +160,52 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var o in Model.Allocations.OrderByDescending(o => o.PaymentDate))
+                    @foreach (var allocation in Model.Charge.Allocations.OrderByDescending(allocation => allocation.PaymentDate))
                     {
-                        string odCls = o.Status switch {
+                        string paymentStatusCssClass = allocation.Status switch {
                             PaymentStatus.Approved     => "badge-kirali",
                             PaymentStatus.Rejected    => "badge-gecmis",
                             _                         => "badge-bos"
                         };
-                        string odLabel = o.Status switch {
+                        string paymentStatusLabel = allocation.Status switch {
                             PaymentStatus.Approved  => "Onaylandı",
                             PaymentStatus.Rejected => "Reddedildi",
                             _                      => "Onay Bekliyor"
                         };
-                        string kanalLabel = o.PaymentChannel switch {
+                        string paymentChannelLabel = allocation.PaymentChannel switch {
                             PaymentChannel.BankTransfer => "Havale",
                             PaymentChannel.Eft    => "EFT",
                             PaymentChannel.Cash  => "Nakit",
                             _                  => "Diğer"
                         };
-                        var odemeJson = System.Text.Json.JsonSerializer.Serialize(new {
-                            id = o.Id,
-                            tarih = o.PaymentDate.ToString("dd.MM.yyyy"),
-                            tutar = o.Amount.ToString("N2") + " ₺",
-                            kanal = kanalLabel,
-                            durum = odLabel,
-                            aciklama = o.Description ?? "—",
-                            redNedeni = o.RejectionReason ?? "—"
+                        var paymentJson = System.Text.Json.JsonSerializer.Serialize(new {
+                            id = allocation.Id,
+                            date = allocation.PaymentDate.Tarih(),
+                            amount = allocation.Amount.Tl(),
+                            channel = paymentChannelLabel,
+                            status = paymentStatusLabel,
+                            description = allocation.Description ?? "—",
+                            rejectionReason = allocation.RejectionReason ?? "—"
                         });
                         <tr>
-                            <td class="font-semibold">@o.PaymentDate.ToString("dd.MM.yyyy")</td>
-                            <td class="text-right font-bold @(o.Status == PaymentStatus.Approved ? "text-emerald-800" : "")">@o.Amount.ToString("N2") ₺</td>
-                            <td class="text-[13px]">@kanalLabel</td>
-                            <td><span class="badge @odCls">@odLabel</span></td>
+                            <td class="font-semibold">@allocation.PaymentDate.Tarih()</td>
+                            <td class="text-right font-bold @(allocation.Status == PaymentStatus.Approved ? "text-emerald-800" : "")">@allocation.Amount.Tl()</td>
+                            <td class="text-[13px]">@paymentChannelLabel</td>
+                            <td><span class="badge @paymentStatusCssClass">@paymentStatusLabel</span></td>
                             <td>
                                 @{
-                                    var odBelgeler = odemeBelgeleri.TryGetValue(o.Id, out var bl) ? bl : new();
+                                    var allocationDocuments = paymentDocuments.TryGetValue(allocation.Id, out var documents) ? documents : new();
                                 }
-                                @if (odBelgeler.Any())
+                                @if (allocationDocuments.Any())
                                 {
-                                    @foreach (var b in odBelgeler)
+                                    @foreach (var document in allocationDocuments)
                                     {
-                                        <a href="/Belge/Indir/@b.Id.ToHashId()" target="_blank"
+                                        <a href="@Url.Action(
+                                                     nameof(KiraTakip.Controllers.DocumentController.Download),
+                                                     nameof(KiraTakip.Controllers.DocumentController).Replace("Controller", ""),
+                                                     new { id = document.Id.ToHashId() })" target="_blank"
                                            class="inline-flex items-center gap-1 text-[12px] font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
-                                           title="@b.FileName">
+                                           title="@document.FileName">
                                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                             İndir
                                         </a>
@@ -214,7 +217,7 @@
                                 }
                             </td>
                             <td>
-                                <button type="button" @@click='odemeDetayModal = @Html.Raw(odemeJson)' class="btn btn-sm btn-secondary">Detay</button>
+                                <button type="button" @@click='odemeDetayModal = @Html.Raw(paymentJson)' class="btn btn-sm btn-secondary">Detay</button>
                             </td>
                         </tr>
                     }
@@ -236,7 +239,7 @@
         <div class="p-5 border-b border-slate-200 flex items-center justify-between shrink-0">
             <div>
                 <div class="text-sm font-bold text-slate-800">Ödeme</div>
-                <div class="text-[12px] text-muted mt-0.5">@Model.PeriodStart.ToString("MMMM yyyy") — Kalan: <span class="font-bold text-red-600">@kalan.ToString("N2") ₺</span></div>
+                <div class="text-[12px] text-muted mt-0.5">@Model.Charge.PeriodStart.ToString("MMMM yyyy") — Kalan: <span class="font-bold text-red-600">@remainingAmount.Tl()</span></div>
             </div>
             <button type="button" @@click="odemeYapModal = false" class="text-slate-400 hover:text-slate-700 transition-colors">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -265,18 +268,18 @@
 
             <!-- HAVALE TAB -->
             <div x-show="odemeTab === 'havale'">
-                <form method="post" action="/Tenant/Tahakkuklarim/OdemeBildir" enctype="multipart/form-data">
+                <form method="post" action="@reportPaymentUrl" enctype="multipart/form-data">
                     @Html.AntiForgeryToken()
-                    <input type="hidden" name="chargeId" value="@Model.Id" />
+                    <input type="hidden" name="ChargeId" value="@Model.Charge.Id" />
 
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Amount (₺) *</label>
-                            <input type="number" name="tutar" step="0.01" min="0.01" max="@kalan.ToString(System.Globalization.CultureInfo.InvariantCulture)" value="@kalan.ToString(System.Globalization.CultureInfo.InvariantCulture)" required class="form-control w-full" />
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Tutar (₺) *</label>
+                            <input type="number" name="Amount" step="0.01" value="@availablePaymentAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control w-full" />
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Ödeme Tarihi *</label>
-                            <input type="date" name="odemeTarihi" value="@DateTime.Today.ToString("yyyy-MM-dd")" required class="form-control w-full" />
+                            <input type="date" name="PaymentDate" value="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control w-full" />
                         </div>
                     </div>
 
@@ -284,19 +287,19 @@
                         <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Ödeme Kanalı *</label>
                         <div class="grid grid-cols-4 gap-2">
                             <label class="flex items-center gap-2 cursor-pointer border border-slate-200 rounded-lg px-3 py-2 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/40 transition-colors">
-                                <input type="radio" name="odemeKanali" value="@((int)PaymentChannel.BankTransfer)" checked class="accent-blue-600" />
+                                <input type="radio" name="PaymentChannel" value="@((int)PaymentChannel.BankTransfer)" checked class="accent-blue-600" />
                                 <span class="text-[13px] font-medium">Havale</span>
                             </label>
                             <label class="flex items-center gap-2 cursor-pointer border border-slate-200 rounded-lg px-3 py-2 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/40 transition-colors">
-                                <input type="radio" name="odemeKanali" value="@((int)PaymentChannel.Eft)" class="accent-blue-600" />
+                                <input type="radio" name="PaymentChannel" value="@((int)PaymentChannel.Eft)" class="accent-blue-600" />
                                 <span class="text-[13px] font-medium">EFT</span>
                             </label>
                             <label class="flex items-center gap-2 cursor-pointer border border-slate-200 rounded-lg px-3 py-2 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/40 transition-colors">
-                                <input type="radio" name="odemeKanali" value="@((int)PaymentChannel.Cash)" class="accent-blue-600" />
+                                <input type="radio" name="PaymentChannel" value="@((int)PaymentChannel.Cash)" class="accent-blue-600" />
                                 <span class="text-[13px] font-medium">Nakit</span>
                             </label>
                             <label class="flex items-center gap-2 cursor-pointer border border-slate-200 rounded-lg px-3 py-2 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/40 transition-colors">
-                                <input type="radio" name="odemeKanali" value="@((int)PaymentChannel.Other)" class="accent-blue-600" />
+                                <input type="radio" name="PaymentChannel" value="@((int)PaymentChannel.Other)" class="accent-blue-600" />
                                 <span class="text-[13px] font-medium">Diğer</span>
                             </label>
                         </div>
@@ -304,13 +307,13 @@
 
                     <div class="mb-4">
                         <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Dekont *</label>
-                        <input type="file" name="dekont" accept=".pdf,.jpg,.jpeg,.png" required class="form-control w-full" />
+                        <input type="file" name="Receipt" accept=".pdf,.jpg,.jpeg,.png" class="form-control w-full" />
                         <div class="text-[11px] text-muted mt-1">PDF, JPG veya PNG (zorunlu)</div>
                     </div>
 
                     <div class="mb-5">
                         <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Açıklama</label>
-                        <textarea name="aciklama" rows="2" class="form-control w-full" placeholder="Opsiyonel not"></textarea>
+                        <textarea name="Description" rows="2" class="form-control w-full" placeholder="Opsiyonel not"></textarea>
                     </div>
 
                     <div class="bg-blue-50/60 border border-blue-100 text-blue-800 p-3 rounded-lg text-[12px] mb-5 flex items-start gap-2">
@@ -351,7 +354,7 @@
                 <div class="rounded-xl bg-gradient-to-r from-slate-50 to-blue-50/40 border border-slate-200/70 px-5 py-4 mt-5">
                     <div class="flex items-end justify-between">
                         <div class="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Toplam Ödenecek</div>
-                        <div class="text-2xl font-bold text-slate-800">@kalan.ToString("N2") <span class="text-base text-slate-500 font-semibold">₺</span></div>
+                        <div class="text-2xl font-bold text-slate-800">@remainingAmount.Tl()</div>
                     </div>
                 </div>
 
@@ -384,27 +387,27 @@
         <div class="p-5 space-y-3 text-[13px]" x-show="odemeDetayModal">
             <div class="flex justify-between gap-3">
                 <span class="text-muted">Tarih:</span>
-                <span class="font-semibold" x-text="odemeDetayModal?.tarih"></span>
+                <span class="font-semibold" x-text="odemeDetayModal?.date"></span>
             </div>
             <div class="flex justify-between gap-3">
-                <span class="text-muted">Amount:</span>
-                <span class="font-bold text-emerald-700" x-text="odemeDetayModal?.tutar"></span>
+                <span class="text-muted">Tutar:</span>
+                <span class="font-bold text-emerald-700" x-text="odemeDetayModal?.amount"></span>
             </div>
             <div class="flex justify-between gap-3">
                 <span class="text-muted">Kanal:</span>
-                <span class="font-semibold" x-text="odemeDetayModal?.kanal"></span>
+                <span class="font-semibold" x-text="odemeDetayModal?.channel"></span>
             </div>
             <div class="flex justify-between gap-3">
                 <span class="text-muted">Durum:</span>
-                <span class="font-semibold" x-text="odemeDetayModal?.durum"></span>
+                <span class="font-semibold" x-text="odemeDetayModal?.status"></span>
             </div>
             <div class="flex justify-between gap-3">
                 <span class="text-muted">Açıklama:</span>
-                <span class="font-semibold text-right" x-text="odemeDetayModal?.aciklama"></span>
+                <span class="font-semibold text-right" x-text="odemeDetayModal?.description"></span>
             </div>
-            <div class="flex justify-between gap-3" x-show="odemeDetayModal?.redNedeni && odemeDetayModal?.redNedeni !== '—'">
+            <div class="flex justify-between gap-3" x-show="odemeDetayModal?.rejectionReason && odemeDetayModal?.rejectionReason !== '—'">
                 <span class="text-muted">Red Nedeni:</span>
-                <span class="font-semibold text-red-600 text-right" x-text="odemeDetayModal?.redNedeni"></span>
+                <span class="font-semibold text-red-600 text-right" x-text="odemeDetayModal?.rejectionReason"></span>
             </div>
         </div>
         <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">

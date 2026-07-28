@@ -1,20 +1,14 @@
-﻿using KiraTakip.Models.Dtos;
-using KiraTakip.Models.ViewModels;
+using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Services.Interfaces;
 
 public interface IManualChargeService
 {
-    // Listeleme — DTO döner (N+1 yok)
-    Task<List<ManuelBorcListItemDto>> GetAllAsync(IReadOnlyList<int>? tasinmazIds = null, string? durum = null, string? baglanti = null, int? leaseId = null, IReadOnlyList<int>? birimIds = null);
-    Task<int> GetIptalSayisiAsync(IReadOnlyList<int>? tasinmazIds = null, IReadOnlyList<int>? birimIds = null);
-
-    // Create / Cancel — entity döner (business logic)
-    Task<(bool Basarili, string? Hata, int ChargeId)> CreateAsync(ManuelBorcCreateViewModel model, string userId);
-    Task<(bool Basarili, string? Hata)> CancelAsync(int tahakkukId, string userId, string neden);
-
-    // Dropdown verileri — DTO döner
-    Task<List<LeaseDropdownDto>> GetAktifSozlesmelerAsync();
-    Task<List<BorcTipiLookupDto>> GetManuelBorcTipleriAsync();
-    Task<List<UnitLookupDto>> GetTumBirimlerAsync(IReadOnlyList<int>? tasinmazIds = null);
+    Task<List<ManualChargeListItemDto>> GetAllAsync(GetManualChargesInput input);
+    Task<int> GetCancelledCountAsync(GetCancelledManualChargeCountInput input);
+    Task CreateAsync(CreateManualChargeInput input);
+    Task CancelAsync(CancelManualChargeInput input);
+    Task<List<LeaseDropdownDto>> GetActiveLeasesAsync(GetActiveManualChargeLeasesInput input);
+    Task<List<ChargeTypeLookupDto>> GetManualChargeTypesAsync();
+    Task<List<UnitLookupDto>> GetAllUnitsAsync(GetManualChargeUnitsInput input);
 }

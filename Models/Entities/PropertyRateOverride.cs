@@ -11,16 +11,16 @@ public class PropertyRateOverride : BaseEntity
     [Column("KiraciKategoriId")]
     public int TenantCategoryId { get; set; }
 
-    [Column("ChargeTypeId")]
+    [Column("BorcTipiId")]
     public int ChargeTypeId { get; set; }
 
     [Column("HesaplamaYontemi")]
     public CalculationMethod CalculationMethod { get; set; } = CalculationMethod.Fixed;
 
-    [Column("UnitValue")]
+    [Column("BirimDeger")]
     public decimal UnitValue { get; set; }
 
-    [Column("KdvRate")]
+    [Column("KdvOrani")]
     public decimal KdvRate { get; set; }
 
     public Property Property { get; set; } = null!;

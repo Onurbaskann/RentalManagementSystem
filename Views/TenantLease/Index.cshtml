@@ -3,6 +3,7 @@
 @{
     Layout = "_KiraciLayout";
     ViewData["Title"] = "Sözleşmelerim";
+    ViewData["UseCentralFeedback"] = true;
 }
 
 <div class="page-header">
@@ -14,7 +15,7 @@
 
 <div class="card p-0 overflow-hidden" x-data="clientTable({ pageSize: 25 })" x-init="init()">
     <div class="flex items-center gap-4 p-3 bg-slate-50/50 border-b border-slate-200">
-        <input type="search" class="form-control w-full max-w-sm" placeholder="Ara: unit, taşınmaz…" x-model.debounce.250ms="q" />
+        <input type="search" class="form-control w-full max-w-sm" placeholder="Ara: birim, taşınmaz…" x-model.debounce.250ms="q" />
         <span class="ml-auto text-xs text-muted">
             <span x-text="total" class="font-bold"></span> kayıt
         </span>
@@ -32,29 +33,32 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var s in Model)
+                @foreach (var lease in Model)
                 {
-                    bool aktif = s.Aktif;
-                    int kalanGun = s.KalanGun;
-                    bool surek = aktif && kalanGun <= 30;
-                    bool feshedildi = s.Status == LeaseStatus.Terminated;
-                    string dayBadgeClass = kalanGun <= 10 ? "bg-red-50 text-red-700 border-red-200" : kalanGun <= 30 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200";
-                    var search = $"{s.UnitName} {s.PropertyName}".ToLower();
-                    var detayHref = $"/Tenant/Leases/{s.Id}";
+                    bool isActive = lease.IsActive;
+                    int remainingDays = lease.RemainingDays;
+                    bool isExpiringSoon = isActive && remainingDays <= 30;
+                    bool isTerminated = lease.Status == LeaseStatus.Terminated;
+                    string dayBadgeClass = remainingDays <= 10 ? "bg-red-50 text-red-700 border-red-200" : remainingDays <= 30 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200";
+                    var search = $"{lease.UnitName} {lease.PropertyName}".ToLower();
+                    var detailsHref = Url.Action(
+                        nameof(KiraTakip.Controllers.TenantLeaseController.Details),
+                        nameof(KiraTakip.Controllers.TenantLeaseController).Replace("Controller", string.Empty),
+                        new { id = lease.Id.ToHashId() });
 
-                    <tr data-row data-search="@search" data-href="@detayHref"
+                    <tr data-row data-search="@search" data-href="@detailsHref"
                         class="cursor-pointer hover:bg-slate-50 transition-colors"
                         @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
-                        <td class="font-semibold">@s.UnitName</td>
-                        <td class="text-sm text-muted">@s.PropertyName</td>
-                        <td class="cell-center text-sm">@s.StartDate.ToString("dd.MM.yyyy")</td>
-                        <td class="cell-center text-sm">@s.EndDate.ToString("dd.MM.yyyy")</td>
-                        <td class="num text-sm font-medium">@s.MonthlyAmount.ToString("N2") ₺</td>
+                        <td class="font-semibold">@lease.UnitName</td>
+                        <td class="text-sm text-muted">@lease.PropertyName</td>
+                        <td class="cell-center text-sm">@lease.StartDate.Tarih()</td>
+                        <td class="cell-center text-sm">@lease.EndDate.Tarih()</td>
+                        <td class="num text-sm font-medium">@lease.MonthlyAmount.Tl()</td>
                         <td class="cell-center">
-                            @if (feshedildi)
+                            @if (isTerminated)
                             { <span class="text-muted text-[11px] italic" title="Durum: Feshedildi">Feshedildi</span> }
-                            else if (aktif)
-                            { <span class="px-2 py-0.5 rounded text-[10px] font-bold border @dayBadgeClass" title="Durum: @(surek ? "Doluyor" : "Aktif")">@kalanGun GÜN</span> }
+                            else if (isActive)
+                            { <span class="px-2 py-0.5 rounded text-[10px] font-bold border @dayBadgeClass" title="Durum: @(isExpiringSoon ? "Doluyor" : "Aktif")">@remainingDays GÜN</span> }
                             else
                             { <span class="text-muted text-[11px] italic" title="Durum: Sona Erdi">Sona erdi</span> }
                         </td>

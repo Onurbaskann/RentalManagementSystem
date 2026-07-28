@@ -1,9 +1,14 @@
-﻿@model KiraTakip.Models.Entities.Tenant
+@model KiraTakip.Models.Dtos.TenantDetailsDto
 @using System.Globalization
 @{
     Layout = "_KiraciLayout";
     ViewData["Title"] = "Firma Profili";
+    ViewData["UseCentralFeedback"] = true;
     var trCulture = new CultureInfo("tr-TR");
+    var profileInitials = string.Concat(Model.Name
+        .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+        .Take(2)
+        .Select(part => char.ToUpper(part[0], trCulture)));
 }
 
 <div class="page-header">
@@ -17,19 +22,19 @@
 <div class="card mb-4">
     <div class="flex items-start gap-4">
         <div class="w-14 h-14 rounded-full bg-primary text-white flex items-center justify-center text-[20px] font-bold flex-shrink-0">
-            @(Model.Name.Split(' ').Where(p => p.Length > 0).Take(2).Select(p => p[0].ToString().ToUpper()).Aggregate("", (a, b) => a + b))
+            @profileInitials
         </div>
         <div class="flex-1 min-w-0">
             <div class="font-serif text-[24px] font-bold leading-tight">@Model.Name</div>
             <div class="mt-1.5 flex flex-wrap gap-1.5 items-center">
                 <span class="badge badge-kurumsal">Tüzel Kişi</span>
-                @if (Model.TenantCategory != null)
+                @if (!string.IsNullOrEmpty(Model.TenantCategoryName))
                 {
-                    <span class="badge badge-bos">@Model.TenantCategory.Name</span>
+                    <span class="badge badge-bos">@Model.TenantCategoryName</span>
                 }
-                @if (Model.Sector != null)
+                @if (!string.IsNullOrEmpty(Model.SectorName))
                 {
-                    <span class="badge badge-bos">@Model.Sector.Name</span>
+                    <span class="badge badge-bos">@Model.SectorName</span>
                 }
             </div>
             @if (!string.IsNullOrEmpty(Model.TenantNo))

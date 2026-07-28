@@ -1,6 +1,7 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.Constants;
 using KiraTakip.Services.Interfaces;
@@ -718,7 +719,7 @@ public class SeedDataService
         // --- 7. Charge Üretimi ---
         foreach (var s in sozlesmeler)
         {
-            await _chargeGeneration.GenerateForLeaseAsync(s.Id);
+            await _chargeGeneration.GenerateForLeaseAsync(new GenerateLeaseChargesInput(s.Id));
         }
 
         // --- 8. Diğer Seed İşlemleri ---
@@ -813,7 +814,8 @@ public class SeedDataService
         // Geriye dönük uyumluluk için (UretSozlesmeIcinAsync SeedDomainDataAsync içinde çağrılıyor)
         if (await _ctx.Charges.AnyAsync()) return;
         var aktifSozlesmeler = await _ctx.Leases.Where(s => s.Status == LeaseStatus.Active).ToListAsync();
-        foreach (var s in aktifSozlesmeler) await _chargeGeneration.GenerateForLeaseAsync(s.Id);
+        foreach (var s in aktifSozlesmeler)
+            await _chargeGeneration.GenerateForLeaseAsync(new GenerateLeaseChargesInput(s.Id));
     }
 
     private async Task SeedTahakkuklarVeOdemelerAsync(List<Lease> sozlesmeler)

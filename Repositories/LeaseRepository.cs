@@ -12,14 +12,21 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
 {
     public LeaseRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public async Task<List<LeaseListItemDto>> GetListAsync(string? filter, List<int>? authorizedPropertyIds)
+    public async Task<List<LeaseListItemDto>> GetListAsync(
+        string? filter,
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null)
     {
         var now = DateTime.Now;
         var query = _dbSet.AsNoTracking().AsQueryable();
 
-        if (authorizedPropertyIds != null)
+        if (authorizedPropertyIds != null || authorizedUnitIds != null)
         {
-            query = query.Where(s => authorizedPropertyIds.Contains(s.Unit.PropertyId));
+            var propertyIds = authorizedPropertyIds ?? [];
+            var unitIds = authorizedUnitIds ?? [];
+            query = query.Where(lease =>
+                propertyIds.Contains(lease.Unit.PropertyId)
+                || unitIds.Contains(lease.UnitId));
         }
 
         query = filter switch
@@ -52,11 +59,32 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
             .ToListAsync();
     }
 
-    public async Task<LeaseDetailDto?> GetDetayAsync(int id)
+    public Task<LeaseDetailDto?> GetDetailsAsync(int id)
+        => ProjectDetails(_dbSet.AsNoTracking().Where(lease => lease.Id == id))
+            .FirstOrDefaultAsync();
+
+    public Task<LeaseDetailDto?> GetTenantDetailsAsync(
+        int leaseId,
+        int tenantId,
+        List<int>? authorizedPropertyIds = null,
+        List<int>? authorizedUnitIds = null)
     {
-        return await _dbSet.AsNoTracking()
-            .Where(s => s.Id == id)
-            .Select(s => new LeaseDetailDto
+        var query = _dbSet.AsNoTracking().Where(lease =>
+            lease.Id == leaseId && lease.TenantId == tenantId);
+        if (authorizedPropertyIds != null || authorizedUnitIds != null)
+        {
+            var propertyIds = authorizedPropertyIds ?? [];
+            var unitIds = authorizedUnitIds ?? [];
+            query = query.Where(lease =>
+                propertyIds.Contains(lease.Unit.PropertyId)
+                || unitIds.Contains(lease.UnitId));
+        }
+
+        return ProjectDetails(query).FirstOrDefaultAsync();
+    }
+
+    private static IQueryable<LeaseDetailDto> ProjectDetails(IQueryable<Lease> query)
+        => query.Select(s => new LeaseDetailDto
             {
                 Id = s.Id,
                 TenantId = s.TenantId,
@@ -83,7 +111,7 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
                 Status = s.Status,
                 TerminationDate = s.TerminationDate,
                 TerminationReason = s.TerminationReason,
-                IsKdvApplied = s.IsKdvApplied,
+                IsVatApplied = s.IsKdvApplied,
                 DueDateRuleType = s.DueDateRuleType,
                 DueDay = s.DueDay,
                 ActivityLog = s.ActivityLog
@@ -114,16 +142,28 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
                         ChargeTypeBehavior = st.ChargeType.Behavior,
                         UnitValue = st.UnitValue,
                         CalculationMethod = st.CalculationMethod,
-                        KdvRate = st.KdvRate
+                        VatRate = st.KdvRate
                     }).ToList()
-            })
-            .FirstOrDefaultAsync();
-    }
+            });
 
-    public async Task<List<LeaseListItemDto>> GetByTenantIdAsync(int tenantId)
+    public async Task<List<LeaseListItemDto>> GetByTenantIdAsync(
+        int tenantId,
+        List<int>? authorizedPropertyIds = null,
+        List<int>? authorizedUnitIds = null)
     {
-        return await _dbSet.AsNoTracking()
-            .Where(s => s.TenantId == tenantId)
+        var query = _dbSet.AsNoTracking()
+            .Where(s => s.TenantId == tenantId);
+
+        if (authorizedPropertyIds != null || authorizedUnitIds != null)
+        {
+            var propertyIds = authorizedPropertyIds ?? [];
+            var unitIds = authorizedUnitIds ?? [];
+            query = query.Where(lease =>
+                propertyIds.Contains(lease.Unit.PropertyId)
+                || unitIds.Contains(lease.UnitId));
+        }
+
+        return await query
             .OrderByDescending(s => s.StartDate)
             .Select(s => new LeaseListItemDto
             {
@@ -168,27 +208,27 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
             .ToListAsync();
     }
 
-    public async Task<Dictionary<int, decimal?>> GetDepozitoTutarlariAsync(IEnumerable<int> leaseIds)
+    public Task<int> CountActiveByTenantAsync(
+        int tenantId,
+        DateTime currentTime,
+        List<int>? authorizedPropertyIds = null,
+        List<int>? authorizedUnitIds = null)
     {
-        var ids = leaseIds.ToList();
-        if (ids.Count == 0) return new Dictionary<int, decimal?>();
+        var query = _dbSet.AsNoTracking().Where(lease =>
+            lease.TenantId == tenantId
+            && lease.Status == LeaseStatus.Active
+            && lease.StartDate <= currentTime
+            && lease.EndDate >= currentTime);
+        if (authorizedPropertyIds != null || authorizedUnitIds != null)
+        {
+            var propertyIds = authorizedPropertyIds ?? [];
+            var unitIds = authorizedUnitIds ?? [];
+            query = query.Where(lease =>
+                propertyIds.Contains(lease.Unit.PropertyId)
+                || unitIds.Contains(lease.UnitId));
+        }
 
-        var kalemler = await _ctx.ChargeLineItems
-            .Where(k => k.Charge.LeaseId.HasValue
-                && ids.Contains(k.Charge.LeaseId.Value)
-                && k.ChargeType.Code == BorcTipiConsts.Depozito
-                && k.Charge.Status != ChargeStatus.Cancelled)
-            .Select(k => new
-            {
-                SozlesmeId = k.Charge.LeaseId!.Value,
-                Donem = k.Charge.PeriodStart,
-                Amount = k.TotalAmount
-            })
-            .ToListAsync();
-
-        return kalemler
-            .GroupBy(x => x.SozlesmeId)
-            .ToDictionary(g => g.Key, g => (decimal?)g.OrderBy(x => x.Donem).First().Amount);
+        return query.CountAsync();
     }
 
     public async Task<List<Lease>> GetAktiflerAsync()
@@ -208,9 +248,23 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
         return info == null ? null : (info.PropertyId, info.TenantCategoryId);
     }
 
-    public async Task<List<LeaseDropdownDto>> GetAktifDropdownAsync()
-        => await _dbSet.AsNoTracking()
-            .Where(s => s.Status == LeaseStatus.Active)
+    public async Task<List<LeaseDropdownDto>> GetActiveDropdownAsync(
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null)
+    {
+        var query = _dbSet.AsNoTracking()
+            .Where(lease => lease.Status == LeaseStatus.Active);
+
+        if (authorizedPropertyIds != null || authorizedUnitIds != null)
+        {
+            var propertyIds = authorizedPropertyIds ?? [];
+            var unitIds = authorizedUnitIds ?? [];
+            query = query.Where(lease =>
+                propertyIds.Contains(lease.Unit.PropertyId)
+                || unitIds.Contains(lease.UnitId));
+        }
+
+        return await query
             .OrderBy(s => s.Tenant.Name)
             .Select(s => new LeaseDropdownDto
             {
@@ -222,4 +276,56 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
                 PropertyName = s.Unit.Property.Name
             })
             .ToListAsync();
+    }
+
+    public async Task<List<UnitLookupDto>> GetActiveLeaseUnitsByTenantIdAsync(int tenantId, CancellationToken ct = default)
+    {
+        return await _dbSet
+            .AsNoTracking()
+            .Where(s => s.TenantId == tenantId && s.Status == LeaseStatus.Active)
+            .Select(s => new UnitLookupDto
+            {
+                Id = s.UnitId,
+                Name = s.Unit.Name,
+                PropertyName = s.Unit.Property.Name,
+                UnitNo = s.Unit.UnitNo,
+            })
+            .Distinct()
+            .OrderBy(b => b.PropertyName).ThenBy(b => b.Name)
+            .ToListAsync(ct);
+    }
+
+    public Task<bool> HasActiveLeaseForUnitAsync(int unitId, DateTime currentTime)
+        => _dbSet.AnyAsync(lease =>
+            lease.UnitId == unitId
+            && lease.Status == LeaseStatus.Active
+            && lease.StartDate <= currentTime
+            && lease.EndDate >= currentTime);
+
+    public Task<Lease?> GetWithActivityLogAsync(int leaseId)
+        => _dbSet
+            .Include(lease => lease.ActivityLog)
+            .Include(lease => lease.Unit)
+            .FirstOrDefaultAsync(lease => lease.Id == leaseId);
+
+    public async Task<DocumentOwnerContextDto?> GetDocumentOwnerContextAsync(int leaseId)
+    {
+        var context = await _dbSet
+            .AsNoTracking()
+            .Where(lease => lease.Id == leaseId)
+            .Select(lease => new
+            {
+                lease.TenantId,
+                lease.UnitId,
+                lease.Unit.PropertyId
+            })
+            .FirstOrDefaultAsync();
+
+        return context == null
+            ? null
+            : new DocumentOwnerContextDto(
+                context.TenantId,
+                [context.PropertyId],
+                [context.UnitId]);
+    }
 }

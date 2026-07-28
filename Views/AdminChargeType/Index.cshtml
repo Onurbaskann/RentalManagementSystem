@@ -1,20 +1,8 @@
-@model List<KiraTakip.Models.Dtos.BorcTipiListItemDto>
+@model List<KiraTakip.Models.Dtos.ChargeTypeListItemDto>
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Borç Tipleri";
-}
-
-@if (TempData["Success"] != null)
-{
-    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
-        ✓ @TempData["Success"]
-    </div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
-        ✕ @TempData["Error"]
-    </div>
+    ViewData["UseCentralFeedback"] = true;
 }
 
 <div class="page-header flex items-center justify-between">
@@ -22,19 +10,19 @@
         <div class="page-title">Borç Tipleri</div>
         <div class="page-subtitle">@Model.Count kayıt</div>
     </div>
-    <a href="/Admin/ChargeType/Ekle" class="btn btn-primary flex items-center gap-2">
+    <a href="/Admin/ChargeType/Create" class="btn btn-primary flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Yeni Borç Tipi
     </a>
 </div>
 
-<div x-data="borcTipiFilter()" class="mb-3">
+<div x-data="chargeTypeFilter()" class="mb-3">
     <div class="flex flex-wrap gap-2">
-        <button @@click="filtre=''" :class="filtre==='' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Tümü</button>
-        <button @@click="filtre='AylikSabit'" :class="filtre==='AylikSabit' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Aylık Sabit</button>
-        <button @@click="filtre='IlkAyTekSeferlik'" :class="filtre==='IlkAyTekSeferlik' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">İlk Ay Tek Seferlik</button>
-        <button @@click="filtre='KullaniciManuel'" :class="filtre==='KullaniciManuel' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Kullanıcı Manuel</button>
-        <button @@click="filtre='RezervasyonOzel'" :class="filtre==='RezervasyonOzel' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Rezervasyon Özel</button>
+        <button @@click="filter=''" :class="filter==='' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Tümü</button>
+        <button @@click="filter='MonthlyFixed'" :class="filter==='MonthlyFixed' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Aylık Sabit</button>
+        <button @@click="filter='FirstMonthOneTime'" :class="filter==='FirstMonthOneTime' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">İlk Ay Tek Seferlik</button>
+        <button @@click="filter='UserManual'" :class="filter==='UserManual' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Kullanıcı Manuel</button>
+        <button @@click="filter='ReservationSpecific'" :class="filter==='ReservationSpecific' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Rezervasyon Özel</button>
     </div>
 
     <div class="card p-0 overflow-hidden mt-3">
@@ -52,57 +40,57 @@
                 <tbody>
                     @foreach (var bt in Model)
                     {
-                        var davranisKey = bt.Davranis.ToString();
-                        var (davranisLabel, davranisColorClass) = bt.Davranis switch
+                        var behaviorKey = bt.Behavior.ToString();
+                        var (behaviorLabel, behaviorColorClass) = bt.Behavior switch
                         {
                             ChargeTypeBehavior.MonthlyFixed        => ("Aylık Sabit",         "text-blue-700"),
                             ChargeTypeBehavior.FirstMonthOneTime  => ("İlk Ay Tek Seferlik", "text-purple-700"),
                             ChargeTypeBehavior.UserManual   => ("Kullanıcı Manuel",    "text-amber-700"),
                             ChargeTypeBehavior.ReservationSpecific   => ("Rezervasyon Özel",    "text-teal-700"),
-                            _                                   => (bt.Davranis.ToString(), "text-slate-700")
+                            _                                   => (bt.Behavior.ToString(), "text-slate-700")
                         };
-                        <tr x-show="filtre==='' || filtre==='@davranisKey'" x-cloak>
+                        <tr x-show="filter==='' || filter==='@behaviorKey'" x-cloak>
                             <td class="text-center">
                                 <div class="flex items-center justify-center gap-1">
-                                    <form method="post" action="/Admin/ChargeType/SiraDegistir/@bt.Id.ToHashId()" class="inline">
+                                    <form method="post" action="/Admin/ChargeType/ChangeSortOrder/@bt.Id.ToHashId()" class="inline">
                                         @Html.AntiForgeryToken()
-                                        <input type="hidden" name="yeniSira" value="@(bt.Sira - 1)" />
-                                        <button type="submit" class="btn btn-sm btn-secondary px-1.5 py-0.5 text-[10px] leading-tight" title="Yukarı taşı" @(bt.Sira <= 1 ? "disabled" : "")>▲</button>
+                                        <input type="hidden" name="newSortOrder" value="@(bt.SortOrder - 1)" />
+                                        <button type="submit" class="btn btn-sm btn-secondary px-1.5 py-0.5 text-[10px] leading-tight" title="Yukarı taşı" @(bt.SortOrder <= 1 ? "disabled" : "")>▲</button>
                                     </form>
-                                    <span class="text-muted text-xs min-w-[1.25rem] text-center">@bt.Sira</span>
-                                    <form method="post" action="/Admin/ChargeType/SiraDegistir/@bt.Id.ToHashId()" class="inline">
+                                    <span class="text-muted text-xs min-w-[1.25rem] text-center">@bt.SortOrder</span>
+                                    <form method="post" action="/Admin/ChargeType/ChangeSortOrder/@bt.Id.ToHashId()" class="inline">
                                         @Html.AntiForgeryToken()
-                                        <input type="hidden" name="yeniSira" value="@(bt.Sira + 1)" />
+                                        <input type="hidden" name="newSortOrder" value="@(bt.SortOrder + 1)" />
                                         <button type="submit" class="btn btn-sm btn-secondary px-1.5 py-0.5 text-[10px] leading-tight" title="Aşağı taşı">▼</button>
                                     </form>
                                 </div>
                             </td>
                             <td class="font-medium text-slate-700">
-                                @bt.Ad
-                                @if (bt.Sistem)
+                                @bt.Name
+                                @if (bt.IsSystem)
                                 {
                                     <span class="ml-1.5 text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded align-middle" title="Sistem kaydı: kod ve pasifleştirme kilitli">Sistem</span>
                                 }
                             </td>
                             <td>
-                                <span class="text-xs font-bold @davranisColorClass">@davranisLabel</span>
+                                <span class="text-xs font-bold @behaviorColorClass">@behaviorLabel</span>
                             </td>
                             <td>
-                                @if (bt.Aktif)
+                                @if (bt.IsActive)
                                 { <span class="badge badge-kirali">Aktif</span> }
                                 else
                                 { <span class="badge badge-gecmis">Pasif</span> }
                             </td>
                             <td class="flex gap-1.5 justify-end">
-                                <a href="/Admin/ChargeType/Duzenle/@bt.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
-                                @if (!bt.Sistem)
+                                <a href="/Admin/ChargeType/Edit/@bt.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
+                                @if (!bt.IsSystem)
                                 {
-                                    <form method="post" action="/Admin/ChargeType/DurumDegistir/@bt.Id.ToHashId()"
-                                          data-confirm="@(bt.Aktif ? $"'{bt.Ad}' pasif yapılsın mı?" : $"'{bt.Ad}' aktif yapılsın mı?")"
+                                    <form method="post" action="/Admin/ChargeType/ToggleStatus/@bt.Id.ToHashId()"
+                                          data-confirm="@(bt.IsActive ? $"'{bt.Name}' pasif yapılsın mı?" : $"'{bt.Name}' aktif yapılsın mı?")"
                                           class="inline">
                                         @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-sm @(bt.Aktif ? "btn-danger" : "btn-amber")">
-                                            @(bt.Aktif ? "Pasif Yap" : "Aktif Yap")
+                                        <button type="submit" class="btn btn-sm @(bt.IsActive ? "btn-danger" : "btn-amber")">
+                                            @(bt.IsActive ? "Pasif Yap" : "Aktif Yap")
                                         </button>
                                     </form>
                                 }
@@ -125,8 +113,8 @@
 
 @section Scripts {
     <script>
-        function borcTipiFilter() {
-            return { filtre: '' };
+        function chargeTypeFilter() {
+            return { filter: '' };
         }
     </script>
 }

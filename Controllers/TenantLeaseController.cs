@@ -1,13 +1,11 @@
 using KiraTakip.Authorization;
-using KiraTakip.Data;
 using KiraTakip.Extensions;
 using KiraTakip.Models;
-using KiraTakip.Models.Entities;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
@@ -15,99 +13,86 @@ namespace KiraTakip.Controllers;
 [RequireKiraciId]
 [Authorize(Policy = PermissionCatalog.TenantPortal.Lease.Module)]
 [Route("Tenant/Leases")]
-public class TenantLeaseController : Controller
+public class TenantLeaseController(
+    ICurrentUserContext currentUserContext,
+    ILeaseService leaseService,
+    IStatisticsService statisticsService,
+    IChargeService chargeService,
+    IDocumentService documentService,
+    IPermissionScopeProvider permissionScopeProvider) : Controller
 {
-    private readonly ApplicationDbContext _db;
-    private readonly ICurrentUserContext _currentUser;
-    private readonly ILeaseService _leaseService;
-    private readonly IStatisticsService _istatistik;
-    private readonly IChargeService _chargeService;
-    private readonly IDocumentService _documentService;
-
-    public TenantLeaseController(
-        ApplicationDbContext db,
-        ICurrentUserContext currentUser,
-        ILeaseService leaseService,
-        IStatisticsService istatistik,
-        IChargeService tahakkukService,
-        IDocumentService documentService)
-    {
-        _db = db;
-        _currentUser = currentUser;
-        _leaseService = leaseService;
-        _istatistik = istatistik;
-        _chargeService = tahakkukService;
-        _documentService = documentService;
-    }
-
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var tenantId = _currentUser.TenantId!.Value;
-        var sozlesmeler = await _leaseService.GetByTenantIdAsync(tenantId);
-        return View(sozlesmeler);
+        var tenantId = currentUserContext.TenantId!.Value;
+        var leases = await leaseService.GetByTenantAsync(new GetLeasesByTenantInput(tenantId, BuildAccessScope()));
+
+        return View(leases);
     }
 
-    [HttpGet("{id:int}")]
-    public async Task<IActionResult> Detay(int id)
+    [HttpGet("{id}")]
+    public async Task<IActionResult> Details(int id)
     {
-        var s = await _leaseService.GetByIdAsync(id);
-        if (s == null) return NotFound();
+        var tenantId = currentUserContext.TenantId!.Value;
+        var now = DateTime.Now;
+        var leaseDetails = await leaseService.GetTenantDetailsAsync(
+            new GetTenantLeaseDetailsInput(id, tenantId, BuildAccessScope()));
+        var summary = await statisticsService.GetLeaseSummaryAsync(
+            new GetLeaseSummaryInput(
+                leaseDetails.Id,
+                leaseDetails.TenantId,
+                leaseDetails.UnitId,
+                leaseDetails.UnitArea,
+                leaseDetails.StartDate,
+                leaseDetails.EndDate,
+                leaseDetails.Status,
+                now));
+        var hasChargeAccess = User.HasModuleAccess(
+            PermissionCatalog.TenantPortal.Charge.Module);
+        var chargeData = await chargeService.GetTenantLeaseDataAsync(
+            new GetTenantLeaseChargeDataInput(
+                tenantId,
+                id,
+                now.Date,
+                hasChargeAccess));
 
-        var tenantId = _currentUser.TenantId!.Value;
-        if (s.TenantId != tenantId) return Forbid();
-
-        var lease = new Lease
+        var viewModel = new TenantLeaseDetailsViewModel
         {
-            Id = s.Id,
-            TenantId = s.TenantId,
-            UnitId = s.UnitId,
-            StartDate = s.StartDate,
-            EndDate = s.EndDate,
-            Status = s.Status,
-            TerminationDate = s.TerminationDate,
-            Unit = new Unit
-            {
-                Id = s.UnitId,
-                Area = s.UnitArea,
-                PropertyId = s.PropertyId
-            }
+            Lease = leaseDetails,
+            RemainingDays = summary.RemainingDays,
+            MonthlyAmount = summary.MonthlyAmount,
+            AnnualAmount = summary.AnnualAmount,
+            IsActive = summary.IsActive,
+            DurationPercentage = summary.DurationPercentage,
+            UnitStatus = summary.UnitStatus,
+            Charges = chargeData.Charges,
+            HasChargeAccess = hasChargeAccess,
+            CurrentLineItems = chargeData.CurrentCharge.LineItems,
+            CurrentLineItemPeriod = chargeData.CurrentCharge.Period,
+            EffectiveVatRate = leaseDetails.LeaseRateOverrides
+                .FirstOrDefault(rate => rate.ChargeTypeBehavior == ChargeTypeBehavior.MonthlyFixed)?.VatRate ?? 20m
         };
 
-        var vm = new SozlesmeDetayViewModel
-        {
-            Lease = s,
-            KalanGun = _istatistik.KalanGun(lease),
-            AylikBedel = await _istatistik.AylikBedelAsync(lease),
-            YillikBedel = await _istatistik.YillikBedelAsync(lease),
-            Aktif = _istatistik.Aktif(lease),
-            SureYuzdesi = _istatistik.SureYuzdesi(lease),
-            Durum = _istatistik.GetBirimDurumu(lease.Unit),
-            HasOdemeAccess = true,
-            KdvOraniEtkin = s.LeaseRateOverrides
-                .FirstOrDefault(r => r.ChargeTypeBehavior == ChargeTypeBehavior.MonthlyFixed)?.KdvRate ?? 20m
-        };
+        var deposits = await leaseService.GetDepositsAsync(
+            new GetLeaseDepositsInput([id], tenantId));
+        viewModel.DepositAmount = deposits.TryGetValue(id, out var deposit) ? deposit : null;
 
-        await _chargeService.UpdateDelaysAsync();
-        vm.Charges = await _chargeService.GetListAsync(leaseId: id);
+        viewModel.DocumentTypes = await documentService.GetTypesAsync(
+            new GetDocumentTypesInput(DocumentOwnerType.Lease));
+        viewModel.Documents = await documentService.GetListAsync(
+            new GetDocumentsInput(
+                DocumentOwnerType.Lease,
+                id,
+                new DocumentAccessScopeInput(
+                    [DocumentOwnerType.Lease],
+                    TenantId: tenantId)));
 
-        var bugun = DateTime.Today;
-        var guncelTahakkuk = await _db.Charges
-            .Include(t => t.LineItems).ThenInclude(k => k.ChargeType)
-            .Where(t => t.LeaseId == id && t.Status != ChargeStatus.Cancelled && t.PeriodStart <= bugun)
-            .OrderByDescending(t => t.PeriodStart)
-            .FirstOrDefaultAsync();
-        vm.GuncelKalemler = guncelTahakkuk?.LineItems
-            .Where(k => k.ChargeType.Behavior == ChargeTypeBehavior.MonthlyFixed)
-            .OrderBy(k => k.ChargeType.SortOrder).ToList() ?? new();
-        vm.GuncelKalemDonemi = guncelTahakkuk?.PeriodStart;
-
-        var depozitoTutarlari = await _leaseService.GetDepozitoTutarlariAsync(new[] { id });
-        vm.DepozitoTutari = depozitoTutarlari.TryGetValue(id, out var dep) ? dep : null;
-
-        vm.DocumentTypes = await _documentService.GetTurlerAsync(DocumentOwnerType.Lease);
-        vm.Belgeler     = await _documentService.GetListAsync(DocumentOwnerType.Lease, id);
-
-        return View(vm);
+        return View(viewModel);
     }
-}
+
+    private LeaseAccessScopeInput BuildAccessScope()
+        => permissionScopeProvider.GlobalAccess
+            ? new LeaseAccessScopeInput()
+            : new LeaseAccessScopeInput(
+                permissionScopeProvider.AccessiblePropertyIds,
+                permissionScopeProvider.AccessibleUnitIds);}

@@ -4,39 +4,20 @@ using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-public class RateResolverService : IRateResolverService
+public class RateResolverService(
+    ILeaseRateOverrideRepository leaseRateOverrideRepository,
+    IUnitRateRepository unitRateRepository,
+    IPropertyRateOverrideRepository propertyRateOverrideRepository,
+    IRateScheduleRepository rateScheduleRepository,
+    ILeaseRepository sozlesmeRepository,
+    IUnitRepository unitRepository,
+    ITenantRepository tenantRepository) : IRateResolverService
 {
-    private readonly ISozlesmeTarifeRepository _sozlesmeTarifeRepo;
-    private readonly IUnitRateRepository _unitRateRepo;
-    private readonly ITasinmazTarifeRepository _tasinmazTarifeRepo;
-    private readonly IRateScheduleRepository _rateScheduleRepo;
-    private readonly ILeaseRepository _sozlesmeRepo;
-    private readonly IUnitRepository _birimRepo;
-    private readonly ITenantRepository _kiraciRepo;
-
-    public RateResolverService(
-        ISozlesmeTarifeRepository sozlesmeTarifeRepo,
-        IUnitRateRepository unitRateRepo,
-        ITasinmazTarifeRepository tasinmazTarifeRepo,
-        IRateScheduleRepository rateScheduleRepo,
-        ILeaseRepository sozlesmeRepo,
-        IUnitRepository birimRepo,
-        ITenantRepository kiraciRepo)
-    {
-        _sozlesmeTarifeRepo = sozlesmeTarifeRepo;
-        _unitRateRepo = unitRateRepo;
-        _tasinmazTarifeRepo = tasinmazTarifeRepo;
-        _rateScheduleRepo = rateScheduleRepo;
-        _sozlesmeRepo = sozlesmeRepo;
-        _birimRepo = birimRepo;
-        _kiraciRepo = kiraciRepo;
-    }
-
     public async Task<RateSnapshot?> ResolveAsync(int? leaseId, int? tenantId, int unitId, int chargeTypeId, DateTime donem)
     {
         if (leaseId.HasValue)
         {
-            var sozRate = await _sozlesmeTarifeRepo.GetRateAsync(leaseId.Value, chargeTypeId);
+            var sozRate = await leaseRateOverrideRepository.GetRateAsync(leaseId.Value, chargeTypeId);
             if (sozRate != null)
                 return Wrap(sozRate, LineItemSourceType.LeaseRateOverride);
         }
@@ -46,7 +27,7 @@ public class RateResolverService : IRateResolverService
 
         if (leaseId.HasValue)
         {
-            var info = await _sozlesmeRepo.GetPropertyAndCategoryAsync(leaseId.Value);
+            var info = await sozlesmeRepository.GetPropertyAndCategoryAsync(leaseId.Value);
             if (info != null)
             {
                 propertyId = info.Value.TasinmazId;
@@ -55,27 +36,27 @@ public class RateResolverService : IRateResolverService
         }
         else if (tenantId.HasValue)
         {
-            propertyId = await _birimRepo.GetPropertyIdAsync(unitId);
-            tenantCategoryId = await _kiraciRepo.GetKategoriIdAsync(tenantId.Value);
+            propertyId = await unitRepository.GetPropertyIdAsync(unitId);
+            tenantCategoryId = await tenantRepository.GetCategoryIdAsync(tenantId.Value);
         }
 
         if (tenantCategoryId.HasValue)
         {
-            var birimRate = await _unitRateRepo.GetRateAsync(unitId, tenantCategoryId.Value, chargeTypeId);
+            var birimRate = await unitRateRepository.GetRateAsync(unitId, tenantCategoryId.Value, chargeTypeId);
             if (birimRate != null)
                 return Wrap(birimRate, LineItemSourceType.UnitRateOverride);
         }
 
         if (propertyId.HasValue && tenantCategoryId.HasValue)
         {
-            var fiyatMatrisi = await _tasinmazTarifeRepo.GetRateAsync(propertyId.Value, tenantCategoryId.Value, chargeTypeId);
+            var fiyatMatrisi = await propertyRateOverrideRepository.GetRateAsync(propertyId.Value, tenantCategoryId.Value, chargeTypeId);
             if (fiyatMatrisi != null)
                 return Wrap(fiyatMatrisi, LineItemSourceType.PropertyRateOverride);
         }
 
         if (!tenantCategoryId.HasValue) return null;
 
-        var kalem = await _rateScheduleRepo.GetRateAsync(tenantCategoryId.Value, chargeTypeId, donem.Year);
+        var kalem = await rateScheduleRepository.GetRateAsync(tenantCategoryId.Value, chargeTypeId, donem.Year);
         if (kalem == null) return null;
 
         return Wrap(kalem, LineItemSourceType.RateSchedule);

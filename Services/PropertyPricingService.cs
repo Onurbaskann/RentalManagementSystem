@@ -1,149 +1,167 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
+using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models;
-using KiraTakip.Models.Entities;
 using KiraTakip.Models.Constants;
-using KiraTakip.Models.ViewModels;
+using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Entities;
 using KiraTakip.Repositories.Interfaces;
+using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-public class PropertyPricingService : Interfaces.IPropertyPricingService
+public class PropertyPricingService(
+    IPropertyRateOverrideRepository propertyRateRepository,
+    IUnitOfWork unitOfWork) : IPropertyPricingService
 {
-    private readonly ITasinmazTarifeRepository _tarifeRepo;
-    private readonly IPropertyRepository _tasinmazRepo;
-    private readonly IUnitOfWork _uow;
-
-    public PropertyPricingService(
-        ITasinmazTarifeRepository tarifeRepo,
-        IPropertyRepository tasinmazRepo,
-        IUnitOfWork uow)
+    public async Task<PropertyPricingMatrixDto> GetMatrixAsync(GetPropertyPricingMatrixInput input)
     {
-        _tarifeRepo = tarifeRepo;
-        _tasinmazRepo = tasinmazRepo;
-        _uow = uow;
-    }
+        Guard.Forbidden(
+            input.PropertyId > 0
+                && input.AccessiblePropertyIds != null
+                && !input.AccessiblePropertyIds.Contains(input.PropertyId),
+            "Bu taşınmazın fiyat parametrelerini görüntüleme yetkiniz bulunmuyor.",
+            "PropertyPricing.OutOfScope");
 
-    public async Task<TasinmazFiyatMatrisiViewModel> GetMatrisiAsync(int propertyId, int page = 1, int pageSize = 10)
-    {
-        Property? property = null;
-        if (propertyId > 0)
+        var context = await propertyRateRepository.GetPricingContextAsync(input.PropertyId);
+        Guard.NotFound(
+            context.PropertyExists ? context : null,
+            "Taşınmaz bulunamadı.",
+            "Property.NotFound");
+
+        var matrix = new PropertyPricingMatrixDto
         {
-            property = await _tasinmazRepo.GetByIdAsync(propertyId);
-            if (property == null) throw new ArgumentException("Taşınmaz bulunamadı");
-        }
-
-        var kiraciKategorileri = await _tarifeRepo.GetKiraciKategorileriAsync();
-        var borcTipleri = await _tarifeRepo.GetBorcTipleriMatrisIcinAsync();
-        var mevcutFiyatlar = await _tarifeRepo.GetByPropertyIdAsync(propertyId);
-
-        var vm = new TasinmazFiyatMatrisiViewModel
-        {
-            TasinmazId = propertyId,
-            TasinmazAd = property?.Name ?? "Yeni Taşınmaz",
-            Kolonlar = borcTipleri.Select(b => new BorcTipiFiyatKolonuViewModel
-            {
-                ChargeTypeId = b.Id,
-                ChargeTypeName = b.Name,
-                ChargeTypeCode = b.Code,
-                ChargeTypeBehavior = b.Behavior
-            }).ToList()
+            PropertyId = input.PropertyId,
+            PropertyName = context.PropertyName,
+            CurrentPage = input.Page,
+            PageSize = input.PageSize,
+            Columns = context.ChargeTypes.Select(chargeType => new PropertyPricingColumnDto(
+                chargeType.Id,
+                chargeType.Name,
+                chargeType.Code,
+                chargeType.Behavior)).ToList()
         };
 
-        var satirList = new List<KiraciKategoriFiyatSatiriViewModel>();
-        foreach (var kk in kiraciKategorileri)
+        var rows = new List<PropertyPricingRowDto>();
+        foreach (var category in context.Categories)
         {
-            var satir = new KiraciKategoriFiyatSatiriViewModel
+            var row = new PropertyPricingRowDto
             {
-                KiraciKategoriId = kk.Id,
-                KiraciKategoriAd = kk.Name,
-                Hucreler = new List<TasinmazFiyatHucreViewModel>()
+                TenantCategoryId = category.Id,
+                TenantCategoryName = category.Name
             };
-            foreach (var bt in borcTipleri)
+
+            foreach (var chargeType in context.ChargeTypes)
             {
-                var fiyat = mevcutFiyatlar.FirstOrDefault(f => f.TenantCategoryId == kk.Id && f.ChargeTypeId == bt.Id);
-                if (fiyat != null)
+                var rate = context.Rates.FirstOrDefault(item =>
+                    item.TenantCategoryId == category.Id
+                    && item.ChargeTypeId == chargeType.Id);
+                row.Cells.Add(new PropertyPricingCellDto
                 {
-                    satir.Hucreler.Add(new TasinmazFiyatHucreViewModel
-                    {
-                        TasinmazTarifeId = fiyat.Id,
-                        TasinmazId = propertyId,
-                        KiraciKategoriId = kk.Id,
-                        ChargeTypeId = bt.Id,
-                        UnitValue = fiyat.UnitValue,
-                        CalculationMethod = fiyat.CalculationMethod,
-                        KdvRate = fiyat.KdvRate,
-                        RateVarMi = true
-                    });
-                }
-                else
-                {
-                    satir.Hucreler.Add(new TasinmazFiyatHucreViewModel
-                    {
-                        TasinmazTarifeId = null,
-                        TasinmazId = propertyId,
-                        KiraciKategoriId = kk.Id,
-                        ChargeTypeId = bt.Id,
-                        UnitValue = null,
-                        CalculationMethod = (bt.Code == BorcTipiConsts.Kira) ? CalculationMethod.M2 : CalculationMethod.Fixed,
-                        KdvRate = null,
-                        RateVarMi = false
-                    });
-                }
+                    PropertyRateOverrideId = rate?.Id,
+                    PropertyId = input.PropertyId,
+                    TenantCategoryId = category.Id,
+                    ChargeTypeId = chargeType.Id,
+                    UnitValue = rate?.UnitValue,
+                    CalculationMethod = rate?.CalculationMethod
+                        ?? (chargeType.Code == BorcTipiConsts.Kira
+                            ? CalculationMethod.M2
+                            : CalculationMethod.Fixed),
+                    VatRate = rate?.VatRate,
+                    HasRate = rate != null
+                });
             }
-            satirList.Add(satir);
+            rows.Add(row);
         }
 
-        var totalRows = satirList.Count;
-        var skip = (page - 1) * pageSize;
-        vm.TotalRows = totalRows;
-        vm.Satirlar = satirList.Skip(skip).Take(pageSize).ToList();
+        matrix.TotalRows = rows.Count;
+        matrix.Rows = rows
+            .Skip((input.Page - 1) * input.PageSize)
+            .Take(input.PageSize)
+            .ToList();
 
-        return vm;
+        return matrix;
     }
 
-    public async Task SaveMatrisiAsync(int propertyId, TasinmazFiyatMatrisiViewModel model, string userId)
+    public async Task SaveMatrixAsync(SavePropertyPricingMatrixInput input)
     {
-        if (model?.Satirlar == null) return;
+        var context = await propertyRateRepository.GetPricingContextAsync(input.PropertyId);
+        Guard.NotFound(
+            context.PropertyExists ? context : null,
+            "Taşınmaz bulunamadı.",
+            "Property.NotFound");
 
-        foreach (var satir in model.Satirlar)
+        var validCategoryIds = context.Categories.Select(category => category.Id).ToHashSet();
+        var validChargeTypeIds = context.ChargeTypes.Select(chargeType => chargeType.Id).ToHashSet();
+        var submittedPairs = new HashSet<(int CategoryId, int ChargeTypeId)>();
+        var existingRates = new Dictionary<int, PropertyRateOverride>();
+
+        foreach (var row in input.Rows)
         {
-            foreach (var hucre in satir.Hucreler)
+            foreach (var cell in row.Cells)
             {
-                if (hucre.TasinmazTarifeId.HasValue)
+                Guard.InvalidField(
+                    row.TenantCategoryId != cell.TenantCategoryId
+                        || !validCategoryIds.Contains(cell.TenantCategoryId)
+                        || !validChargeTypeIds.Contains(cell.ChargeTypeId)
+                        || !submittedPairs.Add((cell.TenantCategoryId, cell.ChargeTypeId)),
+                    "PricingMatrix",
+                    "Fiyat matrisinde geçersiz veya yinelenen bir hücre bulunuyor.",
+                    "Property.InvalidPricingCell");
+                Guard.InvalidField(
+                    cell.UnitValue < 0 || cell.VatRate is < 0 or > 100
+                        || !Enum.IsDefined(cell.CalculationMethod),
+                    "PricingMatrix",
+                    "Fiyat matrisi değerlerinden biri geçersiz.",
+                    "Property.InvalidPricingValue");
+
+                if (!cell.PropertyRateOverrideId.HasValue) continue;
+                var rate = Guard.NotFound(
+                    await propertyRateRepository.GetByIdAsync(cell.PropertyRateOverrideId.Value),
+                    "Fiyat kaydı bulunamadı.",
+                    "Property.PricingRateNotFound");
+                Guard.Forbidden(
+                    rate.PropertyId != input.PropertyId
+                        || rate.TenantCategoryId != cell.TenantCategoryId
+                        || rate.ChargeTypeId != cell.ChargeTypeId,
+                    "Fiyat kaydı bu taşınmaza veya hücreye ait değil.",
+                    "Property.ForeignPricingRate");
+                existingRates[rate.Id] = rate;
+            }
+        }
+
+        foreach (var row in input.Rows)
+        {
+            foreach (var cell in row.Cells)
+            {
+                if (cell.PropertyRateOverrideId.HasValue)
                 {
-                    var entity = await _tarifeRepo.GetByIdAsync(hucre.TasinmazTarifeId.Value);
-                    if (entity != null)
+                    var entity = existingRates[cell.PropertyRateOverrideId.Value];
+                    if (cell.UnitValue.HasValue)
                     {
-                        if (hucre.UnitValue.HasValue)
-                        {
-                            entity.UnitValue = hucre.UnitValue.Value;
-                            entity.CalculationMethod = hucre.CalculationMethod;
-                            entity.KdvRate = hucre.KdvRate ?? 0m;
-                        }
-                        else
-                        {
-                            await _tarifeRepo.DeleteAsync(entity.Id);
-                        }
+                        entity.UnitValue = cell.UnitValue.Value;
+                        entity.CalculationMethod = cell.CalculationMethod;
+                        entity.KdvRate = cell.VatRate ?? 0m;
+                    }
+                    else
+                    {
+                        await propertyRateRepository.DeleteAsync(entity.Id);
                     }
                 }
-                else
+                else if (cell.UnitValue.HasValue)
                 {
-                    if (hucre.UnitValue.HasValue)
+                    await propertyRateRepository.AddAsync(new PropertyRateOverride
                     {
-                        var newEntity = new PropertyRateOverride
-                        {
-                            PropertyId = propertyId,
-                            TenantCategoryId = hucre.KiraciKategoriId,
-                            ChargeTypeId = hucre.ChargeTypeId,
-                            UnitValue = hucre.UnitValue.Value,
-                            CalculationMethod = hucre.CalculationMethod,
-                            KdvRate = hucre.KdvRate ?? 0m
-                        };
-                        await _tarifeRepo.AddAsync(newEntity);
-                    }
+                        PropertyId = input.PropertyId,
+                        TenantCategoryId = cell.TenantCategoryId,
+                        ChargeTypeId = cell.ChargeTypeId,
+                        UnitValue = cell.UnitValue.Value,
+                        CalculationMethod = cell.CalculationMethod,
+                        KdvRate = cell.VatRate ?? 0m
+                    });
                 }
             }
         }
-        await _uow.SaveChangesAsync();
+
+        await unitOfWork.SaveChangesAsync();
     }
 }

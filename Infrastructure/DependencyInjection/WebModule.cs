@@ -1,6 +1,7 @@
 using KiraTakip.Authorization;
 using KiraTakip.Infrastructure;
 using KiraTakip.Infrastructure.Hashids;
+using KiraTakip.Infrastructure.Validation;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace KiraTakip.Infrastructure.DependencyInjection
@@ -12,7 +13,9 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddControllersWithViews(options =>
             {
                 options.Filters.AddService<YetkiKapsamiActionFilter>();
+                options.Filters.Add<ValidationActionFilter>();
                 options.Filters.Add<BusinessRuleExceptionFilter>();
+                options.Filters.Add<SuccessfulPostRedirectFilter>();
                 options.ModelBinderProviders.Insert(0, new HashidsModelBinderProvider());
                 options.ModelBinderProviders.Insert(1, new InvariantDecimalModelBinderProvider());
                 options.ModelBindingMessageProvider.SetAttemptedValueIsInvalidAccessor((x, y) => $"'{x}' değeri '{y}' alanı için geçersizdir.");

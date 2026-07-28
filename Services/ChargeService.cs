@@ -1,4 +1,5 @@
 using KiraTakip.Data;
+using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
@@ -7,63 +8,137 @@ using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-public class ChargeService : IChargeService
+public class ChargeService(
+    IChargeRepository chargeRepository,
+    IPaymentAllocationRepository paymentAllocationRepository,
+    IUnitRepository unitRepository,
+    IUnitOfWork unitOfWork) : IChargeService
 {
-    private readonly IChargeRepository _repo;
-    private readonly IUnitOfWork _uow;
-    public ChargeService(IChargeRepository repo, IUnitOfWork uow)
-    {
-        _repo = repo;
-        _uow = uow;
-    }
-
     // ── Listeleme ────────────────────────────────────────────────────────
-    public async Task<List<ChargeListItemDto>> GetListAsync(int? leaseId = null, IReadOnlyList<int>? propertyIds = null, IReadOnlyList<int>? unitIds = null)
+    public async Task<List<ChargeListItemDto>> GetListAsync(GetChargesInput input)
     {
-        return await _repo.GetListAsync(leaseId, propertyIds?.ToList(), unitIds?.ToList());
+        return await chargeRepository.GetListAsync(input.LeaseId, input.PropertyIds?.ToList(), input.UnitIds?.ToList());
     }
 
-    public async Task<PagedResult<ChargeListItemDto>> GetPagedAsync(TableQuery q, int? leaseId = null, IReadOnlyList<int>? propertyIds = null, IReadOnlyList<int>? unitIds = null)
+    public async Task<PagedResult<ChargeListItemDto>> GetPagedAsync(GetChargesPageInput input)
     {
-        return await _repo.GetPagedListAsync(q, leaseId, propertyIds?.ToList(), unitIds?.ToList());
+        return await chargeRepository.GetPagedListAsync(
+            input.Query,
+            input.LeaseId,
+            input.PropertyIds?.ToList(),
+            input.UnitIds?.ToList());
     }
 
-    public Task<ChargeDetailDto?> GetDetailsAsync(int id) => _repo.GetDetailsAsync(id);
+    public Task<ChargeDetailDto?> GetDetailsAsync(GetChargeDetailsInput input)
+        => chargeRepository.GetDetailsAsync(input.Id);
+
+    public async Task<ChargeDetailDto> GetTenantDetailsAsync(GetTenantChargeDetailsInput input)
+        => Guard.NotFound(
+            await chargeRepository.GetTenantDetailsAsync(
+                input.ChargeId,
+                input.TenantId,
+                input.PropertyIds?.ToList(),
+                input.UnitIds?.ToList()),
+            "Tahakkuk bulunamadı.",
+            "TENANT_CHARGE_NOT_FOUND");
+
+    public Task<ChargeIndexOptionsDto> GetIndexOptionsAsync(GetChargeIndexOptionsInput input)
+        => chargeRepository.GetIndexOptionsAsync(input);
+
+    public Task<CurrentLeaseChargeDto> GetCurrentLeaseChargeAsync(GetCurrentLeaseChargeInput input)
+        => chargeRepository.GetCurrentLeaseChargeAsync(input);
+
+    public Task<TenantLeaseChargeDataDto> GetTenantLeaseDataAsync(
+        GetTenantLeaseChargeDataInput input)
+        => chargeRepository.GetTenantLeaseDataAsync(input);
+
+    public Task<ManualLeaseChargeSummaryDto> GetManualLeaseChargeSummaryAsync(
+        GetManualLeaseChargeSummaryInput input)
+        => chargeRepository.GetManualLeaseChargeSummaryAsync(input);
+
+    public async Task<TenantChargeIndexDataDto> GetTenantChargeIndexAsync(
+        GetTenantChargeIndexInput input)
+    {
+        var charges = await chargeRepository.GetTenantPagedListAsync(input);
+        var overview = await chargeRepository.GetTenantChargeOverviewAsync(
+            input.TenantId,
+            input.Today);
+        var collectedAmount = await paymentAllocationRepository.GetTenantApprovedTotalAsync(
+            input.TenantId,
+            input.PropertyIds?.ToList(),
+            input.UnitIds?.ToList());
+        var units = await unitRepository.GetTenantLeaseOptionsAsync(
+            input.TenantId,
+            input.PropertyIds?.ToList(),
+            input.UnitIds?.ToList());
+
+        return new TenantChargeIndexDataDto(
+            charges,
+            overview.TotalChargeAmount,
+            collectedAmount,
+            overview.RemainingDebtAmount,
+            overview.OverdueRemainingAmount,
+            units,
+            overview.AvailableYears);
+    }
+
+    public async Task<MonthlyCollectionReportDto> GetMonthlyCollectionReportAsync(
+        GetMonthlyCollectionReportInput input)
+    {
+        var report = await chargeRepository.GetMonthlyCollectionReportAsync(input);
+        var rowsByMonth = report.Rows.ToDictionary(row => row.Month);
+
+        report.Rows = Enumerable.Range(1, 12)
+            .Select(month => rowsByMonth.GetValueOrDefault(month)
+                ?? new MonthlyCollectionReportRowDto { Month = month })
+            .ToList();
+
+        if (!report.AvailableYears.Contains(input.Year))
+        {
+            report.AvailableYears.Add(input.Year);
+            report.AvailableYears = report.AvailableYears
+                .OrderByDescending(year => year)
+                .ToList();
+        }
+
+        return report;
+    }
 
     // ── Business: Gecikme Güncelleme ─────────────────────────────────────
     public async Task UpdateDelaysAsync()
     {
-        var gecikmisBekleyenler = await _repo.GetGeciktirileceklerAsync(DateTime.Today);
-        if (gecikmisBekleyenler.Count == 0) return;
+        var chargesToMarkOverdue = await chargeRepository.GetChargesToMarkOverdueAsync(DateTime.Today);
+        if (chargesToMarkOverdue.Count == 0) return;
 
-        foreach (var t in gecikmisBekleyenler)
+        foreach (var charge in chargesToMarkOverdue)
         {
-            t.Status = ChargeStatus.Overdue;
-            await _repo.UpdateAsync(t);
+            charge.Status = ChargeStatus.Overdue;
+
+            await chargeRepository.UpdateAsync(charge);
         }
 
-        await _uow.SaveChangesAsync();
+        await unitOfWork.SaveChangesAsync();
     }
 
-    // ── Business: Ödenen Amount Güncelleme ────────────────────────────────
-    public async Task UpdatePaidAmountAsync(int chargeId)
+    // ── İş Kuralı: Ödenen Tutarı Güncelleme ──────────────────────────────
+    public async Task UpdatePaidAmountAsync(UpdateChargePaidAmountInput input)
     {
-        var charge = await _repo.GetByIdAsync(chargeId);
-        if (charge == null) return;
+        var charge = Guard.NotFound(
+            await chargeRepository.GetByIdAsync(input.ChargeId),
+            "Tahakkuk bulunamadı.");
 
-        var odenenTutar = await _repo.GetOdenenTutarAsync(chargeId);
-        charge.PaidAmount = odenenTutar;
+        var paidAmount = await paymentAllocationRepository.GetPaidAmountAsync(input.ChargeId);
 
-        charge.Status = odenenTutar >= charge.TotalAmount
-            ? ChargeStatus.Paid
-            : odenenTutar > 0
-                ? ChargeStatus.PartiallyPaid
-                : DateTime.Today > charge.DueDate
-                    ? ChargeStatus.Overdue
-                    : ChargeStatus.Pending;
+        charge.PaidAmount = paidAmount;
+        charge.Status = paidAmount >= charge.TotalAmount
+                        ? ChargeStatus.Paid
+                        : paidAmount > 0
+                            ? ChargeStatus.PartiallyPaid
+                            : DateTime.Today > charge.DueDate
+                                ? ChargeStatus.Overdue
+                                : ChargeStatus.Pending;
 
-        await _repo.UpdateAsync(charge);
-        await _uow.SaveChangesAsync();
+        await chargeRepository.UpdateAsync(charge);
+        await unitOfWork.SaveChangesAsync();
     }
-
 }

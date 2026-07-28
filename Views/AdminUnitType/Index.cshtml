@@ -1,19 +1,7 @@
 @model List<KiraTakip.Models.Dtos.UnitTypeListItemDto>
 @{
     ViewData["Title"] = "Birim Türleri";
-}
-
-@if (TempData["Success"] != null)
-{
-    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
-        ✓ @TempData["Success"]
-    </div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
-        ✕ @TempData["Error"]
-    </div>
+    ViewData["UseCentralFeedback"] = true;
 }
 
 <div class="page-header flex items-center justify-between">
@@ -21,7 +9,7 @@
         <div class="page-title">Birim Türleri</div>
         <div class="page-subtitle">@Model.Count kayıt</div>
     </div>
-    <a href="/Admin/UnitType/Ekle" class="btn btn-primary flex items-center gap-2">
+    <a href="/Admin/UnitType/Create" class="btn btn-primary flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Yeni Birim Türü
     </a>
@@ -40,17 +28,17 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var bt in Model)
+                @foreach (var unitType in Model)
                 {
                     <tr>
-                        <td class="text-center text-muted text-xs">@bt.SortOrder</td>
-                        <td class="font-medium text-slate-700">@bt.Name</td>
+                        <td class="text-center text-muted text-xs">@unitType.SortOrder</td>
+                        <td class="font-medium text-slate-700">@unitType.Name</td>
                         <td>
-                            @if (bt.CanBeRented)
+                            @if (unitType.CanBeRented)
                             {
                                 <span class="badge badge-kirali">Kiralanabilir</span>
                             }
-                            else if (bt.CanBeReserved)
+                            else if (unitType.CanBeReserved)
                             {
                                 <span class="badge badge-surek">Rezervasyon Yapılabilir</span>
                             }
@@ -60,19 +48,19 @@
                             }
                         </td>
                         <td>
-                            @if (bt.IsActive)
+                            @if (unitType.IsActive)
                             { <span class="badge badge-kirali">Aktif</span> }
                             else
                             { <span class="badge badge-gecmis">Pasif</span> }
                         </td>
                         <td class="flex gap-1.5 justify-end">
-                            <a href="/Admin/UnitType/Duzenle/@bt.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
-                            <form method="post" action="/Admin/UnitType/DurumDegistir/@bt.Id.ToHashId()"
-                                  data-confirm="@(bt.IsActive ? $"'{bt.Name}' pasif yapılsın mı?" : $"'{bt.Name}' aktif yapılsın mı?")"
+                            <a href="/Admin/UnitType/Edit/@unitType.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
+                            <form method="post" action="/Admin/UnitType/ToggleStatus/@unitType.Id.ToHashId()"
+                                  data-confirm="@(unitType.IsActive ? $"'{unitType.Name}' pasif yapılsın mı?" : $"'{unitType.Name}' aktif yapılsın mı?")"
                                   class="inline">
                                 @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm @(bt.IsActive ? "btn-danger" : "btn-amber")">
-                                    @(bt.IsActive ? "Pasif Yap" : "Aktif Yap")
+                                <button type="submit" class="btn btn-sm @(unitType.IsActive ? "btn-danger" : "btn-amber")">
+                                    @(unitType.IsActive ? "Pasif Yap" : "Aktif Yap")
                                 </button>
                             </form>
                         </td>
@@ -80,7 +68,7 @@
                 }
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="6" class="text-center py-8 text-muted">Henüz unit türü tanımlanmamış.</td></tr>
+                    <tr><td colspan="6" class="text-center py-8 text-muted">Henüz birim türü tanımlanmamış.</td></tr>
                 }
             </tbody>
         </table>

@@ -1,15 +1,13 @@
-﻿@model KiraTakip.Models.ViewModels.TasinmazFiyatMatrisiViewModel
+﻿@model KiraTakip.Models.ViewModels.PropertyPricingMatrixViewModel
 @{
-    ViewData["Title"] = $"{Model.TasinmazAd} - Parametreler";
-    var currentPage = ViewBag.Page ?? 1;
-    var pageSize = ViewBag.PageSize ?? 10;
+    ViewData["Title"] = $"{Model.PropertyName} - Parametreler";
 }
 
 
 <div class="card p-0 overflow-hidden">
     <div class="flex items-center justify-between p-4 bg-slate-50 border-b border-slate-200">
         <div>
-            <div class="text-lg font-bold text-slate-800">@Model.TasinmazAd — Fiyat Parametreleri</div>
+            <div class="text-lg font-bold text-slate-800">@Model.PropertyName — Fiyat Parametreleri</div>
             <div class="text-xs text-muted font-medium mt-0.5">Salt-okunur parametre matrisi</div>
         </div>
         <div class="text-[11px] text-slate-400 bg-white border border-slate-200 px-3 py-1.5 rounded-lg font-medium italic">
@@ -22,7 +20,7 @@
             <thead>
                 <tr>
                     <th class="w-48 bg-slate-50/50">Kiracı Kategorisi</th>
-                    @foreach (var col in Model.Kolonlar)
+                    @foreach (var col in Model.Columns)
                     {
                         <th class="text-center bg-slate-50/50 border-l border-slate-100">
                             <div class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">@col.ChargeTypeCode</div>
@@ -32,33 +30,33 @@
                 </tr>
             </thead>
             <tbody>
-                @if (Model.Satirlar == null || !Model.Satirlar.Any())
+                @if (Model.Rows == null || !Model.Rows.Any())
                 {
                     <tr>
-                        <td colspan="@(Model.Kolonlar.Count + 1)" class="text-center py-8 text-slate-400">
+                        <td colspan="@(Model.Columns.Count + 1)" class="text-center py-8 text-slate-400">
                             Tanımlı fiyat parametresi bulunmuyor.
                         </td>
                     </tr>
                 }
                 else
                 {
-                    @foreach (var satir in Model.Satirlar)
+                    @foreach (var row in Model.Rows)
                     {
                         <tr class="hover:bg-slate-50/30 transition-colors">
-                            <td class="font-bold text-slate-800 bg-slate-50/20">@satir.KiraciKategoriAd</td>
-                            @foreach (var hucre in satir.Hucreler)
+                            <td class="font-bold text-slate-800 bg-slate-50/20">@row.TenantCategoryName</td>
+                            @foreach (var cell in row.Cells)
                             {
-                                <td class="p-4 text-center border-l border-slate-50 @(hucre.RateVarMi ? "bg-white" : "bg-slate-50/40")">
-                                    @if (hucre.RateVarMi)
+                                <td class="p-4 text-center border-l border-slate-50 @(cell.HasRate ? "bg-white" : "bg-slate-50/40")">
+                                    @if (cell.HasRate)
                                     {
                                         <div class="text-base font-bold text-slate-800 flex items-baseline justify-center gap-1">
-                                            @hucre.UnitValue?.ToString("N2") <span class="text-xs font-normal">₺</span>
+                                            @cell.UnitValue?.ToString("N2") <span class="text-xs font-normal">₺</span>
                                             <span class="text-[10px] font-medium text-slate-400 uppercase ml-0.5">
-                                                @(hucre.CalculationMethod == KiraTakip.Models.CalculationMethod.Fixed ? "Sbt" : "m²")
+                                                @(cell.CalculationMethod == KiraTakip.Models.CalculationMethod.Fixed ? "Sbt" : "m²")
                                             </span>
                                         </div>
                                         <div class="text-[10px] font-bold text-indigo-500 uppercase tracking-tighter mt-1">
-                                            KDV %@hucre.KdvRate?.ToString("N0")
+                                            KDV %@cell.VatRate?.ToString("N0")
                                         </div>
                                     }
                                     else
@@ -74,20 +72,20 @@
         </table>
     </div>
 
-    @if (Model.TotalRows > pageSize)
+    @if (Model.TotalRows > Model.PageSize)
     {
         <div class="flex items-center justify-between p-4 bg-slate-50 border-t border-slate-200">
             <div class="text-xs text-muted font-medium">
-                Sayfa @currentPage / @Math.Ceiling((double)Model.TotalRows / pageSize)
+                Sayfa @Model.CurrentPage / @Math.Ceiling((double)Model.TotalRows / Model.PageSize)
             </div>
             <div class="flex gap-1.5">
-                @if (currentPage > 1)
+                @if (Model.CurrentPage > 1)
                 {
-                    <a class="btn btn-sm btn-secondary text-xs px-4" asp-action="Index" asp-route-propertyId="@Model.TasinmazId" asp-route-page="@(currentPage - 1)" asp-route-pageSize="@pageSize">← Önceki</a>
+                    <a class="btn btn-sm btn-secondary text-xs px-4" asp-action="Index" asp-route-propertyId="@Model.PropertyId" asp-route-page="@(Model.CurrentPage - 1)" asp-route-pageSize="@Model.PageSize">← Önceki</a>
                 }
-                @if (currentPage * pageSize < Model.TotalRows)
+                @if (Model.CurrentPage * Model.PageSize < Model.TotalRows)
                 {
-                    <a class="btn btn-sm btn-secondary text-xs px-4" asp-action="Index" asp-route-propertyId="@Model.TasinmazId" asp-route-page="@(currentPage + 1)" asp-route-pageSize="@pageSize">Sonraki →</a>
+                    <a class="btn btn-sm btn-secondary text-xs px-4" asp-action="Index" asp-route-propertyId="@Model.PropertyId" asp-route-page="@(Model.CurrentPage + 1)" asp-route-pageSize="@Model.PageSize">Sonraki →</a>
                 }
             </div>
         </div>

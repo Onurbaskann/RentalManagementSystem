@@ -1,4 +1,4 @@
-﻿@model KiraTakip.Services.InvitationMailModel
+@model KiraTakip.Services.InvitationMailModel
 @{
     Layout = null;
 }
@@ -21,23 +21,23 @@
         </tr>
         <tr>
           <td style="padding:32px;">
-            <p style="margin:0 0 16px;font-size:15px;color:#334155;">Sayın <strong>@Model.AdSoyad</strong>,</p>
+            <p style="margin:0 0 16px;font-size:15px;color:#334155;">Sayın <strong>@Model.FullName</strong>,</p>
             <p style="margin:0 0 24px;font-size:14px;color:#64748b;line-height:1.6;">
               KiraTakip sistemine davet edildiniz. Hesabınızı oluşturmak için aşağıdaki düğmeye tıklayın.
             </p>
             <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
               <tr>
                 <td style="background:#2563eb;border-radius:6px;padding:12px 24px;">
-                  <a href="@Model.DavetLink" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">Hesabımı Oluştur</a>
+                  <a href="@Model.InvitationLink" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">Hesabımı Oluştur</a>
                 </td>
               </tr>
             </table>
             <p style="margin:0 0 8px;font-size:12px;color:#94a3b8;">
-              Bu link <strong>@Model.SonTarih.ToString("dd.MM.yyyy HH:mm")</strong> tarihine kadar geçerlidir.
+              Bu link <strong>@Model.ExpiresAt.ToString("dd.MM.yyyy HH:mm")</strong> tarihine kadar geçerlidir.
             </p>
             <p style="margin:0;font-size:12px;color:#94a3b8;">
               Düğme çalışmıyorsa aşağıdaki adresi tarayıcınıza yapıştırın:<br />
-              <span style="word-break:break-all;">@Model.DavetLink</span>
+              <span style="word-break:break-all;">@Model.InvitationLink</span>
             </p>
           </td>
         </tr>

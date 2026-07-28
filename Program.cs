@@ -9,6 +9,8 @@ builder.Services.AddInfrastructureModule(builder.Configuration);
 builder.Services.AddIdentityModule();
 builder.Services.AddRepositoryModule();
 builder.Services.AddServiceModule();
+builder.Services.AddValidationModule();
+builder.Services.AddBusinessRulesModule();
 builder.Services.AddWebModule();
 
 // ITransactionalService implement eden tüm servisleri otomatik transaction proxy ile sar.

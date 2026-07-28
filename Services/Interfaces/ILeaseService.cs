@@ -6,13 +6,16 @@ namespace KiraTakip.Services.Interfaces;
 
 public interface ILeaseService
 {
-    Task<List<LeaseListItemDto>> GetAllAsync(string? filter = null, IReadOnlyList<int>? propertyIds = null);
-    Task<LeaseDetailDto?> GetByIdAsync(int id);
-    Task<Lease> CreateAsync(Lease lease, decimal? monthlyAmount = null);
-    Task UzatAsync(int id, DateTime newEndDate, decimal oldAmount, decimal newAmount, bool isKdvApplied, decimal kdvRate, decimal? inflationRate, string? description);
-    Task FeshetAsync(int id, DateTime terminationDate, string terminationReason, string? description);
-    Task VadeGuncelleAsync(int id, DueDateRuleType ruleType, int dueDay, string? description);
-    Task<List<LeaseListItemDto>> GetByTenantIdAsync(int tenantId);
-    Task<List<LeaseListItemDto>> GetByUnitIdAsync(int unitId);
-    Task<Dictionary<int, decimal?>> GetDepozitoTutarlariAsync(IEnumerable<int> leaseIds);
+    Task<List<LeaseListItemDto>> GetAllAsync(GetLeasesInput input);
+    Task<LeaseDetailDto?> GetDetailsAsync(GetLeaseDetailsInput input);
+    Task<LeaseDetailDto> GetTenantDetailsAsync(GetTenantLeaseDetailsInput input);
+    Task<Lease> CreateAsync(CreateLeaseInput input);
+    Task ExtendAsync(ExtendLeaseInput input);
+    Task TerminateAsync(TerminateLeaseInput input);
+    Task UpdateDueDateAsync(UpdateLeaseDueDateInput input);
+    Task RegenerateAsync(RegenerateLeaseInput input);
+    Task<IList<ChargeLineItemPreview>> GetDefaultLineItemsAsync(ComposeLeaseLineItemsInput input);
+    Task<List<LeaseListItemDto>> GetByTenantAsync(GetLeasesByTenantInput input);
+    Task<List<LeaseListItemDto>> GetByUnitAsync(GetLeasesByUnitInput input);
+    Task<Dictionary<int, decimal?>> GetDepositsAsync(GetLeaseDepositsInput input);
 }

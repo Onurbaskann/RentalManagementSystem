@@ -1,6 +1,7 @@
-﻿@model KiraTakip.Models.ViewModels.CategoryFormViewModel
+@model KiraTakip.Models.ViewModels.CategoryFormViewModel
 @{
     ViewData["Title"] = "Sektör Düzenle";
+    ViewData["UseCentralFeedback"] = true;
 }
 
 <div class="max-w-[600px] mx-auto"><div class="page-header">
@@ -10,19 +11,20 @@
 </div>
 
 <div class="card">
-    <form method="post" action="/Admin/Sector/Duzenle/@Model.Id.ToHashId()" asp-form-write-permission="@PermissionCatalog.Sector.Edit">
+    <form method="post" action="/Admin/Sector/Edit/@Model.Id.ToHashId()" asp-form-write-permission="@PermissionCatalog.Sector.Edit">
         @Html.AntiForgeryToken()
         <input asp-for="Id" type="hidden" />
 
         <div class="form-group">
             <label class="form-label">Ad <span class="text-red-500">*</span></label>
-            <input asp-for="Name" class="form-control" required />
+            <input asp-for="Name" class="form-control" />
             <span asp-validation-for="Name" class="text-red-500 text-xs mt-1"></span>
         </div>
 
         <div class="form-group">
             <label class="form-label">Sıra</label>
-            <input asp-for="Order" type="number" class="form-control w-24" min="1" />
+            <input asp-for="Order" type="number" class="form-control w-24" />
+            <span asp-validation-for="Order" class="text-red-500 text-xs mt-1"></span>
         </div>
 
         <div class="form-group">
@@ -39,8 +41,3 @@
     </form>
 </div>
 </div>
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-}
-

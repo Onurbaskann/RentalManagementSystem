@@ -1,98 +1,209 @@
 using KiraTakip.Data;
+using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models;
-using KiraTakip.Models.Entities;
+using KiraTakip.Models.Dtos;
+using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Services;
 
-public class DocumentService : IDocumentService
+public class DocumentService(
+    IDocumentRepository documentRepository,
+    IDocumentContentRepository documentContentRepository,
+    IDocumentTypeRepository documentTypeRepository,
+    ITenantRepository tenantRepository,
+    ILeaseRepository leaseRepository,
+    IPaymentAllocationRepository paymentAllocationRepository,
+    IUnitOfWork unitOfWork) : IDocumentService
 {
-    private readonly ApplicationDbContext _db;
-    private readonly IUnitOfWork _uow;
-
-    public DocumentService(ApplicationDbContext db, IUnitOfWork uow)
+    public async Task<List<Document>> GetListAsync(GetDocumentsInput input)
     {
-        _db = db;
-        _uow = uow;
+        if (input.AccessScope != null)
+        {
+            var ownerContext = Guard.NotFound(
+                await GetOwnerContextAsync(input.OwnerType, input.OwnerId),
+                "Belge sahibi kayıt bulunamadı.",
+                "Document.OwnerNotFound");
+            EnsureAccess(input.OwnerType, ownerContext, input.AccessScope);
+        }
+
+        return await documentRepository.GetListAsync(input.OwnerType, input.OwnerId);
     }
 
-    public async Task<List<Document>> GetListAsync(DocumentOwnerType ownerType, int ownerId)
-        => await _db.Belgeler
-            .AsNoTracking()
-            .Include(b => b.DocumentType)
-            .Where(b => b.OwnerType == ownerType && b.OwnerId == ownerId && !b.IsInvalid)
-            .OrderByDescending(b => b.CreatedAt)
-            .ToListAsync();
-
-    public async Task<Document> UploadAsync(DocumentOwnerType ownerType, int ownerId, int documentTypeId,
-        string fileName, string mimeType, byte[] content, string? description = null, bool invalidateOld = true)
+    public async Task<Dictionary<int, List<Document>>> GetListsAsync(
+        GetDocumentsForOwnersInput input)
     {
-        var oldDocument = invalidateOld
-            ? await _db.Belgeler
-                .Where(b => b.OwnerType == ownerType && b.OwnerId == ownerId
-                         && b.DocumentTypeId == documentTypeId && !b.IsInvalid && !b.IsDeleted)
-                .FirstOrDefaultAsync()
+        if (input.OwnerIds.Count == 0) return [];
+
+        var documents = await documentRepository.GetListAsync(input.OwnerType, input.OwnerIds);
+        return input.OwnerIds
+            .Distinct()
+            .ToDictionary(
+                ownerId => ownerId,
+                ownerId => documents.Where(document => document.OwnerId == ownerId).ToList());
+    }
+
+    public async Task UploadAsync(UploadDocumentInput input)
+    {
+        Guard.Against(
+            input.OwnerType is not DocumentOwnerType.Tenant
+                and not DocumentOwnerType.Lease
+                and not DocumentOwnerType.Payment,
+            "Geçersiz belge sahibi türü.",
+            "Document.InvalidOwnerType");
+
+        var documentType = Guard.NotFound(
+            await documentTypeRepository.GetByIdAsync(input.DocumentTypeId),
+            "Belge türü bulunamadı.",
+            "DocumentType.NotFound");
+
+        Guard.Conflict(
+            !documentType.IsActive,
+            "Pasif belge türüne dosya yüklenemez.",
+            "DocumentType.Inactive");
+        Guard.Conflict(
+            documentType.TargetEntity != input.OwnerType,
+            "Seçilen belge türü bu kayıt için kullanılamaz.",
+            "DocumentType.OwnerMismatch");
+
+        var extension = Path.GetExtension(input.FileName).TrimStart('.');
+        var allowedExtensions = documentType.AllowedExtensions
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(item => item.TrimStart('.'));
+        Guard.Against(
+            string.IsNullOrWhiteSpace(extension)
+                || !allowedExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase),
+            "Desteklenmeyen dosya türü.",
+            "Document.UnsupportedExtension");
+        Guard.Against(
+            input.Content.LongLength > documentType.MaxSizeMb * 1024L * 1024L,
+            $"Dosya boyutu {documentType.MaxSizeMb} MB sınırını aşıyor.",
+            "Document.FileTooLarge");
+
+        var ownerContext = Guard.NotFound(
+            await GetOwnerContextAsync(input.OwnerType, input.OwnerId),
+            "Belge sahibi kayıt bulunamadı.",
+            "Document.OwnerNotFound");
+        if (input.AccessScope != null)
+            EnsureAccess(input.OwnerType, ownerContext, input.AccessScope);
+
+        var oldDocument = input.InvalidateOld
+            ? await documentRepository.GetCurrentAsync(input.OwnerType, input.OwnerId, input.DocumentTypeId)
             : null;
 
         var newDocument = new Document
         {
-            DocumentTypeId = documentTypeId,
-            OwnerType = ownerType,
-            OwnerId = ownerId,
-            FileName = fileName,
-            MimeType = mimeType,
-            FileSize = content.Length,
-            Description = description,
+            DocumentTypeId = input.DocumentTypeId,
+            OwnerType = input.OwnerType,
+            OwnerId = input.OwnerId,
+            FileName = Path.GetFileName(input.FileName),
+            MimeType = input.MimeType,
+            FileSize = input.Content.Length,
+            Description = input.Description,
             IsActive = true,
-            Content = new DocumentContent { Content = content }
+            Content = new DocumentContent { Content = input.Content }
         };
 
-        await _db.Belgeler.AddAsync(newDocument);
-        await _uow.SaveChangesAsync(); // Id üretiliyor
+        await documentRepository.AddAsync(newDocument);
+        await unitOfWork.SaveChangesAsync(); // Id üretiliyor
 
         if (oldDocument != null)
         {
             oldDocument.IsInvalid = true;
             oldDocument.InvalidationDate = DateTime.UtcNow;
             oldDocument.ReplacedByDocumentId = newDocument.Id;
-            await _uow.SaveChangesAsync();
+
+            await unitOfWork.SaveChangesAsync();
         }
-
-        return newDocument;
     }
 
-    public async Task<(Document Meta, byte[] Icerik)> DownloadAsync(int documentId)
+    public async Task<DocumentDownloadResult> DownloadAsync(DownloadDocumentInput input)
     {
-        var meta = await _db.Belgeler
-            .AsNoTracking()
-            .Include(b => b.DocumentType)
-            .FirstOrDefaultAsync(b => b.Id == documentId)
-            ?? throw new KeyNotFoundException($"Belge {documentId} bulunamadı.");
+        var metadata = Guard.NotFound(
+            await documentRepository.GetMetadataAsync(input.DocumentId),
+            $"Belge {input.DocumentId} bulunamadı.",
+            "Document.NotFound");
 
-        var icerik = await _db.DocumentContents
-            .AsNoTracking()
-            .Where(i => i.DocumentId == documentId)
-            .Select(i => i.Content)
-            .FirstOrDefaultAsync()
-            ?? Array.Empty<byte>();
+        var ownerContext = Guard.NotFound(
+            await GetOwnerContextAsync(metadata.OwnerType, metadata.OwnerId),
+            "Belge sahibi kayıt bulunamadı.",
+            "Document.OwnerNotFound");
+        EnsureAccess(metadata.OwnerType, ownerContext, input.AccessScope);
 
-        return (meta, icerik);
+        var content = Guard.NotFound(
+            await documentContentRepository.GetContentAsync(input.DocumentId),
+            "Belge içeriği bulunamadı.",
+            "Document.ContentNotFound");
+
+        return new DocumentDownloadResult(metadata, content);
     }
 
-    public async Task DeleteAsync(int documentId)
+    public async Task<DocumentMutationResult> DeleteAsync(DeleteDocumentInput input)
     {
-        var document = await _db.Belgeler.FindAsync(documentId);
-        if (document == null) return;
+        var metadata = Guard.NotFound(
+            await documentRepository.GetMetadataAsync(input.DocumentId),
+            "Belge bulunamadı.",
+            "Document.NotFound");
 
+        var ownerContext = Guard.NotFound(
+            await GetOwnerContextAsync(metadata.OwnerType, metadata.OwnerId),
+            "Belge sahibi kayıt bulunamadı.",
+            "Document.OwnerNotFound");
+        EnsureAccess(metadata.OwnerType, ownerContext, input.AccessScope);
+        Guard.Conflict(
+            metadata.DocumentType.Required,
+            "Zorunlu belge silinemez.",
+            "Document.Required");
+
+        var document = Guard.NotFound(
+            await documentRepository.FindAsync(input.DocumentId),
+            "Belge bulunamadı.",
+            "Document.NotFound");
         document.IsDeleted = true;
-        await _uow.SaveChangesAsync();
+
+        await unitOfWork.SaveChangesAsync();
+
+        return new DocumentMutationResult(document.OwnerType, document.OwnerId);
     }
 
-    public async Task<List<DocumentType>> GetTurlerAsync(DocumentOwnerType targetEntity, bool sadeceDogru = false)
-        => await _db.DocumentTypes
-            .AsNoTracking()
-            .Where(t => t.TargetEntity == targetEntity && t.IsActive && (!sadeceDogru || t.Required))
-            .OrderBy(t => t.SortOrder)
-            .ToListAsync();
+    public Task<List<DocumentType>> GetTypesAsync(GetDocumentTypesInput input)
+        => documentTypeRepository.GetForTargetAsync(input.TargetEntity, input.RequiredOnly);
+
+    private Task<DocumentOwnerContextDto?> GetOwnerContextAsync(
+        DocumentOwnerType ownerType,
+        int ownerId)
+        => ownerType switch
+        {
+            DocumentOwnerType.Tenant => tenantRepository.GetDocumentOwnerContextAsync(ownerId),
+            DocumentOwnerType.Lease => leaseRepository.GetDocumentOwnerContextAsync(ownerId),
+            DocumentOwnerType.Payment => paymentAllocationRepository.GetDocumentOwnerContextAsync(ownerId),
+            _ => Task.FromResult<DocumentOwnerContextDto?>(null)
+        };
+
+    private static void EnsureAccess(
+        DocumentOwnerType ownerType,
+        DocumentOwnerContextDto ownerContext,
+        DocumentAccessScopeInput accessScope)
+    {
+        Guard.Forbidden(
+            !accessScope.AllowedOwnerTypes.Contains(ownerType),
+            "Bu belge üzerinde işlem yapma yetkiniz bulunmuyor.",
+            "Document.Forbidden");
+
+        Guard.Forbidden(
+            accessScope.TenantId.HasValue
+                && ownerContext.TenantId != accessScope.TenantId.Value,
+            "Bu belge yetki kapsamınızın dışındadır.",
+            "Document.TenantOutOfScope");
+
+        var hasScopeRestriction = accessScope.PropertyIds != null || accessScope.UnitIds != null;
+        if (!hasScopeRestriction) return;
+
+        var propertyAccess = accessScope.PropertyIds?.Intersect(ownerContext.PropertyIds).Any() == true;
+        var unitAccess = accessScope.UnitIds?.Intersect(ownerContext.UnitIds).Any() == true;
+        Guard.Forbidden(
+            !propertyAccess && !unitAccess,
+            "Bu belge yetki kapsamınızın dışındadır.",
+            "Document.OutOfScope");
+    }
 }

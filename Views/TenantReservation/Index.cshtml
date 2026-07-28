@@ -1,8 +1,9 @@
-﻿@model List<KiraTakip.Models.Dtos.ReservationListItemDto>
+@model List<KiraTakip.Models.Dtos.ReservationListItemDto>
 @using KiraTakip.Models
 @{
     Layout = "_KiraciLayout";
     ViewData["Title"] = "Rezervasyonlarım";
+    ViewData["UseCentralFeedback"] = true;
 }
 
 <div class="page-header">
@@ -14,7 +15,7 @@
 
 <div class="card p-0 overflow-hidden" x-data="clientTable({ pageSize: 25 })" x-init="init()">
     <div class="table-toolbar">
-        <input type="search" class="form-control toolbar-search" placeholder="Ara: unit, taşınmaz…" x-model.debounce.250ms="q" />
+        <input type="search" class="form-control toolbar-search" placeholder="Ara: birim, taşınmaz…" x-model.debounce.250ms="q" />
         <span class="pagination-info ml-auto"><span x-text="total"></span> kayıt</span>
     </div>
     <div class="table-wrapper">
@@ -25,35 +26,35 @@
                     <th>Taşınmaz</th>
                     <th>Başlangıç</th>
                     <th>Bitiş</th>
-                    <th>Amount</th>
+                    <th>Tutar</th>
                     <th>Durum</th>
                 </tr>
             </thead>
             <tbody x-ref="tbody">
-                @foreach (var r in Model)
+                @foreach (var reservation in Model)
                 {
-                    var search = $"{r.UnitName} {r.PropertyName}".ToLower();
-                    var durumClass = r.Status switch {
+                    var search = $"{reservation.UnitName} {reservation.PropertyName}".ToLower();
+                    var statusClasses = reservation.Status switch {
                         ReservationStatus.Planned => "badge-bos",
                         ReservationStatus.Completed => "badge-kirali",
                         ReservationStatus.Cancelled => "badge-gecmis",
                         ReservationStatus.TransferredToCharge => "badge-kurumsal",
                         _ => "badge-bos"
                     };
-                    var durumLabel = r.Status switch {
+                    var statusLabel = reservation.Status switch {
                         ReservationStatus.Planned => "Planlandı",
                         ReservationStatus.Completed => "Tamamlandı",
                         ReservationStatus.Cancelled => "İptal",
                         ReservationStatus.TransferredToCharge => "Faturalandı",
-                        _ => r.Status.ToString()
+                        _ => "Bilinmiyor"
                     };
                     <tr data-row data-search="@search">
-                        <td class="font-semibold">@r.UnitName</td>
-                        <td class="text-sm text-muted">@r.PropertyName</td>
-                        <td class="text-sm">@r.StartDate.ToString("dd.MM.yyyy HH:mm")</td>
-                        <td class="text-sm">@r.EndDate.ToString("dd.MM.yyyy HH:mm")</td>
-                        <td class="text-sm font-medium">@r.TotalAmount.ToString("N2") ₺</td>
-                        <td><span class="badge @durumClass">@durumLabel</span></td>
+                        <td class="font-semibold">@reservation.UnitName</td>
+                        <td class="text-sm text-muted">@reservation.PropertyName</td>
+                        <td class="text-sm">@reservation.StartDate.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td class="text-sm">@reservation.EndDate.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td class="text-sm font-medium">@reservation.TotalAmount.ToString("N2") ₺</td>
+                        <td><span class="badge @statusClasses">@statusLabel</span></td>
                     </tr>
                 }
             </tbody>

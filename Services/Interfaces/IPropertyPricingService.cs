@@ -1,10 +1,9 @@
-﻿using KiraTakip.Models.ViewModels;
+using KiraTakip.Models.Dtos;
 
-namespace KiraTakip.Services.Interfaces
+namespace KiraTakip.Services.Interfaces;
+
+public interface IPropertyPricingService
 {
-    public interface IPropertyPricingService
-    {
-        Task<TasinmazFiyatMatrisiViewModel> GetMatrisiAsync(int propertyId, int page = 1, int pageSize = 10);
-        Task SaveMatrisiAsync(int propertyId, TasinmazFiyatMatrisiViewModel model, string userId);
-    }
+    Task<PropertyPricingMatrixDto> GetMatrixAsync(GetPropertyPricingMatrixInput input);
+    Task SaveMatrixAsync(SavePropertyPricingMatrixInput input);
 }

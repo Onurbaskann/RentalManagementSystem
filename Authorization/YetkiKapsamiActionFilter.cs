@@ -1,4 +1,4 @@
-﻿using KiraTakip.Services.Interfaces;
+using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Filters;
 using System.Security.Claims;
@@ -20,10 +20,10 @@ public class YetkiKapsamiActionFilter : IAsyncActionFilter
     {
         var user = context.HttpContext.User;
 
-        if (user.Identity?.IsAuthenticated == true
-            && !user.HasClaim(c => c.Type == AppClaimTypes.TenantId))
+        if (user.Identity?.IsAuthenticated == true)
         {
-            var isScopeAware = context.ActionDescriptor.EndpointMetadata
+            var isTenantUser = user.HasClaim(c => c.Type == AppClaimTypes.TenantId);
+            var isScopeAware = isTenantUser || context.ActionDescriptor.EndpointMetadata
                 .OfType<AuthorizeAttribute>()
                 .Any(a => a.Policy != null && PermissionCatalog.IsScopeAware(a.Policy));
 

@@ -1,15 +1,16 @@
-﻿@model List<KiraTakip.Models.Dtos.ManuelBorcListItemDto>
+@model List<KiraTakip.Models.Dtos.ManualChargeListItemDto>
 @using KiraTakip.Models
 @{
     ViewData["Title"] = "Manuel Borçlar";
+    ViewData["UseCentralFeedback"] = true;
     bool canCreate = User.HasPermission(PermissionCatalog.ManualCharge.Create);
     bool canCancel = User.HasPermission(PermissionCatalog.ManualCharge.Cancel);
-    string aktifDurum = ViewBag.Durum ?? "tum";
-    string aktifBaglanti = ViewBag.Baglanti ?? "";
-    int iptalSayisi = ViewBag.IptalSayisi ?? 0;
-    int? leaseId = ViewBag.SozlesmeId;
+    string activeStatus = ViewBag.Status ?? "tum";
+    string activeRelation = ViewBag.Relation ?? "";
+    int cancelledCount = ViewBag.CancelledCount ?? 0;
+    int? leaseId = ViewBag.LeaseId;
 
-    string BtnCls(string d) => aktifDurum == d
+    string ButtonClass(string status) => activeStatus == status
         ? "btn btn-sm bg-primary text-white border-primary"
         : "btn btn-sm btn-secondary";
 }
@@ -21,61 +22,49 @@
     </div>
     @if (canCreate)
     {
-        <a href="/ManualCharge/Ekle" class="btn btn-primary flex items-center gap-2">
+        <a href="/ManualCharge/Create" class="btn btn-primary flex items-center gap-2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Manuel Borç Ekle
         </a>
     }
 </div>
 
-@if (TempData["Success"] != null)
-{
-    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
-        ✓ @TempData["Success"]
-    </div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
-        ✕ @TempData["Error"]
-    </div>
-}
 
 @* Durum filtre butonları *@
 <div class="flex items-center gap-2 mb-3 flex-wrap">
-    <a href="/ManualCharge?durum=tum&baglanti=@aktifBaglanti" class="@BtnCls("tum")">Tümü</a>
-    <a href="/ManualCharge?durum=bekliyor&baglanti=@aktifBaglanti" class="@BtnCls("bekliyor")">Bekliyor</a>
-    <a href="/ManualCharge?durum=kismi&baglanti=@aktifBaglanti" class="@BtnCls("kismi")">Kısmi</a>
-    <a href="/ManualCharge?durum=tamodendi&baglanti=@aktifBaglanti" class="@BtnCls("tamodendi")">Tam Ödendi</a>
-    <a href="/ManualCharge?durum=gecikti&baglanti=@aktifBaglanti" class="@BtnCls("gecikti")">Gecikti</a>
+    <a href="/ManualCharge?status=tum&relation=@activeRelation" class="@ButtonClass("tum")">Tümü</a>
+    <a href="/ManualCharge?status=bekliyor&relation=@activeRelation" class="@ButtonClass("bekliyor")">Bekliyor</a>
+    <a href="/ManualCharge?status=kismi&relation=@activeRelation" class="@ButtonClass("kismi")">Kısmi</a>
+    <a href="/ManualCharge?status=tamodendi&relation=@activeRelation" class="@ButtonClass("tamodendi")">Tam Ödendi</a>
+    <a href="/ManualCharge?status=gecikti&relation=@activeRelation" class="@ButtonClass("gecikti")">Gecikti</a>
 
-    @if (iptalSayisi > 0 && aktifDurum != "iptal")
+    @if (cancelledCount > 0 && activeStatus != "iptal")
     {
         <span class="ml-2 text-xs text-muted">
-            @iptalSayisi iptal edilmiş kayıt gizleniyor
-            <a href="/ManualCharge?durum=iptal&baglanti=@aktifBaglanti" class="text-primary font-semibold hover:underline ml-1">Görüntüle →</a>
+            @cancelledCount iptal edilmiş kayıt gizleniyor
+            <a href="/ManualCharge?status=iptal&relation=@activeRelation" class="text-primary font-semibold hover:underline ml-1">Görüntüle →</a>
         </span>
     }
-    @if (aktifDurum == "iptal")
+    @if (activeStatus == "iptal")
     {
-        <a href="/ManualCharge?durum=iptal&baglanti=@aktifBaglanti" class="@BtnCls("iptal")">İptal Edildi</a>
+        <a href="/ManualCharge?status=iptal&relation=@activeRelation" class="@ButtonClass("iptal")">İptal Edildi</a>
     }
 </div>
 
 @* Filtre formu *@
 <form method="get" action="/ManualCharge" class="card p-3 mb-3 flex flex-wrap items-center gap-3">
-    <input type="hidden" name="durum" value="@aktifDurum" />
-    <select name="baglanti" class="form-control w-40 text-sm" onchange="this.form.submit()">
-        <option value="" selected="@(aktifBaglanti == "")">Bağlantı: Hepsi</option>
-        <option value="sozlesmeli" selected="@(aktifBaglanti == "sozlesmeli")">Sözleşmeli</option>
-        <option value="sozlesmesiz" selected="@(aktifBaglanti == "sozlesmesiz")">Sözleşmesiz</option>
+    <input type="hidden" name="status" value="@activeStatus" />
+    <select name="relation" class="form-control w-40 text-sm" onchange="this.form.submit()">
+        <option value="" selected="@(activeRelation == "")">Bağlantı: Hepsi</option>
+        <option value="sozlesmeli" selected="@(activeRelation == "sozlesmeli")">Sözleşmeli</option>
+        <option value="sozlesmesiz" selected="@(activeRelation == "sozlesmesiz")">Sözleşmesiz</option>
     </select>
     @if (leaseId.HasValue)
     {
         <input type="hidden" name="leaseId" value="@leaseId" />
         <span class="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-md">
             Sözleşme #@leaseId filtreli
-            <a href="/ManualCharge?durum=@aktifDurum" class="ml-1 font-bold hover:underline">✕</a>
+            <a href="/ManualCharge?status=@activeStatus" class="ml-1 font-bold hover:underline">✕</a>
         </span>
     }
 </form>
@@ -99,17 +88,17 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var t in Model)
+                @foreach (var manualCharge in Model)
                 {
-                    var kalan = t.ToplamTutar - t.PaidAmount;
-                    string durumCls = t.Durum switch {
+                    var remainingAmount = manualCharge.TotalAmount - manualCharge.PaidAmount;
+                    string statusClass = manualCharge.Status switch {
                         ChargeStatus.Paid    => "badge-kirali",
                         ChargeStatus.PartiallyPaid => "badge-surek",
                         ChargeStatus.Overdue      => "badge-gecmis",
                         ChargeStatus.Cancelled  => "badge-bos",
                         _                           => "badge-bos"
                     };
-                    string durumLabel = t.Durum switch {
+                    string statusLabel = manualCharge.Status switch {
                         ChargeStatus.Paid    => "Tam Ödendi",
                         ChargeStatus.PartiallyPaid => "Kısmi Ödendi",
                         ChargeStatus.Overdue      => "Gecikti",
@@ -117,40 +106,40 @@
                         _                           => "Bekleniyor"
                     };
                     <tr class="cursor-pointer hover:bg-slate-50 transition-colors"
-                        onclick="if(!event.target.closest('a,button,[data-stop]'))window.location.href='/Charge/Detay/@t.Id.ToHashId()'">
+                        onclick="if(!event.target.closest('a,button,[data-stop]'))window.location.href='/Charge/Details/@manualCharge.Id.ToHashId()'">
                         <td>
-                            @if (t.KiraciId > 0)
+                            @if (manualCharge.TenantId > 0)
                             {
-                                <a href="/Tenant/Detay/@t.KiraciId.ToHashId()" class="font-semibold text-primary hover:underline">@t.KiraciGosterimAdi</a>
+                                <a href="/Tenant/Details/@manualCharge.TenantId.ToHashId()" class="font-semibold text-primary hover:underline">@manualCharge.TenantDisplayName</a>
                             }
                             else
                             {
-                                <div class="font-semibold">@(t.KiraciGosterimAdi ?? "-")</div>
+                                <div class="font-semibold">@(manualCharge.TenantDisplayName ?? "-")</div>
                             }
-                            @if (!string.IsNullOrEmpty(t.KiraciKategoriAd))
+                            @if (!string.IsNullOrEmpty(manualCharge.TenantCategoryName))
                             {
-                                <div class="cell-sub">@t.KiraciKategoriAd</div>
+                                <div class="cell-sub">@manualCharge.TenantCategoryName</div>
                             }
                         </td>
                         <td>
-                            <div>@(t.TasinmazAd ?? "-")</div>
-                            <span class="cell-sub">@(t.BirimAd ?? "-")</span>
+                            <div>@(manualCharge.PropertyName ?? "-")</div>
+                            <span class="cell-sub">@(manualCharge.UnitName ?? "-")</span>
                         </td>
                         <td class="cell-center">
-                            @if (!string.IsNullOrEmpty(t.ChargeTypeCode))
+                            @if (!string.IsNullOrEmpty(manualCharge.ChargeTypeCode))
                             {
-                                <span class="font-mono text-[11px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">@t.ChargeTypeCode</span>
+                                <span class="font-mono text-[11px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">@manualCharge.ChargeTypeCode</span>
                             }
                         </td>
-                        <td class="text-muted max-w-[200px] truncate">@(t.IlkKalemAciklama ?? "-")</td>
-                        <td class="num">@t.ExpectedAmount.ToString("N2") ₺</td>
-                        <td class="num num-muted">@t.KdvTutari.ToString("N2") ₺</td>
-                        <td class="num">@t.ToplamTutar.ToString("N2") ₺</td>
-                        <td class="cell-center">@t.DueDate.ToString("dd.MM.yyyy")</td>
+                        <td class="text-muted max-w-[200px] truncate">@(manualCharge.FirstLineItemDescription ?? "-")</td>
+                        <td class="num">@manualCharge.ExpectedAmount.ToString("N2") ₺</td>
+                        <td class="num num-muted">@manualCharge.VatAmount.ToString("N2") ₺</td>
+                        <td class="num">@manualCharge.TotalAmount.ToString("N2") ₺</td>
+                        <td class="cell-center">@manualCharge.DueDate.ToString("dd.MM.yyyy")</td>
                         <td>
-                            @if (t.LeaseId.HasValue)
+                            @if (manualCharge.LeaseId.HasValue)
                             {
-                                <a href="/Lease/Detay/@t.LeaseId.ToHashId()" data-stop class="font-mono text-xs text-primary hover:underline">#@t.LeaseId</a>
+                                <a href="/Lease/Details/@manualCharge.LeaseId.ToHashId()" data-stop class="font-mono text-xs text-primary hover:underline">#@manualCharge.LeaseId</a>
                             }
                             else
                             {
@@ -158,24 +147,24 @@
                             }
                         </td>
                         <td>
-                            <span class="badge @durumCls">@durumLabel</span>
-                            @if (!string.IsNullOrEmpty(t.CancellationNote))
+                            <span class="badge @statusClass">@statusLabel</span>
+                            @if (!string.IsNullOrEmpty(manualCharge.CancellationNote))
                             {
-                                <div class="text-[10px] text-muted mt-1 italic truncate max-w-[100px]" title="@t.CancellationNote">⤵ @t.CancellationNote</div>
+                                <div class="text-[10px] text-muted mt-1 italic truncate max-w-[100px]" title="@manualCharge.CancellationNote">⤵ @manualCharge.CancellationNote</div>
                             }
                         </td>
                         <td class="text-right">
                             <div class="flex gap-1.5 justify-end items-center">
-                                @if (t.Durum != ChargeStatus.Cancelled && t.Durum != ChargeStatus.Paid)
+                                @if (manualCharge.Status != ChargeStatus.Cancelled && manualCharge.Status != ChargeStatus.Paid)
                                 {
-                                    <a href="/Payment/Ekle?tahakkukId=@t.Id.ToHashId()" class="btn btn-sm btn-primary">Ödeme</a>
+                                    <a href="/Payment/Create?chargeId=@manualCharge.Id.ToHashId()" class="btn btn-sm btn-primary">Ödeme</a>
                                 }
-                                @if (canCancel && t.Durum != ChargeStatus.Cancelled && t.Durum != ChargeStatus.Paid)
+                                @if (canCancel && manualCharge.Status != ChargeStatus.Cancelled && manualCharge.Status != ChargeStatus.Paid)
                                 {
                                     <button type="button" class="btn btn-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white"
                                         data-confirm="Bu manuel borcu iptal etmek istediğinize emin misiniz?"
                                         data-confirm-title="Manuel Borç İptali"
-                                        data-confirm-action="/ManualCharge/Iptal/@t.Id.ToHashId()"
+                                        data-confirm-action="/ManualCharge/Cancel/@manualCharge.Id.ToHashId()"
                                         data-confirm-method="POST"
                                         data-confirm-needs-reason="true"
                                         data-confirm-reason-label="İptal nedeni">
@@ -197,7 +186,7 @@
                             @if (canCreate)
                             {
                                 <div class="text-xs text-muted mt-1">
-                                    <a href="/ManualCharge/Ekle" class="text-primary font-semibold hover:underline">Manuel Borç Ekle</a> butonuyla ilk kaydı oluşturun.
+                                    <a href="/ManualCharge/Create" class="text-primary font-semibold hover:underline">Manuel Borç Ekle</a> butonuyla ilk kaydı oluşturun.
                                 </div>
                             }
                         </td>
@@ -238,7 +227,7 @@ document.querySelectorAll('[data-confirm]').forEach(btn => {
 
         const n = document.createElement('input');
         n.type = 'hidden';
-        n.name = 'neden';
+        n.name = 'Reason';
         n.value = neden;
         form.appendChild(n);
 

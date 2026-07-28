@@ -1,131 +1,115 @@
 using KiraTakip.Authorization;
-using KiraTakip.Data;
-using KiraTakip.Helpers;
-using KiraTakip.Models.Entities;
+using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Models.Dtos.PropertyType;
 using KiraTakip.Models.ViewModels;
-using KiraTakip.Repositories.Interfaces;
+using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KiraTakip.Controllers;
 
 [Authorize]
-[Route("Admin/TasinmazTipi")]
-public class AdminPropertyTypeController : Controller
+[Route("Admin/PropertyType")]
+public class AdminPropertyTypeController(IPropertyTypeService propertyTypeService) : Controller
 {
-    private readonly ITasinmazTipiRepository _repo;
-    private readonly IUnitOfWork _uow;
-
-    public AdminPropertyTypeController(ITasinmazTipiRepository repo, IUnitOfWork uow)
-    {
-        _repo = repo;
-        _uow = uow;
-    }
-
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.PropertyType.Module)]
     public async Task<IActionResult> Index()
     {
-        var list = await _repo.GetListAsync();
+        var list = await propertyTypeService.GetListAsync();
         return View(list);
     }
 
-    [HttpGet("Ekle")]
+    [HttpGet("Create")]
     [Authorize(Policy = PermissionCatalog.PropertyType.Module)]
     public async Task<IActionResult> Create()
     {
-        var nextSira = (await _repo.GetMaxSiraAsync()) + 1;
-        return View(new TasinmazTipiFormViewModel { Sira = nextSira, TekBirimDestekli = true });
+        var nextSortOrder = (await propertyTypeService.GetMaxSortOrderAsync()) + 1;
+        return View(new PropertyTypeFormViewModel { SortOrder = nextSortOrder, SupportsSingleUnit = true });
     }
 
-    [HttpPost("Ekle")]
+    [HttpPost("Create")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.PropertyType.Create)]
-    public async Task<IActionResult> Create(TasinmazTipiFormViewModel model)
+    public async Task<IActionResult> Create(PropertyTypeFormViewModel model)
     {
-        if (!model.TekBirimDestekli && !model.CokluBirimDestekli)
-            ModelState.AddModelError("birimYapisi", "En az bir birim yapısı seçilmelidir.");
-
         if (!ModelState.IsValid) return View(model);
 
-        var kod = CodeSlugger.ToCode(model.Ad);
-        if (await _repo.KodExistsAsync(kod))
+        try
         {
-            ModelState.AddModelError(nameof(model.Ad), "Bu ad zaten kullanılıyor. Farklı bir ad girin.");
+            await propertyTypeService.CreateAsync(new CreateInput(
+                model.Name,
+                model.SortOrder,
+                model.IsActive,
+                model.SupportsSingleUnit,
+                model.SupportsMultipleUnits
+            ));
+        }
+        catch (BusinessValidationException exception)
+        {
+            ModelState.AddModelError(exception.Field, exception.Message);
             return View(model);
         }
 
-        var entity = new PropertyType
-        {
-            Name = model.Ad,
-            Code = kod,
-            SortOrder = model.Sira,
-            IsActive = model.Aktif,
-            SupportsSingleUnit = model.TekBirimDestekli,
-            SupportsMultipleUnits = model.CokluBirimDestekli
-        };
-
-        await _repo.AddAsync(entity);
-        await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Name}' taşınmaz tipi eklendi.";
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpGet("Duzenle/{id}")]
+    [HttpGet("Edit/{id}")]
     [Authorize(Policy = PermissionCatalog.PropertyType.Module)]
     public async Task<IActionResult> Edit(int id)
     {
-        var entity = await _repo.GetByIdAsync(id);
+        var entity = await propertyTypeService.GetByIdAsync(id);
         if (entity == null) return NotFound();
         return View(ToFormVm(entity));
     }
 
-    [HttpPost("Duzenle/{id}")]
+    [HttpPost("Edit/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.PropertyType.Edit)]
-    public async Task<IActionResult> Edit(int id, [FromForm] TasinmazTipiFormViewModel model)
+    public async Task<IActionResult> Edit(int id, [FromForm] PropertyTypeFormViewModel model)
     {
         if (id != model.Id) return BadRequest();
 
-        if (!model.TekBirimDestekli && !model.CokluBirimDestekli)
-            ModelState.AddModelError("birimYapisi", "En az bir birim yapısı seçilmelidir.");
-
         if (!ModelState.IsValid) return View(model);
 
-        var entity = await _repo.GetByIdAsync(id);
-        if (entity == null) return NotFound();
+        try
+        {
+            await propertyTypeService.UpdateAsync(id, new EditInput(
+                model.Name,
+                model.SortOrder,
+                model.IsActive,
+                model.SupportsSingleUnit,
+                model.SupportsMultipleUnits
+            ));
+        }
+        catch (BusinessValidationException exception)
+        {
+            ModelState.AddModelError(exception.Field, exception.Message);
+            return View(model);
+        }
 
-        entity.Name = model.Ad;
-        entity.SortOrder = model.Sira;
-        entity.IsActive = model.Aktif;
-        entity.SupportsSingleUnit = model.TekBirimDestekli;
-        entity.SupportsMultipleUnits = model.CokluBirimDestekli;
-
-        await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Name}' güncellendi.";
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("DurumDegistir/{id}")]
+    [HttpPost("ToggleStatus/{id}")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.PropertyType.Edit)]
-    public async Task<IActionResult> DurumDegistir(int id)
+    public async Task<IActionResult> ToggleStatus(int id)
     {
-        var entity = await _repo.GetByIdAsync(id);
+        var entity = await propertyTypeService.GetByIdAsync(id);
         if (entity == null) return NotFound();
-        entity.IsActive = !entity.IsActive;
-        await _uow.SaveChangesAsync();
-        TempData["Success"] = $"'{entity.Name}' {(entity.IsActive ? "aktif" : "pasif")} yapıldı.";
+
+        await propertyTypeService.ToggleStatusAsync(id);
         return RedirectToAction(nameof(Index));
     }
 
-    private static TasinmazTipiFormViewModel ToFormVm(PropertyType e) => new()
+    private static PropertyTypeFormViewModel ToFormVm(PropertyType e) => new()
     {
         Id = e.Id,
-        Ad = e.Name,
-        Sira = e.SortOrder,
-        Aktif = e.IsActive,
-        TekBirimDestekli = e.SupportsSingleUnit,
-        CokluBirimDestekli = e.SupportsMultipleUnits
+        Name = e.Name,
+        SortOrder = e.SortOrder,
+        IsActive = e.IsActive,
+        SupportsSingleUnit = e.SupportsSingleUnit,
+        SupportsMultipleUnits = e.SupportsMultipleUnits
     };
 }

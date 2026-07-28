@@ -23,10 +23,10 @@ public class Lease : BaseEntity
     [Column("VadeGunu")]
     public int DueDay { get; set; } = 1;
 
-    [Column("StartDate")]
+    [Column("BaslangicTarihi")]
     public DateTime StartDate { get; set; }
 
-    [Column("EndDate")]
+    [Column("BitisTarihi")]
     public DateTime EndDate { get; set; }
 
     [Column("FesihTarihi")]

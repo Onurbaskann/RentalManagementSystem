@@ -1,158 +1,128 @@
 using KiraTakip.Authorization;
-using KiraTakip.Data;
+using KiraTakip.Extensions;
+using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models;
-using KiraTakip.Models.Common;
-using KiraTakip.Models.Entities;
+using KiraTakip.Models.Dtos;
+using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Controllers;
 
 [Authorize(Policy = "TenantUser")]
+[RequireKiraciId]
 [Authorize(Policy = PermissionCatalog.TenantPortal.Charge.Module)]
-[Route("Tenant/Tahakkuklarim")]
-public class TenantChargeController : Controller
+[Route("Tenant/Charges")]
+public class TenantChargeController(
+    IChargeService chargeService,
+    IPaymentService paymentService,
+    IDocumentService documentService,
+    ICurrentUserContext currentUserContext,
+    IPermissionScopeProvider permissionScopeProvider) : Controller
 {
-    private readonly IChargeService _chargeService;
-    private readonly IPaymentService _paymentService;
-    private readonly IDocumentService _documentService;
-    private readonly ApplicationDbContext _ctx;
-    private readonly UserManager<ApplicationUser> _userManager;
-
-    public TenantChargeController(
-        IChargeService tahakkukService,
-        IPaymentService odemeService,
-        IDocumentService documentService,
-        ApplicationDbContext ctx,
-        UserManager<ApplicationUser> userManager)
-    {
-        _chargeService = tahakkukService;
-        _paymentService = odemeService;
-        _documentService = documentService;
-        _ctx = ctx;
-        _userManager = userManager;
-    }
-
     [HttpGet("")]
-    public async Task<IActionResult> Index([FromQuery] TableQuery query)
+    public async Task<IActionResult> Index([FromQuery] TenantChargeQueryViewModel query)
     {
-        await _chargeService.UpdateDelaysAsync();
+        if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        // Query filter (DbContext) kiracı bazlı filtrelemeyi otomatik uygular.
-        var paged = await _chargeService.GetPagedAsync(query);
+        var tenantId = currentUserContext.TenantId!.Value;
+        var indexData = await chargeService.GetTenantChargeIndexAsync(
+            new GetTenantChargeIndexInput(
+                tenantId,
+                DateTime.Today,
+                new TenantChargeQueryInput(
+                    query.Page,
+                    query.Size,
+                    query.Q,
+                    query.Status,
+                    query.UnitId,
+                    query.Source,
+                    query.Year),
+                ScopePropertyIds(),
+                ScopeUnitIds()));
 
-        // Özet kartlar
-        var toplamTahakkuk = await _ctx.Charges
-            .Where(t => t.Status != ChargeStatus.Cancelled)
-            .SumAsync(t => (decimal?)t.TotalAmount) ?? 0m;
+        var viewModel = new TenantChargeIndexViewModel
+        {
+            Charges = indexData.Charges,
+            Query = query,
+            Status = query.Status ?? "tum",
+            TotalChargeAmount = indexData.TotalChargeAmount,
+            CollectedAmount = indexData.CollectedAmount,
+            RemainingDebtAmount = indexData.RemainingDebtAmount,
+            OverdueRemainingAmount = indexData.OverdueRemainingAmount,
+            Units = indexData.Units,
+            AvailableYears = indexData.AvailableYears,
+            CanReportPayment = User.HasModuleAccess(
+                PermissionCatalog.TenantPortal.Payment.Module)
+        };
 
-        var tahsilEdilen = await _ctx.PaymentAllocations
-            .Where(o => o.Status == PaymentStatus.Approved)
-            .SumAsync(o => (decimal?)o.Amount) ?? 0m;
-
-        var kalanBorc = await _ctx.Charges
-            .Where(t => t.Status == ChargeStatus.Pending
-                     || t.Status == ChargeStatus.PartiallyPaid
-                     || t.Status == ChargeStatus.Overdue)
-            .SumAsync(t => (decimal?)(t.TotalAmount - t.PaidAmount)) ?? 0m;
-
-        var gecikmisKalan = await _ctx.Charges
-            .Where(t => t.Status == ChargeStatus.Overdue)
-            .SumAsync(t => (decimal?)(t.TotalAmount - t.PaidAmount)) ?? 0m;
-
-        ViewBag.ToplamTahakkuk = toplamTahakkuk;
-        ViewBag.TahsilEdilen = tahsilEdilen;
-        ViewBag.KalanBorc = kalanBorc;
-        ViewBag.GecikmisKalan = gecikmisKalan;
-
-        ViewBag.Units = await _ctx.Units
-            .Where(b => _ctx.Leases.Any(s => s.UnitId == b.Id))
-            .OrderBy(b => b.Name)
-            .ToListAsync();
-        ViewBag.AvailableYears = await _ctx.Charges
-            .Select(t => t.PeriodStart.Year).Distinct()
-            .OrderByDescending(y => y).ToListAsync();
-
-        ViewBag.Query = query;
-        ViewBag.Status = query.Status ?? "tum";
-        return View(paged);
+        return View(viewModel);
     }
 
-    [HttpGet("Detay/{id:int}")]
+    [HttpGet("Details/{id}")]
     public async Task<IActionResult> Details(int id)
     {
-        var charge = await _chargeService.GetDetailsAsync(id);
-        if (charge == null) return NotFound();
+        var charge = await chargeService.GetTenantDetailsAsync(
+            new GetTenantChargeDetailsInput(
+                id,
+                currentUserContext.TenantId!.Value,
+                ScopePropertyIds(),
+                ScopeUnitIds()));
+        var paymentDocuments = await documentService.GetListsAsync(
+            new GetDocumentsForOwnersInput(
+                DocumentOwnerType.Payment,
+                charge.Allocations.Select(allocation => allocation.Id).ToList()));
 
-        var belgeTurleri = await _documentService.GetTurlerAsync(DocumentOwnerType.Payment);
-        var odemeIdleri = charge.Allocations.Select(o => o.Id).ToList();
-        var tumBelgeler = new Dictionary<int, List<Document>>();
-        foreach (var oid in odemeIdleri)
-            tumBelgeler[oid] = await _documentService.GetListAsync(DocumentOwnerType.Payment, oid);
-
-        ViewBag.DocumentTypes = belgeTurleri;
-        ViewBag.OdemeBelgeleri = tumBelgeler;
-
-        return View(charge);
+        return View(new TenantChargeDetailsViewModel
+        {
+            Charge = charge,
+            PaymentDocuments = paymentDocuments,
+            CanReportPayment = User.HasModuleAccess(
+                PermissionCatalog.TenantPortal.Payment.Module)
+        });
     }
 
-    [HttpPost("OdemeBildir")]
+    [HttpPost("ReportPayment")]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.Payment.Module)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> OdemeBildir(
-        int chargeId,
-        decimal tutar,
-        DateTime odemeTarihi,
-        PaymentChannel odemeKanali,
-        string? aciklama,
-        IFormFile? dekont)
+    public async Task<IActionResult> ReportPayment(TenantChargePaymentFormViewModel viewModel)
     {
-        var charge = await _ctx.Charges.FirstOrDefaultAsync(t => t.Id == chargeId);
-        if (charge == null) return NotFound();
-
-        var kalan = charge.TotalAmount - charge.PaidAmount;
-        if (tutar <= 0 || tutar > kalan)
+        if (!ModelState.IsValid)
         {
-            TempData["Error"] = $"Amount 0'dan büyük ve kalan borçtan ({kalan:N2} ₺) küçük/eşit olmalıdır.";
-            return RedirectToAction(nameof(Details), new { id = chargeId });
-        }
-        if (dekont == null || dekont.Length == 0)
-        {
-            TempData["Error"] = "Dekont yüklemeniz zorunludur.";
-            return RedirectToAction(nameof(Details), new { id = chargeId });
+            var message = ModelState.Values
+                .SelectMany(value => value.Errors)
+                .Select(error => error.ErrorMessage)
+                .FirstOrDefault(message => !string.IsNullOrWhiteSpace(message))
+                ?? "Ödeme bilgileri geçersizdir.";
+            throw new BusinessException(message);
         }
 
-        var userId = _userManager.GetUserId(User)!;
-        var payment = new PaymentAllocation
-        {
-            ChargeId = chargeId,
-            LeaseId = charge.LeaseId,
-            PaymentDate = odemeTarihi,
-            Amount = tutar,
-            PaymentChannel = odemeKanali,
-            PaymentSourceType = PaymentSourceType.Manual,
-            Description = aciklama,
-            CreatedByUserId = userId
-        };
-        await _paymentService.EkleAsync(payment);
+        using var stream = new MemoryStream();
+        await viewModel.Receipt!.CopyToAsync(stream);
 
-        // Dekont yükle
-        var turleri = await _documentService.GetTurlerAsync(DocumentOwnerType.Payment);
-        if (turleri.Any())
-        {
-            var belgeTuru = turleri.First();
-            if (dekont.Length <= belgeTuru.MaxSizeMb * 1024 * 1024)
-            {
-                using var ms = new MemoryStream();
-                await dekont.CopyToAsync(ms);
-                await _documentService.UploadAsync(DocumentOwnerType.Payment, payment.Id, belgeTuru.Id,
-                    dekont.FileName, dekont.ContentType, ms.ToArray(), invalidateOld: false);
-            }
-        }
+        await paymentService.ReportTenantPaymentAsync(new ReportTenantPaymentInput(
+            currentUserContext.TenantId!.Value,
+            viewModel.ChargeId,
+            viewModel.PaymentDate,
+            viewModel.Amount,
+            viewModel.PaymentChannel,
+            viewModel.Description,
+            currentUserContext.UserId!,
+            viewModel.Receipt.FileName,
+            viewModel.Receipt.ContentType,
+            stream.ToArray(),
+            new PaymentAccessScopeInput(ScopePropertyIds(), ScopeUnitIds())));
 
-        TempData["Success"] = "Ödeme bildiriminiz alındı. Yönetici onayı sonrası tahakkuka işlenecektir.";
-        return RedirectToAction(nameof(Details), new { id = chargeId });
+        return RedirectToAction(nameof(Details), new { id = viewModel.ChargeId });
     }
-}
+
+    private IReadOnlyList<int>? ScopePropertyIds()
+        => permissionScopeProvider.GlobalAccess
+            ? null
+            : permissionScopeProvider.AccessiblePropertyIds;
+
+    private IReadOnlyList<int>? ScopeUnitIds()
+        => permissionScopeProvider.GlobalAccess
+            ? null
+            : permissionScopeProvider.AccessibleUnitIds;}

@@ -1,23 +1,14 @@
-﻿@model KiraTakip.Models.ViewModels.AdminKullaniciIndexViewModel
-@using KiraTakip.Models.Entities
+@model KiraTakip.Models.ViewModels.AdminUserIndexViewModel
 @{
     ViewData["Title"] = "Kullanıcı Yönetimi";
-}
-
-@if (TempData["Success"] != null)
-{
-    <div class="alert-success mb-4">✓ @TempData["Success"]</div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert-danger mb-4">✕ @TempData["Error"]</div>
+    ViewData["UseCentralFeedback"] = true;
 }
 
 <div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Kullanıcı Yönetimi</div>
     </div>
-    <a href="/Admin/Kullanicilar/Davet" class="btn btn-primary">
+    <a href="/Admin/Users/Invite" class="btn btn-primary">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Davet Gönder
     </a>
@@ -30,14 +21,14 @@
                 :class="tab === 'ic' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-gray-700'"
                 @@click="tab = 'ic'">
             İç Kullanıcılar
-            <span class="ml-1.5 text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">@Model.IcKullanicilar.Count</span>
+            <span class="ml-1.5 text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">@Model.InternalUsers.Count</span>
         </button>
         <button type="button"
                 class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
                 :class="tab === 'tenant' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-gray-700'"
                 @@click="tab = 'tenant'">
             Kiracı Kullanıcıları
-            <span class="ml-1.5 text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">@Model.KiraciKullanicilar.Count</span>
+            <span class="ml-1.5 text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">@Model.TenantUsers.Count</span>
         </button>
     </div>
 
@@ -60,38 +51,38 @@
                         </tr>
                     </thead>
                     <tbody x-ref="tbody">
-                        @foreach (var u in Model.IcKullanicilar)
+                        @foreach (var user in Model.InternalUsers)
                         {
-                            var search = $"{u.AdSoyad} {u.Email} {u.Rol}".ToLower();
+                            var search = $"{user.FullName} {user.Email} {user.Role}".ToLower();
                             <tr data-row data-search="@search">
-                                <td class="font-semibold">@u.AdSoyad</td>
-                                <td class="text-sm text-muted">@u.Email</td>
+                                <td class="font-semibold">@user.FullName</td>
+                                <td class="text-sm text-muted">@user.Email</td>
                                 <td>
                                     @{
-                                        string rolCls = u.Rol switch {
+                                        string roleCssClass = user.Role switch {
                                             "Admin" => "badge-kurumsal",
                                             "Yonetici" => "badge-kirali",
                                             _ => "badge-bos"
                                         };
-                                        string rolLabel = u.Rol switch {
-                                            _ => u.Rol
+                                        string roleLabel = user.Role switch {
+                                            _ => user.Role
                                         };
                                     }
-                                    <span class="badge @rolCls">@rolLabel</span>
+                                    <span class="badge @roleCssClass">@roleLabel</span>
                                 </td>
                                 <td>
-                                    @if (u.IsActive)
+                                    @if (user.IsActive)
                                     { <span class="badge badge-kirali">Aktif</span> }
                                     else
                                     { <span class="badge badge-gecmis">Pasif</span> }
                                 </td>
                                 <td class="flex gap-1.5 justify-end">
-                                    <a href="/Admin/Kullanicilar/Duzenle/@u.Id" class="btn btn-sm btn-secondary">Düzenle</a>
-                                    <form method="post" action="/Admin/Kullanicilar/DurumDegistir/@u.Id"
-                                          data-confirm="@(u.IsActive ? "Kullanıcı pasif yapılsın mı? Oturum açamaz." : "Kullanıcı aktif yapılsın mı?")" class="inline">
+                                    <a href="/Admin/Users/Edit/@user.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                                    <form method="post" action="/Admin/Users/ToggleActive/@user.Id"
+                                          data-confirm="@(user.IsActive ? "Kullanıcı pasif yapılsın mı? Oturum açamaz." : "Kullanıcı aktif yapılsın mı?")" class="inline">
                                         @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-sm @(u.IsActive ? "btn-danger" : "btn-amber")">
-                                            @(u.IsActive ? "Pasif Yap" : "Aktif Yap")
+                                        <button type="submit" class="btn btn-sm @(user.IsActive ? "btn-danger" : "btn-amber")">
+                                            @(user.IsActive ? "Pasif Yap" : "Aktif Yap")
                                         </button>
                                     </form>
                                 </td>
@@ -115,12 +106,12 @@
             </div>
         </div>
 
-        @if (Model.BekleyenDavetler.Any())
+        @if (Model.PendingInvitations.Any())
         {
             <div class="mt-6">
                 <div class="page-header">
                     <div class="page-title text-base">Bekleyen Davetler</div>
-                    <div class="page-subtitle">@Model.BekleyenDavetler.Count adet gönderilmiş, yanıt bekleyen davet</div>
+                    <div class="page-subtitle">@Model.PendingInvitations.Count adet gönderilmiş, yanıt bekleyen davet</div>
                 </div>
                 <div class="card p-0 overflow-hidden">
                     <div class="table-wrapper">
@@ -134,18 +125,18 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var d in Model.BekleyenDavetler)
+                                @foreach (var invitation in Model.PendingInvitations)
                                 {
                                     <tr>
-                                        <td>@d.Email</td>
-                                        <td class="text-sm text-muted">@(d.FullName ?? "—")</td>
-                                        <td class="text-sm text-muted">@d.ExpiresAt.ToString("dd.MM.yyyy HH:mm")</td>
+                                        <td>@invitation.Email</td>
+                                        <td class="text-sm text-muted">@(invitation.FullName ?? "—")</td>
+                                        <td class="text-sm text-muted">@invitation.ExpiresAt.ToString("dd.MM.yyyy HH:mm")</td>
                                         <td class="flex gap-1.5 justify-end">
-                                            <form method="post" action="/Admin/Kullanicilar/DavetYenidenGonder/@d.Id" class="inline">
+                                            <form method="post" action="/Admin/Users/Invitation/Resend/@invitation.Id" class="inline">
                                                 @Html.AntiForgeryToken()
                                                 <button type="submit" class="btn btn-sm btn-secondary">Yeniden Gönder</button>
                                             </form>
-                                            <form method="post" action="/Admin/Kullanicilar/DavetIptal/@d.Id"
+                                            <form method="post" action="/Admin/Users/Invitation/Cancel/@invitation.Id"
                                                   data-confirm="Bu daveti iptal etmek istediğinizden emin misiniz?" class="inline">
                                                 @Html.AntiForgeryToken()
                                                 <button type="submit" class="btn btn-sm btn-danger">İptal Et</button>
@@ -181,24 +172,24 @@
                         </tr>
                     </thead>
                     <tbody x-ref="tbody">
-                        @foreach (var u in Model.KiraciKullanicilar)
+                        @foreach (var user in Model.TenantUsers)
                         {
-                            var search = $"{u.AdSoyad} {u.Email} {u.KiraciAd} {u.RolAd}".ToLower();
+                            var search = $"{user.FullName} {user.Email} {user.TenantName} {user.RoleName}".ToLower();
                             <tr data-row data-search="@search">
-                                <td class="font-semibold">@u.AdSoyad</td>
-                                <td class="text-sm text-muted">@u.Email</td>
+                                <td class="font-semibold">@user.FullName</td>
+                                <td class="text-sm text-muted">@user.Email</td>
                                 <td>
-                                    <a href="/Admin/Kiracilar/@u.KiraciId.ToHashId()/Kullanicilar" class="text-sm text-primary hover:underline">@u.KiraciAd</a>
+                                    <a href="/Admin/Tenants/@user.TenantId.ToHashId()/Users" class="text-sm text-primary hover:underline">@user.TenantName</a>
                                 </td>
-                                <td><span class="badge badge-bos">@u.RolAd</span></td>
+                                <td><span class="badge badge-bos">@user.RoleName</span></td>
                                 <td>
-                                    @if (u.IsActive)
+                                    @if (user.IsActive)
                                     { <span class="badge badge-kirali">Aktif</span> }
                                     else
                                     { <span class="badge badge-gecmis">Pasif</span> }
                                 </td>
                                 <td class="text-right">
-                                    <a href="/Admin/Kiracilar/@u.KiraciId.ToHashId()/Kullanicilar" class="btn btn-sm btn-secondary">Yönet</a>
+                                    <a href="/Admin/Tenants/@user.TenantId.ToHashId()/Users" class="btn btn-sm btn-secondary">Yönet</a>
                                 </td>
                             </tr>
                         }
@@ -221,5 +212,3 @@
         </div>
     </div>
 </div>
-
-

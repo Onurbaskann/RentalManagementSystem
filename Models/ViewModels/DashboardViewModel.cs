@@ -1,102 +1,86 @@
-﻿namespace KiraTakip.Models.ViewModels;
+namespace KiraTakip.Models.ViewModels;
 
 public class DashboardViewModel
 {
-    // Hero / kimlik
-    public string KullaniciAd { get; set; } = string.Empty;
-    public string KullaniciRol { get; set; } = string.Empty;
-    public string TarihEtiket { get; set; } = string.Empty;
+    public string UserName { get; set; } = string.Empty;
+    public string UserRole { get; set; } = string.Empty;
+    public string DateLabel { get; set; } = string.Empty;
 
-    public int ToplamTasinmaz { get; set; }
-    public Dictionary<string, int> TipiDagilim { get; set; } = [];
-    public int ToplamBirim { get; set; }
-    public int KiraliBirim { get; set; }
-    public int BosBirim { get; set; }
-    public int SuresiDolmakUzereBirim { get; set; }
-    public int AktifSozlesme { get; set; }
-    public int BuAyYenilenecek { get; set; }
-    public decimal AylikToplamGelir { get; set; }
-    public decimal YillikProj { get; set; }
-    public List<SuresiDolmakUzereSozlesme> SuresiDolmakUzere { get; set; } = [];
-    public List<BosBirimOzet> BosBirimler { get; set; } = [];
+    public int TotalProperties { get; set; }
+    public Dictionary<string, int> PropertyTypeDistribution { get; set; } = [];
+    public int TotalUnits { get; set; }
+    public int RentedUnits { get; set; }
+    public int VacantUnits { get; set; }
+    public int ExpiringLeaseUnits { get; set; }
+    public int ActiveLeases { get; set; }
+    public int RenewalsThisMonth { get; set; }
+    public decimal TotalMonthlyRevenue { get; set; }
+    public decimal ProjectedAnnualRevenue { get; set; }
+    public List<ExpiringLeaseSummary> ExpiringLeases { get; set; } = [];
+    public List<VacantUnitSummary> VacantUnitSummaries { get; set; } = [];
 
-    // Ödeme KPI'ları
-    public bool HasOdemeAccess { get; set; }
-    public decimal BuAyBeklenenTahsilat { get; set; }
-    public decimal BuAyTahsilEdilen { get; set; }
-    public int GecikmisTahakkukAdet { get; set; }
-    public decimal GecikmisTutarToplam { get; set; }
-    public int OnayBekleyenOdemeAdet { get; set; }
-    public int EslesmemisHareketAdet { get; set; }
+    public bool HasPaymentAccess { get; set; }
+    public decimal ExpectedCollectionThisMonth { get; set; }
+    public decimal CollectedThisMonth { get; set; }
+    public int OverdueChargeCount { get; set; }
+    public decimal TotalOverdueAmount { get; set; }
+    public int PendingPaymentApprovalCount { get; set; }
+    public int UnmatchedBankTransactionCount { get; set; }
 
-    // Reservation ve manuel borç metrikleri
-    public decimal BuAyManuelBorcToplami { get; set; }
-    public decimal BuAyRezervasyonGeliri { get; set; }
-    public int TahakkukaAktarilmamisRezervasyonAdet { get; set; }
+    public decimal ManualChargeTotalThisMonth { get; set; }
+    public decimal ReservationRevenueThisMonth { get; set; }
+    public int UntransferredReservationCount { get; set; }
 
-    // --- Yeni (Redesign) ---
-    // Trend / grafikler
-    public List<DashboardAylikNakit> AylikNakit { get; set; } = [];      // son 6 ay
-    public List<double> TahsilatOraniSparkline { get; set; } = [];        // son 6 ay yüzde (0..100)
-
-    // Tahsilat oranı (son 30 gün)
-    public decimal TahsilatOrani30Gun { get; set; }                       // 0..100
-
-    // Momentum — aylık gelir
-    public decimal AylikGelirGecenAy { get; set; }
-    public decimal AylikGelirDelta { get; set; }                          // % değişim (-100..+inf)
-
-    // Bugün vade dolan
-    public int BugunVadeDolanAdet { get; set; }
-    public decimal BugunVadeDolanTutar { get; set; }
-
-    // Top 5 gelir getiren taşınmaz (son 12 ay tahsilat)
-    public List<DashboardGelirTasinmaz> TopGelirTasinmaz { get; set; } = [];
-
-    // Top 5 gelir getiren kiracı (son 12 ay tahsilat)
-    public List<DashboardGelirKiraci> TopGelirKiraci { get; set; } = [];
-
-    public int AktifKiraciSayisi { get; set; }
+    public List<DashboardMonthlyCashFlow> MonthlyCashFlow { get; set; } = [];
+    public List<double> CollectionRateSparkline { get; set; } = [];
+    public decimal ThirtyDayCollectionRate { get; set; }
+    public decimal MonthlyRevenueLastMonth { get; set; }
+    public decimal MonthlyRevenueChange { get; set; }
+    public int ChargesDueTodayCount { get; set; }
+    public decimal ChargesDueTodayAmount { get; set; }
+    public List<DashboardPropertyRevenue> TopRevenueProperties { get; set; } = [];
+    public List<DashboardTenantRevenue> TopRevenueTenants { get; set; } = [];
+    public int ActiveTenantCount { get; set; }
 }
 
-public class DashboardAylikNakit
+public class DashboardMonthlyCashFlow
 {
-    public string AyEtiket { get; set; } = string.Empty; // "Oca", "Şub" vb.
-    public decimal Beklenen { get; set; }
-    public decimal Odenen { get; set; }
+    public string MonthLabel { get; set; } = string.Empty;
+    public decimal Expected { get; set; }
+    public decimal Collected { get; set; }
 }
 
-public class DashboardGelirTasinmaz
+public class DashboardPropertyRevenue
 {
-    public int TasinmazId { get; set; }
-    public string TasinmazAd { get; set; } = string.Empty;
-    public decimal ToplamTahsilat { get; set; }
-    public int BirimSayisi { get; set; }
-}
-
-public class DashboardGelirKiraci
-{
-    public int KiraciId { get; set; }
-    public string KiraciAd { get; set; } = string.Empty;
-    public decimal ToplamTahsilat { get; set; }
-    public int SozlesmeSayisi { get; set; }
-}
-
-public class SuresiDolmakUzereSozlesme
-{
-    public int SozlesmeId { get; set; }
-    public string KiraciAdi { get; set; } = string.Empty;
+    public int PropertyId { get; set; }
     public string PropertyName { get; set; } = string.Empty;
-    public string BirimAdi { get; set; } = string.Empty;
-    public int KalanGun { get; set; }
+    public decimal TotalCollected { get; set; }
+    public int UnitCount { get; set; }
+}
+
+public class DashboardTenantRevenue
+{
+    public int TenantId { get; set; }
+    public string TenantName { get; set; } = string.Empty;
+    public decimal TotalCollected { get; set; }
+    public int LeaseCount { get; set; }
+}
+
+public class ExpiringLeaseSummary
+{
+    public int LeaseId { get; set; }
+    public string TenantName { get; set; } = string.Empty;
+    public string PropertyName { get; set; } = string.Empty;
+    public string UnitName { get; set; } = string.Empty;
+    public int RemainingDays { get; set; }
     public DateTime EndDate { get; set; }
 }
 
-public class BosBirimOzet
+public class VacantUnitSummary
 {
-    public int BirimId { get; set; }
+    public int UnitId { get; set; }
     public string PropertyName { get; set; } = string.Empty;
-    public string BirimAdi { get; set; } = string.Empty;
-    public string Ilce { get; set; } = string.Empty;
-    public decimal Yuzolcumu { get; set; }
+    public string UnitName { get; set; } = string.Empty;
+    public string District { get; set; } = string.Empty;
+    public decimal Area { get; set; }
 }

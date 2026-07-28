@@ -1,24 +1,24 @@
 using KiraTakip.Data;
+using KiraTakip.Models.Dtos.AuditLog;
+using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
+using Microsoft.AspNetCore.Identity;
 using System.Security.Claims;
 
 namespace KiraTakip.Services;
 
-public class AuditService : IAuditService
+public class AuditService(
+    IHttpContextAccessor httpContextAccessor,
+    IAuditLogRepository auditLogRepository,
+    IApplicationUserRepository applicationUserRepository,
+    IUnitOfWork unitOfWork,
+    UserManager<ApplicationUser> userManager) : IAuditService
 {
-    private readonly ApplicationDbContext _db;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-
-    public AuditService(ApplicationDbContext db, IHttpContextAccessor httpContextAccessor)
-    {
-        _db = db;
-        _httpContextAccessor = httpContextAccessor;
-    }
-
     public async Task LogAsync(string eventType, string? entityType = null, string? entityId = null, string? details = null)
     {
-        var httpContext = _httpContextAccessor.HttpContext;
-        var log = new AuditLog
+        var httpContext = httpContextAccessor.HttpContext;
+
+        await auditLogRepository.AddAsync(new AuditLog
         {
             EventType = eventType,
             EntityType = entityType,
@@ -30,8 +30,73 @@ public class AuditService : IAuditService
                 : null,
             Details = details,
             CreatedAt = DateTime.UtcNow
+        });
+        await unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task<QueryResult> QueryAsync(QueryInput input, CancellationToken ct = default)
+    {
+        string? userId = null;
+        string? userNotFoundMessage = null;
+        var noResults = false;
+
+        if (!string.IsNullOrWhiteSpace(input.UserEmail))
+        {
+            var user = await userManager.FindByEmailAsync(input.UserEmail);
+            if (user != null)
+            {
+                userId = user.Id;
+            }
+            else
+            {
+                noResults = true;
+                userNotFoundMessage = $"\"{input.UserEmail}\" adresine sahip bir kullanıcı bulunamadı.";
+            }
+        }
+
+        var availableEventTypes = await auditLogRepository.GetDistinctEventTypesAsync(ct);
+        var availableEntityTypes = await auditLogRepository.GetDistinctEntityTypesAsync(ct);
+
+        if (noResults)
+        {
+            return new QueryResult
+            {
+                Rows = [],
+                TotalCount = 0,
+                AvailableEventTypes = availableEventTypes,
+                AvailableEntityTypes = availableEntityTypes,
+                UserNotFoundMessage = userNotFoundMessage
+            };
+        }
+
+        var (rows, totalCount) = await auditLogRepository.QueryAsync(
+            input.EventType, input.EntityType, input.StartDate, input.EndDate,
+            userId, input.Page, input.PageSize, ct);
+
+        var userIds = rows.Where(r => r.UserId != null).Select(r => r.UserId!).Distinct().ToList();
+        var userMap = await applicationUserRepository.GetDisplayNamesAsync(userIds, ct);
+
+        var resultRows = rows.Select(r => new RowResult
+        {
+            Id = r.Id,
+            EventType = r.EventType,
+            EntityType = r.EntityType,
+            EntityId = r.EntityId,
+            UserFullName = r.UserId != null && userMap.TryGetValue(r.UserId, out var u)
+                ? (u ?? r.UserId)
+                : r.UserId,
+            IpAddress = r.IpAddress,
+            Details = r.Details,
+            CreatedAt = r.CreatedAt
+        }).ToList();
+
+        return new QueryResult
+        {
+            Rows = resultRows,
+            TotalCount = totalCount,
+            AvailableEventTypes = availableEventTypes,
+            AvailableEntityTypes = availableEntityTypes,
+            UserNotFoundMessage = userNotFoundMessage
         };
-        _db.AuditLogs.Add(log);
-        await _db.SaveChangesAsync();
     }
 }

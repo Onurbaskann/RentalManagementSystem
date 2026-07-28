@@ -1,0 +1,1028 @@
+@model KiraTakip.Models.ViewModels.PropertyDetailsViewModel
+@using KiraTakip.Models
+@{
+    ViewData["Title"] = Model.Property.Name;
+    ViewData["UseCentralFeedback"] = true;
+    bool canCreateLease = User.HasPermission(PermissionCatalog.Lease.Create);
+    bool canCreateReservation = User.HasPermission(PermissionCatalog.Reservation.Create);
+    bool canEditProperty = User.HasPermission(PermissionCatalog.Property.Edit);
+    bool canManageRate = User.HasPermission(PermissionCatalog.Unit.OverrideRate);
+    var unitControllerName = nameof(KiraTakip.Controllers.UnitController)
+        .Replace("Controller", string.Empty);
+    var unitRatesActionName = nameof(KiraTakip.Controllers.UnitController.Rates);
+
+    string StatusBadge(OccupancyStatus d) => d switch
+    {
+        OccupancyStatus.Leased => "<span class='badge badge-kirali'>Kiralı</span>",
+        OccupancyStatus.ExpiringSoon => "<span class='badge badge-surek'>Süresi Dolmak Üzere</span>",
+        _ => "<span class='badge badge-bos'>Boş</span>"
+    };
+}
+
+@functions {
+    string FloorLabel(int? floorNo) => floorNo switch
+    {
+        null => "Kat Belirtilmemiş",
+        0 => "Zemin Kat",
+        < 0 => $"{Math.Abs(floorNo.Value)}. Bodrum",
+        _ => $"{floorNo}. Kat"
+    };
+}
+
+<div class="page-header flex items-start justify-between">
+    <div>
+        <a href="/Property" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
+            ← Taşınmazlar
+        </a>
+        <div class="page-title">@Model.Property.Name</div>
+        <div class="page-subtitle">@Model.Property.Neighborhood, @Model.Property.District / @Model.Property.City</div>
+    </div>
+    <div class="flex items-center gap-2">
+        @if (canEditProperty)
+        {
+            <a href="/Property/Edit/@Model.Property.Id.ToHashId()" class="btn btn-secondary">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                Düzenle
+            </a>
+        }
+        @if (canCreateLease)
+        {
+            <a href="/Lease/Create" class="btn btn-primary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                Sözleşme Ekle
+            </a>
+        }
+    </div>
+</div>
+
+<div id="detay-tabs">
+    <div class="tabs">
+        <button class="tab">Genel Bilgiler</button>
+        <button class="tab">Birimler (@Model.Property.Units.Count)</button>
+        <button class="tab">Sözleşme Geçmişi</button>
+        <button class="tab">Rezervasyonlar (@Model.Property.Reservations.Count)</button>
+        <button class="tab">Kira Tarifeleri</button>
+    </div>
+
+    <!-- Tab 1: Genel Bilgiler -->
+    <div class="tab-content">
+        <div class="three-col">
+            <div class="card">
+                <div class="card-title">Taşınmaz Tipi</div>
+                <div class="text-[18px] font-bold mb-1.5">@(Model.Property.PropertyTypeName)</div>
+                <div class="text-[13px] text-muted">
+                    @(Model.Property.UnitStructure == UnitStructure.MultipleUnits ? "Çoklu birim" : "Tek birim")
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Yüzölçüm</div>
+                @if (Model.Property.ClosedArea > 0)
+                {
+                    <div class="text-base font-bold">@Model.Property.ClosedArea.M2() <span class="text-[13px] font-normal text-muted">kapalı</span></div>
+                }
+                @if (Model.Property.OpenArea > 0)
+                {
+                    <div class="text-base font-bold mt-1">@Model.Property.OpenArea.M2() <span class="text-[13px] font-normal text-muted">açık</span></div>
+                }
+            </div>
+            @if (Model.Property.UnitStructure == UnitStructure.MultipleUnits)
+            {
+                var occupancyLeasedCount = Model.Property.Units.Count(b => b.Status == OccupancyStatus.Leased || b.Status == OccupancyStatus.ExpiringSoon);
+                var totalCount = Model.Property.Units.Count;
+                var occupancyVacantCount = totalCount - occupancyLeasedCount;
+                <div class="card">
+                    <div class="card-title">Doluluk Durumu</div>
+                    <div class="text-[22px] font-bold mt-1">@occupancyLeasedCount<span class="text-[15px] font-normal text-muted">/@totalCount</span></div>
+                    <div class="text-xs text-muted mt-0.5">birim kiralı</div>
+                    <div class="flex gap-3 mt-2.5 text-xs">
+                        <span class="text-[#065f46] font-semibold">● @occupancyLeasedCount kiralı</span>
+                        <span class="text-[#6b7c93] font-semibold">● @occupancyVacantCount boş</span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                var singleUnit = Model.Property.Units.FirstOrDefault();
+                var hasActiveLease = singleUnit?.ActiveLeaseId.HasValue == true;
+                var status = singleUnit?.Status ?? OccupancyStatus.Vacant;
+                <div class="card">
+                    <div class="card-title">Kira Durumu</div>
+                    @if (hasActiveLease)
+                    {
+                        <div class="mt-1.5">
+                            <span class="inline-block bg-[#ecfdf5] text-[#065f46] text-xs font-bold px-2.5 py-0.5 rounded-[10px]">
+                                @(status == OccupancyStatus.ExpiringSoon ? "Süresi Dolmak Üzere" : "Kiralı")
+                            </span>
+                        </div>
+                        <div class="text-sm font-semibold mt-2">@(singleUnit.ActiveLeaseTenantDisplayName ?? "—")</div>
+                        <div class="text-xs text-muted mt-0.5">
+                            Bitiş: @singleUnit.ActiveLeaseEndDate.Tarih()
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mt-1.5">
+                            <span class="inline-block bg-[#f1f5f9] text-[#475569] text-xs font-bold px-2.5 py-0.5 rounded-[10px]">Müsait</span>
+                        </div>
+                        <div class="text-xs text-muted mt-2">Aktif sözleşme yok</div>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-title mb-3.5">Adres Bilgileri</div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <div class="detail-label mb-0.5">İl</div>
+                    <div class="text-sm font-medium">@Model.Property.City</div>
+                </div>
+                <div>
+                    <div class="detail-label mb-0.5">İlçe</div>
+                    <div class="text-sm font-medium">@Model.Property.District</div>
+                </div>
+                <div>
+                    <div class="detail-label mb-0.5">Mahalle</div>
+                    <div class="text-sm font-medium">@Model.Property.Neighborhood</div>
+                </div>
+                <div>
+                    <div class="detail-label mb-0.5">Açık Adres</div>
+                    <div class="text-sm font-medium">@Model.Property.Address</div>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(Model.Property.Description))
+            {
+                <div class="mt-3.5 pt-3.5 border-t border-[var(--color-border)]">
+                    <div class="detail-label mb-1">Açıklama</div>
+                    <div class="text-sm">@Model.Property.Description</div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Tab 2: Units -->
+    <div class="tab-content">
+        @{
+            bool isMultiUnit = Model.Property.UnitStructure == UnitStructure.MultipleUnits;
+            int totalUnits = Model.Property.Units.Count;
+            int leasedCount = Model.Property.Units.Count(b => b.Status == OccupancyStatus.Leased || b.Status == OccupancyStatus.ExpiringSoon);
+            int vacantCount = totalUnits - leasedCount;
+        }
+
+        <!-- Unit Özet Kartları -->
+        <div class="grid grid-cols-3 gap-3 mb-6">
+            <div class="bg-white border border-[var(--color-border)] rounded-xl p-3.5 px-4.5">
+                <div class="text-[11px] font-semibold text-muted uppercase tracking-wider">Toplam Birim</div>
+                <div class="font-serif text-[28px] font-bold mt-1">@totalUnits</div>
+            </div>
+            <div class="bg-white border border-[var(--color-border)] rounded-xl p-3.5 px-4.5">
+                <div class="text-[11px] font-semibold text-[#065f46] uppercase tracking-wider">Kiralı</div>
+                <div class="font-serif text-[28px] font-bold text-[#065f46] mt-1">@leasedCount</div>
+            </div>
+            <div class="bg-white border border-[var(--color-border)] rounded-xl p-3.5 px-4.5">
+                <div class="text-[11px] font-semibold text-[#6b7c93] uppercase tracking-wider">Boş</div>
+                <div class="font-serif text-[28px] font-bold text-[#6b7c93] mt-1">@vacantCount</div>
+            </div>
+        </div>
+
+        @if (isMultiUnit)
+        {
+            var floorGroups = Model.Property.Units
+                .GroupBy(b => b.FloorNo)
+                .OrderByDescending(g => g.Key ?? int.MinValue)
+                .ToList();
+
+            var floorVacancyMapRaw = floorGroups.ToDictionary(
+                g => g.Key.HasValue ? g.Key.Value.ToString() : "none",
+                g => !g.Any(b => b.ActiveLeaseId.HasValue)
+            );
+            var floorLeaseMapRaw = floorGroups.ToDictionary(
+                g => g.Key.HasValue ? g.Key.Value.ToString() : "none",
+                g => g.Any(b => b.ActiveLeaseId.HasValue)
+            );
+            var floorSearchDataMapRaw = floorGroups.ToDictionary(
+                g => g.Key.HasValue ? g.Key.Value.ToString() : "none",
+                g => g.Select(b => ((b.UnitNo ?? "") + " " + (b.Name ?? "") + " " + (b.ActiveLeaseTenantDisplayName ?? "")).ToLowerInvariant()).ToList()
+            );
+            var floorVacancyMapJson = System.Text.Json.JsonSerializer.Serialize(floorVacancyMapRaw);
+            var floorLeaseMapJson = System.Text.Json.JsonSerializer.Serialize(floorLeaseMapRaw);
+            var floorSearchDataMapJson = System.Text.Json.JsonSerializer.Serialize(floorSearchDataMapRaw);
+
+            <div x-data='{ "filter": "tum", "openFloors": {}, "search": "", "viewMode": "card", "katBosMap": @Html.Raw(floorVacancyMapJson), "katKiraliMap": @Html.Raw(floorLeaseMapJson), "katSearchDataMap": @Html.Raw(floorSearchDataMapJson) }'
+                 x-init="
+                    $watch('filter', v => {
+                        if (v !== 'tum') {
+                            for (const [k, hasEmpty] of Object.entries(katBosMap)) {
+                                if (v === 'bos') openFloors[k] = hasEmpty;
+                                else if (v === 'kirali') openFloors[k] = katKiraliMap[k];
+                                else openFloors[k] = false;
+                            }
+                        }
+                    });
+                    $watch('search', v => {
+                        if (v !== '') {
+                            for (const [k, terms] of Object.entries(katSearchDataMap)) {
+                                if (terms.some(t => t.includes(v.toLowerCase()))) openFloors[k] = true;
+                            }
+                        }
+                    })">
+
+                <!-- Filtre Bar -->
+                <div class="flex items-center gap-2.5 mb-6 flex-wrap">
+                    <select x-model="filter" class="form-control w-auto min-w-[150px] text-[13px] py-1.5 px-2.5">
+                        <option value="tum">Tüm Birimler</option>
+                        <option value="bos">Boş</option>
+                        <option value="kirali">Kiralı</option>
+                    </select>
+                    <input type="text" x-model="search" placeholder="Birim veya kiracı ara..." class="form-control w-[180px] text-[13px] py-1.5 px-2.5" />
+                    <button type="button" class="btn btn-sm btn-secondary" x-show="viewMode === 'table'"
+                        @@click="filter = 'tum'; Object.keys(katBosMap).forEach(k => { openFloors[k] = true })">
+                        Tümünü Aç
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" x-show="viewMode === 'table'"
+                        @@click="filter = 'tum'; Object.keys(katBosMap).forEach(k => { openFloors[k] = false })">
+                        Tümünü Kapat
+                    </button>
+                    <div class="ml-auto flex items-center gap-1">
+                        <button type="button" @@click="viewMode = 'table'" title="Tablo görünümü"
+                                class="btn btn-sm w-8 h-8 p-0 flex items-center justify-center"
+                                :class="viewMode === 'table' ? 'btn-primary' : 'btn-secondary'">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="17" width="18" height="4" rx="1"/>
+                            </svg>
+                        </button>
+                        <button type="button" @@click="viewMode = 'card'" title="Kart görünümü"
+                                class="btn btn-sm w-8 h-8 p-0 flex items-center justify-center"
+                                :class="viewMode === 'card' ? 'btn-primary' : 'btn-secondary'">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                                <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tablo Görünümü -->
+                <div x-show="viewMode === 'table'">
+                @foreach (var group in floorGroups)
+                {
+                    var floorKey = group.Key.HasValue ? group.Key.Value.ToString() : "none";
+                    int floorUnitCount = group.Count();
+                    int floorVacantCount = group.Count(b => !b.ActiveLeaseId.HasValue);
+                    int floorLeasedCount = floorUnitCount - floorVacantCount;
+                    int floorReservableCount = group.Count(b => b.CanBeReserved);
+                    int leasedPercentage = floorUnitCount > 0 ? floorLeasedCount * 100 / floorUnitCount : 0;
+
+                    <div class="mb-2 rounded-lg shadow-sm"
+                         x-show="!(filter === 'kirali' && !katKiraliMap['@floorKey']) &&
+                                  !(filter === 'bos' && !katBosMap['@floorKey']) &&
+                                  !(search !== '' && !(katSearchDataMap['@floorKey'] || []).some(t => t.includes(search.toLowerCase())))">
+                        <!-- Accordion Header -->
+                        <div @@click="openFloors['@floorKey'] = !openFloors['@floorKey']"
+                            class="flex items-center gap-2.5 p-2.5 px-3.5 bg-white border border-[var(--color-border)] rounded-lg cursor-pointer select-none transition-colors duration-150"
+                            :class="openFloors['@floorKey'] ? 'rounded-b-none border-b-transparent bg-primary-light border-[#a3e0d2]' : 'hover:bg-[#fafbfc]'">
+                            <svg :class="openFloors['@floorKey'] ? 'rotate-90' : ''"
+                                 class="transition-transform duration-200 flex-shrink-0"
+                                 width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5">
+                                <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                            <span class="text-[13px] font-bold text-primary">@FloorLabel(group.Key)</span>
+                            <span class="text-xs text-muted font-medium ml-0.5">@floorUnitCount birim</span>
+                            <div class="flex-1 flex items-center gap-2 min-w-0 mx-1">
+                                <div class="flex-1 h-1.5 bg-[#e8f0ee] rounded-full overflow-hidden">
+                                    <div class="h-full bg-[var(--color-primary)] rounded-full" style="width: @leasedPercentage%"></div>
+                                </div>
+                                <span class="text-[11px] text-muted whitespace-nowrap">@floorLeasedCount/@floorUnitCount kiralı@(floorReservableCount > 0 ? $" · {floorReservableCount} rez" : "")</span>
+                            </div>
+                        </div>
+
+                        <!-- Accordion Body -->
+                        <div x-show="openFloors['@floorKey']" x-cloak>
+                            <div class="card p-0 overflow-hidden rounded-t-none border-t-0">
+                                <div class="table-wrapper m-0">
+                                    <table class="table-fixed w-full">
+                                        <colgroup>
+                                            <col class="w-[72px]" />
+                                            <col class="w-auto" />
+                                            <col class="w-[80px]" />
+                                            <col class="w-[130px]" />
+                                            <col class="w-auto" />
+                                            <col class="w-[125px]" />
+                                            <col class="w-[140px]" />
+                                            <col class="w-[110px]" />
+                                        </colgroup>
+                                        <thead>
+                                            <tr>
+                                                <th>No</th>
+                                                <th>Ad</th>
+                                                <th>m²</th>
+                                                <th>Durum</th>
+                                                <th>Kiracı</th>
+                                                <th>Bitiş</th>
+                                                <th>Bedel</th>
+                                                <th class="text-right pr-3.5">İşlem</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var b in group.OrderBy(x => x.UnitNo))
+                                            {
+                                                var statusData = b.ActiveLeaseId.HasValue ? "kirali" : "bos";
+                                                var searchData = ((b.UnitNo ?? "") + " " + (b.Name ?? "")).ToLowerInvariant();
+                                                var rowHref = b.ActiveLeaseId.HasValue
+                                                    ? $"/Lease/Details/{b.ActiveLeaseId}"
+                                                    : ((b.CanBeReserved ? canCreateReservation : canCreateLease)
+                                                        ? (b.CanBeReserved 
+                                                            ? Url.Action(
+                                                                nameof(KiraTakip.Controllers.ReservationController.Create),
+                                                                nameof(KiraTakip.Controllers.ReservationController).Replace("Controller", ""),
+                                                                new { unitId = b.Id }) ?? ""
+                                                            : (b.CanBeRented ? $"/Lease/Create?unitId={b.Id}" : "")) 
+                                                        : "");
+                                                <tr data-durum="@statusData"
+                                                    data-search="@searchData"
+                                                    @Html.Raw(rowHref != "" ? $"data-href=\"{rowHref}\"" : "")
+                                                    class="@(rowHref != "" ? "cursor-pointer hover:bg-[#f7f9fb]" : "") transition-colors duration-100"
+                                                    @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)"
+                                                    x-show="(filter === 'tum' || $el.getAttribute('data-durum') === filter) && (search === '' || ($el.getAttribute('data-search') || '').includes(search.toLowerCase()))">
+                                                    <td>
+                                                        <span class="font-mono text-[13px] font-bold text-primary bg-primary-light px-2 py-0.5 rounded-md">@b.UnitNo</span>
+                                                    </td>
+                                                    <td class="font-semibold text-[13.5px]">@b.Name</td>
+                                                    <td>
+                                                        <span class="font-mono text-[12.5px] text-muted">@b.Area.ToString("N0")</span>
+                                                        <span class="text-[11px] text-muted">m²</span>
+                                                    </td>
+                                                    <td>
+                                                        @if (!b.CanBeRented && !b.CanBeReserved)
+                                                        {
+                                                            <span class="badge badge-bos">Kiralanamaz</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            @Html.Raw(StatusBadge(b.Status))
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (b.ActiveLeaseId.HasValue)
+                                                        {
+                                                            <a href="/Tenant/Details/@b.ActiveLeaseTenantId.ToHashId()" class="font-semibold text-primary no-underline text-[13px] hover:underline">@b.ActiveLeaseTenantDisplayName</a>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-[#c8cfd8]">—</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (b.ActiveLeaseId.HasValue && b.ActiveLeaseEndDate.HasValue)
+                                                        {
+                                                            var remainingDays = (int)(b.ActiveLeaseEndDate.Value - DateTime.Now).TotalDays;
+                                                            <div class="flex items-center gap-1.5">
+                                                                <span class="text-[13px] font-medium">@b.ActiveLeaseEndDate.Value.Tarih()</span>
+                                                                @if (remainingDays <= 30)
+                                                                {
+                                                                    <span class="day-badge @(remainingDays <= 10 ? "day-badge-red" : "day-badge-amber") text-[10.5px] px-1.5 py-0.5">@remainingDays g</span>
+                                                                }
+                                                            </div>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-[#c8cfd8]">—</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (b.CanBeReserved)
+                                                        {
+                                                            @if (b.ReservationRateOverrideId.HasValue)
+                                                            {
+                                                                <span class="font-serif font-bold text-[13.5px]">@b.ReservationPeriodRate.Tl(0)</span>
+                                                                <span class="text-[11px] text-muted ml-0.5">/ @b.ReservationBillingPeriodMinutes dk</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="text-[#c8cfd8] text-xs">genel tarife</span>
+                                                            }
+                                                        }
+                                                        else if (b.ActiveLeaseId.HasValue)
+                                                        {
+                                                            <div>
+                                                                <span class="font-serif font-bold text-sm">@b.MonthlyRent.Tl(0)</span>
+                                                                <span class="text-[11px] text-muted ml-0.5">/ay</span>
+                                                            </div>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-[#c8cfd8]">—</span>
+                                                        }
+                                                    </td>
+                                                    <td data-stop>
+                                                        <div class="flex items-center justify-end gap-1.5">
+                                                            @if (b.CanBeReserved)
+                                                            {
+                                                                @if (canCreateReservation)
+                                                                {
+                                                                    <a href="@Url.Action(
+                                                                            nameof(KiraTakip.Controllers.ReservationController.Create),
+                                                                            nameof(KiraTakip.Controllers.ReservationController).Replace("Controller", ""),
+                                                                            new { unitId = b.Id.ToHashId() })"
+                                                                       class="btn btn-sm btn-primary">Rezervasyon</a>
+                                                                }
+                                                            }
+                                                            else if (b.CanBeRented)
+                                                            {
+                                                                @if (b.ActiveLeaseId.HasValue)
+                                                                {
+                                                                    <a href="/Lease/Details/@b.ActiveLeaseId.ToHashId()" class="btn btn-sm btn-secondary">Sözleşme</a>
+                                                                }
+                                                                else if (canCreateLease)
+                                                                {
+                                                                    <a href="/Lease/Create?unitId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Kiraya Ver</a>
+                                                                }
+                                                            }
+                                                            @if (canManageRate)
+                                                            {
+                                                                <div x-data="{ open: false }" class="relative">
+                                                                    <button type="button" @@click="open = !open"
+                                                                            class="btn btn-sm btn-secondary w-7 h-[30px] p-0 flex items-center justify-center">
+                                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                                                                            <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+                                                                        </svg>
+                                                                    </button>
+                                                                    <div x-show="open" @@click.outside="open = false" x-cloak
+                                                                         class="absolute right-0 mt-1 bg-white border border-[var(--color-border)] rounded-lg shadow-lg z-20 min-w-[150px] py-1">
+                                                                        <a asp-controller="@unitControllerName" asp-action="@unitRatesActionName"
+                                                                           asp-route-id="@b.Id.ToHashId()"
+                                                                           class="flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--color-text)] hover:bg-[#f7f9fb] no-underline">
+                                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                                                <line x1="12" y1="1" x2="12" y2="23"/>
+                                                                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                                                                            </svg>
+                                                                            Özel Fiyat
+                                                                        </a>
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                </div>
+
+                <!-- Kart Görünümü -->
+                <div x-show="viewMode === 'card'" x-cloak>
+                @foreach (var group in floorGroups)
+                {
+                    var floorKey = group.Key.HasValue ? group.Key.Value.ToString() : "none";
+
+                    <div class="mb-5"
+                         x-show="!(filter === 'kirali' && !katKiraliMap['@floorKey']) &&
+                                  !(filter === 'bos' && !katBosMap['@floorKey']) &&
+                                  !(search !== '' && !(katSearchDataMap['@floorKey'] || []).some(t => t.includes(search.toLowerCase())))">
+                        <div class="text-[11px] font-bold text-muted uppercase tracking-wider mb-2.5 px-0.5">@FloorLabel(group.Key)</div>
+                        <div class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-2.5">
+                            @foreach (var b in group.OrderBy(x => x.UnitNo))
+                            {
+                                var statusData = b.ActiveLeaseId.HasValue ? "kirali" : "bos";
+                                var searchData = ((b.UnitNo ?? "") + " " + (b.Name ?? "") + " " + (b.ActiveLeaseTenantDisplayName ?? "")).ToLowerInvariant();
+                                var cardHref = b.ActiveLeaseId.HasValue
+                                    ? $"/Lease/Details/{b.ActiveLeaseId}"
+                                    : ((b.CanBeReserved ? canCreateReservation : canCreateLease)
+                                        ? (b.CanBeReserved 
+                                            ? Url.Action(
+                                                nameof(KiraTakip.Controllers.ReservationController.Create),
+                                                nameof(KiraTakip.Controllers.ReservationController).Replace("Controller", ""),
+                                                new { unitId = b.Id }) ?? ""
+                                            : (b.CanBeRented ? $"/Lease/Create?unitId={b.Id}" : "")) 
+                                        : "");
+                                var isNotRentable = !b.CanBeRented && !b.CanBeReserved;
+                                var cardBg = isNotRentable
+                                    ? "border-l-slate-300 bg-slate-50 opacity-80"
+                                    : (b.Status switch {
+                                        OccupancyStatus.Leased => "border-l-[var(--color-primary)] bg-[#f0faf7]",
+                                        OccupancyStatus.ExpiringSoon => "border-l-amber-400 bg-[#fffbeb]",
+                                        _ => "border-l-[#d1d9e0] bg-white"
+                                    });
+                                var typeChip = b.CanBeReserved
+                                    ? ("bg-sky-50 text-sky-700 border-sky-200", "●")
+                                    : b.CanBeRented
+                                        ? ("bg-emerald-50 text-emerald-700 border-emerald-200", "●")
+                                        : ("bg-slate-100 text-slate-500 border-slate-200", "○");
+                                <div @Html.Raw(cardHref != "" ? $"data-href=\"{cardHref}\"" : "")
+                                     data-durum="@statusData"
+                                     data-search="@searchData"
+                                     class="relative flex flex-col border border-[var(--color-border)] border-l-4 @cardBg rounded-lg px-3.5 py-3.5 @(cardHref != "" ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md" : "") transition-all duration-200"
+                                     @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)"
+                                     x-show="(filter === 'tum' || $el.getAttribute('data-durum') === filter) && (search === '' || ($el.getAttribute('data-search') || '').includes(search.toLowerCase()))">
+                                    @if (canManageRate)
+                                    {
+                                        <a asp-controller="@unitControllerName" asp-action="@unitRatesActionName"
+                                           asp-route-id="@b.Id.ToHashId()" data-stop title="Özel Fiyat"
+                                           class="absolute top-1.5 right-1.5 w-6 h-6 flex items-center justify-center rounded bg-white border border-[var(--color-border)] text-muted hover:text-primary hover:border-primary transition-colors text-[12px] font-bold no-underline leading-none">₺</a>
+                                    }
+                                    <div class="font-mono font-bold text-primary leading-none mb-2"
+                                         style="font-size: clamp(16px, 2vw, 22px)">@b.UnitNo</div>
+                                    <div class="text-[12px] text-muted font-medium">@b.Area.M2()</div>
+                                    @if (b.ActiveLeaseTenantDisplayName != null)
+                                    {
+                                        <div class="text-[10.5px] font-semibold text-slate-600 mt-1 truncate" title="@b.ActiveLeaseTenantDisplayName">@b.ActiveLeaseTenantDisplayName</div>
+                                    }
+                                    <div class="mt-auto pt-2.5">
+                                        <span class="inline-flex items-center gap-1 text-[9.5px] font-semibold px-1.5 py-0.5 rounded border @typeChip.Item1 max-w-full truncate" title="@b.UnitTypeName">
+                                            <span class="opacity-60 text-[8px]">@typeChip.Item2</span>@b.UnitTypeName
+                                        </span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+                </div>
+
+                <!-- Boş durum -->
+                <div x-show="Object.keys(katBosMap).every(k =>
+                        (filter === 'kirali' && !katKiraliMap[k]) ||
+                        (filter === 'bos' && !katBosMap[k]) ||
+                        (search !== '' && !(katSearchDataMap[k] || []).some(t => t.includes(search.toLowerCase())))
+                    )" x-cloak
+                     class="flex flex-col items-center justify-center py-14 text-muted">
+                    <svg class="mb-3 opacity-25" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <p class="text-sm font-medium">Bu filtreye uygun birim bulunamadı</p>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card p-0 overflow-hidden">
+                <div class="table-wrapper m-0">
+                    <table class="table-fixed w-full">
+                        <colgroup>
+                            <col class="w-auto" />
+                            <col class="w-[90px]" />
+                            <col class="w-[140px]" />
+                            <col class="w-auto" />
+                            <col class="w-[130px]" />
+                            <col class="w-[140px]" />
+                            <col class="w-[110px]" />
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Birim</th>
+                                <th>Yüzölçüm</th>
+                                <th>Durum</th>
+                                <th>Kiracı</th>
+                                <th>Bitiş Tarihi</th>
+                                <th>Bedel</th>
+                                <th class="text-center">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var b in Model.Property.Units)
+                            {
+                                <tr>
+                                    <td class="font-semibold">@b.Name</td>
+                                    <td>
+                                        <span class="font-mono text-[12.5px] text-muted">@b.Area.M2()</span>
+                                    </td>
+                                    <td>
+                                        @if (!b.CanBeRented && !b.CanBeReserved)
+                                        {
+                                            <span class="badge badge-bos">Kiralanamaz</span>
+                                        }
+                                        else
+                                        {
+                                            @Html.Raw(StatusBadge(b.Status))
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (b.ActiveLeaseId.HasValue)
+                                        {
+                                            <a href="/Tenant/Details/@b.ActiveLeaseTenantId.ToHashId()" class="font-semibold text-primary no-underline text-[13px] hover:underline">@b.ActiveLeaseTenantDisplayName</a>
+                                        }
+                                        else
+                                        {
+
+                                            <span class="text-[#c8cfd8]">—</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (b.ActiveLeaseId.HasValue && b.ActiveLeaseEndDate.HasValue)
+                                        {
+                                            var remainingDays = (int)(b.ActiveLeaseEndDate.Value - DateTime.Now).TotalDays;
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-[13px] font-medium">@b.ActiveLeaseEndDate.Value.Tarih()</span>
+                                                @if (remainingDays <= 30)
+                                                {
+                                                    <span class="day-badge @(remainingDays <= 10 ? "day-badge-red" : "day-badge-amber") text-[10.5px] px-1.5 py-0.5">@remainingDays g</span>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+
+                                            <span class="text-[#c8cfd8]">—</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (b.CanBeReserved)
+                                        {
+                                            @if (b.ReservationRateOverrideId.HasValue)
+                                            {
+                                                <span class="font-serif font-bold text-[13.5px]">@b.ReservationPeriodRate.Tl(0)</span>
+                                                <span class="text-[11px] text-muted ml-0.5">/ @b.ReservationBillingPeriodMinutes dk</span>
+                                            }
+                                            else
+                                            {
+
+                                                <span class="text-[#c8cfd8] text-xs">genel tarife</span>
+                                            }
+                                        }
+                                        else if (b.ActiveLeaseId.HasValue)
+                                        {
+                                            <div>
+                                                <span class="font-serif font-bold text-sm">@b.MonthlyRent.Tl(0)</span>
+                                                <span class="text-[11px] text-muted ml-0.5">/ay</span>
+                                            </div>
+                                        }
+                                        else
+                                        {
+
+                                            <span class="text-[#c8cfd8]">—</span>
+                                        }
+                                    </td>
+                                    <td class="text-center flex gap-1 justify-center flex-wrap">
+                                        @if (b.CanBeReserved)
+                                        {
+                                            @if (canCreateReservation)
+                                            {
+                                                <a href="@Url.Action(
+                                                        nameof(KiraTakip.Controllers.ReservationController.Create),
+                                                        nameof(KiraTakip.Controllers.ReservationController).Replace("Controller", ""),
+                                                        new { unitId = b.Id.ToHashId() })"
+                                                   class="btn btn-sm btn-primary">Rezervasyon</a>
+                                            }
+                                        }
+                                        else if (b.CanBeRented)
+                                        {
+                                            @if (b.ActiveLeaseId.HasValue)
+                                            {
+                                                <a href="/Lease/Details/@b.ActiveLeaseId.ToHashId()" class="btn btn-sm btn-secondary">Sözleşme</a>
+                                            }
+                                            else if (canCreateLease)
+                                            {
+                                                <a href="/Lease/Create?unitId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Kiraya Ver</a>
+                                            }
+                                        }
+                                        @if (canManageRate)
+                                        {
+                                            <a asp-controller="@unitControllerName" asp-action="@unitRatesActionName"
+                                               asp-route-id="@b.Id.ToHashId()" class="btn btn-sm btn-secondary" title="Özel Fiyatlar">₺</a>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Tab 3: Sözleşme Geçmişi -->
+    <div class="tab-content">
+        @{
+            var allLeases = Model.Property.LeaseHistory
+                .OrderByDescending(s => s.StartDate)
+                .ToList();
+        }
+        @if (!allLeases.Any())
+        {
+            <div class="p-8 text-center text-muted">Henüz sözleşme kaydı yok.</div>
+        }
+        else
+        {
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Birim</th>
+                            <th>Kiracı</th>
+                            <th>Başlangıç</th>
+                            <th>Bitiş</th>
+                            <th>Bedel <span class="text-[10.5px] font-normal text-muted">(tam ay)</span></th>
+                            <th>Durum</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in allLeases)
+                        {
+                            bool isActive = s.StartDate <= DateTime.Now && s.EndDate >= DateTime.Now;
+                            bool isExpiringSoon = isActive && (s.EndDate - DateTime.Now).TotalDays <= 30;
+                            <tr>
+                                <td class="font-semibold">@s.UnitName</td>
+                                <td>
+                                    <a href="/Tenant/Details/@s.TenantId.ToHashId()" class="text-primary no-underline font-medium hover:underline">@s.TenantDisplayName</a>
+                                </td>
+                                <td>@s.StartDate.Tarih()</td>
+                                <td>@s.EndDate.Tarih()</td>
+                                <td class="font-semibold">@s.MonthlyAmount.Tl(0)/ay</td>
+                                <td>
+                                    @if (isExpiringSoon)
+                                    {
+                                        <span class="badge badge-surek">Dolmak Üzere</span>
+                                    }
+                                    else if (isActive)
+                                    {
+
+                                        <span class="badge badge-kirali">Aktif</span>
+                                    }
+                                    else
+                                    {
+
+                                        <span class="badge badge-gecmis">Geçmiş</span>
+                                    }
+                                </td>
+                                <td><a href="/Lease/Details/@s.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <!-- Tab 4: Rezervasyonlar -->
+    <div class="tab-content">
+        @if (!Model.Property.Reservations.Any())
+        {
+            <div class="p-8 text-center text-muted">Henüz rezervasyon kaydı yok.</div>
+        }
+        else
+        {
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Birim</th>
+                            <th>Kiracı</th>
+                            <th>Başlangıç</th>
+                            <th>Bitiş</th>
+                            <th>Süre</th>
+                            <th>Tutar</th>
+                            <th>Durum</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model.Property.Reservations)
+                        {
+                            var reservationStatusBadge = r.Status switch
+                            {
+                                ReservationStatus.Planned => "<span class='badge bg-blue-100 text-blue-800'>Planlandı</span>",
+                                ReservationStatus.Completed => "<span class='badge badge-kirali'>Tamamlandı</span>",
+                                ReservationStatus.Cancelled => "<span class='badge badge-gecmis'>İptal</span>",
+                                ReservationStatus.TransferredToCharge => "<span class='badge badge-surek'>Aktarıldı</span>",
+                                _ => "<span class='badge'>—</span>"
+                            };
+                            <tr>
+                                <td class="font-semibold">@r.UnitName</td>
+                                <td>
+                                    <a href="/Tenant/Details/@r.TenantId.ToHashId()" class="text-primary no-underline font-medium hover:underline">@r.TenantDisplayName</a>
+                                </td>
+                                <td>@r.StartDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td>@r.EndDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td>
+                                    <span class="font-mono text-[12.5px]">@r.TotalDurationMinutes dk</span>
+                                    @if (r.FreeDurationMinutes > 0)
+                                    {
+                                        <span class="text-[11px] text-muted"> (@r.FreeDurationMinutes dk ücretsiz)</span>
+                                    }
+                                </td>
+                                <td class="font-semibold">@r.TotalAmount.ToString("N0") ₺</td>
+                                <td>@Html.Raw(reservationStatusBadge)</td>
+                                <td>
+                                    <a href="@Url.Action(
+                                            nameof(KiraTakip.Controllers.ReservationController.Details),
+                                            nameof(KiraTakip.Controllers.ReservationController).Replace("Controller", ""),
+                                            new { id = r.Id.ToHashId() })"
+                                       class="btn btn-sm btn-secondary">Detay</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <!-- Tab 5: Kira Tarifeleri -->
+    <div class="tab-content">
+
+        <!-- Bölüm 1: Taşınmaz Tarifeleri (Genel Tarife) -->
+        <div class="flex justify-between items-center mb-3.5 pb-3 border-b-2 border-[var(--color-border)]">
+            <div>
+                <div class="text-[15px] font-bold">Taşınmaz Tarifeleri</div>
+                <div class="text-xs text-muted mt-1">Sözleşme oluşturulurken varsayılan olarak kullanılır. Birim bazlı özel fiyat tanımlıysa bu tarife geçersiz kalır.</div>
+            </div>
+        </div>
+
+        <div class="table-wrapper overflow-x-auto m-0 mb-8">
+            <table class="table table-bordered min-w-[800px]">
+                <thead>
+                    <tr>
+                        <th class="w-[180px]">Kiracı Kategorisi</th>
+                        @foreach (var col in Model.PricingMatrix.Columns)
+                        {
+                            <th class="text-center">
+                                <div class="text-[11px] text-muted mb-0.5">@col.ChargeTypeCode</div>
+                                <div class="text-[13px]">@col.ChargeTypeName</div>
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.PricingMatrix?.Rows == null || Model.PricingMatrix.Rows.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="@(Model.PricingMatrix?.Columns?.Count + 1 ?? 1)" class="text-center py-6 text-slate-400 text-sm">
+                                Tanımlı fiyat parametresi bulunmuyor.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var row in Model.PricingMatrix.Rows)
+                        {
+                            <tr>
+                                <td class="font-semibold align-middle bg-[#fafbfc]">@row.TenantCategoryName</td>
+                                @foreach (var cell in row.Cells)
+                                {
+                                    <td class="p-3 text-center @(cell.HasRate ? "" : "bg-[#f9fafb]")">
+                                        @if (cell.HasRate)
+                                        {
+                                            <div class="font-serif font-bold text-[15px]">
+                                                @cell.UnitValue?.ToString("N2") ₺
+                                                <small class="font-sans text-[11px] font-normal text-muted">
+                                                    @(cell.CalculationMethod == CalculationMethod.Fixed ? "/sabit" : "/m²")
+                                                </small>
+                                            </div>
+                                            <div class="text-[11px] text-muted mt-1">KDV: %@cell.VatRate?.ToString("N0")</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="text-[#c8cfd8] text-xs">Tanımsız</div>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Bölüm 2: Birim Özel Fiyatları -->
+        <div class="flex justify-between items-center mb-3.5 pb-3 border-b-2 border-[var(--color-border)]">
+            <div>
+                <div class="text-[15px] font-bold">Birim Özel Fiyatları</div>
+                <div class="text-xs text-muted mt-1">Aşağıdaki birimler için taşınmaz tarifesi yerine bu özel fiyatlar geçerlidir.</div>
+            </div>
+        </div>
+
+        @if (Model.Property.UnitCustomRates.Any())
+        {
+            <div class="mb-8">
+                @foreach (var unitSummary in Model.Property.UnitCustomRates)
+                {
+                    <div class="card mb-2.5 p-0 overflow-hidden">
+                        <div class="flex items-center justify-between p-2.5 px-4 bg-[#fafbfc] border-b border-[var(--color-border)]">
+                            <div class="flex items-center gap-2.5">
+                                @if (!string.IsNullOrEmpty(unitSummary.UnitNo))
+                                {
+                                    <span class="font-mono text-[13px] font-bold text-primary bg-primary-light px-2 py-0.5 rounded-md">@unitSummary.UnitNo</span>
+                                }
+                                <span class="text-[13.5px] font-bold">@(unitSummary.UnitName ?? "—")</span>
+                                <span class="badge badge-kirali text-[10.5px]">@unitSummary.Rates.Count özel fiyat</span>
+                            </div>
+                            @if (canManageRate)
+                            {
+                                <a asp-controller="@unitControllerName" asp-action="@unitRatesActionName"
+                                   asp-route-id="@unitSummary.UnitId.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
+                            }
+                        </div>
+                        <div class="table-wrapper m-0">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Kiracı Kategorisi</th>
+                                        <th>Ücret Tipi</th>
+                                        <th>Hesaplama</th>
+                                        <th>Fiyat</th>
+                                        <th>KDV</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var r in unitSummary.Rates)
+                                    {
+                                        <tr>
+                                            <td class="font-semibold">@r.TenantCategoryName</td>
+                                            <td>@r.ChargeTypeName</td>
+                                            <td class="text-xs text-muted">@(r.CalculationMethod == CalculationMethod.Fixed ? "Sabit" : "m² bazlı")</td>
+                                            <td class="font-serif font-bold">@r.UnitValue.ToString("N2") ₺</td>
+                                            <td class="text-[12.5px] text-muted">%@r.VatRate.ToString("N0")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="p-3.5 px-4.5 bg-[#f9fafb] border border-[var(--color-border)] rounded-lg text-[13px] text-muted mb-8">
+                Tüm birimler için taşınmaz tarifeleri geçerlidir. Birim bazlı özel fiyat tanımlı değil.
+            </div>
+        }
+
+        <!-- Bölüm 3: Rezervasyon Ücret Kuralları -->
+        @{
+            var reservationUnits = Model.Property.Units.Where(b => b.CanBeReserved).ToList();
+        }
+        @if (reservationUnits.Any())
+        {
+            <div class="flex justify-between items-center mb-3.5 pb-3 border-b-2 border-[var(--color-border)]">
+                <div>
+                    <div class="text-[15px] font-bold">Rezervasyon Ücret Kuralları</div>
+                    <div class="text-xs text-muted mt-1">Rezervasyon birimi olan birimlerin saatlik/periyotluk ücretlendirme kuralları.</div>
+                </div>
+            </div>
+            <div class="table-wrapper m-0">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Birim</th>
+                            <th>Kural</th>
+                            <th>Periyot Ücreti</th>
+                            <th>Periyot</th>
+                            <th>Ücretsiz Süre</th>
+                            <th>KDV</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var b in reservationUnits)
+                        {
+                            var customRule = Model.Property.UnitReservationRateOverrides.FirstOrDefault(k => k.UnitId == b.Id);
+                            var activeRule = customRule;
+                            <tr>
+                                <td class="font-semibold">@(b.Name ?? b.UnitNo)</td>
+                                <td>
+                                    @if (customRule != null)
+                                    {
+                                        <span class="badge badge-kirali">Özel</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-xs text-muted">Tanımsız</span>
+                                    }
+                                </td>
+                                @if (activeRule != null)
+                                {
+                                    <td class="font-semibold">@activeRule.PeriodRate.ToString("N0") ₺</td>
+                                    <td>@activeRule.BillingPeriodMinutes dk</td>
+                                    <td>@activeRule.FreeDurationMinutes dk</td>
+                                    <td>%@activeRule.VatRate.ToString("N0")</td>
+                                }
+                                else
+                                {
+                                    <td colspan="4" class="text-[#c8cfd8] text-xs">Kural tanımlı değil</td>
+                                }
+                                <td>
+                                    @if (canManageRate)
+                                    {
+                                        <a asp-controller="@unitControllerName" asp-action="@unitRatesActionName"
+                                           asp-route-id="@b.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>initTabs('detay-tabs');</script>
+}

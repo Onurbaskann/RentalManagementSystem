@@ -1,21 +1,22 @@
-@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.OdemeListItemDto>
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.PaymentListItemDto>
 @using KiraTakip.Models
 @using KiraTakip.Models.Common
 @{
     ViewData["Title"] = "Ödemeler";
-    int? tahakkukId = ViewBag.ChargeId;
-    string durum = ViewBag.Durum ?? "tum";
-    var q = (TableQuery)ViewBag.Query;
+    ViewData["UseCentralFeedback"] = true;
+    int? chargeId = ViewBag.ChargeId;
+    string status = ViewBag.Status ?? "tum";
+    var tableQuery = (TableQuery)ViewBag.Query;
     bool canApprove = User.HasPermission(PermissionCatalog.Payment.Approve);
 
-    var extra = q.ToQueryDict();
-    if (tahakkukId.HasValue) extra["tahakkukId"] = tahakkukId.Value.ToString();
-    var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/Payment", Extra = extra };
+    var extraQuery = tableQuery.ToQueryDict();
+    if (chargeId.HasValue) extraQuery["chargeId"] = chargeId.Value.ToString();
+    var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/Payment", Extra = extraQuery };
 }
 
 <div class="page-header flex items-center justify-between">
     <div>
-        @if (tahakkukId.HasValue)
+        @if (chargeId.HasValue)
         {
             <a href="/Charge" class="text-[12.5px] text-muted hover:text-primary transition-colors inline-flex items-center gap-1 mb-2 no-underline">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
@@ -27,23 +28,17 @@
     </div>
 </div>
 
-@if (TempData["Success"] != null)
-{
-    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg mb-4 text-[13.5px] font-medium">
-        ✓ @TempData["Success"]
-    </div>
-}
 
-@if (!tahakkukId.HasValue)
+@if (!chargeId.HasValue)
 {
     <div class="flex gap-1.5 flex-wrap mb-5">
         @{
-            var oFilters = new[] { ("tum","Tümü"), ("onaybekliyor","Onay Bekliyor"), ("onaylandi","Onaylandı"), ("reddedildi","Reddedildi") };
+            var paymentFilters = new[] { ("tum","Tümü"), ("onaybekliyor","Onay Bekliyor"), ("onaylandi","Onaylandı"), ("reddedildi","Reddedildi") };
         }
-        @foreach (var (key, label) in oFilters)
+        @foreach (var (key, label) in paymentFilters)
         {
-            bool isActive = durum == key;
-            var url = key == "tum" ? "/Payment" : $"/Payment?durum={key}";
+            bool isActive = status == key;
+            var url = key == "tum" ? "/Payment" : $"/Payment?status={key}";
             <a href="@url" class="btn btn-sm @(isActive ? "btn-primary" : "btn-secondary text-slate-600 bg-white border-slate-200")">@label</a>
         }
     </div>
@@ -51,28 +46,28 @@
 
 <div class="card p-0 overflow-hidden">
     <form method="get" class="flex flex-wrap items-center gap-3 p-3 bg-slate-50/50 border-b border-slate-200" action="/Payment">
-        <input type="search" name="q" value="@q.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: kiracı, açıklama…" />
+        <input type="search" name="q" value="@tableQuery.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: kiracı, açıklama…" />
         <div class="flex items-center gap-2">
             @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
-                { "Name", "from" }, { "Value", q.From?.ToString("yyyy-MM-dd") ?? "" },
+                { "Name", "from" }, { "Value", tableQuery.From?.ToString("yyyy-MM-dd") ?? "" },
                 { "Mode", "date" }, { "Field", "from" }, { "Compact", true }, { "WrapperClass", "w-36" }
             })
             <span class="text-muted">–</span>
             @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData) {
-                { "Name", "to" }, { "Value", q.To?.ToString("yyyy-MM-dd") ?? "" },
+                { "Name", "to" }, { "Value", tableQuery.To?.ToString("yyyy-MM-dd") ?? "" },
                 { "Mode", "date" }, { "Field", "to" }, { "Compact", true }, { "WrapperClass", "w-36" }
             })
         </div>
         <div class="flex items-center gap-2">
-            <input type="number" name="min" value="@q.Min?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-24 text-xs font-medium" placeholder="Min ₺" />
-            <input type="number" name="max" value="@q.Max?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-24 text-xs font-medium" placeholder="Max ₺" />
+            <input type="number" name="min" value="@tableQuery.Min?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-24 text-xs font-medium" placeholder="Min ₺" />
+            <input type="number" name="max" value="@tableQuery.Max?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control w-24 text-xs font-medium" placeholder="Max ₺" />
         </div>
-        @if (durum != "tum") { <input type="hidden" name="durum" value="@durum" /> }
-        @if (tahakkukId.HasValue) { <input type="hidden" name="tahakkukId" value="@tahakkukId" /> }
+        @if (status != "tum") { <input type="hidden" name="status" value="@status" /> }
+        @if (chargeId.HasValue) { <input type="hidden" name="chargeId" value="@chargeId" /> }
         <button type="submit" class="btn btn-primary btn-sm px-4">Filtrele</button>
-        @if (!string.IsNullOrEmpty(q.Q) || q.From.HasValue || q.To.HasValue || q.Min.HasValue || q.Max.HasValue)
+        @if (!string.IsNullOrEmpty(tableQuery.Q) || tableQuery.From.HasValue || tableQuery.To.HasValue || tableQuery.Min.HasValue || tableQuery.Max.HasValue)
         {
-            <a href="/Payment@(durum != "tum" ? $"?durum={durum}" : "")" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
+            <a href="/Payment@(status != "tum" ? $"?status={status}" : "")" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
         }
     </form>
     <div class="table-wrapper">
@@ -82,7 +77,7 @@
                     <th class="w-28">Tarih</th>
                     <th>Kiracı</th>
                     <th class="w-32">Dönem</th>
-                    <th class="w-32 num">Amount</th>
+                    <th class="w-32 num">Tutar</th>
                     <th class="w-24 cell-center">Kanal</th>
                     <th class="w-32">Giren</th>
                     <th class="w-36">Durum</th>
@@ -90,33 +85,33 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var o in Model.Items)
+                @foreach (var payment in Model.Items)
                 {
-                    string durumCls = o.Status switch {
+                    string statusClass = payment.Status switch {
                         PaymentStatus.Approved    => "badge-kirali",
                         PaymentStatus.Rejected   => "badge-gecmis",
                         _                        => "badge-surek"
                     };
-                    string durumLabel = o.Status switch {
+                    string statusLabel = payment.Status switch {
                         PaymentStatus.Approved    => "Onaylandı",
                         PaymentStatus.Rejected   => "Reddedildi",
                         _                        => "Onay Bekliyor"
                     };
-                    string kanalLabel = o.PaymentChannel switch {
+                    string channelLabel = payment.PaymentChannel switch {
                         PaymentChannel.BankTransfer => "Havale",
                         PaymentChannel.Eft    => "EFT",
                         PaymentChannel.Cash  => "Nakit",
                         _                  => "Diğer"
                     };
                     <tr>
-                        <td>@o.PaymentDate.ToString("dd.MM.yyyy")</td>
-                        <td class="font-semibold">@o.TenantDisplayName</td>
-                        <td class="text-muted">@o.ChargePeriodStart.ToString("MMMM yyyy")</td>
-                        <td class="num">@o.Amount.ToString("N2") ₺</td>
-                        <td class="cell-center">@kanalLabel</td>
-                        <td class="text-muted truncate max-w-[120px]">@(o.GirenUserGosterimAdi ?? "—")</td>
-                        <td><span class="badge @durumCls">@durumLabel</span></td>
-                        <td class="text-right"><a href="/Payment/Detay/@o.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
+                        <td>@payment.PaymentDate.Tarih()</td>
+                        <td class="font-semibold">@payment.TenantDisplayName</td>
+                        <td class="text-muted">@payment.ChargePeriodStart.ToString("MMMM yyyy")</td>
+                        <td class="num">@payment.Amount.Tl()</td>
+                        <td class="cell-center">@channelLabel</td>
+                        <td class="text-muted truncate max-w-[120px]">@(payment.CreatedByUserDisplayName ?? "—")</td>
+                        <td><span class="badge @statusClass">@statusLabel</span></td>
+                        <td class="text-right"><a href="/Payment/Details/@payment.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
                     </tr>
                 }
                 @if (Model.Total == 0)

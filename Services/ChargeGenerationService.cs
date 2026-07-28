@@ -1,48 +1,39 @@
 using KiraTakip.Data;
+using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
-using KiraTakip.Models.DTOs;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
 
 namespace KiraTakip.Services;
 
-public class ChargeGenerationService : IChargeGenerationService, ITransactionalService
+public class ChargeGenerationService(
+    IChargeRepository chargeRepository,
+    IChargeTypeRepository chargeTypeRepository,
+    IUnitOfWork uow,
+    IRateResolverService rateResolver,
+    ILeaseRepository leaseRepository,
+    IUnitRepository unitRepository,
+    ITenantRepository tenantRepository) : IChargeGenerationService, ITransactionalService
 {
-    private readonly IChargeRepository _chargeRepo;
-    private readonly IUnitOfWork _uow;
-    private readonly IRateResolverService _rateResolver;
-    private readonly ILeaseRepository _leaseRepo;
-    private readonly IUnitRepository _unitRepo;
-
-    public ChargeGenerationService(
-        IChargeRepository chargeRepo,
-        IUnitOfWork uow,
-        IRateResolverService rateResolver,
-        ILeaseRepository leaseRepo,
-        IUnitRepository unitRepo)
+    public async Task GenerateForLeaseAsync(GenerateLeaseChargesInput input)
     {
-        _chargeRepo = chargeRepo;
-        _uow = uow;
-        _rateResolver = rateResolver;
-        _leaseRepo = leaseRepo;
-        _unitRepo = unitRepo;
-    }
-
-    public async Task GenerateForLeaseAsync(int leaseId)
-    {
-        var lease = await _leaseRepo.GetByIdAsync(leaseId);
-        if (lease == null) return;
+        var lease = Guard.NotFound(
+            await leaseRepository.GetByIdAsync(input.LeaseId),
+            $"Sözleşme {input.LeaseId} bulunamadı.",
+            "Lease.NotFound");
 
         foreach (var periodStartDate in GetPeriods(lease.StartDate, lease.EndDate))
         {
-            var exists = await _chargeRepo.AnyAsync(t => t.LeaseId == leaseId
+            var exists = await chargeRepository.AnyAsync(t => t.LeaseId == input.LeaseId
                 && t.PeriodStart == periodStartDate
                 && t.SourceType == ChargeSourceType.Lease);
             if (exists) continue;
 
             var proRata = CalculateProRataMultiplier(periodStartDate, lease.StartDate, lease.EndDate);
-            var composedPreviews = await ComposeLineItemsAsync(lease.UnitId, lease.TenantId, periodStartDate, leaseId);
+            var composedPreviews = await ComposeLineItemsAsync(
+                new ComposeLeaseLineItemsInput(lease.UnitId, lease.TenantId, periodStartDate, input.LeaseId));
             var lineItems = new List<ChargeLineItem>();
 
             foreach (var preview in composedPreviews)
@@ -73,7 +64,7 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
             {
                 TenantId = lease.TenantId,
                 UnitId = lease.UnitId,
-                LeaseId = leaseId,
+                LeaseId = input.LeaseId,
                 PeriodStart = periodStartDate,
                 PeriodEnd = periodEnd,
                 DueDate = CalculateDueDate(periodStartDate, lease.DueDateRuleType, lease.DueDay),
@@ -86,29 +77,37 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
                 LineItems = lineItems
             };
 
-            await _chargeRepo.AddAsync(charge);
+            await chargeRepository.AddAsync(charge);
         }
 
-        await _uow.SaveChangesAsync();
+        await uow.SaveChangesAsync();
     }
 
-    public async Task RegenerateAsync(int leaseId, DateTime startDate)
+    public async Task RegenerateAsync(RegenerateLeaseChargesInput input)
     {
-        var firstDay = new DateTime(startDate.Year, startDate.Month, 1);
-        var toDelete = await _chargeRepo.GetSilineceklerAsync(leaseId, firstDay);
-        await _chargeRepo.DeleteRangeAsync(toDelete);
-        await _uow.SaveChangesAsync();
-        await GenerateForLeaseAsync(leaseId);
+        Guard.NotFound(
+            await leaseRepository.GetByIdAsync(input.LeaseId),
+            $"Sözleşme {input.LeaseId} bulunamadı.",
+            "Lease.NotFound");
+
+        var firstDay = new DateTime(input.StartDate.Year, input.StartDate.Month, 1);
+        var toDelete = await chargeRepository.GetSilineceklerAsync(input.LeaseId, firstDay);
+
+        await chargeRepository.DeleteRangeAsync(toDelete);
+        await uow.SaveChangesAsync();
+        await GenerateForLeaseAsync(new GenerateLeaseChargesInput(input.LeaseId));
     }
 
-    public async Task RecalculatePendingDueDatesAsync(int leaseId)
+    public async Task RecalculatePendingDueDatesAsync(RecalculateLeaseDueDatesInput input)
     {
-        var lease = await _leaseRepo.GetByIdAsync(leaseId);
-        if (lease == null) return;
+        var lease = Guard.NotFound(
+            await leaseRepository.GetByIdAsync(input.LeaseId),
+            $"Sözleşme {input.LeaseId} bulunamadı.",
+            "Lease.NotFound");
 
         var targetStatuses = new[] { ChargeStatus.Pending, ChargeStatus.PartiallyPaid, ChargeStatus.Overdue };
-        var pendingCharges = await _chargeRepo.GetAllAsync(t =>
-            t.LeaseId == leaseId
+        var pendingCharges = await chargeRepository.GetAllAsync(t =>
+            t.LeaseId == input.LeaseId
             && t.SourceType == ChargeSourceType.Lease
             && targetStatuses.Contains(t.Status));
 
@@ -128,14 +127,19 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
                         : ChargeStatus.Pending;
         }
 
-        await _uow.SaveChangesAsync();
+        await uow.SaveChangesAsync();
     }
 
-    public async Task CancelFutureChargesAsync(int leaseId, DateTime terminationDate)
+    public async Task CancelFutureChargesAsync(CancelFutureLeaseChargesInput input)
     {
-        var firstDay = new DateTime(terminationDate.Year, terminationDate.Month, 1).AddMonths(1);
-        var toCancel = await _chargeRepo.GetAllAsync(t =>
-            t.LeaseId == leaseId
+        Guard.NotFound(
+            await leaseRepository.GetByIdAsync(input.LeaseId),
+            $"Sözleşme {input.LeaseId} bulunamadı.",
+            "Lease.NotFound");
+
+        var firstDay = new DateTime(input.TerminationDate.Year, input.TerminationDate.Month, 1).AddMonths(1);
+        var toCancel = await chargeRepository.GetAllAsync(t =>
+            t.LeaseId == input.LeaseId
             && t.PeriodStart >= firstDay
             && t.Status != ChargeStatus.Paid
             && t.SourceType == ChargeSourceType.Lease);
@@ -144,7 +148,7 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
             t.Status = ChargeStatus.Cancelled;
 
         if (toCancel.Count > 0)
-            await _uow.SaveChangesAsync();
+            await uow.SaveChangesAsync();
     }
 
     private static DateTime CalculateDueDate(DateTime periodStartDate, DueDateRuleType ruleType, int dueDay)
@@ -170,6 +174,7 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
             return 1.0m;
 
         var dayCount = (activeEnd - activeStart).Days + 1;
+
         return Math.Min(1.0m, (decimal)dayCount / 30m);
     }
 
@@ -184,12 +189,32 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
         }
     }
 
-    public async Task<IList<ChargeLineItemPreview>> ComposeLineItemsAsync(int unitId, int tenantId, DateTime period, int? leaseId = null)
+    public async Task<IList<ChargeLineItemPreview>> ComposeLineItemsAsync(ComposeLeaseLineItemsInput input)
     {
-        var unit = await _unitRepo.GetByIdAsync(unitId);
-        if (unit == null) return new List<ChargeLineItemPreview>();
+        var unit = Guard.NotFound(
+            await unitRepository.GetByIdAsync(input.UnitId),
+            "Birim bulunamadı.",
+            "Unit.NotFound");
+        EnsureScope(unit.PropertyId, unit.Id, input.AccessScope);
 
-        var activeChargeTypes = await _chargeRepo.GetAktifUretimBorcTipleriAsync();
+        Guard.NotFound(
+            await tenantRepository.GetByIdAsync(input.TenantId),
+            "Kiracı bulunamadı.",
+            "Tenant.NotFound");
+
+        if (input.LeaseId.HasValue)
+        {
+            var lease = Guard.NotFound(
+                await leaseRepository.GetDetailsAsync(input.LeaseId.Value),
+                $"Sözleşme {input.LeaseId.Value} bulunamadı.",
+                "Lease.NotFound");
+            Guard.Against(
+                lease.UnitId != input.UnitId || lease.TenantId != input.TenantId,
+                "Sözleşme, birim ve kiracı bilgileri birbiriyle uyuşmuyor.",
+                "Lease.PricingContextMismatch");
+        }
+
+        var activeChargeTypes = await chargeTypeRepository.GetActiveGenerationTypesAsync();
         var previewList = new List<ChargeLineItemPreview>();
 
         foreach (var ct in activeChargeTypes)
@@ -197,20 +222,25 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
             if (ct.Behavior == ChargeTypeBehavior.FirstMonthOneTime)
             {
                 DateTime? start = null;
-                if (leaseId.HasValue)
+                if (input.LeaseId.HasValue)
                 {
-                    start = await _leaseRepo.GetByIdAsync<DateTime?>(leaseId.Value, s => s.StartDate);
+                    start = await leaseRepository.GetByIdAsync<DateTime?>(input.LeaseId.Value, s => s.StartDate);
                 }
                 else
                 {
-                    start = period;
+                    start = input.Period;
                 }
 
-                if (start.HasValue && (period.Year != start.Value.Year || period.Month != start.Value.Month))
+                if (start.HasValue && (input.Period.Year != start.Value.Year || input.Period.Month != start.Value.Month))
                     continue;
             }
 
-            RateSnapshot? snapshot = await _rateResolver.ResolveAsync(leaseId, tenantId, unitId, ct.Id, period);
+            RateSnapshot? snapshot = await rateResolver.ResolveAsync(
+                input.LeaseId,
+                input.TenantId,
+                input.UnitId,
+                ct.Id,
+                input.Period);
 
             if (snapshot != null)
             {
@@ -259,5 +289,22 @@ public class ChargeGenerationService : IChargeGenerationService, ITransactionalS
         }
 
         return previewList;
+    }
+
+    private static void EnsureScope(
+        int propertyId,
+        int unitId,
+        LeaseAccessScopeInput? accessScope)
+    {
+        if (accessScope == null
+            || (accessScope.PropertyIds == null && accessScope.UnitIds == null))
+            return;
+
+        var propertyAccess = accessScope.PropertyIds?.Contains(propertyId) == true;
+        var unitAccess = accessScope.UnitIds?.Contains(unitId) == true;
+        Guard.Forbidden(
+            !propertyAccess && !unitAccess,
+            "Bu birim yetki kapsamınızın dışındadır.",
+            "Lease.UnitOutOfScope");
     }
 }

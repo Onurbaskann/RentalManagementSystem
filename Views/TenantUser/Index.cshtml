@@ -1,30 +1,21 @@
-@model KiraTakip.Models.ViewModels.KiraciKullaniciListeViewModel
-@using KiraTakip.Models.Entities
+@model KiraTakip.Models.ViewModels.TenantUserListViewModel
+@using KiraTakip.Infrastructure.Hashids
 @{
     Layout = "_KiraciLayout";
     ViewData["Title"] = "Kullanıcılar";
+    ViewData["UseCentralFeedback"] = true;
+    var controllerName = nameof(KiraTakip.Controllers.TenantUserController).Replace("Controller", "");
 }
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert-success mb-4">✓ @TempData["Success"]</div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert-danger mb-4">✕ @TempData["Error"]</div>
-}
 
 <div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Kullanıcılar</div>
-        <div class="page-subtitle">@Model.Kullanicilar.Count kayıtlı kullanıcı</div>
+        <div class="page-subtitle">@Model.Users.Count kayıtlı kullanıcı</div>
     </div>
     @if (Model.CanInvite)
     {
-        <a href="/Tenant/Kullanicilar/Davet" class="btn btn-primary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Davet Gönder
-        </a>
+        <a asp-controller="@controllerName" asp-action="@nameof(KiraTakip.Controllers.TenantUserController.Invite)" class="btn btn-primary">Davet Gönder</a>
     }
 </div>
 
@@ -35,106 +26,69 @@
     </div>
     <div class="table-wrapper">
         <table>
-            <thead>
-                <tr>
-                    <th>Ad Soyad</th>
-                    <th>E-posta</th>
-                    <th>Rol</th>
-                    <th>Durum</th>
-                    <th></th>
-                </tr>
-            </thead>
+            <thead><tr><th>Ad Soyad</th><th>E-posta</th><th>Rol</th><th>Durum</th><th></th></tr></thead>
             <tbody x-ref="tbody">
-                @foreach (var u in Model.Kullanicilar)
-                {
-                    var search = $"{u.AdSoyad} {u.Email} {u.RolAd}".ToLower();
-                    <tr data-row data-search="@search">
-                        <td class="font-semibold">
-                            @u.AdSoyad
-                            @if (u.IsCurrentUser)
-                            {
-                                <span class="text-xs text-muted ml-1">(siz)</span>
-                            }
-                        </td>
-                        <td class="text-sm text-muted">@u.Email</td>
-                        <td><span class="badge badge-bos">@u.RolAd</span></td>
-                        <td>
-                            @if (u.IsActive)
-                            { <span class="badge badge-kirali">Aktif</span> }
-                            else
-                            { <span class="badge badge-gecmis">Pasif</span> }
-                        </td>
-                        <td class="flex gap-1.5 justify-end">
-                            @if (Model.CanManage && !u.IsCurrentUser)
-                            {
-                                <a href="/Tenant/Kullanicilar/Duzenle/@u.Id" class="btn btn-sm btn-secondary">Düzenle</a>
-                                <form method="post" action="/Tenant/Kullanicilar/DurumDegistir/@u.Id"
-                                      data-confirm="@(u.IsActive ? "Kullanıcı pasif yapılsın mı?" : "Kullanıcı aktif yapılsın mı?")" class="inline">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-sm @(u.IsActive ? "btn-danger" : "btn-amber")">
-                                        @(u.IsActive ? "Pasif Yap" : "Aktif Yap")
-                                    </button>
-                                </form>
-                            }
-                        </td>
-                    </tr>
-                }
+            @foreach (var user in Model.Users)
+            {
+                var search = $"{user.FullName} {user.Email} {user.RoleName}".ToLower();
+                <tr data-row data-search="@search">
+                    <td class="font-semibold">@user.FullName @if (user.IsCurrentUser) { <span class="text-xs text-muted ml-1">(siz)</span> }</td>
+                    <td class="text-sm text-muted">@user.Email</td>
+                    <td><span class="badge badge-bos">@user.RoleName</span></td>
+                    <td>@if (user.IsActive) { <span class="badge badge-kirali">Aktif</span> } else { <span class="badge badge-gecmis">Pasif</span> }</td>
+                    <td class="flex gap-1.5 justify-end">
+                    @if (!user.IsCurrentUser)
+                    {
+                        @if (Model.CanEdit)
+                        {
+                            <a asp-controller="@controllerName" asp-action="@nameof(KiraTakip.Controllers.TenantUserController.Edit)" asp-route-id="@user.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                        }
+                        @if (Model.CanDeactivate)
+                        {
+                            <form method="post" asp-controller="@controllerName" asp-action="@nameof(KiraTakip.Controllers.TenantUserController.ToggleStatus)" asp-route-id="@user.Id"
+                                  data-confirm="@(user.IsActive ? "Kullanıcı pasif yapılsın mı?" : "Kullanıcı aktif yapılsın mı?")" class="inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm @(user.IsActive ? "btn-danger" : "btn-amber")">@(user.IsActive ? "Pasif Yap" : "Aktif Yap")</button>
+                            </form>
+                        }
+                    }
+                    </td>
+                </tr>
+            }
             </tbody>
         </table>
     </div>
 </div>
 
-@if (Model.BekleyenDavetler.Any())
+@if (Model.PendingInvitations.Any())
 {
     <div class="mt-6">
-        <div class="page-header">
-            <div class="page-title text-base">Bekleyen Davetler</div>
-        </div>
-        <div class="card p-0 overflow-hidden">
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>E-posta</th>
-                            <th>Ad Soyad</th>
-                            <th>Rol</th>
-                            <th>Gönderilme</th>
-                            <th>Son Tarih</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var d in Model.BekleyenDavetler)
-                        {
-                            <tr>
-                                <td>@d.Email</td>
-                                <td class="text-sm text-muted">@(d.AdSoyad ?? "—")</td>
-                                <td><span class="badge badge-bos">@d.RolAd</span></td>
-                                <td class="text-sm text-muted">@d.GonderimTarihi.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
-                                <td class="text-sm @(d.ExpiresAt < DateTime.UtcNow.AddDays(1) ? "text-red-600" : "text-muted")">
-                                    @d.ExpiresAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
-                                </td>
-                                <td class="flex gap-1.5 justify-end">
-                                    @if (Model.CanInvite)
-                                    {
-                                        <form method="post" action="/Tenant/Kullanicilar/Davet/YenidenGonder/@d.Id" class="inline">
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-secondary">Yeniden Gönder</button>
-                                        </form>
-                                        <form method="post" action="/Tenant/Kullanicilar/Davet/Iptal/@d.Id"
-                                              data-confirm="Bu daveti iptal etmek istediğinizden emin misiniz?" class="inline">
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-danger">İptal</button>
-                                        </form>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <div class="page-header"><div class="page-title text-base">Bekleyen Davetler</div></div>
+        <div class="card p-0 overflow-hidden"><div class="table-wrapper"><table>
+            <thead><tr><th>E-posta</th><th>Ad Soyad</th><th>Rol</th><th>Gönderilme</th><th>Son Tarih</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var invitation in Model.PendingInvitations)
+            {
+                <tr>
+                    <td>@invitation.Email</td>
+                    <td class="text-sm text-muted">@(invitation.FullName ?? "—")</td>
+                    <td><span class="badge badge-bos">@invitation.RoleName</span></td>
+                    <td class="text-sm text-muted">@invitation.SentAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                    <td class="text-sm @(invitation.ExpiresAt < DateTime.UtcNow.AddDays(1) ? "text-red-600" : "text-muted")">@invitation.ExpiresAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                    <td class="flex gap-1.5 justify-end">
+                    @if (Model.CanInvite)
+                    {
+                        <form method="post" asp-controller="@controllerName" asp-action="@nameof(KiraTakip.Controllers.TenantUserController.ResendInvite)" asp-route-id="@invitation.Id.ToHashId()" class="inline">
+                            @Html.AntiForgeryToken()<button type="submit" class="btn btn-sm btn-secondary">Yeniden Gönder</button>
+                        </form>
+                        <form method="post" asp-controller="@controllerName" asp-action="@nameof(KiraTakip.Controllers.TenantUserController.CancelInvite)" asp-route-id="@invitation.Id.ToHashId()" data-confirm="Bu daveti iptal etmek istediğinizden emin misiniz?" class="inline">
+                            @Html.AntiForgeryToken()<button type="submit" class="btn btn-sm btn-danger">İptal</button>
+                        </form>
+                    }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table></div></div>
     </div>
 }
-
-

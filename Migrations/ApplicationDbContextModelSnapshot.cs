@@ -17,7 +17,7 @@ namespace KiraTakip.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.17")
+                .HasAnnotation("ProductVersion", "9.0.18")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -139,24 +139,29 @@ namespace KiraTakip.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Details")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("Detaylar");
 
                     b.Property<string>("EntityId")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("VarlikId");
 
                     b.Property<string>("EntityType")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("VarlikTipi");
 
                     b.Property<string>("EventType")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("OlayTipi");
 
                     b.Property<string>("IpAddress")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("IpAdresi");
 
                     b.Property<int?>("KiraciId")
                         .HasColumnType("int");
@@ -179,7 +184,7 @@ namespace KiraTakip.Migrations
 
                     b.HasIndex("UserId", "CreatedAt");
 
-                    b.ToTable("AuditLogs");
+                    b.ToTable("HareketGecmisleri");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.BankTransaction", b =>
@@ -977,7 +982,7 @@ namespace KiraTakip.Migrations
 
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("datetime2")
-                        .HasColumnName("EndDate");
+                        .HasColumnName("BitisTarihi");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit")
@@ -992,7 +997,7 @@ namespace KiraTakip.Migrations
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2")
-                        .HasColumnName("StartDate");
+                        .HasColumnName("BaslangicTarihi");
 
                     b.Property<int>("Status")
                         .HasColumnType("int")
@@ -1032,7 +1037,7 @@ namespace KiraTakip.Migrations
 
                     b.ToTable("Sozlesmeler", t =>
                         {
-                            t.HasCheckConstraint("CK_Sozlesmeler_TarihSirasi", "[EndDate] > [StartDate]");
+                            t.HasCheckConstraint("CK_Sozlesmeler_TarihSirasi", "[BitisTarihi] > [BaslangicTarihi]");
 
                             t.HasCheckConstraint("CK_Sozlesmeler_VadeGunu", "[VadeGunu] BETWEEN 1 AND 31");
                         });
@@ -1092,11 +1097,12 @@ namespace KiraTakip.Migrations
 
                     b.Property<decimal?>("KdvRate")
                         .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
+                        .HasColumnType("decimal(5,2)")
+                        .HasColumnName("KdvOrani");
 
                     b.Property<int>("LeaseId")
                         .HasColumnType("int")
-                        .HasColumnName("LeaseId");
+                        .HasColumnName("SozlesmeId");
 
                     b.Property<DateTime?>("NewEndDate")
                         .HasColumnType("datetime2")
@@ -1117,7 +1123,8 @@ namespace KiraTakip.Migrations
                         .HasColumnName("EskiKiraBedeli");
 
                     b.Property<DateTime>("TransactionDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("IslemTarihi");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1146,7 +1153,7 @@ namespace KiraTakip.Migrations
 
                     b.Property<int>("ChargeTypeId")
                         .HasColumnType("int")
-                        .HasColumnName("ChargeTypeId");
+                        .HasColumnName("BorcTipiId");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -1165,16 +1172,16 @@ namespace KiraTakip.Migrations
                     b.Property<decimal>("KdvRate")
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)")
-                        .HasColumnName("KdvRate");
+                        .HasColumnName("KdvOrani");
 
                     b.Property<int>("LeaseId")
                         .HasColumnType("int")
-                        .HasColumnName("LeaseId");
+                        .HasColumnName("SozlesmeId");
 
                     b.Property<decimal>("UnitValue")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)")
-                        .HasColumnName("UnitValue");
+                        .HasColumnName("BirimDeger");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1193,7 +1200,7 @@ namespace KiraTakip.Migrations
 
                     b.ToTable("SozlesmeTarifeler", t =>
                         {
-                            t.HasCheckConstraint("CK_SozlesmeTarifeler_Degerler", "[UnitValue] >= 0 AND [KdvRate] BETWEEN 0 AND 100");
+                            t.HasCheckConstraint("CK_SozlesmeTarifeler_Degerler", "[BirimDeger] >= 0 AND [KdvOrani] BETWEEN 0 AND 100");
                         });
                 });
 
@@ -1648,7 +1655,7 @@ namespace KiraTakip.Migrations
 
                     b.Property<int>("ChargeTypeId")
                         .HasColumnType("int")
-                        .HasColumnName("ChargeTypeId");
+                        .HasColumnName("BorcTipiId");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -1667,7 +1674,7 @@ namespace KiraTakip.Migrations
                     b.Property<decimal>("KdvRate")
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)")
-                        .HasColumnName("KdvRate");
+                        .HasColumnName("KdvOrani");
 
                     b.Property<int>("PropertyId")
                         .HasColumnType("int")
@@ -1680,7 +1687,7 @@ namespace KiraTakip.Migrations
                     b.Property<decimal>("UnitValue")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
-                        .HasColumnName("UnitValue");
+                        .HasColumnName("BirimDeger");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1701,7 +1708,7 @@ namespace KiraTakip.Migrations
 
                     b.ToTable("TasinmazTarifeler", t =>
                         {
-                            t.HasCheckConstraint("CK_TasinmazTarifeler_Degerler", "[UnitValue] >= 0 AND [KdvRate] BETWEEN 0 AND 100");
+                            t.HasCheckConstraint("CK_TasinmazTarifeler_Degerler", "[BirimDeger] >= 0 AND [KdvOrani] BETWEEN 0 AND 100");
                         });
                 });
 

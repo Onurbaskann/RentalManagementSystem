@@ -14,7 +14,7 @@ public class SecureTokenService : ISecureTokenService
     {
         var secret = options.Value.Secret;
         if (string.IsNullOrWhiteSpace(secret) || secret.Length < 32)
-            throw new InvalidOperationException("SecureToken:Secret yapılandırılmamış veya çok kısa (min 32 karakter).");
+            throw new InvalidOperationException("SecureToken:Secret yapılandırılmamış veya çok kısa (en az 32 karakter).");
         _secretBytes = Encoding.UTF8.GetBytes(secret);
     }
 
@@ -38,19 +38,19 @@ public class SecureTokenService : ISecureTokenService
         try
         {
             var parts = rawToken.Split('.');
-            if (parts.Length != 3) { reason = "Geçersiz token formatı."; return false; }
+            if (parts.Length != 3) { reason = "Geçersiz bağlantı biçimi."; return false; }
 
             var decodedId = FromB64(parts[0]);
             var decodedExpires = FromB64(parts[1]);
             var decodedHmac = FromB64(parts[2]);
 
-            if (decodedId != entityId) { reason = "Token ID uyuşmuyor."; return false; }
+            if (decodedId != entityId) { reason = "Bağlantı kimliği uyuşmuyor."; return false; }
 
             if (!long.TryParse(decodedExpires, out var expiresUnix))
             { reason = "Geçersiz son kullanma tarihi."; return false; }
 
             var expiresAt = DateTimeOffset.FromUnixTimeSeconds(expiresUnix).UtcDateTime;
-            if (DateTime.UtcNow > expiresAt) { reason = "Token süresi dolmuş."; return false; }
+            if (DateTime.UtcNow > expiresAt) { reason = "Bağlantının süresi dolmuş."; return false; }
 
             var expected = ComputeHmac($"{entityId}|{decodedExpires}|{purpose}");
             if (!CryptographicOperations.FixedTimeEquals(
@@ -62,7 +62,7 @@ public class SecureTokenService : ISecureTokenService
         }
         catch
         {
-            reason = "Token doğrulanamadı.";
+            reason = "Bağlantı doğrulanamadı.";
             return false;
         }
     }

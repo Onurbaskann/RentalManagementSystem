@@ -20,4 +20,11 @@ public class DocumentTypeRepository : BaseRepository<DocumentType>, IDocumentTyp
     public async Task<bool> KodExistsAsync(string kod, int? excludeId = null)
         => await _dbSet.AsNoTracking()
             .AnyAsync(b => b.Code == kod && !b.IsDeleted && (excludeId == null || b.Id != excludeId));
+
+    public Task<List<DocumentType>> GetForTargetAsync(KiraTakip.Models.DocumentOwnerType targetEntity, bool requiredOnly)
+        => _dbSet
+            .AsNoTracking()
+            .Where(type => type.TargetEntity == targetEntity && type.IsActive && (!requiredOnly || type.Required))
+            .OrderBy(type => type.SortOrder)
+            .ToListAsync();
 }

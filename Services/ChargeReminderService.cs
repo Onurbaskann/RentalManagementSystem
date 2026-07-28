@@ -1,5 +1,7 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
+using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Settings;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
@@ -8,141 +10,171 @@ using Microsoft.Extensions.Options;
 
 namespace KiraTakip.Services;
 
-public class ChargeReminderService : IChargeReminderService
+public class ChargeReminderService(
+    IChargeRepository chargeRepository,
+    IUnitOfWork unitOfWork,
+    IPaymentLinkService paymentLinkService,
+    IMailService mailService,
+    IRazorViewToStringRenderer renderer,
+    ILogger<ChargeReminderService> logger,
+    IOptions<PaymentLinkSettings> paymentOptions,
+    IOptions<SmtpSettings> smtpOptions) : IChargeReminderService
 {
-    private readonly IChargeRepository _tahakkukRepo;
-    private readonly IUnitOfWork _uow;
-    private readonly IPaymentLinkService _paymentLinkService;
-    private readonly IMailService _mailService;
-    private readonly IRazorViewToStringRenderer _renderer;
-    private readonly ILogger<ChargeReminderService> _logger;
-    private readonly PaymentLinkSettings _paymentSettings;
-    private readonly SmtpSettings _smtpSettings;
+    private readonly PaymentLinkSettings paymentSettings = paymentOptions.Value;
+    private readonly SmtpSettings smtpSettings = smtpOptions.Value;
 
-    public ChargeReminderService(
-        IChargeRepository tahakkukRepo,
-        IUnitOfWork uow,
-        IPaymentLinkService paymentLinkService,
-        IMailService mailService,
-        IRazorViewToStringRenderer renderer,
-        ILogger<ChargeReminderService> logger,
-        IOptions<PaymentLinkSettings> paymentOptions,
-        IOptions<SmtpSettings> smtpOptions)
+    public async Task<int> GetDebtorCountAsync(
+        ChargeReminderScopeInput input,
+        CancellationToken cancellationToken = default)
     {
-        _tahakkukRepo = tahakkukRepo;
-        _uow = uow;
-        _paymentLinkService = paymentLinkService;
-        _mailService = mailService;
-        _renderer = renderer;
-        _logger = logger;
-        _paymentSettings = paymentOptions.Value;
-        _smtpSettings = smtpOptions.Value;
+        var dueDateLimit = DateTime.Today.AddDays(paymentSettings.ReminderDaysBefore);
+        var debts = await chargeRepository.GetPendingReminderChargesAsync(
+            new GetPendingChargeRemindersInput(
+                dueDateLimit,
+                input.PropertyIds,
+                input.UnitIds),
+            cancellationToken);
+
+        return debts.GroupBy(charge => charge.TenantId).Count();
     }
 
-    public async Task<BorcHatirlatmaSonucDto> GonderAsync(CancellationToken ct = default)
+    public async Task SendDebtRemindersAsync(
+        ChargeReminderScopeInput input,
+        CancellationToken cancellationToken = default)
     {
-        var sonuc = new BorcHatirlatmaSonucDto();
+        var successfulSends = 0;
+        var skippedDuringCooldown = 0;
+        var failedSends = 0;
 
-        // 1. Config Guards
-        if (string.IsNullOrWhiteSpace(_paymentSettings.Secret) || _paymentSettings.Secret.Length < 32)
-            throw new InvalidOperationException("PaymentLink:Secret yapılandırılmamış veya çok kısa (min 32 karakter).");
-        if (string.IsNullOrWhiteSpace(_smtpSettings.Host) || string.IsNullOrWhiteSpace(_smtpSettings.From))
-            throw new InvalidOperationException("SMTP sunucu ayarları (Host veya From) yapılandırılmamış.");
+        Guard.Against(
+            string.IsNullOrWhiteSpace(paymentSettings.Secret) || paymentSettings.Secret.Length < 32,
+            "PaymentLink:Secret ayarı yapılmamış veya çok kısa (en az 32 karakter olmalıdır).");
+        Guard.Against(
+            paymentSettings.TokenTtlHours <= 0,
+            "PaymentLink:TokenTtlHours sıfırdan büyük olmalıdır.");
+        Guard.Against(
+            string.IsNullOrWhiteSpace(smtpSettings.Host) || string.IsNullOrWhiteSpace(smtpSettings.From),
+            "SMTP sunucu ayarları (Smtp:Host veya Smtp:From) yapılandırılmamış.");
 
         var today = DateTime.Today;
-        var limitVade = today.AddDays(_paymentSettings.ReminderDaysBefore);
-        var cooldownThreshold = today.AddDays(-_paymentSettings.ReminderCooldownDays);
-
-        // 2. Fetch Outstanding Debts
-        var borclar = await _tahakkukRepo.GetBekleyenBorclarAsync(limitVade, ct);
-
-        // Group by Tenant
-        var groups = borclar.GroupBy(t => t.TenantId).ToList();
-        sonuc.ToplamBorclu = groups.Count;
+        var dueDateLimit = today.AddDays(paymentSettings.ReminderDaysBefore);
+        var cooldownThreshold = today.AddDays(-paymentSettings.ReminderCooldownDays);
+        var debts = await chargeRepository.GetPendingReminderChargesAsync(
+            new GetPendingChargeRemindersInput(
+                dueDateLimit,
+                input.PropertyIds,
+                input.UnitIds),
+            cancellationToken);
+        var groups = debts.GroupBy(charge => charge.TenantId).ToList();
 
         foreach (var group in groups)
         {
             var tenant = group.First().Tenant;
             if (tenant == null || string.IsNullOrWhiteSpace(tenant.Email))
             {
-                _logger.LogWarning("Tenant {KiraciId} için geçerli e-posta adresi bulunamadı. Atlanıyor.", group.Key);
-                sonuc.BasarisizGonderim++;
+                logger.LogWarning(
+                    "Kiracı {KiraciId} için geçerli e-posta adresi bulunamadı. Atlanıyor.",
+                    group.Key);
+                failedSends++;
                 continue;
             }
 
-            // 3. Cooldown check
-            var debtsOutsideCooldown = group.Where(t => t.LastReminderDate == null || t.LastReminderDate.Value.Date <= cooldownThreshold).ToList();
+            var debtsOutsideCooldown = group
+                .Where(charge => charge.LastReminderDate == null
+                    || charge.LastReminderDate.Value.Date <= cooldownThreshold)
+                .ToList();
 
             if (!debtsOutsideCooldown.Any())
             {
-                _logger.LogInformation("Tenant {KiraciId} için son hatırlatmalar bekleme süresi içerisinde. Atlanıyor.", group.Key);
-                sonuc.CooldownAtlanan++;
+                logger.LogInformation(
+                    "Kiracı {KiraciId} için son hatırlatmalar bekleme süresi içerisinde. Atlanıyor.",
+                    group.Key);
+                skippedDuringCooldown++;
                 continue;
             }
 
-            // 4. Prepare email model with ALL outstanding debts for the tenant
-            var mailModel = new KiraciBorcHatirlatmaMailModel
+            var mailModel = new TenantDebtReminderEmailViewModel
             {
-                Ad = tenant.Name,
-                Soyad = "",
+                FirstName = tenant.Name,
+                LastName = "",
                 Email = tenant.Email,
-                OdemeLink = await _paymentLinkService.BuildLinkAsync(tenant.Id, ct),
-                Borclar = group.OrderBy(t => t.DueDate).Select(t => new BorcSatiri
+                PaymentLinkValidityText = FormatValidity(paymentSettings.TokenTtlHours),
+                PaymentLink = await paymentLinkService.CreateAsync(
+                    new CreatePaymentLinkInput(tenant.Id),
+                    cancellationToken),
+                Debts = group.OrderBy(charge => charge.DueDate).Select(charge => new DebtReminderLineViewModel
                 {
-                    PropertyName = t.Lease?.Unit?.Property?.Name ?? "-",
-                    BirimAdi = t.Lease?.Unit?.Name ?? "-",
-                    PeriodStart = t.PeriodStart,
-                    DueDate = t.DueDate,
-                    ToplamTutar = t.TotalAmount,
-                    PaidAmount = t.Allocations.Where(o => o.Status == PaymentStatus.Approved).Sum(o => o.Amount)
+                    PropertyName = charge.Unit.Property.Name,
+                    UnitName = charge.Unit.Name,
+                    PeriodStart = charge.PeriodStart,
+                    DueDate = charge.DueDate,
+                    TotalAmount = charge.TotalAmount,
+                    PaidAmount = charge.Allocations
+                        .Where(allocation => allocation.Status == PaymentStatus.Approved)
+                        .Sum(allocation => allocation.Amount)
                 }).ToList()
             };
 
-            // 5. Render HTML
             string htmlBody;
             try
             {
-                htmlBody = await _renderer.RenderAsync("BorcHatirlatma", mailModel);
+                htmlBody = await renderer.RenderAsync("DebtReminder", mailModel);
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                _logger.LogError(ex, "Tenant {KiraciId} için e-posta şablonu render edilemedi.", tenant.Id);
-                sonuc.BasarisizGonderim++;
+                logger.LogError(
+                    exception,
+                    "Kiracı {KiraciId} için e-posta şablonu oluşturulamadı.",
+                    tenant.Id);
+                failedSends++;
                 continue;
             }
 
-            // 6. Send Mail
             try
             {
-                await _mailService.SendAsync(
+                await mailService.SendAsync(
                     tenant.Email,
-                    mailModel.GosterimAdi,
+                    mailModel.DisplayName,
                     "KiraTakip - Ödeme Hatırlatması",
                     htmlBody,
-                    ct
-                );
+                    cancellationToken);
 
-                // 7. Mark as sent ONLY for debts outside cooldown (so we reset their cooldown)
                 foreach (var debt in debtsOutsideCooldown)
-                {
                     debt.LastReminderDate = DateTime.Today;
-                }
 
-                sonuc.BasariliGonderim++;
+                successfulSends++;
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                _logger.LogError(ex, "Tenant {KiraciId} e-posta gönderimi başarısız.", tenant.Id);
-                sonuc.BasarisizGonderim++;
+                logger.LogError(
+                    exception,
+                    "Kiracı {KiraciId} için e-posta gönderimi başarısız.",
+                    tenant.Id);
+                failedSends++;
             }
         }
 
-        // 8. Save changes to DB (updates LastReminderDate)
-        if (sonuc.BasariliGonderim > 0)
-        {
-            await _uow.SaveChangesAsync(ct);
-        }
+        if (successfulSends > 0)
+            await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return sonuc;
+        if (failedSends > 0)
+        {
+            var messageParts = new List<string>();
+            if (successfulSends > 0)
+                messageParts.Add($"{successfulSends} kiracıya e-posta gönderildi");
+            if (skippedDuringCooldown > 0)
+                messageParts.Add(
+                    $"{skippedDuringCooldown} kiracı (bekleme süresinde olduğu için) atlandı");
+            messageParts.Add($"{failedSends} gönderimde hata oluştu");
+
+            Guard.Against(
+                true,
+                string.Join(", ", messageParts) + ". Detaylar için logları inceleyin.");
+        }
     }
+
+    private static string FormatValidity(int validityHours)
+        => validityHours % 24 == 0
+            ? $"{validityHours / 24} gün"
+            : $"{validityHours} saat";
 }

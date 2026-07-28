@@ -1,4 +1,4 @@
-﻿using KiraTakip.Data;
+using KiraTakip.Data;
 using KiraTakip.Repositories;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,20 +15,33 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<IUnitRepository, UnitRepository>();
             services.AddScoped<ILeaseRepository, LeaseRepository>();
             services.AddScoped<IChargeRepository, ChargeRepository>();
-            services.AddScoped<IPaymentRepository, PaymentRepository>();
+            services.AddScoped<IChargeLineItemRepository, ChargeLineItemRepository>();
+            services.AddScoped<IPaymentAllocationRepository, PaymentAllocationRepository>();
+            services.AddScoped<IPaymentMatchRepository, PaymentMatchRepository>();
             services.AddScoped<IBankTransactionRepository, BankTransactionRepository>();
-            services.AddScoped<ITasinmazTarifeRepository, TasinmazTarifeRepository>();
+            services.AddScoped<IPropertyRateOverrideRepository, PropertyRateOverrideRepository>();
             services.AddScoped<IChargeTypeRepository, ChargeTypeRepository>();
-            services.AddScoped<ISozlesmeTarifeRepository, SozlesmeTarifeRepository>();
+            services.AddScoped<ILeaseRateOverrideRepository, LeaseRateOverrideRepository>();
             services.AddScoped<IUnitRateRepository, UnitRateRepository>();
             services.AddScoped<IRateScheduleRepository, RateScheduleRepository>();
             services.AddScoped<IReservationRateOverrideRepository, ReservationRateOverrideRepository>();
             services.AddScoped<IUnitTypeRepository, UnitTypeRepository>();
             services.AddScoped<IDocumentTypeRepository, DocumentTypeRepository>();
+            services.AddScoped<IDocumentRepository, DocumentRepository>();
+            services.AddScoped<IDocumentContentRepository, DocumentContentRepository>();
             services.AddScoped<ICategoryRepository, CategoryRepository>();
-            services.AddScoped<ITasinmazTipiRepository, TasinmazTipiRepository>();
+            services.AddScoped<IPropertyTypeRepository, PropertyTypeRepository>();
             services.AddScoped<IReservationRepository, ReservationRepository>();
             services.AddScoped<IUserPermissionRepository, UserPermissionRepository>();
+            services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+            services.AddScoped<IRoleRepository, RoleRepository>();
+            services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
+            services.AddScoped<IUserRoleRepository, UserRoleRepository>();
+            services.AddScoped<IApplicationUserRepository, ApplicationUserRepository>();
+            services.AddScoped<IUserPermissionScopeRepository, UserPermissionScopeRepository>();
+            services.AddScoped<IInvitationRepository, InvitationRepository>();
+            services.AddScoped<IPaymentLinkRecordRepository, PaymentLinkRecordRepository>();
+            services.AddScoped<IPasswordResetRequestRepository, PasswordResetRequestRepository>();
 
             return services;
         }

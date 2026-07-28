@@ -8,5 +8,5 @@ public class UnitReservationRateOverrideDto
     public decimal PeriodRate { get; set; }
     public int BillingPeriodMinutes { get; set; }
     public int FreeDurationMinutes { get; set; }
-    public decimal KdvRate { get; set; }
+    public decimal VatRate { get; set; }
 }

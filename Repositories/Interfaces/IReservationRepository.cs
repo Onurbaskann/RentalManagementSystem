@@ -1,26 +1,21 @@
-﻿using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Repositories.Interfaces;
 
 public interface IReservationRepository : IBaseRepository<Reservation>
 {
     // Listeleme (DTO)
-    Task<List<ReservationListItemDto>> GetListAsync(List<int>? yetkiliPropertyIds);
+    Task<List<ReservationListItemDto>> GetListAsync(
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null);
+    Task<List<ReservationListItemDto>> GetTenantListAsync(int tenantId, DateTime currentTime, List<int>? authorizedPropertyIds = null, List<int>? authorizedUnitIds = null);
     Task<ReservationListItemDto?> GetByIdAsync(int id);
+    Task<Reservation?> GetForOperationAsync(int id);
 
     // Çakışma kontrolü
-    Task<bool> IsConflictAsync(int unitId, DateTime baslangic, DateTime bitis);
+    Task<bool> IsConflictAsync(int unitId, DateTime startDate, DateTime endDate);
 
-    // ReservationRateOverride — Reservation domain
-    Task<ReservationRateOverride?> GetAktifTarifeForBirimAsync(int unitId);
-    Task<ReservationRateOverride?> GetGenelTarifeAsync(int unitTypeId, int yil);
-    Task<List<ReservationRateOverride>> GetUcretKurallariAsync();
-    Task<ReservationRateOverride?> GetUcretKuralByIdAsync(int id);
-    Task AddUcretKuralAsync(ReservationRateOverride kural);
-
-    // ChargeType — reservation charge üretimi için
-    Task<ChargeType?> ResolveRezervasyonBorcTipiAsync(int? preferredBorcTipiId);
-
-    // Charge — Transfer işlemi için
-    Task AddTahakkukAsync(Charge charge);
+    Task<List<int>> GetActiveUnitIdsAsync(IReadOnlyCollection<int> unitIds, DateTime now);
+    Task<bool> HasPlannedForUnitTypeAsync(int unitTypeId);
+    Task<bool> ExistsForUnitAsync(int unitId);
 }

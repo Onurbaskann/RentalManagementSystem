@@ -1,4 +1,4 @@
-@model KiraTakip.Models.ViewModels.KiraciOdemePortalViewModel
+@model KiraTakip.Models.ViewModels.TenantPaymentPortalViewModel
 @{
     Layout = "_PortalLayout";
     ViewData["Title"] = "Teşekkürler";
@@ -12,9 +12,9 @@
                 <polyline points="22 4 12 14.01 9 11.01"/>
             </svg>
         </div>
-        <h1 class="text-xl font-bold text-slate-800 mb-2">Sayın @Model.Ad @Model.Soyad</h1>
+        <h1 class="text-xl font-bold text-slate-800 mb-2">Sayın @Model.TenantName</h1>
         <p class="text-sm text-slate-600 leading-relaxed mb-1">
-            Şu an için vadesi gelmiş veya geçmiş bir borcunuz bulunmamaktadır.
+            Şu an için vadesi yaklaşan, gelmiş veya geçmiş bir borcunuz bulunmamaktadır.
         </p>
         <p class="text-sm text-slate-500 leading-relaxed mb-5">
             Hassasiyetiniz için teşekkür ederiz.

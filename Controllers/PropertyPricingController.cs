@@ -1,33 +1,34 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
+using KiraTakip.Models.Dtos;
+using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KiraTakip.Controllers
+namespace KiraTakip.Controllers;
+
+[Authorize]
+[Route("Property/{propertyId}/Pricing")]
+public class PropertyPricingController(
+    IPropertyPricingService propertyPricingService,
+    IPermissionScopeProvider permissionScopeProvider) : Controller
 {
-    [Authorize]
-    [Route("Property/{propertyId}/Parametreler")]
-    public class PropertyPricingController : Controller
+    [HttpGet]
+    [Authorize(Policy = PermissionCatalog.Property.Module)]
+    public async Task<IActionResult> Index(PropertyPricingQueryViewModel query)
     {
-        private readonly IPropertyPricingService _fiyatService;
-        private readonly UserManager<ApplicationUser> _userManager;
+        if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        public PropertyPricingController(IPropertyPricingService fiyatService,
-                                      UserManager<ApplicationUser> userManager)
-        {
-            _fiyatService = fiyatService;
-            _userManager = userManager;
-        }
+        var accessiblePropertyIds = permissionScopeProvider.GlobalAccess
+            ? null
+            : permissionScopeProvider.AccessiblePropertyIds;
+        var viewModel = (await propertyPricingService.GetMatrixAsync(
+            new GetPropertyPricingMatrixInput(
+                query.PropertyId,
+                query.Page,
+                query.PageSize,
+                accessiblePropertyIds))).ToViewModel();
 
-        [HttpGet]
-        [Authorize(Policy = PermissionCatalog.Property.Module)]
-        public async Task<IActionResult> Index(int propertyId, int page = 1, int pageSize = 10)
-        {
-            var vm = await _fiyatService.GetMatrisiAsync(propertyId, page, pageSize);
-            ViewBag.Page = page;
-            ViewBag.PageSize = pageSize;
-            return View(vm);
-        }
+        return View(viewModel);
     }
 }

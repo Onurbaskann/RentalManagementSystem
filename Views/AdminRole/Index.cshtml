@@ -1,23 +1,16 @@
-@model List<KiraTakip.Models.ViewModels.RolListeViewModel>
+@model List<KiraTakip.Models.ViewModels.RoleListViewModel>
 @{
     ViewData["Title"] = "Rol Yönetimi";
+    ViewData["UseCentralFeedback"] = true;
 }
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert-success mb-4">✓ @TempData["Success"]</div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert-danger mb-4">✕ @TempData["Error"]</div>
-}
 
 <div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Rol Yönetimi</div>
         <div class="page-subtitle">@Model.Count rol tanımlı</div>
     </div>
-    <a href="/Admin/Roller/Ekle" class="btn btn-primary">
+    <a href="/Admin/Roles/Create" class="btn btn-primary">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Yeni Rol
     </a>
@@ -40,14 +33,14 @@
                 @foreach (var r in Model)
                 {
                     <tr>
-                        <td class="font-semibold">@r.Ad</td>
-                        <td class="text-sm text-muted">@(r.Aciklama ?? "—")</td>
-                        <td class="text-sm">@r.KullaniciSayisi kullanıcı</td>
+                        <td class="font-semibold">@r.Name</td>
+                        <td class="text-sm text-muted">@(r.Description ?? "—")</td>
+                        <td class="text-sm">@r.UserCount kullanıcı</td>
                         <td class="text-sm">
-                            @if (r.Ad == "Admin")
+                            @if (r.Name == "Admin")
                             { <span class="text-muted text-xs">Tümü (otomatik)</span> }
                             else
-                            { <span>@r.IzinSayisi izin</span> }
+                            { <span>@r.PermissionCount izin</span> }
                         </td>
                         <td>
                             @if (r.IsSystemRole)
@@ -56,11 +49,11 @@
                             { <span class="badge badge-bos">Özel</span> }
                         </td>
                         <td class="flex gap-1.5 justify-end">
-                            <a href="/Admin/Roller/Duzenle/@r.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
+                            <a href="/Admin/Roles/Edit/@r.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
                             @if (!r.IsSystemRole)
                             {
-                                <form method="post" action="/Admin/Roller/Sil/@r.Id.ToHashId()"
-                                      data-confirm="'@r.Ad' rolünü silmek istediğinizden emin misiniz?" class="inline">
+                                <form method="post" action="/Admin/Roles/Delete/@r.Id.ToHashId()"
+                                      data-confirm="'@r.Name' rolünü silmek istediğinizden emin misiniz?" class="inline">
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="btn btn-sm btn-danger">Sil</button>
                                 </form>
@@ -72,4 +65,3 @@
         </table>
     </div>
 </div>
-
