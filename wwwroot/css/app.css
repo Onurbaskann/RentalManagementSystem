@@ -138,6 +138,55 @@ input[type="number"] { appearance: textfield; }
 .radio-group { display: flex; gap: 0.75rem; /* 12px */ flex-wrap: wrap; }
 .radio-option { display: flex; align-items: center; gap: 0.375rem; /* 6px */ cursor: pointer; font-size: 0.84375rem; /* 13.5px */ font-weight: 500; }
 
+/* Long property forms: keep primary actions reachable while scrolling. */
+.property-form { padding-bottom: 5.5rem; }
+.property-form-actions {
+    position: fixed;
+    bottom: 1rem;
+    left: calc(var(--sidebar-width) + 2rem);
+    right: 2rem;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    max-width: 62.5rem;
+    margin-right: auto;
+    margin-left: auto;
+    padding: 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+    backdrop-filter: blur(8px);
+}
+.property-form-actions__submit { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
+.property-form-actions__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    padding: 0 0.375rem;
+    border-radius: 999px;
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    font-size: 0.71875rem;
+    font-weight: 700;
+}
+
+@media (max-width: 56.25em) {
+    .property-form-actions { left: 1rem; right: 1rem; max-width: none; }
+}
+
+@media (max-width: 30em) {
+    .property-form { padding-bottom: 9rem; }
+    .property-form-actions { bottom: 0.5rem; flex-wrap: wrap; }
+    .property-form-actions > [data-property-sticky-add-unit] { flex: 1; justify-content: center; }
+    .property-form-actions__submit { width: 100%; }
+    .property-form-actions__submit .btn { flex: 1; justify-content: center; }
+}
+
 /* Progress */
 .progress-bar { height: 0.375rem; /* 6px */ border-radius: 999px; background: #e8ecef; overflow: hidden; }
 .progress-fill { height: 100%; border-radius: 999px; background: var(--color-primary); }

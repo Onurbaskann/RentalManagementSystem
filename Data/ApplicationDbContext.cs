@@ -59,6 +59,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
     public DbSet<Tenant> Tenants { get; set; }
     public DbSet<Lease> Leases { get; set; }
     public DbSet<LeaseActivityLog> SozlesmeIslemGecmisleri { get; set; }
+    public DbSet<LeaseReviewHistory> SozlesmeIncelemeGecmisleri { get; set; }
     public DbSet<UserPermissionScope> KullaniciYetkiKapsamlari { get; set; }
     public DbSet<UserPermission> UserPermissions { get; set; }
 
@@ -166,11 +167,15 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             // Not: "Bir birimde tek devam-eden aktif sözleşme" kuralı tarih koşulu içerdiğinden
             // filtered index ile ifade edilemez (SQL Server GETDATE() destegi yok);
             // kontrol uygulama katmanında yapılır (LeaseController.Create).
-            entity.HasIndex(s => s.UnitId)
+            entity.HasIndex(s => s.UnitId, "IX_Lease_UnitId")
                   .HasDatabaseName("IX_Sozlesmeler_BirimId");
             entity.HasIndex(s => s.TenantId)
                   .HasDatabaseName("IX_Sozlesmeler_KiraciId_Aktif")
                   .HasFilter("[IsDeleted] = 0");
+            entity.HasIndex(s => s.UnitId, "UX_Lease_UnitId_OpenApplication")
+                  .IsUnique()
+                  .HasDatabaseName("UX_Sozlesmeler_BirimId_AcikBasvuru")
+                  .HasFilter("[IsDeleted] = 0 AND [Durum] IN (4, 5)");
             entity.ToTable(t =>
             {
                 t.HasCheckConstraint("CK_Sozlesmeler_TarihSirasi", "[BitisTarihi] > [BaslangicTarihi]");
@@ -192,6 +197,27 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .WithMany(s => s.ActivityLog)
                   .HasForeignKey(g => g.LeaseId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<LeaseReviewHistory>(entity =>
+        {
+            entity.Property(g => g.ActionType).HasComment(EC<LeaseReviewActionType>());
+            entity.Property(g => g.FromStatus).HasComment(EC<LeaseStatus>());
+            entity.Property(g => g.ToStatus).HasComment(EC<LeaseStatus>());
+            entity.Property(g => g.Explanation).HasMaxLength(1000);
+            entity.Property(g => g.ActorUserId).IsRequired();
+            entity.HasOne(g => g.Lease)
+                  .WithMany(s => s.ReviewHistory)
+                  .HasForeignKey(g => g.LeaseId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(g => g.ActorUser)
+                  .WithMany()
+                  .HasForeignKey(g => g.ActorUserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(g => new { g.LeaseId, g.ActionDate })
+                  .HasDatabaseName("IX_SozlesmeIncelemeGecmisleri_SozlesmeId_IslemTarihi");
+            entity.HasIndex(g => g.ActorUserId)
+                  .HasDatabaseName("IX_SozlesmeIncelemeGecmisleri_IslemYapanKullaniciId");
         });
 
         builder.Entity<UserPermission>(entity =>

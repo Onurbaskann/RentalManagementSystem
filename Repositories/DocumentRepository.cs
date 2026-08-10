@@ -43,4 +43,16 @@ public class DocumentRepository(ApplicationDbContext context)
 
     public async Task<Document?> FindAsync(int documentId)
         => await _dbSet.FindAsync(documentId);
+
+    public async Task SoftDeleteByOwnerAsync(DocumentOwnerType ownerType, int ownerId)
+    {
+        var documents = await _dbSet
+            .Where(document => document.OwnerType == ownerType && document.OwnerId == ownerId)
+            .ToListAsync();
+        foreach (var document in documents)
+        {
+            document.IsDeleted = true;
+            document.IsActive = false;
+        }
+    }
 }

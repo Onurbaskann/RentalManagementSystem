@@ -21,7 +21,10 @@ public class DocumentService(
         if (input.AccessScope != null)
         {
             var ownerContext = Guard.NotFound(
-                await GetOwnerContextAsync(input.OwnerType, input.OwnerId),
+                await GetOwnerContextAsync(
+                    input.OwnerType,
+                    input.OwnerId,
+                    input.AccessScope.TenantId.HasValue),
                 "Belge sahibi kayıt bulunamadı.",
                 "Document.OwnerNotFound");
             EnsureAccess(input.OwnerType, ownerContext, input.AccessScope);
@@ -81,7 +84,10 @@ public class DocumentService(
             "Document.FileTooLarge");
 
         var ownerContext = Guard.NotFound(
-            await GetOwnerContextAsync(input.OwnerType, input.OwnerId),
+            await GetOwnerContextAsync(
+                input.OwnerType,
+                input.OwnerId,
+                input.AccessScope?.TenantId.HasValue == true),
             "Belge sahibi kayıt bulunamadı.",
             "Document.OwnerNotFound");
         if (input.AccessScope != null)
@@ -125,7 +131,10 @@ public class DocumentService(
             "Document.NotFound");
 
         var ownerContext = Guard.NotFound(
-            await GetOwnerContextAsync(metadata.OwnerType, metadata.OwnerId),
+            await GetOwnerContextAsync(
+                metadata.OwnerType,
+                metadata.OwnerId,
+                input.AccessScope.TenantId.HasValue),
             "Belge sahibi kayıt bulunamadı.",
             "Document.OwnerNotFound");
         EnsureAccess(metadata.OwnerType, ownerContext, input.AccessScope);
@@ -146,7 +155,10 @@ public class DocumentService(
             "Document.NotFound");
 
         var ownerContext = Guard.NotFound(
-            await GetOwnerContextAsync(metadata.OwnerType, metadata.OwnerId),
+            await GetOwnerContextAsync(
+                metadata.OwnerType,
+                metadata.OwnerId,
+                input.AccessScope.TenantId.HasValue),
             "Belge sahibi kayıt bulunamadı.",
             "Document.OwnerNotFound");
         EnsureAccess(metadata.OwnerType, ownerContext, input.AccessScope);
@@ -171,11 +183,14 @@ public class DocumentService(
 
     private Task<DocumentOwnerContextDto?> GetOwnerContextAsync(
         DocumentOwnerType ownerType,
-        int ownerId)
+        int ownerId,
+        bool tenantPortalOnly)
         => ownerType switch
         {
             DocumentOwnerType.Tenant => tenantRepository.GetDocumentOwnerContextAsync(ownerId),
-            DocumentOwnerType.Lease => leaseRepository.GetDocumentOwnerContextAsync(ownerId),
+            DocumentOwnerType.Lease => leaseRepository.GetDocumentOwnerContextAsync(
+                ownerId,
+                tenantPortalOnly),
             DocumentOwnerType.Payment => paymentAllocationRepository.GetDocumentOwnerContextAsync(ownerId),
             _ => Task.FromResult<DocumentOwnerContextDto?>(null)
         };

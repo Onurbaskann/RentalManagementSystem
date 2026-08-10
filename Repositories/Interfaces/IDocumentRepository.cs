@@ -10,4 +10,5 @@ public interface IDocumentRepository : IBaseRepository<Document>
     Task<Document?> GetCurrentAsync(DocumentOwnerType ownerType, int ownerId, int documentTypeId);
     Task<Document?> GetMetadataAsync(int documentId);
     Task<Document?> FindAsync(int documentId);
+    Task SoftDeleteByOwnerAsync(DocumentOwnerType ownerType, int ownerId);
 }

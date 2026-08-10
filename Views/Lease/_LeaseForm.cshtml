@@ -1,0 +1,159 @@
+@model KiraTakip.Models.ViewModels.ILeaseFormViewModel
+@using KiraTakip.Models
+@{
+    bool readOnly = ViewData["ReadOnly"] as bool? ?? false;
+}
+
+<div asp-validation-summary="ModelOnly" class="form-error mb-3"></div>
+
+<div class="card">
+    <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex items-center gap-2">
+        <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+        <span>Taşınmaz ve Kiracı</span>
+    </div>
+    <div class="form-group">
+        <label class="form-label">Birim *</label>
+        <select asp-for="UnitId" class="form-control" x-model="unitId" disabled="@readOnly">
+            <option value="">— Boş birim seçin —</option>
+            @foreach (var unit in Model.AvailableUnits)
+            {
+                string label = unit.UnitStructure == UnitStructure.MultipleUnits
+                    ? $"{unit.PropertyName} — Birim {unit.UnitNo}{(unit.FloorNo.HasValue ? $" • {unit.FloorNo}. Kat" : "")} • {unit.Area.M2()}"
+                    : $"{unit.PropertyName} — Komple • {unit.Area.M2()} • {unit.District}";
+                <option value="@unit.Id">@label</option>
+            }
+        </select>
+        <span asp-validation-for="UnitId" class="form-error"></span>
+    </div>
+    <div x-show="unitId && units[unitId]" class="mb-4" x-cloak>
+        <div class="bg-primary/5 border border-primary/10 rounded-lg p-3 text-[13.5px] font-medium text-primary"
+             x-text="units[unitId] ? `${units[unitId].name} • ${units[unitId].meta} • ${units[unitId].district}, ${units[unitId].city}` : ''"></div>
+    </div>
+    <div class="form-group mb-0">
+        <label class="form-label">Kiracı *</label>
+        <select asp-for="TenantId" class="form-control" x-model="tenantId" disabled="@readOnly">
+            <option value="">— Kiracı seçin —</option>
+            @foreach (var tenant in Model.Tenants)
+            {
+                <option value="@tenant.Id">@tenant.DisplayName</option>
+            }
+        </select>
+        <span asp-validation-for="TenantId" class="form-error"></span>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex items-center gap-2">
+        <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span><span>Süre ve Vade</span>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+        <div class="form-group mb-0">
+            <label class="form-label">Başlangıç Tarihi *</label>
+            @if (readOnly)
+            {
+                <input class="form-control" value="@Model.StartDate.ToString("dd.MM.yyyy")" disabled />
+            }
+            else
+            {
+                @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData)
+                {
+                    ["Name"] = "StartDate", ["Value"] = Model.StartDate.ToString("yyyy-MM-dd"),
+                    ["Mode"] = "date", ["Field"] = "start"
+                })
+            }
+        </div>
+        <div class="form-group mb-0">
+            <label class="form-label">Bitiş Tarihi *</label>
+            @if (readOnly)
+            {
+                <input class="form-control" value="@Model.EndDate.ToString("dd.MM.yyyy")" disabled />
+            }
+            else
+            {
+                @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData)
+                {
+                    ["Name"] = "EndDate", ["Value"] = Model.EndDate.ToString("yyyy-MM-dd"),
+                    ["Mode"] = "date", ["Field"] = "end"
+                })
+            }
+            <span asp-validation-for="EndDate" class="form-error"></span>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-3.5">
+        <div class="form-group mb-0">
+            <label class="form-label">Vade Kuralı</label>
+            <select asp-for="DueDateRuleType" class="form-control" x-model.number="dueDateRuleType" disabled="@readOnly">
+                <option value="1">Sabit Ay Günü (ayın N'i)</option>
+                <option value="2">Dönem Başı + N Gün</option>
+            </select>
+        </div>
+        <div class="form-group mb-0">
+            <label class="form-label">Vade Günü *</label>
+            <input asp-for="DueDay" type="number" class="form-control" x-model.number="dueDay" disabled="@readOnly" />
+            <span asp-validation-for="DueDay" class="form-error"></span>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4" x-show="unitId && tenantId && startDate" x-cloak>
+    <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex justify-between items-center">
+        <div class="flex items-center gap-2"><span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span><span>Sözleşme Tarifesi</span></div>
+        <span x-show="loading" class="text-xs text-muted">Yükleniyor…</span>
+    </div>
+    <div x-show="error" class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-sm" x-text="error"></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <template x-for="(item, index) in lineItems" :key="item.chargeTypeId">
+            <div class="bg-slate-50/50 border border-[var(--color-border)] rounded-xl p-4">
+                <div class="flex justify-between gap-2 mb-3">
+                    <strong class="text-sm text-slate-800" x-text="item.chargeTypeName"></strong>
+                    <span class="text-[10px] px-2 py-0.5 rounded font-bold bg-slate-800 text-white" x-text="sourceLabel(item.sourceType)"></span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 items-end">
+                    <div>
+                        <label class="text-[10px] text-muted font-bold mb-1 block" x-text="item.calculationMethod == 2 ? '₺ / m²' : 'Tutar (₺)'"></label>
+                        <input type="number" step="0.01" min="0" class="form-control form-control-sm"
+                               x-model.number="item.unitValue" @@input="item.isUserModified = true" :disabled="readOnly" />
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-muted font-bold mb-1 block">Yöntem</label>
+                        <select class="form-control form-control-sm" x-model.number="item.calculationMethod"
+                                @@change="item.isUserModified = true" :disabled="readOnly">
+                            <option value="1">Sabit</option><option value="2">m²</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-muted font-bold mb-1 block">KDV (%)</label>
+                        <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm"
+                               x-model.number="item.vatRate" @@input="item.isUserModified = true" :disabled="readOnly" />
+                    </div>
+                </div>
+                <div class="mt-2 text-xs text-indigo-700" x-show="item.calculationMethod == 2"
+                     x-text="`${Number(item.unitValue || 0).toLocaleString('tr-TR')} ₺/m² × ${unitArea()} m² = ${amount(item).toLocaleString('tr-TR')} ₺`"></div>
+
+                <input type="hidden" :name="`LeaseLineItems[${index}].ChargeTypeId`" :value="item.chargeTypeId" />
+                <input type="hidden" :name="`LeaseLineItems[${index}].ChargeTypeName`" :value="item.chargeTypeName" />
+                <input type="hidden" :name="`LeaseLineItems[${index}].ChargeTypeCode`" :value="item.chargeTypeCode" />
+                <input type="hidden" :name="`LeaseLineItems[${index}].Behavior`" :value="item.behavior" />
+                <input type="hidden" :name="`LeaseLineItems[${index}].UnitValue`" :value="item.unitValue" />
+                <input type="hidden" :name="`LeaseLineItems[${index}].CalculationMethod`" :value="item.calculationMethod" />
+                <input type="hidden" :name="`LeaseLineItems[${index}].Amount`" :value="amount(item)" />
+                <input type="hidden" :name="`LeaseLineItems[${index}].DefaultAmount`" :value="item.defaultAmount" />
+                <input type="hidden" :name="`LeaseLineItems[${index}].DefaultUnitValue`" :value="item.defaultUnitValue" />
+                <input type="hidden" :name="`LeaseLineItems[${index}].VatRate`" :value="item.vatRate" />
+                <input type="hidden" :name="`LeaseLineItems[${index}].IsUserModified`" :value="item.isUserModified" />
+                <input type="hidden" :name="`LeaseLineItems[${index}].IsRateFound`" :value="item.isRateFound" />
+                <input type="hidden" :name="`LeaseLineItems[${index}].SourceType`" :value="item.sourceType" />
+            </div>
+        </template>
+    </div>
+    <div x-show="!loading && lineItems.length === 0" class="text-muted text-sm italic">Bu seçimlere uygun tarife bulunamadı.</div>
+    <span asp-validation-for="LeaseLineItems" class="form-error"></span>
+</div>
+
+<div class="card mt-4">
+    <div class="form-group mb-0">
+        <label class="form-label">Açıklama</label>
+        <textarea asp-for="Description" class="form-control" rows="3" disabled="@readOnly"
+                  placeholder="Başvuruya ait ek açıklama..."></textarea>
+    </div>
+</div>

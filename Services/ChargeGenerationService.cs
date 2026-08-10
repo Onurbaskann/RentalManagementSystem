@@ -23,6 +23,10 @@ public class ChargeGenerationService(
             await leaseRepository.GetByIdAsync(input.LeaseId),
             $"Sözleşme {input.LeaseId} bulunamadı.",
             "Lease.NotFound");
+        Guard.Conflict(
+            lease.Status != LeaseStatus.Active,
+            "Yalnız aktif sözleşme için tahakkuk üretilebilir.",
+            "Lease.NotActive");
 
         foreach (var periodStartDate in GetPeriods(lease.StartDate, lease.EndDate))
         {
@@ -85,10 +89,14 @@ public class ChargeGenerationService(
 
     public async Task RegenerateAsync(RegenerateLeaseChargesInput input)
     {
-        Guard.NotFound(
+        var lease = Guard.NotFound(
             await leaseRepository.GetByIdAsync(input.LeaseId),
             $"Sözleşme {input.LeaseId} bulunamadı.",
             "Lease.NotFound");
+        Guard.Conflict(
+            lease.Status != LeaseStatus.Active,
+            "Yalnız aktif sözleşmenin tahakkukları yeniden üretilebilir.",
+            "Lease.NotActive");
 
         var firstDay = new DateTime(input.StartDate.Year, input.StartDate.Month, 1);
         var toDelete = await chargeRepository.GetSilineceklerAsync(input.LeaseId, firstDay);

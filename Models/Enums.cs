@@ -16,7 +16,19 @@ public enum LeaseStatus
 {
     Active = 1,
     Ended = 2,
-    Terminated = 3
+    Terminated = 3,
+    Draft = 4,
+    RevisionRequested = 5
+}
+
+public enum LeaseReviewActionType
+{
+    DraftCreated = 1,
+    DraftUpdated = 2,
+    RevisionRequested = 3,
+    Resubmitted = 4,
+    Approved = 5,
+    Deleted = 6
 }
 
 public enum LeaseActivityType

@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace KiraTakip.Models.Entities;
@@ -38,8 +39,12 @@ public class Lease : BaseEntity
     [Column("Aciklama")]
     public string? Description { get; set; }
 
+    [Timestamp]
+    public byte[] RowVersion { get; set; } = [];
+
     public Unit Unit { get; set; } = null!;
     public Tenant Tenant { get; set; } = null!;
     public List<LeaseActivityLog> ActivityLog { get; set; } = [];
     public List<LeaseRateOverride> LeaseRateOverrides { get; set; } = [];
+    public List<LeaseReviewHistory> ReviewHistory { get; set; } = [];
 }

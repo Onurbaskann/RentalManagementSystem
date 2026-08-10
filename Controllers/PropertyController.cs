@@ -16,6 +16,8 @@ public class PropertyController(
     IRateHierarchyService rateHierarchyService,
     IPermissionScopeProvider permissionScopeProvider) : Controller
 {
+    private const int PropertyFormValueCountLimit = 10_000;
+
     [Authorize(Policy = PermissionCatalog.Property.Module)]
     public async Task<IActionResult> Index()
     {
@@ -59,6 +61,7 @@ public class PropertyController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequestFormLimits(ValueCountLimit = PropertyFormValueCountLimit)]
     [Authorize(Policy = PermissionCatalog.Property.Create)]
     public async Task<IActionResult> Create(CreatePropertyViewModel viewModel)
     {
@@ -99,6 +102,7 @@ public class PropertyController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequestFormLimits(ValueCountLimit = PropertyFormValueCountLimit)]
     [Authorize(Policy = PermissionCatalog.Property.Edit)]
     public async Task<IActionResult> Edit([FromForm] EditPropertyViewModel viewModel)
     {

@@ -50,6 +50,8 @@ public class LeaseController(
         var leaseDetails = await leaseService.GetDetailsAsync(new GetLeaseDetailsInput(id));
         if (leaseDetails == null) return NotFound();
         if (!IsInScope(leaseDetails.PropertyId, leaseDetails.UnitId)) return Forbid();
+        if (leaseDetails.Status is LeaseStatus.Draft or LeaseStatus.RevisionRequested)
+            return RedirectToAction(nameof(Draft), new { id });
 
         var previousLeases = await leaseService.GetByUnitAsync(new GetLeasesByUnitInput(leaseDetails.UnitId));
         var tenantLeases = await leaseService.GetByTenantAsync(new GetLeasesByTenantInput(leaseDetails.TenantId));
@@ -129,26 +131,17 @@ public class LeaseController(
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.Lease.Create)]
     public async Task<IActionResult> Create(CreateLeaseViewModel viewModel)
     {
         await PopulateCreateOptionsAsync(viewModel);
-
-        foreach (var documentType in viewModel.DocumentTypes.Where(documentType => documentType.Required))
-        {
-            var file = Request.Form.Files.GetFile($"dosya_{documentType.Id}");
-            if (file == null || file.Length == 0)
-                ModelState.AddModelError(
-                    $"dosya_{documentType.Id}",
-                    $"'{documentType.Name}' belgesi zorunludur.");
-        }
-
         if (!ModelState.IsValid) return View(viewModel);
 
         Lease lease;
         try
         {
-            lease = await leaseService.CreateAsync(new CreateLeaseInput(
+            lease = await leaseService.CreateDraftAsync(new CreateLeaseDraftInput(
                 viewModel.UnitId!.Value,
                 viewModel.TenantId,
                 viewModel.StartDate,
@@ -157,6 +150,7 @@ public class LeaseController(
                 viewModel.DueDay,
                 viewModel.Description,
                 BuildRateOverrideInputs(viewModel.LeaseLineItems),
+                CurrentActorUserId(),
                 BuildAccessScope()));
         }
         catch (BusinessValidationException exception)
@@ -167,10 +161,162 @@ public class LeaseController(
         }
 
         await UploadDocumentsAsync(lease.Id, viewModel.DocumentTypes);
-        return RedirectToAction(nameof(Details), new { id = lease.Id });
+        return RedirectToAction(nameof(Draft), new { id = lease.Id });
+    }
+
+    [HttpGet]
+    [Authorize(Policy = PermissionCatalog.Lease.Module)]
+    public async Task<IActionResult> Draft(int id)
+    {
+        var draft = await leaseService.GetDraftForEditAsync(new GetLeaseDraftInput(id, BuildAccessScope()));
+        if (draft == null) return NotFound();
+
+        var actorUserId = CurrentActorUserId();
+        var isOwner = string.Equals(draft.OwnerUserId, actorUserId, StringComparison.Ordinal);
+        var model = new LeaseDraftViewModel
+        {
+            LeaseId = draft.LeaseId,
+            UnitId = draft.UnitId,
+            TenantId = draft.TenantId,
+            StartDate = draft.StartDate,
+            EndDate = draft.EndDate,
+            DueDateRuleType = draft.DueDateRuleType,
+            DueDay = draft.DueDay,
+            Description = draft.Description,
+            Status = draft.Status,
+            RowVersion = draft.RowVersion,
+            OwnerDisplayName = draft.OwnerDisplayName,
+            CreatedAt = draft.CreatedAt,
+            UpdatedAt = draft.UpdatedAt,
+            LatestRevision = draft.LatestRevision,
+            ReviewHistory = await leaseService.GetReviewHistoryAsync(id),
+            CanEdit = isOwner && User.HasPermission(PermissionCatalog.Lease.Create),
+            CanApprove = (!isOwner || currentUserContext.IsSuperAdmin) && draft.Status == LeaseStatus.Draft && User.HasPermission(PermissionCatalog.Lease.Approve),
+            CanRequestRevision = (!isOwner || currentUserContext.IsSuperAdmin) && draft.Status == LeaseStatus.Draft && User.HasPermission(PermissionCatalog.Lease.RequestRevision),
+            CanDelete = (!isOwner || currentUserContext.IsSuperAdmin) && User.HasPermission(PermissionCatalog.Lease.DeleteDraft),
+            LeaseLineItems = draft.RateOverrides.Select(ToLeaseLineItemInput).ToList()
+        };
+        await PopulateDraftOptionsAsync(model);
+        var documents = await documentService.GetListAsync(
+            new GetDocumentsInput(DocumentOwnerType.Lease, id));
+        model.Documents = documents.Select(document => new LeaseDraftDocumentViewModel(
+            document.Id,
+            document.DocumentTypeId,
+            document.DocumentType?.Name ?? string.Empty,
+            document.FileName,
+            document.FileSize,
+            document.Description)).ToList();
+        var documentTypes = await documentService.GetTypesAsync(
+            new GetDocumentTypesInput(DocumentOwnerType.Lease));
+        model.DocumentTypes = documentTypes.Select(documentType => new LeaseDraftDocumentTypeViewModel(
+            documentType.Id,
+            documentType.Name,
+            documentType.Description,
+            documentType.Required,
+            documentType.AllowedExtensions,
+            documentType.MaxSizeMb)).ToList();
+        return View(model);
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.Lease.Create)]
+    public async Task<IActionResult> UpdateDraft(LeaseDraftViewModel viewModel)
+    {
+        if (!ModelState.IsValid) return await Draft(viewModel.LeaseId);
+        await leaseService.UpdateDraftAsync(new UpdateLeaseDraftInput(
+            viewModel.LeaseId, viewModel.UnitId!.Value, viewModel.TenantId,
+            viewModel.StartDate, viewModel.EndDate, viewModel.DueDateRuleType,
+            viewModel.DueDay, viewModel.Description,
+            BuildRateOverrideInputs(viewModel.LeaseLineItems), viewModel.RowVersion,
+            CurrentActorUserId(), BuildAccessScope()));
+        return RedirectToAction(nameof(Draft), new { id = viewModel.LeaseId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.Lease.Create)]
+    public async Task<IActionResult> ResubmitRevision(LeaseDraftViewModel viewModel)
+    {
+        if (!ModelState.IsValid) return await Draft(viewModel.LeaseId);
+        await leaseService.ResubmitRevisionAsync(new ResubmitLeaseRevisionInput(
+            viewModel.LeaseId, viewModel.UnitId!.Value, viewModel.TenantId,
+            viewModel.StartDate, viewModel.EndDate, viewModel.DueDateRuleType,
+            viewModel.DueDay, viewModel.Description,
+            BuildRateOverrideInputs(viewModel.LeaseLineItems), null, viewModel.RowVersion,
+            CurrentActorUserId(), BuildAccessScope()));
+        return RedirectToAction(nameof(Draft), new { id = viewModel.LeaseId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.Lease.Approve)]
+    public async Task<IActionResult> Approve(ApproveLeaseViewModel viewModel)
+    {
+        ThrowIfModelStateInvalid();
+        await leaseService.ApproveAsync(new ApproveLeaseInput(
+            viewModel.LeaseId, viewModel.Explanation, viewModel.RowVersion,
+            CurrentActorUserId(), BuildAccessScope()));
+        return RedirectToAction(nameof(Details), new { id = viewModel.LeaseId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.Lease.RequestRevision)]
+    public async Task<IActionResult> RequestRevision(RequestLeaseRevisionViewModel viewModel)
+    {
+        ThrowIfModelStateInvalid();
+        await leaseService.RequestRevisionAsync(new RequestLeaseRevisionInput(
+            viewModel.LeaseId, viewModel.Reason.Trim(), viewModel.RowVersion,
+            CurrentActorUserId(), BuildAccessScope()));
+        return RedirectToAction(nameof(Draft), new { id = viewModel.LeaseId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.Lease.DeleteDraft)]
+    public async Task<IActionResult> DeleteDraft(DeleteLeaseDraftViewModel viewModel)
+    {
+        ThrowIfModelStateInvalid();
+        await leaseService.DeleteDraftAsync(new DeleteLeaseDraftInput(
+            viewModel.LeaseId, viewModel.Reason.Trim(), viewModel.RowVersion,
+            CurrentActorUserId(), BuildAccessScope()));
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.Lease.Create)]
+    public async Task<IActionResult> UploadDraftDocument(UploadLeaseDraftDocumentViewModel viewModel)
+    {
+        if (viewModel.File is null || viewModel.File.Length == 0)
+            throw new BusinessValidationException(nameof(viewModel.File), "Yüklenecek belgeyi seçin.");
+
+        var draft = await leaseService.GetDraftForEditAsync(
+            new GetLeaseDraftInput(viewModel.LeaseId, BuildAccessScope()));
+        if (draft == null) return NotFound();
+        if (!string.Equals(draft.OwnerUserId, CurrentActorUserId(), StringComparison.Ordinal))
+            return Forbid();
+
+        using var memoryStream = new MemoryStream();
+        await viewModel.File.CopyToAsync(memoryStream);
+        var scope = BuildAccessScope();
+        await documentService.UploadAsync(new UploadDocumentInput(
+            DocumentOwnerType.Lease,
+            viewModel.LeaseId,
+            viewModel.DocumentTypeId,
+            viewModel.File.FileName,
+            viewModel.File.ContentType,
+            memoryStream.ToArray(),
+            InvalidateOld: true,
+            AccessScope: new DocumentAccessScopeInput(
+                [DocumentOwnerType.Lease], scope.PropertyIds, scope.UnitIds)));
+
+        return RedirectToAction(nameof(Draft), new { id = viewModel.LeaseId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.Lease.Extend)]
     public async Task<IActionResult> Extend(int id, ExtendLeaseViewModel viewModel)
     {
@@ -192,6 +338,7 @@ public class LeaseController(
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.Lease.Edit)]
     public async Task<IActionResult> UpdateDueDate(int id, UpdateLeaseDueDateViewModel viewModel)
     {
@@ -208,6 +355,7 @@ public class LeaseController(
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.Lease.Terminate)]
     public async Task<IActionResult> Terminate(int id, TerminateLeaseViewModel viewModel)
     {
@@ -224,6 +372,7 @@ public class LeaseController(
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.Charge.Regenerate)]
     public async Task<IActionResult> Regenerate(int id, RegenerateLeaseViewModel viewModel)
     {
@@ -241,6 +390,7 @@ public class LeaseController(
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.Lease.Edit)]
     public IActionResult CalculateInflationAndVat(CalculateRentIncreaseViewModel viewModel)
     {
@@ -335,6 +485,22 @@ public class LeaseController(
                 lineItem.VatRate))
             .ToList();
 
+    private static LeaseLineItemInputDto ToLeaseLineItemInput(LeaseRateDto rate)
+        => new()
+        {
+            ChargeTypeId = rate.ChargeTypeId,
+            ChargeTypeCode = rate.ChargeTypeCode,
+            ChargeTypeName = rate.ChargeTypeName,
+            Behavior = rate.ChargeTypeBehavior,
+            UnitValue = rate.UnitValue,
+            DefaultUnitValue = rate.UnitValue,
+            VatRate = rate.VatRate,
+            CalculationMethod = rate.CalculationMethod,
+            IsUserModified = true,
+            IsRateFound = true,
+            SourceType = "LeaseRateOverride"
+        };
+
     private async Task PopulateCreateOptionsAsync(CreateLeaseViewModel viewModel)
     {
         var accessScope = BuildAccessScope();
@@ -348,6 +514,21 @@ public class LeaseController(
         ViewBag.UnitAreas = System.Text.Json.JsonSerializer.Serialize(
             viewModel.AvailableUnits.ToDictionary(unit => unit.Id, unit => (double)unit.Area));
     }
+
+    private async Task PopulateDraftOptionsAsync(LeaseDraftViewModel viewModel)
+    {
+        var accessScope = BuildAccessScope();
+        viewModel.AvailableUnits = await propertyService.GetAvailableUnitsAsync(
+            new GetAvailableUnitsInput(accessScope.PropertyIds, accessScope.UnitIds, viewModel.LeaseId > 0 ? viewModel.UnitId : null));
+        viewModel.Tenants = await tenantService.GetAllAsync(
+            new GetTenantsInput(accessScope.PropertyIds, accessScope.UnitIds));
+        ViewBag.UnitAreas = System.Text.Json.JsonSerializer.Serialize(
+            viewModel.AvailableUnits.ToDictionary(unit => unit.Id, unit => (double)unit.Area));
+    }
+
+    private string CurrentActorUserId()
+        => currentUserContext.UserId
+            ?? throw new BusinessException("Oturum kullanıcısı bulunamadı.", ErrorType.Forbidden, "Lease.ActorNotFound");
 
     private LeaseAccessScopeInput BuildAccessScope()
         => permissionScopeProvider.GlobalAccess

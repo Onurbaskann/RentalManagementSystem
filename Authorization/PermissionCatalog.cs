@@ -49,7 +49,10 @@ public static class PermissionCatalog
         public const string Extend       = "Internal.Lease.Extend";
         public const string Terminate    = "Internal.Lease.Terminate";
         public const string OverrideRate = "Internal.Lease.OverrideRate";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(Extend, "Süre Uzat"), new(Terminate, "Feshet"), new(OverrideRate, "Elle Müdahale")];
+        public const string Approve = "Internal.Lease.Approve";
+        public const string RequestRevision = "Internal.Lease.RequestRevision";
+        public const string DeleteDraft = "Internal.Lease.DeleteDraft";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(Extend, "Süre Uzat"), new(Terminate, "Feshet"), new(OverrideRate, "Elle Müdahale"), new(Approve, "Onayla"), new(RequestRevision, "Revizyon İste"), new(DeleteDraft, "Başvuru Sil")];
     }
 
     public static class Payment
@@ -320,6 +323,7 @@ public static class PermissionCatalog
         Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate,
         Tenant.Module, Tenant.Create, Tenant.Edit,
         Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
+        Lease.Approve, Lease.RequestRevision, Lease.DeleteDraft,
         Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject, Payment.MatchBankTransaction,
         ManualCharge.Module, ManualCharge.Create, ManualCharge.Cancel,
         Reservation.Module, Reservation.Create, Reservation.Edit, Reservation.Cancel, Reservation.TransferToCharge,
@@ -338,6 +342,7 @@ public static class PermissionCatalog
         Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate,
         Tenant.Module, Tenant.Create, Tenant.Edit,
         Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
+        Lease.Approve, Lease.RequestRevision, Lease.DeleteDraft,
         Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject,
         Payment.ImportBankStatement, Payment.MatchBankTransaction,
         ChargeType.Module, ChargeType.Create, ChargeType.Edit,
@@ -385,6 +390,7 @@ public static class PermissionCatalog
         Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate,
         Tenant.Module, Tenant.Create, Tenant.Edit,
         Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
+        Lease.Approve, Lease.RequestRevision, Lease.DeleteDraft,
         Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject,
         Payment.ImportBankStatement, Payment.MatchBankTransaction,
         ChargeType.Module, ChargeType.Create, ChargeType.Edit,

@@ -1,0 +1,174 @@
+@model KiraTakip.Models.ViewModels.LeaseDraftViewModel
+@using KiraTakip.Models
+@{
+    ViewData["Title"] = Model.Status == LeaseStatus.RevisionRequested ? "Revizyon İstenen Başvuru" : "Onay Bekleyen Başvuru";
+    ViewData["UseCentralFeedback"] = true;
+    bool isRevision = Model.Status == LeaseStatus.RevisionRequested;
+    bool readOnly = !Model.CanEdit;
+    string editAction = isRevision ? "ResubmitRevision" : "UpdateDraft";
+    var uploadedTypeIds = Model.Documents.Select(document => document.DocumentTypeId).ToHashSet();
+    var missingRequiredTypes = Model.DocumentTypes.Where(type => type.Required && !uploadedTypeIds.Contains(type.Id)).ToList();
+}
+
+<div class="max-w-[1050px] mx-auto" x-data="{ revisionOpen: false, deleteOpen: false, approveOpen: false }">
+    <div class="page-header flex flex-wrap items-start justify-between gap-3">
+        <div>
+            <a href="/Lease" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary">← Sözleşmeler</a>
+            <div class="page-title">Sözleşme Başvurusu #@Model.LeaseId</div>
+            <div class="page-subtitle">Başvuru sahibi: @Model.OwnerDisplayName</div>
+        </div>
+        <span class="px-3 py-1.5 rounded-full text-xs font-bold @(isRevision ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800")">
+            @(isRevision ? "Revizyon İstendi" : "Onay Bekliyor")
+        </span>
+    </div>
+
+    @if (isRevision)
+    {
+        <div class="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-950">
+            <div class="font-bold">Bu başvuru için revizyon istendi.</div>
+            @if (Model.LatestRevision != null)
+            {
+                <div class="mt-2 whitespace-pre-wrap text-sm">@Model.LatestRevision.Explanation</div>
+                <div class="mt-2 text-xs text-rose-700">@Model.LatestRevision.ActorDisplayName · @Model.LatestRevision.ActionDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+            <div class="font-bold">Başvuru onay bekliyor.</div>
+            <div class="mt-1 text-sm">Onaylanana kadar sözleşme aktifleşmez ve tahakkuk oluşmaz.</div>
+        </div>
+    }
+
+    <div class="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+        <div class="rounded-lg border border-slate-200 bg-white p-3"><span class="text-muted block">Başvuru sahibi</span><strong>@Model.OwnerDisplayName</strong></div>
+        <div class="rounded-lg border border-slate-200 bg-white p-3"><span class="text-muted block">Oluşturma</span><strong>@Model.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</strong></div>
+        <div class="rounded-lg border border-slate-200 bg-white p-3"><span class="text-muted block">Son güncelleme</span><strong>@((Model.UpdatedAt ?? Model.CreatedAt).ToLocalTime().ToString("dd.MM.yyyy HH:mm"))</strong></div>
+    </div>
+
+    @if (missingRequiredTypes.Count > 0)
+    {
+        <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+            <strong>Onay için eksik zorunlu belgeler:</strong>
+            @string.Join(", ", missingRequiredTypes.Select(type => type.Name))
+        </div>
+    }
+
+    <div x-data="leaseForm()" x-init="init()" x-cloak @@datechanged="onPickerChanged($event)">
+        <form asp-action="@editAction" method="post" id="leaseDraftForm" x-on:submit="submitting = true">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="LeaseId" />
+            <input type="hidden" name="RowVersion" value="@Convert.ToBase64String(Model.RowVersion)" />
+            @await Html.PartialAsync("_LeaseForm", Model, new ViewDataDictionary(ViewData)
+            {
+                ["ReadOnly"] = readOnly,
+                ["LeaseId"] = Model.LeaseId
+            })
+
+            @if (Model.CanEdit)
+            {
+                <div class="flex flex-wrap gap-3 mt-6">
+                    <button type="submit" class="btn btn-primary px-6" :disabled="submitting">
+                        <span x-text="submitting ? 'Kaydediliyor…' : '@(isRevision ? "Revizyonu Tamamla ve Onaya Gönder" : "Değişiklikleri Kaydet")'"></span>
+                    </button>
+                    <a href="/Lease" class="btn btn-secondary">Vazgeç</a>
+                </div>
+            }
+        </form>
+    </div>
+
+    <div class="card mt-4">
+        <div class="flex items-center justify-between gap-3 mb-4">
+            <div class="text-[15px] font-bold">Belgeler</div>
+            <span class="text-xs text-muted">@Model.Documents.Count belge</span>
+        </div>
+        @if (Model.Documents.Count > 0)
+        {
+            <div class="space-y-2 mb-4">
+                @foreach (var document in Model.Documents)
+                {
+                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
+                        <div><strong class="text-sm">@document.DocumentTypeName</strong><div class="text-xs text-muted">@document.FileName · @(Math.Ceiling(document.FileSize / 1024m)) KB</div></div>
+                        <a href="/Document/Download/@document.Id.ToHashId()" class="btn btn-sm btn-secondary">Görüntüle</a>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-sm text-muted italic mb-4">Henüz belge yüklenmedi.</div>
+        }
+
+        @if (Model.CanEdit)
+        {
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                @foreach (var type in Model.DocumentTypes)
+                {
+                    <form asp-action="UploadDraftDocument" method="post" enctype="multipart/form-data" class="rounded-lg bg-slate-50 border border-slate-200 p-3">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="LeaseId" value="@Model.LeaseId" />
+                        <input type="hidden" name="DocumentTypeId" value="@type.Id" />
+                        <label class="text-xs font-bold block mb-2">@type.Name @(type.Required ? "*" : "")</label>
+                        <div class="flex gap-2"><input type="file" name="File" class="form-control text-xs" accept="@string.Join(",", type.AllowedExtensions.Split(',').Select(ext => "." + ext.Trim()))" required /><button class="btn btn-sm btn-secondary" type="submit">Yükle</button></div>
+                        <div class="text-[11px] text-muted mt-1">Maksimum @type.MaxSizeMb MB</div>
+                    </form>
+                }
+            </div>
+        }
+    </div>
+
+    @await Html.PartialAsync("_LeaseReviewTimeline", Model.ReviewHistory)
+
+    @if (Model.Status == LeaseStatus.Draft && (Model.CanApprove || Model.CanRequestRevision || Model.CanDelete))
+    {
+        <div class="card mt-4 flex flex-wrap gap-3">
+            @if (Model.CanApprove) { <button type="button" class="btn btn-primary" @@click="approveOpen = true">Onayla</button> }
+            @if (Model.CanRequestRevision) { <button type="button" class="btn btn-secondary" @@click="revisionOpen = true">Revizyon İste</button> }
+            @if (Model.CanDelete) { <button type="button" class="btn btn-danger" @@click="deleteOpen = true">Başvuruyu Sil</button> }
+        </div>
+    }
+    else if (isRevision && Model.CanDelete)
+    {
+        <div class="card mt-4"><button type="button" class="btn btn-danger" @@click="deleteOpen = true">Başvuruyu Sil</button></div>
+    }
+
+    <div x-show="approveOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" @@keydown.escape.window="approveOpen = false">
+        <form asp-action="Approve" method="post" class="card w-full max-w-lg" x-on:submit="if ($el.dataset.submitting) $event.preventDefault(); else $el.dataset.submitting = '1'">
+            @Html.AntiForgeryToken()<input type="hidden" name="LeaseId" value="@Model.LeaseId" /><input type="hidden" name="RowVersion" value="@Convert.ToBase64String(Model.RowVersion)" />
+            <div class="text-lg font-bold">Başvuruyu Onayla</div><p class="text-sm text-muted my-3">Onayla birlikte sözleşme aktifleşir ve mevcut süreçle tahakkuklar oluşturulur.</p>
+            <textarea name="Explanation" maxlength="1000" class="form-control" rows="3" placeholder="Onay açıklaması (opsiyonel)"></textarea>
+            <div class="flex justify-end gap-2 mt-4"><button type="button" class="btn btn-secondary" @@click="approveOpen = false">Vazgeç</button><button type="submit" class="btn btn-primary">Onayla</button></div>
+        </form>
+    </div>
+
+    <div x-show="revisionOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" @@keydown.escape.window="revisionOpen = false">
+        <form asp-action="RequestRevision" method="post" class="card w-full max-w-lg" x-data="{ reason: '' }">
+            @Html.AntiForgeryToken()<input type="hidden" name="LeaseId" value="@Model.LeaseId" /><input type="hidden" name="RowVersion" value="@Convert.ToBase64String(Model.RowVersion)" />
+            <div class="text-lg font-bold">Revizyon İste</div><p class="text-sm text-muted my-3">Başvuru sahibine yapılması gereken değişiklikleri açıkça belirtin.</p>
+            <textarea name="Reason" x-model="reason" required maxlength="1000" class="form-control" rows="5"></textarea>
+            <div class="text-xs text-muted text-right mt-1" x-text="`${reason.length}/1000`"></div>
+            <span class="form-error">@Html.ValidationMessage("Reason")</span>
+            <div class="flex justify-end gap-2 mt-4"><button type="button" class="btn btn-secondary" @@click="revisionOpen = false">Vazgeç</button><button type="submit" class="btn btn-primary">Gönder</button></div>
+        </form>
+    </div>
+
+    <div x-show="deleteOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" @@keydown.escape.window="deleteOpen = false">
+        <form asp-action="DeleteDraft" method="post" class="card w-full max-w-lg" x-data="{ reason: '' }">
+            @Html.AntiForgeryToken()<input type="hidden" name="LeaseId" value="@Model.LeaseId" /><input type="hidden" name="RowVersion" value="@Convert.ToBase64String(Model.RowVersion)" />
+            <div class="text-lg font-bold text-red-700">Başvuruyu Sil</div><p class="text-sm text-muted my-3">Başvuru ve bağlı taslak verileri pasif hale getirilir; inceleme geçmişi denetim amacıyla korunur.</p>
+            <textarea name="Reason" x-model="reason" required maxlength="1000" class="form-control" rows="5"></textarea>
+            <div class="text-xs text-muted text-right mt-1" x-text="`${reason.length}/1000`"></div>
+            <span class="form-error">@Html.ValidationMessage("Reason")</span>
+            <div class="flex justify-end gap-2 mt-4"><button type="button" class="btn btn-secondary" @@click="deleteOpen = false">Vazgeç</button><button type="submit" class="btn btn-danger">Başvuruyu Sil</button></div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_LeaseFormScripts", Model, new ViewDataDictionary(ViewData)
+    {
+        ["LeaseId"] = Model.LeaseId,
+        ["ReadOnly"] = readOnly
+    })
+}

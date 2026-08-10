@@ -4,7 +4,7 @@
     ViewData["Title"] = "Yeni Rol";
     ViewData["UseCentralFeedback"] = true;
 
-    var riskSegments = new HashSet<string> { "Delete", "Cancel", "Terminate", "OverrideRate", "Approve", "Reject" };
+    var riskSegments = new HashSet<string> { "Delete", "DeleteDraft", "Cancel", "Terminate", "OverrideRate", "Approve", "Reject" };
 
     var treeData = Model.Permissions.Select(g =>
     {

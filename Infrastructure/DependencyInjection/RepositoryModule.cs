@@ -14,6 +14,7 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<IPropertyRepository, PropertyRepository>();
             services.AddScoped<IUnitRepository, UnitRepository>();
             services.AddScoped<ILeaseRepository, LeaseRepository>();
+            services.AddScoped<ILeaseReviewHistoryRepository, LeaseReviewHistoryRepository>();
             services.AddScoped<IChargeRepository, ChargeRepository>();
             services.AddScoped<IChargeLineItemRepository, ChargeLineItemRepository>();
             services.AddScoped<IPaymentAllocationRepository, PaymentAllocationRepository>();

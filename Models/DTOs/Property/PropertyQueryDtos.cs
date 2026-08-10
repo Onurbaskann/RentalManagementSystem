@@ -6,4 +6,5 @@ public record GetPropertiesInput(
 
 public record GetAvailableUnitsInput(
     IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    IReadOnlyList<int>? UnitIds = null,
+    int? IncludedUnitId = null);

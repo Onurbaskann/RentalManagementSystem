@@ -1,0 +1,63 @@
+@model KiraTakip.Models.ViewModels.ILeaseFormViewModel
+@using System.Text.Json
+@{
+    int? leaseId = ViewData["LeaseId"] as int?;
+    bool readOnly = ViewData["ReadOnly"] as bool? ?? false;
+    var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+}
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('leaseForm', () => ({
+        unitId: @(Model.UnitId?.ToString() ?? "null"),
+        tenantId: @(Model.TenantId > 0 ? Model.TenantId : "null"),
+        startDate: '@Model.StartDate.ToString("yyyy-MM-dd")',
+        endDate: '@Model.EndDate.ToString("yyyy-MM-dd")',
+        dueDateRuleType: @((int)Model.DueDateRuleType),
+        dueDay: @Model.DueDay,
+        leaseId: @(leaseId?.ToString() ?? "null"),
+        readOnly: @(readOnly ? "true" : "false"),
+        submitting: false,
+        loading: false,
+        error: null,
+        lineItems: @Html.Raw(JsonSerializer.Serialize(Model.LeaseLineItems, jsonOptions)),
+        units: {
+            @foreach (var unit in Model.AvailableUnits)
+            {
+                string name = unit.UnitStructure == KiraTakip.Models.UnitStructure.MultipleUnits ? $"{unit.PropertyName} — Birim {unit.UnitNo}" : $"{unit.PropertyName} — Komple";
+                @Html.Raw($"{unit.Id}: {{name: {JsonSerializer.Serialize(name)}, meta: {JsonSerializer.Serialize(unit.Area.M2())}, district: {JsonSerializer.Serialize(unit.District)}, city: {JsonSerializer.Serialize(unit.City)}}},")
+            }
+        },
+        unitAreas: @Html.Raw(ViewBag.UnitAreas ?? "{}"),
+        onPickerChanged(event) {
+            if (event.detail.field === 'start') this.startDate = event.detail.value;
+            if (event.detail.field === 'end') this.endDate = event.detail.value;
+        },
+        init() {
+            if (!this.readOnly) {
+                this.$watch('unitId', () => this.fetchLineItems());
+                this.$watch('tenantId', () => this.fetchLineItems());
+                this.$watch('startDate', () => this.fetchLineItems());
+            }
+            if (this.lineItems.length === 0 && this.unitId && this.tenantId && this.startDate)
+                this.fetchLineItems();
+        },
+        async fetchLineItems() {
+            if (this.readOnly || !this.unitId || !this.tenantId || !this.startDate) return;
+            this.loading = true; this.error = null;
+            try {
+                const leasePart = this.leaseId ? `&leaseId=${this.leaseId}` : '';
+                const response = await fetch(`/Lease/GetDefaultLineItems?unitId=${this.unitId}&tenantId=${this.tenantId}&startDate=${this.startDate}${leasePart}`);
+                if (!response.ok) throw new Error('Tarife kalemleri alınamadı.');
+                this.lineItems = (await response.json()).map(item => ({ ...item }));
+            } catch (error) { this.error = error.message; }
+            finally { this.loading = false; }
+        },
+        unitArea() { return this.unitAreas[this.unitId] ?? 0; },
+        amount(item) { return item.calculationMethod == 2 ? item.unitValue * this.unitArea() : item.unitValue; },
+        sourceLabel(source) {
+            const labels = { LeaseRateOverride: 'Sözleşme Tarifesi', UnitRateOverride: 'Birim Tarifesi', PropertyRateOverride: 'Taşınmaz Tarifesi', RateSchedule: 'Genel Tarife', ManualInput: 'Manuel Giriş' };
+            return labels[source] || 'Tarife';
+        }
+    }));
+});
+</script>

@@ -10,6 +10,9 @@ namespace KiraTakip.Repositories;
 
 public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
 {
+    private static readonly LeaseStatus[] TenantVisibleStatuses =
+        [LeaseStatus.Active, LeaseStatus.Ended, LeaseStatus.Terminated];
+
     public LeaseRepository(ApplicationDbContext ctx) : base(ctx) { }
 
     public async Task<List<LeaseListItemDto>> GetListAsync(
@@ -35,6 +38,9 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
             "surek" => query.Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now && s.EndDate <= now.AddDays(30)),
             "gecmis" => query.Where(s => s.Status == LeaseStatus.Ended),
             "feshedildi" => query.Where(s => s.Status == LeaseStatus.Terminated),
+            "onaybekliyor" => query.Where(s => s.Status == LeaseStatus.Draft),
+            "revizyon" => query.Where(s => s.Status == LeaseStatus.RevisionRequested),
+            "tum" => query,
             _ => query
         };
 
@@ -70,7 +76,9 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
         List<int>? authorizedUnitIds = null)
     {
         var query = _dbSet.AsNoTracking().Where(lease =>
-            lease.Id == leaseId && lease.TenantId == tenantId);
+            lease.Id == leaseId
+            && lease.TenantId == tenantId
+            && TenantVisibleStatuses.Contains(lease.Status));
         if (authorizedPropertyIds != null || authorizedUnitIds != null)
         {
             var propertyIds = authorizedPropertyIds ?? [];
@@ -81,6 +89,47 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
         }
 
         return ProjectDetails(query).FirstOrDefaultAsync();
+    }
+
+    public async Task<List<LeaseListItemDto>> GetTenantPortalListAsync(
+        int tenantId,
+        List<int>? authorizedPropertyIds = null,
+        List<int>? authorizedUnitIds = null)
+    {
+        var query = _dbSet.AsNoTracking().Where(lease =>
+            lease.TenantId == tenantId
+            && TenantVisibleStatuses.Contains(lease.Status));
+
+        if (authorizedPropertyIds != null || authorizedUnitIds != null)
+        {
+            var propertyIds = authorizedPropertyIds ?? [];
+            var unitIds = authorizedUnitIds ?? [];
+            query = query.Where(lease =>
+                propertyIds.Contains(lease.Unit.PropertyId)
+                || unitIds.Contains(lease.UnitId));
+        }
+
+        return await query
+            .OrderByDescending(lease => lease.StartDate)
+            .Select(lease => new LeaseListItemDto
+            {
+                Id = lease.Id,
+                TenantId = lease.TenantId,
+                TenantDisplayName = lease.Tenant.DisplayName,
+                TenantCategoryName = lease.Tenant.TenantCategory != null
+                    ? lease.Tenant.TenantCategory.Name
+                    : string.Empty,
+                UnitId = lease.UnitId,
+                UnitName = lease.Unit.Name,
+                PropertyId = lease.Unit.PropertyId,
+                PropertyName = lease.Unit.Property.Name,
+                StartDate = lease.StartDate,
+                EndDate = lease.EndDate,
+                MonthlyAmount = 0,
+                Status = lease.Status,
+                UnitArea = lease.Unit.Area
+            })
+            .ToListAsync();
     }
 
     private static IQueryable<LeaseDetailDto> ProjectDetails(IQueryable<Lease> query)
@@ -302,17 +351,130 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
             && lease.StartDate <= currentTime
             && lease.EndDate >= currentTime);
 
+    public async Task<LeaseDraftEditDto?> GetDraftForEditAsync(
+        int leaseId,
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null)
+    {
+        var query = ApplyScope(
+            _dbSet.AsNoTracking().Where(lease =>
+                lease.Id == leaseId
+                && (lease.Status == LeaseStatus.Draft
+                    || lease.Status == LeaseStatus.RevisionRequested)),
+            authorizedPropertyIds,
+            authorizedUnitIds);
+
+        var draft = await query.Select(lease => new LeaseDraftEditDto
+        {
+            LeaseId = lease.Id,
+            UnitId = lease.UnitId,
+            TenantId = lease.TenantId,
+            StartDate = lease.StartDate,
+            EndDate = lease.EndDate,
+            DueDateRuleType = lease.DueDateRuleType,
+            DueDay = lease.DueDay,
+            Description = lease.Description,
+            Status = lease.Status,
+            RowVersion = lease.RowVersion,
+            OwnerUserId = lease.CreatedBy,
+            CreatedAt = lease.CreatedAt,
+            UpdatedAt = lease.UpdatedAt,
+            RateOverrides = lease.LeaseRateOverrides
+                .OrderBy(rate => rate.ChargeType.Name)
+                .Select(rate => new LeaseRateDto
+                {
+                    Id = rate.Id,
+                    ChargeTypeId = rate.ChargeTypeId,
+                    ChargeTypeCode = rate.ChargeType.Code,
+                    ChargeTypeName = rate.ChargeType.Name,
+                    ChargeTypeBehavior = rate.ChargeType.Behavior,
+                    UnitValue = rate.UnitValue,
+                    CalculationMethod = rate.CalculationMethod,
+                    VatRate = rate.KdvRate
+                })
+                .ToList()
+        }).FirstOrDefaultAsync();
+
+        if (draft == null) return null;
+
+        draft.OwnerDisplayName = await _ctx.Users
+            .AsNoTracking()
+            .Where(user => user.Id == draft.OwnerUserId)
+            .Select(user => user.AdSoyad ?? user.UserName ?? user.Email ?? user.Id)
+            .FirstOrDefaultAsync() ?? draft.OwnerUserId;
+        draft.LatestRevision = await _ctx.SozlesmeIncelemeGecmisleri
+            .AsNoTracking()
+            .Where(history => history.LeaseId == leaseId
+                && history.ActionType == LeaseReviewActionType.RevisionRequested)
+            .OrderByDescending(history => history.ActionDate)
+            .ThenByDescending(history => history.Id)
+            .Select(history => new LeaseReviewHistoryDto(
+                history.Id,
+                history.ActionType,
+                history.FromStatus,
+                history.ToStatus,
+                history.Explanation,
+                history.ActorUser.AdSoyad
+                    ?? history.ActorUser.UserName
+                    ?? history.ActorUser.Email
+                    ?? history.ActorUserId,
+                history.ActionDate))
+            .FirstOrDefaultAsync();
+
+        return draft;
+    }
+
+    public Task<Lease?> GetForDecisionAsync(
+        int leaseId,
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null)
+        => ApplyScope(
+                _dbSet
+                    .Include(lease => lease.Unit)
+                    .ThenInclude(unit => unit.Property)
+                    .Where(lease => lease.Id == leaseId
+                        && (lease.Status == LeaseStatus.Draft
+                            || lease.Status == LeaseStatus.RevisionRequested)),
+                authorizedPropertyIds,
+                authorizedUnitIds)
+            .FirstOrDefaultAsync();
+
+    public Task<bool> HasOpenApplicationForUnitAsync(int unitId, int? excludedLeaseId = null)
+        => _dbSet.AsNoTracking().AnyAsync(lease =>
+            lease.UnitId == unitId
+            && (!excludedLeaseId.HasValue || lease.Id != excludedLeaseId.Value)
+            && (lease.Status == LeaseStatus.Draft
+                || lease.Status == LeaseStatus.RevisionRequested));
+
+    public Task<bool> HasChargesAsync(int leaseId)
+        => _ctx.Charges.AsNoTracking().AnyAsync(charge => charge.LeaseId == leaseId);
+
+    public Task<bool> HasCreationActivityAsync(int leaseId)
+        => _ctx.SozlesmeIslemGecmisleri.AsNoTracking().AnyAsync(activity =>
+            activity.LeaseId == leaseId
+            && activity.ActivityType == LeaseActivityType.Creation);
+
+    public Task<Lease?> GetDeletedApplicationForAuditAsync(int leaseId)
+        => _dbSet.IgnoreQueryFilters().AsNoTracking().FirstOrDefaultAsync(lease =>
+            lease.Id == leaseId
+            && lease.IsDeleted
+            && (lease.Status == LeaseStatus.Draft
+                || lease.Status == LeaseStatus.RevisionRequested));
+
     public Task<Lease?> GetWithActivityLogAsync(int leaseId)
         => _dbSet
             .Include(lease => lease.ActivityLog)
             .Include(lease => lease.Unit)
             .FirstOrDefaultAsync(lease => lease.Id == leaseId);
 
-    public async Task<DocumentOwnerContextDto?> GetDocumentOwnerContextAsync(int leaseId)
+    public async Task<DocumentOwnerContextDto?> GetDocumentOwnerContextAsync(
+        int leaseId,
+        bool tenantPortalOnly = false)
     {
         var context = await _dbSet
             .AsNoTracking()
-            .Where(lease => lease.Id == leaseId)
+            .Where(lease => lease.Id == leaseId
+                && (!tenantPortalOnly || TenantVisibleStatuses.Contains(lease.Status)))
             .Select(lease => new
             {
                 lease.TenantId,
@@ -327,5 +489,19 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
                 context.TenantId,
                 [context.PropertyId],
                 [context.UnitId]);
+    }
+
+    private static IQueryable<Lease> ApplyScope(
+        IQueryable<Lease> query,
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds)
+    {
+        if (authorizedPropertyIds == null && authorizedUnitIds == null) return query;
+
+        var propertyIds = authorizedPropertyIds ?? [];
+        var unitIds = authorizedUnitIds ?? [];
+        return query.Where(lease =>
+            propertyIds.Contains(lease.Unit.PropertyId)
+            || unitIds.Contains(lease.UnitId));
     }
 }

@@ -5,7 +5,7 @@ using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Models.ViewModels;
 
-public class CreateLeaseViewModel
+public class CreateLeaseViewModel : ILeaseFormViewModel
 {
     public int? UnitId { get; set; }
     public int TenantId { get; set; }

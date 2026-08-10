@@ -32,7 +32,7 @@
         {
             <a href="/Lease/Create" class="btn btn-primary flex items-center gap-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Yeni Sözleşme
+                Yeni Sözleşme Başvurusu
             </a>
         }
     </div>
@@ -44,6 +44,8 @@
         var filters = new[] {
             ("tum",         "Tümü"),
             ("aktif",       "Aktif"),
+            ("onaybekliyor", "Onay Bekleyen"),
+            ("revizyon",     "Revizyon İstenen"),
             ("surek",       "Dolmak Üzere"),
             ("gecmis",      "Sona Erdi"),
             ("feshedildi",  "Feshedildi")
@@ -52,7 +54,7 @@
     @foreach (var (key, label) in filters)
     {
         bool isActive = filtre == key;
-        <a href="/Lease?filtre=@key" 
+        <a href="/Lease?filter=@key" 
            class="btn btn-sm @(isActive ? "btn-primary" : "btn-secondary text-slate-600 bg-white border-slate-200")">@label</a>
     }
 </div>
@@ -84,10 +86,16 @@
                     int kalanGun = s.RemainingDays;
                     bool surek = aktif && kalanGun <= 30;
                     bool feshedildi = s.Status == LeaseStatus.Terminated;
+                    bool draft = s.Status == LeaseStatus.Draft;
+                    bool revisionRequested = s.Status == LeaseStatus.RevisionRequested;
                     string dayBadgeClass = kalanGun <= 10 ? "bg-red-50 text-red-700 border-red-200" : kalanGun <= 30 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200";
-                    var search = $"{s.Id} {s.TenantDisplayName} {s.PropertyName} {s.UnitName}".ToLower();
+                    string statusSearch = draft ? "onay bekliyor taslak" : revisionRequested ? "revizyon istendi" : string.Empty;
+                    var search = $"{s.Id} {s.TenantDisplayName} {s.PropertyName} {s.UnitName} {statusSearch}".ToLower();
+                    string rowHref = draft || revisionRequested
+                        ? $"/Lease/Draft/{s.Id.ToHashId()}"
+                        : $"/Lease/Details/{s.Id.ToHashId()}";
 
-                    <tr data-row data-search="@search" data-href="/Lease/Details/@s.Id.ToHashId()"
+                    <tr data-row data-search="@search" data-href="@rowHref"
                         class="cursor-pointer hover:bg-slate-50 transition-colors"
                         @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
                         <td class="text-xs text-muted font-mono">@s.Id</td>
@@ -106,7 +114,11 @@
                         <td class="cell-center">@s.EndDate.Tarih()</td>
                         <td class="num">@s.MonthlyAmount.Tl()</td>
                         <td class="cell-center">
-                            @if (feshedildi)
+                            @if (draft)
+                            { <span class="px-2 py-0.5 rounded text-[10px] font-bold border bg-amber-50 text-amber-800 border-amber-200">ONAY BEKLİYOR</span> }
+                            else if (revisionRequested)
+                            { <span class="px-2 py-0.5 rounded text-[10px] font-bold border bg-rose-50 text-rose-800 border-rose-200">REVİZYON İSTENDİ</span> }
+                            else if (feshedildi)
                             { <span class="text-muted text-[11px] italic" title="Durum: Feshedildi">Feshedildi</span> }
                             else if (aktif)
                             { <span class="px-2 py-0.5 rounded text-[10px] font-bold border @dayBadgeClass" title="Durum: @(surek ? "Doluyor" : "Aktif")">@kalanGun GÜN</span> }

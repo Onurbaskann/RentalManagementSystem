@@ -480,5 +480,6 @@ public class PropertyService(
     public Task<List<UnitLookupDto>> GetAvailableUnitsAsync(GetAvailableUnitsInput input)
         => unitRepository.GetAvailableAsync(
             input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
+            input.UnitIds?.ToList(),
+            input.IncludedUnitId);
 }

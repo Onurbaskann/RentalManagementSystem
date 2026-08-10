@@ -995,6 +995,12 @@ namespace KiraTakip.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("KdvUygulanacakMi");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2")
                         .HasColumnName("BaslangicTarihi");
@@ -1002,7 +1008,7 @@ namespace KiraTakip.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int")
                         .HasColumnName("Durum")
-                        .HasComment("Active=1, Ended=2, Terminated=3");
+                        .HasComment("Active=1, Ended=2, Terminated=3, Draft=4, RevisionRequested=5");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int")
@@ -1032,8 +1038,13 @@ namespace KiraTakip.Migrations
                         .HasDatabaseName("IX_Sozlesmeler_KiraciId_Aktif")
                         .HasFilter("[IsDeleted] = 0");
 
-                    b.HasIndex("UnitId")
+                    b.HasIndex(new[] { "UnitId" }, "IX_Lease_UnitId")
                         .HasDatabaseName("IX_Sozlesmeler_BirimId");
+
+                    b.HasIndex(new[] { "UnitId" }, "UX_Lease_UnitId_OpenApplication")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Sozlesmeler_BirimId_AcikBasvuru")
+                        .HasFilter("[IsDeleted] = 0 AND [Durum] IN (4, 5)");
 
                     b.ToTable("Sozlesmeler", t =>
                         {
@@ -1202,6 +1213,78 @@ namespace KiraTakip.Migrations
                         {
                             t.HasCheckConstraint("CK_SozlesmeTarifeler_Degerler", "[BirimDeger] >= 0 AND [KdvOrani] BETWEEN 0 AND 100");
                         });
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.LeaseReviewHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ActionDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("IslemTarihi");
+
+                    b.Property<int>("ActionType")
+                        .HasColumnType("int")
+                        .HasColumnName("IslemTipi")
+                        .HasComment("DraftCreated=1, DraftUpdated=2, RevisionRequested=3, Resubmitted=4, Approved=5, Deleted=6");
+
+                    b.Property<string>("ActorUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("IslemYapanKullaniciId");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Explanation")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("Aciklama");
+
+                    b.Property<int?>("FromStatus")
+                        .HasColumnType("int")
+                        .HasColumnName("OncekiDurum")
+                        .HasComment("Active=1, Ended=2, Terminated=3, Draft=4, RevisionRequested=5");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("Aktif");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("LeaseId")
+                        .HasColumnType("int")
+                        .HasColumnName("SozlesmeId");
+
+                    b.Property<int?>("ToStatus")
+                        .HasColumnType("int")
+                        .HasColumnName("YeniDurum")
+                        .HasComment("Active=1, Ended=2, Terminated=3, Draft=4, RevisionRequested=5");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId")
+                        .HasDatabaseName("IX_SozlesmeIncelemeGecmisleri_IslemYapanKullaniciId");
+
+                    b.HasIndex("LeaseId", "ActionDate")
+                        .HasDatabaseName("IX_SozlesmeIncelemeGecmisleri_SozlesmeId_IslemTarihi");
+
+                    b.ToTable("SozlesmeIncelemeGecmisleri");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.LookupValue", b =>
@@ -2798,6 +2881,25 @@ namespace KiraTakip.Migrations
                     b.Navigation("Lease");
                 });
 
+            modelBuilder.Entity("KiraTakip.Models.Entities.LeaseReviewHistory", b =>
+                {
+                    b.HasOne("KiraTakip.Models.Entities.ApplicationUser", "ActorUser")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("KiraTakip.Models.Entities.Lease", "Lease")
+                        .WithMany("ReviewHistory")
+                        .HasForeignKey("LeaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ActorUser");
+
+                    b.Navigation("Lease");
+                });
+
             modelBuilder.Entity("KiraTakip.Models.Entities.PaymentAllocation", b =>
                 {
                     b.HasOne("KiraTakip.Models.Entities.ApplicationUser", "OnaylayanUser")
@@ -3104,6 +3206,8 @@ namespace KiraTakip.Migrations
                     b.Navigation("ActivityLog");
 
                     b.Navigation("LeaseRateOverrides");
+
+                    b.Navigation("ReviewHistory");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.PaymentAllocation", b =>

@@ -32,4 +32,14 @@ public class LeaseRateOverrideRepository : BaseRepository<LeaseRateOverride>, IL
             .Include(rate => rate.ChargeType)
             .Where(rate => rate.LeaseId == leaseId)
             .ToListAsync();
+
+    public async Task SoftDeleteByLeaseIdAsync(int leaseId)
+    {
+        var rates = await _dbSet.Where(rate => rate.LeaseId == leaseId).ToListAsync();
+        foreach (var rate in rates)
+        {
+            rate.IsDeleted = true;
+            rate.IsActive = false;
+        }
+    }
 }

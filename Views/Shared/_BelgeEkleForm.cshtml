@@ -1,5 +1,8 @@
 @model List<KiraTakip.Models.Entities.DocumentType>
 @using System.Linq
+@{
+    bool enforceRequired = ViewData["EnforceRequired"] as bool? ?? true;
+}
 
 @if (!Model.Any()) { return; }
 
@@ -35,7 +38,7 @@
                     }
                     <input type="file" name="dosya_@bt.Id"
                            class="form-control text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                           data-belge-zorunlu="1" data-belge-ad="@bt.Name"
+                           data-belge-zorunlu="@(enforceRequired ? "1" : "0")" data-belge-ad="@bt.Name"
                            accept="@acceptAttr" />
                     @Html.ValidationMessage($"dosya_{bt.Id}", null, new { @class = "form-error" })
                 </div>

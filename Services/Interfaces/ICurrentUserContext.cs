@@ -8,4 +8,5 @@ public interface ICurrentUserContext
     UserType? UserType { get; }
     int? TenantId { get; }
     bool IsKiraciUser { get; }
+    bool IsSuperAdmin => false;
 }

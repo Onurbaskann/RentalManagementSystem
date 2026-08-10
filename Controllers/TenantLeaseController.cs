@@ -25,7 +25,8 @@ public class TenantLeaseController(
     public async Task<IActionResult> Index()
     {
         var tenantId = currentUserContext.TenantId!.Value;
-        var leases = await leaseService.GetByTenantAsync(new GetLeasesByTenantInput(tenantId, BuildAccessScope()));
+        var leases = await leaseService.GetTenantPortalLeasesAsync(
+            new GetTenantPortalLeasesInput(tenantId, BuildAccessScope()));
 
         return View(leases);
     }

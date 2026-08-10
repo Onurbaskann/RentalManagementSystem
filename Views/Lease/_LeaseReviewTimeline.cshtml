@@ -1,0 +1,40 @@
+@model IReadOnlyList<KiraTakip.Models.Dtos.LeaseReviewHistoryDto>
+@using KiraTakip.Models
+
+<div class="card mt-4">
+    <div class="text-[15px] font-bold mb-4">Başvuru Geçmişi</div>
+    @if (Model.Count == 0)
+    {
+        <div class="text-sm text-muted italic">Henüz işlem geçmişi bulunmuyor.</div>
+    }
+    else
+    {
+        <ol class="space-y-4">
+            @foreach (var item in Model.OrderByDescending(history => history.ActionDate).ThenByDescending(history => history.Id))
+            {
+                string label = item.ActionType switch
+                {
+                    LeaseReviewActionType.DraftCreated => "Başvuru oluşturuldu",
+                    LeaseReviewActionType.DraftUpdated => "Taslak güncellendi",
+                    LeaseReviewActionType.RevisionRequested => "Revizyon istendi",
+                    LeaseReviewActionType.Resubmitted => "Revizyon tamamlandı ve yeniden gönderildi",
+                    LeaseReviewActionType.Approved => "Başvuru onaylandı",
+                    LeaseReviewActionType.Deleted => "Başvuru silindi",
+                    _ => item.ActionType.ToString()
+                };
+                <li class="relative pl-6 border-l-2 border-slate-200">
+                    <span class="absolute -left-[6px] top-1 h-2.5 w-2.5 rounded-full bg-indigo-500"></span>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <strong class="text-sm text-slate-800">@label</strong>
+                        <time class="text-xs text-muted">@item.ActionDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</time>
+                    </div>
+                    <div class="text-xs text-muted mt-1">@item.ActorDisplayName</div>
+                    @if (!string.IsNullOrWhiteSpace(item.Explanation))
+                    {
+                        <div class="mt-2 rounded-lg bg-slate-50 border border-slate-100 p-3 text-sm text-slate-700 whitespace-pre-wrap">@item.Explanation</div>
+                    }
+                </li>
+            }
+        </ol>
+    }
+</div>

@@ -14,7 +14,7 @@
 
     <div x-data="tasinmazDuzenleData()" x-cloak>
 
-        <form asp-action="Edit" method="post" asp-form-write-permission="@PermissionCatalog.Property.Edit">
+        <form asp-action="Edit" method="post" class="property-form" asp-form-write-permission="@PermissionCatalog.Property.Edit">
         <input type="hidden" asp-for="Id" />
 
         <div class="card">
@@ -100,7 +100,7 @@
                 </div>
 
                 <template x-for="(unit, i) in birimler" :key="i">
-                    <div class="bg-[#fafbfc] border border-[var(--color-border)] rounded-lg p-3.5 px-4 mb-3 relative">
+                    <div data-unit-card class="bg-[#fafbfc] border border-[var(--color-border)] rounded-lg p-3.5 px-4 mb-3 relative">
                         <input type="hidden" :name="'Units['+i+'].Id'" :value="unit.id ?? ''" />
                         <input type="hidden" :name="'Units['+i+'].HasActiveLease'" :value="unit.aktifSozlesmesiVar" />
 
@@ -445,12 +445,23 @@
             </div>
         </div>
 
-        <div class="flex gap-3 mt-5">
-            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Property.Edit">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>
-                Kaydet
+        <div class="property-form-actions">
+            <button type="button"
+                    data-property-sticky-add-unit
+                    class="btn btn-secondary"
+                    x-show="unitStructure === '2'"
+                    @@click="addBirim()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                <span>Birim Ekle</span>
+                <span class="property-form-actions__count" x-text="birimler.length"></span>
             </button>
-            <a href="/Property/@Model.Id.ToHashId()" class="btn btn-secondary">İptal</a>
+            <div class="property-form-actions__submit">
+                <a href="/Property/@Model.Id.ToHashId()" class="btn btn-secondary">İptal</a>
+                <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Property.Edit">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>
+                    Kaydet
+                </button>
+            </div>
         </div>
     </form>
 </div>
@@ -521,6 +532,19 @@
                 addBirim() {
                     this.birimler.push({ id: null, birimNo: '', katNo: '', ad: '', yuzolcumu: '', aciklama: '', unitTypeId: '', aktifSozlesmesiVar: false });
                     this.birimErrors.push({});
+                    this.focusNewUnit();
+                },
+                focusNewUnit() {
+                    this.$nextTick(() => {
+                        const cards = this.$root.querySelectorAll('[data-unit-card]');
+                        const newCard = cards[cards.length - 1];
+                        if (!newCard) return;
+
+                        newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        window.setTimeout(() => {
+                            newCard.querySelector('input[name$=".UnitNo"]')?.focus({ preventScroll: true });
+                        }, 350);
+                    });
                 },
                 removeBirim(i) {
                     this.birimler.splice(i, 1);

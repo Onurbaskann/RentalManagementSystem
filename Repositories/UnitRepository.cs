@@ -155,7 +155,8 @@ public class UnitRepository : BaseRepository<Unit>, IUnitRepository
 
     public async Task<List<UnitLookupDto>> GetAvailableAsync(
         List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+        List<int>? authorizedUnitIds = null,
+        int? includedUnitId = null)
     {
         var now = DateTime.Now;
         var query = _dbSet.AsNoTracking().AsQueryable();
@@ -170,7 +171,12 @@ public class UnitRepository : BaseRepository<Unit>, IUnitRepository
 
         return await query
             .Where(unit => unit.UnitType != null && unit.UnitType.Usage == UnitTypeUsage.Rentable)
-            .Where(unit => !unit.Leases.Any(lease => lease.Status == LeaseStatus.Active && lease.StartDate <= now && lease.EndDate >= now))
+            .Where(unit => unit.Id == includedUnitId
+                || (!unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
+                        && lease.StartDate <= now
+                        && lease.EndDate >= now)
+                    && !unit.Leases.Any(lease => lease.Status == LeaseStatus.Draft
+                        || lease.Status == LeaseStatus.RevisionRequested)))
             .OrderBy(unit => unit.Property.Name)
             .ThenBy(unit => unit.Name)
             .Select(unit => new UnitLookupDto
@@ -249,7 +255,9 @@ public class UnitRepository : BaseRepository<Unit>, IUnitRepository
         List<int>? authorizedUnitIds = null)
     {
         var query = _dbSet.AsNoTracking()
-            .Where(unit => unit.Leases.Any(lease => lease.TenantId == tenantId));
+            .Where(unit => unit.Leases.Any(lease =>
+                lease.TenantId == tenantId
+                && lease.Status == LeaseStatus.Active));
         if (authorizedPropertyIds != null || authorizedUnitIds != null)
         {
             var propertyIds = authorizedPropertyIds ?? [];

@@ -33,6 +33,8 @@ public class CurrentUserContext : ICurrentUserContext
     }
 
     public bool IsKiraciUser => UserType == Models.UserType.Tenant && TenantId.HasValue;
+    public bool IsSuperAdmin => Principal?.HasClaim(
+        claim => claim.Type == "IsSuperAdmin" && claim.Value == "true") == true;
 
     public CurrentUserContext(IHttpContextAccessor httpContextAccessor)
     {

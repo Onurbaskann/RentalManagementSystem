@@ -10,6 +10,10 @@ public interface ILeaseRepository : IBaseRepository<Lease>
         List<int>? authorizedUnitIds = null);
     Task<LeaseDetailDto?> GetDetailsAsync(int id);
     Task<LeaseDetailDto?> GetTenantDetailsAsync(int leaseId, int tenantId, List<int>? authorizedPropertyIds = null, List<int>? authorizedUnitIds = null);
+    Task<List<LeaseListItemDto>> GetTenantPortalListAsync(
+        int tenantId,
+        List<int>? authorizedPropertyIds = null,
+        List<int>? authorizedUnitIds = null);
     Task<List<LeaseListItemDto>> GetByTenantIdAsync(
         int tenantId,
         List<int>? authorizedPropertyIds = null,
@@ -30,6 +34,18 @@ public interface ILeaseRepository : IBaseRepository<Lease>
 
     Task<List<UnitLookupDto>> GetActiveLeaseUnitsByTenantIdAsync(int tenantId, CancellationToken ct = default);
     Task<bool> HasActiveLeaseForUnitAsync(int unitId, DateTime currentTime);
+    Task<LeaseDraftEditDto?> GetDraftForEditAsync(
+        int leaseId,
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null);
+    Task<Lease?> GetForDecisionAsync(
+        int leaseId,
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null);
+    Task<bool> HasOpenApplicationForUnitAsync(int unitId, int? excludedLeaseId = null);
+    Task<bool> HasChargesAsync(int leaseId);
+    Task<bool> HasCreationActivityAsync(int leaseId);
+    Task<Lease?> GetDeletedApplicationForAuditAsync(int leaseId);
     Task<Lease?> GetWithActivityLogAsync(int leaseId);
-    Task<DocumentOwnerContextDto?> GetDocumentOwnerContextAsync(int leaseId);
+    Task<DocumentOwnerContextDto?> GetDocumentOwnerContextAsync(int leaseId, bool tenantPortalOnly = false);
 }
