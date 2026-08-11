@@ -1,15 +1,18 @@
-@model List<KiraTakip.Models.Dtos.PropertyListItemDto>
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.PropertyListItemDto>
 @using KiraTakip.Models
+@using KiraTakip.Models.Common
 @{
     ViewData["Title"] = "Taşınmazlar";
 
     bool canEdit = User.HasPermission(PermissionCatalog.Property.Create);
+    var query = ViewBag.Query as TableQuery ?? new TableQuery();
+    var pagination = PaginationModel.FromPaged(Model, "/Property", query.ToQueryDict());
 }
 
 <div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Taşınmazlar</div>
-        <div class="page-subtitle">@Model.Count taşınmaz kayıtlı</div>
+        <div class="page-subtitle">@Model.Total taşınmaz kayıtlı</div>
     </div>
     @if (canEdit)
     {
@@ -20,8 +23,19 @@
     }
 </div>
 
+<form method="get" action="/Property" class="card p-3 mb-4 flex items-center gap-3">
+    <input type="hidden" name="size" value="@query.Size" />
+    <input type="search" name="q" value="@query.Q" class="form-control w-full max-w-sm" placeholder="Ara: taşınmaz, şehir, ilçe veya tür…" />
+    <button type="submit" class="btn btn-secondary">Ara</button>
+    @if (!string.IsNullOrWhiteSpace(query.Q))
+    {
+        <a href="/Property?size=@query.Size" class="btn btn-secondary">Temizle</a>
+    }
+    <span class="ml-auto text-xs text-muted"><strong>@Model.Total</strong> kayıt</span>
+</form>
+
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    @foreach (var t in Model)
+    @foreach (var t in Model.Items)
     {
         var kiraliSayi = t.LeasedUnitCount;
         var surekSayi = t.ExpiringSoonUnitCount;
@@ -76,4 +90,6 @@
         </a>
     }
 </div>
+
+@await Html.PartialAsync("_Pagination", pagination)
 

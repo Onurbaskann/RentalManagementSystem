@@ -1,5 +1,6 @@
-@model List<KiraTakip.Models.ViewModels.RoleListViewModel>
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.RoleListItemDto>
 @using KiraTakip.Authorization
+@using KiraTakip.Models.Common
 @{
     Layout = "_KiraciLayout";
     ViewData["Title"] = "Rol Yönetimi";
@@ -12,13 +13,15 @@
     var canCreate = User.HasPermission(PermissionCatalog.TenantPortal.System.Role.Create);
     var canEdit = User.HasPermission(PermissionCatalog.TenantPortal.System.Role.Edit);
     var canDelete = User.HasPermission(PermissionCatalog.TenantPortal.System.Role.Delete);
+    var query = ViewBag.Query as TableQuery ?? new TableQuery();
+    var pagination = PaginationModel.FromPaged(Model, "/Tenant/Roles", query.ToQueryDict());
 }
 
 
 <div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Rol Yönetimi</div>
-        <div class="page-subtitle">@Model.Count rol tanımlı</div>
+        <div class="page-subtitle">@Model.Total rol tanımlı</div>
     </div>
     @if (canCreate)
     {
@@ -43,7 +46,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var role in Model)
+                @foreach (var role in Model.Items)
                 {
                     <tr>
                         <td class="font-semibold">@role.Name</td>
@@ -84,4 +87,5 @@
             </tbody>
         </table>
     </div>
+    @await Html.PartialAsync("_Pagination", pagination)
 </div>

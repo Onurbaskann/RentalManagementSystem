@@ -1,12 +1,13 @@
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Entities;
+using KiraTakip.Models.Common;
 
 namespace KiraTakip.Models.ViewModels;
 
 public class TenantIndexViewModel
 {
-    public List<TenantListItemDto> Tenants { get; set; } = [];
-    public Dictionary<int, int> ActiveLeaseCounts { get; set; } = [];
+    public PagedResult<TenantListItemDto> Tenants { get; set; } = new();
+    public TableQuery Query { get; set; } = new();
     public bool CanCreate { get; set; }
     public bool CanEdit { get; set; }
 }

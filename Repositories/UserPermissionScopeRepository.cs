@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace KiraTakip.Repositories;
 
 public class UserPermissionScopeRepository(ApplicationDbContext ctx)
-    : BaseRepository<UserPermissionScope>(ctx), IUserPermissionScopeRepository
+    : RepositoryBase<UserPermissionScope>(ctx), IUserPermissionScopeRepository
 {
     public async Task<List<int>> GetScopeIdsAsync(
         string userId,

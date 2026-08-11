@@ -1,5 +1,6 @@
 ﻿using KiraTakip.Authorization;
 using KiraTakip.Models.Dtos.AuditLog;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -12,37 +13,35 @@ namespace KiraTakip.Controllers;
 public class AdminAuditLogController(IAuditService auditService) : Controller
 {
     [HttpGet("")]
-    public async Task<IActionResult> Index([FromQuery] AuditLogFilterViewModel filter)
+    public async Task<IActionResult> Index(
+        [FromQuery] TableQuery query,
+        string? eventType,
+        string? entityType,
+        string? userEmail,
+        DateTime? startDate,
+        DateTime? endDate)
     {
-        filter.Page = Math.Max(1, filter.Page);
+        query.From ??= startDate;
+        query.To ??= endDate;
 
         var input = new QueryInput(
-            filter.EventType,
-            filter.EntityType,
-            filter.StartDate,
-            filter.EndDate,
-            filter.UserEmail,
-            filter.Page,
-            AuditLogFilterViewModel.PageSize);
+            eventType,
+            entityType,
+            userEmail,
+            query);
 
         var result = await auditService.QueryAsync(input);
 
-        filter.TotalCount = result.TotalCount;
-        filter.AvailableEventTypes = result.AvailableEventTypes;
-        filter.AvailableEntityTypes = result.AvailableEntityTypes;
-        filter.UserNotFoundMessage = result.UserNotFoundMessage;
-        filter.Records = result.Rows.Select(r => new AuditLogRowViewModel
+        return View(new AuditLogFilterViewModel
         {
-            Id = r.Id,
-            EventType = r.EventType,
-            EntityType = r.EntityType,
-            EntityId = r.EntityId,
-            UserFullName = r.UserFullName,
-            IpAddress = r.IpAddress,
-            Details = r.Details,
-            CreatedAt = r.CreatedAt
-        }).ToList();
-
-        return View(filter);
+            EventType = eventType,
+            EntityType = entityType,
+            UserEmail = userEmail,
+            Query = query,
+            Records = result.Records,
+            AvailableEventTypes = result.AvailableEventTypes,
+            AvailableEntityTypes = result.AvailableEntityTypes,
+            UserNotFoundMessage = result.UserNotFoundMessage
+        });
     }
 }

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class BankTransactionRepository : BaseRepository<BankTransaction>, IBankTransactionRepository
+public class BankTransactionRepository : RepositoryBase<BankTransaction>, IBankTransactionRepository
 {
     public BankTransactionRepository(ApplicationDbContext ctx) : base(ctx) { }
 
@@ -59,29 +59,22 @@ public class BankTransactionRepository : BaseRepository<BankTransaction>, IBankT
             if (status.HasValue) query = query.Where(transaction => transaction.MatchStatus == status.Value);
         }
 
-        var total = await query.CountAsync();
-        var items = await query.OrderByDescending(transaction => transaction.TransactionDate)
-                               .Skip(tableQuery.Skip).Take(tableQuery.Take)
-                               .Select(transaction => new BankTransactionListItemDto
-                               {
-                                   Id = transaction.Id,
-                                   TransactionDate = transaction.TransactionDate,
-                                   TransactionAmount = transaction.TransactionAmount,
-                                   Description = transaction.Description,
-                                   SenderIban = transaction.SenderIban,
-                                   SenderInfo = transaction.SenderInfo,
-                                   BankCode = transaction.BankCode,
-                                   MatchStatus = transaction.MatchStatus,
-                               })
-                               .ToListAsync();
+        var itemsQuery = query
+            .OrderByDescending(transaction => transaction.TransactionDate)
+            .ThenByDescending(transaction => transaction.Id)
+            .Select(transaction => new BankTransactionListItemDto
+            {
+                Id = transaction.Id,
+                TransactionDate = transaction.TransactionDate,
+                TransactionAmount = transaction.TransactionAmount,
+                Description = transaction.Description,
+                SenderIban = transaction.SenderIban,
+                SenderInfo = transaction.SenderInfo,
+                BankCode = transaction.BankCode,
+                MatchStatus = transaction.MatchStatus,
+            });
 
-        return new PagedResult<BankTransactionListItemDto>
-        {
-            Items = items,
-            Total = total,
-            Page = Math.Max(1, tableQuery.Page),
-            Size = tableQuery.SafeSize
-        };
+        return await GetPagedResultAsync(query, itemsQuery, tableQuery);
     }
 
     public async Task<BankTransactionDetailDto?> GetDetailAsync(int id)

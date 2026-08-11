@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class PropertyRateOverrideRepository : BaseRepository<PropertyRateOverride>, IPropertyRateOverrideRepository
+public class PropertyRateOverrideRepository : RepositoryBase<PropertyRateOverride>, IPropertyRateOverrideRepository
 {
     public PropertyRateOverrideRepository(ApplicationDbContext ctx) : base(ctx) { }
 

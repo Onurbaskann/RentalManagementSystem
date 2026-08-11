@@ -4,6 +4,7 @@ using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
+using KiraTakip.Models.Common;
 
 namespace KiraTakip.Services;
 
@@ -15,6 +16,9 @@ public class TenantCategoryService(
 
     public Task<List<CategoryListItemDto>> GetTenantCategoriesAsync()
         => categoryRepository.GetListByTipiAsync(Type);
+
+    public Task<PagedResult<CategoryListItemDto>> GetTenantCategoriesPagedAsync(TableQuery query)
+        => categoryRepository.GetPagedListByTypeAsync(Type, query);
 
     public async Task<int> GetNextOrderAsync()
         => (await categoryRepository.GetMaxSiraByTipiAsync(Type)) + 1;

@@ -1,6 +1,7 @@
 using KiraTakip.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -14,13 +15,16 @@ public class ManualChargeController(
     IPermissionScopeProvider permissionScopeProvider) : Controller
 {
     [Authorize(Policy = PermissionCatalog.ManualCharge.Module)]
-    public async Task<IActionResult> Index(string? status, string? relation, int? leaseId)
+    public async Task<IActionResult> Index(
+        [FromQuery] TableQuery query,
+        string? relation,
+        int? leaseId)
     {
         var accessScope = GetAccessScope();
 
-        var manualCharges = await manualChargeService.GetAllAsync(new GetManualChargesInput(
+        var manualCharges = await manualChargeService.GetPageAsync(new GetManualChargesPageInput(
+            query,
             accessScope.PropertyIds,
-            status,
             relation,
             leaseId,
             accessScope.UnitIds));
@@ -30,7 +34,8 @@ public class ManualChargeController(
                 accessScope.PropertyIds,
                 accessScope.UnitIds));
 
-        ViewBag.Status = status ?? "tum";
+        ViewBag.Query = query;
+        ViewBag.Status = query.Status ?? "tum";
         ViewBag.Relation = relation ?? "";
         ViewBag.LeaseId = leaseId;
 

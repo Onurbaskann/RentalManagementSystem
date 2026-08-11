@@ -1,12 +1,13 @@
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class PropertyRepository : BaseRepository<Property>, IPropertyRepository
+public class PropertyRepository : RepositoryBase<Property>, IPropertyRepository
 {
     public PropertyRepository(ApplicationDbContext ctx) : base(ctx) { }
 
@@ -60,6 +61,72 @@ public class PropertyRepository : BaseRepository<Property>, IPropertyRepository
                         && lease.EndDate >= now))
             })
             .ToListAsync();
+    }
+
+    public async Task<PagedResult<PropertyListItemDto>> GetPagedListAsync(
+        TableQuery tableQuery,
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null)
+    {
+        var now = DateTime.Now;
+        var query = _dbSet.AsNoTracking().AsQueryable();
+        var hasScopeFilter = authorizedPropertyIds != null || authorizedUnitIds != null;
+        var propertyIds = authorizedPropertyIds ?? [];
+        var unitIds = authorizedUnitIds ?? [];
+
+        if (hasScopeFilter)
+        {
+            query = query.Where(property =>
+                propertyIds.Contains(property.Id)
+                || property.Units.Any(unit => unitIds.Contains(unit.Id)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(tableQuery.Q))
+        {
+            var search = tableQuery.Q.Trim();
+            query = query.Where(property =>
+                EF.Functions.Like(property.Name, $"%{search}%")
+                || EF.Functions.Like(property.City, $"%{search}%")
+                || EF.Functions.Like(property.District, $"%{search}%")
+                || (property.PropertyType != null
+                    && EF.Functions.Like(property.PropertyType.Name, $"%{search}%")));
+        }
+
+        var itemsQuery = query
+            .OrderBy(property => property.Name)
+            .ThenBy(property => property.Id)
+            .Select(property => new PropertyListItemDto
+            {
+                Id = property.Id,
+                Name = property.Name,
+                City = property.City,
+                District = property.District,
+                PropertyTypeName = property.PropertyType != null ? property.PropertyType.Name : string.Empty,
+                ClosedArea = property.ClosedArea,
+                OpenArea = property.OpenArea,
+                UnitStructure = property.UnitStructure,
+                UnitCount = property.Units.Count(unit =>
+                    !hasScopeFilter || propertyIds.Contains(property.Id) || unitIds.Contains(unit.Id)),
+                LeasedUnitCount = property.Units.Count(unit =>
+                    (!hasScopeFilter || propertyIds.Contains(property.Id) || unitIds.Contains(unit.Id))
+                    && unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
+                        && lease.StartDate <= now
+                        && lease.EndDate >= now
+                        && lease.EndDate > now.AddDays(30))),
+                ExpiringSoonUnitCount = property.Units.Count(unit =>
+                    (!hasScopeFilter || propertyIds.Contains(property.Id) || unitIds.Contains(unit.Id))
+                    && unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
+                        && lease.StartDate <= now
+                        && lease.EndDate >= now
+                        && lease.EndDate <= now.AddDays(30))),
+                VacantUnitCount = property.Units.Count(unit =>
+                    (!hasScopeFilter || propertyIds.Contains(property.Id) || unitIds.Contains(unit.Id))
+                    && !unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
+                        && lease.StartDate <= now
+                        && lease.EndDate >= now))
+            });
+
+        return await GetPagedResultAsync(query, itemsQuery, tableQuery);
     }
 
     public async Task<PropertyDetailDto?> GetDetailsAsync(int id)

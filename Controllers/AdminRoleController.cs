@@ -2,6 +2,7 @@ using KiraTakip.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Models.Common;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -16,21 +17,11 @@ public class AdminRoleController(
     UserManager<ApplicationUser> userManager) : Controller
 {
     [HttpGet("")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
-        var roller = await roleService.GetInternalRolesWithDetailsAsync();
-        var model = roller.Select(r => new RoleListViewModel
-        {
-            Id = r.Id,
-            Name = r.Name,
-            Description = r.Description,
-            IsSystemRole = r.IsSystemRole,
-            IsActive = r.IsActive,
-            UserCount = r.UserCount,
-            PermissionCount = r.PermissionCount
-        }).ToList();
-
-        return View(model);
+        var roles = await roleService.GetInternalRolesWithDetailsPagedAsync(query);
+        ViewBag.Query = query;
+        return View(roles);
     }
 
     [HttpGet("Create")]

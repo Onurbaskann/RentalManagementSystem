@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
+public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
 {
     public ChargeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
@@ -153,9 +153,8 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
             query = query.Where(t => t.Status != ChargeStatus.Cancelled);
         }
 
-        var total = await query.CountAsync();
-        var items = await query.OrderByDescending(t => t.PeriodStart)
-                               .Skip(q.Skip).Take(q.Take)
+        var itemsQuery = query.OrderByDescending(t => t.PeriodStart)
+                              .ThenByDescending(t => t.Id)
                                .Select(t => new ChargeListItemDto
                                {
                                    Id = t.Id,
@@ -188,16 +187,9 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
                                        TotalAmount = k.TotalAmount,
                                        SourceType = k.SourceType
                                    }).ToList()
-                               })
-                               .ToListAsync();
+                               });
 
-        return new PagedResult<ChargeListItemDto>
-        {
-            Items = items,
-            Total = total,
-            Page = Math.Max(1, q.Page),
-            Size = q.SafeSize
-        };
+        return await GetPagedResultAsync(query, itemsQuery, q);
     }
 
     public async Task<PagedResult<ChargeListItemDto>> GetTenantPagedListAsync(
@@ -261,11 +253,9 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
             };
         }
 
-        var total = await query.CountAsync();
-        var items = await query
+        var itemsQuery = query
             .OrderByDescending(charge => charge.PeriodStart)
-            .Skip(filter.Skip)
-            .Take(filter.Size)
+            .ThenByDescending(charge => charge.Id)
             .Select(charge => new ChargeListItemDto
             {
                 Id = charge.Id,
@@ -308,16 +298,9 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
                     TotalAmount = lineItem.TotalAmount,
                     SourceType = lineItem.SourceType
                 }).ToList()
-            })
-            .ToListAsync();
+            });
 
-        return new PagedResult<ChargeListItemDto>
-        {
-            Items = items,
-            Total = total,
-            Page = filter.Page,
-            Size = filter.Size
-        };
+        return await GetPagedResultAsync(query, itemsQuery, filter.Page, filter.Size);
     }
 
     // ── Detay (DTO) ───────────────────────────────────────────────────────
@@ -635,6 +618,100 @@ public class ChargeRepository : BaseRepository<Charge>, IChargeRepository
         q = ApplyScope(q, propertyIds, unitIds);
 
         return await q.CountAsync();
+    }
+
+    public async Task<PagedResult<ManualChargeListItemDto>> GetManualChargePagedListAsync(
+        TableQuery tableQuery,
+        List<int>? propertyIds,
+        string? relation = null,
+        int? leaseId = null,
+        List<int>? unitIds = null)
+    {
+        IQueryable<Charge> query = _dbSet.AsNoTracking()
+            .Where(charge => charge.SourceType == ChargeSourceType.Manual);
+
+        query = ApplyScope(query, propertyIds, unitIds);
+
+        if (leaseId.HasValue)
+            query = query.Where(charge => charge.LeaseId == leaseId.Value);
+
+        if (!string.IsNullOrWhiteSpace(relation))
+        {
+            if (relation == "sozlesmeli")
+                query = query.Where(charge => charge.LeaseId != null);
+            else if (relation == "sozlesmesiz")
+                query = query.Where(charge => charge.LeaseId == null);
+        }
+
+        if (!string.IsNullOrWhiteSpace(tableQuery.Status) && tableQuery.Status != "tum")
+        {
+            if (tableQuery.Status == "iptal")
+            {
+                query = query.Where(charge => charge.Status == ChargeStatus.Cancelled);
+            }
+            else
+            {
+                query = query.Where(charge => charge.Status != ChargeStatus.Cancelled);
+                var filteredStatus = tableQuery.Status switch
+                {
+                    "bekliyor" => ChargeStatus.Pending,
+                    "kismi" => ChargeStatus.PartiallyPaid,
+                    "tamodendi" => ChargeStatus.Paid,
+                    "gecikti" => ChargeStatus.Overdue,
+                    _ => (ChargeStatus?)null
+                };
+                if (filteredStatus.HasValue)
+                    query = query.Where(charge => charge.Status == filteredStatus.Value);
+            }
+        }
+        else
+        {
+            query = query.Where(charge => charge.Status != ChargeStatus.Cancelled);
+        }
+
+        if (!string.IsNullOrWhiteSpace(tableQuery.Q))
+        {
+            var search = tableQuery.Q.Trim();
+            query = query.Where(charge =>
+                EF.Functions.Like(charge.Tenant.Name, $"%{search}%")
+                || EF.Functions.Like(charge.Unit.Property.Name, $"%{search}%")
+                || EF.Functions.Like(charge.Unit.Name, $"%{search}%")
+                || charge.LineItems.Any(lineItem =>
+                    EF.Functions.Like(lineItem.Description, $"%{search}%")));
+        }
+
+        var itemsQuery = query
+            .OrderByDescending(charge => charge.CreatedAt)
+            .ThenByDescending(charge => charge.Id)
+            .Select(charge => new ManualChargeListItemDto
+            {
+                Id = charge.Id,
+                LeaseId = charge.LeaseId,
+                TenantId = charge.TenantId,
+                TenantCategoryName = charge.Tenant.TenantCategory != null
+                    ? charge.Tenant.TenantCategory.Name
+                    : null,
+                TenantDisplayName = charge.Tenant.Name,
+                PropertyName = charge.Unit.Property.Name,
+                UnitName = charge.Unit.Name,
+                ChargeTypeCode = charge.LineItems
+                    .OrderBy(lineItem => lineItem.ChargeType.SortOrder)
+                    .Select(lineItem => lineItem.ChargeType.Code)
+                    .FirstOrDefault(),
+                FirstLineItemDescription = charge.LineItems
+                    .OrderBy(lineItem => lineItem.ChargeType.SortOrder)
+                    .Select(lineItem => lineItem.Description)
+                    .FirstOrDefault(),
+                ExpectedAmount = charge.ExpectedAmount,
+                VatAmount = charge.KdvAmount,
+                TotalAmount = charge.TotalAmount,
+                PaidAmount = charge.PaidAmount,
+                DueDate = charge.DueDate,
+                Status = charge.Status,
+                CancellationNote = charge.CancellationNote
+            });
+
+        return await GetPagedResultAsync(query, itemsQuery, tableQuery);
     }
 
     public async Task<CurrentLeaseChargeDto> GetCurrentLeaseChargeAsync(GetCurrentLeaseChargeInput input)

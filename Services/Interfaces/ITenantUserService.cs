@@ -8,6 +8,7 @@ public interface ITenantUserService
         EnsureTenantManagerExistsInput input,
         CancellationToken ct = default);
     Task<TenantUsersListDto> GetTenantUsersListAsync(GetTenantUsersListInput input);
+    Task<TenantUsersPageDto> GetTenantUsersPageAsync(GetTenantUsersPageInput input);
     Task ToggleUserActiveAsync(ToggleTenantUserActiveInput input);
     Task CancelInvitationAsync(CancelTenantInvitationInput input);
     Task ResendInvitationAsync(ResendTenantInvitationInput input);

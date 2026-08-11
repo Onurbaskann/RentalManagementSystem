@@ -1,4 +1,6 @@
 using KiraTakip.Data;
+using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -6,18 +8,19 @@ using Microsoft.EntityFrameworkCore;
 namespace KiraTakip.Repositories;
 
 public class TenantRepository(ApplicationDbContext context)
-    : BaseRepository<Tenant>(context), ITenantRepository
+    : RepositoryBase<Tenant>(context), ITenantRepository
 {
     public async Task<List<TenantListItemDto>> GetListAsync(
         List<int>? authorizedPropertyIds,
         List<int>? authorizedUnitIds = null)
     {
         IQueryable<Tenant> query = _dbSet.AsNoTracking();
+        var scopeRestricted = authorizedPropertyIds != null || authorizedUnitIds != null;
+        var propertyIds = authorizedPropertyIds ?? [];
+        var unitIds = authorizedUnitIds ?? [];
 
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
+        if (scopeRestricted)
         {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
             var authorizedTenantIds = _ctx.Leases
                 .Where(lease => propertyIds.Contains(lease.Unit.PropertyId)
                     || unitIds.Contains(lease.UnitId))
@@ -27,6 +30,7 @@ public class TenantRepository(ApplicationDbContext context)
             query = query.Where(tenant => authorizedTenantIds.Contains(tenant.Id));
         }
 
+        var now = DateTime.Now;
         return await query
             .OrderBy(tenant => tenant.TenantNo)
             .Select(tenant => new TenantListItemDto
@@ -38,9 +42,75 @@ public class TenantRepository(ApplicationDbContext context)
                 TenantCategoryName = tenant.TenantCategory != null ? tenant.TenantCategory.Name : null,
                 Phone = tenant.Phone,
                 Email = tenant.Email,
-                RegistrationDate = tenant.RegistrationDate
+                RegistrationDate = tenant.RegistrationDate,
+                ActiveLeaseCount = _ctx.Leases.Count(lease =>
+                    lease.TenantId == tenant.Id
+                    && lease.Status == LeaseStatus.Active
+                    && lease.StartDate <= now
+                    && lease.EndDate >= now
+                    && (!scopeRestricted
+                        || propertyIds.Contains(lease.Unit.PropertyId)
+                        || unitIds.Contains(lease.UnitId)))
             })
             .ToListAsync();
+    }
+
+    public async Task<PagedResult<TenantListItemDto>> GetPagedListAsync(
+        TableQuery tableQuery,
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null)
+    {
+        IQueryable<Tenant> query = _dbSet.AsNoTracking();
+        var scopeRestricted = authorizedPropertyIds != null || authorizedUnitIds != null;
+        var propertyIds = authorizedPropertyIds ?? [];
+        var unitIds = authorizedUnitIds ?? [];
+
+        if (scopeRestricted)
+        {
+            var authorizedTenantIds = _ctx.Leases
+                .Where(lease => propertyIds.Contains(lease.Unit.PropertyId)
+                    || unitIds.Contains(lease.UnitId))
+                .Select(lease => lease.TenantId)
+                .Distinct();
+            query = query.Where(tenant => authorizedTenantIds.Contains(tenant.Id));
+        }
+
+        if (!string.IsNullOrWhiteSpace(tableQuery.Q))
+        {
+            var search = tableQuery.Q.Trim();
+            query = query.Where(tenant =>
+                EF.Functions.Like(tenant.TenantNo, $"%{search}%")
+                || EF.Functions.Like(tenant.Name, $"%{search}%")
+                || (tenant.TaxNo != null && EF.Functions.Like(tenant.TaxNo, $"%{search}%"))
+                || EF.Functions.Like(tenant.Phone, $"%{search}%")
+                || EF.Functions.Like(tenant.Email, $"%{search}%"));
+        }
+
+        var now = DateTime.Now;
+        var itemsQuery = query
+            .OrderBy(tenant => tenant.TenantNo)
+            .ThenBy(tenant => tenant.Id)
+            .Select(tenant => new TenantListItemDto
+            {
+                Id = tenant.Id,
+                TenantNo = tenant.TenantNo,
+                DisplayName = tenant.Name,
+                TaxNo = tenant.TaxNo,
+                TenantCategoryName = tenant.TenantCategory != null ? tenant.TenantCategory.Name : null,
+                Phone = tenant.Phone,
+                Email = tenant.Email,
+                RegistrationDate = tenant.RegistrationDate,
+                ActiveLeaseCount = _ctx.Leases.Count(lease =>
+                    lease.TenantId == tenant.Id
+                    && lease.Status == LeaseStatus.Active
+                    && lease.StartDate <= now
+                    && lease.EndDate >= now
+                    && (!scopeRestricted
+                        || propertyIds.Contains(lease.Unit.PropertyId)
+                        || unitIds.Contains(lease.UnitId)))
+            });
+
+        return await GetPagedResultAsync(query, itemsQuery, tableQuery);
     }
 
     public Task<bool> IsInScopeAsync(

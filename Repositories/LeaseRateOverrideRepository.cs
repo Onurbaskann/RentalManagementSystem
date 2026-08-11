@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class LeaseRateOverrideRepository : BaseRepository<LeaseRateOverride>, ILeaseRateOverrideRepository
+public class LeaseRateOverrideRepository : RepositoryBase<LeaseRateOverride>, ILeaseRateOverrideRepository
 {
     public LeaseRateOverrideRepository(ApplicationDbContext ctx) : base(ctx) { }
 

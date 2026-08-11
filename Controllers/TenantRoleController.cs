@@ -2,6 +2,7 @@ using KiraTakip.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Models.Common;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,24 +18,13 @@ public class TenantRoleController(
 {
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Module)]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
         var tenantId = currentUser.TenantId!.Value;
-        var roles = await roleService.GetTenantRolesWithDetailsAsync(
-            new GetTenantRolesWithDetailsInput(tenantId));
-
-        var model = roles.Select(role => new RoleListViewModel
-        {
-            Id = role.Id,
-            Name = role.Name,
-            Description = role.Description,
-            IsSystemRole = role.IsSystemRole,
-            IsActive = role.IsActive,
-            UserCount = role.UserCount,
-            PermissionCount = role.PermissionCount
-        }).ToList();
-
-        return View(model);
+        var roles = await roleService.GetTenantRolesWithDetailsPagedAsync(
+            new GetTenantRolesWithDetailsInput(tenantId), query);
+        ViewBag.Query = query;
+        return View(roles);
     }
 
     [HttpGet("Create")]

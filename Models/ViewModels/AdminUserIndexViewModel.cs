@@ -1,3 +1,5 @@
+using KiraTakip.Models.Common;
+
 namespace KiraTakip.Models.ViewModels;
 
 public class AdminUserListItemViewModel
@@ -30,7 +32,9 @@ public class AdminPendingInvitationViewModel
 
 public class AdminUserIndexViewModel
 {
-    public List<AdminUserListItemViewModel> InternalUsers { get; set; } = [];
-    public List<AdminTenantUserListItemViewModel> TenantUsers { get; set; } = [];
+    public PagedResult<AdminUserListItemViewModel> InternalUsers { get; set; } = new();
+    public PagedResult<AdminTenantUserListItemViewModel> TenantUsers { get; set; } = new();
     public List<AdminPendingInvitationViewModel> PendingInvitations { get; set; } = [];
+    public TableQuery Query { get; set; } = new();
+    public string ActiveTab { get; set; } = "ic";
 }

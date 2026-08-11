@@ -2,6 +2,7 @@ using KiraTakip.Authorization;
 using KiraTakip.Extensions;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
@@ -25,10 +26,11 @@ public class LeaseController(
     ICurrentUserContext currentUserContext) : Controller
 {
     [Authorize(Policy = PermissionCatalog.Lease.Module)]
-    public async Task<IActionResult> Index(string? filter)
+    public async Task<IActionResult> Index(string? filter, [FromQuery] TableQuery query)
     {
-        var leases = await leaseService.GetAllAsync(
-            new GetLeasesInput(
+        var leases = await leaseService.GetPagedAsync(
+            new GetPagedLeasesInput(
+                query,
                 filter,
                 permissionScopeProvider.GlobalAccess ? null : permissionScopeProvider.AccessiblePropertyIds,
                 permissionScopeProvider.GlobalAccess ? null : permissionScopeProvider.AccessibleUnitIds));
@@ -40,6 +42,7 @@ public class LeaseController(
                     permissionScopeProvider.AccessiblePropertyIds,
                     permissionScopeProvider.AccessibleUnitIds));
         ViewBag.Filter = filter ?? "tum";
+        ViewBag.Query = query;
 
         return View(leases);
     }

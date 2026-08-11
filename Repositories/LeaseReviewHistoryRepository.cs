@@ -8,13 +8,10 @@ using Microsoft.EntityFrameworkCore;
 namespace KiraTakip.Repositories;
 
 public class LeaseReviewHistoryRepository(ApplicationDbContext context)
-    : ILeaseReviewHistoryRepository
+    : RepositoryBase<LeaseReviewHistory>(context), ILeaseReviewHistoryRepository
 {
-    public Task AddAsync(LeaseReviewHistory history)
-        => context.SozlesmeIncelemeGecmisleri.AddAsync(history).AsTask();
-
     public Task<List<LeaseReviewHistoryDto>> GetByLeaseIdAsync(int leaseId)
-        => Project(context.SozlesmeIncelemeGecmisleri
+        => Project(_dbSet
                 .AsNoTracking()
                 .Where(history => history.LeaseId == leaseId)
                 .OrderBy(history => history.ActionDate)
@@ -22,7 +19,7 @@ public class LeaseReviewHistoryRepository(ApplicationDbContext context)
             .ToListAsync();
 
     public Task<LeaseReviewHistoryDto?> GetLatestRevisionAsync(int leaseId)
-        => Project(context.SozlesmeIncelemeGecmisleri
+        => Project(_dbSet
                 .AsNoTracking()
                 .Where(history => history.LeaseId == leaseId
                     && history.ActionType == LeaseReviewActionType.RevisionRequested)

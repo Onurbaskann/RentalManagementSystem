@@ -5,6 +5,7 @@ using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.ChargeType;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
+using KiraTakip.Models.Common;
 
 namespace KiraTakip.Services;
 
@@ -14,6 +15,8 @@ public class ChargeTypeService(
     IUnitOfWork uow) : IChargeTypeService
 {
     public Task<List<ChargeTypeListItemDto>> GetListAsync() => chargeTypeRepository.GetListAsync();
+    public Task<PagedResult<ChargeTypeListItemDto>> GetPagedListAsync(TableQuery query)
+        => chargeTypeRepository.GetPagedListAsync(query);
 
     public Task<ChargeType?> GetByIdAsync(int id) => chargeTypeRepository.GetByIdAsync(id);
 

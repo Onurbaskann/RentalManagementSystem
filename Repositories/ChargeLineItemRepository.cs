@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace KiraTakip.Repositories;
 
 public class ChargeLineItemRepository(ApplicationDbContext context)
-    : BaseRepository<ChargeLineItem>(context), IChargeLineItemRepository
+    : RepositoryBase<ChargeLineItem>(context), IChargeLineItemRepository
 {
     public async Task<Dictionary<int, decimal?>> GetDepositAmountsByLeaseIdsAsync(
         IEnumerable<int> leaseIds,

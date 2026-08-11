@@ -3,7 +3,7 @@ using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IChargeRepository : IBaseRepository<Charge>
+public interface IChargeRepository : IRepositoryBase<Charge>
 {
     // Okuma — DTO döner
     Task<List<ChargeListItemDto>> GetListAsync(int? leaseId, List<int>? authorizedPropertyIds, List<int>? authorizedUnitIds = null);
@@ -28,6 +28,12 @@ public interface IChargeRepository : IBaseRepository<Charge>
     Task<List<ManualChargeListItemDto>> GetManualChargeListAsync(
         List<int>? propertyIds,
         string? status = null,
+        string? relation = null,
+        int? leaseId = null,
+        List<int>? unitIds = null);
+    Task<PagedResult<ManualChargeListItemDto>> GetManualChargePagedListAsync(
+        TableQuery query,
+        List<int>? propertyIds,
         string? relation = null,
         int? leaseId = null,
         List<int>? unitIds = null);

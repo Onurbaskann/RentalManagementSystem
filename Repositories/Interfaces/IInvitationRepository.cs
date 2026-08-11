@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IInvitationRepository : IBaseRepository<Invitation>
+public interface IInvitationRepository : IRepositoryBase<Invitation>
 {
     Task<List<TenantInvitationListItemDto>> GetPendingTenantListAsync(int tenantId, DateTime now, CancellationToken ct = default);
     Task<bool> HasPendingForTenantEmailAsync(int tenantId, string email, DateTime now, CancellationToken ct = default);

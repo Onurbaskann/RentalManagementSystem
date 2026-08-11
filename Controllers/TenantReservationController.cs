@@ -1,5 +1,6 @@
 using KiraTakip.Authorization;
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Common;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,18 +17,20 @@ public class TenantReservationController(
     IPermissionScopeProvider permissionScopeProvider) : Controller
 {
     [HttpGet("")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
         var tenantId = currentUserContext.TenantId!.Value;
-        var list = await reservationService.GetTenantReservationsAsync(
-            new GetTenantReservationsInput(
+        var list = await reservationService.GetTenantReservationsPageAsync(
+            new GetTenantReservationsPageInput(
                 tenantId,
                 DateTime.Now,
+                query,
                 permissionScopeProvider.GlobalAccess
                     ? new ReservationAccessScopeInput()
                     : new ReservationAccessScopeInput(
                         permissionScopeProvider.AccessiblePropertyIds,
                         permissionScopeProvider.AccessibleUnitIds)));
+        ViewBag.Query = query;
         return View(list);
     }
 }

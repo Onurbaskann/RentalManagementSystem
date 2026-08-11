@@ -1,6 +1,7 @@
 using KiraTakip.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -16,16 +17,18 @@ public class ReservationController(
 {
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.Reservation.Module)]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
-        var reservations = await reservationService.GetAllAsync(
-            new GetReservationsInput(
+        var reservations = await reservationService.GetPageAsync(
+            new GetReservationsPageInput(
+                query,
                 permissionScopeProvider.GlobalAccess
                     ? null
                     : permissionScopeProvider.AccessiblePropertyIds,
                 permissionScopeProvider.GlobalAccess
                     ? null
                     : permissionScopeProvider.AccessibleUnitIds));
+        ViewBag.Query = query;
         return View(reservations);
     }
 

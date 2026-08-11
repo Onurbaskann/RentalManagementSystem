@@ -1,7 +1,10 @@
-@model List<KiraTakip.Models.ViewModels.RateYearSummaryViewModel>
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.RateSchedule.RateYearSummaryDto>
+@using KiraTakip.Models.Common
 @{
     ViewData["Title"] = "Tarifeler";
     ViewData["UseCentralFeedback"] = true;
+    var query = ViewBag.Query as TableQuery ?? new TableQuery();
+    var pagination = PaginationModel.FromPaged(Model, "/Admin/Rate", query.ToQueryDict());
 }
 
 
@@ -28,7 +31,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var t in Model)
+                @foreach (var t in Model.Items)
                 {
                     <tr>
                         <td style="font-weight:700;font-size:15px;">@t.Year</td>
@@ -52,11 +55,12 @@
                         </td>
                     </tr>
                 }
-                @if (!Model.Any())
+                @if (!Model.Items.Any())
                 {
                     <tr><td colspan="4" style="text-align:center;padding:32px;color:var(--color-muted);">Henüz tarife tanımlanmamış.</td></tr>
                 }
             </tbody>
         </table>
     </div>
+    @await Html.PartialAsync("_Pagination", pagination)
 </div>

@@ -1,14 +1,20 @@
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Common;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IReservationRepository : IBaseRepository<Reservation>
+public interface IReservationRepository : IRepositoryBase<Reservation>
 {
     // Listeleme (DTO)
     Task<List<ReservationListItemDto>> GetListAsync(
         List<int>? authorizedPropertyIds,
         List<int>? authorizedUnitIds = null);
+    Task<PagedResult<ReservationListItemDto>> GetPagedListAsync(
+        TableQuery query,
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null);
     Task<List<ReservationListItemDto>> GetTenantListAsync(int tenantId, DateTime currentTime, List<int>? authorizedPropertyIds = null, List<int>? authorizedUnitIds = null);
+    Task<PagedResult<ReservationListItemDto>> GetTenantPagedListAsync(int tenantId, DateTime currentTime, TableQuery query, List<int>? authorizedPropertyIds = null, List<int>? authorizedUnitIds = null);
     Task<ReservationListItemDto?> GetByIdAsync(int id);
     Task<Reservation?> GetForOperationAsync(int id);
 

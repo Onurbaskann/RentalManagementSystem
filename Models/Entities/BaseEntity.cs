@@ -2,9 +2,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace KiraTakip.Models.Entities;
 
-public abstract class BaseEntity : IAuditable
+public abstract class BaseEntity<TKey> : IAuditable, ISoftDeletable where TKey : notnull
 {
-    public int Id { get; set; }
+    public TKey Id { get; set; } = default!;
     public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public DateTime? UpdatedAt { get; set; }
@@ -13,4 +13,8 @@ public abstract class BaseEntity : IAuditable
 
     [Column("Aktif")]
     public bool IsActive { get; set; } = true;
+}
+
+public abstract class BaseEntity : BaseEntity<int>
+{
 }

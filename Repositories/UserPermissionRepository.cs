@@ -4,12 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class UserPermissionRepository : IUserPermissionRepository
+public class UserPermissionRepository(ApplicationDbContext ctx)
+    : RepositoryBase<UserPermission>(ctx), IUserPermissionRepository
 {
-    private readonly ApplicationDbContext _ctx;
-
-    public UserPermissionRepository(ApplicationDbContext ctx) => _ctx = ctx;
-
     public async Task<List<string>> GetUserPermissionsAsync(string userId)
         => await _ctx.UserPermissions
             .AsNoTracking()

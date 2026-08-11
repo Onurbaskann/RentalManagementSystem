@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace KiraTakip.Repositories;
 
 public class PaymentMatchRepository(ApplicationDbContext context)
-    : BaseRepository<PaymentMatch>(context), IPaymentMatchRepository
+    : RepositoryBase<PaymentMatch>(context), IPaymentMatchRepository
 {
     public Task<bool> ExistsForPaymentAsync(int paymentId)
         => _dbSet.AsNoTracking().AnyAsync(match => match.PaymentAllocationId == paymentId);

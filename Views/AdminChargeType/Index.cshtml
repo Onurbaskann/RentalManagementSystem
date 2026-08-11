@@ -1,14 +1,17 @@
-@model List<KiraTakip.Models.Dtos.ChargeTypeListItemDto>
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.ChargeTypeListItemDto>
 @using KiraTakip.Models
+@using KiraTakip.Models.Common
 @{
     ViewData["Title"] = "Borç Tipleri";
     ViewData["UseCentralFeedback"] = true;
+    var query = ViewBag.Query as TableQuery ?? new TableQuery();
+    var pagination = PaginationModel.FromPaged(Model, "/Admin/ChargeType", query.ToQueryDict());
 }
 
 <div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Borç Tipleri</div>
-        <div class="page-subtitle">@Model.Count kayıt</div>
+        <div class="page-subtitle">@Model.Total kayıt</div>
     </div>
     <a href="/Admin/ChargeType/Create" class="btn btn-primary flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -16,13 +19,13 @@
     </a>
 </div>
 
-<div x-data="chargeTypeFilter()" class="mb-3">
+<div class="mb-3">
     <div class="flex flex-wrap gap-2">
-        <button @@click="filter=''" :class="filter==='' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Tümü</button>
-        <button @@click="filter='MonthlyFixed'" :class="filter==='MonthlyFixed' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Aylık Sabit</button>
-        <button @@click="filter='FirstMonthOneTime'" :class="filter==='FirstMonthOneTime' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">İlk Ay Tek Seferlik</button>
-        <button @@click="filter='UserManual'" :class="filter==='UserManual' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Kullanıcı Manuel</button>
-        <button @@click="filter='ReservationSpecific'" :class="filter==='ReservationSpecific' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'">Rezervasyon Özel</button>
+        <a href="/Admin/ChargeType?size=@query.Size" class="btn @(string.IsNullOrWhiteSpace(query.Source) ? "btn-primary" : "btn-secondary") btn-sm">Tümü</a>
+        <a href="/Admin/ChargeType?source=MonthlyFixed&size=@query.Size" class="btn @(query.Source == "MonthlyFixed" ? "btn-primary" : "btn-secondary") btn-sm">Aylık Sabit</a>
+        <a href="/Admin/ChargeType?source=FirstMonthOneTime&size=@query.Size" class="btn @(query.Source == "FirstMonthOneTime" ? "btn-primary" : "btn-secondary") btn-sm">İlk Ay Tek Seferlik</a>
+        <a href="/Admin/ChargeType?source=UserManual&size=@query.Size" class="btn @(query.Source == "UserManual" ? "btn-primary" : "btn-secondary") btn-sm">Kullanıcı Manuel</a>
+        <a href="/Admin/ChargeType?source=ReservationSpecific&size=@query.Size" class="btn @(query.Source == "ReservationSpecific" ? "btn-primary" : "btn-secondary") btn-sm">Rezervasyon Özel</a>
     </div>
 
     <div class="card p-0 overflow-hidden mt-3">
@@ -38,7 +41,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var bt in Model)
+                    @foreach (var bt in Model.Items)
                     {
                         var behaviorKey = bt.Behavior.ToString();
                         var (behaviorLabel, behaviorColorClass) = bt.Behavior switch
@@ -49,7 +52,7 @@
                             ChargeTypeBehavior.ReservationSpecific   => ("Rezervasyon Özel",    "text-teal-700"),
                             _                                   => (bt.Behavior.ToString(), "text-slate-700")
                         };
-                        <tr x-show="filter==='' || filter==='@behaviorKey'" x-cloak>
+                        <tr>
                             <td class="text-center">
                                 <div class="flex items-center justify-center gap-1">
                                     <form method="post" action="/Admin/ChargeType/ChangeSortOrder/@bt.Id.ToHashId()" class="inline">
@@ -101,21 +104,14 @@
                             </td>
                         </tr>
                     }
-                    @if (!Model.Any())
+                    @if (!Model.Items.Any())
                     {
                         <tr><td colspan="5" class="text-center py-8 text-muted">Henüz borç tipi tanımlanmamış.</td></tr>
                     }
                 </tbody>
             </table>
         </div>
+        @await Html.PartialAsync("_Pagination", pagination)
     </div>
 </div>
-
-@section Scripts {
-    <script>
-        function chargeTypeFilter() {
-            return { filter: '' };
-        }
-    </script>
-}
 

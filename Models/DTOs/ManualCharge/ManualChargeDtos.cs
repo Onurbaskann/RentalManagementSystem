@@ -1,8 +1,17 @@
+using KiraTakip.Models.Common;
+
 namespace KiraTakip.Models.Dtos;
 
 public record GetManualChargesInput(
     IReadOnlyList<int>? PropertyIds = null,
     string? Status = null,
+    string? Relation = null,
+    int? LeaseId = null,
+    IReadOnlyList<int>? UnitIds = null);
+
+public record GetManualChargesPageInput(
+    TableQuery Query,
+    IReadOnlyList<int>? PropertyIds = null,
     string? Relation = null,
     int? LeaseId = null,
     IReadOnlyList<int>? UnitIds = null);

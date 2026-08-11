@@ -1,6 +1,6 @@
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IPaymentMatchRepository : IBaseRepository<PaymentMatch>
+public interface IPaymentMatchRepository : IRepositoryBase<PaymentMatch>
 {
     Task<bool> ExistsForPaymentAsync(int paymentId);
     Task<bool> ExistsForBankTransactionAsync(int bankTransactionId);

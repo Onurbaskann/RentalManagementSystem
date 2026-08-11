@@ -1,22 +1,22 @@
 using KiraTakip.Models.Entities;
+using KiraTakip.Models.Common;
 
 namespace KiraTakip.Repositories.Interfaces;
 
 /// <summary>
-/// AuditLog, BaseEntity'den türemediği (long Id, soft-delete/audit alanları yok) için
-/// IBaseRepository&lt;T&gt;'ye uymuyor; standalone bir repository olarak tanımlanır.
+/// AuditLog long anahtarlı ortak okuma altyapısını kullanır.
+/// Append-only yapısı nedeniyle yazma operasyonlarından yalnızca AddAsync sunulur.
 /// </summary>
-public interface IAuditLogRepository
+public interface IAuditLogRepository : IRepository<AuditLog, long>
 {
     Task AddAsync(AuditLog log, CancellationToken ct = default);
-    Task<(List<AuditLog> Rows, int TotalCount)> QueryAsync(
+    Task<PagedResult<AuditLog>> QueryAsync(
         string? eventType,
         string? entityType,
         DateTime? startDate,
         DateTime? endDate,
         string? userId,
-        int page,
-        int pageSize,
+        TableQuery query,
         CancellationToken ct = default);
 
     Task<List<string>> GetDistinctEventTypesAsync(CancellationToken ct = default);

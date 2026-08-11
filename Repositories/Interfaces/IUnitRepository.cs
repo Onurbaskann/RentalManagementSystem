@@ -2,7 +2,7 @@ using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IUnitRepository : IBaseRepository<Unit>
+public interface IUnitRepository : IRepositoryBase<Unit>
 {
     Task<List<AdminUserUnitOptionDto>> GetAdminUserOptionsAsync(CancellationToken ct = default);
     Task<List<UnitListItemDto>> GetByPropertyIdAsync(int propertyId);

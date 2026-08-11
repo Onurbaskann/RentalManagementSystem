@@ -5,6 +5,7 @@ namespace KiraTakip.Services.Interfaces;
 public interface IUnitTypeService
 {
     Task<List<UnitTypeListItemDto>> GetListAsync();
+    Task<PagedResult<UnitTypeListItemDto>> GetPagedListAsync(TableQuery query);
     Task<int> GetNextSortOrderAsync();
     Task<List<UnitTypeChargeTypeCandidateDto>> GetChargeTypeCandidatesAsync();
     Task<UnitTypeDetailDto?> GetByIdAsync(GetUnitTypeByIdInput input);

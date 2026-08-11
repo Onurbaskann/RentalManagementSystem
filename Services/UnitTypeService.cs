@@ -5,6 +5,7 @@ using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
+using KiraTakip.Models.Common;
 
 namespace KiraTakip.Services;
 
@@ -17,6 +18,9 @@ public class UnitTypeService(
 {
     public Task<List<UnitTypeListItemDto>> GetListAsync()
         => unitTypeRepository.GetListAsync();
+
+    public Task<PagedResult<UnitTypeListItemDto>> GetPagedListAsync(TableQuery query)
+        => unitTypeRepository.GetPagedListAsync(query);
 
     public async Task<int> GetNextSortOrderAsync()
         => (await unitTypeRepository.GetMaxSiraAsync()) + 1;

@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class UnitRateRepository : BaseRepository<UnitRate>, IUnitRateRepository
+public class UnitRateRepository : RepositoryBase<UnitRate>, IUnitRateRepository
 {
     public UnitRateRepository(ApplicationDbContext ctx) : base(ctx) { }
 

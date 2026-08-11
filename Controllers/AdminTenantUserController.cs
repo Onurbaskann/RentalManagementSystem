@@ -1,6 +1,6 @@
 using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
-using KiraTakip.Models.Entities;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -26,15 +26,46 @@ public class AdminTenantUserController(
     }
 
     [HttpGet("")]
-    public async Task<IActionResult> Index(int tenantId)
+    public async Task<IActionResult> Index(int tenantId, [FromQuery] TableQuery query)
     {
         try
         {
-            var data = await tenantUserService.GetTenantUsersListAsync(new GetTenantUsersListInput(tenantId));
+            var data = await tenantUserService.GetTenantUsersPageAsync(
+                new GetTenantUsersPageInput(tenantId, query));
             ViewBag.TenantId = tenantId;
             ViewBag.TenantName = data.TenantDisplayName;
 
-            return View(data);
+            return View(new TenantUserListViewModel
+            {
+                Users = new PagedResult<TenantUserListItemViewModel>
+                {
+                    Items = data.Users.Items.Select(user => new TenantUserListItemViewModel
+                    {
+                        Id = user.Id,
+                        FullName = user.FullName,
+                        Email = user.Email,
+                        RoleName = user.RoleName,
+                        RoleId = user.RoleId,
+                        IsActive = user.IsActive
+                    }).ToList(),
+                    Total = data.Users.Total,
+                    Page = data.Users.Page,
+                    Size = data.Users.Size
+                },
+                PendingInvitations = data.PendingInvitations.Select(invitation =>
+                    new TenantInvitationListItemViewModel
+                    {
+                        Id = invitation.Id,
+                        Email = invitation.Email,
+                        FullName = invitation.FullName,
+                        RoleName = invitation.RoleName,
+                        SentAt = invitation.SentAt,
+                        ExpiresAt = invitation.ExpiresAt
+                    }).ToList(),
+                Query = query,
+                CanInvite = true,
+                CanDeactivate = true
+            });
         }
         catch (BusinessException exception) when (exception.ErrorType == ErrorType.NotFound)
         {

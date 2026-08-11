@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class PaymentAllocationRepository : BaseRepository<PaymentAllocation>, IPaymentAllocationRepository
+public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IPaymentAllocationRepository
 {
     public PaymentAllocationRepository(ApplicationDbContext ctx) : base(ctx) { }
 
@@ -83,10 +83,9 @@ public class PaymentAllocationRepository : BaseRepository<PaymentAllocation>, IP
                 query = query.Where(o => o.Status == filteredStatus.Value);
         }
 
-        var total = await query.CountAsync();
-        var items = await query
+        var itemsQuery = query
             .OrderByDescending(o => o.EntryDate)
-            .Skip(tableQuery.Skip).Take(tableQuery.Take)
+            .ThenByDescending(o => o.Id)
             .Select(o => new PaymentListItemDto
             {
                 Id = o.Id,
@@ -102,16 +101,9 @@ public class PaymentAllocationRepository : BaseRepository<PaymentAllocation>, IP
                 TenantDisplayName = o.Charge.Tenant.Name,
                 ChargePeriodStart = o.Charge.PeriodStart,
                 CreatedByUserDisplayName = o.GirenUser != null ? (o.GirenUser.AdSoyad ?? o.GirenUser.Email) : null
-            })
-            .ToListAsync();
+            });
 
-        return new PagedResult<PaymentListItemDto>
-        {
-            Items = items,
-            Total = total,
-            Page = Math.Max(1, tableQuery.Page),
-            Size = tableQuery.SafeSize
-        };
+        return await GetPagedResultAsync(query, itemsQuery, tableQuery);
     }
 
     public async Task<PaymentDetailDto?> GetDetailsAsync(

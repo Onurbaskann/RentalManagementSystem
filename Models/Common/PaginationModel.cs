@@ -3,7 +3,7 @@ namespace KiraTakip.Models.Common;
 public class PaginationModel
 {
     public int Page { get; set; }
-    public int Size { get; set; } = 25;
+    public int Size { get; set; } = 10;
     public int Total { get; set; }
     public string BasePath { get; set; } = string.Empty;
     public Dictionary<string, string?> Extra { get; set; } = [];
@@ -17,10 +17,27 @@ public class PaginationModel
     public string Url(int page)
     {
         var q = new List<string> { $"page={page}" };
-        if (Size != 25) q.Add($"size={Size}");
+        if (Size != 10) q.Add($"size={Size}");
         foreach (var kv in Extra)
         {
             if (string.IsNullOrEmpty(kv.Value)) continue;
+            if (string.Equals(kv.Key, "page", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(kv.Key, "size", StringComparison.OrdinalIgnoreCase))
+                continue;
+            q.Add($"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value)}");
+        }
+        return $"{BasePath}?{string.Join("&", q)}";
+    }
+
+    public string UrlForSize(int size)
+    {
+        var q = new List<string> { "page=1", $"size={size}" };
+        foreach (var kv in Extra)
+        {
+            if (string.IsNullOrEmpty(kv.Value)) continue;
+            if (string.Equals(kv.Key, "page", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(kv.Key, "size", StringComparison.OrdinalIgnoreCase))
+                continue;
             q.Add($"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value)}");
         }
         return $"{BasePath}?{string.Join("&", q)}";

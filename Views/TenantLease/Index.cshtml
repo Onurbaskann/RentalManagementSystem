@@ -1,25 +1,32 @@
-@model List<KiraTakip.Models.Dtos.LeaseListItemDto>
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.LeaseListItemDto>
 @using KiraTakip.Models
+@using KiraTakip.Models.Common
 @{
     Layout = "_KiraciLayout";
     ViewData["Title"] = "Sözleşmelerim";
     ViewData["UseCentralFeedback"] = true;
+    var query = ViewBag.Query as TableQuery ?? new TableQuery();
+    var pagination = PaginationModel.FromPaged(Model, "/Tenant/Leases", query.ToQueryDict());
 }
 
 <div class="page-header">
     <div>
         <div class="page-title">Sözleşmelerim</div>
-        <div class="page-subtitle">@Model.Count sözleşme</div>
+        <div class="page-subtitle">@Model.Total sözleşme</div>
     </div>
 </div>
 
-<div class="card p-0 overflow-hidden" x-data="clientTable({ pageSize: 25 })" x-init="init()">
-    <div class="flex items-center gap-4 p-3 bg-slate-50/50 border-b border-slate-200">
-        <input type="search" class="form-control w-full max-w-sm" placeholder="Ara: birim, taşınmaz…" x-model.debounce.250ms="q" />
-        <span class="ml-auto text-xs text-muted">
-            <span x-text="total" class="font-bold"></span> kayıt
-        </span>
-    </div>
+<div class="card p-0 overflow-hidden">
+    <form method="get" action="/Tenant/Leases" class="flex items-center gap-3 p-3 bg-slate-50/50 border-b border-slate-200">
+        <input type="hidden" name="size" value="@query.Size" />
+        <input type="search" name="q" value="@query.Q" class="form-control w-full max-w-sm" placeholder="Ara: birim, taşınmaz…" />
+        <button type="submit" class="btn btn-secondary">Ara</button>
+        @if (!string.IsNullOrWhiteSpace(query.Q))
+        {
+            <a href="/Tenant/Leases?size=@query.Size" class="btn btn-secondary">Temizle</a>
+        }
+        <span class="ml-auto text-xs text-muted"><strong>@Model.Total</strong> kayıt</span>
+    </form>
     <div class="table-wrapper">
         <table class="w-full">
             <thead>
@@ -33,7 +40,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var lease in Model)
+                @foreach (var lease in Model.Items)
                 {
                     bool isActive = lease.IsActive;
                     int remainingDays = lease.RemainingDays;
@@ -64,29 +71,13 @@
                         </td>
                     </tr>
                 }
-                @if (!Model.Any())
+                @if (!Model.Items.Any())
                 {
                     <tr><td colspan="6" class="text-center py-12 text-muted italic">Henüz sözleşmeniz yok.</td></tr>
                 }
             </tbody>
         </table>
     </div>
-    <div class="flex items-center justify-between p-3 bg-slate-50/50 border-t border-slate-200" x-show="totalPages > 1">
-        <div class="text-xs text-muted font-medium">
-            <span x-text="from"></span>–<span x-text="to"></span> / <strong x-text="total"></strong> kayıt
-        </div>
-        <nav class="flex gap-1" aria-label="Sayfalar">
-            <button type="button" class="w-8 h-8 flex items-center justify-center rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" :disabled="page === 1" @@click="prev()">‹</button>
-            <template x-for="p in pageList" :key="p">
-                <button type="button" class="w-8 h-8 flex items-center justify-center rounded border font-medium text-xs transition-colors"
-                        :class="p === page ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
-                        @@click="goto(p)" x-text="p"></button>
-            </template>
-            <button type="button" class="w-8 h-8 flex items-center justify-center rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" :disabled="page === totalPages" @@click="next()">›</button>
-        </nav>
-    </div>
-    <div class="p-8 text-center" x-show="total === 0 && q.length > 0" x-cloak>
-        <div class="text-slate-400 font-medium">Aramaya uyan kayıt bulunamadı.</div>
-    </div>
+    @await Html.PartialAsync("_Pagination", pagination)
 </div>
 

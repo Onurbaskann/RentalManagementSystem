@@ -1,5 +1,6 @@
 using KiraTakip.Data;
 using KiraTakip.Models.Dtos.AuditLog;
+using KiraTakip.Models.Common;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
@@ -61,22 +62,32 @@ public class AuditService(
         {
             return new QueryResult
             {
-                Rows = [],
-                TotalCount = 0,
+                Records = new PagedResult<RowResult>
+                {
+                    Items = [],
+                    Total = 0,
+                    Page = Math.Max(1, input.Query.Page),
+                    Size = input.Query.SafeSize
+                },
                 AvailableEventTypes = availableEventTypes,
                 AvailableEntityTypes = availableEntityTypes,
                 UserNotFoundMessage = userNotFoundMessage
             };
         }
 
-        var (rows, totalCount) = await auditLogRepository.QueryAsync(
-            input.EventType, input.EntityType, input.StartDate, input.EndDate,
-            userId, input.Page, input.PageSize, ct);
+        var page = await auditLogRepository.QueryAsync(
+            input.EventType,
+            input.EntityType,
+            input.Query.From,
+            input.Query.To,
+            userId,
+            input.Query,
+            ct);
 
-        var userIds = rows.Where(r => r.UserId != null).Select(r => r.UserId!).Distinct().ToList();
+        var userIds = page.Items.Where(r => r.UserId != null).Select(r => r.UserId!).Distinct().ToList();
         var userMap = await applicationUserRepository.GetDisplayNamesAsync(userIds, ct);
 
-        var resultRows = rows.Select(r => new RowResult
+        var resultRows = page.Items.Select(r => new RowResult
         {
             Id = r.Id,
             EventType = r.EventType,
@@ -92,8 +103,13 @@ public class AuditService(
 
         return new QueryResult
         {
-            Rows = resultRows,
-            TotalCount = totalCount,
+            Records = new PagedResult<RowResult>
+            {
+                Items = resultRows,
+                Total = page.Total,
+                Page = page.Page,
+                Size = page.Size
+            },
             AvailableEventTypes = availableEventTypes,
             AvailableEntityTypes = availableEntityTypes,
             UserNotFoundMessage = userNotFoundMessage

@@ -1,12 +1,20 @@
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 
 namespace KiraTakip.Models.Dtos;
 
 public record GetTenantUsersListInput(int TenantId);
 
+public record GetTenantUsersPageInput(int TenantId, TableQuery Query);
+
 public record TenantUsersListDto(
     string TenantDisplayName,
     List<TenantUserListItemDto> Users,
+    List<TenantInvitationListItemDto> PendingInvitations);
+
+public record TenantUsersPageDto(
+    string TenantDisplayName,
+    PagedResult<TenantUserListItemDto> Users,
     List<TenantInvitationListItemDto> PendingInvitations);
 
 public record TenantUserListItemDto(

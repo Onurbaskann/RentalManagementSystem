@@ -4,6 +4,7 @@ using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos.DocumentType;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
+using KiraTakip.Models.Common;
 
 namespace KiraTakip.Services;
 
@@ -15,6 +16,9 @@ public class DocumentTypeService(
     {
         return await documentTypeRepository.GetListAsync();
     }
+
+    public Task<PagedResult<DocumentType>> GetPagedListAsync(TableQuery query)
+        => documentTypeRepository.GetPagedListAsync(query);
 
     public async Task<int> GetMaxSortOrderAsync()
     {

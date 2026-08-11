@@ -5,6 +5,7 @@ namespace KiraTakip.Services.Interfaces;
 public interface IAdminUserService
 {
     Task<AdminUserIndexDto> GetIndexAsync();
+    Task<AdminUserIndexPageDto> GetIndexPageAsync(GetAdminUserIndexPageInput input);
     Task<AdminUserEditDataDto?> GetEditDataAsync(GetAdminUserEditDataInput input);
     Task<AdminUserFormOptionsDto> GetFormOptionsAsync();
     Task UpdateAsync(UpdateAdminUserInput input);

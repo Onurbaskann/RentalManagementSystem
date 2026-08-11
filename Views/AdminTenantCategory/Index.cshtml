@@ -1,14 +1,17 @@
-@model List<KiraTakip.Models.Dtos.CategoryListItemDto>
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.CategoryListItemDto>
+@using KiraTakip.Models.Common
 @{
     ViewData["Title"] = "Kiracı Kategorileri";
     ViewData["UseCentralFeedback"] = true;
+    var query = ViewBag.Query as TableQuery ?? new TableQuery();
+    var pagination = PaginationModel.FromPaged(Model, "/Admin/TenantCategory", query.ToQueryDict());
 }
 
 
 <div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Kiracı Kategorileri</div>
-        <div class="page-subtitle">@Model.Count kayıt — çarpan hesaplamalarında kullanılır</div>
+        <div class="page-subtitle">@Model.Total kayıt — çarpan hesaplamalarında kullanılır</div>
     </div>
     <a href="/Admin/TenantCategory/Create" class="btn btn-primary flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -28,7 +31,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var k in Model)
+                @foreach (var k in Model.Items)
                 {
                     <tr>
                         <td class="text-center text-muted text-xs">@k.Order</td>
@@ -52,11 +55,12 @@
                         </td>
                     </tr>
                 }
-                @if (!Model.Any())
+                @if (!Model.Items.Any())
                 {
                     <tr><td colspan="4" class="text-center py-8 text-muted">Henüz kiracı kategorisi tanımlanmamış.</td></tr>
                 }
             </tbody>
         </table>
     </div>
+    @await Html.PartialAsync("_Pagination", pagination)
 </div>

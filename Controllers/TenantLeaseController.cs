@@ -1,6 +1,7 @@
 using KiraTakip.Authorization;
 using KiraTakip.Extensions;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
@@ -22,12 +23,13 @@ public class TenantLeaseController(
     IPermissionScopeProvider permissionScopeProvider) : Controller
 {
     [HttpGet("")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
         var tenantId = currentUserContext.TenantId!.Value;
-        var leases = await leaseService.GetTenantPortalLeasesAsync(
-            new GetTenantPortalLeasesInput(tenantId, BuildAccessScope()));
+        var leases = await leaseService.GetTenantPortalLeasesPageAsync(
+            new GetTenantPortalLeasesPageInput(tenantId, query, BuildAccessScope()));
 
+        ViewBag.Query = query;
         return View(leases);
     }
 

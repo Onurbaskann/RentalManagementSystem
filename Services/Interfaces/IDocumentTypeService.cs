@@ -6,6 +6,7 @@ namespace KiraTakip.Services.Interfaces;
 public interface IDocumentTypeService
 {
     Task<List<DocumentType>> GetListAsync();
+    Task<PagedResult<DocumentType>> GetPagedListAsync(TableQuery query);
     Task<int> GetMaxSortOrderAsync();
     Task CreateAsync(CreateInput input);
     Task<DocumentType?> GetByIdAsync(int id);

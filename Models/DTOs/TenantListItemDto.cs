@@ -10,4 +10,5 @@ public class TenantListItemDto
     public string Phone { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public DateTime RegistrationDate { get; set; }
+    public int ActiveLeaseCount { get; set; }
 }

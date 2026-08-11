@@ -2,7 +2,7 @@
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface ILeaseRateOverrideRepository : IBaseRepository<LeaseRateOverride>
+public interface ILeaseRateOverrideRepository : IRepositoryBase<LeaseRateOverride>
 {
     Task<RateValueDto?> GetRateAsync(int leaseId, int chargeTypeId);
     Task ReplaceAsync(int leaseId, IReadOnlyCollection<LeaseRateOverride> rateOverrides);

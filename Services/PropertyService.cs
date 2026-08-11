@@ -1,6 +1,7 @@
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Data;
 using KiraTakip.Repositories.Interfaces;
@@ -21,6 +22,12 @@ public class PropertyService(
 {
     public Task<List<PropertyListItemDto>> GetAllAsync(GetPropertiesInput input)
         => propertyRepository.GetListAsync(
+            input.PropertyIds?.ToList(),
+            input.UnitIds?.ToList());
+
+    public Task<PagedResult<PropertyListItemDto>> GetPagedAsync(GetPropertiesPageInput input)
+        => propertyRepository.GetPagedListAsync(
+            input.Query,
             input.PropertyIds?.ToList(),
             input.UnitIds?.ToList());
 

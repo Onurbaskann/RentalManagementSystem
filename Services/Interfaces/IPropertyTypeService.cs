@@ -5,6 +5,7 @@ namespace KiraTakip.Services.Interfaces;
 public interface IPropertyTypeService
 {
     Task<List<PropertyTypeListItemDto>> GetListAsync();
+    Task<PagedResult<PropertyTypeListItemDto>> GetPagedListAsync(TableQuery query);
     Task<int> GetMaxSortOrderAsync();
     Task CreateAsync(CreateInput input);
     Task<PropertyType?> GetByIdAsync(int id);

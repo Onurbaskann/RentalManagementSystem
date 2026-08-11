@@ -1,12 +1,13 @@
 using KiraTakip.Data;
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class ReservationRateOverrideRepository : BaseRepository<ReservationRateOverride>, IReservationRateOverrideRepository
+public class ReservationRateOverrideRepository : RepositoryBase<ReservationRateOverride>, IReservationRateOverrideRepository
 {
     public ReservationRateOverrideRepository(ApplicationDbContext ctx) : base(ctx) { }
 
@@ -47,6 +48,35 @@ public class ReservationRateOverrideRepository : BaseRepository<ReservationRateO
                 Description = r.Description
             })
             .ToListAsync();
+
+    public Task<PagedResult<ReservationRateOverrideListItemDto>> GetRateRulesPagedAsync(TableQuery tableQuery)
+    {
+        var query = _dbSet.AsNoTracking().Where(rate => rate.UnitId != null);
+        if (!string.IsNullOrWhiteSpace(tableQuery.Q))
+        {
+            var search = tableQuery.Q.Trim();
+            query = query.Where(rate => rate.Unit != null
+                && (rate.Unit.Name.Contains(search) || rate.Unit.Property.Name.Contains(search)));
+        }
+        var items = query
+            .OrderBy(rate => rate.Unit != null ? rate.Unit.Property.Name : string.Empty)
+            .ThenBy(rate => rate.Unit != null ? rate.Unit.Name : string.Empty)
+            .ThenBy(rate => rate.Id)
+            .Select(rate => new ReservationRateOverrideListItemDto
+            {
+                Id = rate.Id,
+                UnitId = rate.UnitId,
+                UnitName = rate.Unit != null ? rate.Unit.Name : null,
+                PropertyName = rate.Unit != null ? rate.Unit.Property.Name : null,
+                FreeDurationMinutes = rate.FreeDurationMinutes,
+                BillingPeriodMinutes = rate.BillingPeriodMinutes,
+                PeriodRate = rate.PeriodRate,
+                KdvRate = rate.KdvRate,
+                IsActive = rate.IsActive,
+                Description = rate.Description
+            });
+        return GetPagedResultAsync(query, items, tableQuery);
+    }
 
     public Task<ReservationRateOverride?> GetActiveForUnitAsync(int unitId)
         => _dbSet.FirstOrDefaultAsync(rate => rate.IsActive && rate.UnitId == unitId);

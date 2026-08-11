@@ -3,7 +3,7 @@ using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IUserPermissionScopeRepository : IBaseRepository<UserPermissionScope>
+public interface IUserPermissionScopeRepository : IRepositoryBase<UserPermissionScope>
 {
     Task<List<int>> GetScopeIdsAsync(string userId, ScopeType scopeType, CancellationToken ct = default);
     Task ReplaceAsync(

@@ -2,9 +2,11 @@ using KiraTakip.Data;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
+using KiraTakip.Models.Common;
 using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Services;
@@ -28,6 +30,12 @@ public class ReservationService(
             input.UnitIds?.ToList());
     }
 
+    public Task<PagedResult<ReservationListItemDto>> GetPageAsync(GetReservationsPageInput input)
+        => reservationRepository.GetPagedListAsync(
+            input.Query,
+            input.PropertyIds?.ToList(),
+            input.UnitIds?.ToList());
+
     public async Task<List<ReservationListItemDto>> GetTenantReservationsAsync(
         GetTenantReservationsInput input)
     {
@@ -39,6 +47,22 @@ public class ReservationService(
         return await reservationRepository.GetTenantListAsync(
             input.TenantId,
             input.CurrentTime,
+            input.AccessScope.PropertyIds?.ToList(),
+            input.AccessScope.UnitIds?.ToList());
+    }
+
+    public async Task<PagedResult<ReservationListItemDto>> GetTenantReservationsPageAsync(
+        GetTenantReservationsPageInput input)
+    {
+        Guard.NotFound(
+            await tenantRepository.GetDetailsAsync(input.TenantId),
+            "Kiracı bulunamadı.",
+            "TENANT_RESERVATION_TENANT_NOT_FOUND");
+
+        return await reservationRepository.GetTenantPagedListAsync(
+            input.TenantId,
+            input.CurrentTime,
+            input.Query,
             input.AccessScope.PropertyIds?.ToList(),
             input.AccessScope.UnitIds?.ToList());
     }
@@ -346,6 +370,9 @@ public class ReservationService(
 
     public async Task<List<ReservationRateOverrideListItemDto>> GetRateRulesAsync()
         => await reservationRateOverrideRepository.GetUcretKurallariListAsync();
+
+    public Task<PagedResult<ReservationRateOverrideListItemDto>> GetRateRulesPagedAsync(TableQuery query)
+        => reservationRateOverrideRepository.GetRateRulesPagedAsync(query);
 
     public async Task<ReservationRateOverride?> GetRateRuleByIdAsync(GetRateRuleByIdInput input)
         => await reservationRateOverrideRepository.GetWithUnitAsync(input.Id);

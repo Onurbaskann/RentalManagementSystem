@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace KiraTakip.Repositories;
 
 public class DocumentRepository(ApplicationDbContext context)
-    : BaseRepository<Document>(context), IDocumentRepository
+    : RepositoryBase<Document>(context), IDocumentRepository
 {
     public async Task<List<Document>> GetListAsync(DocumentOwnerType ownerType, int ownerId)
         => await _dbSet

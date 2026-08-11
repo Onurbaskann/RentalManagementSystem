@@ -1,14 +1,17 @@
-@model List<KiraTakip.Models.Dtos.ReservationRateOverrideListItemDto>
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.ReservationRateOverrideListItemDto>
+@using KiraTakip.Models.Common
 @{
     ViewData["Title"] = "Rezervasyon Ücret Kuralları";
     ViewData["UseCentralFeedback"] = true;
+    var query = ViewBag.Query as TableQuery ?? new TableQuery();
+    var pagination = PaginationModel.FromPaged(Model, "/Admin/ReservationRateOverride", query.ToQueryDict());
 }
 
 
 <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
     <div>
         <div class="page-title">Rezervasyon Ücret Kuralları</div>
-        <div class="page-subtitle">@Model.Count kayıt · Birime özel kural genel kuralı geçersiz kılar</div>
+        <div class="page-subtitle">@Model.Total kayıt · Birime özel kural genel kuralı geçersiz kılar</div>
     </div>
     <a href="/Admin/ReservationRateOverride/Create" class="btn btn-primary">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -31,7 +34,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var k in Model)
+                @foreach (var k in Model.Items)
                 {
                     <tr>
                         <td>
@@ -69,11 +72,12 @@
                         </td>
                     </tr>
                 }
-                @if (!Model.Any())
+                @if (!Model.Items.Any())
                 {
                     <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--color-muted);">Henüz ücret kuralı tanımlanmamış.</td></tr>
                 }
             </tbody>
         </table>
     </div>
+    @await Html.PartialAsync("_Pagination", pagination)
 </div>

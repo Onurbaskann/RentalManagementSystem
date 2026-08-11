@@ -2,7 +2,7 @@ using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IRolePermissionRepository
+public interface IRolePermissionRepository : IRepository<RolePermission, int>
 {
     Task<List<RolePermission>> GetForRoleAsync(int roleId);
     Task<List<string>> GetPermissionsForRoleAsync(int roleId);

@@ -1,6 +1,7 @@
 using KiraTakip.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
@@ -19,14 +20,16 @@ public class PropertyController(
     private const int PropertyFormValueCountLimit = 10_000;
 
     [Authorize(Policy = PermissionCatalog.Property.Module)]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
-        var properties = await propertyService.GetAllAsync(
-            new GetPropertiesInput(
+        var properties = await propertyService.GetPagedAsync(
+            new GetPropertiesPageInput(
+                query,
                 permissionScopeProvider.GlobalAccess
                     ? null
                     : permissionScopeProvider.AccessiblePropertyIds));
 
+        ViewBag.Query = query;
         return View(properties);
     }
 

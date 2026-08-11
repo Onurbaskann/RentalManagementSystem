@@ -1,6 +1,13 @@
+using KiraTakip.Models.Common;
+
 namespace KiraTakip.Models.Dtos;
 
 public record GetTenantsInput(
+    IReadOnlyList<int>? PropertyIds = null,
+    IReadOnlyList<int>? UnitIds = null);
+
+public record GetPagedTenantsInput(
+    TableQuery Query,
     IReadOnlyList<int>? PropertyIds = null,
     IReadOnlyList<int>? UnitIds = null);
 

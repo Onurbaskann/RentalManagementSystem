@@ -3,6 +3,7 @@ using KiraTakip.Extensions;
 using KiraTakip.Infrastructure;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
@@ -25,25 +26,16 @@ public class TenantController(
 {
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.Tenant.Module)]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
         var accessScope = BuildAccessScope();
-        var tenants = await tenantService.GetAllAsync(
-            new GetTenantsInput(accessScope.PropertyIds, accessScope.UnitIds));
-        var leases = await leaseService.GetAllAsync(new GetLeasesInput(
-            PropertyIds: accessScope.PropertyIds,
-            UnitIds: accessScope.UnitIds));
-        var now = DateTime.Now;
+        var tenants = await tenantService.GetPagedAsync(
+            new GetPagedTenantsInput(query, accessScope.PropertyIds, accessScope.UnitIds));
 
         return View(new TenantIndexViewModel
         {
             Tenants = tenants,
-            ActiveLeaseCounts = leases
-                .Where(lease => lease.Status == LeaseStatus.Active
-                    && lease.StartDate <= now
-                    && lease.EndDate >= now)
-                .GroupBy(lease => lease.TenantId)
-                .ToDictionary(group => group.Key, group => group.Count()),
+            Query = query,
             CanCreate = permissionScopeProvider.GlobalAccess
                 && User.HasPermission(PermissionCatalog.Tenant.Create),
             CanEdit = User.HasPermission(PermissionCatalog.Tenant.Edit)

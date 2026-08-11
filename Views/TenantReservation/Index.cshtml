@@ -1,23 +1,32 @@
-@model List<KiraTakip.Models.Dtos.ReservationListItemDto>
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.ReservationListItemDto>
 @using KiraTakip.Models
+@using KiraTakip.Models.Common
 @{
     Layout = "_KiraciLayout";
     ViewData["Title"] = "Rezervasyonlarım";
     ViewData["UseCentralFeedback"] = true;
+    var query = ViewBag.Query as TableQuery ?? new TableQuery();
+    var pagination = PaginationModel.FromPaged(Model, "/Tenant/MyReservations", query.ToQueryDict());
 }
 
 <div class="page-header">
     <div>
         <div class="page-title">Rezervasyonlarım</div>
-        <div class="page-subtitle">@Model.Count kayıt</div>
+        <div class="page-subtitle">@Model.Total kayıt</div>
     </div>
 </div>
 
-<div class="card p-0 overflow-hidden" x-data="clientTable({ pageSize: 25 })" x-init="init()">
-    <div class="table-toolbar">
-        <input type="search" class="form-control toolbar-search" placeholder="Ara: birim, taşınmaz…" x-model.debounce.250ms="q" />
-        <span class="pagination-info ml-auto"><span x-text="total"></span> kayıt</span>
-    </div>
+<div class="card p-0 overflow-hidden">
+    <form method="get" action="/Tenant/MyReservations" class="table-toolbar">
+        <input type="hidden" name="size" value="@query.Size" />
+        <input type="search" name="q" value="@query.Q" class="form-control toolbar-search" placeholder="Ara: birim, taşınmaz…" />
+        <button type="submit" class="btn btn-secondary">Ara</button>
+        @if (!string.IsNullOrWhiteSpace(query.Q))
+        {
+            <a href="/Tenant/MyReservations?size=@query.Size" class="btn btn-secondary">Temizle</a>
+        }
+        <span class="pagination-info ml-auto"><strong>@Model.Total</strong> kayıt</span>
+    </form>
     <div class="table-wrapper">
         <table>
             <thead>
@@ -30,10 +39,9 @@
                     <th>Durum</th>
                 </tr>
             </thead>
-            <tbody x-ref="tbody">
-                @foreach (var reservation in Model)
+            <tbody>
+                @foreach (var reservation in Model.Items)
                 {
-                    var search = $"{reservation.UnitName} {reservation.PropertyName}".ToLower();
                     var statusClasses = reservation.Status switch {
                         ReservationStatus.Planned => "badge-bos",
                         ReservationStatus.Completed => "badge-kirali",
@@ -48,7 +56,7 @@
                         ReservationStatus.TransferredToCharge => "Faturalandı",
                         _ => "Bilinmiyor"
                     };
-                    <tr data-row data-search="@search">
+                    <tr>
                         <td class="font-semibold">@reservation.UnitName</td>
                         <td class="text-sm text-muted">@reservation.PropertyName</td>
                         <td class="text-sm">@reservation.StartDate.ToString("dd.MM.yyyy HH:mm")</td>
@@ -60,5 +68,10 @@
             </tbody>
         </table>
     </div>
+    @if (!Model.Items.Any())
+    {
+        <div class="p-8 text-center text-slate-400 font-medium">Aramaya uyan kayıt bulunamadı.</div>
+    }
+    @await Html.PartialAsync("_Pagination", pagination)
 </div>
 

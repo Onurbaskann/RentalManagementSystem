@@ -1,11 +1,13 @@
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Common;
 
 namespace KiraTakip.Models.ViewModels;
 
 public class TenantUserListViewModel
 {
-    public List<TenantUserListItemViewModel> Users { get; set; } = [];
+    public PagedResult<TenantUserListItemViewModel> Users { get; set; } = new();
     public List<TenantInvitationListItemViewModel> PendingInvitations { get; set; } = [];
+    public TableQuery Query { get; set; } = new();
     public bool CanInvite { get; set; }
     public bool CanEdit { get; set; }
     public bool CanDeactivate { get; set; }

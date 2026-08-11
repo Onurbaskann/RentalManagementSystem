@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace KiraTakip.Repositories;
 
 public class PasswordResetRequestRepository(ApplicationDbContext context)
-    : BaseRepository<PasswordResetRequest>(context), IPasswordResetRequestRepository
+    : RepositoryBase<PasswordResetRequest>(context), IPasswordResetRequestRepository
 {
     public Task<int> CountRecentPendingAsync(string userId, DateTime cutoff, CancellationToken ct = default)
         => _dbSet.CountAsync(request => request.UserId == userId

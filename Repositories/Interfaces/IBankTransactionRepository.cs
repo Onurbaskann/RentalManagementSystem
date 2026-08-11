@@ -4,7 +4,7 @@ using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IBankTransactionRepository : IBaseRepository<BankTransaction>
+public interface IBankTransactionRepository : IRepositoryBase<BankTransaction>
 {
     // Listeleme (DTO)
     Task<List<BankTransactionListItemDto>> GetListAsync(BankMatchStatus? status = null);

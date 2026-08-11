@@ -679,11 +679,12 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
 
         foreach (var entityType in builder.Model.GetEntityTypes())
         {
-            if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType) && entityType.FindProperty(nameof(BaseEntity.IsDeleted)) != null)
+            if (typeof(ISoftDeletable).IsAssignableFrom(entityType.ClrType)
+                && entityType.FindProperty(nameof(ISoftDeletable.IsDeleted)) != null)
             {
                 var param = Expression.Parameter(entityType.ClrType, "e");
                 var body = Expression.Equal(
-                    Expression.Property(param, nameof(BaseEntity.IsDeleted)),
+                    Expression.Property(param, nameof(ISoftDeletable.IsDeleted)),
                     Expression.Constant(false));
                 entityType.SetQueryFilter(Expression.Lambda(body, param));
             }

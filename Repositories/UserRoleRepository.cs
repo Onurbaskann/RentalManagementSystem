@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class UserRoleRepository : BaseRepository<UserRole>, IUserRoleRepository
+public class UserRoleRepository : RepositoryBase<UserRole>, IUserRoleRepository
 {
     public UserRoleRepository(ApplicationDbContext ctx) : base(ctx) { }
 

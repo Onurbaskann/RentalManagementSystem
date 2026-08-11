@@ -1,12 +1,14 @@
 using KiraTakip.Models;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Common;
 
 namespace KiraTakip.Services.Interfaces;
 
 public interface ILeaseService
 {
     Task<List<LeaseListItemDto>> GetAllAsync(GetLeasesInput input);
+    Task<PagedResult<LeaseListItemDto>> GetPagedAsync(GetPagedLeasesInput input);
     Task<LeaseDetailDto?> GetDetailsAsync(GetLeaseDetailsInput input);
     Task<LeaseDetailDto> GetTenantDetailsAsync(GetTenantLeaseDetailsInput input);
     Task<Lease> CreateAsync(CreateLeaseInput input);
@@ -25,6 +27,7 @@ public interface ILeaseService
     Task<IList<ChargeLineItemPreview>> GetDefaultLineItemsAsync(ComposeLeaseLineItemsInput input);
     Task<List<LeaseListItemDto>> GetByTenantAsync(GetLeasesByTenantInput input);
     Task<List<LeaseListItemDto>> GetTenantPortalLeasesAsync(GetTenantPortalLeasesInput input);
+    Task<PagedResult<LeaseListItemDto>> GetTenantPortalLeasesPageAsync(GetTenantPortalLeasesPageInput input);
     Task<List<LeaseListItemDto>> GetByUnitAsync(GetLeasesByUnitInput input);
     Task<Dictionary<int, decimal?>> GetDepositsAsync(GetLeaseDepositsInput input);
 }

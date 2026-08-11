@@ -1,9 +1,10 @@
+using KiraTakip.Models.Common;
+
 namespace KiraTakip.Models.Dtos.AuditLog;
 
 public class QueryResult
 {
-    public List<RowResult> Rows { get; set; } = [];
-    public int TotalCount { get; set; }
+    public PagedResult<RowResult> Records { get; set; } = new();
     public List<string> AvailableEventTypes { get; set; } = [];
     public List<string> AvailableEntityTypes { get; set; } = [];
     public string? UserNotFoundMessage { get; set; }

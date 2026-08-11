@@ -1,6 +1,6 @@
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IUserPermissionRepository
+public interface IUserPermissionRepository : IRepositoryBase<UserPermission>
 {
     Task<List<string>> GetUserPermissionsAsync(string userId);
     Task<bool> HasPermissionAsync(string userId, string permission);

@@ -3,7 +3,7 @@ using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IChargeLineItemRepository : IBaseRepository<ChargeLineItem>
+public interface IChargeLineItemRepository : IRepositoryBase<ChargeLineItem>
 {
     Task<Dictionary<int, decimal?>> GetDepositAmountsByLeaseIdsAsync(
         IEnumerable<int> leaseIds,

@@ -2,7 +2,7 @@ using KiraTakip.Models.Entities;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IUserRoleRepository : IBaseRepository<UserRole>
+public interface IUserRoleRepository : IRepositoryBase<UserRole>
 {
     Task<int> CountUsersInRoleAsync(int roleId);
     Task<int> CountUsersInRoleForTenantAsync(int roleId, int tenantId);

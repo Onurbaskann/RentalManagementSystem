@@ -1,12 +1,13 @@
 ﻿using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Common;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class ChargeTypeRepository : BaseRepository<ChargeType>, IChargeTypeRepository
+public class ChargeTypeRepository : RepositoryBase<ChargeType>, IChargeTypeRepository
 {
     public ChargeTypeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
@@ -62,6 +63,34 @@ public class ChargeTypeRepository : BaseRepository<ChargeType>, IChargeTypeRepos
                 Behavior = b.Behavior
             })
             .ToListAsync();
+
+    public Task<PagedResult<ChargeTypeListItemDto>> GetPagedListAsync(TableQuery tableQuery)
+    {
+        var query = _dbSet.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(tableQuery.Q))
+        {
+            var search = tableQuery.Q.Trim();
+            query = query.Where(type => type.Name.Contains(search) || type.Code.Contains(search));
+        }
+        if (Enum.TryParse<ChargeTypeBehavior>(tableQuery.Source, out var behavior))
+            query = query.Where(type => type.Behavior == behavior);
+
+        var items = query
+            .OrderBy(type => type.SortOrder)
+            .ThenBy(type => type.Name)
+            .ThenBy(type => type.Id)
+            .Select(type => new ChargeTypeListItemDto
+            {
+                Id = type.Id,
+                Name = type.Name,
+                Code = type.Code,
+                Behavior = type.Behavior,
+                SortOrder = type.SortOrder,
+                IsSystem = type.IsSystem,
+                IsActive = type.IsActive
+            });
+        return GetPagedResultAsync(query, items, tableQuery);
+    }
 
     public Task<bool> IsActiveReservationSpecificAsync(int id)
         => _dbSet.AsNoTracking().AnyAsync(type =>

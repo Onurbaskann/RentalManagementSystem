@@ -2,6 +2,7 @@ using KiraTakip.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Models.Common;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,9 +17,10 @@ public class AdminTenantCategoryController(ITenantCategoryService tenantCategory
 
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.TenantCategory.Module)]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
-        var list = await tenantCategoryService.GetTenantCategoriesAsync();
+        var list = await tenantCategoryService.GetTenantCategoriesPagedAsync(query);
+        ViewBag.Query = query;
         return View(list);
     }
 

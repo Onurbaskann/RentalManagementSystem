@@ -4,9 +4,10 @@ using KiraTakip.Models;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IUnitTypeRepository : IBaseRepository<UnitType>
+public interface IUnitTypeRepository : IRepositoryBase<UnitType>
 {
     Task<List<UnitTypeListItemDto>> GetListAsync();
+    Task<PagedResult<UnitTypeListItemDto>> GetPagedListAsync(TableQuery query);
     Task<int> GetMaxSiraAsync();
     Task<bool> KodExistsAsync(string kod, int? excludeId = null);
 

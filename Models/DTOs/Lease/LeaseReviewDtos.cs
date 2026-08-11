@@ -33,6 +33,11 @@ public sealed record GetTenantPortalLeasesInput(
     int TenantId,
     LeaseAccessScopeInput AccessScope);
 
+public sealed record GetTenantPortalLeasesPageInput(
+    int TenantId,
+    KiraTakip.Models.Common.TableQuery Query,
+    LeaseAccessScopeInput AccessScope);
+
 public sealed record GetLeaseDraftInput(
     int LeaseId,
     LeaseAccessScopeInput AccessScope);

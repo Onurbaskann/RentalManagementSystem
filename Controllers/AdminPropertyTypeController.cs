@@ -2,6 +2,7 @@ using KiraTakip.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos.PropertyType;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Models.Common;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,9 +15,10 @@ public class AdminPropertyTypeController(IPropertyTypeService propertyTypeServic
 {
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.PropertyType.Module)]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
-        var list = await propertyTypeService.GetListAsync();
+        var list = await propertyTypeService.GetPagedListAsync(query);
+        ViewBag.Query = query;
         return View(list);
     }
 

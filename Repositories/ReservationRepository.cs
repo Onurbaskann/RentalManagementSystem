@@ -1,12 +1,13 @@
 using KiraTakip.Data;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class ReservationRepository : BaseRepository<Reservation>, IReservationRepository
+public class ReservationRepository : RepositoryBase<Reservation>, IReservationRepository
 {
     public ReservationRepository(ApplicationDbContext ctx) : base(ctx) { }
 
@@ -26,6 +27,55 @@ public class ReservationRepository : BaseRepository<Reservation>, IReservationRe
         }
 
         return await ProjectList(query).ToListAsync();
+    }
+
+    public async Task<PagedResult<ReservationListItemDto>> GetPagedListAsync(
+        TableQuery tableQuery,
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null)
+    {
+        var query = _dbSet.AsNoTracking().AsQueryable();
+
+        if (authorizedPropertyIds != null || authorizedUnitIds != null)
+        {
+            var propertyIds = authorizedPropertyIds ?? [];
+            var unitIds = authorizedUnitIds ?? [];
+            query = query.Where(reservation =>
+                propertyIds.Contains(reservation.Unit.PropertyId)
+                || unitIds.Contains(reservation.UnitId));
+        }
+
+        if (!string.IsNullOrWhiteSpace(tableQuery.Q))
+        {
+            var search = tableQuery.Q.Trim();
+            query = query.Where(reservation =>
+                EF.Functions.Like(reservation.Unit.Name, $"%{search}%")
+                || EF.Functions.Like(reservation.Unit.Property.Name, $"%{search}%")
+                || EF.Functions.Like(reservation.Tenant.Name, $"%{search}%"));
+        }
+
+        var currentTime = DateTime.Now;
+
+        query = tableQuery.Status switch
+        {
+            "planlandi" => query.Where(reservation =>
+                reservation.Status == ReservationStatus.Planned
+                && reservation.EndDate > currentTime),
+            "tamamlandi" => query.Where(reservation =>
+                reservation.Status == ReservationStatus.Completed
+                || (reservation.Status == ReservationStatus.Planned
+                    && reservation.EndDate <= currentTime)),
+            "aktarildi" => query.Where(reservation =>
+                reservation.Status == ReservationStatus.TransferredToCharge),
+            "iptal" => query.Where(reservation =>
+                reservation.Status == ReservationStatus.Cancelled),
+            _ => query
+        };
+
+        return await GetPagedResultAsync(
+            query,
+            ProjectList(query, currentTime),
+            tableQuery);
     }
 
     public async Task<List<ReservationListItemDto>> GetTenantListAsync(
@@ -50,11 +100,45 @@ public class ReservationRepository : BaseRepository<Reservation>, IReservationRe
         return await ProjectList(query, currentTime).ToListAsync();
     }
 
+    public async Task<PagedResult<ReservationListItemDto>> GetTenantPagedListAsync(
+        int tenantId,
+        DateTime currentTime,
+        TableQuery tableQuery,
+        List<int>? authorizedPropertyIds = null,
+        List<int>? authorizedUnitIds = null)
+    {
+        var query = _dbSet.AsNoTracking()
+            .Where(reservation => reservation.TenantId == tenantId);
+
+        if (authorizedPropertyIds != null || authorizedUnitIds != null)
+        {
+            var propertyIds = authorizedPropertyIds ?? [];
+            var unitIds = authorizedUnitIds ?? [];
+            query = query.Where(reservation =>
+                propertyIds.Contains(reservation.Unit.PropertyId)
+                || unitIds.Contains(reservation.UnitId));
+        }
+
+        if (!string.IsNullOrWhiteSpace(tableQuery.Q))
+        {
+            var search = tableQuery.Q.Trim();
+            query = query.Where(reservation =>
+                EF.Functions.Like(reservation.Unit.Name, $"%{search}%")
+                || EF.Functions.Like(reservation.Unit.Property.Name, $"%{search}%"));
+        }
+
+        return await GetPagedResultAsync(
+            query,
+            ProjectList(query, currentTime),
+            tableQuery);
+    }
+
     private IQueryable<ReservationListItemDto> ProjectList(
         IQueryable<Reservation> query,
         DateTime? currentTime = null)
         => query
             .OrderByDescending(reservation => reservation.CreatedAt)
+            .ThenByDescending(reservation => reservation.Id)
             .Select(reservation => new ReservationListItemDto
             {
                 Id = reservation.Id,

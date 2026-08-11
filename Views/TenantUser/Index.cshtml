@@ -1,17 +1,19 @@
 @model KiraTakip.Models.ViewModels.TenantUserListViewModel
 @using KiraTakip.Infrastructure.Hashids
+@using KiraTakip.Models.Common
 @{
     Layout = "_KiraciLayout";
     ViewData["Title"] = "Kullanıcılar";
     ViewData["UseCentralFeedback"] = true;
     var controllerName = nameof(KiraTakip.Controllers.TenantUserController).Replace("Controller", "");
+    var pagination = PaginationModel.FromPaged(Model.Users, "/Tenant/Users", Model.Query.ToQueryDict());
 }
 
 
 <div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Kullanıcılar</div>
-        <div class="page-subtitle">@Model.Users.Count kayıtlı kullanıcı</div>
+        <div class="page-subtitle">@Model.Users.Total kayıtlı kullanıcı</div>
     </div>
     @if (Model.CanInvite)
     {
@@ -19,19 +21,24 @@
     }
 </div>
 
-<div class="card p-0 overflow-hidden" x-data="clientTable({ pageSize: 25 })" x-init="init()">
-    <div class="table-toolbar">
-        <input type="search" class="form-control toolbar-search" placeholder="Ara: ad, e-posta, rol…" x-model.debounce.250ms="q" />
-        <span class="pagination-info ml-auto"><span x-text="total"></span> kayıt</span>
-    </div>
+<div class="card p-0 overflow-hidden">
+    <form method="get" asp-controller="@controllerName" asp-action="Index" class="table-toolbar">
+        <input type="hidden" name="size" value="@Model.Query.Size" />
+        <input type="search" name="q" value="@Model.Query.Q" class="form-control toolbar-search" placeholder="Ara: ad, e-posta, rol…" />
+        <button type="submit" class="btn btn-secondary">Ara</button>
+        @if (!string.IsNullOrWhiteSpace(Model.Query.Q))
+        {
+            <a asp-controller="@controllerName" asp-action="Index" asp-route-size="@Model.Query.Size" class="btn btn-secondary">Temizle</a>
+        }
+        <span class="pagination-info ml-auto"><strong>@Model.Users.Total</strong> kayıt</span>
+    </form>
     <div class="table-wrapper">
         <table>
             <thead><tr><th>Ad Soyad</th><th>E-posta</th><th>Rol</th><th>Durum</th><th></th></tr></thead>
-            <tbody x-ref="tbody">
-            @foreach (var user in Model.Users)
+            <tbody>
+            @foreach (var user in Model.Users.Items)
             {
-                var search = $"{user.FullName} {user.Email} {user.RoleName}".ToLower();
-                <tr data-row data-search="@search">
+                <tr>
                     <td class="font-semibold">@user.FullName @if (user.IsCurrentUser) { <span class="text-xs text-muted ml-1">(siz)</span> }</td>
                     <td class="text-sm text-muted">@user.Email</td>
                     <td><span class="badge badge-bos">@user.RoleName</span></td>
@@ -58,6 +65,11 @@
             </tbody>
         </table>
     </div>
+    @if (!Model.Users.Items.Any())
+    {
+        <div class="p-8 text-center text-slate-400 font-medium">Aramaya uyan kullanıcı bulunamadı.</div>
+    }
+    @await Html.PartialAsync("_Pagination", pagination)
 </div>
 
 @if (Model.PendingInvitations.Any())

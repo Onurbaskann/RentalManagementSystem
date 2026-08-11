@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace KiraTakip.Repositories;
 
-public class InvitationRepository(ApplicationDbContext ctx) : BaseRepository<Invitation>(ctx), IInvitationRepository
+public class InvitationRepository(ApplicationDbContext ctx) : RepositoryBase<Invitation>(ctx), IInvitationRepository
 {
     public Task<List<TenantInvitationListItemDto>> GetPendingTenantListAsync(
         int tenantId,

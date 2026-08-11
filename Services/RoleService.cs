@@ -6,6 +6,7 @@ using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
+using KiraTakip.Models.Common;
 
 namespace KiraTakip.Services;
 
@@ -45,6 +46,9 @@ public class RoleService(
 
         return list;
     }
+
+    public Task<PagedResult<RoleListItemDto>> GetInternalRolesWithDetailsPagedAsync(TableQuery query)
+        => roleRepository.GetInternalRolesWithDetailsPagedAsync(query);
 
     public Task<Role?> GetRoleByIdAsync(GetRoleByIdInput input)
         => roleRepository.GetAsync(r =>
@@ -154,6 +158,11 @@ public class RoleService(
     public Task<List<RoleListItemDto>> GetTenantRolesWithDetailsAsync(
         GetTenantRolesWithDetailsInput input)
         => roleRepository.GetTenantRolesWithDetailsAsync(input.TenantId);
+
+    public Task<PagedResult<RoleListItemDto>> GetTenantRolesWithDetailsPagedAsync(
+        GetTenantRolesWithDetailsInput input,
+        TableQuery query)
+        => roleRepository.GetTenantRolesWithDetailsPagedAsync(input.TenantId, query);
 
     public async Task<TenantRoleEditDto> GetTenantRoleForEditAsync(
         GetTenantRoleForEditInput input)

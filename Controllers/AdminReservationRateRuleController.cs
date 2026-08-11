@@ -2,6 +2,7 @@ using KiraTakip.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Models.Common;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,9 +17,10 @@ public class AdminReservationRateRuleController(
 {
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.ReservationRateRule.Module)]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
-        var liste = await reservationService.GetRateRulesAsync();
+        var liste = await reservationService.GetRateRulesPagedAsync(query);
+        ViewBag.Query = query;
         return View(liste);
     }
 

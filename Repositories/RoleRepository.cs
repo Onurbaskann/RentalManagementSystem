@@ -1,6 +1,7 @@
 using KiraTakip.Data;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.Entities;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -11,9 +12,68 @@ using System.Threading.Tasks;
 
 namespace KiraTakip.Repositories;
 
-public class RoleRepository : BaseRepository<Role>, IRoleRepository
+public class RoleRepository : RepositoryBase<Role>, IRoleRepository
 {
     public RoleRepository(ApplicationDbContext ctx) : base(ctx) { }
+
+    public Task<PagedResult<RoleListItemDto>> GetInternalRolesWithDetailsPagedAsync(
+        TableQuery tableQuery,
+        CancellationToken ct = default)
+    {
+        var query = _dbSet.AsNoTracking()
+            .Where(role => role.Scope == RoleScope.Internal && !role.IsDeleted);
+        if (!string.IsNullOrWhiteSpace(tableQuery.Q))
+        {
+            var search = tableQuery.Q.Trim();
+            query = query.Where(role => role.Name.Contains(search)
+                || (role.Description != null && role.Description.Contains(search)));
+        }
+        var items = query
+            .OrderBy(role => role.IsSystemRole ? 0 : 1)
+            .ThenBy(role => role.Name)
+            .ThenBy(role => role.Id)
+            .Select(role => new RoleListItemDto(
+                role.Id,
+                role.Name,
+                role.Description,
+                role.IsSystemRole,
+                role.IsActive,
+                _ctx.UserRoller.Count(userRole => userRole.RoleId == role.Id),
+                role.RolePermissions.Count));
+        return GetPagedResultAsync(query, items, tableQuery, ct);
+    }
+
+    public Task<PagedResult<RoleListItemDto>> GetTenantRolesWithDetailsPagedAsync(
+        int tenantId,
+        TableQuery tableQuery,
+        CancellationToken ct = default)
+    {
+        var query = _dbSet.AsNoTracking()
+            .Where(role => role.Scope == RoleScope.Tenant
+                && (role.TenantId == null || role.TenantId == tenantId)
+                && role.IsActive
+                && !role.IsDeleted);
+        if (!string.IsNullOrWhiteSpace(tableQuery.Q))
+        {
+            var search = tableQuery.Q.Trim();
+            query = query.Where(role => role.Name.Contains(search)
+                || (role.Description != null && role.Description.Contains(search)));
+        }
+        var items = query
+            .OrderBy(role => role.IsSystemRole ? 0 : 1)
+            .ThenBy(role => role.Name)
+            .ThenBy(role => role.Id)
+            .Select(role => new RoleListItemDto(
+                role.Id,
+                role.Name,
+                role.Description,
+                role.IsSystemRole,
+                role.IsActive,
+                _ctx.UserRoller.Count(userRole => userRole.RoleId == role.Id
+                    && _ctx.Users.Any(user => user.Id == userRole.UserId && user.TenantId == tenantId)),
+                role.RolePermissions.Count));
+        return GetPagedResultAsync(query, items, tableQuery, ct);
+    }
 
     public async Task<List<AdminUserRoleOptionDto>> GetActiveInternalRoleOptionsAsync(CancellationToken ct = default)
         => await _dbSet.AsNoTracking()

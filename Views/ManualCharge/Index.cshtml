@@ -1,5 +1,6 @@
-@model List<KiraTakip.Models.Dtos.ManualChargeListItemDto>
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.ManualChargeListItemDto>
 @using KiraTakip.Models
+@using KiraTakip.Models.Common
 @{
     ViewData["Title"] = "Manuel Borçlar";
     ViewData["UseCentralFeedback"] = true;
@@ -9,6 +10,11 @@
     string activeRelation = ViewBag.Relation ?? "";
     int cancelledCount = ViewBag.CancelledCount ?? 0;
     int? leaseId = ViewBag.LeaseId;
+    var query = ViewBag.Query as TableQuery ?? new TableQuery();
+    var paginationExtra = query.ToQueryDict();
+    paginationExtra["relation"] = activeRelation;
+    paginationExtra["leaseId"] = leaseId?.ToString();
+    var pagination = PaginationModel.FromPaged(Model, "/ManualCharge", paginationExtra);
 
     string ButtonClass(string status) => activeStatus == status
         ? "btn btn-sm bg-primary text-white border-primary"
@@ -18,7 +24,7 @@
 <div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Manuel Borçlar</div>
-        <div class="page-subtitle">@Model.Count kayıt</div>
+        <div class="page-subtitle">@Model.Total kayıt</div>
     </div>
     @if (canCreate)
     {
@@ -54,6 +60,8 @@
 @* Filtre formu *@
 <form method="get" action="/ManualCharge" class="card p-3 mb-3 flex flex-wrap items-center gap-3">
     <input type="hidden" name="status" value="@activeStatus" />
+    <input type="hidden" name="size" value="@query.Size" />
+    <input type="search" name="q" value="@query.Q" class="form-control w-full max-w-xs" placeholder="Ara: kiracı, taşınmaz, birim veya açıklama…" />
     <select name="relation" class="form-control w-40 text-sm" onchange="this.form.submit()">
         <option value="" selected="@(activeRelation == "")">Bağlantı: Hepsi</option>
         <option value="sozlesmeli" selected="@(activeRelation == "sozlesmeli")">Sözleşmeli</option>
@@ -88,7 +96,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var manualCharge in Model)
+                @foreach (var manualCharge in Model.Items)
                 {
                     var remainingAmount = manualCharge.TotalAmount - manualCharge.PaidAmount;
                     string statusClass = manualCharge.Status switch {
@@ -175,7 +183,7 @@
                         </td>
                     </tr>
                 }
-                @if (!Model.Any())
+                @if (!Model.Items.Any())
                 {
                     <tr>
                         <td colspan="11" class="py-16 text-center">
@@ -195,6 +203,7 @@
             </tbody>
         </table>
     </div>
+    @await Html.PartialAsync("_Pagination", pagination)
 </div>
 
 @section Scripts {

@@ -4,7 +4,7 @@ using KiraTakip.Models.ViewModels;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IUnitRateRepository : IBaseRepository<UnitRate>
+public interface IUnitRateRepository : IRepositoryBase<UnitRate>
 {
     Task<RateValueDto?> GetRateAsync(int unitId, int tenantCategoryId, int chargeTypeId);
     Task<List<ParentRateCardViewModel>> GetCardsByUnitAsync(int unitId, int? tenantCategoryId);

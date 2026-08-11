@@ -1,6 +1,14 @@
+using KiraTakip.Models.Common;
+
 namespace KiraTakip.Models.Dtos;
 
 public record GetLeasesInput(
+    string? Filter = null,
+    IReadOnlyList<int>? PropertyIds = null,
+    IReadOnlyList<int>? UnitIds = null);
+
+public record GetPagedLeasesInput(
+    TableQuery Query,
     string? Filter = null,
     IReadOnlyList<int>? PropertyIds = null,
     IReadOnlyList<int>? UnitIds = null);

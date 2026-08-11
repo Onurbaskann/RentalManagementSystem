@@ -2,6 +2,7 @@ using KiraTakip.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos.ChargeType;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Models.Common;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,9 +15,10 @@ public class AdminChargeTypeController(IChargeTypeService chargeTypeService) : C
 {
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.ChargeType.Module)]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
-        var list = await chargeTypeService.GetListAsync();
+        var list = await chargeTypeService.GetPagedListAsync(query);
+        ViewBag.Query = query;
         return View(list);
     }
 

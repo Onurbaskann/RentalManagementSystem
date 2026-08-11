@@ -3,14 +3,28 @@ using KiraTakip.Models;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Models.Common;
+using KiraTakip.Models.Dtos.RateSchedule;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class RateScheduleRepository : BaseRepository<RateSchedule>, IRateScheduleRepository
+public class RateScheduleRepository : RepositoryBase<RateSchedule>, IRateScheduleRepository
 {
     public RateScheduleRepository(ApplicationDbContext ctx) : base(ctx) { }
+
+    public Task<PagedResult<RateYearSummaryDto>> GetYearSummariesPagedAsync(TableQuery tableQuery)
+    {
+        var grouped = _dbSet.AsNoTracking().GroupBy(rate => rate.Year);
+        var items = grouped
+            .OrderByDescending(group => group.Key)
+            .Select(group => new RateYearSummaryDto(
+                group.Key,
+                group.Any(rate => rate.IsActive),
+                group.Count()));
+        return PagedQuery.CreateAsync(grouped, items, tableQuery);
+    }
 
     public async Task<RateValueDto?> GetRateAsync(int kategoriId, int chargeTypeId, int donemYil)
         => await _dbSet.AsNoTracking()

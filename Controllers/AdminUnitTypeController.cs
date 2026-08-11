@@ -3,6 +3,7 @@ using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Models.Common;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,9 +16,10 @@ public class AdminUnitTypeController(IUnitTypeService unitTypeService) : Control
 {
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.UnitType.Module)]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
-        var list = await unitTypeService.GetListAsync();
+        var list = await unitTypeService.GetPagedListAsync(query);
+        ViewBag.Query = query;
         return View(list);
     }
 

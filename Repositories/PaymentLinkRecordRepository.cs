@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace KiraTakip.Repositories;
 
 public class PaymentLinkRecordRepository(ApplicationDbContext context)
-    : BaseRepository<PaymentLinkRecord>(context), IPaymentLinkRecordRepository
+    : RepositoryBase<PaymentLinkRecord>(context), IPaymentLinkRecordRepository
 {
     public Task<PaymentLinkRecord?> GetByIdIgnoringFiltersAsync(
         int recordId,

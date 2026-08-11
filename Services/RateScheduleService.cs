@@ -4,6 +4,7 @@ using KiraTakip.Models;
 using KiraTakip.Models.Dtos.RateSchedule;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
+using KiraTakip.Models.Common;
 
 namespace KiraTakip.Services;
 
@@ -24,6 +25,9 @@ public class RateScheduleService(
             .OrderByDescending(o => o.Year)
             .ToList();
     }
+
+    public Task<PagedResult<RateYearSummaryDto>> GetYearSummariesPagedAsync(TableQuery query)
+        => rateScheduleRepository.GetYearSummariesPagedAsync(query);
 
     public async Task<List<int>> GetExistingYearsAsync()
     {

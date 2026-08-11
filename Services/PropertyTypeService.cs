@@ -4,6 +4,7 @@ using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos.PropertyType;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
+using KiraTakip.Models.Common;
 
 namespace KiraTakip.Services;
 
@@ -23,6 +24,25 @@ public class PropertyTypeService(
             k.TekBirimDestekli,
             k.CokluBirimDestekli
         )).ToList();
+    }
+
+    public async Task<PagedResult<PropertyTypeListItemDto>> GetPagedListAsync(TableQuery query)
+    {
+        var result = await tasinmazTipiRepository.GetPagedListAsync(query);
+        return new PagedResult<PropertyTypeListItemDto>
+        {
+            Items = result.Items.Select(item => new PropertyTypeListItemDto(
+                item.Id,
+                item.Ad,
+                item.Kod,
+                item.Sira,
+                item.Aktif,
+                item.TekBirimDestekli,
+                item.CokluBirimDestekli)).ToList(),
+            Total = result.Total,
+            Page = result.Page,
+            Size = result.Size
+        };
     }
 
     public async Task<int> GetMaxSortOrderAsync()

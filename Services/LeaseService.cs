@@ -2,6 +2,7 @@ using KiraTakip.Data;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
@@ -478,6 +479,17 @@ public class LeaseService(
         return list;
     }
 
+    public async Task<PagedResult<LeaseListItemDto>> GetPagedAsync(GetPagedLeasesInput input)
+    {
+        var result = await leaseRepository.GetPagedListAsync(
+            input.Query,
+            input.Filter,
+            input.PropertyIds?.ToList(),
+            input.UnitIds?.ToList());
+        await PopulateMonthlyAmountsAsync(result.Items);
+        return result;
+    }
+
     public async Task<List<LeaseListItemDto>> GetTenantPortalLeasesAsync(
         GetTenantPortalLeasesInput input)
     {
@@ -488,6 +500,18 @@ public class LeaseService(
         await PopulateMonthlyAmountsAsync(list);
 
         return list;
+    }
+
+    public async Task<PagedResult<LeaseListItemDto>> GetTenantPortalLeasesPageAsync(
+        GetTenantPortalLeasesPageInput input)
+    {
+        var result = await leaseRepository.GetTenantPortalPagedListAsync(
+            input.TenantId,
+            input.Query,
+            input.AccessScope.PropertyIds?.ToList(),
+            input.AccessScope.UnitIds?.ToList());
+        await PopulateMonthlyAmountsAsync(result.Items);
+        return result;
     }
 
     public async Task<List<LeaseListItemDto>> GetByUnitAsync(GetLeasesByUnitInput input)

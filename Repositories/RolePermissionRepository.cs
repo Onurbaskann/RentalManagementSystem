@@ -5,15 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class RolePermissionRepository : IRolePermissionRepository
+public class RolePermissionRepository(ApplicationDbContext ctx)
+    : Repository<RolePermission, int>(ctx, permission => permission.Id), IRolePermissionRepository
 {
-    private readonly ApplicationDbContext _ctx;
-
-    public RolePermissionRepository(ApplicationDbContext ctx)
-    {
-        _ctx = ctx;
-    }
-
     public async Task<List<RolePermission>> GetForRoleAsync(int roleId)
         => await _ctx.RolPermissions.Where(rp => rp.RoleId == roleId).ToListAsync();
 

@@ -1,11 +1,12 @@
 using KiraTakip.Data;
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Common;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class PropertyTypeRepository : BaseRepository<PropertyType>, IPropertyTypeRepository
+public class PropertyTypeRepository : RepositoryBase<PropertyType>, IPropertyTypeRepository
 {
     public PropertyTypeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
@@ -42,6 +43,29 @@ public class PropertyTypeRepository : BaseRepository<PropertyType>, IPropertyTyp
                 propertyType.SupportsSingleUnit,
                 propertyType.SupportsMultipleUnits))
             .ToListAsync();
+
+    public Task<PagedResult<TasinmazTipiListItemDto>> GetPagedListAsync(TableQuery tableQuery)
+    {
+        var query = _dbSet.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(tableQuery.Q))
+        {
+            var search = tableQuery.Q.Trim();
+            query = query.Where(type => type.Name.Contains(search) || type.Code.Contains(search));
+        }
+        var items = query
+            .OrderBy(type => type.SortOrder).ThenBy(type => type.Name).ThenBy(type => type.Id)
+            .Select(type => new TasinmazTipiListItemDto
+            {
+                Id = type.Id,
+                Ad = type.Name,
+                Kod = type.Code,
+                Sira = type.SortOrder,
+                Aktif = type.IsActive,
+                TekBirimDestekli = type.SupportsSingleUnit,
+                CokluBirimDestekli = type.SupportsMultipleUnits
+            });
+        return GetPagedResultAsync(query, items, tableQuery);
+    }
 
     public Task<PropertyStructureSupportDto?> GetStructureSupportAsync(int propertyTypeId)
         => _dbSet.AsNoTracking()

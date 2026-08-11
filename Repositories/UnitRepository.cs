@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class UnitRepository : BaseRepository<Unit>, IUnitRepository
+public class UnitRepository : RepositoryBase<Unit>, IUnitRepository
 {
     public UnitRepository(ApplicationDbContext ctx) : base(ctx) { }
 

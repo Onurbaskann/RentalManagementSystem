@@ -53,6 +53,20 @@ public class TenantUserService(
         return new TenantUsersListDto(tenant.DisplayName, users, invitations);
     }
 
+    public async Task<TenantUsersPageDto> GetTenantUsersPageAsync(GetTenantUsersPageInput input)
+    {
+        var tenant = Guard.NotFound(
+            await tenantRepository.GetActiveByIdAsync(input.TenantId),
+            "Kiracı bulunamadı.",
+            "TENANT_USER_TENANT_NOT_FOUND");
+        var users = await userRepository.GetTenantUserPageAsync(input.TenantId, input.Query);
+        var invitations = await invitationRepository.GetPendingTenantListAsync(
+            input.TenantId,
+            DateTime.UtcNow);
+
+        return new TenantUsersPageDto(tenant.DisplayName, users, invitations);
+    }
+
     public async Task ToggleUserActiveAsync(ToggleTenantUserActiveInput input)
     {
         Guard.Forbidden(

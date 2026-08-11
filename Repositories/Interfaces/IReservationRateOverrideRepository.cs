@@ -3,10 +3,11 @@ using KiraTakip.Models.ViewModels;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IReservationRateOverrideRepository : IBaseRepository<ReservationRateOverride>
+public interface IReservationRateOverrideRepository : IRepositoryBase<ReservationRateOverride>
 {
     Task<List<ParentReservationRateOverrideRow>> GetGeneralRowsAsync(int year);
     Task<List<ReservationRateOverrideListItemDto>> GetUcretKurallariListAsync();
+    Task<PagedResult<ReservationRateOverrideListItemDto>> GetRateRulesPagedAsync(TableQuery query);
     Task<ReservationRateOverride?> GetActiveForUnitAsync(int unitId);
     Task<ReservationRateOverride?> GetForUnitAsync(int unitId);
     Task<ReservationRateOverride?> GetGeneralAsync(int unitTypeId, int year);

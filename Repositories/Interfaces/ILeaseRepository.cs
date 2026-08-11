@@ -1,10 +1,16 @@
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Common;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface ILeaseRepository : IBaseRepository<Lease>
+public interface ILeaseRepository : IRepositoryBase<Lease>
 {
     Task<List<LeaseListItemDto>> GetListAsync(
+        string? filter,
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null);
+    Task<PagedResult<LeaseListItemDto>> GetPagedListAsync(
+        TableQuery query,
         string? filter,
         List<int>? authorizedPropertyIds,
         List<int>? authorizedUnitIds = null);
@@ -12,6 +18,11 @@ public interface ILeaseRepository : IBaseRepository<Lease>
     Task<LeaseDetailDto?> GetTenantDetailsAsync(int leaseId, int tenantId, List<int>? authorizedPropertyIds = null, List<int>? authorizedUnitIds = null);
     Task<List<LeaseListItemDto>> GetTenantPortalListAsync(
         int tenantId,
+        List<int>? authorizedPropertyIds = null,
+        List<int>? authorizedUnitIds = null);
+    Task<PagedResult<LeaseListItemDto>> GetTenantPortalPagedListAsync(
+        int tenantId,
+        TableQuery query,
         List<int>? authorizedPropertyIds = null,
         List<int>? authorizedUnitIds = null);
     Task<List<LeaseListItemDto>> GetByTenantIdAsync(

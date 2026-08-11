@@ -3,6 +3,7 @@ using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos.DocumentType;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.ViewModels;
+using KiraTakip.Models.Common;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,9 +16,10 @@ public class AdminDocumentTypeController(IDocumentTypeService documentTypeServic
 {
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.DocumentType.Module)]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
-        var list = await documentTypeService.GetListAsync();
+        var list = await documentTypeService.GetPagedListAsync(query);
+        ViewBag.Query = query;
         return View(list);
     }
 

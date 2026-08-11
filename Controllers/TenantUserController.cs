@@ -2,6 +2,7 @@ using KiraTakip.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Infrastructure.Hashids;
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -18,24 +19,30 @@ public class TenantUserController(
 {
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Module)]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
         var currentUserId = currentUser.UserId!;
-        var data = await tenantUserService.GetTenantUsersListAsync(
-            new GetTenantUsersListInput(currentUser.TenantId!.Value));
+        var data = await tenantUserService.GetTenantUsersPageAsync(
+            new GetTenantUsersPageInput(currentUser.TenantId!.Value, query));
 
         return View(new TenantUserListViewModel
         {
-            Users = data.Users.Select(user => new TenantUserListItemViewModel
+            Users = new PagedResult<TenantUserListItemViewModel>
             {
-                Id = user.Id,
-                FullName = user.FullName,
-                Email = user.Email,
-                RoleName = user.RoleName,
-                RoleId = user.RoleId,
-                IsActive = user.IsActive,
-                IsCurrentUser = user.Id == currentUserId
-            }).ToList(),
+                Items = data.Users.Items.Select(user => new TenantUserListItemViewModel
+                {
+                    Id = user.Id,
+                    FullName = user.FullName,
+                    Email = user.Email,
+                    RoleName = user.RoleName,
+                    RoleId = user.RoleId,
+                    IsActive = user.IsActive,
+                    IsCurrentUser = user.Id == currentUserId
+                }).ToList(),
+                Total = data.Users.Total,
+                Page = data.Users.Page,
+                Size = data.Users.Size
+            },
             PendingInvitations = data.PendingInvitations.Select(invitation =>
                 new TenantInvitationListItemViewModel
                 {
@@ -46,6 +53,7 @@ public class TenantUserController(
                     SentAt = invitation.SentAt,
                     ExpiresAt = invitation.ExpiresAt
                 }).ToList(),
+            Query = query,
             CanInvite = User.HasClaim(
                 AppClaimTypes.Permission,
                 PermissionCatalog.TenantPortal.System.User.Invite),

@@ -1,17 +1,21 @@
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Common;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IApplicationUserRepository
+public interface IApplicationUserRepository : IRepository<ApplicationUser, string>
 {
     Task<List<AdminUserAccountDto>> GetInternalAdminUsersAsync(CancellationToken ct = default);
     Task<List<AdminTenantUserAccountDto>> GetAdminTenantUsersAsync(CancellationToken ct = default);
+    Task<PagedResult<AdminUserListItemDto>> GetInternalAdminUsersPageAsync(TableQuery query, CancellationToken ct = default);
+    Task<PagedResult<AdminTenantUserListItemDto>> GetAdminTenantUsersPageAsync(TableQuery query, CancellationToken ct = default);
     Task<List<ApplicationUser>> GetUsersByTenantIdAsync(int tenantId, bool ignoreQueryFilters = false, CancellationToken ct = default);
     Task<List<TenantUserListItemDto>> GetTenantUserListAsync(int tenantId, CancellationToken ct = default);
+    Task<PagedResult<TenantUserListItemDto>> GetTenantUserPageAsync(int tenantId, TableQuery query, CancellationToken ct = default);
     Task<TenantUserEditCoreDto?> GetTenantUserForEditAsync(string userId, int tenantId, CancellationToken ct = default);
     Task<bool> EmailExistsAsync(string normalizedEmail, CancellationToken ct = default);
     Task<UserScopeAccountDto?> GetScopeAccountAsync(string userId, CancellationToken ct = default);

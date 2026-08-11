@@ -2,6 +2,7 @@ using KiraTakip.Data;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
@@ -20,6 +21,14 @@ public class ManualChargeService(
         => chargeRepository.GetManualChargeListAsync(
             input.PropertyIds?.ToList(),
             input.Status,
+            input.Relation,
+            input.LeaseId,
+            input.UnitIds?.ToList());
+
+    public Task<PagedResult<ManualChargeListItemDto>> GetPageAsync(GetManualChargesPageInput input)
+        => chargeRepository.GetManualChargePagedListAsync(
+            input.Query,
+            input.PropertyIds?.ToList(),
             input.Relation,
             input.LeaseId,
             input.UnitIds?.ToList());

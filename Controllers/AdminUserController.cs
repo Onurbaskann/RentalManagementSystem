@@ -1,6 +1,7 @@
 using KiraTakip.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -15,36 +16,40 @@ public class AdminUserController(
     ICurrentUserContext currentUserContext) : Controller
 {
     [HttpGet("")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? tab, [FromQuery] TableQuery query)
     {
-        var data = await adminUserService.GetIndexAsync();
+        var activeTab = tab == "tenant" ? "tenant" : "ic";
+        var data = await adminUserService.GetIndexPageAsync(
+            new GetAdminUserIndexPageInput(query, activeTab == "tenant"));
         var viewModel = new AdminUserIndexViewModel
         {
-            InternalUsers = data.InternalUsers.Select(user => new AdminUserListItemViewModel
-            {
-                Id = user.Id,
-                FullName = user.FullName,
-                Email = user.Email,
-                Role = user.Role,
-                IsActive = user.IsActive
-            }).ToList(),
-            TenantUsers = data.TenantUsers.Select(user => new AdminTenantUserListItemViewModel
-            {
-                Id = user.Id,
-                FullName = user.FullName,
-                Email = user.Email,
-                TenantId = user.TenantId,
-                TenantName = user.TenantName,
-                RoleName = user.RoleName,
-                IsActive = user.IsActive
-            }).ToList(),
+            InternalUsers = MapPage(data.InternalUsers, user => new AdminUserListItemViewModel
+                {
+                    Id = user.Id,
+                    FullName = user.FullName,
+                    Email = user.Email,
+                    Role = user.Role,
+                    IsActive = user.IsActive
+                }),
+            TenantUsers = MapPage(data.TenantUsers, user => new AdminTenantUserListItemViewModel
+                {
+                    Id = user.Id,
+                    FullName = user.FullName,
+                    Email = user.Email,
+                    TenantId = user.TenantId,
+                    TenantName = user.TenantName,
+                    RoleName = user.RoleName,
+                    IsActive = user.IsActive
+                }),
             PendingInvitations = data.PendingInvitations.Select(invitation => new AdminPendingInvitationViewModel
             {
                 Id = invitation.Id,
                 Email = invitation.Email,
                 FullName = invitation.FullName,
                 ExpiresAt = invitation.ExpiresAt
-            }).ToList()
+            }).ToList(),
+            Query = query,
+            ActiveTab = activeTab
         };
 
         return View(viewModel);
@@ -228,4 +233,15 @@ public class AdminUserController(
                 Selected = model.SelectedUnitIds?.Contains(unit.Id) ?? false
             }).ToList();
     }
+
+    private static PagedResult<TOutput> MapPage<TInput, TOutput>(
+        PagedResult<TInput> source,
+        Func<TInput, TOutput> map)
+        => new()
+        {
+            Items = source.Items.Select(map).ToList(),
+            Total = source.Total,
+            Page = source.Page,
+            Size = source.Size
+        };
 }

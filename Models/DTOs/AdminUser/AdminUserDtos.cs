@@ -1,4 +1,8 @@
+using KiraTakip.Models.Common;
+
 namespace KiraTakip.Models.Dtos;
+
+public record GetAdminUserIndexPageInput(TableQuery Query, bool TenantUsersTab);
 
 public record GetAdminUserEditDataInput(string UserId, string? CurrentUserId);
 
@@ -52,6 +56,11 @@ public record AdminPendingInvitationDto(int Id, string Email, string? FullName, 
 public record AdminUserIndexDto(
     List<AdminUserListItemDto> InternalUsers,
     List<AdminTenantUserListItemDto> TenantUsers,
+    List<AdminPendingInvitationDto> PendingInvitations);
+
+public record AdminUserIndexPageDto(
+    PagedResult<AdminUserListItemDto> InternalUsers,
+    PagedResult<AdminTenantUserListItemDto> TenantUsers,
     List<AdminPendingInvitationDto> PendingInvitations);
 
 public record AdminUserRoleOptionDto(int Id, string Name);

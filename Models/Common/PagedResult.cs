@@ -5,7 +5,7 @@ public class PagedResult<T>
     public List<T> Items { get; set; } = [];
     public int Total { get; set; }
     public int Page { get; set; } = 1;
-    public int Size { get; set; } = 25;
+    public int Size { get; set; } = 10;
 
     public int TotalPages => Size > 0 ? (int)Math.Ceiling(Total / (double)Size) : 0;
     public bool HasPrev => Page > 1;

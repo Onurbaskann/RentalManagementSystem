@@ -1,10 +1,11 @@
 ﻿using KiraTakip.Data;
 using KiraTakip.Repositories.Interfaces;
+using KiraTakip.Models.Common;
 using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class DocumentTypeRepository : BaseRepository<DocumentType>, IDocumentTypeRepository
+public class DocumentTypeRepository : RepositoryBase<DocumentType>, IDocumentTypeRepository
 {
     public DocumentTypeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
@@ -27,4 +28,18 @@ public class DocumentTypeRepository : BaseRepository<DocumentType>, IDocumentTyp
             .Where(type => type.TargetEntity == targetEntity && type.IsActive && (!requiredOnly || type.Required))
             .OrderBy(type => type.SortOrder)
             .ToListAsync();
+
+    public Task<PagedResult<DocumentType>> GetPagedListAsync(TableQuery tableQuery)
+    {
+        var query = _dbSet.AsNoTracking().Where(type => !type.IsDeleted);
+        if (!string.IsNullOrWhiteSpace(tableQuery.Q))
+        {
+            var search = tableQuery.Q.Trim();
+            query = query.Where(type => type.Name.Contains(search) || type.Code.Contains(search));
+        }
+        return GetPagedResultAsync(
+            query,
+            query.OrderBy(type => type.SortOrder).ThenBy(type => type.Name).ThenBy(type => type.Id),
+            tableQuery);
+    }
 }

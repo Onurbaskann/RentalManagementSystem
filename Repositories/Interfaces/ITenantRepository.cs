@@ -1,10 +1,15 @@
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Common;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface ITenantRepository : IBaseRepository<Tenant>
+public interface ITenantRepository : IRepositoryBase<Tenant>
 {
     Task<List<TenantListItemDto>> GetListAsync(
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null);
+    Task<PagedResult<TenantListItemDto>> GetPagedListAsync(
+        TableQuery query,
         List<int>? authorizedPropertyIds,
         List<int>? authorizedUnitIds = null);
     Task<bool> IsInScopeAsync(

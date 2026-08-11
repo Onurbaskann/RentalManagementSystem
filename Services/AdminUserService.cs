@@ -1,6 +1,7 @@
 using KiraTakip.Data;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.Invitation;
 using KiraTakip.Repositories.Interfaces;
@@ -67,6 +68,24 @@ public class AdminUserService(
             .ToList();
 
         return new AdminUserIndexDto(internalItems, tenantItems, pendingInvitations);
+    }
+
+    public async Task<AdminUserIndexPageDto> GetIndexPageAsync(GetAdminUserIndexPageInput input)
+    {
+        var inactiveTabQuery = new TableQuery { Page = 1, Size = input.Query.SafeSize };
+        var internalUsers = await userRepository.GetInternalAdminUsersPageAsync(
+            input.TenantUsersTab ? inactiveTabQuery : input.Query);
+        var tenantUsers = await userRepository.GetAdminTenantUsersPageAsync(
+            input.TenantUsersTab ? input.Query : inactiveTabQuery);
+        var pendingInvitations = (await invitationService.GetPendingAsync())
+            .Select(invitation => new AdminPendingInvitationDto(
+                invitation.Id,
+                invitation.Email,
+                invitation.FullName,
+                invitation.ExpiresAt))
+            .ToList();
+
+        return new AdminUserIndexPageDto(internalUsers, tenantUsers, pendingInvitations);
     }
 
     public async Task<AdminUserFormOptionsDto> GetFormOptionsAsync()

@@ -3,12 +3,13 @@ using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.Constants;
+using KiraTakip.Models.Common;
 using KiraTakip.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Repositories;
 
-public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
+public class LeaseRepository : RepositoryBase<Lease>, ILeaseRepository
 {
     private static readonly LeaseStatus[] TenantVisibleStatuses =
         [LeaseStatus.Active, LeaseStatus.Ended, LeaseStatus.Terminated];
@@ -130,6 +131,119 @@ public class LeaseRepository : BaseRepository<Lease>, ILeaseRepository
                 UnitArea = lease.Unit.Area
             })
             .ToListAsync();
+    }
+
+    public async Task<PagedResult<LeaseListItemDto>> GetPagedListAsync(
+        TableQuery tableQuery,
+        string? filter,
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null)
+    {
+        var now = DateTime.Now;
+        var query = _dbSet.AsNoTracking().AsQueryable();
+
+        if (authorizedPropertyIds != null || authorizedUnitIds != null)
+        {
+            var propertyIds = authorizedPropertyIds ?? [];
+            var unitIds = authorizedUnitIds ?? [];
+            query = query.Where(lease =>
+                propertyIds.Contains(lease.Unit.PropertyId)
+                || unitIds.Contains(lease.UnitId));
+        }
+
+        query = filter switch
+        {
+            "aktif" => query.Where(lease => lease.Status == LeaseStatus.Active && lease.StartDate <= now && lease.EndDate >= now),
+            "surek" => query.Where(lease => lease.Status == LeaseStatus.Active && lease.StartDate <= now && lease.EndDate >= now && lease.EndDate <= now.AddDays(30)),
+            "gecmis" => query.Where(lease => lease.Status == LeaseStatus.Ended),
+            "feshedildi" => query.Where(lease => lease.Status == LeaseStatus.Terminated),
+            "onaybekliyor" => query.Where(lease => lease.Status == LeaseStatus.Draft),
+            "revizyon" => query.Where(lease => lease.Status == LeaseStatus.RevisionRequested),
+            _ => query
+        };
+
+        if (!string.IsNullOrWhiteSpace(tableQuery.Q))
+        {
+            var search = tableQuery.Q.Trim();
+            query = query.Where(lease =>
+                EF.Functions.Like(lease.Tenant.Name, $"%{search}%")
+                || EF.Functions.Like(lease.Unit.Property.Name, $"%{search}%")
+                || EF.Functions.Like(lease.Unit.Name, $"%{search}%"));
+        }
+
+        var itemsQuery = query
+            .OrderByDescending(lease => lease.StartDate)
+            .ThenByDescending(lease => lease.Id)
+            .Select(lease => new LeaseListItemDto
+            {
+                Id = lease.Id,
+                TenantId = lease.TenantId,
+                TenantDisplayName = lease.Tenant.DisplayName,
+                TenantCategoryName = lease.Tenant.TenantCategory != null ? lease.Tenant.TenantCategory.Name : string.Empty,
+                UnitId = lease.UnitId,
+                UnitName = lease.Unit.Name,
+                PropertyId = lease.Unit.PropertyId,
+                PropertyName = lease.Unit.Property.Name,
+                StartDate = lease.StartDate,
+                EndDate = lease.EndDate,
+                MonthlyAmount = 0,
+                Status = lease.Status,
+                UnitArea = lease.Unit.Area
+            });
+
+        return await GetPagedResultAsync(query, itemsQuery, tableQuery);
+    }
+
+    public async Task<PagedResult<LeaseListItemDto>> GetTenantPortalPagedListAsync(
+        int tenantId,
+        TableQuery tableQuery,
+        List<int>? authorizedPropertyIds = null,
+        List<int>? authorizedUnitIds = null)
+    {
+        var query = _dbSet.AsNoTracking().Where(lease =>
+            lease.TenantId == tenantId
+            && TenantVisibleStatuses.Contains(lease.Status));
+
+        if (authorizedPropertyIds != null || authorizedUnitIds != null)
+        {
+            var propertyIds = authorizedPropertyIds ?? [];
+            var unitIds = authorizedUnitIds ?? [];
+            query = query.Where(lease =>
+                propertyIds.Contains(lease.Unit.PropertyId)
+                || unitIds.Contains(lease.UnitId));
+        }
+
+        if (!string.IsNullOrWhiteSpace(tableQuery.Q))
+        {
+            var search = tableQuery.Q.Trim();
+            query = query.Where(lease =>
+                EF.Functions.Like(lease.Unit.Name, $"%{search}%")
+                || EF.Functions.Like(lease.Unit.Property.Name, $"%{search}%"));
+        }
+
+        var itemsQuery = query
+            .OrderByDescending(lease => lease.StartDate)
+            .ThenByDescending(lease => lease.Id)
+            .Select(lease => new LeaseListItemDto
+            {
+                Id = lease.Id,
+                TenantId = lease.TenantId,
+                TenantDisplayName = lease.Tenant.DisplayName,
+                TenantCategoryName = lease.Tenant.TenantCategory != null
+                    ? lease.Tenant.TenantCategory.Name
+                    : string.Empty,
+                UnitId = lease.UnitId,
+                UnitName = lease.Unit.Name,
+                PropertyId = lease.Unit.PropertyId,
+                PropertyName = lease.Unit.Property.Name,
+                StartDate = lease.StartDate,
+                EndDate = lease.EndDate,
+                MonthlyAmount = 0,
+                Status = lease.Status,
+                UnitArea = lease.Unit.Area
+            });
+
+        return await GetPagedResultAsync(query, itemsQuery, tableQuery);
     }
 
     private static IQueryable<LeaseDetailDto> ProjectDetails(IQueryable<Lease> query)

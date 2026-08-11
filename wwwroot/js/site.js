@@ -1,5 +1,5 @@
 // KiraTakip — site.js
-// Tooltip (vanilla, [data-tip]), clientTable (Alpine), confirm modal (Alpine + form intercept)
+// Tooltip (vanilla, [data-tip]), confirm modal (Alpine + form intercept)
 
 (function () {
     // --- Tooltip ---
@@ -71,50 +71,6 @@ document.addEventListener('alpine:init', () => {
             }
         }
     });
-
-    // clientTable (Alpine.data)
-    Alpine.data('clientTable', (opts = {}) => ({
-        pageSize: opts.pageSize || 25,
-        page: 1,
-        q: '',
-        rows: [],
-        filteredRows: [],
-        init() {
-            const tbody = this.$refs.tbody || this.$el.querySelector('tbody');
-            if (!tbody) return;
-            this.rows = Array.from(tbody.querySelectorAll('tr[data-row]'));
-            this.filter();
-            this.$watch('q', () => { this.page = 1; this.filter(); });
-            this.$watch('pageSize', () => { this.page = 1; this.apply(); });
-            this.$watch('page', () => this.apply());
-        },
-        filter() {
-            const q = (this.q || '').trim().toLowerCase();
-            this.filteredRows = q
-                ? this.rows.filter(r => (r.dataset.search || '').toLowerCase().includes(q))
-                : this.rows.slice();
-            this.apply();
-        },
-        apply() {
-            const start = (this.page - 1) * this.pageSize;
-            const end = start + this.pageSize;
-            this.rows.forEach(r => r.style.display = 'none');
-            this.filteredRows.slice(start, end).forEach(r => r.style.display = '');
-        },
-        get total() { return this.filteredRows.length; },
-        get totalPages() { return Math.max(1, Math.ceil(this.total / this.pageSize)); },
-        get from() { return this.total === 0 ? 0 : (this.page - 1) * this.pageSize + 1; },
-        get to() { return Math.min(this.page * this.pageSize, this.total); },
-        get pageList() {
-            const tp = this.totalPages, c = this.page;
-            const set = new Set([1, tp]);
-            for (let i = c - 2; i <= c + 2; i++) if (i >= 1 && i <= tp) set.add(i);
-            return Array.from(set).sort((a, b) => a - b);
-        },
-        next() { if (this.page < this.totalPages) this.page++; },
-        prev() { if (this.page > 1) this.page--; },
-        goto(p) { this.page = Math.max(1, Math.min(this.totalPages, p)); }
-    }));
 
     // mobile sidebar store
     Alpine.store('ui', {

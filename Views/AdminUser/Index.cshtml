@@ -1,214 +1,149 @@
 @model KiraTakip.Models.ViewModels.AdminUserIndexViewModel
+@using KiraTakip.Models.Common
 @{
     ViewData["Title"] = "Kullanıcı Yönetimi";
     ViewData["UseCentralFeedback"] = true;
+    bool tenantTab = Model.ActiveTab == "tenant";
+    var paginationExtra = Model.Query.ToQueryDict();
+    paginationExtra["tab"] = Model.ActiveTab;
+    var pagination = tenantTab
+        ? PaginationModel.FromPaged(Model.TenantUsers, "/Admin/Users", paginationExtra)
+        : PaginationModel.FromPaged(Model.InternalUsers, "/Admin/Users", paginationExtra);
 }
 
 <div class="page-header flex items-center justify-between">
-    <div>
-        <div class="page-title">Kullanıcı Yönetimi</div>
-    </div>
+    <div><div class="page-title">Kullanıcı Yönetimi</div></div>
     <a href="/Admin/Users/Invite" class="btn btn-primary">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Davet Gönder
     </a>
 </div>
 
-<div x-data="{ tab: 'ic' }">
-    <div class="flex gap-1 border-b border-gray-200 mb-4">
-        <button type="button"
-                class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
-                :class="tab === 'ic' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-gray-700'"
-                @@click="tab = 'ic'">
-            İç Kullanıcılar
-            <span class="ml-1.5 text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">@Model.InternalUsers.Count</span>
-        </button>
-        <button type="button"
-                class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
-                :class="tab === 'tenant' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-gray-700'"
-                @@click="tab = 'tenant'">
-            Kiracı Kullanıcıları
-            <span class="ml-1.5 text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">@Model.TenantUsers.Count</span>
-        </button>
-    </div>
+<div class="flex gap-1 border-b border-gray-200 mb-4">
+    <a href="/Admin/Users?tab=ic"
+       class="px-4 py-2 text-sm font-medium border-b-2 transition-colors @(tenantTab ? "border-transparent text-muted hover:text-gray-700" : "border-primary text-primary")">
+        İç Kullanıcılar
+        <span class="ml-1.5 text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">@Model.InternalUsers.Total</span>
+    </a>
+    <a href="/Admin/Users?tab=tenant"
+       class="px-4 py-2 text-sm font-medium border-b-2 transition-colors @(tenantTab ? "border-primary text-primary" : "border-transparent text-muted hover:text-gray-700")">
+        Kiracı Kullanıcıları
+        <span class="ml-1.5 text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">@Model.TenantUsers.Total</span>
+    </a>
+</div>
 
-    @* İç Kullanıcılar *@
-    <div x-show="tab === 'ic'" x-data="clientTable({ pageSize: 25 })" x-init="init()">
-        <div class="card p-0 overflow-hidden">
-            <div class="table-toolbar">
-                <input type="search" class="form-control toolbar-search" placeholder="Ara: ad, e-posta, rol…" x-model.debounce.250ms="q" />
-                <span class="pagination-info ml-auto"><span x-text="total"></span> kayıt</span>
-            </div>
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Ad Soyad</th>
-                            <th>E-posta</th>
-                            <th>Rol</th>
-                            <th>Durum</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody x-ref="tbody">
-                        @foreach (var user in Model.InternalUsers)
-                        {
-                            var search = $"{user.FullName} {user.Email} {user.Role}".ToLower();
-                            <tr data-row data-search="@search">
-                                <td class="font-semibold">@user.FullName</td>
-                                <td class="text-sm text-muted">@user.Email</td>
-                                <td>
-                                    @{
-                                        string roleCssClass = user.Role switch {
-                                            "Admin" => "badge-kurumsal",
-                                            "Yonetici" => "badge-kirali",
-                                            _ => "badge-bos"
-                                        };
-                                        string roleLabel = user.Role switch {
-                                            _ => user.Role
-                                        };
-                                    }
-                                    <span class="badge @roleCssClass">@roleLabel</span>
-                                </td>
-                                <td>
-                                    @if (user.IsActive)
-                                    { <span class="badge badge-kirali">Aktif</span> }
-                                    else
-                                    { <span class="badge badge-gecmis">Pasif</span> }
-                                </td>
-                                <td class="flex gap-1.5 justify-end">
-                                    <a href="/Admin/Users/Edit/@user.Id" class="btn btn-sm btn-secondary">Düzenle</a>
-                                    <form method="post" action="/Admin/Users/ToggleActive/@user.Id"
-                                          data-confirm="@(user.IsActive ? "Kullanıcı pasif yapılsın mı? Oturum açamaz." : "Kullanıcı aktif yapılsın mı?")" class="inline">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-sm @(user.IsActive ? "btn-danger" : "btn-amber")">
-                                            @(user.IsActive ? "Pasif Yap" : "Aktif Yap")
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-            <div class="pagination-wrap" x-show="totalPages > 1">
-                <div class="pagination-info"><span x-text="from"></span>–<span x-text="to"></span> / <strong x-text="total"></strong></div>
-                <nav class="pagination" aria-label="Sayfalar">
-                    <button type="button" class="page-btn" :class="{ 'page-btn-disabled': page === 1 }" :disabled="page === 1" @@click="prev()">‹</button>
-                    <template x-for="p in pageList" :key="p">
-                        <button type="button" class="page-btn" :class="{ 'page-btn-active': p === page }" @@click="goto(p)" x-text="p"></button>
-                    </template>
-                    <button type="button" class="page-btn" :class="{ 'page-btn-disabled': page === totalPages }" :disabled="page === totalPages" @@click="next()">›</button>
-                </nav>
-            </div>
-            <div class="pagination-wrap" x-show="total === 0 && q.length > 0" x-cloak>
-                <div class="pagination-info m-auto">Aramaya uyan kayıt yok.</div>
-            </div>
-        </div>
-
-        @if (Model.PendingInvitations.Any())
+<div class="card p-0 overflow-hidden">
+    <form method="get" action="/Admin/Users" class="table-toolbar">
+        <input type="hidden" name="tab" value="@Model.ActiveTab" />
+        <input type="hidden" name="size" value="@Model.Query.Size" />
+        <input type="search" name="q" value="@Model.Query.Q" class="form-control toolbar-search"
+               placeholder="@(tenantTab ? "Ara: ad, e-posta, kiracı, rol…" : "Ara: ad, e-posta, rol…")" />
+        <button type="submit" class="btn btn-secondary">Ara</button>
+        @if (!string.IsNullOrWhiteSpace(Model.Query.Q))
         {
-            <div class="mt-6">
-                <div class="page-header">
-                    <div class="page-title text-base">Bekleyen Davetler</div>
-                    <div class="page-subtitle">@Model.PendingInvitations.Count adet gönderilmiş, yanıt bekleyen davet</div>
-                </div>
-                <div class="card p-0 overflow-hidden">
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>E-posta</th>
-                                    <th>Ad Soyad</th>
-                                    <th>Son Geçerlilik</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var invitation in Model.PendingInvitations)
-                                {
-                                    <tr>
-                                        <td>@invitation.Email</td>
-                                        <td class="text-sm text-muted">@(invitation.FullName ?? "—")</td>
-                                        <td class="text-sm text-muted">@invitation.ExpiresAt.ToString("dd.MM.yyyy HH:mm")</td>
-                                        <td class="flex gap-1.5 justify-end">
-                                            <form method="post" action="/Admin/Users/Invitation/Resend/@invitation.Id" class="inline">
-                                                @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-sm btn-secondary">Yeniden Gönder</button>
-                                            </form>
-                                            <form method="post" action="/Admin/Users/Invitation/Cancel/@invitation.Id"
-                                                  data-confirm="Bu daveti iptal etmek istediğinizden emin misiniz?" class="inline">
-                                                @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-sm btn-danger">İptal Et</button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+            <a href="/Admin/Users?tab=@Model.ActiveTab&size=@Model.Query.Size" class="btn btn-secondary">Temizle</a>
+        }
+        <span class="pagination-info ml-auto"><strong>@(tenantTab ? Model.TenantUsers.Total : Model.InternalUsers.Total)</strong> kayıt</span>
+    </form>
+
+    <div class="table-wrapper">
+        @if (!tenantTab)
+        {
+            <table>
+                <thead><tr><th>Ad Soyad</th><th>E-posta</th><th>Rol</th><th>Durum</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var user in Model.InternalUsers.Items)
+                {
+                    string roleCssClass = user.Role switch
+                    {
+                        "Admin" => "badge-kurumsal",
+                        "Yonetici" => "badge-kirali",
+                        _ => "badge-bos"
+                    };
+                    <tr>
+                        <td class="font-semibold">@user.FullName</td>
+                        <td class="text-sm text-muted">@user.Email</td>
+                        <td><span class="badge @roleCssClass">@user.Role</span></td>
+                        <td>
+                            @if (user.IsActive) { <span class="badge badge-kirali">Aktif</span> }
+                            else { <span class="badge badge-gecmis">Pasif</span> }
+                        </td>
+                        <td class="flex gap-1.5 justify-end">
+                            <a href="/Admin/Users/Edit/@user.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                            <form method="post" action="/Admin/Users/ToggleActive/@user.Id"
+                                  data-confirm="@(user.IsActive ? "Kullanıcı pasif yapılsın mı? Oturum açamaz." : "Kullanıcı aktif yapılsın mı?")" class="inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm @(user.IsActive ? "btn-danger" : "btn-amber")">@(user.IsActive ? "Pasif Yap" : "Aktif Yap")</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <table>
+                <thead><tr><th>Ad Soyad</th><th>E-posta</th><th>Kiracı</th><th>Rol</th><th>Durum</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var user in Model.TenantUsers.Items)
+                {
+                    <tr>
+                        <td class="font-semibold">@user.FullName</td>
+                        <td class="text-sm text-muted">@user.Email</td>
+                        <td><a href="/Admin/Tenants/@user.TenantId.ToHashId()/Users" class="text-sm text-primary hover:underline">@user.TenantName</a></td>
+                        <td><span class="badge badge-bos">@user.RoleName</span></td>
+                        <td>
+                            @if (user.IsActive) { <span class="badge badge-kirali">Aktif</span> }
+                            else { <span class="badge badge-gecmis">Pasif</span> }
+                        </td>
+                        <td class="text-right"><a href="/Admin/Tenants/@user.TenantId.ToHashId()/Users" class="btn btn-sm btn-secondary">Yönet</a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
         }
     </div>
 
-    @* Kiracı Kullanıcıları *@
-    <div x-show="tab === 'tenant'" x-cloak x-data="clientTable({ pageSize: 25 })" x-init="init()">
+    @if ((tenantTab && !Model.TenantUsers.Items.Any()) || (!tenantTab && !Model.InternalUsers.Items.Any()))
+    {
+        <div class="p-8 text-center text-slate-400 font-medium">Aramaya uyan kullanıcı bulunamadı.</div>
+    }
+    @await Html.PartialAsync("_Pagination", pagination)
+</div>
+
+@if (!tenantTab && Model.PendingInvitations.Any())
+{
+    <div class="mt-6">
+        <div class="page-header">
+            <div class="page-title text-base">Bekleyen Davetler</div>
+            <div class="page-subtitle">@Model.PendingInvitations.Count adet gönderilmiş, yanıt bekleyen davet</div>
+        </div>
         <div class="card p-0 overflow-hidden">
-            <div class="table-toolbar">
-                <input type="search" class="form-control toolbar-search" placeholder="Ara: ad, e-posta, kiracı…" x-model.debounce.250ms="q" />
-                <span class="pagination-info ml-auto"><span x-text="total"></span> kayıt</span>
-            </div>
             <div class="table-wrapper">
                 <table>
-                    <thead>
+                    <thead><tr><th>E-posta</th><th>Ad Soyad</th><th>Son Geçerlilik</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var invitation in Model.PendingInvitations)
+                    {
                         <tr>
-                            <th>Ad Soyad</th>
-                            <th>E-posta</th>
-                            <th>Kiracı</th>
-                            <th>Rol</th>
-                            <th>Durum</th>
-                            <th></th>
+                            <td>@invitation.Email</td>
+                            <td class="text-sm text-muted">@(invitation.FullName ?? "—")</td>
+                            <td class="text-sm text-muted">@invitation.ExpiresAt.ToString("dd.MM.yyyy HH:mm")</td>
+                            <td class="flex gap-1.5 justify-end">
+                                <form method="post" action="/Admin/Users/Invitation/Resend/@invitation.Id" class="inline">
+                                    @Html.AntiForgeryToken()<button type="submit" class="btn btn-sm btn-secondary">Yeniden Gönder</button>
+                                </form>
+                                <form method="post" action="/Admin/Users/Invitation/Cancel/@invitation.Id"
+                                      data-confirm="Bu daveti iptal etmek istediğinizden emin misiniz?" class="inline">
+                                    @Html.AntiForgeryToken()<button type="submit" class="btn btn-sm btn-danger">İptal Et</button>
+                                </form>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody x-ref="tbody">
-                        @foreach (var user in Model.TenantUsers)
-                        {
-                            var search = $"{user.FullName} {user.Email} {user.TenantName} {user.RoleName}".ToLower();
-                            <tr data-row data-search="@search">
-                                <td class="font-semibold">@user.FullName</td>
-                                <td class="text-sm text-muted">@user.Email</td>
-                                <td>
-                                    <a href="/Admin/Tenants/@user.TenantId.ToHashId()/Users" class="text-sm text-primary hover:underline">@user.TenantName</a>
-                                </td>
-                                <td><span class="badge badge-bos">@user.RoleName</span></td>
-                                <td>
-                                    @if (user.IsActive)
-                                    { <span class="badge badge-kirali">Aktif</span> }
-                                    else
-                                    { <span class="badge badge-gecmis">Pasif</span> }
-                                </td>
-                                <td class="text-right">
-                                    <a href="/Admin/Tenants/@user.TenantId.ToHashId()/Users" class="btn btn-sm btn-secondary">Yönet</a>
-                                </td>
-                            </tr>
-                        }
+                    }
                     </tbody>
                 </table>
             </div>
-            <div class="pagination-wrap" x-show="totalPages > 1">
-                <div class="pagination-info"><span x-text="from"></span>–<span x-text="to"></span> / <strong x-text="total"></strong></div>
-                <nav class="pagination" aria-label="Sayfalar">
-                    <button type="button" class="page-btn" :class="{ 'page-btn-disabled': page === 1 }" :disabled="page === 1" @@click="prev()">‹</button>
-                    <template x-for="p in pageList" :key="p">
-                        <button type="button" class="page-btn" :class="{ 'page-btn-active': p === page }" @@click="goto(p)" x-text="p"></button>
-                    </template>
-                    <button type="button" class="page-btn" :class="{ 'page-btn-disabled': page === totalPages }" :disabled="page === totalPages" @@click="next()">›</button>
-                </nav>
-            </div>
-            <div class="pagination-wrap" x-show="total === 0 && q.length > 0" x-cloak>
-                <div class="pagination-info m-auto">Aramaya uyan kayıt yok.</div>
-            </div>
         </div>
     </div>
-</div>
+}

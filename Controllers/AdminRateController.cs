@@ -5,6 +5,7 @@ using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos.RateSchedule;
 using KiraTakip.Models.ViewModels;
 using KiraTakip.Services.Interfaces;
+using KiraTakip.Models.Common;
 
 namespace KiraTakip.Controllers;
 
@@ -13,17 +14,11 @@ public class AdminRateController(IRateScheduleService rateScheduleService) : Con
 {
     [Authorize(Policy = PermissionCatalog.RateSchedule.Module)]
     [HttpGet("")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
-        var summaries = await rateScheduleService.GetYearSummariesAsync();
-        var vm = summaries.Select(o => new RateYearSummaryViewModel
-        {
-            Year = o.Year,
-            IsActive = o.IsActive,
-            ItemCount = o.ItemCount
-        }).ToList();
-
-        return View(vm);
+        var summaries = await rateScheduleService.GetYearSummariesPagedAsync(query);
+        ViewBag.Query = query;
+        return View(summaries);
     }
 
     [Authorize(Policy = PermissionCatalog.RateSchedule.Module)]

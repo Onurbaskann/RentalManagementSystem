@@ -3,7 +3,7 @@ using KiraTakip.Models.Dtos;
 
 namespace KiraTakip.Repositories.Interfaces;
 
-public interface IPaymentAllocationRepository : IBaseRepository<PaymentAllocation>
+public interface IPaymentAllocationRepository : IRepositoryBase<PaymentAllocation>
 {
     Task<List<PaymentListItemDto>> GetListAsync(
         int? chargeId,
