@@ -19,16 +19,23 @@ public class ReservationController(
     [Authorize(Policy = PermissionCatalog.Reservation.Module)]
     public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
+        var propertyIds = permissionScopeProvider.GlobalAccess
+            ? null
+            : permissionScopeProvider.AccessiblePropertyIds;
+        var unitIds = permissionScopeProvider.GlobalAccess
+            ? null
+            : permissionScopeProvider.AccessibleUnitIds;
+
         var reservations = await reservationService.GetPageAsync(
             new GetReservationsPageInput(
                 query,
-                permissionScopeProvider.GlobalAccess
-                    ? null
-                    : permissionScopeProvider.AccessiblePropertyIds,
-                permissionScopeProvider.GlobalAccess
-                    ? null
-                    : permissionScopeProvider.AccessibleUnitIds));
+                propertyIds,
+                unitIds));
+        var cancelledCount = await reservationService.GetCancelledCountAsync(
+            new GetCancelledReservationCountInput(propertyIds, unitIds));
+
         ViewBag.Query = query;
+        ViewBag.CancelledCount = cancelledCount;
         return View(reservations);
     }
 

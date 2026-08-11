@@ -69,13 +69,34 @@ public class ReservationRepository : RepositoryBase<Reservation>, IReservationRe
                 reservation.Status == ReservationStatus.TransferredToCharge),
             "iptal" => query.Where(reservation =>
                 reservation.Status == ReservationStatus.Cancelled),
-            _ => query
+            _ => query.Where(reservation =>
+                reservation.Status != ReservationStatus.Cancelled)
         };
 
         return await GetPagedResultAsync(
             query,
             ProjectList(query, currentTime),
             tableQuery);
+    }
+
+    public Task<int> GetCancelledCountAsync(
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null)
+    {
+        var query = _dbSet
+            .AsNoTracking()
+            .Where(reservation => reservation.Status == ReservationStatus.Cancelled);
+
+        if (authorizedPropertyIds != null || authorizedUnitIds != null)
+        {
+            var propertyIds = authorizedPropertyIds ?? [];
+            var unitIds = authorizedUnitIds ?? [];
+            query = query.Where(reservation =>
+                propertyIds.Contains(reservation.Unit.PropertyId)
+                || unitIds.Contains(reservation.UnitId));
+        }
+
+        return query.CountAsync();
     }
 
     public async Task<List<ReservationListItemDto>> GetTenantListAsync(

@@ -36,6 +36,11 @@ public class ReservationService(
             input.PropertyIds?.ToList(),
             input.UnitIds?.ToList());
 
+    public Task<int> GetCancelledCountAsync(GetCancelledReservationCountInput input)
+        => reservationRepository.GetCancelledCountAsync(
+            input.PropertyIds?.ToList(),
+            input.UnitIds?.ToList());
+
     public async Task<List<ReservationListItemDto>> GetTenantReservationsAsync(
         GetTenantReservationsInput input)
     {

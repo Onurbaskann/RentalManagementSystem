@@ -9,6 +9,7 @@
     bool canTransfer = User.HasPermission(PermissionCatalog.Reservation.TransferToCharge);
     var query = ViewBag.Query as TableQuery ?? new TableQuery();
     var activeStatus = string.IsNullOrWhiteSpace(query.Status) ? "tum" : query.Status;
+    var cancelledCount = ViewBag.CancelledCount is int count ? count : 0;
     var pagination = PaginationModel.FromPaged(Model, "/Reservation", query.ToQueryDict());
 }
 
@@ -35,8 +36,7 @@
             ("tum", "Tümü"),
             ("planlandi", "Planlandı"),
             ("tamamlandi", "Tamamlandı"),
-            ("aktarildi", "Tahakkuka Aktarıldı"),
-            ("iptal", "İptal Edildi")
+            ("aktarildi", "Tahakkuka Aktarıldı")
         };
     }
     @foreach (var (key, label) in statusFilters)
@@ -46,6 +46,15 @@
            class="btn btn-sm @(isActive ? "btn-primary" : "btn-secondary text-slate-600 bg-white border-slate-200")">@label</a>
     }
 </div>
+
+@if (cancelledCount > 0 && activeStatus == "tum")
+{
+    <div class="text-[12px] text-slate-400 mb-4 -mt-3">
+        @cancelledCount iptal edilmiş kayıt varsayılan görünümde gizleniyor.
+        <a href="/Reservation?status=iptal&size=@query.Size"
+           class="text-slate-500 hover:text-primary underline ml-1">Görüntüle →</a>
+    </div>
+}
 
 <div class="card p-0 overflow-hidden">
     <form method="get" action="/Reservation" class="flex items-center gap-3 p-3 bg-slate-50/50 border-b border-slate-200">

@@ -11,6 +11,10 @@ public record GetReservationsPageInput(
     IReadOnlyList<int>? PropertyIds = null,
     IReadOnlyList<int>? UnitIds = null);
 
+public record GetCancelledReservationCountInput(
+    IReadOnlyList<int>? PropertyIds = null,
+    IReadOnlyList<int>? UnitIds = null);
+
 public record GetTenantReservationsInput(
     int TenantId,
     DateTime CurrentTime,

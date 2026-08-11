@@ -7,6 +7,7 @@ public interface IReservationService
 {
     Task<List<ReservationListItemDto>> GetAllAsync(GetReservationsInput input);
     Task<PagedResult<ReservationListItemDto>> GetPageAsync(GetReservationsPageInput input);
+    Task<int> GetCancelledCountAsync(GetCancelledReservationCountInput input);
     Task<List<ReservationListItemDto>> GetTenantReservationsAsync(GetTenantReservationsInput input);
     Task<PagedResult<ReservationListItemDto>> GetTenantReservationsPageAsync(GetTenantReservationsPageInput input);
     Task<ReservationListItemDto> GetByIdAsync(GetReservationByIdInput input);

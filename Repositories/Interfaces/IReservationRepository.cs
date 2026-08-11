@@ -13,6 +13,9 @@ public interface IReservationRepository : IRepositoryBase<Reservation>
         TableQuery query,
         List<int>? authorizedPropertyIds,
         List<int>? authorizedUnitIds = null);
+    Task<int> GetCancelledCountAsync(
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null);
     Task<List<ReservationListItemDto>> GetTenantListAsync(int tenantId, DateTime currentTime, List<int>? authorizedPropertyIds = null, List<int>? authorizedUnitIds = null);
     Task<PagedResult<ReservationListItemDto>> GetTenantPagedListAsync(int tenantId, DateTime currentTime, TableQuery query, List<int>? authorizedPropertyIds = null, List<int>? authorizedUnitIds = null);
     Task<ReservationListItemDto?> GetByIdAsync(int id);
