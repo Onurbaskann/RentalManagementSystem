@@ -1,0 +1,85 @@
+@model KiraTakip.Models.ViewModels.TenantUserEditViewModel
+
+<div class="form-group">
+    <label class="form-label">E-posta</label>
+    <div class="form-control bg-slate-50 text-muted cursor-default">@Model.Email</div>
+    <input type="hidden" asp-for="Email" />
+</div>
+<div class="form-group">
+    <label class="form-label">Ad Soyad</label>
+    <input asp-for="FullName" class="form-control" />
+    <span asp-validation-for="FullName" class="form-error"></span>
+</div>
+<div class="form-group">
+    <label class="form-label">Rol</label>
+    <select asp-for="RoleId" class="form-control">
+        <option value="0">— Seçin —</option>
+        @foreach (var role in Model.Roles)
+        {
+            <option value="@role.Id">@role.Name</option>
+        }
+    </select>
+    <span asp-validation-for="RoleId" class="form-error"></span>
+</div>
+
+<div class="form-group">
+    <label class="flex items-center gap-2 text-[13.5px] cursor-pointer">
+        <input asp-for="HasAccessToAllUnits" class="w-4 h-4 accent-primary" />
+        <span class="font-semibold">Tüm Birimlere Erişim</span>
+    </label>
+    <div class="text-muted text-[12.5px] mt-1">Kapalıysa kullanıcının erişebileceği birimleri aşağıdan seçin.</div>
+</div>
+
+<div id="unitScopeOptions" class="form-group">
+    <label class="form-label">Birim Erişimi</label>
+    <span asp-validation-for="UnitIds" class="form-error block mb-2"></span>
+    @if (!Model.LeaseUnits.Any() && !Model.ReservableUnits.Any())
+    {
+        <div class="text-muted text-[13px]">Atanabilecek birim bulunamadı.</div>
+    }
+    else
+    {
+        <div class="border border-[var(--color-border)] rounded-lg p-3 max-h-64 overflow-y-auto">
+            @if (Model.LeaseUnits.Any())
+            {
+                <div class="text-[12px] font-semibold text-muted mb-2">Sözleşmeli Birimler</div>
+                <div class="flex flex-col gap-2 mb-4">
+                    @foreach (var unit in Model.LeaseUnits)
+                    {
+                        <label class="flex items-center gap-2 text-[13.5px] cursor-pointer">
+                            <input type="checkbox" name="UnitIds" value="@unit.Id" class="unit-scope-checkbox w-4 h-4 accent-primary" @(Model.UnitIds.Contains(unit.Id) ? "checked" : null) />
+                            <span>@unit.PropertyName — @unit.Name@(unit.UnitNo != null ? " (" + unit.UnitNo + ")" : "")</span>
+                        </label>
+                    }
+                </div>
+            }
+            @if (Model.ReservableUnits.Any())
+            {
+                <div class="text-[12px] font-semibold text-muted mb-2">Rezervasyon Birimleri</div>
+                <div class="flex flex-col gap-2">
+                    @foreach (var unit in Model.ReservableUnits)
+                    {
+                        <label class="flex items-center gap-2 text-[13.5px] cursor-pointer">
+                            <input type="checkbox" name="UnitIds" value="@unit.Id" class="unit-scope-checkbox w-4 h-4 accent-primary" @(Model.UnitIds.Contains(unit.Id) ? "checked" : null) />
+                            <span>@unit.PropertyName — @unit.Name@(unit.UnitNo != null ? " (" + unit.UnitNo + ")" : "")</span>
+                        </label>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<script>
+    (() => {
+        const allUnits = document.getElementById('@Html.IdFor(model => model.HasAccessToAllUnits)');
+        const options = document.getElementById('unitScopeOptions');
+        const updateState = () => {
+            const disabled = allUnits.checked;
+            options.classList.toggle('opacity-50', disabled);
+            options.querySelectorAll('.unit-scope-checkbox').forEach(item => item.disabled = disabled);
+        };
+        allUnits.addEventListener('change', updateState);
+        updateState();
+    })();
+</script>

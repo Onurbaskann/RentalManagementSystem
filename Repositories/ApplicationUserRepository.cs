@@ -212,6 +212,7 @@ public class ApplicationUserRepository(ApplicationDbContext ctx)
                 user.AdSoyad ?? string.Empty,
                 user.Email ?? string.Empty,
                 user.IsActive,
+                user.TumTasinmazlaraErisim,
                 _ctx.UserRoller
                     .Where(userRole => userRole.UserId == user.Id)
                     .Select(userRole => userRole.RoleId)

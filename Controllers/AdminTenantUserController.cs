@@ -1,3 +1,5 @@
+using KiraTakip.Authorization;
+using KiraTakip.Extensions;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
@@ -64,6 +66,7 @@ public class AdminTenantUserController(
                     }).ToList(),
                 Query = query,
                 CanInvite = true,
+                CanEdit = User.HasPermission(PermissionCatalog.User.Edit),
                 CanDeactivate = true
             });
         }
@@ -71,6 +74,59 @@ public class AdminTenantUserController(
         {
             return NotFound();
         }
+    }
+
+    [HttpGet("Edit/{id}")]
+    [Authorize(Policy = PermissionCatalog.User.Edit)]
+    public async Task<IActionResult> Edit(int tenantId, string id)
+    {
+        var currentUserId = userManager.GetUserId(User)!;
+        var data = await tenantUserService.GetTenantUserForEditAsync(
+            new GetTenantUserForEditInput(
+                tenantId,
+                id,
+                currentUserId,
+                new ReservationAccessScopeInput()));
+        await PopulateEditContextAsync(tenantId);
+        return View(ToEditViewModel(data));
+    }
+
+    [HttpPost("Edit/{id}")]
+    [Authorize(Policy = PermissionCatalog.User.Edit)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(
+        int tenantId,
+        string id,
+        TenantUserEditViewModel model)
+    {
+        model.Id = id;
+        var currentUserId = userManager.GetUserId(User)!;
+        if (!ModelState.IsValid)
+        {
+            await PopulateEditOptionsAsync(model, tenantId, id, currentUserId);
+            return View(model);
+        }
+
+        try
+        {
+            await tenantUserService.EditTenantUserAsync(new EditTenantUserInput(
+                tenantId,
+                id,
+                model.FullName,
+                model.RoleId,
+                model.HasAccessToAllUnits,
+                model.UnitIds,
+                currentUserId,
+                new ReservationAccessScopeInput()));
+        }
+        catch (BusinessValidationException exception)
+        {
+            ModelState.AddModelError(exception.Field, exception.Message);
+            await PopulateEditOptionsAsync(model, tenantId, id, currentUserId);
+            return View(model);
+        }
+
+        return RedirectToAction(nameof(Index), new { tenantId });
     }
 
     [HttpPost("ToggleActive/{id}")]
@@ -151,4 +207,50 @@ public class AdminTenantUserController(
 
         return RedirectToAction(nameof(Index), new { tenantId });
     }
+
+    private async Task PopulateEditOptionsAsync(
+        TenantUserEditViewModel model,
+        int tenantId,
+        string userId,
+        string currentUserId)
+    {
+        var data = await tenantUserService.GetTenantUserForEditAsync(
+            new GetTenantUserForEditInput(
+                tenantId,
+                userId,
+                currentUserId,
+                new ReservationAccessScopeInput()));
+        model.Email = data.Email;
+        model.IsActive = data.IsActive;
+        model.Roles = data.Roles
+            .Select(role => new RoleOptionViewModel { Id = role.Id, Name = role.Name })
+            .ToList();
+        model.LeaseUnits = data.LeaseUnits;
+        model.ReservableUnits = data.ReservableUnits;
+        await PopulateEditContextAsync(tenantId);
+    }
+
+    private async Task PopulateEditContextAsync(int tenantId)
+    {
+        var data = await tenantUserService.GetInviteDataAsync(new GetInviteDataInput(tenantId));
+        ViewBag.TenantId = tenantId;
+        ViewBag.TenantName = data.TenantDisplayName;
+    }
+
+    private static TenantUserEditViewModel ToEditViewModel(TenantUserEditDataDto data)
+        => new()
+        {
+            Id = data.Id,
+            FullName = data.FullName,
+            Email = data.Email,
+            IsActive = data.IsActive,
+            RoleId = data.RoleId,
+            HasAccessToAllUnits = data.HasAccessToAllUnits,
+            UnitIds = data.SelectedUnitIds,
+            Roles = data.Roles
+                .Select(role => new RoleOptionViewModel { Id = role.Id, Name = role.Name })
+                .ToList(),
+            LeaseUnits = data.LeaseUnits,
+            ReservableUnits = data.ReservableUnits
+        };
 }

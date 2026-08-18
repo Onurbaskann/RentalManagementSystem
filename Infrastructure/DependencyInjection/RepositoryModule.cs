@@ -33,6 +33,7 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<ICategoryRepository, CategoryRepository>();
             services.AddScoped<IPropertyTypeRepository, PropertyTypeRepository>();
             services.AddScoped<IReservationRepository, ReservationRepository>();
+            services.AddScoped<IReservationAttendeeRepository, ReservationAttendeeRepository>();
             services.AddScoped<IUserPermissionRepository, UserPermissionRepository>();
             services.AddScoped<IAuditLogRepository, AuditLogRepository>();
             services.AddScoped<IRoleRepository, RoleRepository>();
@@ -43,6 +44,7 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<IInvitationRepository, InvitationRepository>();
             services.AddScoped<IPaymentLinkRecordRepository, PaymentLinkRecordRepository>();
             services.AddScoped<IPasswordResetRequestRepository, PasswordResetRequestRepository>();
+            services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
 
             return services;
         }

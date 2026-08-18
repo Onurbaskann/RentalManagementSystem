@@ -26,6 +26,9 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<ILeaseService, LeaseService>();
             services.AddScoped<IStatisticsService, StatisticsService>();
             services.AddScoped<SeedDataService>();
+            services.AddScoped<ISystemSettingService, SystemSettingService>();
+            services.AddSingleton<IReservationPolicyProvider, ReservationPolicyProvider>();
+            services.AddSingleton<IOperationalPolicyProvider, OperationalPolicyProvider>();
 
             // Domain & Calculation Services
             services.AddScoped<IChargeService, ChargeService>();
@@ -36,6 +39,7 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<IChargeGenerationService, ChargeGenerationService>();
             services.AddScoped<IManualChargeService, ManualChargeService>();
             services.AddScoped<IReservationService, ReservationService>();
+            services.AddScoped<IReservationCompletionService, ReservationCompletionService>();
             services.AddScoped<IPropertyPricingService, PropertyPricingService>();
             services.AddScoped<IUnitPricingService, UnitPricingService>();
             services.AddScoped<IRateHierarchyService, RateHierarchyService>();

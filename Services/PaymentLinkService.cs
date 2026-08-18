@@ -18,6 +18,7 @@ public class PaymentLinkService(
     ITenantRepository tenantRepository,
     IUnitOfWork unitOfWork,
     ISecureTokenService tokenService,
+    IOperationalPolicyProvider operationalPolicyProvider,
     IOptions<PaymentLinkSettings> options) : IPaymentLinkService, ITransactionalService
 {
     private readonly PaymentLinkSettings settings = options.Value;
@@ -28,8 +29,8 @@ public class PaymentLinkService(
         CancellationToken cancellationToken = default)
     {
         Guard.Against(
-            settings.TokenTtlHours <= 0,
-            "PaymentLink:TokenTtlHours sıfırdan büyük olmalıdır.",
+            operationalPolicyProvider.Current.PaymentLinkValidityHours <= 0,
+            "Ödeme bağlantısı geçerlilik süresi sıfırdan büyük olmalıdır.",
             "PAYMENT_LINK_INVALID_TTL");
 
         var hasValidBaseUrl = Uri.TryCreate(settings.BaseUrl, UriKind.Absolute, out var baseUri)
@@ -44,7 +45,8 @@ public class PaymentLinkService(
             "Kiracı bulunamadı.",
             "PAYMENT_LINK_TENANT_NOT_FOUND");
 
-        var ttl = TimeSpan.FromHours(settings.TokenTtlHours);
+        var ttl = TimeSpan.FromHours(
+            operationalPolicyProvider.Current.PaymentLinkValidityHours);
         var record = new PaymentLinkRecord
         {
             TenantId = input.TenantId,

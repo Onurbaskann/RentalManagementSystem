@@ -13,6 +13,10 @@ public class CurrentUserContext : ICurrentUserContext
         _httpContextAccessor.HttpContext?.User is { } u && u.Identity?.IsAuthenticated == true ? u : null;
 
     public string? UserId => Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+    public string? DisplayName => Principal?.FindFirstValue(AppClaimTypes.DisplayName)
+        ?? Principal?.Identity?.Name;
+    public string? EmailAddress => Principal?.FindFirstValue(ClaimTypes.Email)
+        ?? Principal?.Identity?.Name;
 
     public UserType? UserType
     {

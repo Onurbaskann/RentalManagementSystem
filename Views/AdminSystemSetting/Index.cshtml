@@ -1,0 +1,58 @@
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.SystemSettingListItemDto>
+@using KiraTakip.Models.Common
+@{
+    ViewData["Title"] = "Sistem Ayarları";
+    ViewData["UseCentralFeedback"] = true;
+    var query = ViewBag.Query as TableQuery ?? new TableQuery();
+    var pagination = PaginationModel.FromPaged(Model, "/Admin/SystemSetting", query.ToQueryDict());
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Sistem Ayarları</div>
+        <div class="page-subtitle">Uygulamanın iş kurallarını yöneten merkezi ayarlar</div>
+    </div>
+</div>
+
+<div class="card p-0 overflow-hidden">
+    <div class="table-wrapper">
+        <table class="w-full">
+            <thead>
+                <tr>
+                    <th>Ayar</th>
+                    <th>Grup</th>
+                    <th>Değer</th>
+                    <th class="w-32"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var setting in Model.Items)
+                {
+                    <tr>
+                        <td>
+                            <span class="block font-medium text-slate-700">@setting.DisplayName</span>
+                            <span class="cell-sub">@setting.Description</span>
+                            <span class="cell-sub font-mono">@setting.Key</span>
+                        </td>
+                        <td><span class="badge badge-bos">@setting.GroupDisplayName</span></td>
+                        <td class="font-semibold text-slate-700">@setting.Value</td>
+                        <td class="text-right">
+                            @if (setting.IsEditable)
+                            {
+                                <a asp-controller="AdminSystemSetting" asp-action="Edit"
+                                   asp-route-id="@setting.Id.ToHashId()"
+                                   asp-permission="@PermissionCatalog.Parameter.Edit"
+                                   class="btn btn-sm btn-secondary">Düzenle</a>
+                            }
+                        </td>
+                    </tr>
+                }
+                @if (Model.Total == 0)
+                {
+                    <tr><td colspan="4" class="text-center py-8 text-muted">Tanımlı sistem ayarı bulunamadı.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @await Html.PartialAsync("_Pagination", pagination)
+</div>

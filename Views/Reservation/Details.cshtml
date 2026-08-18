@@ -5,20 +5,12 @@
     ViewData["UseCentralFeedback"] = true;
     bool canCancel   = User.HasPermission(PermissionCatalog.Reservation.Cancel);
     bool canTransfer = User.HasPermission(PermissionCatalog.Reservation.TransferToCharge);
+    bool canApprove = User.HasPermission(PermissionCatalog.Reservation.Approve);
+    bool canReject = User.HasPermission(PermissionCatalog.Reservation.Reject);
+    bool canEdit = User.HasPermission(PermissionCatalog.Reservation.Edit);
 
-    string statusClass = Model.Status switch {
-        ReservationStatus.Completed         => "badge-kirali",
-        ReservationStatus.TransferredToCharge => "badge-surek",
-        ReservationStatus.Cancelled        => "badge-gecmis",
-        _                                    => "badge-bos"
-    };
-    string statusLabel = Model.Status switch {
-        ReservationStatus.Planned          => "Planlandı",
-        ReservationStatus.Completed         => "Tamamlandı",
-        ReservationStatus.Cancelled        => "İptal Edildi",
-        ReservationStatus.TransferredToCharge => "Tahakkuka Aktarıldı",
-        _                                    => Model.Status.ToString()
-    };
+    string statusClass = Model.Status.GetBadgeCssClass();
+    string statusLabel = Model.Status.GetDisplayLabel();
 }
 
 <div class="page-header flex flex-wrap items-start justify-between mb-2.5 gap-4">
@@ -31,7 +23,20 @@
         <div class="mt-1.5"><span class="badge @statusClass">@statusLabel</span></div>
     </div>
     <div class="flex gap-2">
-        @if (canTransfer && Model.Status == ReservationStatus.Planned && Model.TotalAmount > 0 && Model.ChargeId == null)
+        @if (canEdit && Model.Status is ReservationStatus.PendingApproval or ReservationStatus.Confirmed)
+        {
+            <a asp-controller="Reservation" asp-action="Edit" asp-route-id="@Model.Id.ToHashId()" class="btn btn-secondary">Düzenle</a>
+        }
+        @if (Model.Status == ReservationStatus.PendingApproval && canApprove)
+        {
+            <form asp-controller="Reservation" asp-action="Approve" asp-route-id="@Model.Id.ToHashId()" method="post"
+                  data-confirm="Bu rezervasyon talebi onaylansın mı?">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="RowVersion" value="@Convert.ToBase64String(Model.RowVersion)" />
+                <button type="submit" class="btn btn-primary">Onayla</button>
+            </form>
+        }
+        @if (canTransfer && Model.Status == ReservationStatus.Confirmed && Model.TotalAmount > 0 && Model.ChargeId == null)
         {
             <form method="post"
                   action="@Url.Action(
@@ -43,7 +48,7 @@
                 <button type="submit" class="btn btn-primary">Tahakkuka Aktar</button>
             </form>
         }
-        @if (canCancel && Model.Status == ReservationStatus.Planned)
+        @if (canCancel && Model.Status is ReservationStatus.PendingApproval or ReservationStatus.Confirmed)
         {
             <button type="button" class="btn btn-danger"
                     data-confirm-prompt="İptal nedeni"
@@ -57,6 +62,40 @@
         }
     </div>
 </div>
+
+<div asp-validation-summary="ModelOnly" class="form-error bg-red-50 border border-red-200 rounded-lg p-3 mb-5"></div>
+
+@if (Model.Status == ReservationStatus.Rejected && !string.IsNullOrWhiteSpace(Model.RejectionReason))
+{
+    <div class="card mb-5 border border-red-200 bg-red-50">
+        <div class="card-title text-red-700 mb-2">Ret Bilgisi</div>
+        <div class="text-[13.5px] mb-2">@Model.RejectionReason</div>
+        <div class="text-xs text-muted flex flex-wrap gap-x-4 gap-y-1">
+            @if (!string.IsNullOrWhiteSpace(Model.RejectedByDisplayName))
+            {
+                <span>Reddeden: @Model.RejectedByDisplayName</span>
+            }
+            @if (Model.RejectedAt.HasValue)
+            {
+                <span>Ret tarihi: @Model.RejectedAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
+            }
+        </div>
+    </div>
+}
+
+@if (Model.Status == ReservationStatus.PendingApproval && canReject)
+{
+    <form asp-controller="Reservation" asp-action="Reject" asp-route-id="@Model.Id.ToHashId()" method="post" class="card mb-5">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="RowVersion" value="@Convert.ToBase64String(Model.RowVersion)" />
+        <label for="Reason" class="form-label">Ret Gerekçesi</label>
+        <div class="flex gap-2 items-start">
+            @Html.TextArea("Reason", null, 2, 50, new { @class = "form-control", maxlength = "450", required = "required" })
+            <button type="submit" class="btn btn-danger whitespace-nowrap">Talebi Reddet</button>
+        </div>
+        @Html.ValidationMessage("Reason", null, new { @class = "form-error" })
+    </form>
+}
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
     <!-- Genel Bilgiler -->
@@ -94,6 +133,24 @@
                     <span class="text-right max-w-[60%]">@Model.Description</span>
                 </div>
             }
+            @if (!string.IsNullOrWhiteSpace(Model.Notes))
+            {
+                <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
+                    <span class="text-muted">Toplantı Notları</span>
+                    <span class="text-right max-w-[60%]">@Model.Notes</span>
+                </div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.InternalNotes))
+            {
+                <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
+                    <span class="text-muted">İç Notlar</span>
+                    <span class="text-right max-w-[60%]">@Model.InternalNotes</span>
+                </div>
+            }
+            <div class="flex justify-between border-t border-[var(--color-border)] pt-2.5 mt-0.5">
+                <span class="text-muted">Talep Eden</span>
+                <span class="text-right"><strong>@Model.RequestedByDisplayName</strong><span class="cell-sub">@Model.RequestedByEmailAddress</span></span>
+            </div>
         </div>
     </div>
 
@@ -131,4 +188,20 @@
         </div>
     </div>
 </div>
+
+@if (Model.Attendees.Count > 0)
+{
+    <div class="card mt-5">
+        <div class="card-title mb-3">Katılımcılar</div>
+        <div class="divide-y divide-slate-100">
+            @foreach (var attendee in Model.Attendees)
+            {
+                <div class="py-2 flex justify-between gap-3">
+                    <span class="font-medium">@attendee.DisplayName @if (attendee.IsReservationOwner) { <span class="badge badge-kurumsal ml-1">Talep Sahibi</span> }</span>
+                    <span class="text-muted">@attendee.EmailAddress</span>
+                </div>
+            }
+        </div>
+    </div>
+}
 

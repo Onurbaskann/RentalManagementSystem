@@ -43,7 +43,11 @@ public interface ILeaseRepository : IRepositoryBase<Lease>
     // RateResolver için projeksiyon: TasinmazId + KiraciKategoriId
     Task<(int TasinmazId, int? KategoriId)?> GetPropertyAndCategoryAsync(int leaseId);
 
-    Task<List<UnitLookupDto>> GetActiveLeaseUnitsByTenantIdAsync(int tenantId, CancellationToken ct = default);
+    Task<List<UnitLookupDto>> GetActiveLeaseUnitsByTenantIdAsync(
+        int tenantId,
+        List<int>? authorizedPropertyIds = null,
+        List<int>? authorizedUnitIds = null,
+        CancellationToken ct = default);
     Task<bool> HasActiveLeaseForUnitAsync(int unitId, DateTime currentTime);
     Task<LeaseDraftEditDto?> GetDraftForEditAsync(
         int leaseId,

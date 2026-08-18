@@ -17,6 +17,7 @@ public class ChargeReminderService(
     IMailService mailService,
     IRazorViewToStringRenderer renderer,
     ILogger<ChargeReminderService> logger,
+    IOperationalPolicyProvider operationalPolicyProvider,
     IOptions<PaymentLinkSettings> paymentOptions,
     IOptions<SmtpSettings> smtpOptions) : IChargeReminderService
 {
@@ -27,7 +28,8 @@ public class ChargeReminderService(
         ChargeReminderScopeInput input,
         CancellationToken cancellationToken = default)
     {
-        var dueDateLimit = DateTime.Today.AddDays(paymentSettings.ReminderDaysBefore);
+        var dueDateLimit = DateTime.Today.AddDays(
+            operationalPolicyProvider.Current.PaymentReminderDaysBefore);
         var debts = await chargeRepository.GetPendingReminderChargesAsync(
             new GetPendingChargeRemindersInput(
                 dueDateLimit,
@@ -50,15 +52,16 @@ public class ChargeReminderService(
             string.IsNullOrWhiteSpace(paymentSettings.Secret) || paymentSettings.Secret.Length < 32,
             "PaymentLink:Secret ayarı yapılmamış veya çok kısa (en az 32 karakter olmalıdır).");
         Guard.Against(
-            paymentSettings.TokenTtlHours <= 0,
-            "PaymentLink:TokenTtlHours sıfırdan büyük olmalıdır.");
+            operationalPolicyProvider.Current.PaymentLinkValidityHours <= 0,
+            "Ödeme bağlantısı geçerlilik süresi sıfırdan büyük olmalıdır.");
         Guard.Against(
             string.IsNullOrWhiteSpace(smtpSettings.Host) || string.IsNullOrWhiteSpace(smtpSettings.From),
             "SMTP sunucu ayarları (Smtp:Host veya Smtp:From) yapılandırılmamış.");
 
         var today = DateTime.Today;
-        var dueDateLimit = today.AddDays(paymentSettings.ReminderDaysBefore);
-        var cooldownThreshold = today.AddDays(-paymentSettings.ReminderCooldownDays);
+        var policy = operationalPolicyProvider.Current;
+        var dueDateLimit = today.AddDays(policy.PaymentReminderDaysBefore);
+        var cooldownThreshold = today.AddDays(-policy.PaymentReminderCooldownDays);
         var debts = await chargeRepository.GetPendingReminderChargesAsync(
             new GetPendingChargeRemindersInput(
                 dueDateLimit,
@@ -98,7 +101,7 @@ public class ChargeReminderService(
                 FirstName = tenant.Name,
                 LastName = "",
                 Email = tenant.Email,
-                PaymentLinkValidityText = FormatValidity(paymentSettings.TokenTtlHours),
+                PaymentLinkValidityText = FormatValidity(policy.PaymentLinkValidityHours),
                 PaymentLink = await paymentLinkService.CreateAsync(
                     new CreatePaymentLinkInput(tenant.Id),
                     cancellationToken),

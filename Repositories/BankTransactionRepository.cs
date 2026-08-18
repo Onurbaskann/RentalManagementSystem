@@ -108,11 +108,13 @@ public class BankTransactionRepository : RepositoryBase<BankTransaction>, IBankT
             .Select(transaction => new PaymentMatchingBasisDto(transaction.TransactionAmount, transaction.TransactionDate))
             .FirstOrDefaultAsync();
 
-    public async Task<List<BankTransactionListItemDto>> GetTransactionCandidatesAsync(PaymentMatchingBasisDto basis)
+    public async Task<List<BankTransactionListItemDto>> GetTransactionCandidatesAsync(
+        PaymentMatchingBasisDto basis,
+        PaymentMatchingPolicyDto policy)
     {
         var amount = basis.Amount;
         var date = basis.Date;
-        var tolerance = amount * 0.02m;
+        var tolerance = amount * policy.AmountTolerancePercent / 100m;
 
         var candidates = await _dbSet.AsNoTracking()
             .Where(transaction => transaction.MatchStatus == BankMatchStatus.Unmatched)
@@ -135,9 +137,9 @@ public class BankTransactionRepository : RepositoryBase<BankTransaction>, IBankT
             var isExactAmount = transaction.TransactionAmount == amount;
             var isCloseAmount = Math.Abs(transaction.TransactionAmount - amount) <= tolerance;
             var dayDifference = Math.Abs((transaction.TransactionDate - date).Days);
-            if (isExactAmount && dayDifference <= 15) return 0;
+            if (isExactAmount && dayDifference <= policy.DateToleranceDays) return 0;
             if (isExactAmount) return 1;
-            if (isCloseAmount && dayDifference <= 15) return 2;
+            if (isCloseAmount && dayDifference <= policy.DateToleranceDays) return 2;
             return 3;
         })
         .ThenBy(transaction => Math.Abs((transaction.TransactionDate - date).Days))

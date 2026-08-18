@@ -2,7 +2,6 @@ using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Settings;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Interfaces;
-using Microsoft.Extensions.Options;
 
 namespace KiraTakip.Services;
 
@@ -10,9 +9,8 @@ public class PaymentPortalService(
     IPaymentLinkService paymentLinkService,
     ITenantRepository tenantRepository,
     IChargeRepository chargeRepository,
-    IOptions<PaymentLinkSettings> paymentLinkOptions) : IPaymentPortalService
+    IOperationalPolicyProvider operationalPolicyProvider) : IPaymentPortalService
 {
-    private readonly PaymentLinkSettings paymentLinkSettings = paymentLinkOptions.Value;
 
     public async Task<PaymentPortalResultDto> GetAsync(
         GetPaymentPortalInput input,
@@ -41,7 +39,8 @@ public class PaymentPortalService(
                 []);
         }
 
-        var dueDateLimit = DateTime.Today.AddDays(paymentLinkSettings.ReminderDaysBefore);
+        var dueDateLimit = DateTime.Today.AddDays(
+            operationalPolicyProvider.Current.PaymentReminderDaysBefore);
         var charges = await chargeRepository.GetPaymentPortalChargesAsync(
             tenant.Id,
             dueDateLimit,

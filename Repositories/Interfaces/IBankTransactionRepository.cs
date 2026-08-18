@@ -13,7 +13,9 @@ public interface IBankTransactionRepository : IRepositoryBase<BankTransaction>
 
     // Eşleştirme adayları (DTO)
     Task<PaymentMatchingBasisDto?> GetMatchingBasisAsync(int bankTransactionId);
-    Task<List<BankTransactionListItemDto>> GetTransactionCandidatesAsync(PaymentMatchingBasisDto basis);
+    Task<List<BankTransactionListItemDto>> GetTransactionCandidatesAsync(
+        PaymentMatchingBasisDto basis,
+        PaymentMatchingPolicyDto policy);
 
     // Eşleştirme yazma işlemleri
     // CSV import için toplu ekleme

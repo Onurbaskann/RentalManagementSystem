@@ -9,10 +9,14 @@
     var pagination = PaginationModel.FromPaged(Model, "/Tenant/MyReservations", query.ToQueryDict());
 }
 
-<div class="page-header">
+<div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Rezervasyonlarım</div>
         <div class="page-subtitle">@Model.Total kayıt</div>
+    </div>
+    <div class="flex gap-2">
+        <a asp-controller="TenantReservation" asp-action="Calendar" class="btn btn-secondary">Uygunluk Takvimi</a>
+        <a asp-controller="TenantReservation" asp-action="Create" class="btn btn-primary" asp-permission="@PermissionCatalog.TenantPortal.Reservation.Create">Talep Oluştur</a>
     </div>
 </div>
 
@@ -37,25 +41,14 @@
                     <th>Bitiş</th>
                     <th>Tutar</th>
                     <th>Durum</th>
+                    <th class="text-right"></th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var reservation in Model.Items)
                 {
-                    var statusClasses = reservation.Status switch {
-                        ReservationStatus.Planned => "badge-bos",
-                        ReservationStatus.Completed => "badge-kirali",
-                        ReservationStatus.Cancelled => "badge-gecmis",
-                        ReservationStatus.TransferredToCharge => "badge-kurumsal",
-                        _ => "badge-bos"
-                    };
-                    var statusLabel = reservation.Status switch {
-                        ReservationStatus.Planned => "Planlandı",
-                        ReservationStatus.Completed => "Tamamlandı",
-                        ReservationStatus.Cancelled => "İptal",
-                        ReservationStatus.TransferredToCharge => "Faturalandı",
-                        _ => "Bilinmiyor"
-                    };
+                    var statusClasses = reservation.Status.GetBadgeCssClass();
+                    var statusLabel = reservation.Status.GetDisplayLabel();
                     <tr>
                         <td class="font-semibold">@reservation.UnitName</td>
                         <td class="text-sm text-muted">@reservation.PropertyName</td>
@@ -63,6 +56,13 @@
                         <td class="text-sm">@reservation.EndDate.ToString("dd.MM.yyyy HH:mm")</td>
                         <td class="text-sm font-medium">@reservation.TotalAmount.ToString("N2") ₺</td>
                         <td><span class="badge @statusClasses">@statusLabel</span></td>
+                        <td class="text-right">
+                            <a asp-controller="TenantReservation" asp-action="Details" asp-route-id="@reservation.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a>
+                            @if (reservation.Status == ReservationStatus.PendingApproval)
+                            {
+                                <span class="cell-sub">İnceleniyor</span>
+                            }
+                        </td>
                     </tr>
                 }
             </tbody>

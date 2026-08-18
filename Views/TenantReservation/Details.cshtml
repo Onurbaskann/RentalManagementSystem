@@ -1,0 +1,65 @@
+@model ReservationListItemDto
+@{
+    Layout = "_KiraciLayout";
+    ViewData["Title"] = "Rezervasyon Detayı";
+    ViewData["UseCentralFeedback"] = true;
+    var canCancel = User.HasPermission(PermissionCatalog.TenantPortal.Reservation.Cancel)
+        && Model.Status is ReservationStatus.PendingApproval or ReservationStatus.Confirmed;
+}
+
+<div class="max-w-[850px] mx-auto">
+    <div class="page-header flex items-center justify-between">
+        <div>
+            <a asp-controller="TenantReservation" asp-action="Index" class="text-[12.5px] text-muted no-underline inline-block mb-2">← Rezervasyonlarım</a>
+            <div class="page-title">@(string.IsNullOrWhiteSpace(Model.Title) ? "Rezervasyon Detayı" : Model.Title)</div>
+            <div class="page-subtitle">@Model.PropertyName — @Model.UnitName</div>
+        </div>
+        <span class="badge @Model.Status.GetBadgeCssClass()">@Model.Status.GetDisplayLabel()</span>
+    </div>
+
+    <div asp-validation-summary="ModelOnly" class="form-error bg-red-50 border border-red-200 rounded-lg p-3 mb-5"></div>
+
+    @if (Model.Status == ReservationStatus.Rejected && !string.IsNullOrWhiteSpace(Model.RejectionReason))
+    {
+        <div class="card mb-4 border border-red-200 bg-red-50">
+            <div class="card-title text-red-700 mb-2">Ret Gerekçesi</div>
+            <div class="text-[13.5px]">@Model.RejectionReason</div>
+            @if (Model.RejectedAt.HasValue)
+            {
+                <div class="text-xs text-muted mt-2">Ret tarihi: @Model.RejectedAt.Value.ToString("dd.MM.yyyy HH:mm")</div>
+            }
+        </div>
+    }
+
+    <div class="card mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div><div class="text-xs text-muted">Başlangıç</div><div class="font-semibold">@Model.StartDate.ToString("dd.MM.yyyy HH:mm")</div></div>
+            <div><div class="text-xs text-muted">Bitiş</div><div class="font-semibold">@Model.EndDate.ToString("dd.MM.yyyy HH:mm")</div></div>
+            <div><div class="text-xs text-muted">Toplam Süre</div><div class="font-semibold">@Model.TotalDurationMinutes dakika</div></div>
+            <div><div class="text-xs text-muted">Toplam Tutar</div><div class="font-semibold">@Model.TotalAmount.ToString("N2") ₺</div></div>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Model.Description))
+        {
+            <div class="border-t border-slate-100 mt-5 pt-4"><div class="text-xs text-muted mb-1">Açıklama</div><div>@Model.Description</div></div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.Notes))
+        {
+            <div class="border-t border-slate-100 mt-4 pt-4"><div class="text-xs text-muted mb-1">Toplantı Notları</div><div>@Model.Notes</div></div>
+        }
+    </div>
+
+    @if (canCancel)
+    {
+        <div class="flex justify-end">
+            <button type="button" class="btn bg-red-50 text-red-700 border-red-200"
+                    data-confirm="Bu rezervasyon talebini iptal etmek istediğinize emin misiniz?"
+                    data-confirm-title="Rezervasyon İptali"
+                    data-confirm-action="@Url.Action(nameof(KiraTakip.Controllers.TenantReservationController.Cancel), "TenantReservation", new { id = Model.Id.ToHashId() })"
+                    data-confirm-method="POST"
+                    data-confirm-needs-reason="true"
+                    data-confirm-reason-label="İptal nedeni">
+                İptal Et
+            </button>
+        </div>
+    }
+</div>

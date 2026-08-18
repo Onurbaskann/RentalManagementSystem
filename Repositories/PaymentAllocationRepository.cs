@@ -245,10 +245,11 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
 
     public async Task<List<PaymentCandidateDto>> GetCandidatesAsync(
         PaymentMatchingBasisDto basis,
+        PaymentMatchingPolicyDto policy,
         IReadOnlyList<int>? propertyIds,
         IReadOnlyList<int>? unitIds = null)
     {
-        var tolerance = basis.Amount * 0.02m;
+        var tolerance = basis.Amount * policy.AmountTolerancePercent / 100m;
         IQueryable<PaymentAllocation> query = _dbSet.AsNoTracking()
             .Where(payment => payment.Status == PaymentStatus.PendingApproval || payment.Status == PaymentStatus.Approved)
             .Where(payment => !_ctx.PaymentMatches.Any(match => match.PaymentAllocationId == payment.Id));
@@ -273,9 +274,9 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
             var isExactAmount = payment.Amount == basis.Amount;
             var isCloseAmount = Math.Abs(payment.Amount - basis.Amount) <= tolerance;
             var dayDifference = Math.Abs((payment.PaymentDate - basis.Date).Days);
-            if (isExactAmount && dayDifference <= 15) return 0;
+            if (isExactAmount && dayDifference <= policy.DateToleranceDays) return 0;
             if (isExactAmount) return 1;
-            if (isCloseAmount && dayDifference <= 15) return 2;
+            if (isCloseAmount && dayDifference <= policy.DateToleranceDays) return 2;
             return 3;
         })
         .ThenBy(payment => Math.Abs((payment.PaymentDate - basis.Date).Days))

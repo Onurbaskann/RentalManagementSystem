@@ -8,6 +8,11 @@ public record GetReservationByIdInput(
     int ReservationId,
     ReservationAccessScopeInput AccessScope);
 
+public record GetTenantReservationByIdInput(
+    int ReservationId,
+    int TenantId,
+    ReservationAccessScopeInput AccessScope);
+
 public record GetReservationFormOptionsInput(
     ReservationAccessScopeInput AccessScope);
 
@@ -25,14 +30,83 @@ public record CreateReservationInput(
     string? Description,
     ReservationAccessScopeInput AccessScope);
 
+public record CreateReservationRequestInput(
+    int UnitId,
+    int TenantId,
+    DateTime StartDate,
+    DateTime EndDate,
+    string Title,
+    string? Description,
+    string? Notes,
+    string? InternalNotes,
+    IReadOnlyList<ReservationAttendeePolicyInput> Attendees,
+    bool CreateAndApprove,
+    string RequestedByUserId,
+    string RequestedByDisplayName,
+    string RequestedByEmailAddress,
+    ReservationAccessScopeInput AccessScope);
+
 public record CancelReservationInput(
     int ReservationId,
     string Reason,
+    ReservationAccessScopeInput AccessScope,
+    bool CanOverrideTimeRestriction = false,
+    string? ActorUserId = null);
+
+public record CancelTenantReservationInput(
+    int ReservationId,
+    int TenantId,
+    string Reason,
+    ReservationAccessScopeInput AccessScope,
+    string ActorUserId = "");
+
+public record ApproveReservationInput(
+    int ReservationId,
+    byte[] ExpectedRowVersion,
+    string ActorUserId,
+    ReservationAccessScopeInput AccessScope);
+
+public record RejectReservationInput(
+    int ReservationId,
+    string Reason,
+    byte[] ExpectedRowVersion,
+    string ActorUserId,
+    ReservationAccessScopeInput AccessScope);
+
+public record UpdateReservationInput(
+    int ReservationId,
+    int UnitId,
+    int TenantId,
+    DateTime StartDate,
+    DateTime EndDate,
+    string Title,
+    string? Description,
+    string? Notes,
+    string? InternalNotes,
+    IReadOnlyList<ReservationAttendeePolicyInput> Attendees,
+    byte[] ExpectedRowVersion,
+    string ActorUserId,
+    string ActorDisplayName,
+    string ActorEmailAddress,
+    bool CanOverrideTimeRestriction,
+    string? OverrideReason,
     ReservationAccessScopeInput AccessScope);
 
 public record TransferReservationToChargeInput(
     int ReservationId,
     ReservationAccessScopeInput AccessScope);
+
+public record ReservationAttendeePolicyInput(
+    string? DisplayName,
+    string? EmailAddress,
+    bool IsReservationOwner);
+
+public record ReservationContentPolicyInput(
+    string? Title,
+    string? Description,
+    string? Notes,
+    string? InternalNotes,
+    IReadOnlyList<ReservationAttendeePolicyInput> Attendees);
 
 public record ReservationUnitContextDto(
     int UnitId,

@@ -17,11 +17,9 @@ public record GetCancelledReservationCountInput(
 
 public record GetTenantReservationsInput(
     int TenantId,
-    DateTime CurrentTime,
     ReservationAccessScopeInput AccessScope);
 
 public record GetTenantReservationsPageInput(
     int TenantId,
-    DateTime CurrentTime,
     TableQuery Query,
     ReservationAccessScopeInput AccessScope);

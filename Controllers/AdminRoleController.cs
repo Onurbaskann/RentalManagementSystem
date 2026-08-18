@@ -128,7 +128,12 @@ public class AdminRoleController(
                         Label = action.DisplayName,
                         Selected = selected.Contains(action.Path)
                     }));
-                    return new PermissionGroupViewModel { GroupName = m.DisplayName, Permissions = items };
+                    return new PermissionGroupViewModel
+                    {
+                        GroupName = m.DisplayName,
+                        ParentGroupName = m.ParentGroupDisplayName,
+                        Permissions = items
+                    };
                 })
         );
     }

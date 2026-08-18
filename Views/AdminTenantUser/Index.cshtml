@@ -57,6 +57,10 @@
                             { <span class="badge badge-gecmis">Pasif</span> }
                         </td>
                         <td class="flex gap-1.5 justify-end">
+                            @if (Model.CanEdit)
+                            {
+                                <a href="/Admin/Tenants/@tenantId.ToHashId()/Users/Edit/@u.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                            }
                             <form method="post" action="/Admin/Tenants/@tenantId.ToHashId()/Users/ToggleActive/@u.Id"
                                   data-confirm="@(u.IsActive ? "Kullanıcı pasif yapılsın mı?" : "Kullanıcı aktif yapılsın mı?")" class="inline">
                                 @Html.AntiForgeryToken()

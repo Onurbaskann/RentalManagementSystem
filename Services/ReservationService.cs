@@ -18,6 +18,7 @@ public class ReservationService(
     IChargeTypeRepository chargeTypeRepository,
     IUnitRepository unitRepository,
     ITenantRepository tenantRepository,
+    IReservationBusinessRules reservationBusinessRules,
     IUnitOfWork uow) : IReservationService, ITransactionalService
 {
 
@@ -51,7 +52,6 @@ public class ReservationService(
 
         return await reservationRepository.GetTenantListAsync(
             input.TenantId,
-            input.CurrentTime,
             input.AccessScope.PropertyIds?.ToList(),
             input.AccessScope.UnitIds?.ToList());
     }
@@ -66,7 +66,6 @@ public class ReservationService(
 
         return await reservationRepository.GetTenantPagedListAsync(
             input.TenantId,
-            input.CurrentTime,
             input.Query,
             input.AccessScope.PropertyIds?.ToList(),
             input.AccessScope.UnitIds?.ToList());
@@ -79,7 +78,25 @@ public class ReservationService(
             "Rezervasyon bulunamadı.",
             "RESERVATION_NOT_FOUND");
 
-        EnsureScope(reservation.PropertyId, reservation.UnitId, input.AccessScope);
+        reservationBusinessRules.EnsureAccessScope(
+            reservation.PropertyId,
+            reservation.UnitId,
+            input.AccessScope);
+        return reservation;
+    }
+
+    public async Task<ReservationListItemDto> GetTenantByIdAsync(
+        GetTenantReservationByIdInput input)
+    {
+        var reservation = Guard.NotFound(
+            await reservationRepository.GetByIdAsync(input.ReservationId),
+            "Rezervasyon bulunamadı.",
+            "RESERVATION_NOT_FOUND");
+        reservationBusinessRules.EnsureTenantOwnership(reservation.TenantId, input.TenantId);
+        reservationBusinessRules.EnsureAccessScope(
+            reservation.PropertyId,
+            reservation.UnitId,
+            input.AccessScope);
         return reservation;
     }
 
@@ -90,22 +107,132 @@ public class ReservationService(
                    input.AccessScope.UnitIds?.ToList()),
                await tenantRepository.GetReservationOptionsAsync());
 
+    public async Task<ReservationCalendarResultDto> GetCalendarAsync(
+        GetReservationCalendarInput input)
+    {
+        var (fromDate, toDate) = GetWeekRange(input.AnchorDate);
+        var units = await GetCalendarUnitsAsync(input.UnitId, input.AccessScope);
+        var items = await reservationRepository.GetCalendarItemsAsync(
+            BuildCalendarQuery(fromDate, toDate, input.UnitId, input.AccessScope));
+
+        return new ReservationCalendarResultDto(
+            fromDate,
+            toDate.AddDays(-1),
+            input.UnitId,
+            units,
+            items);
+    }
+
+    public async Task<TenantReservationCalendarResultDto> GetTenantCalendarAsync(
+        GetTenantReservationCalendarInput input)
+    {
+        Guard.NotFound(
+            await tenantRepository.GetDetailsAsync(input.TenantId),
+            "Kiracı bulunamadı.",
+            "TENANT_RESERVATION_TENANT_NOT_FOUND");
+
+        var (fromDate, toDate) = GetWeekRange(input.AnchorDate);
+        var units = await GetCalendarUnitsAsync(input.UnitId, input.AccessScope);
+        var items = await reservationRepository.GetTenantCalendarItemsAsync(
+            input.TenantId,
+            BuildCalendarQuery(fromDate, toDate, input.UnitId, input.AccessScope));
+
+        return new TenantReservationCalendarResultDto(
+            fromDate,
+            toDate.AddDays(-1),
+            input.UnitId,
+            units,
+            items);
+    }
+
+    public async Task<ReservationAvailabilityResultDto> CheckAvailabilityAsync(
+        CheckReservationAvailabilityInput input)
+    {
+        try
+        {
+            reservationBusinessRules.EnsureScheduleIsValid(input.StartDate, input.EndDate);
+        }
+        catch (BusinessException exception) when (exception.ErrorType == ErrorType.Failure)
+        {
+            return new ReservationAvailabilityResultDto(
+                false,
+                exception.Code ?? "RESERVATION_POLICY_RESTRICTION",
+                exception.Message);
+        }
+
+        var unit = Guard.NotFound(
+            await unitRepository.GetReservationContextAsync(input.UnitId),
+            "Birim bulunamadı.",
+            "RESERVATION_UNIT_NOT_FOUND");
+        reservationBusinessRules.EnsureAccessScope(unit.PropertyId, unit.UnitId, input.AccessScope);
+        reservationBusinessRules.EnsureUnitIsReservable(unit);
+
+        var hasConflict = await reservationRepository.IsConflictAsync(
+            input.UnitId,
+            input.StartDate,
+            input.EndDate,
+            input.ExcludedReservationId);
+
+        return hasConflict
+            ? new ReservationAvailabilityResultDto(
+                false,
+                "RESERVATION_TIME_CONFLICT",
+                "Seçilen zaman aralığında bu birim doludur.")
+            : new ReservationAvailabilityResultDto(
+                true,
+                "RESERVATION_AVAILABLE",
+                "Seçilen zaman aralığı uygundur.");
+    }
+
+    private async Task<List<UnitListItemDto>> GetCalendarUnitsAsync(
+        int? selectedUnitId,
+        ReservationAccessScopeInput accessScope)
+    {
+        var units = await unitRepository.GetReservableUnitsAsync(
+            accessScope.PropertyIds?.ToList(),
+            accessScope.UnitIds?.ToList());
+
+        Guard.Forbidden(
+            selectedUnitId.HasValue && units.All(unit => unit.Id != selectedUnitId.Value),
+            "Bu birimin takvimini görüntüleme yetkiniz bulunmuyor.",
+            "RESERVATION_CALENDAR_UNIT_OUT_OF_SCOPE");
+
+        return units;
+    }
+
+    private static ReservationCalendarRepositoryQuery BuildCalendarQuery(
+        DateTime fromDate,
+        DateTime toDate,
+        int? unitId,
+        ReservationAccessScopeInput accessScope)
+        => new(
+            fromDate,
+            toDate,
+            unitId,
+            accessScope.PropertyIds,
+            accessScope.UnitIds);
+
+    private (DateTime FromDate, DateTime ToDate) GetWeekRange(DateTime? anchorDate)
+    {
+        var date = (anchorDate ?? reservationBusinessRules.GetCurrentTime()).Date;
+        var daysFromMonday = ((int)date.DayOfWeek + 6) % 7;
+        var monday = date.AddDays(-daysFromMonday);
+        return (monday, monday.AddDays(7));
+    }
+
     // ── Ücret Hesaplama (öncelik: birime özel → birim türü genel tarife → hata) ─
 
     public async Task<ReservationCalculationResultDto> CalculateAsync(CalculateReservationInput input)
     {
-        Guard.Against(
-            input.EndDate <= input.StartDate,
-            "Bitiş tarihi başlangıç tarihinden sonra olmalıdır.",
-            "RESERVATION_INVALID_DATE_RANGE");
+        reservationBusinessRules.EnsureScheduleIsValid(input.StartDate, input.EndDate);
 
         var unit = Guard.NotFound(
             await unitRepository.GetReservationContextAsync(input.UnitId),
             "Birim bulunamadı.",
             "RESERVATION_UNIT_NOT_FOUND");
 
-        EnsureScope(unit.PropertyId, unit.UnitId, input.AccessScope);
-        EnsureReservableUnit(unit);
+        reservationBusinessRules.EnsureAccessScope(unit.PropertyId, unit.UnitId, input.AccessScope);
+        reservationBusinessRules.EnsureUnitIsReservable(unit);
 
         return await CalculateCoreAsync(input, unit);
     }
@@ -178,11 +305,7 @@ public class ReservationService(
 
     public async Task<int> CreateAsync(CreateReservationInput input)
     {
-        Guard.InvalidField(
-            input.EndDate <= input.StartDate,
-            nameof(input.EndDate),
-            "Bitiş tarihi başlangıç tarihinden sonra olmalıdır.",
-            "RESERVATION_INVALID_DATE_RANGE");
+        reservationBusinessRules.EnsureScheduleIsValid(input.StartDate, input.EndDate);
 
         var unit = await unitRepository.GetReservationContextAsync(input.UnitId);
         Guard.InvalidField(
@@ -191,12 +314,8 @@ public class ReservationService(
             "Birim bulunamadı.",
             "RESERVATION_UNIT_NOT_FOUND");
 
-        EnsureScope(unit!.PropertyId, unit.UnitId, input.AccessScope);
-        Guard.InvalidField(
-            !unit.IsUnitActive || !unit.IsUnitTypeActive || unit.Usage != UnitTypeUsage.Reservable,
-            nameof(input.UnitId),
-            "Seçilen birim aktif veya rezervasyona uygun değildir.",
-            "RESERVATION_UNIT_NOT_RESERVABLE");
+        reservationBusinessRules.EnsureAccessScope(unit!.PropertyId, unit.UnitId, input.AccessScope);
+        reservationBusinessRules.EnsureUnitIsReservable(unit, fieldValidation: true);
 
         var tenant = await tenantRepository.GetByIdAsync(input.TenantId);
         Guard.InvalidField(
@@ -238,13 +357,117 @@ public class ReservationService(
             KdvRate = calculation.VatRate > 0 ? calculation.VatRate : null,
             KdvAmount = calculation.VatAmount > 0 ? calculation.VatAmount : null,
             TotalAmount = calculation.TotalAmount,
-            Status = ReservationStatus.Planned,
+            Status = ReservationStatus.Confirmed,
             Description = input.Description,
         };
 
         await reservationRepository.AddAsync(reservation);
         await uow.SaveChangesAsync();
 
+        return reservation.Id;
+    }
+
+    public async Task<int> CreateRequestAsync(CreateReservationRequestInput input)
+    {
+        reservationBusinessRules.EnsureScheduleIsValid(input.StartDate, input.EndDate);
+        Guard.Against(
+            string.IsNullOrWhiteSpace(input.RequestedByUserId)
+                || string.IsNullOrWhiteSpace(input.RequestedByEmailAddress),
+            "Talep sahibi kullanıcı bilgisi doğrulanamadı.",
+            "RESERVATION_REQUESTER_NOT_RESOLVED");
+
+        var attendeeInputs = new List<ReservationAttendeePolicyInput>
+        {
+            new(
+                input.RequestedByDisplayName,
+                input.RequestedByEmailAddress,
+                true)
+        };
+        attendeeInputs.AddRange(input.Attendees);
+        reservationBusinessRules.EnsureContentIsValid(new ReservationContentPolicyInput(
+            input.Title,
+            input.Description,
+            input.Notes,
+            input.InternalNotes,
+            attendeeInputs));
+
+        var unit = Guard.NotFound(
+            await unitRepository.GetReservationContextAsync(input.UnitId),
+            "Birim bulunamadı.",
+            "RESERVATION_UNIT_NOT_FOUND");
+        reservationBusinessRules.EnsureAccessScope(unit.PropertyId, unit.UnitId, input.AccessScope);
+        reservationBusinessRules.EnsureUnitIsReservable(unit);
+
+        var tenant = await tenantRepository.GetByIdAsync(input.TenantId);
+        Guard.InvalidField(
+            tenant == null || !tenant.IsActive,
+            nameof(input.TenantId),
+            "Kiracı bulunamadı veya aktif değildir.",
+            "RESERVATION_TENANT_NOT_ACTIVE");
+
+        if (input.CreateAndApprove)
+        {
+            Guard.InvalidField(
+                await reservationRepository.IsConflictAsync(
+                    input.UnitId,
+                    input.StartDate,
+                    input.EndDate),
+                nameof(input.StartDate),
+                "Seçilen zaman aralığında bu birim için onaylanmış başka bir rezervasyon mevcut.",
+                "RESERVATION_TIME_CONFLICT");
+        }
+
+        var calculation = await CalculateCoreAsync(
+            new CalculateReservationInput(
+                input.UnitId,
+                input.StartDate,
+                input.EndDate,
+                input.AccessScope),
+            unit);
+        Guard.InvalidField(
+            !string.IsNullOrWhiteSpace(calculation.ErrorMessage),
+            nameof(input.UnitId),
+            calculation.ErrorMessage ?? "Rezervasyon ücreti hesaplanamadı.",
+            "RESERVATION_RATE_NOT_FOUND");
+
+        var now = reservationBusinessRules.GetCurrentTime();
+        var reservation = new Reservation
+        {
+            UnitId = input.UnitId,
+            TenantId = input.TenantId,
+            StartDate = input.StartDate,
+            EndDate = input.EndDate,
+            TotalDurationMinutes = calculation.TotalDurationMinutes,
+            FreeDurationMinutes = calculation.FreeDurationMinutes,
+            PaidDurationMinutes = calculation.PaidDurationMinutes,
+            UnitRate = calculation.UnitRate,
+            RateAmount = calculation.RateAmount,
+            KdvRate = calculation.VatRate,
+            KdvAmount = calculation.VatAmount,
+            TotalAmount = calculation.TotalAmount,
+            Status = input.CreateAndApprove
+                ? ReservationStatus.Confirmed
+                : ReservationStatus.PendingApproval,
+            Title = input.Title.Trim(),
+            Description = input.Description?.Trim(),
+            Notes = input.Notes?.Trim(),
+            InternalNotes = input.InternalNotes?.Trim(),
+            RequestedByUserId = input.RequestedByUserId,
+            RequestedByDisplayNameSnapshot = input.RequestedByDisplayName.Trim(),
+            RequestedByEmailSnapshot = input.RequestedByEmailAddress.Trim(),
+            ApprovedByUserId = input.CreateAndApprove ? input.RequestedByUserId : null,
+            ApprovedAt = input.CreateAndApprove ? now : null,
+            Attendees = attendeeInputs.Select(attendee => new ReservationAttendee
+            {
+                DisplayName = attendee.DisplayName!.Trim(),
+                EmailAddress = attendee.EmailAddress!.Trim(),
+                NormalizedEmailAddress = attendee.EmailAddress.Trim().ToUpperInvariant(),
+                IsReservationOwner = attendee.IsReservationOwner
+            }).ToList()
+        };
+
+        await reservationRepository.AddAsync(reservation);
+        await uow.SaveChangesAsync();
         return reservation.Id;
     }
 
@@ -262,40 +485,275 @@ public class ReservationService(
             "Rezervasyon bulunamadı.",
             "RESERVATION_NOT_FOUND");
 
-        EnsureScope(reservation.Unit.PropertyId, reservation.UnitId, input.AccessScope);
-        Guard.Conflict(
-            reservation.Status == ReservationStatus.Cancelled,
-            "Bu rezervasyon zaten iptal edilmiş.",
-            "RESERVATION_ALREADY_CANCELLED");
-        Guard.Conflict(
-            reservation.Status is not ReservationStatus.Planned
-                and not ReservationStatus.TransferredToCharge,
-            "Yalnızca planlanmış veya tahakkuka aktarılmış rezervasyonlar iptal edilebilir.",
-            "RESERVATION_CANNOT_BE_CANCELLED");
+        reservationBusinessRules.EnsureAccessScope(
+            reservation.Unit.PropertyId,
+            reservation.UnitId,
+            input.AccessScope);
+        reservationBusinessRules.EnsureCancellationAllowed(
+            reservation,
+            input.CanOverrideTimeRestriction);
 
-        var reason = input.Reason.Trim();
+        await CancelCoreAsync(reservation, input.Reason.Trim(), input.ActorUserId);
+    }
 
-        if (reservation.Status == ReservationStatus.TransferredToCharge)
+    public async Task CancelTenantAsync(CancelTenantReservationInput input)
+    {
+        Guard.Against(
+            string.IsNullOrWhiteSpace(input.Reason) || input.Reason.Trim().Length > 450,
+            "İptal nedeni zorunlu ve en fazla 450 karakter olmalıdır.",
+            "RESERVATION_INVALID_CANCELLATION_REASON");
+
+        var reservation = Guard.NotFound(
+            await reservationRepository.GetForOperationAsync(input.ReservationId),
+            "Rezervasyon bulunamadı.",
+            "RESERVATION_NOT_FOUND");
+        reservationBusinessRules.EnsureTenantOwnership(reservation.TenantId, input.TenantId);
+        reservationBusinessRules.EnsureAccessScope(
+            reservation.Unit.PropertyId,
+            reservation.UnitId,
+            input.AccessScope);
+        reservationBusinessRules.EnsureCancellationAllowed(
+            reservation,
+            canOverrideTimeRestriction: false);
+
+        await CancelCoreAsync(reservation, input.Reason.Trim(), input.ActorUserId);
+    }
+
+    public async Task ApproveAsync(ApproveReservationInput input)
+    {
+        var unitId = await reservationRepository.GetUnitIdAsync(input.ReservationId);
+        Guard.Against(
+            !unitId.HasValue,
+            "Rezervasyon bulunamadı.",
+            "RESERVATION_NOT_FOUND");
+        await reservationRepository.AcquireUnitDecisionLockAsync(unitId!.Value);
+
+        var reservation = Guard.NotFound(
+            await reservationRepository.GetForOperationAsync(input.ReservationId),
+            "Rezervasyon bulunamadı.",
+            "RESERVATION_NOT_FOUND");
+        EnsureExpectedRowVersion(reservation, input.ExpectedRowVersion);
+        reservationBusinessRules.EnsureAccessScope(
+            reservation.Unit.PropertyId,
+            reservation.UnitId,
+            input.AccessScope);
+        reservationBusinessRules.EnsureTransitionAllowed(
+            reservation.Status,
+            ReservationStatus.Confirmed);
+        Guard.Conflict(
+            await reservationRepository.IsConflictAsync(
+                reservation.UnitId,
+                reservation.StartDate,
+                reservation.EndDate,
+                reservation.Id),
+            "Bu zaman aralığında birim için onaylanmış başka bir rezervasyon bulunuyor.",
+            "RESERVATION_APPROVAL_TIME_CONFLICT");
+
+        reservation.Status = ReservationStatus.Confirmed;
+        reservation.ApprovedByUserId = input.ActorUserId;
+        reservation.ApprovedAt = reservationBusinessRules.GetCurrentTime();
+        await SaveDecisionAsync();
+    }
+
+    public async Task RejectAsync(RejectReservationInput input)
+    {
+        Guard.Against(
+            string.IsNullOrWhiteSpace(input.Reason) || input.Reason.Trim().Length > 450,
+            "Ret gerekçesi zorunlu ve en fazla 450 karakter olmalıdır.",
+            "RESERVATION_INVALID_REJECTION_REASON");
+
+        var reservation = Guard.NotFound(
+            await reservationRepository.GetForOperationAsync(input.ReservationId),
+            "Rezervasyon bulunamadı.",
+            "RESERVATION_NOT_FOUND");
+        EnsureExpectedRowVersion(reservation, input.ExpectedRowVersion);
+        reservationBusinessRules.EnsureAccessScope(
+            reservation.Unit.PropertyId,
+            reservation.UnitId,
+            input.AccessScope);
+        reservationBusinessRules.EnsureTransitionAllowed(
+            reservation.Status,
+            ReservationStatus.Rejected);
+
+        reservation.Status = ReservationStatus.Rejected;
+        reservation.RejectionReason = input.Reason.Trim();
+        reservation.RejectedByUserId = input.ActorUserId;
+        reservation.RejectedAt = reservationBusinessRules.GetCurrentTime();
+        await SaveDecisionAsync();
+    }
+
+    public async Task UpdateAsync(UpdateReservationInput input)
+    {
+        reservationBusinessRules.EnsureScheduleIsValid(input.StartDate, input.EndDate);
+        Guard.Against(
+            string.IsNullOrWhiteSpace(input.ActorUserId)
+                || string.IsNullOrWhiteSpace(input.ActorEmailAddress),
+            "İşlem yapan kullanıcı bilgisi doğrulanamadı.",
+            "RESERVATION_ACTOR_NOT_RESOLVED");
+
+        var currentUnitId = await reservationRepository.GetUnitIdAsync(input.ReservationId);
+        Guard.Against(
+            !currentUnitId.HasValue,
+            "Rezervasyon bulunamadı.",
+            "RESERVATION_NOT_FOUND");
+        foreach (var unitId in new[] { currentUnitId!.Value, input.UnitId }.Distinct().Order())
+            await reservationRepository.AcquireUnitDecisionLockAsync(unitId);
+
+        var reservation = Guard.NotFound(
+            await reservationRepository.GetForOperationAsync(input.ReservationId),
+            "Rezervasyon bulunamadı.",
+            "RESERVATION_NOT_FOUND");
+        EnsureExpectedRowVersion(reservation, input.ExpectedRowVersion);
+        reservationBusinessRules.EnsureAccessScope(
+            reservation.Unit.PropertyId,
+            reservation.UnitId,
+            input.AccessScope);
+        reservationBusinessRules.EnsureModificationAllowed(
+            reservation,
+            input.CanOverrideTimeRestriction,
+            input.OverrideReason);
+
+        var targetUnit = Guard.NotFound(
+            await unitRepository.GetReservationContextAsync(input.UnitId),
+            "Birim bulunamadı.",
+            "RESERVATION_UNIT_NOT_FOUND");
+        reservationBusinessRules.EnsureAccessScope(
+            targetUnit.PropertyId,
+            targetUnit.UnitId,
+            input.AccessScope);
+        reservationBusinessRules.EnsureUnitIsReservable(targetUnit);
+
+        var tenant = await tenantRepository.GetByIdAsync(input.TenantId);
+        Guard.InvalidField(
+            tenant == null || !tenant.IsActive,
+            nameof(input.TenantId),
+            "Kiracı bulunamadı veya aktif değildir.",
+            "RESERVATION_TENANT_NOT_ACTIVE");
+
+        var owner = reservation.Attendees.FirstOrDefault(attendee => attendee.IsReservationOwner);
+        var attendeeInputs = new List<ReservationAttendeePolicyInput>
         {
-            var charge = await chargeRepository.GetByReservationWithAllocationsAsync(reservation.Id);
+            new(
+                owner?.DisplayName ?? reservation.RequestedByDisplayNameSnapshot ?? input.ActorDisplayName,
+                owner?.EmailAddress ?? reservation.RequestedByEmailSnapshot ?? input.ActorEmailAddress,
+                true)
+        };
+        attendeeInputs.AddRange(input.Attendees);
+        reservationBusinessRules.EnsureContentIsValid(new ReservationContentPolicyInput(
+            input.Title,
+            input.Description,
+            input.Notes,
+            input.InternalNotes,
+            attendeeInputs));
 
-            var hasApprovedPayment = charge?.Allocations.Any(allocation => allocation.Status == PaymentStatus.Approved) ?? false;
-            Guard.Conflict(
-                hasApprovedPayment,
-                "Ödemesi alınmış tahakkuka bağlı rezervasyon iptal edilemez.",
-                "RESERVATION_HAS_APPROVED_PAYMENT");
+        if (reservation.Status == ReservationStatus.Confirmed)
+        {
+            Guard.InvalidField(
+                await reservationRepository.IsConflictAsync(
+                    input.UnitId,
+                    input.StartDate,
+                    input.EndDate,
+                    reservation.Id),
+                nameof(input.StartDate),
+                "Seçilen zaman aralığında bu birim için onaylanmış başka bir rezervasyon mevcut.",
+                "RESERVATION_TIME_CONFLICT");
+        }
 
-            if (charge != null)
-            {
-                charge.Status = ChargeStatus.Cancelled;
-                charge.CancellationNote = $"Rezervasyon iptal edildi: {reason}";
-            }
+        var calculation = await CalculateCoreAsync(
+            new CalculateReservationInput(
+                input.UnitId,
+                input.StartDate,
+                input.EndDate,
+                input.AccessScope),
+            targetUnit);
+        Guard.InvalidField(
+            !string.IsNullOrWhiteSpace(calculation.ErrorMessage),
+            nameof(input.UnitId),
+            calculation.ErrorMessage ?? "Rezervasyon ücreti hesaplanamadı.",
+            "RESERVATION_RATE_NOT_FOUND");
+
+        reservation.UnitId = input.UnitId;
+        reservation.TenantId = input.TenantId;
+        reservation.StartDate = input.StartDate;
+        reservation.EndDate = input.EndDate;
+        reservation.Title = input.Title.Trim();
+        reservation.Description = input.Description?.Trim();
+        reservation.Notes = input.Notes?.Trim();
+        reservation.InternalNotes = input.InternalNotes?.Trim();
+        reservation.LastModificationReason = string.IsNullOrWhiteSpace(input.OverrideReason)
+            ? null
+            : input.OverrideReason.Trim();
+        reservation.TotalDurationMinutes = calculation.TotalDurationMinutes;
+        reservation.FreeDurationMinutes = calculation.FreeDurationMinutes;
+        reservation.PaidDurationMinutes = calculation.PaidDurationMinutes;
+        reservation.UnitRate = calculation.UnitRate;
+        reservation.RateAmount = calculation.RateAmount;
+        reservation.KdvRate = calculation.VatRate;
+        reservation.KdvAmount = calculation.VatAmount;
+        reservation.TotalAmount = calculation.TotalAmount;
+        reservation.Attendees.Clear();
+        reservation.Attendees.AddRange(attendeeInputs.Select(attendee => new ReservationAttendee
+        {
+            DisplayName = attendee.DisplayName!.Trim(),
+            EmailAddress = attendee.EmailAddress!.Trim(),
+            NormalizedEmailAddress = attendee.EmailAddress.Trim().ToUpperInvariant(),
+            IsReservationOwner = attendee.IsReservationOwner
+        }));
+
+        await SaveDecisionAsync();
+    }
+
+    private async Task CancelCoreAsync(
+        Reservation reservation,
+        string reason,
+        string? actorUserId)
+    {
+
+        var charge = await chargeRepository.GetByReservationWithAllocationsAsync(reservation.Id);
+        var hasApprovedPayment = charge?.Allocations.Any(
+            allocation => allocation.Status == PaymentStatus.Approved) ?? false;
+        Guard.Conflict(
+            hasApprovedPayment,
+            "Ödemesi alınmış tahakkuka bağlı rezervasyon iptal edilemez.",
+            "RESERVATION_HAS_APPROVED_PAYMENT");
+
+        if (charge != null)
+        {
+            charge.Status = ChargeStatus.Cancelled;
+            charge.CancellationNote = $"Rezervasyon iptal edildi: {reason}";
         }
 
         reservation.Status = ReservationStatus.Cancelled;
-        reservation.Description = $"İptal: {reason}";
+        reservation.CancellationReason = reason;
+        if (!string.IsNullOrWhiteSpace(actorUserId))
+            reservation.CancelledByUserId = actorUserId;
+        reservation.CancelledAt = reservationBusinessRules.GetCurrentTime();
 
         await uow.SaveChangesAsync();
+    }
+
+    private static void EnsureExpectedRowVersion(
+        Reservation reservation,
+        byte[] expectedRowVersion)
+        => Guard.Conflict(
+            expectedRowVersion.Length == 0
+                || !reservation.RowVersion.SequenceEqual(expectedRowVersion),
+            "Rezervasyon başka bir kullanıcı tarafından değiştirildi. Sayfayı yenileyip tekrar deneyin.",
+            "RESERVATION_STALE_VERSION");
+
+    private async Task SaveDecisionAsync()
+    {
+        try
+        {
+            await uow.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new BusinessException(
+                "Rezervasyon başka bir kullanıcı tarafından değiştirildi. Sayfayı yenileyip tekrar deneyin.",
+                ErrorType.Conflict,
+                "RESERVATION_STALE_VERSION");
+        }
     }
 
     // ── Tahakkuka Aktar (8.6.2) ──────────────────────────────────────────────
@@ -308,11 +766,14 @@ public class ReservationService(
             "Rezervasyon bulunamadı.",
             "RESERVATION_NOT_FOUND");
 
-        EnsureScope(reservation.Unit.PropertyId, reservation.UnitId, input.AccessScope);
+        reservationBusinessRules.EnsureAccessScope(
+            reservation.Unit.PropertyId,
+            reservation.UnitId,
+            input.AccessScope);
         Guard.Conflict(
-            reservation.Status != ReservationStatus.Planned,
-            "Yalnızca planlanmış rezervasyonlar tahakkuka aktarılabilir.",
-            "RESERVATION_NOT_PLANNED");
+            reservation.Status != ReservationStatus.Confirmed,
+            "Yalnızca onaylanmış rezervasyonlar tahakkuka aktarılabilir.",
+            "RESERVATION_NOT_CONFIRMED");
         Guard.Conflict(
             await chargeRepository.ExistsForReservationAsync(reservation.Id),
             "Bu rezervasyon zaten tahakkuka aktarılmış.",
@@ -365,7 +826,6 @@ public class ReservationService(
         };
 
         await chargeRepository.AddAsync(charge);
-        reservation.Status = ReservationStatus.TransferredToCharge;
         await uow.SaveChangesAsync();
 
         return charge.Id;
@@ -429,7 +889,7 @@ public class ReservationService(
             "Birim bulunamadı.",
             "UNIT_RESERVATION_RATE_UNIT_NOT_FOUND");
         EnsureUnitRateScope(unit.PropertyId, unit.UnitId, input.AccessScope);
-        EnsureReservableUnit(unit);
+        reservationBusinessRules.EnsureUnitIsReservable(unit);
 
         ReservationRateOverride? rateRule = null;
         if (input.Id != 0)
@@ -494,22 +954,6 @@ public class ReservationService(
         await uow.SaveChangesAsync();
     }
 
-    private static void EnsureScope(
-        int propertyId,
-        int unitId,
-        ReservationAccessScopeInput accessScope)
-    {
-        if (accessScope.PropertyIds == null && accessScope.UnitIds == null)
-            return;
-
-        var hasPropertyAccess = accessScope.PropertyIds?.Contains(propertyId) == true;
-        var hasUnitAccess = accessScope.UnitIds?.Contains(unitId) == true;
-        Guard.Forbidden(
-            !hasPropertyAccess && !hasUnitAccess,
-            "Bu rezervasyon yetki kapsamınızın dışındadır.",
-            "RESERVATION_OUT_OF_SCOPE");
-    }
-
     private static void EnsureUnitRateScope(
         int propertyId,
         int unitId,
@@ -526,11 +970,4 @@ public class ReservationService(
             "UNIT_RESERVATION_RATE_OUT_OF_SCOPE");
     }
 
-    private static void EnsureReservableUnit(ReservationUnitContextDto unit)
-        => Guard.Against(
-            !unit.IsUnitActive
-            || !unit.IsUnitTypeActive
-            || unit.Usage != UnitTypeUsage.Reservable,
-            "Seçilen birim aktif veya rezervasyona uygun değildir.",
-            "RESERVATION_UNIT_NOT_RESERVABLE");
 }

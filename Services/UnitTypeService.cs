@@ -107,7 +107,7 @@ public class UnitTypeService(
                 "Bu birim türüne bağlı birimlerde aktif tahakkuku bulunduğu için pasif yapılamaz.");
 
             Guard.Conflict(
-                await reservationRepository.HasPlannedForUnitTypeAsync(input.Id),
+                await reservationRepository.HasConfirmedForUnitTypeAsync(input.Id),
                 "Bu birim türüne bağlı birimlerde planlanmış rezervasyon bulunduğu için pasif yapılamaz.");
 
             if (entity.ChargeTypeId.HasValue)

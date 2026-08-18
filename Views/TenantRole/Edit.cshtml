@@ -1,5 +1,4 @@
 @model KiraTakip.Models.ViewModels.TenantRoleFormViewModel
-@using System.Text.Json
 @{
     Layout = "_KiraciLayout";
     ViewData["Title"] = "Rol Düzenle";
@@ -9,27 +8,6 @@
     var indexActionName = nameof(KiraTakip.Controllers.TenantRoleController.Index);
     var editActionName = nameof(KiraTakip.Controllers.TenantRoleController.Edit);
 
-    var riskSegments = new HashSet<string> { "Delete", "Cancel", "Terminate", "OverrideRate", "Approve", "Reject" };
-
-    var treeData = Model.Permissions.Select(g =>
-    {
-        var moduleItem = g.Permissions.FirstOrDefault();
-        return new
-        {
-            path = moduleItem?.Value ?? "",
-            name = g.GroupName,
-            @checked = moduleItem?.Selected ?? false,
-            actions = g.Permissions.Skip(1).Select(p => new
-            {
-                value = p.Value,
-                label = p.Label,
-                @checked = p.Selected,
-                danger = riskSegments.Contains(p.Value.Split('.').LastOrDefault() ?? "")
-            }).ToList()
-        };
-    }).ToList();
-
-    var treeJson = JsonSerializer.Serialize(treeData);
 }
 
 <div class="page-header">
@@ -62,7 +40,9 @@
 
         <div class="mt-5">
             <label class="form-label mb-2">İzinler</label>
-            @await Html.PartialAsync("_PermissionTreePicker", new ViewDataDictionary(ViewData) { { "TreeJson", treeJson } })
+            @await Html.PartialAsync(
+                "_TreePicker",
+                KiraTakip.Models.ViewModels.PermissionTreePickerViewModelFactory.Create(Model.Permissions))
         </div>
 
         <div class="flex gap-2 mt-6">

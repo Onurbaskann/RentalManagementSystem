@@ -9,7 +9,8 @@ namespace KiraTakip.Services;
 
 public class StatisticsService(
     IChargeTypeRepository chargeTypeRepository,
-    IRateResolverService rateResolver) : IStatisticsService
+    IRateResolverService rateResolver,
+    IOperationalPolicyProvider operationalPolicyProvider) : IStatisticsService
 {
     public OccupancyStatus GetUnitStatus(Unit unit)
     {
@@ -24,7 +25,9 @@ public class StatisticsService(
         if (activeLease == null) return OccupancyStatus.Vacant;
 
         var remainingDays = (activeLease.EndDate - DateTime.Now).Days;
-        return remainingDays <= 30 ? OccupancyStatus.ExpiringSoon : OccupancyStatus.Leased;
+        return remainingDays <= operationalPolicyProvider.Current.LeaseExpiringSoonStatusDays
+            ? OccupancyStatus.ExpiringSoon
+            : OccupancyStatus.Leased;
     }
 
     public Lease? GetActiveLease(Unit unit)
@@ -68,7 +71,7 @@ public class StatisticsService(
             : Math.Min(100, Math.Max(0, elapsedDays / totalDays * 100));
         var unitStatus = !isActive
             ? OccupancyStatus.Vacant
-            : remainingDays <= 30
+            : remainingDays <= operationalPolicyProvider.Current.LeaseExpiringSoonStatusDays
                 ? OccupancyStatus.ExpiringSoon
                 : OccupancyStatus.Leased;
 

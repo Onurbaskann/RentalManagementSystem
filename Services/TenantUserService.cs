@@ -2,6 +2,7 @@ using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Infrastructure.Transactions;
+using KiraTakip.Models;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.Invitation;
 using KiraTakip.Repositories.Interfaces;
@@ -17,6 +18,8 @@ public class TenantUserService(
     IRoleRepository roleRepository,
     IUserRoleRepository userRoleRepository,
     ILeaseRepository leaseRepository,
+    IUnitRepository unitRepository,
+    IUserPermissionScopeRepository permissionScopeRepository,
     UserManager<ApplicationUser> userManager,
     IInvitationService invitationService,
     IAuditService auditService,
@@ -232,6 +235,12 @@ public class TenantUserService(
             "Kullanıcı bulunamadı.",
             "TENANT_USER_NOT_FOUND");
         var roles = await GetEditRoleOptionsAsync(input.TenantId, user.RoleId);
+        var (leaseUnits, reservableUnits) = await GetAssignableUnitsAsync(
+            input.TenantId,
+            input.AccessScope);
+        var selectedUnitIds = await permissionScopeRepository.GetScopeIdsAsync(
+            user.Id,
+            ScopeType.Unit);
 
         return new TenantUserEditDataDto(
             user.Id,
@@ -239,7 +248,11 @@ public class TenantUserService(
             user.Email,
             user.IsActive,
             user.RoleId,
-            roles);
+            user.HasAccessToAllUnits,
+            selectedUnitIds,
+            roles,
+            leaseUnits,
+            reservableUnits);
     }
 
     public async Task EditTenantUserAsync(EditTenantUserInput input)
@@ -261,6 +274,25 @@ public class TenantUserService(
             "Geçersiz rol seçildi.",
             "TENANT_USER_INVALID_ROLE");
 
+        var selectedUnitIds = input.HasAccessToAllUnits
+            ? []
+            : input.UnitIds.Distinct().ToList();
+        if (!input.HasAccessToAllUnits)
+        {
+            var (leaseUnits, reservableUnits) = await GetAssignableUnitsAsync(
+                input.TenantId,
+                input.AccessScope);
+            var assignableUnitIds = leaseUnits.Select(unit => unit.Id)
+                .Concat(reservableUnits.Select(unit => unit.Id))
+                .ToHashSet();
+            Guard.InvalidField(
+                selectedUnitIds.Count == 0
+                    || selectedUnitIds.Any(unitId => !assignableUnitIds.Contains(unitId)),
+                nameof(input.UnitIds),
+                "Seçilen birimlerden en az biri bu kullanıcıya atanamaz.",
+                "TENANT_USER_INVALID_UNIT_SCOPE");
+        }
+
         if (currentRole?.RoleName == RoleNames.KiraciYoneticisi
             && newRole!.Name != RoleNames.KiraciYoneticisi)
         {
@@ -278,12 +310,18 @@ public class TenantUserService(
         });
 
         user.AdSoyad = input.FullName.Trim();
+        var previousGlobalAccess = user.TumTasinmazlaraErisim;
+        var previousUnitIds = await permissionScopeRepository.GetScopeIdsAsync(
+            user.Id,
+            ScopeType.Unit);
+        user.TumTasinmazlaraErisim = input.HasAccessToAllUnits;
         var updateResult = await userManager.UpdateAsync(user);
         Guard.InvalidField(
             !updateResult.Succeeded,
             nameof(input.FullName),
             "Kullanıcı güncellenemedi.",
             "TENANT_USER_UPDATE_FAILED");
+        await permissionScopeRepository.ReplaceAsync(user.Id, [], selectedUnitIds);
         await unitOfWork.SaveChangesAsync();
 
         await userSecurityService.UpdateStampAsync(user.Id);
@@ -293,6 +331,16 @@ public class TenantUserService(
             "ApplicationUser",
             user.Id,
             $"KiraciId:{input.TenantId}");
+
+        if (previousGlobalAccess != input.HasAccessToAllUnits
+            || !previousUnitIds.Order().SequenceEqual(selectedUnitIds.Order()))
+        {
+            await auditService.LogAsync(
+                "User.ScopeChanged",
+                "ApplicationUser",
+                user.Id,
+                $"KiraciId:{input.TenantId};TumBirimler:{input.HasAccessToAllUnits};BirimSayisi:{selectedUnitIds.Count}");
+        }
     }
 
     private async Task<List<RoleLookupDto>> GetEditRoleOptionsAsync(int tenantId, int currentRoleId)
@@ -302,5 +350,25 @@ public class TenantUserService(
             .Where(role => !role.IsSystemRole || role.Id == currentRoleId)
             .Select(role => new RoleLookupDto(role.Id, role.Name))
             .ToList();
+    }
+
+    private async Task<(List<UnitLookupDto> LeaseUnits, List<UnitListItemDto> ReservableUnits)>
+        GetAssignableUnitsAsync(int tenantId, ReservationAccessScopeInput accessScope)
+    {
+        var propertyIds = accessScope.PropertyIds?.ToList();
+        var unitIds = accessScope.UnitIds?.ToList();
+        var leaseUnits = await leaseRepository.GetActiveLeaseUnitsByTenantIdAsync(
+            tenantId,
+            propertyIds,
+            unitIds);
+        var reservableUnits = await unitRepository.GetReservableUnitsAsync(
+            propertyIds,
+            unitIds);
+
+        var leaseUnitIds = leaseUnits.Select(unit => unit.Id).ToHashSet();
+        reservableUnits = reservableUnits
+            .Where(unit => !leaseUnitIds.Contains(unit.Id))
+            .ToList();
+        return (leaseUnits, reservableUnits);
     }
 }

@@ -17,5 +17,22 @@ public class ReservationListItemDto
     public int PaidDurationMinutes { get; set; }
     public decimal TotalAmount { get; set; }
     public ReservationStatus Status { get; set; }
+    public string? Title { get; set; }
     public string? Description { get; set; }
+    public string? Notes { get; set; }
+    public string? InternalNotes { get; set; }
+    public string? CancellationReason { get; set; }
+    public string? RejectionReason { get; set; }
+    public string? RequestedByDisplayName { get; set; }
+    public string? RequestedByEmailAddress { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+    public DateTime? RejectedAt { get; set; }
+    public string? RejectedByDisplayName { get; set; }
+    public List<ReservationAttendeeDto> Attendees { get; set; } = [];
+    public byte[] RowVersion { get; set; } = [];
 }
+
+public record ReservationAttendeeDto(
+    string DisplayName,
+    string EmailAddress,
+    bool IsReservationOwner);

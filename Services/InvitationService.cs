@@ -21,13 +21,14 @@ public class InvitationService(
     UserManager<ApplicationUser> userManager,
     IUserRoleService userRoleService,
     IPermissionScopeCache permissionScopeCache,
+    IOperationalPolicyProvider operationalPolicyProvider,
     ILogger<InvitationService> logger) : IInvitationService, ITransactionalService
 {
     private const string Purpose = "invite";
-    private static readonly TimeSpan Ttl = TimeSpan.FromDays(7);
 
     public async Task<Invitation> SendAsync(SendInvitationInput input, CancellationToken ct = default)
     {
+        var ttl = GetTtl();
         var userType = input.TenantId.HasValue ? UserType.Tenant : UserType.Internal;
         var invitation = new Invitation
         {
@@ -44,14 +45,14 @@ public class InvitationService(
             UnitIds = (input.UnitIds != null && input.UnitIds.Any())
                 ? System.Text.Json.JsonSerializer.Serialize(input.UnitIds)
                 : null,
-            ExpiresAt = DateTime.UtcNow.Add(Ttl),
+            ExpiresAt = DateTime.UtcNow.Add(ttl),
             Status = InvitationStatus.Pending,
         };
 
         await invitationRepository.AddAsync(invitation);
         await unitOfWork.SaveChangesAsync(ct);
 
-        var tokenResult = tokenService.Generate(invitation.Id.ToString(), Purpose, Ttl);
+        var tokenResult = tokenService.Generate(invitation.Id.ToString(), Purpose, ttl);
         invitation.TokenHash = tokenResult.TokenHash;
         invitation.ExpiresAt = tokenResult.ExpiresAt;
         await unitOfWork.SaveChangesAsync(ct);
@@ -171,8 +172,6 @@ public class InvitationService(
         await auditService.LogAsync("Invite.Cancelled", "Invitation", invitationId.ToString());
     }
 
-    private static readonly TimeSpan ResendCooldown = TimeSpan.FromHours(1);
-
     public async Task ResendAsync(int invitationId, string invitedByUserId, CancellationToken ct = default)
     {
         var invitation = Guard.NotFound(
@@ -188,12 +187,14 @@ public class InvitationService(
             "İptal edilmiş davetler yeniden gönderilemez.");
 
         var lastSentAt = invitation.UpdatedAt ?? invitation.CreatedAt;
-        var remainingMinutes = (int)(ResendCooldown - (DateTime.UtcNow - lastSentAt)).TotalMinutes;
+        var resendCooldown = TimeSpan.FromMinutes(
+            operationalPolicyProvider.Current.InvitationResendCooldownMinutes);
+        var remainingMinutes = (int)(resendCooldown - (DateTime.UtcNow - lastSentAt)).TotalMinutes;
         Guard.Conflict(
             remainingMinutes > 0,
             $"Bu davet en son {lastSentAt.ToLocalTime():HH:mm} itibarıyla gönderildi. Yeniden göndermek için {remainingMinutes} dakika beklemeniz gerekiyor.");
 
-        var tokenResult = tokenService.Generate(invitation.Id.ToString(), Purpose, Ttl);
+        var tokenResult = tokenService.Generate(invitation.Id.ToString(), Purpose, GetTtl());
 
         invitation.TokenHash = tokenResult.TokenHash;
         invitation.ExpiresAt = tokenResult.ExpiresAt;
@@ -244,6 +245,9 @@ public class InvitationService(
 
         await mailService.SendAsync(invitation.Email, invitation.FullName ?? invitation.Email, "KiraTakip — Hesap Davetiyeniz", html, ct);
     }
+
+    private TimeSpan GetTtl()
+        => TimeSpan.FromDays(operationalPolicyProvider.Current.InvitationValidityDays);
 }
 
 public class InvitationMailModel

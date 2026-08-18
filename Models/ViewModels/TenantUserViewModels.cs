@@ -51,5 +51,9 @@ public class TenantUserEditViewModel
     public string Email { get; set; } = string.Empty;
     public bool IsActive { get; set; }
     public int RoleId { get; set; }
+    public bool HasAccessToAllUnits { get; set; }
+    public List<int> UnitIds { get; set; } = [];
     public List<RoleOptionViewModel> Roles { get; set; } = [];
+    public List<UnitLookupDto> LeaseUnits { get; set; } = [];
+    public List<UnitListItemDto> ReservableUnits { get; set; } = [];
 }

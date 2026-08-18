@@ -20,6 +20,7 @@ public class HomeController(
     IPaymentService paymentService,
     IBankTransactionService bankTransactionService,
     IReservationService reservationService,
+    IOperationalPolicyProvider operationalPolicyProvider,
     UserManager<ApplicationUser> userManager,
     IPermissionScopeCache permissionScopeCache) : Controller
 {
@@ -78,7 +79,8 @@ public class HomeController(
             .Count(lease => lease.IsActive && lease.EndDate.Year == now.Year && lease.EndDate.Month == now.Month);
 
         viewModel.ExpiringLeases = leases
-            .Where(lease => lease.IsActive && lease.RemainingDays <= 60)
+            .Where(lease => lease.IsActive
+                && lease.RemainingDays <= operationalPolicyProvider.Current.DashboardExpiringLeaseLookaheadDays)
             .OrderBy(lease => lease.EndDate)
             .Take(5)
             .Select(lease => new ExpiringLeaseSummary
@@ -139,7 +141,7 @@ public class HomeController(
             var reservations = await reservationService.GetAllAsync(
                 new GetReservationsInput(propertyIds, unitIds));
             viewModel.UntransferredReservationCount = reservations
-                .Count(reservation => reservation.Status == ReservationStatus.Planned
+                .Count(reservation => reservation.Status == ReservationStatus.Confirmed
                     && reservation.TotalAmount > 0
                     && reservation.ChargeId == null);
 

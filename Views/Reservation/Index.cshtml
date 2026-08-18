@@ -18,8 +18,10 @@
         <div class="page-title">Rezervasyon Yönetimi</div>
         <div class="page-subtitle">@Model.Total kayıt</div>
     </div>
-    @if (canCreate)
-    {
+    <div class="flex gap-2">
+        <a asp-controller="Reservation" asp-action="Calendar" class="btn btn-secondary">Takvim</a>
+        @if (canCreate)
+        {
         <a href="@Url.Action(
                 nameof(KiraTakip.Controllers.ReservationController.Create),
                 nameof(KiraTakip.Controllers.ReservationController).Replace("Controller", ""))"
@@ -27,16 +29,18 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Rezervasyon Ekle
         </a>
-    }
+        }
+    </div>
 </div>
 
 <div class="flex gap-1.5 flex-wrap mb-5">
     @{
         var statusFilters = new[] {
             ("tum", "Tümü"),
-            ("planlandi", "Planlandı"),
+            ("onaylandi", "Onaylandı"),
+            ("onaybekliyor", "Onay Bekliyor"),
             ("tamamlandi", "Tamamlandı"),
-            ("aktarildi", "Tahakkuka Aktarıldı")
+            ("reddedildi", "Reddedildi")
         };
     }
     @foreach (var (key, label) in statusFilters)
@@ -86,19 +90,8 @@
             <tbody>
                 @foreach (var r in Model.Items)
                 {
-                    string statusClass = r.Status switch {
-                        ReservationStatus.Completed         => "badge-kirali",
-                        ReservationStatus.TransferredToCharge => "badge-surek",
-                        ReservationStatus.Cancelled        => "badge-gecmis",
-                        _                                    => "badge-bos"
-                    };
-                    string statusLabel = r.Status switch {
-                        ReservationStatus.Planned          => "Planlandı",
-                        ReservationStatus.Completed         => "Tamamlandı",
-                        ReservationStatus.Cancelled        => "İptal Edildi",
-                        ReservationStatus.TransferredToCharge => "Tahakkuka Aktarıldı",
-                        _                                    => r.Status.ToString()
-                    };
+                    string statusClass = r.Status.GetBadgeCssClass();
+                    string statusLabel = r.Status.GetDisplayLabel();
 
                     <tr>
                         <td>
@@ -121,15 +114,15 @@
                         </td>
                         <td>
                             <span class="badge @statusClass">@statusLabel</span>
-                            @if (r.Status == ReservationStatus.Cancelled && !string.IsNullOrEmpty(r.Description))
+                            @if (r.Status == ReservationStatus.Cancelled && !string.IsNullOrEmpty(r.CancellationReason))
                             {
-                                var displayedReason = r.Description.StartsWith("İptal:") ? r.Description.Substring(6).Trim() : r.Description;
-                                <div class="text-[10px] text-muted mt-1 italic truncate max-w-[100px]" title="@displayedReason">⤵ @displayedReason</div>
+                                <div class="text-[10px] text-muted mt-1 italic truncate max-w-[100px]" title="@r.CancellationReason">⤵ @r.CancellationReason</div>
                             }
                         </td>
                         <td class="text-right">
                             <div class="flex gap-1.5 justify-end items-center">
-                                @if (canTransfer && r.Status == ReservationStatus.Planned && r.TotalAmount > 0 && r.ChargeId == null)
+                                <a asp-controller="Reservation" asp-action="Details" asp-route-id="@r.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a>
+                                @if (canTransfer && r.Status == ReservationStatus.Confirmed && r.TotalAmount > 0 && r.ChargeId == null)
                                 {
                                     <form method="post"
                                           action="@Url.Action(
@@ -142,7 +135,7 @@
                                         <button type="submit" class="btn btn-sm btn-primary">Aktar</button>
                                     </form>
                                 }
-                                @if (canCancel && r.Status == ReservationStatus.Planned)
+                                @if (canCancel && r.Status is ReservationStatus.PendingApproval or ReservationStatus.Confirmed)
                                 {
                                     <button type="button" class="btn btn-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white"
                                         data-confirm="Bu rezervasyonu iptal etmek istediğinize emin misiniz?"

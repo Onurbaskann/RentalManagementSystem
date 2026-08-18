@@ -784,14 +784,7 @@
                     <tbody>
                         @foreach (var r in Model.Property.Reservations)
                         {
-                            var reservationStatusBadge = r.Status switch
-                            {
-                                ReservationStatus.Planned => "<span class='badge bg-blue-100 text-blue-800'>Planlandı</span>",
-                                ReservationStatus.Completed => "<span class='badge badge-kirali'>Tamamlandı</span>",
-                                ReservationStatus.Cancelled => "<span class='badge badge-gecmis'>İptal</span>",
-                                ReservationStatus.TransferredToCharge => "<span class='badge badge-surek'>Aktarıldı</span>",
-                                _ => "<span class='badge'>—</span>"
-                            };
+                            var reservationStatusBadge = $"<span class='badge {r.Status.GetBadgeCssClass()}'>{r.Status.GetDisplayLabel()}</span>";
                             <tr>
                                 <td class="font-semibold">@r.UnitName</td>
                                 <td>

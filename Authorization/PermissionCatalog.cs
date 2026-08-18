@@ -5,7 +5,8 @@ public record PermissionActionInfo(string Path, string DisplayName);
 public record PermissionModuleInfo(
     string Path,
     string DisplayName,
-    IReadOnlyList<PermissionActionInfo> ActionDefinitions)
+    IReadOnlyList<PermissionActionInfo> ActionDefinitions,
+    string? ParentGroupDisplayName = null)
 {
     public string AccessDisplayName => "Görüntüle";
     public IReadOnlyList<string> Actions { get; } =
@@ -152,8 +153,20 @@ public static class PermissionCatalog
         public const string Create             = "Internal.Reservation.Create";
         public const string Edit               = "Internal.Reservation.Edit";
         public const string Cancel             = "Internal.Reservation.Cancel";
-        public const string TransferToCharge = "Internal.Reservation.TransferToCharge";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(Cancel, "İptal Et"), new(TransferToCharge, "Tahakkuka Aktar")];
+        public const string Approve             = "Internal.Reservation.Approve";
+        public const string Reject              = "Internal.Reservation.Reject";
+        public const string OverrideTimeRestriction = "Internal.Reservation.OverrideTimeRestriction";
+        public const string TransferToCharge    = "Internal.Reservation.TransferToCharge";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions =
+        [
+            new(Create, "Ekle"),
+            new(Edit, "Düzenle"),
+            new(Cancel, "İptal Et"),
+            new(Approve, "Onayla"),
+            new(Reject, "Reddet"),
+            new(OverrideTimeRestriction, "Zaman Sınırı İstisnası"),
+            new(TransferToCharge, "Tahakkuka Aktar")
+        ];
     }
 
     public static class PropertyMultiplier
@@ -282,30 +295,30 @@ public static class PermissionCatalog
     public static readonly IReadOnlyList<PermissionModuleInfo> AllModules =
     [
         // Internal
-        new(Property.Module,               "Property",                   Property.ActionDefinitions),
-        new(Unit.Module,                  "Unit",                      Unit.ActionDefinitions),
-        new(Tenant.Module,                 "Tenant",                     Tenant.ActionDefinitions),
-        new(Lease.Module,               "Lease",                   Lease.ActionDefinitions),
-        new(Payment.Module,                  "Payment",                      Payment.ActionDefinitions),
-        new(ManualCharge.Module,             "Manual Charge",                ManualCharge.ActionDefinitions),
+        new(Property.Module,               "Taşınmaz",                   Property.ActionDefinitions),
+        new(Unit.Module,                  "Birim",                      Unit.ActionDefinitions),
+        new(Tenant.Module,                 "Kiracı",                     Tenant.ActionDefinitions),
+        new(Lease.Module,               "Sözleşme",                   Lease.ActionDefinitions),
+        new(Payment.Module,                  "Ödeme",                      Payment.ActionDefinitions),
+        new(ManualCharge.Module,             "Manuel Borç",                ManualCharge.ActionDefinitions),
         new(Reservation.Module,            "Rezervasyon",                Reservation.ActionDefinitions),
-        new(Charge.Module,               "Charge",                   Charge.ActionDefinitions),
-        new(ChargeType.Module,               "Charge Type",                  ChargeType.ActionDefinitions),
-        new(Parameter.Module,              "Parameter",                  Parameter.ActionDefinitions),
-        new(PropertyType.Module,           "Property Type",              PropertyType.ActionDefinitions),
-        new(UnitType.Module,              "Unit Type",                 UnitType.ActionDefinitions),
-        new(TenantCategory.Module,         "Tenant Category",          TenantCategory.ActionDefinitions),
-        new(Sector.Module,                 "Sector",                     Sector.ActionDefinitions),
-        new(DocumentType.Module,              "Document Type",              DocumentType.ActionDefinitions),
-        new(RateSchedule.Module,                 "Rate Schedule",                     RateSchedule.ActionDefinitions),
-        new(PropertyMultiplier.Module,         "Property Multiplier",           PropertyMultiplier.ActionDefinitions),
+        new(Charge.Module,               "Tahakkuk",                   Charge.ActionDefinitions),
+        new(ChargeType.Module,               "Borç Tipi",                  ChargeType.ActionDefinitions, "Parametreler"),
+        new(Parameter.Module,              "Sistem Ayarları",                  Parameter.ActionDefinitions, "Parametreler"),
+        new(PropertyType.Module,           "Taşınmaz Tipi",              PropertyType.ActionDefinitions, "Parametreler"),
+        new(UnitType.Module,              "Birim Tipi",                 UnitType.ActionDefinitions, "Parametreler"),
+        new(TenantCategory.Module,         "Kiracı Kategorisi",          TenantCategory.ActionDefinitions, "Parametreler"),
+        new(Sector.Module,                 "Sektör",                     Sector.ActionDefinitions, "Parametreler"),
+        new(DocumentType.Module,              "Belge Türü",              DocumentType.ActionDefinitions),
+        new(RateSchedule.Module,                 "Yıllık Tarife",                     RateSchedule.ActionDefinitions),
+        new(PropertyMultiplier.Module,         "Taşınmaz Katsayısı",           PropertyMultiplier.ActionDefinitions),
         new(ReservationRateRule.Module, "Rezervasyon Tarife Kuralı",  ReservationRateRule.ActionDefinitions),
-        new(Notification.Module,               "Notification",                   Notification.ActionDefinitions),
+        new(Notification.Module,               "Bildirim",                   Notification.ActionDefinitions),
         // System
-        new(User.Module,              "User",                  User.ActionDefinitions),
-        new(Role.Module,                    "Role",                        Role.ActionDefinitions),
-        new(Invitation.Module,               "Invitation",                  Invitation.ActionDefinitions),
-        new(Audit.Module,                  "Audit Log",            Audit.ActionDefinitions),
+        new(User.Module,              "Kullanıcı",                  User.ActionDefinitions),
+        new(Role.Module,                    "Rol",                        Role.ActionDefinitions),
+        new(Invitation.Module,               "Davet",                  Invitation.ActionDefinitions),
+        new(Audit.Module,                  "Hareket Geçmişi",            Audit.ActionDefinitions),
         // Tenant Portal
         new(TenantPortal.Lease.Module,           "Kiracı — Sözleşme",          TenantPortal.Lease.ActionDefinitions),
         new(TenantPortal.Charge.Module,               "Kiracı — Tahakkuk",              TenantPortal.Charge.ActionDefinitions),
@@ -326,7 +339,9 @@ public static class PermissionCatalog
         Lease.Approve, Lease.RequestRevision, Lease.DeleteDraft,
         Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject, Payment.MatchBankTransaction,
         ManualCharge.Module, ManualCharge.Create, ManualCharge.Cancel,
-        Reservation.Module, Reservation.Create, Reservation.Edit, Reservation.Cancel, Reservation.TransferToCharge,
+        Reservation.Module, Reservation.Create, Reservation.Edit, Reservation.Cancel,
+        Reservation.Approve, Reservation.Reject, Reservation.OverrideTimeRestriction,
+        Reservation.TransferToCharge,
         Charge.Module, Charge.Regenerate,
         PropertyMultiplier.Module, PropertyMultiplier.Edit,
         ReservationRateRule.Module, ReservationRateRule.Create, ReservationRateRule.Edit,
@@ -355,7 +370,9 @@ public static class PermissionCatalog
         Sector.Module, Sector.Create, Sector.Edit,
         DocumentType.Module, DocumentType.Create, DocumentType.Edit, DocumentType.Delete,
         ManualCharge.Module, ManualCharge.Create, ManualCharge.Cancel,
-        Reservation.Module, Reservation.Create, Reservation.Edit, Reservation.Cancel, Reservation.TransferToCharge,
+        Reservation.Module, Reservation.Create, Reservation.Edit, Reservation.Cancel,
+        Reservation.Approve, Reservation.Reject, Reservation.OverrideTimeRestriction,
+        Reservation.TransferToCharge,
         PropertyMultiplier.Module, PropertyMultiplier.Edit,
         ReservationRateRule.Module, ReservationRateRule.Create, ReservationRateRule.Edit,
         Notification.Module, Notification.BorcHatirlatma,
@@ -403,7 +420,9 @@ public static class PermissionCatalog
         RateSchedule.Module, RateSchedule.Create, RateSchedule.Edit,
         Charge.Module, Charge.Regenerate,
         ManualCharge.Module, ManualCharge.Create, ManualCharge.Cancel,
-        Reservation.Module, Reservation.Create, Reservation.Edit, Reservation.Cancel, Reservation.TransferToCharge,
+        Reservation.Module, Reservation.Create, Reservation.Edit, Reservation.Cancel,
+        Reservation.Approve, Reservation.Reject, Reservation.OverrideTimeRestriction,
+        Reservation.TransferToCharge,
         PropertyMultiplier.Module, PropertyMultiplier.Edit,
         ReservationRateRule.Module, ReservationRateRule.Create, ReservationRateRule.Edit,
         Notification.Module, Notification.BorcHatirlatma,

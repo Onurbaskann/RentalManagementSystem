@@ -1,0 +1,79 @@
+@model KiraTakip.Models.ViewModels.ReservationEditViewModel
+@using KiraTakip.Models.ViewModels
+@{
+    ViewData["Title"] = "Rezervasyonu Düzenle";
+}
+
+<div class="max-w-[950px] mx-auto">
+    <div class="page-header">
+        <a asp-controller="Reservation" asp-action="Details" asp-route-id="@Model.Id.ToHashId()" class="text-[12.5px] text-muted no-underline inline-block mb-2">← Rezervasyon Detayı</a>
+        <div class="page-title">Rezervasyonu Düzenle</div>
+        <div class="page-subtitle">Birim veya zaman değişirse uygunluk ve ücret yeniden hesaplanır.</div>
+    </div>
+
+    <form method="post" asp-controller="Reservation" asp-action="Edit" asp-route-id="@Model.Id.ToHashId()">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        <input type="hidden" name="RowVersion" value="@Convert.ToBase64String(Model.RowVersion)" />
+        <div asp-validation-summary="ModelOnly" class="form-error bg-red-50 border border-red-200 rounded-lg p-3 mb-5"></div>
+
+        <div class="card mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-group">
+                    <label asp-for="UnitId" class="form-label">Birim</label>
+                    <select asp-for="UnitId" class="form-control">
+                        <option value="">— Birim seçin —</option>
+                        @foreach (var unit in Model.Units) { <option value="@unit.Id">@unit.PropertyName — @unit.Name</option> }
+                    </select>
+                    <span asp-validation-for="UnitId" class="form-error"></span>
+                </div>
+                <div class="form-group">
+                    <label asp-for="TenantId" class="form-label">Kiracı</label>
+                    <select asp-for="TenantId" class="form-control">
+                        <option value="">— Kiracı seçin —</option>
+                        @foreach (var tenant in Model.Tenants) { <option value="@tenant.Id">@tenant.DisplayName</option> }
+                    </select>
+                    <span asp-validation-for="TenantId" class="form-error"></span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label asp-for="Title" class="form-label">Toplantı Başlığı</label>
+                <input asp-for="Title" class="form-control" maxlength="200" />
+                <span asp-validation-for="Title" class="form-error"></span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-group mb-0"><label asp-for="StartDate" class="form-label">Başlangıç</label><input asp-for="StartDate" type="datetime-local" class="form-control" /><span asp-validation-for="StartDate" class="form-error"></span></div>
+                <div class="form-group mb-0"><label asp-for="EndDate" class="form-label">Bitiş</label><input asp-for="EndDate" type="datetime-local" class="form-control" /><span asp-validation-for="EndDate" class="form-error"></span></div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="form-group"><label asp-for="Description" class="form-label">Açıklama</label><textarea asp-for="Description" class="form-control" rows="2"></textarea><span asp-validation-for="Description" class="form-error"></span></div>
+            <div class="form-group"><label asp-for="Notes" class="form-label">Toplantı Notları</label><textarea asp-for="Notes" class="form-control" rows="2"></textarea><span asp-validation-for="Notes" class="form-error"></span></div>
+            <div class="form-group"><label asp-for="InternalNotes" class="form-label">İç Notlar</label><textarea asp-for="InternalNotes" class="form-control" rows="2"></textarea><span asp-validation-for="InternalNotes" class="form-error"></span></div>
+            <div class="form-group mb-0" asp-permission="@PermissionCatalog.Reservation.OverrideTimeRestriction">
+                <label asp-for="OverrideReason" class="form-label">Zaman Sınırı İstisna Gerekçesi</label>
+                <textarea asp-for="OverrideReason" class="form-control" rows="2" maxlength="450" placeholder="Yalnız zaman sınırı aşıldığında zorunludur."></textarea>
+                <span asp-validation-for="OverrideReason" class="form-error"></span>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="text-lg font-bold mb-1">Katılımcılar</div>
+            <div class="text-xs text-muted mb-4">Talep sahibi korunur; diğer katılımcıları güncelleyebilirsiniz.</div>
+            @for (var index = 0; index < Math.Max(3, Model.Attendees.Count); index++)
+            {
+                var attendee = index < Model.Attendees.Count ? Model.Attendees[index] : new ReservationAttendeeInputViewModel();
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <div><input name="Attendees[@index].DisplayName" value="@attendee.DisplayName" class="form-control" placeholder="Ad soyad" maxlength="200" />@Html.ValidationMessage($"Attendees[{index}].DisplayName", null, new { @class = "form-error" })</div>
+                    <div><input name="Attendees[@index].EmailAddress" value="@attendee.EmailAddress" type="email" class="form-control" placeholder="E-posta" maxlength="320" />@Html.ValidationMessage($"Attendees[{index}].EmailAddress", null, new { @class = "form-error" })</div>
+                </div>
+            }
+        </div>
+
+        <div class="flex justify-end gap-3">
+            <a asp-controller="Reservation" asp-action="Details" asp-route-id="@Model.Id.ToHashId()" class="btn btn-secondary">İptal</a>
+            <button type="submit" class="btn btn-primary">Kaydet</button>
+        </div>
+    </form>
+</div>

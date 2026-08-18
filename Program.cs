@@ -42,5 +42,6 @@ app.MapControllerRoute(
     .WithStaticAssets();
 
 await app.SeedAsync();
+await app.InitializeSystemSettingsAsync();
 
 app.Run();

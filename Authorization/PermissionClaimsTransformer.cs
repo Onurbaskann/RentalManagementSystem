@@ -23,6 +23,9 @@ public class PermissionClaimsTransformer : UserClaimsPrincipalFactory<Applicatio
     {
         var identity = await base.GenerateClaimsAsync(user);
 
+        if (!string.IsNullOrWhiteSpace(user.AdSoyad))
+            identity.AddClaim(new Claim(AppClaimTypes.DisplayName, user.AdSoyad));
+
         identity.AddClaim(new Claim(AppClaimTypes.UserType, ((int)user.UserType).ToString()));
         if (user.TenantId.HasValue)
             identity.AddClaim(new Claim(AppClaimTypes.TenantId, user.TenantId.Value.ToString()));

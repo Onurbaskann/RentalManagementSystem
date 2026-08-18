@@ -1,0 +1,28 @@
+@model KiraTakip.Models.ViewModels.TenantUserEditViewModel
+@{
+    ViewData["Title"] = "Kiracı Kullanıcısı Düzenle";
+    ViewData["UseCentralFeedback"] = true;
+    var tenantId = ViewBag.TenantId as int? ?? 0;
+    var tenantName = ViewBag.TenantName as string ?? "—";
+    var usersPath = $"/Admin/Tenants/{tenantId.ToHashId()}/Users";
+}
+
+<div class="page-header">
+    <div>
+        <a href="@usersPath" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">← @tenantName — Kullanıcılar</a>
+        <div class="page-title">Kiracı Kullanıcısı Düzenle</div>
+        <div class="page-subtitle">@Model.Email</div>
+    </div>
+</div>
+
+<div class="card">
+    <form method="post" action="@usersPath/Edit/@Model.Id" asp-form-write-permission="@PermissionCatalog.User.Edit">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        @await Html.PartialAsync("_TenantUserEditFields", Model)
+        <div class="flex gap-2.5 mt-6">
+            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.User.Edit">Kaydet</button>
+            <a href="@usersPath" class="btn btn-secondary px-6">İptal</a>
+        </div>
+    </form>
+</div>

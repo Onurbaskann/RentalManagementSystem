@@ -1,5 +1,6 @@
 ﻿@model KiraTakip.Models.ViewModels.ReservationCreateViewModel
 @using KiraTakip.Models
+@using KiraTakip.Models.ViewModels
 @{
     ViewData["Title"] = "Rezervasyon Ekle";
 }
@@ -134,10 +135,45 @@
         </div>
 
         <div class="card mb-4">
+            <div class="form-group mb-5">
+                <label asp-for="Title" class="form-label">Toplantı Başlığı <span class="text-red-500">*</span></label>
+                <input asp-for="Title" class="form-control" maxlength="200" />
+                <span asp-validation-for="Title" class="form-error"></span>
+            </div>
             <div class="form-group mb-0">
                 <label asp-for="Description" class="form-label">Açıklama <span class="text-muted font-normal">(opsiyonel)</span></label>
                 <textarea asp-for="Description" class="form-control" rows="2" placeholder="Rezervasyon konusu, katılımcılar vb."></textarea>
+                <span asp-validation-for="Description" class="form-error"></span>
             </div>
+            <div class="form-group mt-4 mb-0">
+                <label asp-for="Notes" class="form-label">Toplantı Notları <span class="text-muted font-normal">(opsiyonel)</span></label>
+                <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+                <span asp-validation-for="Notes" class="form-error"></span>
+            </div>
+            <div class="form-group mt-4 mb-0">
+                <label asp-for="InternalNotes" class="form-label">İç Notlar <span class="text-muted font-normal">(kiracıya gösterilmez)</span></label>
+                <textarea asp-for="InternalNotes" class="form-control" rows="2"></textarea>
+                <span asp-validation-for="InternalNotes" class="form-error"></span>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="text-lg font-bold mb-1">Katılımcılar</div>
+            <div class="text-xs text-muted mb-4">Talep sahibi otomatik olarak ana katılımcı eklenir. Diğer katılımcılar isteğe bağlıdır.</div>
+            @for (var index = 0; index < Math.Max(3, Model.Attendees.Count); index++)
+            {
+                var attendee = index < Model.Attendees.Count ? Model.Attendees[index] : new ReservationAttendeeInputViewModel();
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <input name="Attendees[@index].DisplayName" value="@attendee.DisplayName" class="form-control" placeholder="Ad soyad" maxlength="200" />
+                        @Html.ValidationMessage($"Attendees[{index}].DisplayName", null, new { @class = "form-error" })
+                    </div>
+                    <div>
+                        <input name="Attendees[@index].EmailAddress" value="@attendee.EmailAddress" type="email" class="form-control" placeholder="E-posta" maxlength="320" />
+                        @Html.ValidationMessage($"Attendees[{index}].EmailAddress", null, new { @class = "form-error" })
+                    </div>
+                </div>
+            }
         </div>
 
         <div class="flex justify-end gap-3 mt-6">
@@ -145,7 +181,8 @@
                     nameof(KiraTakip.Controllers.ReservationController.Index),
                     nameof(KiraTakip.Controllers.ReservationController).Replace("Controller", ""))"
                class="btn btn-secondary px-6">İptal</a>
-            <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.Reservation.Create">Rezervasyon Oluştur</button>
+            <button type="submit" class="btn btn-secondary px-6" asp-permission="@PermissionCatalog.Reservation.Create">Talep Oluştur</button>
+            <button type="submit" name="CreateAndApprove" value="true" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.Reservation.Approve">Oluştur ve Onayla</button>
         </div>
     </form>
 </div>

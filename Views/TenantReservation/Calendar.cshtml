@@ -1,0 +1,89 @@
+@model TenantReservationCalendarResultDto
+@{
+    Layout = "_KiraciLayout";
+    ViewData["Title"] = "Rezervasyon Uygunluğu";
+    var days = Enumerable.Range(0, 7).Select(offset => Model.FromDate.AddDays(offset)).ToList();
+    var previousDate = Model.FromDate.AddDays(-7).ToString("yyyy-MM-dd");
+    var nextDate = Model.FromDate.AddDays(7).ToString("yyyy-MM-dd");
+    var selectedUnitQuery = Model.SelectedUnitId.HasValue ? $"&unitId={Model.SelectedUnitId}" : string.Empty;
+    var calendarUnits = Model.SelectedUnitId.HasValue
+        ? Model.Units.Where(unit => unit.Id == Model.SelectedUnitId.Value).ToList()
+        : Model.Units;
+}
+
+<div class="page-header flex items-center justify-between gap-3 flex-wrap">
+    <div>
+        <div class="page-title">Rezervasyon Uygunluğu</div>
+        <div class="page-subtitle">@Model.FromDate.ToString("dd.MM.yyyy") – @Model.ToDate.ToString("dd.MM.yyyy")</div>
+    </div>
+    <a asp-controller="TenantReservation" asp-action="Index" class="btn btn-secondary">Rezervasyonlarıma Dön</a>
+</div>
+
+<div class="card mb-4">
+    <form method="get" asp-controller="TenantReservation" asp-action="Calendar" class="flex items-end gap-3 flex-wrap">
+        <div class="form-group mb-0 min-w-[260px]">
+            <label for="unitId">Birim</label>
+            <select id="unitId" name="unitId" class="form-control">
+                <option value="">Tüm rezervasyon birimleri</option>
+                @foreach (var unit in calendarUnits)
+                {
+                    <option value="@unit.Id" selected="@(Model.SelectedUnitId == unit.Id)">@unit.PropertyName — @unit.Name</option>
+                }
+            </select>
+        </div>
+        <div class="form-group mb-0">
+            <label for="date">Hafta</label>
+            <input id="date" name="date" type="date" value="@Model.FromDate.ToString("yyyy-MM-dd")" class="form-control" />
+        </div>
+        <button type="submit" class="btn btn-primary">Göster</button>
+        <div class="flex gap-2 ml-auto">
+            <a href="/Tenant/MyReservations/Calendar?date=@previousDate@selectedUnitQuery" class="btn btn-secondary">← Önceki</a>
+            <a href="/Tenant/MyReservations/Calendar?date=@nextDate@selectedUnitQuery" class="btn btn-secondary">Sonraki →</a>
+        </div>
+    </form>
+</div>
+
+<div class="flex gap-4 mb-3 text-xs text-slate-600" aria-label="Takvim açıklaması">
+    <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-violet-100 border border-violet-300"></span> Dolu</span>
+    <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-100 border border-amber-300"></span> Onay bekleyen zaman</span>
+</div>
+
+<div class="flex gap-4 mb-3 text-xs text-slate-600" aria-label="Geçmiş zaman açıklaması">
+    <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-slate-100 border border-slate-300"></span> Tamamlandı</span>
+    <span class="inline-flex items-center gap-1.5 text-slate-400">Geçmiş boş günler “Geçmiş” olarak gösterilir.</span>
+</div>
+
+<div class="card p-0 overflow-hidden">
+    <div class="table-wrapper">
+        <table class="w-full min-w-[1200px]">
+            <thead><tr><th class="w-56">Birim</th>@foreach (var day in days) { <th class="min-w-[135px]">@day.ToString("dddd")<span class="cell-sub">@day.ToString("dd.MM")</span></th> }</tr></thead>
+            <tbody>
+                @foreach (var unit in Model.Units)
+                {
+                    <tr>
+                        <td class="align-top"><span class="font-semibold">@unit.Name</span><span class="cell-sub">@unit.PropertyName</span></td>
+                        @foreach (var day in days)
+                        {
+                            var dayEnd = day.AddDays(1);
+                            var entries = Model.Items.Where(item => item.UnitId == unit.Id && item.StartDate < dayEnd && item.EndDate > day).ToList();
+                            <td class="align-top p-2">
+                                @foreach (var entry in entries)
+                                {
+                                    var confirmed = entry.Status == ReservationStatus.Confirmed;
+                                    var completed = entry.Status == ReservationStatus.Completed;
+                                    <div class="rounded-lg border p-2 mb-2 @(completed ? "bg-slate-100 border-slate-300 text-slate-600" : confirmed ? "bg-violet-50 border-violet-200 text-violet-900" : "bg-amber-50 border-amber-200 text-amber-900")">
+                                        <span class="block text-[11px] font-bold">@entry.StartDate.ToString("HH:mm")–@entry.EndDate.ToString("HH:mm")</span>
+                                        <span class="block text-xs font-semibold">@(completed ? entry.IsOwnedByCurrentTenant ? "Rezervasyonunuz — Tamamlandı" : "Tamamlandı" : entry.IsOwnedByCurrentTenant ? "Rezervasyonunuz" : confirmed ? "Dolu" : "Onay bekleyen zaman")</span>
+                                        <span class="sr-only">@entry.Status.GetDisplayLabel()</span>
+                                    </div>
+                                }
+                                @if (entries.Count == 0) { <span class="text-[11px] text-slate-300">@(day.Date < DateTime.Today ? "Geçmiş" : "Uygun")</span> }
+                            </td>
+                        }
+                    </tr>
+                }
+                @if (calendarUnits.Count == 0) { <tr><td colspan="8" class="py-14 text-center text-slate-400">Rezervasyona uygun birim bulunamadı.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>

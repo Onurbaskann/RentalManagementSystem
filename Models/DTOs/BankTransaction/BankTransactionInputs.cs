@@ -26,6 +26,10 @@ public record GetBankTransactionCandidatesInput(int PaymentId);
 
 public record PaymentMatchingBasisDto(decimal Amount, DateTime Date);
 
+public record PaymentMatchingPolicyDto(
+    decimal AmountTolerancePercent,
+    int DateToleranceDays);
+
 public record PaymentMatchingContextDto(
     int PaymentId,
     int PropertyId,

@@ -11,11 +11,22 @@ public interface IReservationService
     Task<List<ReservationListItemDto>> GetTenantReservationsAsync(GetTenantReservationsInput input);
     Task<PagedResult<ReservationListItemDto>> GetTenantReservationsPageAsync(GetTenantReservationsPageInput input);
     Task<ReservationListItemDto> GetByIdAsync(GetReservationByIdInput input);
+    Task<ReservationListItemDto> GetTenantByIdAsync(GetTenantReservationByIdInput input);
     Task<ReservationCalculationResultDto> CalculateAsync(CalculateReservationInput input);
     Task<int> CreateAsync(CreateReservationInput input);
+    Task<int> CreateRequestAsync(CreateReservationRequestInput input);
     Task CancelAsync(CancelReservationInput input);
+    Task CancelTenantAsync(CancelTenantReservationInput input);
+    Task ApproveAsync(ApproveReservationInput input);
+    Task RejectAsync(RejectReservationInput input);
+    Task UpdateAsync(UpdateReservationInput input);
     Task<int> TransferToChargeAsync(TransferReservationToChargeInput input);
     Task<ReservationFormOptionsDto> GetFormOptionsAsync(GetReservationFormOptionsInput input);
+    Task<ReservationCalendarResultDto> GetCalendarAsync(GetReservationCalendarInput input);
+    Task<TenantReservationCalendarResultDto> GetTenantCalendarAsync(
+        GetTenantReservationCalendarInput input);
+    Task<ReservationAvailabilityResultDto> CheckAvailabilityAsync(
+        CheckReservationAvailabilityInput input);
 
     // Ücret kuralları (birime özel)
     Task<List<ReservationRateOverrideListItemDto>> GetRateRulesAsync();

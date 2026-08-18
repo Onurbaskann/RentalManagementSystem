@@ -1,0 +1,87 @@
+@model KiraTakip.Models.ViewModels.TenantReservationCreateViewModel
+@using KiraTakip.Models.ViewModels
+@{
+    Layout = "_KiraciLayout";
+    ViewData["Title"] = "Rezervasyon Talebi";
+}
+
+<div class="max-w-[900px] mx-auto">
+    <div class="page-header">
+        <a asp-controller="TenantReservation" asp-action="Index" class="text-[12.5px] text-muted no-underline inline-block mb-2">← Rezervasyonlarım</a>
+        <div class="page-title">Rezervasyon Talebi Oluştur</div>
+        <div class="page-subtitle">Talebiniz yetkili kullanıcı tarafından incelendikten sonra kesinleşir.</div>
+    </div>
+
+    <form method="post" asp-controller="TenantReservation" asp-action="Create">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="form-error bg-red-50 border border-red-200 rounded-lg p-3 mb-5"></div>
+
+        <div class="card mb-4">
+            <div class="form-group">
+                <label asp-for="UnitId" class="form-label">Birim <span class="text-red-500">*</span></label>
+                <select asp-for="UnitId" class="form-control">
+                    <option value="">— Birim seçin —</option>
+                    @foreach (var unit in Model.Units)
+                    {
+                        <option value="@unit.Id">@unit.PropertyName — @unit.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="UnitId" class="form-error"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Title" class="form-label">Toplantı Başlığı <span class="text-red-500">*</span></label>
+                <input asp-for="Title" class="form-control" maxlength="200" />
+                <span asp-validation-for="Title" class="form-error"></span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-group mb-0">
+                    <label asp-for="StartDate" class="form-label">Başlangıç <span class="text-red-500">*</span></label>
+                    <input asp-for="StartDate" type="datetime-local" class="form-control" />
+                    <span asp-validation-for="StartDate" class="form-error"></span>
+                </div>
+                <div class="form-group mb-0">
+                    <label asp-for="EndDate" class="form-label">Bitiş <span class="text-red-500">*</span></label>
+                    <input asp-for="EndDate" type="datetime-local" class="form-control" />
+                    <span asp-validation-for="EndDate" class="form-error"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="form-group">
+                <label asp-for="Description" class="form-label">Açıklama <span class="text-muted font-normal">(opsiyonel)</span></label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Description" class="form-error"></span>
+            </div>
+            <div class="form-group mb-0">
+                <label asp-for="Notes" class="form-label">Toplantı Notları <span class="text-muted font-normal">(opsiyonel)</span></label>
+                <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+                <span asp-validation-for="Notes" class="form-error"></span>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="text-lg font-bold mb-1">Katılımcılar</div>
+            <div class="text-xs text-muted mb-4">Siz otomatik olarak ana katılımcı eklenirsiniz.</div>
+            @for (var index = 0; index < Math.Max(3, Model.Attendees.Count); index++)
+            {
+                var attendee = index < Model.Attendees.Count ? Model.Attendees[index] : new ReservationAttendeeInputViewModel();
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <input name="Attendees[@index].DisplayName" value="@attendee.DisplayName" class="form-control" placeholder="Ad soyad" maxlength="200" />
+                        @Html.ValidationMessage($"Attendees[{index}].DisplayName", null, new { @class = "form-error" })
+                    </div>
+                    <div>
+                        <input name="Attendees[@index].EmailAddress" value="@attendee.EmailAddress" type="email" class="form-control" placeholder="E-posta" maxlength="320" />
+                        @Html.ValidationMessage($"Attendees[{index}].EmailAddress", null, new { @class = "form-error" })
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="flex justify-end gap-3">
+            <a asp-controller="TenantReservation" asp-action="Index" class="btn btn-secondary">İptal</a>
+            <button type="submit" class="btn btn-primary">Talep Gönder</button>
+        </div>
+    </form>
+</div>

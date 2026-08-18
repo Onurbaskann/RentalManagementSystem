@@ -72,13 +72,15 @@ public record TenantUserEditCoreDto(
     string FullName,
     string Email,
     bool IsActive,
+    bool HasAccessToAllUnits,
     int RoleId,
     string RoleName);
 
 public record GetTenantUserForEditInput(
     int TenantId,
     string UserId,
-    string CurrentUserId);
+    string CurrentUserId,
+    ReservationAccessScopeInput AccessScope);
 
 public record TenantUserEditDataDto(
     string Id,
@@ -86,11 +88,18 @@ public record TenantUserEditDataDto(
     string Email,
     bool IsActive,
     int RoleId,
-    List<RoleLookupDto> Roles);
+    bool HasAccessToAllUnits,
+    List<int> SelectedUnitIds,
+    List<RoleLookupDto> Roles,
+    List<UnitLookupDto> LeaseUnits,
+    List<UnitListItemDto> ReservableUnits);
 
 public record EditTenantUserInput(
     int TenantId,
     string UserId,
     string FullName,
     int RoleId,
-    string CurrentUserId);
+    bool HasAccessToAllUnits,
+    List<int> UnitIds,
+    string CurrentUserId,
+    ReservationAccessScopeInput AccessScope);

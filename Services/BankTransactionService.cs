@@ -15,6 +15,7 @@ public class BankTransactionService(
     IPaymentAllocationRepository paymentAllocationRepository,
     IPaymentMatchRepository paymentMatchRepository,
     IEnumerable<IBankaHareketiParser> parsers,
+    IOperationalPolicyProvider operationalPolicyProvider,
     IUnitOfWork unitOfWork) : IBankTransactionService, ITransactionalService
 {
     public async Task ImportAsync(ImportBankTransactionsInput input)
@@ -119,6 +120,7 @@ public class BankTransactionService(
             ? []
             : await paymentAllocationRepository.GetCandidatesAsync(
                 basis,
+                GetMatchingPolicy(),
                 input.PropertyIds,
                 input.UnitIds);
     }
@@ -131,7 +133,9 @@ public class BankTransactionService(
         var basis = await paymentAllocationRepository.GetMatchingBasisAsync(input.PaymentId);
         return basis == null
             ? []
-            : await bankTransactionRepository.GetTransactionCandidatesAsync(basis);
+            : await bankTransactionRepository.GetTransactionCandidatesAsync(
+                basis,
+                GetMatchingPolicy());
     }
 
     private static bool IsOutsideScope(
@@ -145,5 +149,13 @@ public class BankTransactionService(
 
         return propertyIds?.Contains(propertyId) != true
             && unitIds?.Contains(unitId) != true;
+    }
+
+    private PaymentMatchingPolicyDto GetMatchingPolicy()
+    {
+        var policy = operationalPolicyProvider.Current;
+        return new PaymentMatchingPolicyDto(
+            policy.BankMatchingAmountTolerancePercent,
+            policy.BankMatchingDateToleranceDays);
     }
 }

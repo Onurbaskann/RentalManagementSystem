@@ -975,7 +975,7 @@ public class SeedDataService
 
         var btRezervasyon = await _ctx.ChargeTypes.FirstOrDefaultAsync(b => b.Code == "TOPLANTI");
 
-        // 1. Geçmiş Reservation (Tahakkuka Aktarıldı)
+        // 1. Geçmiş ve tahakkuku bulunan onaylı rezervasyon
         var rezervasyon1 = new Reservation
         {
             UnitId = salon.Id,
@@ -990,7 +990,7 @@ public class SeedDataService
             KdvRate = 20,
             KdvAmount = 200,
             TotalAmount = 1200,
-            Status = ReservationStatus.TransferredToCharge,
+            Status = ReservationStatus.Confirmed,
         };
         _ctx.Reservations.Add(rezervasyon1);
         await _ctx.SaveChangesAsync();
@@ -1047,7 +1047,7 @@ public class SeedDataService
             KdvRate = 20,
             KdvAmount = 200,
             TotalAmount = 1200,
-            Status = ReservationStatus.Planned,
+            Status = ReservationStatus.Confirmed,
         });
 
         // 3. Z02 Rezervasyonu (Gelecek - Planlandı)
@@ -1068,7 +1068,7 @@ public class SeedDataService
                 KdvRate = 20,
                 KdvAmount = 100,
                 TotalAmount = 600,
-                Status = ReservationStatus.Planned
+                Status = ReservationStatus.Confirmed
             });
         }
 

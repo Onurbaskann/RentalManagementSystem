@@ -13,8 +13,8 @@ namespace KiraTakip.Infrastructure.DependencyInjection
         /// CustomerBLeaseBusinessRules), bu taramanın bulacağı implementasyon sınıfını
         /// değiştirmekten ibarettir — servise dokunulmaz.
         ///
-        /// Şu an assembly içinde IBusinessRules'tan türeyen bir interface olmadığından
-        /// bu adımda hiçbir kayıt yapılmaz; seam inert'tir (davranış değişmez).
+        /// Rezervasyon politikaları gibi domain kural implementasyonları bu taramayla
+        /// kendi interface'leri üzerinden scoped olarak kaydedilir.
         /// </summary>
         public static IServiceCollection AddBusinessRulesModule(this IServiceCollection services)
         {

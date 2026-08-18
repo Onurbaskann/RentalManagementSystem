@@ -124,10 +124,11 @@ public enum ChargeSourceType
 
 public enum ReservationStatus
 {
-    Planned = 1,
+    Confirmed = 1,
     Completed = 2,
     Cancelled = 3,
-    TransferredToCharge = 4
+    PendingApproval = 5,
+    Rejected = 6
 }
 
 public enum ChargeTypeBehavior

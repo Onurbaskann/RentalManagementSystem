@@ -441,11 +441,26 @@ public class LeaseRepository : RepositoryBase<Lease>, ILeaseRepository
             .ToListAsync();
     }
 
-    public async Task<List<UnitLookupDto>> GetActiveLeaseUnitsByTenantIdAsync(int tenantId, CancellationToken ct = default)
+    public async Task<List<UnitLookupDto>> GetActiveLeaseUnitsByTenantIdAsync(
+        int tenantId,
+        List<int>? authorizedPropertyIds = null,
+        List<int>? authorizedUnitIds = null,
+        CancellationToken ct = default)
     {
-        return await _dbSet
+        var query = _dbSet
             .AsNoTracking()
-            .Where(s => s.TenantId == tenantId && s.Status == LeaseStatus.Active)
+            .Where(s => s.TenantId == tenantId && s.Status == LeaseStatus.Active);
+
+        if (authorizedPropertyIds != null || authorizedUnitIds != null)
+        {
+            var propertyIds = authorizedPropertyIds ?? [];
+            var unitIds = authorizedUnitIds ?? [];
+            query = query.Where(lease =>
+                propertyIds.Contains(lease.Unit.PropertyId)
+                || unitIds.Contains(lease.UnitId));
+        }
+
+        return await query
             .Select(s => new UnitLookupDto
             {
                 Id = s.UnitId,

@@ -1,0 +1,48 @@
+@model KiraTakip.Models.ViewModels.SystemSettingEditViewModel
+@using KiraTakip.Models.Settings
+@{
+    ViewData["Title"] = "Sistem Ayarı Düzenle";
+    ViewData["UseCentralFeedback"] = true;
+}
+
+<div class="max-w-[680px] mx-auto">
+    <div class="page-header">
+        <div>
+            <div class="page-title">Sistem Ayarı Düzenle</div>
+            <div class="page-subtitle">@Model.GroupDisplayName</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div class="font-semibold text-slate-800">@Model.DisplayName</div>
+            <div class="text-sm text-slate-600 mt-1">@Model.Description</div>
+            <div class="text-xs font-mono text-slate-400 mt-2">@Model.Key</div>
+        </div>
+
+        <form method="post"
+              action="/Admin/SystemSetting/Edit/@Model.Id.ToHashId()"
+              asp-form-write-permission="@PermissionCatalog.Parameter.Edit">
+            @Html.AntiForgeryToken()
+            <input asp-for="Id" type="hidden" />
+
+            <div class="form-group">
+                <label asp-for="Value" class="form-label">Değer <span class="text-red-500">*</span></label>
+                @if (Model.InputKind == SystemSettingInputKind.Integer)
+                {
+                    <input asp-for="Value" type="number" min="@Model.MinimumValue" max="@Model.MaximumValue" class="form-control" />
+                }
+                else
+                {
+                    <input asp-for="Value" type="text" class="form-control" />
+                }
+                <span asp-validation-for="Value" class="text-red-500 text-xs mt-1"></span>
+            </div>
+
+            <div class="flex gap-2 mt-5">
+                <button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.Parameter.Edit">Kaydet</button>
+                <a asp-controller="AdminSystemSetting" asp-action="Index" class="btn btn-secondary px-6">İptal</a>
+            </div>
+        </form>
+    </div>
+</div>

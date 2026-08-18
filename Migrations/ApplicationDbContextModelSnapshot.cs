@@ -17,7 +17,7 @@ namespace KiraTakip.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.18")
+                .HasAnnotation("ProductVersion", "9.0.19")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -1935,6 +1935,31 @@ namespace KiraTakip.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("OnayTarihi");
+
+                    b.Property<string>("ApprovedByUserId")
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("OnaylayanKullaniciId");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("IptalNedeni");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("IptalTarihi");
+
+                    b.Property<string>("CancelledByUserId")
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("IptalEdenKullaniciId");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("TamamlanmaTarihi");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1955,6 +1980,11 @@ namespace KiraTakip.Migrations
                         .HasColumnType("int")
                         .HasColumnName("UcretsizSureDakika");
 
+                    b.Property<string>("InternalNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("IcNotlar");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit")
                         .HasColumnName("Aktif");
@@ -1972,6 +2002,16 @@ namespace KiraTakip.Migrations
                         .HasColumnType("decimal(5,2)")
                         .HasColumnName("KdvOrani");
 
+                    b.Property<string>("LastModificationReason")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("SonDegisiklikNedeni");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("Notlar");
+
                     b.Property<int>("PaidDurationMinutes")
                         .HasColumnType("int")
                         .HasColumnName("UcretliSureDakika");
@@ -1981,6 +2021,39 @@ namespace KiraTakip.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("TarifeTutari");
 
+                    b.Property<DateTime?>("RejectedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("RetTarihi");
+
+                    b.Property<string>("RejectedByUserId")
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("ReddedenKullaniciId");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("RetNedeni");
+
+                    b.Property<string>("RequestedByDisplayNameSnapshot")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("TalepEdenAdSoyad");
+
+                    b.Property<string>("RequestedByEmailSnapshot")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)")
+                        .HasColumnName("TalepEdenEposta");
+
+                    b.Property<string>("RequestedByUserId")
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("TalepEdenKullaniciId");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2")
                         .HasColumnName("BaslangicTarihi");
@@ -1988,11 +2061,16 @@ namespace KiraTakip.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int")
                         .HasColumnName("Durum")
-                        .HasComment("Planned=1, Completed=2, Cancelled=3, TransferredToCharge=4");
+                        .HasComment("Confirmed=1, Completed=2, Cancelled=3, PendingApproval=5, Rejected=6");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int")
                         .HasColumnName("KiraciId");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("Baslik");
 
                     b.Property<decimal>("TotalAmount")
                         .HasPrecision(18, 2)
@@ -2020,20 +2098,96 @@ namespace KiraTakip.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ApprovedByUserId");
+
+                    b.HasIndex("CancelledByUserId");
+
+                    b.HasIndex("RejectedByUserId");
+
+                    b.HasIndex("RequestedByUserId");
+
                     b.HasIndex("TenantId")
                         .HasDatabaseName("IX_Rezervasyonlari_KiraciId_Aktif")
                         .HasFilter("[IsDeleted] = 0");
 
-                    b.HasIndex("UnitId", "StartDate");
+                    b.HasIndex("UnitId", "StartDate", "EndDate", "Status")
+                        .HasDatabaseName("IX_Rezervasyonlari_BirimTarihDurum_Aktif")
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("Rezervasyonlar", t =>
                         {
+                            t.HasCheckConstraint("CK_Rezervasyonlari_Durum", "[Durum] IN (1, 2, 3, 5, 6)");
+
                             t.HasCheckConstraint("CK_Rezervasyonlari_KdvOrani", "[KdvOrani] IS NULL OR [KdvOrani] BETWEEN 0 AND 100");
 
                             t.HasCheckConstraint("CK_Rezervasyonlari_TarihSirasi", "[BitisTarihi] > [BaslangicTarihi]");
 
                             t.HasCheckConstraint("CK_Rezervasyonlari_Tutarlar_Pozitif", "[TarifeTutari] >= 0 AND [ToplamTutar] >= 0 AND ([KdvTutari] IS NULL OR [KdvTutari] >= 0)");
                         });
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.ReservationAttendee", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("AdSoyad");
+
+                    b.Property<string>("EmailAddress")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)")
+                        .HasColumnName("EpostaAdresi");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("Aktif");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsReservationOwner")
+                        .HasColumnType("bit")
+                        .HasColumnName("RezervasyonSahibiMi");
+
+                    b.Property<string>("NormalizedEmailAddress")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)")
+                        .HasColumnName("NormalizeEpostaAdresi");
+
+                    b.Property<int>("ReservationId")
+                        .HasColumnType("int")
+                        .HasColumnName("RezervasyonId");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReservationId", "NormalizedEmailAddress")
+                        .IsUnique()
+                        .HasDatabaseName("UX_RezervasyonKatilimcilari_RezervasyonEposta")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("RezervasyonKatilimcilari");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.ReservationRateOverride", b =>
@@ -2204,6 +2358,56 @@ namespace KiraTakip.Migrations
                         .IsUnique();
 
                     b.ToTable("RolYetkileri");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.SystemSetting", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("Aktif");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("Anahtar");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("Deger");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique()
+                        .HasDatabaseName("UX_SistemAyarlari_Anahtar_Aktif")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("SistemAyarlari");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.Tenant", b =>
@@ -3021,6 +3225,26 @@ namespace KiraTakip.Migrations
 
             modelBuilder.Entity("KiraTakip.Models.Entities.Reservation", b =>
                 {
+                    b.HasOne("KiraTakip.Models.Entities.ApplicationUser", "ApprovedByUser")
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("KiraTakip.Models.Entities.ApplicationUser", "CancelledByUser")
+                        .WithMany()
+                        .HasForeignKey("CancelledByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("KiraTakip.Models.Entities.ApplicationUser", "RejectedByUser")
+                        .WithMany()
+                        .HasForeignKey("RejectedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("KiraTakip.Models.Entities.ApplicationUser", "RequestedByUser")
+                        .WithMany()
+                        .HasForeignKey("RequestedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("KiraTakip.Models.Entities.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
@@ -3033,9 +3257,28 @@ namespace KiraTakip.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("ApprovedByUser");
+
+                    b.Navigation("CancelledByUser");
+
+                    b.Navigation("RejectedByUser");
+
+                    b.Navigation("RequestedByUser");
+
                     b.Navigation("Tenant");
 
                     b.Navigation("Unit");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.ReservationAttendee", b =>
+                {
+                    b.HasOne("KiraTakip.Models.Entities.Reservation", "Reservation")
+                        .WithMany("Attendees")
+                        .HasForeignKey("ReservationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Reservation");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.ReservationRateOverride", b =>
@@ -3218,6 +3461,11 @@ namespace KiraTakip.Migrations
             modelBuilder.Entity("KiraTakip.Models.Entities.Property", b =>
                 {
                     b.Navigation("Units");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.Reservation", b =>
+                {
+                    b.Navigation("Attendees");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.Role", b =>

@@ -30,6 +30,7 @@ public interface IPaymentAllocationRepository : IRepositoryBase<PaymentAllocatio
     Task<PaymentMatchingBasisDto?> GetMatchingBasisAsync(int paymentId);
     Task<List<PaymentCandidateDto>> GetCandidatesAsync(
         PaymentMatchingBasisDto basis,
+        PaymentMatchingPolicyDto policy,
         IReadOnlyList<int>? propertyIds,
         IReadOnlyList<int>? unitIds = null);
     Task<DocumentOwnerContextDto?> GetDocumentOwnerContextAsync(int paymentId);

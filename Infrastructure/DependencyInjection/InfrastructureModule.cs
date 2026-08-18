@@ -32,6 +32,9 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.Configure<SmtpSettings>(configuration.GetSection("Smtp"));
             services.Configure<SecureTokenSettings>(configuration.GetSection("SecureToken"));
             services.Configure<PaymentLinkSettings>(configuration.GetSection("PaymentLink"));
+            services.Configure<ReservationCompletionSettings>(configuration.GetSection("ReservationCompletion"));
+            services.AddSingleton(TimeProvider.System);
+            services.AddHostedService<ReservationCompletionBackgroundService>();
 
             // Hashids Configuration
             var hashidsSection = configuration.GetSection("Hashids");
