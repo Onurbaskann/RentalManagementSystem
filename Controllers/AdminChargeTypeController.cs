@@ -39,8 +39,12 @@ public class AdminChargeTypeController(IChargeTypeService chargeTypeService) : C
 
         try
         {
-            await chargeTypeService.CreateAsync(
-                new CreateInput(model.Name, model.Behavior, model.SortOrder, model.IsActive));
+            var id = await chargeTypeService.CreateAsync(
+                new CreateInput(model.Name, model.Behavior, model.SortOrder));
+            return RedirectToAction(
+                nameof(AdminPaymentStoreRoutingController.Index),
+                "AdminPaymentStoreRouting",
+                new { chargeTypeId = id });
         }
         catch (BusinessValidationException exception)
         {
@@ -48,7 +52,6 @@ public class AdminChargeTypeController(IChargeTypeService chargeTypeService) : C
             return View(model);
         }
 
-        return RedirectToAction(nameof(Index));
     }
 
     [HttpGet("Edit/{id}")]

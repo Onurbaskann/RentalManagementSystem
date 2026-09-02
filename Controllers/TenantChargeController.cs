@@ -112,7 +112,8 @@ public class TenantChargeController(
             viewModel.Receipt.FileName,
             viewModel.Receipt.ContentType,
             stream.ToArray(),
-            new PaymentAccessScopeInput(ScopePropertyIds(), ScopeUnitIds())));
+            new PaymentAccessScopeInput(ScopePropertyIds(), ScopeUnitIds()),
+            ChargeLineItemId: viewModel.ChargeLineItemId));
 
         return RedirectToAction(nameof(Details), new { id = viewModel.ChargeId });
     }

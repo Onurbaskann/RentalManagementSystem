@@ -13,6 +13,11 @@ public class CreatePaymentViewModelValidator : IValidator<CreatePaymentViewModel
         if (input.ChargeId <= 0)
             errors.Add(new ValidationError("Tahakkuk seçilmelidir.", nameof(input.ChargeId)));
 
+        if (input.ChargeLineItemId is not > 0)
+            errors.Add(new ValidationError(
+                "Ödeme yapılacak tahakkuk kalemi seçilmelidir.",
+                nameof(input.ChargeLineItemId)));
+
         if (input.Amount < 0.01m)
             errors.Add(new ValidationError("Tutar sıfırdan büyük olmalıdır.", nameof(input.Amount)));
 

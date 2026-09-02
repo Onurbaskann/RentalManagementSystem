@@ -1,6 +1,6 @@
 namespace KiraTakip.Models.Dtos;
 
-public record ImportBankTransactionsInput(Stream File, string BankCode);
+public record ImportBankTransactionsInput(Stream File, string BankCode, int StoreId);
 
 public record GetBankTransactionsInput(BankMatchStatus? Status = null);
 
@@ -24,7 +24,7 @@ public record GetBankTransactionPaymentCandidatesInput(
 
 public record GetBankTransactionCandidatesInput(int PaymentId);
 
-public record PaymentMatchingBasisDto(decimal Amount, DateTime Date);
+public record PaymentMatchingBasisDto(decimal Amount, DateTime Date, int StoreAccountId);
 
 public record PaymentMatchingPolicyDto(
     decimal AmountTolerancePercent,
@@ -34,4 +34,5 @@ public record PaymentMatchingContextDto(
     int PaymentId,
     int PropertyId,
     int UnitId,
-    PaymentStatus Status);
+    PaymentStatus Status,
+    int StoreAccountId);

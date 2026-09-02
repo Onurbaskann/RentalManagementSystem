@@ -11,32 +11,6 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
 {
     public ChargeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
-    public Task<List<PaymentPortalChargeDto>> GetPaymentPortalChargesAsync(
-        int tenantId,
-        DateTime dueDateLimit,
-        CancellationToken cancellationToken = default)
-        => _dbSet
-            .AsNoTracking()
-            .Where(charge => charge.TenantId == tenantId
-                && charge.Status != ChargeStatus.Paid
-                && charge.Status != ChargeStatus.Cancelled
-                && charge.DueDate <= dueDateLimit
-                && charge.TotalAmount > charge.Allocations
-                    .Where(allocation => allocation.Status == PaymentStatus.Approved)
-                    .Sum(allocation => allocation.Amount))
-            .OrderBy(charge => charge.DueDate)
-            .Select(charge => new PaymentPortalChargeDto(
-                charge.Id,
-                charge.Unit.Property.Name,
-                charge.Unit.Name,
-                charge.PeriodStart,
-                charge.DueDate,
-                charge.TotalAmount,
-                charge.Allocations
-                    .Where(allocation => allocation.Status == PaymentStatus.Approved)
-                    .Sum(allocation => allocation.Amount)))
-            .ToListAsync(cancellationToken);
-
     // ── Listeleme (DTO) ───────────────────────────────────────────────────
     public async Task<List<ChargeListItemDto>> GetListAsync(int? leaseId, List<int>? authorizedPropertyIds, List<int>? authorizedUnitIds = null)
     {
@@ -68,6 +42,8 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                               .Count(o => o.ChargeId == t.Id && !o.IsDeleted && o.Status == PaymentStatus.PendingApproval),
                           LineItems = t.LineItems.Select(k => new ChargeLineItemDto
                           {
+                              Id = k.Id,
+                              ChargeTypeId = k.ChargeTypeId,
                               ChargeTypeCode = k.ChargeType.Code,
                               ChargeTypeSortOrder = k.ChargeType.SortOrder,
                               ChargeTypeName = k.ChargeType.Name,
@@ -79,6 +55,10 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                               KdvRate = k.KdvRate,
                               VatAmount = k.KdvAmount,
                               TotalAmount = k.TotalAmount,
+                              PaidAmount = k.PaidAmount,
+                              PendingAmount = k.Allocations
+                                  .Where(o => o.Status == PaymentStatus.PendingApproval)
+                                  .Sum(o => (decimal?)o.Amount) ?? 0m,
                               SourceType = k.SourceType
                           }).ToList()
                       })
@@ -174,6 +154,8 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                                    PendingPaymentCount = t.Allocations.Count(o => o.Status == PaymentStatus.PendingApproval),
                                    LineItems = t.LineItems.Select(k => new ChargeLineItemDto
                                    {
+                                       Id = k.Id,
+                                       ChargeTypeId = k.ChargeTypeId,
                                        ChargeTypeCode = k.ChargeType.Code,
                                        ChargeTypeSortOrder = k.ChargeType.SortOrder,
                                        ChargeTypeName = k.ChargeType.Name,
@@ -185,6 +167,10 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                                        KdvRate = k.KdvRate,
                                        VatAmount = k.KdvAmount,
                                        TotalAmount = k.TotalAmount,
+                                       PaidAmount = k.PaidAmount,
+                                       PendingAmount = k.Allocations
+                                           .Where(o => o.Status == PaymentStatus.PendingApproval)
+                                           .Sum(o => (decimal?)o.Amount) ?? 0m,
                                        SourceType = k.SourceType
                                    }).ToList()
                                });
@@ -285,6 +271,8 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                     .Sum(payment => (decimal?)payment.Amount) ?? 0m,
                 LineItems = charge.LineItems.Select(lineItem => new ChargeLineItemDto
                 {
+                    Id = lineItem.Id,
+                    ChargeTypeId = lineItem.ChargeTypeId,
                     ChargeTypeCode = lineItem.ChargeType.Code,
                     ChargeTypeSortOrder = lineItem.ChargeType.SortOrder,
                     ChargeTypeName = lineItem.ChargeType.Name,
@@ -296,6 +284,10 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                     KdvRate = lineItem.KdvRate,
                     VatAmount = lineItem.KdvAmount,
                     TotalAmount = lineItem.TotalAmount,
+                    PaidAmount = lineItem.PaidAmount,
+                    PendingAmount = lineItem.Allocations
+                        .Where(allocation => allocation.Status == PaymentStatus.PendingApproval)
+                        .Sum(allocation => (decimal?)allocation.Amount) ?? 0m,
                     SourceType = lineItem.SourceType
                 }).ToList()
             });
@@ -355,6 +347,8 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                                CreatedAt = t.CreatedAt,
                                LineItems = t.LineItems.Select(k => new ChargeLineItemDto
                                {
+                                   Id = k.Id,
+                                   ChargeTypeId = k.ChargeTypeId,
                                    ChargeTypeCode = k.ChargeType.Code,
                                    ChargeTypeSortOrder = k.ChargeType.SortOrder,
                                    ChargeTypeName = k.ChargeType.Name,
@@ -366,11 +360,18 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                                    KdvRate = k.KdvRate,
                                    VatAmount = k.KdvAmount,
                                    TotalAmount = k.TotalAmount,
+                                   PaidAmount = k.PaidAmount,
+                                   PendingAmount = k.Allocations
+                                       .Where(o => o.Status == PaymentStatus.PendingApproval)
+                                       .Sum(o => (decimal?)o.Amount) ?? 0m,
                                    SourceType = k.SourceType
                                }).ToList(),
                                Allocations = t.Allocations.Select(o => new PaymentAllocationDto
                                {
                                    Id = o.Id,
+                                   ChargeLineItemId = o.ChargeLineItemId,
+                                   ChargeLineItemDescription = o.ChargeLineItem.Description,
+                                   ChargeTypeName = o.ChargeLineItem.ChargeType.Name,
                                    PaymentDate = o.PaymentDate,
                                    Amount = o.Amount,
                                    PaymentChannel = o.PaymentChannel,
@@ -781,6 +782,8 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                         .Sum(payment => (decimal?)payment.Amount) ?? 0m,
                     LineItems = charge.LineItems.Select(lineItem => new ChargeLineItemDto
                     {
+                        Id = lineItem.Id,
+                        ChargeTypeId = lineItem.ChargeTypeId,
                         ChargeTypeCode = lineItem.ChargeType.Code,
                         ChargeTypeSortOrder = lineItem.ChargeType.SortOrder,
                         ChargeTypeName = lineItem.ChargeType.Name,
@@ -792,6 +795,10 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                         KdvRate = lineItem.KdvRate,
                         VatAmount = lineItem.KdvAmount,
                         TotalAmount = lineItem.TotalAmount,
+                        PaidAmount = lineItem.PaidAmount,
+                        PendingAmount = lineItem.Allocations
+                            .Where(allocation => allocation.Status == PaymentStatus.PendingApproval)
+                            .Sum(allocation => (decimal?)allocation.Amount) ?? 0m,
                         SourceType = lineItem.SourceType
                     }).ToList()
                 })

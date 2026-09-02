@@ -293,5 +293,6 @@ public class UnitRepository : RepositoryBase<Unit>, IUnitRepository
     public async Task<bool> HasHistoricalDependencyAsync(int unitId)
         => await _ctx.Leases.IgnoreQueryFilters().AnyAsync(lease => lease.UnitId == unitId)
             || await _ctx.Reservations.IgnoreQueryFilters().AnyAsync(reservation => reservation.UnitId == unitId)
-            || await _ctx.Charges.IgnoreQueryFilters().AnyAsync(charge => charge.UnitId == unitId);
+            || await _ctx.Charges.IgnoreQueryFilters().AnyAsync(charge => charge.UnitId == unitId)
+            || await _ctx.PaymentStoreRoutings.IgnoreQueryFilters().AnyAsync(routing => routing.UnitId == unitId);
 }

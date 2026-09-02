@@ -29,6 +29,9 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
             {
                 Id = o.Id,
                 ChargeId = o.ChargeId,
+                ChargeLineItemId = o.ChargeLineItemId,
+                ChargeLineItemDescription = o.ChargeLineItem.Description,
+                ChargeTypeName = o.ChargeLineItem.ChargeType.Name,
                 LeaseId = o.LeaseId,
                 PaymentDate = o.PaymentDate,
                 Amount = o.Amount,
@@ -90,6 +93,9 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
             {
                 Id = o.Id,
                 ChargeId = o.ChargeId,
+                ChargeLineItemId = o.ChargeLineItemId,
+                ChargeLineItemDescription = o.ChargeLineItem.Description,
+                ChargeTypeName = o.ChargeLineItem.ChargeType.Name,
                 LeaseId = o.LeaseId,
                 PaymentDate = o.PaymentDate,
                 Amount = o.Amount,
@@ -121,6 +127,9 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
             {
                 Id = o.Id,
                 ChargeId = o.ChargeId,
+                ChargeLineItemId = o.ChargeLineItemId,
+                ChargeLineItemDescription = o.ChargeLineItem.Description,
+                ChargeTypeName = o.ChargeLineItem.ChargeType.Name,
                 LeaseId = o.LeaseId,
                 PaymentDate = o.PaymentDate,
                 Amount = o.Amount,
@@ -132,6 +141,10 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
                 EntryDate = o.EntryDate,
                 ApprovalDate = o.ApprovalDate,
                 RejectionReason = o.RejectionReason,
+                StoreAccountId = o.StoreAccountId,
+                StoreName = o.StoreAccount.Store.Name,
+                StoreProviderCode = o.StoreAccount.ProviderCode,
+                StoreCurrency = o.StoreAccount.Currency,
                 PropertyId = o.Charge.Unit.PropertyId,
                 TenantDisplayName = o.Charge.Tenant.Name,
                 ChargePeriodStart = o.Charge.PeriodStart,
@@ -156,6 +169,7 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
     {
         var query = _dbSet
             .Include(payment => payment.Charge)
+            .Include(payment => payment.ChargeLineItem)
             .Where(payment => payment.Id == id);
 
         query = ApplyScope(query, authorizedPropertyIds, authorizedUnitIds);
@@ -167,6 +181,12 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
         => await _dbSet.AsNoTracking()
             .Where(payment => payment.ChargeId == chargeId && payment.Status == PaymentStatus.Approved)
             .SumAsync(payment => (decimal?)payment.Amount) ?? 0m;
+
+    public Task<int?> GetChargeLineItemIdAsync(int paymentId)
+        => _dbSet.AsNoTracking()
+            .Where(payment => payment.Id == paymentId)
+            .Select(payment => (int?)payment.ChargeLineItemId)
+            .FirstOrDefaultAsync();
 
     public async Task<decimal> GetTenantApprovedTotalAsync(
         int tenantId,
@@ -234,13 +254,15 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
                 payment.Id,
                 payment.Charge.Unit.PropertyId,
                 payment.Charge.UnitId,
-                payment.Status))
+                payment.Status,
+                payment.StoreAccountId))
             .FirstOrDefaultAsync();
 
     public Task<PaymentMatchingBasisDto?> GetMatchingBasisAsync(int paymentId)
         => _dbSet.AsNoTracking()
             .Where(payment => payment.Id == paymentId)
-            .Select(payment => new PaymentMatchingBasisDto(payment.Amount, payment.PaymentDate))
+            .Select(payment => new PaymentMatchingBasisDto(
+                payment.Amount, payment.PaymentDate, payment.StoreAccountId))
             .FirstOrDefaultAsync();
 
     public async Task<List<PaymentCandidateDto>> GetCandidatesAsync(
@@ -252,6 +274,7 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
         var tolerance = basis.Amount * policy.AmountTolerancePercent / 100m;
         IQueryable<PaymentAllocation> query = _dbSet.AsNoTracking()
             .Where(payment => payment.Status == PaymentStatus.PendingApproval || payment.Status == PaymentStatus.Approved)
+            .Where(payment => payment.StoreAccountId == basis.StoreAccountId)
             .Where(payment => !_ctx.PaymentMatches.Any(match => match.PaymentAllocationId == payment.Id));
 
         query = ApplyScope(

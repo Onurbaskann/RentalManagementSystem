@@ -1,4 +1,4 @@
-﻿using KiraTakip.Models;
+using KiraTakip.Models;
 using KiraTakip.Services.Interfaces;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -90,12 +90,16 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<Invitation> Davetiyeler { get; set; }
     public DbSet<PasswordResetRequest> SifreSifirlamaTalepleri { get; set; }
-    public DbSet<PaymentLinkRecord> OdemeLinkKayitlari { get; set; }
 
     public DbSet<DocumentType> DocumentTypes { get; set; }
     public DbSet<Document> Belgeler { get; set; }
     public DbSet<DocumentContent> DocumentContents { get; set; }
     public DbSet<SystemSetting> SystemSettings { get; set; }
+    public DbSet<Store> Stores { get; set; }
+    public DbSet<StoreAccount> StoreAccounts { get; set; }
+    public DbSet<PaymentStoreRouting> PaymentStoreRoutings { get; set; }
+    public DbSet<OnlinePaymentTransaction> OnlinePaymentTransactions { get; set; }
+    public DbSet<OnlinePaymentEvent> OnlinePaymentEvents { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -109,6 +113,136 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                 .IsUnique()
                 .HasFilter("[IsDeleted] = 0")
                 .HasDatabaseName("UX_SistemAyarlari_Anahtar_Aktif");
+        });
+
+        builder.Entity<Store>(entity =>
+        {
+            entity.Property(store => store.Code).IsRequired().HasMaxLength(100);
+            entity.Property(store => store.Name).IsRequired().HasMaxLength(200);
+            entity.Property(store => store.Description).HasMaxLength(500);
+            entity.HasIndex(store => store.Code)
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0")
+                .HasDatabaseName("UX_Magazalar_Kod_Silinmemis");
+        });
+
+        builder.Entity<StoreAccount>(entity =>
+        {
+            entity.Property(account => account.ProviderCode).IsRequired().HasMaxLength(50);
+            entity.Property(account => account.Currency).IsRequired().HasColumnType("char(3)");
+            entity.Property(account => account.MerchantId).IsRequired().HasMaxLength(200);
+            entity.Property(account => account.MerchantUser).IsRequired().HasMaxLength(200);
+            entity.Property(account => account.ProtectedMerchantPassword).IsRequired();
+            entity.HasIndex(account => account.StoreId)
+                .IsUnique()
+                .HasFilter("[Aktif] = 1 AND [IsDeleted] = 0")
+                .HasDatabaseName("UX_MagazaHesapBilgileri_Magaza_Aktif");
+            entity.HasIndex(account => new { account.StoreId, account.ValidFrom })
+                .HasDatabaseName("IX_MagazaHesapBilgileri_MagazaId_GecerlilikBaslangici");
+            entity.HasOne(account => account.Store)
+                .WithMany(store => store.Accounts)
+                .HasForeignKey(account => account.StoreId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(table => table.HasCheckConstraint(
+                "CK_MagazaHesapBilgileri_Gecerlilik",
+                "[GecerlilikBitisi] IS NULL OR [GecerlilikBitisi] >= [GecerlilikBaslangici]"));
+        });
+
+        builder.Entity<PaymentStoreRouting>(entity =>
+        {
+            entity.HasOne(routing => routing.ChargeType)
+                .WithMany()
+                .HasForeignKey(routing => routing.ChargeTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(routing => routing.Property)
+                .WithMany()
+                .HasForeignKey(routing => routing.PropertyId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(routing => routing.Unit)
+                .WithMany()
+                .HasForeignKey(routing => routing.UnitId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(routing => routing.Store)
+                .WithMany()
+                .HasForeignKey(routing => routing.StoreId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(routing => routing.ChargeTypeId)
+                .IsUnique()
+                .HasFilter("[TasinmazId] IS NULL AND [BirimId] IS NULL AND [Aktif] = 1 AND [IsDeleted] = 0")
+                .HasDatabaseName("UX_OdemeMagazaYonlendirmeleri_Genel_Aktif");
+            entity.HasIndex(routing => new { routing.ChargeTypeId, routing.PropertyId })
+                .IsUnique()
+                .HasFilter("[TasinmazId] IS NOT NULL AND [BirimId] IS NULL AND [Aktif] = 1 AND [IsDeleted] = 0")
+                .HasDatabaseName("UX_OdemeMagazaYonlendirmeleri_Tasinmaz_Aktif");
+            entity.HasIndex(routing => new { routing.ChargeTypeId, routing.UnitId })
+                .IsUnique()
+                .HasFilter("[TasinmazId] IS NULL AND [BirimId] IS NOT NULL AND [Aktif] = 1 AND [IsDeleted] = 0")
+                .HasDatabaseName("UX_OdemeMagazaYonlendirmeleri_Birim_Aktif");
+            entity.HasIndex(routing => routing.StoreId)
+                .HasDatabaseName("IX_OdemeMagazaYonlendirmeleri_MagazaId");
+            entity.HasIndex(routing => routing.PropertyId)
+                .HasDatabaseName("IX_OdemeMagazaYonlendirmeleri_TasinmazId");
+            entity.HasIndex(routing => routing.UnitId)
+                .HasDatabaseName("IX_OdemeMagazaYonlendirmeleri_BirimId");
+
+            entity.ToTable(table => table.HasCheckConstraint(
+                "CK_OdemeMagazaYonlendirmeleri_Kapsam",
+                "([TasinmazId] IS NULL AND [BirimId] IS NULL) OR " +
+                "([TasinmazId] IS NOT NULL AND [BirimId] IS NULL) OR " +
+                "([TasinmazId] IS NULL AND [BirimId] IS NOT NULL)"));
+        });
+
+        builder.Entity<OnlinePaymentTransaction>(entity =>
+        {
+            entity.Property(t => t.ProviderCode).IsRequired().HasMaxLength(50);
+            entity.Property(t => t.MerchantPaymentId).IsRequired().HasMaxLength(100);
+            entity.Property(t => t.ProviderTransactionId).HasMaxLength(100);
+            entity.Property(t => t.Amount).HasPrecision(18, 2);
+            entity.Property(t => t.Currency).IsRequired().HasColumnType("char(3)");
+            entity.Property(t => t.Status).HasComment(EC<OnlinePaymentTransactionStatus>());
+            entity.Property(t => t.ResponseCode).HasMaxLength(20);
+            entity.Property(t => t.TransactionStatus).HasMaxLength(20);
+            entity.Property(t => t.ErrorCode).HasMaxLength(50);
+            entity.Property(t => t.SafeMessage).HasMaxLength(500);
+            entity.HasOne(t => t.ChargeLineItem)
+                .WithMany()
+                .HasForeignKey(t => t.ChargeLineItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(t => t.StoreAccount)
+                .WithMany()
+                .HasForeignKey(t => t.StoreAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(t => t.InitiatedByUser)
+                .WithMany()
+                .HasForeignKey(t => t.InitiatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(t => t.PaymentAllocation)
+                .WithMany()
+                .HasForeignKey(t => t.PaymentAllocationId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(t => t.MerchantPaymentId)
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0")
+                .HasDatabaseName("UX_SanalPosIslemleri_UyeIsyeriOdemeNo_Silinmemis");
+            entity.HasIndex(t => new { t.ChargeLineItemId, t.Status })
+                .HasDatabaseName("IX_SanalPosIslemleri_TahakkukKalemiId_Durum");
+            entity.HasIndex(t => t.StoreAccountId)
+                .HasDatabaseName("IX_SanalPosIslemleri_MagazaHesapBilgisiId");
+        });
+
+        builder.Entity<OnlinePaymentEvent>(entity =>
+        {
+            entity.Property(e => e.EventType).HasComment(EC<OnlinePaymentEventType>());
+            entity.Property(e => e.ProviderResponseCode).HasMaxLength(20);
+            entity.Property(e => e.ProviderTransactionStatus).HasMaxLength(20);
+            entity.Property(e => e.SafeSummary).HasMaxLength(1000);
+            entity.HasOne(e => e.OnlinePaymentTransaction)
+                .WithMany(t => t.Events)
+                .HasForeignKey(e => e.OnlinePaymentTransactionId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => e.OnlinePaymentTransactionId)
+                .HasDatabaseName("IX_SanalPosIslemOlaylari_SanalPosIslemiId");
         });
 
         builder.Entity<LookupValue>(entity =>
@@ -409,7 +543,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .HasFilter("[RezervasyonId] IS NOT NULL AND [IsDeleted] = 0");
             entity.ToTable(t =>
             {
-                t.HasCheckConstraint("CK_Tahakkuklar_TarihSirasi", "[DonemBitisi] > [DonemBaslangici]");
+                t.HasCheckConstraint("CK_Tahakkuklar_TarihSirasi", "[DonemBitisi] >= [DonemBaslangici]");
                 t.HasCheckConstraint("CK_Tahakkuklar_Tutarlar_Pozitif", "[BeklenenTutar] >= 0 AND [KdvTutari] >= 0 AND [ToplamTutar] >= 0 AND [OdenenTutar] >= 0");
                 t.HasCheckConstraint("CK_Tahakkuklar_OdenenLimit", "[OdenenTutar] <= [ToplamTutar]");
             });
@@ -426,16 +560,24 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.Property(k => k.KdvRate).HasPrecision(5, 2);
             entity.Property(k => k.KdvAmount).HasPrecision(18, 2);
             entity.Property(k => k.TotalAmount).HasPrecision(18, 2);
+            entity.Property(k => k.PaidAmount).HasPrecision(18, 2);
             entity.HasOne(k => k.Charge)
                   .WithMany(t => t.LineItems)
                   .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(k => k.ChargeType)
                   .WithMany()
                   .OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(k => k.Allocations)
+                  .WithOne(o => o.ChargeLineItem)
+                  .HasForeignKey(o => o.ChargeLineItemId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(k => k.ChargeId)
+                  .HasDatabaseName("IX_TahakkukKalemleri_TahakkukId");
             entity.ToTable(t =>
             {
                 t.HasCheckConstraint("CK_TahakkukKalemleri_Tutarlar_Pozitif", "[Tutar] >= 0 AND [KdvTutari] >= 0 AND [ToplamTutar] >= 0");
                 t.HasCheckConstraint("CK_TahakkukKalemleri_KdvOrani", "[KdvOrani] BETWEEN 0 AND 100");
+                t.HasCheckConstraint("CK_TahakkukKalemleri_OdenenLimit", "[OdenenTutar] >= 0 AND [OdenenTutar] <= [ToplamTutar]");
             });
         });
 
@@ -463,6 +605,15 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .WithMany()
                   .HasForeignKey(o => o.ApprovedByUserId)
                   .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(o => o.StoreAccount)
+                  .WithMany()
+                  .HasForeignKey(o => o.StoreAccountId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(o => new { o.ChargeLineItemId, o.Status })
+                  .HasDatabaseName("IX_TahakkukOdemeleri_TahakkukKalemiId_Durum")
+                  .HasFilter("[IsDeleted] = 0");
+            entity.HasIndex(o => o.StoreAccountId)
+                  .HasDatabaseName("IX_TahakkukOdemeleri_MagazaHesapBilgisiId");
             entity.ToTable(t =>
             {
                 t.HasCheckConstraint("CK_TahakkukOdemeler_Tutar_Pozitif", "[Tutar] > 0");
@@ -482,6 +633,12 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .IsUnique()
                   .HasDatabaseName("UX_BankaHareketleri_BankaReferansNo")
                   .HasFilter("[BankaReferansNo] IS NOT NULL AND [IsDeleted] = 0");
+            entity.HasOne(b => b.StoreAccount)
+                  .WithMany()
+                  .HasForeignKey(b => b.StoreAccountId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(b => b.StoreAccountId)
+                  .HasDatabaseName("IX_BankaHareketleri_MagazaHesapBilgisiId");
         });
 
         builder.Entity<PaymentMatch>(entity =>
@@ -683,17 +840,6 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.HasIndex(t => new { t.UserId, t.Status });
         });
 
-        builder.Entity<PaymentLinkRecord>(entity =>
-        {
-            entity.Property(o => o.TokenHash).IsRequired().HasMaxLength(128);
-            entity.Property(o => o.CancelledByUserId).HasMaxLength(450);
-            entity.HasIndex(o => new { o.TenantId, o.Status });
-            entity.HasOne(o => o.Tenant)
-                  .WithMany()
-                  .HasForeignKey(o => o.TenantId)
-                  .OnDelete(DeleteBehavior.Restrict);
-        });
-
         builder.Entity<DocumentType>(entity =>
         {
             entity.Property(b => b.Code).HasMaxLength(50).IsRequired();
@@ -761,6 +907,9 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
 
         builder.Entity<PaymentAllocation>().HasQueryFilter(
             o => !o.IsDeleted && (!_currentUser.IsKiraciUser || o.Charge.TenantId == _currentUser.TenantId));
+
+        builder.Entity<ChargeLineItem>().HasQueryFilter(
+            k => !k.IsDeleted && (!_currentUser.IsKiraciUser || k.Charge.TenantId == _currentUser.TenantId));
 
         builder.Entity<Reservation>().HasQueryFilter(
             r => !r.IsDeleted && (!_currentUser.IsKiraciUser || r.TenantId == _currentUser.TenantId));

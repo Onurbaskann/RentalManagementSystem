@@ -241,6 +241,10 @@ namespace KiraTakip.Migrations
                         .HasColumnType("nvarchar(200)")
                         .HasColumnName("GondericiBilgisi");
 
+                    b.Property<int>("StoreAccountId")
+                        .HasColumnType("int")
+                        .HasColumnName("MagazaHesapBilgisiId");
+
                     b.Property<decimal>("TransactionAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
@@ -262,6 +266,9 @@ namespace KiraTakip.Migrations
                         .IsUnique()
                         .HasDatabaseName("UX_BankaHareketleri_BankaReferansNo")
                         .HasFilter("[BankaReferansNo] IS NOT NULL AND [IsDeleted] = 0");
+
+                    b.HasIndex("StoreAccountId")
+                        .HasDatabaseName("IX_BankaHareketleri_MagazaHesapBilgisiId");
 
                     b.ToTable("BankaHareketleri");
                 });
@@ -441,7 +448,7 @@ namespace KiraTakip.Migrations
                         {
                             t.HasCheckConstraint("CK_Tahakkuklar_OdenenLimit", "[OdenenTutar] <= [ToplamTutar]");
 
-                            t.HasCheckConstraint("CK_Tahakkuklar_TarihSirasi", "[DonemBitisi] > [DonemBaslangici]");
+                            t.HasCheckConstraint("CK_Tahakkuklar_TarihSirasi", "[DonemBitisi] >= [DonemBaslangici]");
 
                             t.HasCheckConstraint("CK_Tahakkuklar_Tutarlar_Pozitif", "[BeklenenTutar] >= 0 AND [KdvTutari] >= 0 AND [ToplamTutar] >= 0 AND [OdenenTutar] >= 0");
                         });
@@ -508,6 +515,11 @@ namespace KiraTakip.Migrations
                         .HasColumnType("decimal(18,4)")
                         .HasColumnName("Carpan");
 
+                    b.Property<decimal>("PaidAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("OdenenTutar");
+
                     b.Property<int>("SourceType")
                         .HasColumnType("int")
                         .HasColumnName("KaynakTipi")
@@ -531,13 +543,16 @@ namespace KiraTakip.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ChargeId");
+                    b.HasIndex("ChargeId")
+                        .HasDatabaseName("IX_TahakkukKalemleri_TahakkukId");
 
                     b.HasIndex("ChargeTypeId");
 
                     b.ToTable("TahakkukKalemleri", t =>
                         {
                             t.HasCheckConstraint("CK_TahakkukKalemleri_KdvOrani", "[KdvOrani] BETWEEN 0 AND 100");
+
+                            t.HasCheckConstraint("CK_TahakkukKalemleri_OdenenLimit", "[OdenenTutar] >= 0 AND [OdenenTutar] <= [ToplamTutar]");
 
                             t.HasCheckConstraint("CK_TahakkukKalemleri_Tutarlar_Pozitif", "[Tutar] >= 0 AND [KdvTutari] >= 0 AND [ToplamTutar] >= 0");
                         });
@@ -1344,6 +1359,196 @@ namespace KiraTakip.Migrations
                     b.ToTable("EnumDegerleri");
                 });
 
+            modelBuilder.Entity("KiraTakip.Models.Entities.OnlinePaymentEvent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EventType")
+                        .HasColumnType("int")
+                        .HasColumnName("OlayTipi")
+                        .HasComment("SessionRequested=1, SessionResult=2, CallbackReceived=3, InquiryPerformed=4, Succeeded=5, Failed=6");
+
+                    b.Property<int>("OnlinePaymentTransactionId")
+                        .HasColumnType("int")
+                        .HasColumnName("SanalPosIslemiId");
+
+                    b.Property<string>("ProviderResponseCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("SaglayiciYanitKodu");
+
+                    b.Property<DateTime?>("ProviderTimestamp")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("SaglayiciZamani");
+
+                    b.Property<string>("ProviderTransactionStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("SaglayiciIslemDurumu");
+
+                    b.Property<string>("SafeSummary")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("GuvenliOzet");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OnlinePaymentTransactionId")
+                        .HasDatabaseName("IX_SanalPosIslemOlaylari_SanalPosIslemiId");
+
+                    b.ToTable("SanalPosIslemOlaylari");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.OnlinePaymentTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("Tutar");
+
+                    b.Property<DateTime?>("CallbackReceivedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("GeriBildirimAlinmaTarihi");
+
+                    b.Property<int>("ChargeLineItemId")
+                        .HasColumnType("int")
+                        .HasColumnName("TahakkukKalemiId");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("TamamlanmaTarihi");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("char(3)")
+                        .HasColumnName("ParaBirimi");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("HataKodu");
+
+                    b.Property<string>("InitiatedByUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("BaslatanKullaniciId");
+
+                    b.Property<int>("InquiryCount")
+                        .HasColumnType("int")
+                        .HasColumnName("SorgulamaSayisi");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("Aktif");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastInquiryAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("SonSorgulamaTarihi");
+
+                    b.Property<string>("MerchantPaymentId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("UyeIsyeriOdemeNo");
+
+                    b.Property<int?>("PaymentAllocationId")
+                        .HasColumnType("int")
+                        .HasColumnName("OdemeId");
+
+                    b.Property<string>("ProviderCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("SaglayiciKodu");
+
+                    b.Property<string>("ProviderTransactionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("SaglayiciIslemNo");
+
+                    b.Property<string>("ResponseCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("YanitKodu");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SafeMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("GuvenliMesaj");
+
+                    b.Property<DateTime?>("SessionExpiresAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("OturumSonTarihi");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("Durum")
+                        .HasComment("Pending=1, Approved=2, Failed=3, Cancelled=4, Unknown=5");
+
+                    b.Property<int>("StoreAccountId")
+                        .HasColumnType("int")
+                        .HasColumnName("MagazaHesapBilgisiId");
+
+                    b.Property<string>("TransactionStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("IslemDurumu");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InitiatedByUserId");
+
+                    b.HasIndex("MerchantPaymentId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_SanalPosIslemleri_UyeIsyeriOdemeNo_Silinmemis")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.HasIndex("PaymentAllocationId");
+
+                    b.HasIndex("StoreAccountId")
+                        .HasDatabaseName("IX_SanalPosIslemleri_MagazaHesapBilgisiId");
+
+                    b.HasIndex("ChargeLineItemId", "Status")
+                        .HasDatabaseName("IX_SanalPosIslemleri_TahakkukKalemiId_Durum");
+
+                    b.ToTable("SanalPosIslemleri");
+                });
+
             modelBuilder.Entity("KiraTakip.Models.Entities.PasswordResetRequest", b =>
                 {
                     b.Property<int>("Id")
@@ -1432,6 +1637,10 @@ namespace KiraTakip.Migrations
                         .HasColumnType("int")
                         .HasColumnName("TahakkukId");
 
+                    b.Property<int>("ChargeLineItemId")
+                        .HasColumnType("int")
+                        .HasColumnName("TahakkukKalemiId");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1492,6 +1701,10 @@ namespace KiraTakip.Migrations
                         .HasColumnName("Durum")
                         .HasComment("PendingApproval=1, Approved=2, Rejected=3");
 
+                    b.Property<int>("StoreAccountId")
+                        .HasColumnType("int")
+                        .HasColumnName("MagazaHesapBilgisiId");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -1508,72 +1721,17 @@ namespace KiraTakip.Migrations
 
                     b.HasIndex("LeaseId");
 
+                    b.HasIndex("StoreAccountId")
+                        .HasDatabaseName("IX_TahakkukOdemeleri_MagazaHesapBilgisiId");
+
+                    b.HasIndex("ChargeLineItemId", "Status")
+                        .HasDatabaseName("IX_TahakkukOdemeleri_TahakkukKalemiId_Durum")
+                        .HasFilter("[IsDeleted] = 0");
+
                     b.ToTable("TahakkukOdemeleri", t =>
                         {
                             t.HasCheckConstraint("CK_TahakkukOdemeler_Tutar_Pozitif", "[Tutar] > 0");
                         });
-                });
-
-            modelBuilder.Entity("KiraTakip.Models.Entities.PaymentLinkRecord", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("CancelledAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("IptalTarihi");
-
-                    b.Property<string>("CancelledByUserId")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)")
-                        .HasColumnName("IptalEdenUserId");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("GecerlilikTarihi");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit")
-                        .HasColumnName("Aktif");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int")
-                        .HasColumnName("Durum");
-
-                    b.Property<int>("TenantId")
-                        .HasColumnType("int")
-                        .HasColumnName("KiraciId");
-
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)")
-                        .HasColumnName("TokenHash");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId", "Status");
-
-                    b.ToTable("OdemeLinkKayitlari");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.PaymentMatch", b =>
@@ -1630,6 +1788,82 @@ namespace KiraTakip.Migrations
                         .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("OdemeBankaEslesmeleri");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.PaymentStoreRouting", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ChargeTypeId")
+                        .HasColumnType("int")
+                        .HasColumnName("BorcTipiId");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("Aktif");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("PropertyId")
+                        .HasColumnType("int")
+                        .HasColumnName("TasinmazId");
+
+                    b.Property<int>("StoreId")
+                        .HasColumnType("int")
+                        .HasColumnName("MagazaId");
+
+                    b.Property<int?>("UnitId")
+                        .HasColumnType("int")
+                        .HasColumnName("BirimId");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChargeTypeId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_OdemeMagazaYonlendirmeleri_Genel_Aktif")
+                        .HasFilter("[TasinmazId] IS NULL AND [BirimId] IS NULL AND [Aktif] = 1 AND [IsDeleted] = 0");
+
+                    b.HasIndex("PropertyId")
+                        .HasDatabaseName("IX_OdemeMagazaYonlendirmeleri_TasinmazId");
+
+                    b.HasIndex("StoreId")
+                        .HasDatabaseName("IX_OdemeMagazaYonlendirmeleri_MagazaId");
+
+                    b.HasIndex("UnitId")
+                        .HasDatabaseName("IX_OdemeMagazaYonlendirmeleri_BirimId");
+
+                    b.HasIndex("ChargeTypeId", "PropertyId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_OdemeMagazaYonlendirmeleri_Tasinmaz_Aktif")
+                        .HasFilter("[TasinmazId] IS NOT NULL AND [BirimId] IS NULL AND [Aktif] = 1 AND [IsDeleted] = 0");
+
+                    b.HasIndex("ChargeTypeId", "UnitId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_OdemeMagazaYonlendirmeleri_Birim_Aktif")
+                        .HasFilter("[TasinmazId] IS NULL AND [BirimId] IS NOT NULL AND [Aktif] = 1 AND [IsDeleted] = 0");
+
+                    b.ToTable("OdemeMagazaYonlendirmeleri", t =>
+                        {
+                            t.HasCheckConstraint("CK_OdemeMagazaYonlendirmeleri_Kapsam", "([TasinmazId] IS NULL AND [BirimId] IS NULL) OR ([TasinmazId] IS NOT NULL AND [BirimId] IS NULL) OR ([TasinmazId] IS NULL AND [BirimId] IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.Property", b =>
@@ -2360,6 +2594,145 @@ namespace KiraTakip.Migrations
                     b.ToTable("RolYetkileri");
                 });
 
+            modelBuilder.Entity("KiraTakip.Models.Entities.Store", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("Kod");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("Aciklama");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("Aktif");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("Ad");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Magazalar_Kod_Silinmemis")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("Magazalar");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.StoreAccount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("char(3)")
+                        .HasColumnName("ParaBirimi");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("Aktif");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("MerchantId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("MerchantId");
+
+                    b.Property<string>("MerchantUser")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("MerchantUser");
+
+                    b.Property<string>("ProtectedMerchantPassword")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("SifreliMerchantPassword");
+
+                    b.Property<string>("ProviderCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("SaglayiciKodu");
+
+                    b.Property<int>("StoreId")
+                        .HasColumnType("int")
+                        .HasColumnName("MagazaId");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ValidFrom")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("GecerlilikBaslangici");
+
+                    b.Property<DateTime?>("ValidUntil")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("GecerlilikBitisi");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StoreId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_MagazaHesapBilgileri_Magaza_Aktif")
+                        .HasFilter("[Aktif] = 1 AND [IsDeleted] = 0");
+
+                    b.HasIndex("StoreId", "ValidFrom")
+                        .HasDatabaseName("IX_MagazaHesapBilgileri_MagazaId_GecerlilikBaslangici");
+
+                    b.ToTable("MagazaHesapBilgileri", t =>
+                        {
+                            t.HasCheckConstraint("CK_MagazaHesapBilgileri_Gecerlilik", "[GecerlilikBitisi] IS NULL OR [GecerlilikBitisi] >= [GecerlilikBaslangici]");
+                        });
+                });
+
             modelBuilder.Entity("KiraTakip.Models.Entities.SystemSetting", b =>
                 {
                     b.Property<int>("Id")
@@ -2934,6 +3307,17 @@ namespace KiraTakip.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("KiraTakip.Models.Entities.BankTransaction", b =>
+                {
+                    b.HasOne("KiraTakip.Models.Entities.StoreAccount", "StoreAccount")
+                        .WithMany()
+                        .HasForeignKey("StoreAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("StoreAccount");
+                });
+
             modelBuilder.Entity("KiraTakip.Models.Entities.Charge", b =>
                 {
                     b.HasOne("KiraTakip.Models.Entities.Lease", "Lease")
@@ -3104,6 +3488,51 @@ namespace KiraTakip.Migrations
                     b.Navigation("Lease");
                 });
 
+            modelBuilder.Entity("KiraTakip.Models.Entities.OnlinePaymentEvent", b =>
+                {
+                    b.HasOne("KiraTakip.Models.Entities.OnlinePaymentTransaction", "OnlinePaymentTransaction")
+                        .WithMany("Events")
+                        .HasForeignKey("OnlinePaymentTransactionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("OnlinePaymentTransaction");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.OnlinePaymentTransaction", b =>
+                {
+                    b.HasOne("KiraTakip.Models.Entities.ChargeLineItem", "ChargeLineItem")
+                        .WithMany()
+                        .HasForeignKey("ChargeLineItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("KiraTakip.Models.Entities.ApplicationUser", "InitiatedByUser")
+                        .WithMany()
+                        .HasForeignKey("InitiatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("KiraTakip.Models.Entities.PaymentAllocation", "PaymentAllocation")
+                        .WithMany()
+                        .HasForeignKey("PaymentAllocationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("KiraTakip.Models.Entities.StoreAccount", "StoreAccount")
+                        .WithMany()
+                        .HasForeignKey("StoreAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ChargeLineItem");
+
+                    b.Navigation("InitiatedByUser");
+
+                    b.Navigation("PaymentAllocation");
+
+                    b.Navigation("StoreAccount");
+                });
+
             modelBuilder.Entity("KiraTakip.Models.Entities.PaymentAllocation", b =>
                 {
                     b.HasOne("KiraTakip.Models.Entities.ApplicationUser", "OnaylayanUser")
@@ -3114,6 +3543,12 @@ namespace KiraTakip.Migrations
                     b.HasOne("KiraTakip.Models.Entities.Charge", "Charge")
                         .WithMany("Allocations")
                         .HasForeignKey("ChargeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("KiraTakip.Models.Entities.ChargeLineItem", "ChargeLineItem")
+                        .WithMany("Allocations")
+                        .HasForeignKey("ChargeLineItemId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -3128,24 +3563,23 @@ namespace KiraTakip.Migrations
                         .HasForeignKey("LeaseId")
                         .OnDelete(DeleteBehavior.NoAction);
 
+                    b.HasOne("KiraTakip.Models.Entities.StoreAccount", "StoreAccount")
+                        .WithMany()
+                        .HasForeignKey("StoreAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Charge");
+
+                    b.Navigation("ChargeLineItem");
 
                     b.Navigation("GirenUser");
 
                     b.Navigation("Lease");
 
                     b.Navigation("OnaylayanUser");
-                });
 
-            modelBuilder.Entity("KiraTakip.Models.Entities.PaymentLinkRecord", b =>
-                {
-                    b.HasOne("KiraTakip.Models.Entities.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Tenant");
+                    b.Navigation("StoreAccount");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.PaymentMatch", b =>
@@ -3165,6 +3599,39 @@ namespace KiraTakip.Migrations
                     b.Navigation("BankTransaction");
 
                     b.Navigation("PaymentAllocation");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.PaymentStoreRouting", b =>
+                {
+                    b.HasOne("KiraTakip.Models.Entities.ChargeType", "ChargeType")
+                        .WithMany()
+                        .HasForeignKey("ChargeTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("KiraTakip.Models.Entities.Property", "Property")
+                        .WithMany()
+                        .HasForeignKey("PropertyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("KiraTakip.Models.Entities.Store", "Store")
+                        .WithMany()
+                        .HasForeignKey("StoreId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("KiraTakip.Models.Entities.Unit", "Unit")
+                        .WithMany()
+                        .HasForeignKey("UnitId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ChargeType");
+
+                    b.Navigation("Property");
+
+                    b.Navigation("Store");
+
+                    b.Navigation("Unit");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.Property", b =>
@@ -3317,6 +3784,17 @@ namespace KiraTakip.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("KiraTakip.Models.Entities.StoreAccount", b =>
+                {
+                    b.HasOne("KiraTakip.Models.Entities.Store", "Store")
+                        .WithMany("Accounts")
+                        .HasForeignKey("StoreId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Store");
+                });
+
             modelBuilder.Entity("KiraTakip.Models.Entities.Tenant", b =>
                 {
                     b.HasOne("KiraTakip.Models.Entities.Category", "Sector")
@@ -3439,6 +3917,11 @@ namespace KiraTakip.Migrations
                     b.Navigation("LineItems");
                 });
 
+            modelBuilder.Entity("KiraTakip.Models.Entities.ChargeLineItem", b =>
+                {
+                    b.Navigation("Allocations");
+                });
+
             modelBuilder.Entity("KiraTakip.Models.Entities.Document", b =>
                 {
                     b.Navigation("Content");
@@ -3451,6 +3934,11 @@ namespace KiraTakip.Migrations
                     b.Navigation("LeaseRateOverrides");
 
                     b.Navigation("ReviewHistory");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.OnlinePaymentTransaction", b =>
+                {
+                    b.Navigation("Events");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.PaymentAllocation", b =>
@@ -3473,6 +3961,11 @@ namespace KiraTakip.Migrations
                     b.Navigation("RolePermissions");
 
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.Store", b =>
+                {
+                    b.Navigation("Accounts");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.Unit", b =>

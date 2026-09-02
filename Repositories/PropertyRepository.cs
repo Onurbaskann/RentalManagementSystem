@@ -291,6 +291,9 @@ public class PropertyRepository : RepositoryBase<Property>, IPropertyRepository
             .Select(unit => unit.Id)
             .ToListAsync();
 
+        var hasRoutingDependency = await _ctx.PaymentStoreRoutings.IgnoreQueryFilters().AnyAsync(routing =>
+            routing.PropertyId == propertyId || (routing.UnitId.HasValue && unitIds.Contains(routing.UnitId.Value)));
+        if (hasRoutingDependency) return false;
         if (unitIds.Count == 0) return true;
 
         return !await _ctx.Leases.IgnoreQueryFilters().AnyAsync(lease => unitIds.Contains(lease.UnitId))

@@ -42,9 +42,13 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<IApplicationUserRepository, ApplicationUserRepository>();
             services.AddScoped<IUserPermissionScopeRepository, UserPermissionScopeRepository>();
             services.AddScoped<IInvitationRepository, InvitationRepository>();
-            services.AddScoped<IPaymentLinkRecordRepository, PaymentLinkRecordRepository>();
             services.AddScoped<IPasswordResetRequestRepository, PasswordResetRequestRepository>();
             services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
+            services.AddScoped<IStoreRepository, StoreRepository>();
+            services.AddScoped<IStoreAccountRepository, StoreAccountRepository>();
+            services.AddScoped<IPaymentStoreRoutingRepository, PaymentStoreRoutingRepository>();
+            services.AddScoped<IOnlinePaymentTransactionRepository, OnlinePaymentTransactionRepository>();
+            services.AddScoped<IOnlinePaymentEventRepository, OnlinePaymentEventRepository>();
 
             return services;
         }

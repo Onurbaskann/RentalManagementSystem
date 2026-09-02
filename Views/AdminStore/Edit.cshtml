@@ -1,0 +1,177 @@
+@model KiraTakip.Models.ViewModels.StoreEditViewModel
+@using KiraTakip.Models.Constants
+@{
+    ViewData["Title"] = "Mağaza Düzenle";
+    ViewData["UseCentralFeedback"] = true;
+    var activeAccount = Model.Store.Accounts.FirstOrDefault(account => account.IsActive);
+}
+
+<div class="max-w-[900px] mx-auto">
+    <div class="page-header">
+        <a href="/Admin/Store" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">← Mağazalar</a>
+        <div class="page-title">@Model.Store.Name</div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="font-semibold text-slate-800 mb-4">Mağaza Bilgileri</div>
+        <form method="post" action="/Admin/Store/Edit/@Model.Store.Id.ToHashId()" asp-form-write-permission="@PermissionCatalog.Store.Edit">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="Id" value="@Model.Store.Id" />
+            <div class="form-group">
+                <label class="form-label">Ad <span class="text-red-500">*</span></label>
+                @Html.TextBox("Name", Model.Store.Name, new { @class = "form-control", maxlength = "200", required = "required" })
+                @Html.ValidationMessage("Name", null, new { @class = "text-red-500 text-xs mt-1" })
+            </div>
+            <div class="form-group">
+                <label class="form-label">Açıklama</label>
+                @Html.TextArea("Description", Model.Store.Description, 3, 0, new { @class = "form-control", maxlength = "500" })
+                @Html.ValidationMessage("Description", null, new { @class = "text-red-500 text-xs mt-1" })
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input name="IsActive" type="checkbox" value="true" checked="@Model.Store.IsActive" class="w-4 h-4 accent-primary" />
+                <input name="IsActive" type="hidden" value="false" />
+                <span class="form-label mb-0">Aktif</span>
+            </label>
+            <button type="submit" class="btn btn-primary mt-4" asp-permission="@PermissionCatalog.Store.Edit">Bilgileri Kaydet</button>
+        </form>
+    </div>
+
+    <div class="card mb-4">
+        <div class="mb-4">
+            <div>
+                <div class="font-semibold text-slate-800">Ödeme Sağlayıcısı Hesabı</div>
+                <div class="text-xs text-muted mt-1">Yeni sürüm oluşturulduğunda mevcut aktif hesap tarihçeye alınır.</div>
+            </div>
+        </div>
+
+        @if (activeAccount != null)
+        {
+            <div class="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white overflow-hidden mb-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-b border-emerald-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
+                            @activeAccount.ProviderCode[..1].ToUpperInvariant()
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold text-slate-800">Aktif ödeme hesabı</span>
+                                <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                    Kullanıma hazır
+                                </span>
+                            </div>
+                            <div class="text-xs text-slate-500 mt-0.5">Bu mağazaya yönlendirilen ödemelerde kullanılacak hesap</div>
+                        </div>
+                    </div>
+                    <form method="post" action="/Admin/Store/DeactivateAccount/@Model.Store.Id.ToHashId()/@activeAccount.Id.ToHashId()"
+                          data-confirm="Aktif mağaza hesabı kapatılsın mı? Yeni hesap tanımlanana kadar bu mağazaya ödeme yönlendirilemez.">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-danger" asp-permission="@PermissionCatalog.Store.Account">Hesabı Kapat</button>
+                    </form>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-emerald-100">
+                    <div class="px-4 py-3">
+                        <div class="text-[11px] uppercase tracking-wide font-semibold text-slate-400">Sağlayıcı</div>
+                        <div class="font-medium text-slate-700 mt-1">@activeAccount.ProviderCode</div>
+                        <div class="text-xs text-slate-500">@activeAccount.Currency</div>
+                    </div>
+                    <div class="px-4 py-3">
+                        <div class="text-[11px] uppercase tracking-wide font-semibold text-slate-400">Merchant ID</div>
+                        <div class="font-medium text-slate-700 mt-1 break-all">@activeAccount.MerchantId</div>
+                    </div>
+                    <div class="px-4 py-3">
+                        <div class="text-[11px] uppercase tracking-wide font-semibold text-slate-400">Merchant Kullanıcı</div>
+                        <div class="font-medium text-slate-700 mt-1 break-all">@activeAccount.MerchantUser</div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="rounded-xl bg-amber-50 border border-amber-200 p-4 mb-5 flex items-start gap-3 text-amber-900">
+                <div class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0 font-bold">!</div>
+                <div>
+                    <div class="font-semibold">Aktif ödeme hesabı bulunmuyor</div>
+                    <div class="text-sm text-amber-800 mt-0.5">Bu mağaza, aşağıdan bir hesap tanımlanana kadar ödeme yönlendirmesinde kullanılamaz.</div>
+                </div>
+            </div>
+        }
+
+        <form method="post" action="/Admin/Store/ReplaceAccount/@Model.Store.Id.ToHashId()"
+              asp-form-write-permission="@PermissionCatalog.Store.Account">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="StoreId" value="@Model.Store.Id" />
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="form-group">
+                    <label class="form-label">Sağlayıcı</label>
+                    <select name="ProviderCode" class="form-control">
+                        @foreach (var provider in PaymentProviderCodes.Supported)
+                        {
+                            <option value="@provider" selected="@(Model.AccountForm.ProviderCode == provider)">@provider</option>
+                        }
+                    </select>
+                    @Html.ValidationMessage("ProviderCode", null, new { @class = "text-red-500 text-xs mt-1" })
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Para Birimi</label>
+                    <select name="Currency" class="form-control">
+                        @foreach (var currency in CurrencyCodes.Supported)
+                        {
+                            <option value="@currency" selected="@(Model.AccountForm.Currency == currency)">@currency</option>
+                        }
+                    </select>
+                    @Html.ValidationMessage("Currency", null, new { @class = "text-red-500 text-xs mt-1" })
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Merchant ID <span class="text-red-500">*</span></label>
+                    <input name="MerchantId" value="@Model.AccountForm.MerchantId" class="form-control" maxlength="200" required />
+                    @Html.ValidationMessage("MerchantId", null, new { @class = "text-red-500 text-xs mt-1" })
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Merchant Kullanıcı <span class="text-red-500">*</span></label>
+                    <input name="MerchantUser" value="@Model.AccountForm.MerchantUser" class="form-control" maxlength="200" required />
+                    @Html.ValidationMessage("MerchantUser", null, new { @class = "text-red-500 text-xs mt-1" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Merchant Parola <span class="text-red-500">*</span></label>
+                <input name="MerchantPassword" value="" type="password" autocomplete="new-password" class="form-control" maxlength="1000" required />
+                @Html.ValidationMessage("MerchantPassword", null, new { @class = "text-red-500 text-xs mt-1" })
+                <div class="text-xs text-muted mt-1">Mevcut parola gösterilmez. Her hesap sürümü için parola yeniden girilir.</div>
+            </div>
+            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Store.Account">
+                @(activeAccount == null ? "Hesap Oluştur" : "Yeni Hesap Sürümü Oluştur")
+            </button>
+        </form>
+    </div>
+
+    <div class="card p-0 overflow-hidden">
+        <div class="p-4">
+            <div class="font-semibold text-slate-800">Hesap Tarihçesi</div>
+            <div class="text-xs text-muted mt-0.5">Tarih ve saatler Türkiye saatine göre gösterilir.</div>
+        </div>
+        <div class="table-wrapper">
+            <table class="w-full">
+                <thead><tr><th>Sağlayıcı</th><th>Merchant</th><th>Başlangıç</th><th>Bitiş</th><th>Durum</th></tr></thead>
+                <tbody>
+                    @foreach (var account in Model.Store.Accounts)
+                    {
+                        <tr>
+                            <td>@account.ProviderCode / @account.Currency</td>
+                            <td>@account.MerchantId<br /><span class="text-xs text-muted">@account.MerchantUser</span></td>
+                            <td>@account.ValidFrom.TurkiyeTarihSaat()</td>
+                            <td>@account.ValidUntil.TurkiyeTarihSaat()</td>
+                            <td><span class="badge @(account.IsActive ? "badge-kirali" : "badge-gecmis")">@(account.IsActive ? "Aktif" : "Geçmiş")</span></td>
+                        </tr>
+                    }
+                    @if (!Model.Store.Accounts.Any())
+                    {
+                        <tr><td colspan="5" class="text-center py-6 text-muted">Hesap tarihçesi bulunmuyor.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -76,6 +76,25 @@ public static class PermissionCatalog
         public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle")];
     }
 
+    public static class Store
+    {
+        public const string Module  = "Internal.Store";
+        public const string Create  = "Internal.Store.Create";
+        public const string Edit    = "Internal.Store.Edit";
+        public const string Account = "Internal.Store.Account";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions =
+            [new(Create, "Ekle"), new(Edit, "Düzenle"), new(Account, "Hesap Yönet")];
+    }
+
+    public static class PaymentRouting
+    {
+        public const string Module = "Internal.PaymentRouting";
+        public const string Create = "Internal.PaymentRouting.Create";
+        public const string Edit   = "Internal.PaymentRouting.Edit";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions =
+            [new(Create, "Ekle"), new(Edit, "Düzenle")];
+    }
+
     public static class Parameter
     {
         public const string Module = "Internal.Parameter";
@@ -304,6 +323,8 @@ public static class PermissionCatalog
         new(Reservation.Module,            "Rezervasyon",                Reservation.ActionDefinitions),
         new(Charge.Module,               "Tahakkuk",                   Charge.ActionDefinitions),
         new(ChargeType.Module,               "Borç Tipi",                  ChargeType.ActionDefinitions, "Parametreler"),
+        new(Store.Module,                    "Mağaza",                     Store.ActionDefinitions, "Parametreler"),
+        new(PaymentRouting.Module,           "Ödeme Yönlendirmeleri",      PaymentRouting.ActionDefinitions, "Parametreler"),
         new(Parameter.Module,              "Sistem Ayarları",                  Parameter.ActionDefinitions, "Parametreler"),
         new(PropertyType.Module,           "Taşınmaz Tipi",              PropertyType.ActionDefinitions, "Parametreler"),
         new(UnitType.Module,              "Birim Tipi",                 UnitType.ActionDefinitions, "Parametreler"),
@@ -361,6 +382,8 @@ public static class PermissionCatalog
         Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject,
         Payment.ImportBankStatement, Payment.MatchBankTransaction,
         ChargeType.Module, ChargeType.Create, ChargeType.Edit,
+        Store.Module, Store.Create, Store.Edit, Store.Account,
+        PaymentRouting.Module, PaymentRouting.Create, PaymentRouting.Edit,
         RateSchedule.Module, RateSchedule.Create, RateSchedule.Edit,
         Charge.Module, Charge.Regenerate,
         Parameter.Module, Parameter.Edit,
@@ -411,6 +434,8 @@ public static class PermissionCatalog
         Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject,
         Payment.ImportBankStatement, Payment.MatchBankTransaction,
         ChargeType.Module, ChargeType.Create, ChargeType.Edit,
+        Store.Module, Store.Create, Store.Edit, Store.Account,
+        PaymentRouting.Module, PaymentRouting.Create, PaymentRouting.Edit,
         Parameter.Module, Parameter.Edit,
         PropertyType.Module, PropertyType.Create, PropertyType.Edit,
         UnitType.Module, UnitType.Create, UnitType.Edit,

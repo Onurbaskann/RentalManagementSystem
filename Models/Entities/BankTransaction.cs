@@ -29,5 +29,9 @@ public class BankTransaction : BaseEntity
     [Column("Aciklama")]
     public string Description { get; set; } = string.Empty;
 
+    [Column("MagazaHesapBilgisiId")]
+    public int StoreAccountId { get; set; }
+
+    public StoreAccount StoreAccount { get; set; } = null!;
     public List<PaymentMatch> Matches { get; set; } = [];
 }

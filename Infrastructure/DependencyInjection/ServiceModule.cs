@@ -27,6 +27,12 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<IStatisticsService, StatisticsService>();
             services.AddScoped<SeedDataService>();
             services.AddScoped<ISystemSettingService, SystemSettingService>();
+            services.AddScoped<IStoreService, StoreService>();
+            services.AddScoped<IStoreAccountCredentialProtector, StoreAccountCredentialProtector>();
+            services.AddScoped<IPaymentStoreRoutingService, PaymentStoreRoutingService>();
+            services.AddScoped<IPaymentStoreResolver, PaymentStoreResolver>();
+            services.AddScoped<IOnlinePaymentService, OnlinePaymentService>();
+            // Somut IOnlinePaymentProvider kaydı (ör. ParatikaOnlinePaymentProvider) İç Faz 7'de eklenecek.
             services.AddSingleton<IReservationPolicyProvider, ReservationPolicyProvider>();
             services.AddSingleton<IOperationalPolicyProvider, OperationalPolicyProvider>();
 
@@ -48,8 +54,6 @@ namespace KiraTakip.Infrastructure.DependencyInjection
 
             // Notification, Payment & Integration Services
             services.AddScoped<IMailService, SmtpMailService>();
-            services.AddScoped<IPaymentLinkService, PaymentLinkService>();
-            services.AddScoped<IPaymentPortalService, PaymentPortalService>();
             services.AddScoped<IChargeReminderService, ChargeReminderService>();
             services.AddSingleton<ISecureTokenService, SecureTokenService>();
             services.AddScoped<IInvitationService, InvitationService>();

@@ -12,6 +12,7 @@ public class ChargeService(
     IChargeRepository chargeRepository,
     IPaymentAllocationRepository paymentAllocationRepository,
     IUnitRepository unitRepository,
+    IChargeLineItemRepository chargeLineItemRepository,
     IUnitOfWork unitOfWork) : IChargeService
 {
     // ── Listeleme ────────────────────────────────────────────────────────
@@ -123,11 +124,22 @@ public class ChargeService(
     // ── İş Kuralı: Ödenen Tutarı Güncelleme ──────────────────────────────
     public async Task UpdatePaidAmountAsync(UpdateChargePaidAmountInput input)
     {
+        var lineItem = Guard.NotFound(
+            await chargeLineItemRepository.GetForPaymentUpdateAsync(input.ChargeLineItemId),
+            "Tahakkuk kalemi bulunamadı.",
+            "CHARGE_LINE_ITEM_NOT_FOUND");
+        var balance = Guard.NotFound(
+            await chargeLineItemRepository.GetPaymentBalanceAsync(input.ChargeLineItemId),
+            "Tahakkuk kalemi bulunamadı.",
+            "CHARGE_LINE_ITEM_NOT_FOUND");
+        lineItem.PaidAmount = balance.ApprovedAmount;
+        await unitOfWork.SaveChangesAsync();
+
         var charge = Guard.NotFound(
             await chargeRepository.GetByIdAsync(input.ChargeId),
             "Tahakkuk bulunamadı.");
 
-        var paidAmount = await paymentAllocationRepository.GetPaidAmountAsync(input.ChargeId);
+        var paidAmount = await chargeLineItemRepository.GetChargePaidAmountTotalAsync(input.ChargeId);
 
         charge.PaidAmount = paidAmount;
         charge.Status = paidAmount >= charge.TotalAmount

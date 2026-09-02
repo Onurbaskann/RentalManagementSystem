@@ -35,7 +35,6 @@ public static class SystemSettingDefinitions
 
     public static class Payment
     {
-        public const string LinkValidityHours = "Payment.LinkValidityHours";
         public const string ReminderDaysBefore = "Payment.ReminderDaysBefore";
         public const string ReminderCooldownDays = "Payment.ReminderCooldownDays";
     }
@@ -85,9 +84,6 @@ public static class SystemSettingDefinitions
         new(7, Reservation.MaximumAttendeeCount, "Maksimum katılımcı sayısı", "Rezervasyon",
             "Rezervasyona eklenebilecek en fazla katılımcı sayısı.", "100",
             SystemSettingInputKind.Integer, true, 1, 10000),
-        new(8, Payment.LinkValidityHours, "Ödeme bağlantısı geçerlilik süresi", "Ödeme ve Hatırlatma",
-            "Ödeme bağlantısının kaç saat geçerli kalacağı.", "168",
-            SystemSettingInputKind.Integer, true, 1, 8760),
         new(9, Payment.ReminderDaysBefore, "Hatırlatma başlangıç günü", "Ödeme ve Hatırlatma",
             "Vade tarihinden kaç gün önce borcun hatırlatma kapsamına alınacağı.", "5",
             SystemSettingInputKind.Integer, true, 0, 365),
@@ -206,7 +202,6 @@ public static class SystemSettingDefinitions
         IReadOnlyDictionary<string, string> values)
         => new()
         {
-            PaymentLinkValidityHours = ParseRequiredInt(values, Payment.LinkValidityHours),
             PaymentReminderDaysBefore = ParseRequiredInt(values, Payment.ReminderDaysBefore),
             PaymentReminderCooldownDays = ParseRequiredInt(values, Payment.ReminderCooldownDays),
             InvitationValidityDays = ParseRequiredInt(values, Invitation.ValidityDays),

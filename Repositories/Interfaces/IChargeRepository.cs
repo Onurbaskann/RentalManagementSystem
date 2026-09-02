@@ -19,11 +19,6 @@ public interface IChargeRepository : IRepositoryBase<Charge>
     Task<TenantPanelChargeDataDto> GetTenantPanelDataAsync(GetTenantPanelChargeDataInput input);
     Task<MonthlyCollectionReportDto> GetMonthlyCollectionReportAsync(
         GetMonthlyCollectionReportInput input);
-    Task<List<PaymentPortalChargeDto>> GetPaymentPortalChargesAsync(
-        int tenantId,
-        DateTime dueDateLimit,
-        CancellationToken cancellationToken = default);
-
     // Manuel Borç — DTO döner
     Task<List<ManualChargeListItemDto>> GetManualChargeListAsync(
         List<int>? propertyIds,

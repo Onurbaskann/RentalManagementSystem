@@ -1,0 +1,86 @@
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.Store.StoreListItemDto>
+@using KiraTakip.Models.Common
+@{
+    ViewData["Title"] = "Mağazalar";
+    ViewData["UseCentralFeedback"] = true;
+    var query = ViewBag.Query as TableQuery ?? new TableQuery();
+    var pagination = PaginationModel.FromPaged(Model, "/Admin/Store", query.ToQueryDict());
+}
+
+<div class="page-header flex items-center justify-between">
+    <div>
+        <div class="page-title">Mağazalar</div>
+        <div class="page-subtitle">@Model.Total kayıt</div>
+    </div>
+    <a href="/Admin/Store/Create" class="btn btn-primary" asp-permission="@PermissionCatalog.Store.Create">Yeni Mağaza</a>
+</div>
+
+<form method="get" action="/Admin/Store" class="card mb-3 flex flex-wrap items-end gap-3">
+    <div class="form-group mb-0 flex-1 min-w-[240px]">
+        <label class="form-label">Ara</label>
+        <input name="q" value="@query.Q" class="form-control" placeholder="Mağaza adı veya kodu" />
+    </div>
+    <input type="hidden" name="size" value="@query.Size" />
+    <button type="submit" class="btn btn-secondary">Ara</button>
+    <a href="/Admin/Store" class="btn btn-secondary">Temizle</a>
+</form>
+
+<div class="card p-0 overflow-hidden">
+    <div class="table-wrapper">
+        <table class="w-full">
+            <thead>
+                <tr>
+                    <th>Mağaza</th>
+                    <th>Aktif Hesap</th>
+                    <th>Durum</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var store in Model.Items)
+                {
+                    <tr>
+                        <td>
+                            <div class="font-medium text-slate-700">@store.Name</div>
+                            @if (!string.IsNullOrWhiteSpace(store.Description))
+                            {
+                                <div class="text-xs text-muted">@store.Description</div>
+                            }
+                        </td>
+                        <td>
+                            @if (store.HasActiveAccount)
+                            {
+                                <span class="badge badge-kirali">@store.ActiveProviderCode / @store.ActiveCurrency</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-gecmis">Tanımsız</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge @(store.IsActive ? "badge-kirali" : "badge-gecmis")">
+                                @(store.IsActive ? "Aktif" : "Pasif")
+                            </span>
+                        </td>
+                        <td class="flex gap-2 justify-end">
+                            <a href="/Admin/Store/Edit/@store.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
+                            <form method="post" action="/Admin/Store/ToggleStatus/@store.Id.ToHashId()" class="inline"
+                                  data-confirm="'@store.Name' mağazası @(store.IsActive ? "pasif" : "aktif") yapılsın mı?">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm @(store.IsActive ? "btn-danger" : "btn-amber")"
+                                        asp-permission="@PermissionCatalog.Store.Edit">
+                                    @(store.IsActive ? "Pasif Yap" : "Aktif Yap")
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Items.Any())
+                {
+                    <tr><td colspan="4" class="text-center py-8 text-muted">Henüz mağaza tanımlanmamış.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @await Html.PartialAsync("_Pagination", pagination)
+</div>

@@ -59,6 +59,7 @@ namespace KiraTakip.Infrastructure.DependencyInjection
                     // Sistem tanımları — her ortamda idempotent çalışır
                     await domainSeed.SeedEnumDegerleriAsync();
                     await domainSeed.SeedBorcTipleriAsync();
+                    await domainSeed.SeedOdemeMagazalariAsync();
                     await domainSeed.SeedTasinmazTipleriAsync();
                     await domainSeed.SeedBirimTurleriAsync();
                     await domainSeed.SeedKiraciKategorileriAsync();
@@ -68,6 +69,7 @@ namespace KiraTakip.Infrastructure.DependencyInjection
 
                     await domainSeed.SeedTasinmazFiyatlarAsync();
                     await domainSeed.SeedDomainDataAsync();
+                    await domainSeed.SeedOrnekMagazaYonlendirmeleriAsync();
                     await domainSeed.SeedTahakkuklarAsync();
                 }
             }

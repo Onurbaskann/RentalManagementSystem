@@ -4,6 +4,7 @@ using KiraTakip.Infrastructure;
 using KiraTakip.Models.Settings;
 using KiraTakip.Services;
 using KiraTakip.Services.Interfaces;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,8 +32,13 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             // Options Pattern Settings Configuration
             services.Configure<SmtpSettings>(configuration.GetSection("Smtp"));
             services.Configure<SecureTokenSettings>(configuration.GetSection("SecureToken"));
-            services.Configure<PaymentLinkSettings>(configuration.GetSection("PaymentLink"));
             services.Configure<ReservationCompletionSettings>(configuration.GetSection("ReservationCompletion"));
+            services.Configure<DataProtectionSettings>(configuration.GetSection("DataProtection"));
+            services.Configure<ParatikaOptions>(configuration.GetSection("Paratika"));
+            var dataProtection = services.AddDataProtection().SetApplicationName("KiraTakip");
+            var keyRingPath = configuration["DataProtection:KeyRingPath"];
+            if (!string.IsNullOrWhiteSpace(keyRingPath))
+                dataProtection.PersistKeysToFileSystem(new DirectoryInfo(Path.GetFullPath(keyRingPath)));
             services.AddSingleton(TimeProvider.System);
             services.AddHostedService<ReservationCompletionBackgroundService>();
 

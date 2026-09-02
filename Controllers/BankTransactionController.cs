@@ -30,9 +30,12 @@ public class BankTransactionController(
 
     [HttpGet("Import")]
     [Authorize(Policy = PermissionCatalog.Payment.ImportBankStatement)]
-    public IActionResult Import()
+    public async Task<IActionResult> Import()
     {
-        return View(new BankTransactionImportViewModel());
+        return View(new BankTransactionImportViewModel
+        {
+            StoreOptions = await bankTransactionService.GetImportStoreOptionsAsync()
+        });
     }
 
     [HttpPost("Import")]
@@ -40,16 +43,22 @@ public class BankTransactionController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Import(BankTransactionImportViewModel model)
     {
-        if (!ModelState.IsValid) return View(model);
+        if (!ModelState.IsValid)
+        {
+            model.StoreOptions = await bankTransactionService.GetImportStoreOptionsAsync();
+            return View(model);
+        }
 
         try
         {
             await using var stream = model.File!.OpenReadStream();
-            await bankTransactionService.ImportAsync(new ImportBankTransactionsInput(stream, model.BankCode));
+            await bankTransactionService.ImportAsync(
+                new ImportBankTransactionsInput(stream, model.BankCode, model.StoreId));
         }
         catch (BusinessValidationException exception)
         {
             ModelState.AddModelError(exception.Field, exception.Message);
+            model.StoreOptions = await bankTransactionService.GetImportStoreOptionsAsync();
             return View(model);
         }
 

@@ -34,13 +34,21 @@
             <div class="detail-label">Tutar</div>
             <div style="font-size: 1.125rem; font-family: 'Fraunces', Georgia, serif;" class="font-bold">@payment.Amount.Tl(0)</div>
         </div>
+        <div>
+            <div class="detail-label">Mağaza</div>
+            <div class="font-semibold">@payment.StoreName</div>
+        </div>
     </div>
 </div>
 
 <!-- Aday hareketler -->
 <div class="card p-0 overflow-hidden">
-    <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--color-border);">
+    <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--color-border);" class="flex items-center justify-between">
         <div class="section-title m-0">Eşleşmemiş Banka Hareketleri (@Model.TransactionCandidates.Count)</div>
+        @if (Model.TransactionCandidates.Any())
+        {
+            <span class="text-xs text-muted">Yalnız aynı mağaza hesabına ait hareketler listelenir.</span>
+        }
     </div>
     @if (Model.TransactionCandidates.Any())
     {

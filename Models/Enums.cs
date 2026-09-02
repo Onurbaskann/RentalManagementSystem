@@ -168,17 +168,29 @@ public enum PasswordResetStatus
     Cancelled = 4
 }
 
-public enum PaymentLinkStatus
-{
-    Active = 1,
-    Cancelled = 2,
-    Expired = 3
-}
-
 public enum DocumentOwnerType
 {
     Tenant = 1,
     Payment = 2,
     Lease = 3,
     Template = 99
+}
+
+public enum OnlinePaymentTransactionStatus
+{
+    Pending = 1,
+    Approved = 2,
+    Failed = 3,
+    Cancelled = 4,
+    Unknown = 5
+}
+
+public enum OnlinePaymentEventType
+{
+    SessionRequested = 1,
+    SessionResult = 2,
+    CallbackReceived = 3,
+    InquiryPerformed = 4,
+    Succeeded = 5,
+    Failed = 6
 }

@@ -1,3 +1,4 @@
+using KiraTakip;
 using KiraTakip.Data;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models;
@@ -13,15 +14,13 @@ namespace KiraTakip.Services;
 public class ChargeReminderService(
     IChargeRepository chargeRepository,
     IUnitOfWork unitOfWork,
-    IPaymentLinkService paymentLinkService,
+    IHttpContextAccessor httpContextAccessor,
     IMailService mailService,
     IRazorViewToStringRenderer renderer,
     ILogger<ChargeReminderService> logger,
     IOperationalPolicyProvider operationalPolicyProvider,
-    IOptions<PaymentLinkSettings> paymentOptions,
     IOptions<SmtpSettings> smtpOptions) : IChargeReminderService
 {
-    private readonly PaymentLinkSettings paymentSettings = paymentOptions.Value;
     private readonly SmtpSettings smtpSettings = smtpOptions.Value;
 
     public async Task<int> GetDebtorCountAsync(
@@ -49,12 +48,6 @@ public class ChargeReminderService(
         var failedSends = 0;
 
         Guard.Against(
-            string.IsNullOrWhiteSpace(paymentSettings.Secret) || paymentSettings.Secret.Length < 32,
-            "PaymentLink:Secret ayarı yapılmamış veya çok kısa (en az 32 karakter olmalıdır).");
-        Guard.Against(
-            operationalPolicyProvider.Current.PaymentLinkValidityHours <= 0,
-            "Ödeme bağlantısı geçerlilik süresi sıfırdan büyük olmalıdır.");
-        Guard.Against(
             string.IsNullOrWhiteSpace(smtpSettings.Host) || string.IsNullOrWhiteSpace(smtpSettings.From),
             "SMTP sunucu ayarları (Smtp:Host veya Smtp:From) yapılandırılmamış.");
 
@@ -69,6 +62,11 @@ public class ChargeReminderService(
                 input.UnitIds),
             cancellationToken);
         var groups = debts.GroupBy(charge => charge.TenantId).ToList();
+
+        var request = httpContextAccessor.HttpContext?.Request;
+        var baseUrl = request is not null
+            ? $"{request.Scheme}://{request.Host}"
+            : "http://localhost:5031";
 
         foreach (var group in groups)
         {
@@ -101,10 +99,6 @@ public class ChargeReminderService(
                 FirstName = tenant.Name,
                 LastName = "",
                 Email = tenant.Email,
-                PaymentLinkValidityText = FormatValidity(policy.PaymentLinkValidityHours),
-                PaymentLink = await paymentLinkService.CreateAsync(
-                    new CreatePaymentLinkInput(tenant.Id),
-                    cancellationToken),
                 Debts = group.OrderBy(charge => charge.DueDate).Select(charge => new DebtReminderLineViewModel
                 {
                     PropertyName = charge.Unit.Property.Name,
@@ -114,7 +108,8 @@ public class ChargeReminderService(
                     TotalAmount = charge.TotalAmount,
                     PaidAmount = charge.Allocations
                         .Where(allocation => allocation.Status == PaymentStatus.Approved)
-                        .Sum(allocation => allocation.Amount)
+                        .Sum(allocation => allocation.Amount),
+                    ChargeDetailsUrl = $"{baseUrl}/Tenant/Charges/Details/{charge.Id.ToHashId()}"
                 }).ToList()
             };
 
@@ -175,9 +170,4 @@ public class ChargeReminderService(
                 string.Join(", ", messageParts) + ". Detaylar için logları inceleyin.");
         }
     }
-
-    private static string FormatValidity(int validityHours)
-        => validityHours % 24 == 0
-            ? $"{validityHours / 24} gün"
-            : $"{validityHours} saat";
 }

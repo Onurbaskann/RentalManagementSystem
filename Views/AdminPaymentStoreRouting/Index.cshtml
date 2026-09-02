@@ -1,0 +1,281 @@
+@model KiraTakip.Models.ViewModels.PaymentStoreRoutingIndexViewModel
+@using KiraTakip.Models.Common
+@{
+    ViewData["Title"] = "Ödeme Yönlendirmeleri";
+    ViewData["UseCentralFeedback"] = true;
+    var pagination = PaginationModel.FromPaged(
+        Model.Data.Routings,
+        "/Admin/PaymentStoreRouting",
+        Model.Query.ToQueryDict());
+    var unitGroups = Model.Data.Units.GroupBy(unit => unit.ParentName).OrderBy(group => group.Key);
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Ödeme Yönlendirmeleri</div>
+        <div class="page-subtitle">Bir tahakkuk kaleminin ödemesi hangi mağazaya gidecek, burada belirlenir. Ödeme sırasında sırasıyla <strong>Birim → Taşınmaz → Genel</strong> yönlendirmesi aranır.</div>
+    </div>
+</div>
+
+@if (Model.Guide != null && !Model.Guide.HasUsableDefault)
+{
+    <div class="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+        @if (Model.Guide.IsChargeTypeActive)
+        {
+            <text>«@Model.Guide.ChargeTypeName» borç tipinin genel mağaza yönlendirmesi tanımlı değil; bu borç tipine ait ödemeler başlatılamıyor. Aşağıdaki formda Kapsam «Genel» seçip bir mağaza tanımlayın.</text>
+        }
+        else
+        {
+            <text>«@Model.Guide.ChargeTypeName» borç tipi pasif; genel bir mağaza yönlendirmesi tanımlanmadan aktifleştirilemez. Aşağıdaki formda Kapsam «Genel» seçip bir mağaza tanımlayıp kaydedin.</text>
+        }
+    </div>
+}
+else if (Model.Guide != null && Model.Guide.HasUsableDefault && !Model.Guide.IsChargeTypeActive)
+{
+    <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 flex flex-wrap items-center justify-between gap-3">
+        <div>«@Model.Guide.ChargeTypeName» için genel yönlendirme tanımlandı; Borç Tipleri ekranından aktifleştirebilirsiniz.</div>
+        <a href="/Admin/ChargeType" class="btn btn-primary btn-sm">Borç Tipleri ekranına git</a>
+    </div>
+}
+
+@if (Model.Data.MissingDefaults.Count > 0)
+{
+    <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+        <div class="font-semibold text-amber-900">
+            @Model.Data.MissingDefaults.Count borç tipinin kullanılabilir genel mağaza yönlendirmesi yok
+        </div>
+        <div class="mt-2 text-xs text-amber-800">Aşağıdaki formda Kapsam «Genel» seçip her biri için bir mağaza tanımlayın; tanımlanana kadar bu borç tipleri aktifleştirilemez ve buna bağlı ödemeler başlatılamaz.</div>
+        <div class="mt-2 text-xs font-medium text-amber-900">Tanımlanacak borç tipleri:</div>
+        <div class="mt-1 flex flex-wrap gap-2">
+            @foreach (var item in Model.Data.MissingDefaults)
+            {
+                <a class="badge badge-gecmis" href="/Admin/PaymentStoreRouting?chargeTypeId=@item.ChargeTypeId">
+                    @item.ChargeTypeName
+                </a>
+            }
+        </div>
+    </div>
+}
+
+<div class="grid grid-cols-1 xl:grid-cols-[380px_minmax(0,1fr)] gap-4 items-start">
+    <div class="card xl:sticky xl:top-4">
+        <div class="text-base font-semibold text-slate-800 mb-1">
+            @(Model.Guide != null ? $"«{Model.Guide.ChargeTypeName}» için yönlendirme tanımla" : "Yönlendirme tanımla")
+        </div>
+        <div class="text-xs text-muted mb-4">Aynı kapsam yeniden kaydedilirse aktif tanımın mağazası güncellenir.</div>
+
+        <form method="post" action="/Admin/PaymentStoreRouting/Save" asp-form-write-permission="@PermissionCatalog.PaymentRouting.Create">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-red-500 text-sm mb-3"></div>
+
+            <div class="form-group">
+                <label class="form-label">Borç tipi <span class="text-red-500">*</span></label>
+                <select asp-for="Form.ChargeTypeId" name="ChargeTypeId" class="form-control">
+                    <option value="0">Seçiniz</option>
+                    @foreach (var item in Model.Data.ChargeTypes)
+                    {
+                        <option value="@item.Id" selected="@(Model.Form.ChargeTypeId == item.Id)">@item.Name</option>
+                    }
+                </select>
+                @Html.ValidationMessage("ChargeTypeId", null, new { @class = "text-red-500 text-xs" })
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Kapsam <span class="text-red-500">*</span></label>
+                <select asp-for="Form.Scope" name="Scope" id="routing-scope" class="form-control">
+                    <option value="0" selected="@(Model.Form.Scope == PaymentRoutingScope.General)">Genel — tüm taşınmazlar</option>
+                    <option value="1" selected="@(Model.Form.Scope == PaymentRoutingScope.Property)">Taşınmaz — seçilen taşınmaza özel</option>
+                    <option value="2" selected="@(Model.Form.Scope == PaymentRoutingScope.Unit)">Birim — seçilen birime özel</option>
+                </select>
+                <div id="scope-help" class="text-xs text-muted mt-1"></div>
+                @Html.ValidationMessage("Scope", null, new { @class = "text-red-500 text-xs" })
+            </div>
+
+            <div class="form-group" id="property-field">
+                <label class="form-label">Taşınmaz <span class="text-red-500">*</span></label>
+                <select asp-for="Form.PropertyId" name="PropertyId" id="routing-property" class="form-control">
+                    <option value="">Seçiniz</option>
+                    @foreach (var item in Model.Data.Properties)
+                    {
+                        <option value="@item.Id" selected="@(Model.Form.PropertyId == item.Id)">@item.Name</option>
+                    }
+                </select>
+                @Html.ValidationMessage("PropertyId", null, new { @class = "text-red-500 text-xs" })
+            </div>
+
+            <div class="form-group" id="unit-field">
+                <label class="form-label">Birim <span class="text-red-500">*</span></label>
+                <select asp-for="Form.UnitId" name="UnitId" id="routing-unit" class="form-control">
+                    <option value="">Seçiniz</option>
+                    @foreach (var group in unitGroups)
+                    {
+                        <optgroup label="@group.Key">
+                            @foreach (var item in group)
+                            {
+                                <option value="@item.Id" selected="@(Model.Form.UnitId == item.Id)">@item.Name</option>
+                            }
+                        </optgroup>
+                    }
+                </select>
+                @Html.ValidationMessage("UnitId", null, new { @class = "text-red-500 text-xs" })
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Mağaza <span class="text-red-500">*</span></label>
+                <select asp-for="Form.StoreId" name="StoreId" class="form-control">
+                    <option value="0">Seçiniz</option>
+                    @foreach (var item in Model.Data.Stores)
+                    {
+                        <option value="@item.Id" selected="@(Model.Form.StoreId == item.Id)">@item.Name — @item.ProviderCode / @item.Currency</option>
+                    }
+                </select>
+                @Html.ValidationMessage("StoreId", null, new { @class = "text-red-500 text-xs" })
+                @if (!Model.Data.Stores.Any())
+                {
+                    <div class="text-xs text-amber-700 mt-1">Aktif ve tek aktif hesaba sahip mağaza bulunamadı.</div>
+                }
+            </div>
+
+            <button type="submit" class="btn btn-primary w-full" asp-permission="@PermissionCatalog.PaymentRouting.Create">
+                Yönlendirmeyi Kaydet
+            </button>
+        </form>
+    </div>
+
+    <div>
+        <form method="get" action="/Admin/PaymentStoreRouting" class="card mb-3 flex flex-wrap items-end gap-3">
+            <div class="form-group mb-0 flex-1 min-w-[220px]">
+                <label class="form-label">Ara</label>
+                <input name="q" value="@Model.Query.Q" class="form-control" placeholder="Borç tipi, kapsam veya mağaza" />
+            </div>
+            <div class="form-group mb-0 min-w-[170px]">
+                <label class="form-label">Kapsam</label>
+                <select name="source" class="form-control">
+                    <option value="">Tümü</option>
+                    <option value="General" selected="@(Model.Query.Source == "General")">Genel</option>
+                    <option value="Property" selected="@(Model.Query.Source == "Property")">Taşınmaz</option>
+                    <option value="Unit" selected="@(Model.Query.Source == "Unit")">Birim</option>
+                </select>
+            </div>
+            <input type="hidden" name="size" value="@Model.Query.Size" />
+            <input type="hidden" name="status" value="@Model.Query.Status" />
+            <button type="submit" class="btn btn-secondary">Filtrele</button>
+            <a href="/Admin/PaymentStoreRouting" class="btn btn-secondary">Temizle</a>
+        </form>
+
+        @if (string.Equals(Model.Query.Status, "gecmis", StringComparison.OrdinalIgnoreCase))
+        {
+            <div class="text-[12px] text-slate-500 mb-2 -mt-1">
+                Yalnızca geçmiş yönlendirmeler gösteriliyor.
+                <a href="/Admin/PaymentStoreRouting" class="text-slate-600 hover:text-primary underline ml-1">← Güncel yönlendirmelere dön</a>
+            </div>
+        }
+        else if (Model.Data.HistoryCount > 0)
+        {
+            <div class="text-[12px] text-slate-400 mb-2 -mt-1">
+                @Model.Data.HistoryCount geçmiş kayıt varsayılan görünümde gizleniyor.
+                <a href="/Admin/PaymentStoreRouting?status=gecmis" class="text-slate-500 hover:text-primary underline ml-1">Görüntüle →</a>
+            </div>
+        }
+
+        <div class="card p-0 overflow-hidden">
+            <div class="table-wrapper">
+                <table class="w-full">
+                    <thead>
+                        <tr>
+                            <th>Borç tipi</th>
+                            <th>Kapsam</th>
+                            <th>Mağaza</th>
+                            <th>Hesap</th>
+                            <th>Durum</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var routing in Model.Data.Routings.Items)
+                        {
+                            <tr class="@(!routing.IsActive ? "opacity-60" : "")">
+                                <td>
+                                    <div class="font-medium text-slate-700">@routing.ChargeTypeName</div>
+                                </td>
+                                <td>
+                                    <div class="text-sm font-medium">@(routing.Scope == PaymentRoutingScope.General ? "Genel (varsayılan)" : routing.Scope == PaymentRoutingScope.Property ? "Taşınmaza özel" : "Birime özel")</div>
+                                    <div class="text-xs text-muted">@routing.ScopeName</div>
+                                </td>
+                                <td>
+                                    <div class="text-sm">@routing.StoreName</div>
+                                </td>
+                                <td>
+                                    @if (routing.IsStoreActive && routing.HasActiveStoreAccount)
+                                    {
+                                        <span class="badge badge-kirali">@routing.ProviderCode / @routing.Currency</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-gecmis" title="Mağaza pasif ya da tek bir aktif hesabı yok. Bu kapsamdaki ödemeler başlatılamaz.">Kullanılamaz</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (routing.IsActive)
+                                    {
+                                        <span class="badge badge-kirali" title="Ödemelerde kullanılan güncel yönlendirme.">Aktif</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-gecmis" title="Bu yönlendirme kaldırıldı; tarihçe için saklanıyor.">Geçmiş</span>
+                                    }
+                                </td>
+                                <td class="text-right">
+                                    @if (routing.IsActive && routing.Scope != PaymentRoutingScope.General)
+                                    {
+                                        <form method="post" action="/Admin/PaymentStoreRouting/Deactivate/@routing.Id.ToHashId()" class="inline"
+                                              data-confirm="«@routing.ScopeName» için tanımlı yönlendirme kaldırılsın mı? Bu kapsamdaki yeni ödemeler bir üst kapsamın mağazasına (Birim → Taşınmaz → Genel) yönlendirilir. Kayıt silinmez, listede «Geçmiş» olarak kalır.">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-danger" asp-permission="@PermissionCatalog.PaymentRouting.Edit">Yönlendirmeyi Kaldır</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        @if (!Model.Data.Routings.Items.Any())
+                        {
+                            <tr><td colspan="6" class="text-center py-8 text-muted">Henüz ödeme yönlendirmesi tanımlanmamış. Soldaki formdan başlayın.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @await Html.PartialAsync("_Pagination", pagination)
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const scope = document.getElementById('routing-scope');
+            const propertyField = document.getElementById('property-field');
+            const unitField = document.getElementById('unit-field');
+            const property = document.getElementById('routing-property');
+            const unit = document.getElementById('routing-unit');
+            const scopeHelp = document.getElementById('scope-help');
+            const scopeHelpText = {
+                '0': 'Bu borç tipinin tüm taşınmaz ve birimleri için varsayılan mağaza. Her aktif borç tipinde zorunludur.',
+                '1': 'Yalnız seçilen taşınmazdaki birimler için geçerlidir; genel yönlendirmenin yerine geçer.',
+                '2': 'Yalnız seçilen birim için geçerlidir; taşınmaz ve genel yönlendirmenin yerine geçer.'
+            };
+
+            const refresh = () => {
+                const value = scope.value;
+                propertyField.classList.toggle('hidden', value !== '1');
+                unitField.classList.toggle('hidden', value !== '2');
+                if (value !== '1') property.value = '';
+                if (value !== '2') unit.value = '';
+                scopeHelp.textContent = scopeHelpText[value] || '';
+            };
+
+            scope.addEventListener('change', refresh);
+            refresh();
+        })();
+    </script>
+}

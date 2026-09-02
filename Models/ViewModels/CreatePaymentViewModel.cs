@@ -5,6 +5,7 @@ namespace KiraTakip.Models.ViewModels;
 public class CreatePaymentViewModel
 {
     public int ChargeId { get; set; }
+    public int? ChargeLineItemId { get; set; }
     public DateTime PaymentDate { get; set; } = DateTime.Today;
 
     public decimal Amount { get; set; }

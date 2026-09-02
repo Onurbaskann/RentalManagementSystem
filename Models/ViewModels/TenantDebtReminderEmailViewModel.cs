@@ -9,8 +9,6 @@ public class TenantDebtReminderEmailViewModel
         : $"{FirstName} {LastName}";
     public string Email { get; set; } = string.Empty;
     public List<DebtReminderLineViewModel> Debts { get; set; } = [];
-    public string PaymentLink { get; set; } = string.Empty;
-    public string PaymentLinkValidityText { get; set; } = string.Empty;
 }
 
 public class DebtReminderLineViewModel
@@ -22,4 +20,5 @@ public class DebtReminderLineViewModel
     public decimal TotalAmount { get; set; }
     public decimal PaidAmount { get; set; }
     public decimal RemainingAmount => TotalAmount - PaidAmount;
+    public string ChargeDetailsUrl { get; set; } = string.Empty;
 }

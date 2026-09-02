@@ -12,6 +12,7 @@ document.addEventListener('alpine:init', () => {
         tenantId: @(Model.TenantId > 0 ? Model.TenantId : "null"),
         startDate: '@Model.StartDate.ToString("yyyy-MM-dd")',
         endDate: '@Model.EndDate.ToString("yyyy-MM-dd")',
+        endDateManuallyChanged: false,
         dueDateRuleType: @((int)Model.DueDateRuleType),
         dueDay: @Model.DueDay,
         leaseId: @(leaseId?.ToString() ?? "null"),
@@ -28,9 +29,32 @@ document.addEventListener('alpine:init', () => {
             }
         },
         unitAreas: @Html.Raw(ViewBag.UnitAreas ?? "{}"),
+        calculateDefaultEndDate(startDateStr) {
+            if (!startDateStr || !/^\d{4}-\d{2}-\d{2}/.test(startDateStr)) return '';
+            const [y, m, d] = startDateStr.split('-').map(Number);
+            const date = new Date(y, m - 1, d);
+            date.setFullYear(date.getFullYear() + 1);
+            date.setDate(date.getDate() - 1);
+            const resY = date.getFullYear();
+            const resM = String(date.getMonth() + 1).padStart(2, '0');
+            const resD = String(date.getDate()).padStart(2, '0');
+            return `${resY}-${resM}-${resD}`;
+        },
         onPickerChanged(event) {
-            if (event.detail.field === 'start') this.startDate = event.detail.value;
-            if (event.detail.field === 'end') this.endDate = event.detail.value;
+            if (event.detail.field === 'start') {
+                this.startDate = event.detail.value;
+                if (!this.readOnly && !this.endDateManuallyChanged && this.startDate) {
+                    const defaultEnd = this.calculateDefaultEndDate(this.startDate);
+                    if (defaultEnd) {
+                        this.endDate = defaultEnd;
+                        this.$dispatch('set-date-value', { field: 'end', value: defaultEnd });
+                    }
+                }
+            }
+            if (event.detail.field === 'end') {
+                this.endDate = event.detail.value;
+                this.endDateManuallyChanged = true;
+            }
         },
         init() {
             if (!this.readOnly) {

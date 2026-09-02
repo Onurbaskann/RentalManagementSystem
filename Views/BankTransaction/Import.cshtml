@@ -28,6 +28,23 @@
             </div>
 
             <div class="form-group">
+                <label class="form-label">Hedef Mağaza <span class="text-red-500">*</span></label>
+                <select asp-for="StoreId" class="form-control">
+                    <option value="0">Seçiniz</option>
+                    @foreach (var item in Model.StoreOptions)
+                    {
+                        <option value="@item.Id">@item.Name — @item.ProviderCode / @item.Currency</option>
+                    }
+                </select>
+                <span asp-validation-for="StoreId" class="text-red-600 text-xs"></span>
+                @if (!Model.StoreOptions.Any())
+                {
+                    <div class="text-xs text-amber-700 mt-1">Aktif ve tek aktif hesaba sahip mağaza bulunamadı; içe aktarma yapılamaz.</div>
+                }
+                <div class="form-hint">Bu dosyadaki tüm hareketler seçilen mağazanın aktif hesabına bağlanır ve yalnız aynı hesaba ait ödemelerle eşleştirilebilir.</div>
+            </div>
+
+            <div class="form-group">
                 <label class="form-label">CSV Dosyası</label>
                 <input type="file" asp-for="File" class="form-control" accept=".csv,.txt" />
                 <span asp-validation-for="File" class="text-red-600 text-xs"></span>

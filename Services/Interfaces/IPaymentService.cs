@@ -9,6 +9,7 @@ public interface IPaymentService
     Task<PagedResult<PaymentListItemDto>> GetPagedAsync(GetPagedPaymentsInput input);
     Task<PaymentDetailDto?> GetByIdAsync(GetPaymentByIdInput input);
     Task<ChargeDetailDto> GetCreationContextAsync(GetPaymentCreationContextInput input);
+    Task<List<ChargeLineItemPaymentBalanceDto>> GetPayableLineItemsAsync(int chargeId);
     Task<int> CreateAsync(CreatePaymentInput input);
     Task ReportTenantPaymentAsync(ReportTenantPaymentInput input);
     Task ApproveAsync(ApprovePaymentInput input);

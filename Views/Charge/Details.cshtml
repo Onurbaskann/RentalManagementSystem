@@ -54,19 +54,47 @@
             </div>
             <div class="mt-2"><span class="badge @statusClass text-[12.5px] px-3.5 py-1.5">@statusLabel</span></div>
         </div>
-        <div class="flex gap-6 flex-wrap">
-            <div class="text-center">
-                <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Beklenen</div>
-                <div class="text-xl font-bold">@Model.TotalAmount.Tl()</div>
+        <div class="flex flex-col items-end gap-3">
+            <div class="flex gap-6 flex-wrap">
+                <div class="text-center">
+                    <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Beklenen</div>
+                    <div class="text-xl font-bold">@Model.TotalAmount.Tl()</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Ödenen</div>
+                    <div class="text-xl font-bold text-emerald-800">@Model.PaidAmount.Tl()</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Kalan</div>
+                    <div class="text-xl font-bold @(remainingAmount > 0 ? "text-red-500" : "text-emerald-800")">@remainingAmount.Tl()</div>
+                </div>
             </div>
-            <div class="text-center">
-                <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Ödenen</div>
-                <div class="text-xl font-bold text-emerald-800">@Model.PaidAmount.Tl()</div>
-            </div>
-            <div class="text-center">
-                <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Kalan</div>
-                <div class="text-xl font-bold @(remainingAmount > 0 ? "text-red-500" : "text-emerald-800")">@remainingAmount.Tl()</div>
-            </div>
+
+            <details class="group w-full">
+                <summary class="list-none cursor-pointer flex items-center gap-2.5 p-2 px-3 bg-slate-50 border border-slate-200 rounded-lg select-none group-open:rounded-b-none hover:bg-slate-100/50 transition-all">
+                    <span class="text-[9px] font-bold uppercase tracking-widest bg-indigo-50 text-indigo-600 border border-indigo-100 rounded px-1.5 py-0.5">Kalem Bazında</span>
+                    <span class="text-[11px] text-slate-500 font-medium">@Model.LineItems.Count kalem</span>
+                    <span class="ml-auto text-[10px] text-slate-300 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div class="border border-slate-200 border-t-0 rounded-b-lg bg-white p-3">
+                    <div class="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 gap-y-1.5 text-xs items-center">
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest pb-1 border-b border-slate-100">Kalem</span>
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest pb-1 border-b border-slate-100 text-right">Toplam</span>
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest pb-1 border-b border-slate-100 text-right">Ödenen</span>
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest pb-1 border-b border-slate-100 text-right">Kalan</span>
+                        @foreach (var item in Model.LineItems.OrderBy(item => item.ChargeTypeSortOrder))
+                        {
+                            <span class="text-slate-700 font-medium">
+                                @item.ChargeTypeName
+                                <span class="block text-[10px] text-muted font-normal">@item.Description</span>
+                            </span>
+                            <span class="text-right font-bold text-slate-600 font-mono">@item.TotalAmount.Tl()</span>
+                            <span class="text-right font-bold text-emerald-700 font-mono">@item.PaidAmount.Tl()</span>
+                            <span class="text-right font-bold font-mono @(item.RemainingAmount > 0 ? "text-red-500" : "text-emerald-700")">@item.RemainingAmount.Tl()</span>
+                        }
+                    </div>
+                </div>
+            </details>
         </div>
     </div>
 
@@ -198,6 +226,7 @@
                 <thead>
                     <tr>
                         <th>Ödeme Tarihi</th>
+                        <th>Kalem</th>
                         <th class="text-right">Tutar</th>
                         <th>Kanal</th>
                         <th>Durum</th>
@@ -227,6 +256,10 @@
                         };
                         <tr>
                             <td class="font-semibold">@payment.PaymentDate.Tarih()</td>
+                            <td class="text-[13px]">
+                                <span class="font-semibold">@payment.ChargeTypeName</span>
+                                <span class="block text-[11px] text-muted">@payment.ChargeLineItemDescription</span>
+                            </td>
                             <td class="text-right font-bold @(payment.Status == PaymentStatus.Approved ? "text-emerald-800" : "")">@payment.Amount.Tl()</td>
                             <td class="text-[13px]">@channelLabel</td>
                             <td><span class="badge @paymentStatusClass">@paymentStatusLabel</span></td>

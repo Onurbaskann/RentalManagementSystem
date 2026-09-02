@@ -12,6 +12,11 @@ public class BankTransactionImportViewModelValidator : IValidator<BankTransactio
         if (string.IsNullOrWhiteSpace(input.BankCode))
             errors.Add(new ValidationError("Banka seçilmelidir.", nameof(input.BankCode)));
 
+        if (input.StoreId <= 0)
+            errors.Add(new ValidationError(
+                "Hareketlerin yönlendirileceği mağaza seçilmelidir.",
+                nameof(input.StoreId)));
+
         if (input.File == null || input.File.Length == 0)
             errors.Add(new ValidationError("CSV dosyası seçiniz.", nameof(input.File)));
 

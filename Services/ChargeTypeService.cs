@@ -12,6 +12,7 @@ namespace KiraTakip.Services;
 public class ChargeTypeService(
     IChargeTypeRepository chargeTypeRepository,
     IUnitTypeRepository unitTypeRepository,
+    IPaymentStoreRoutingRepository paymentStoreRoutingRepository,
     IUnitOfWork uow) : IChargeTypeService
 {
     public Task<List<ChargeTypeListItemDto>> GetListAsync() => chargeTypeRepository.GetListAsync();
@@ -22,7 +23,7 @@ public class ChargeTypeService(
 
     public async Task<int> GetNextSortOrderAsync() => (await chargeTypeRepository.GetMaxSortOrderAsync()) + 1;
 
-    public async Task CreateAsync(CreateInput input)
+    public async Task<int> CreateAsync(CreateInput input)
     {
         var code = CodeSlugger.ToCode(input.Name);
         Guard.InvalidField(
@@ -36,12 +37,13 @@ public class ChargeTypeService(
             Code = code,
             Behavior = input.Behavior,
             SortOrder = input.SortOrder,
-            IsActive = input.IsActive,
+            IsActive = false,
             IsSystem = false
         };
 
         await chargeTypeRepository.AddAsync(entity);
         await uow.SaveChangesAsync();
+        return entity.Id;
     }
 
     public async Task UpdateAsync(int id, EditInput input)
@@ -53,6 +55,14 @@ public class ChargeTypeService(
             await chargeTypeRepository.CodeExistsAsync(code, excludeId: id),
             nameof(input.Name),
             "Bu ad zaten kullanılıyor. Farklı bir ad girin.");
+
+        if (!entity.IsActive && input.IsActive)
+        {
+            Guard.Conflict(
+                !await paymentStoreRoutingRepository.HasUsableDefaultAsync(id),
+                "Borç tipi aktifleştirilmeden önce kullanılabilir bir genel mağaza yönlendirmesi tanımlanmalıdır.",
+                "CHARGE_TYPE_DEFAULT_STORE_REQUIRED");
+        }
 
         entity.Name = input.Name;
         entity.Code = code;
@@ -74,6 +84,13 @@ public class ChargeTypeService(
             Guard.Conflict(
                 await unitTypeRepository.AnyAktifByBorcTipiIdAsync(id),
                 "Bu borç tipi aktif bir birim türüne bağlı. Önce ilgili birim türünü pasif yapın.");
+        }
+        else
+        {
+            Guard.Conflict(
+                !await paymentStoreRoutingRepository.HasUsableDefaultAsync(id),
+                "Borç tipi aktifleştirilmeden önce kullanılabilir bir genel mağaza yönlendirmesi tanımlanmalıdır.",
+                "CHARGE_TYPE_DEFAULT_STORE_REQUIRED");
         }
 
         entity.IsActive = !entity.IsActive;

@@ -34,6 +34,7 @@ public record CreatePaymentInput(
     string? Description,
     string CreatedByUserId,
     PaymentAccessScopeInput AccessScope,
+    int? ChargeLineItemId,
     string? PosReferenceNo = null);
 
 public record ReportTenantPaymentInput(
@@ -47,7 +48,8 @@ public record ReportTenantPaymentInput(
     string ReceiptFileName,
     string ReceiptMimeType,
     byte[] ReceiptContent,
-    PaymentAccessScopeInput AccessScope);
+    PaymentAccessScopeInput AccessScope,
+    int? ChargeLineItemId);
 
 public record ApprovePaymentInput(
     int PaymentId,

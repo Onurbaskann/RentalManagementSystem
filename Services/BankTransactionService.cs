@@ -4,6 +4,7 @@ using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Dtos.PaymentStoreRouting;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Services.Banka;
 using KiraTakip.Services.Interfaces;
@@ -16,6 +17,8 @@ public class BankTransactionService(
     IPaymentMatchRepository paymentMatchRepository,
     IEnumerable<IBankaHareketiParser> parsers,
     IOperationalPolicyProvider operationalPolicyProvider,
+    IStoreRepository storeRepository,
+    IStoreAccountRepository storeAccountRepository,
     IUnitOfWork unitOfWork) : IBankTransactionService, ITransactionalService
 {
     public async Task ImportAsync(ImportBankTransactionsInput input)
@@ -27,11 +30,27 @@ public class BankTransactionService(
             nameof(input.BankCode),
             $"'{input.BankCode}' için parser bulunamadı.");
 
+        var account = Guard.NotFound(
+            await storeAccountRepository.GetActiveByStoreIdAsync(input.StoreId, tracking: false),
+            "Seçilen mağazanın aktif ödeme hesabı bulunamadı.",
+            "BANK_IMPORT_STORE_ACCOUNT_NOT_FOUND");
+
         var transactions = parser!.Parse(input.File).ToList();
+        Guard.InvalidField(
+            transactions.Count == 0,
+            nameof(input.File),
+            "Dosyada içe aktarılabilir banka hareketi bulunamadı.",
+            "BANK_IMPORT_NO_TRANSACTIONS");
+
+        foreach (var transaction in transactions)
+            transaction.StoreAccountId = account.Id;
 
         await bankTransactionRepository.AddRangeAsync(transactions);
         await unitOfWork.SaveChangesAsync();
     }
+
+    public Task<List<StoreRoutingOptionDto>> GetImportStoreOptionsAsync()
+        => storeRepository.GetRoutingOptionsAsync();
 
     public Task<List<BankTransactionListItemDto>> GetAllAsync(GetBankTransactionsInput input)
         => bankTransactionRepository.GetListAsync(input.Status);
@@ -72,6 +91,11 @@ public class BankTransactionService(
             transaction.MatchStatus != BankMatchStatus.Unmatched
                 || await paymentMatchRepository.ExistsForBankTransactionAsync(input.BankTransactionId),
             "Banka hareketi başka bir ödemeyle zaten eşleştirilmiş.");
+
+        Guard.Conflict(
+            transaction.StoreAccountId != payment.StoreAccountId,
+            "Banka hareketi ile ödeme farklı mağaza hesaplarına ait olduğu için eşleştirilemez.",
+            "BANK_MATCH_STORE_ACCOUNT_MISMATCH");
 
         var match = new PaymentMatch
         {

@@ -13,7 +13,10 @@ public class PaymentService(
     IPaymentAllocationRepository paymentRepository,
     IUnitOfWork unitOfWork,
     IChargeService chargeService,
-    IDocumentService documentService) : IPaymentService, ITransactionalService
+    IDocumentService documentService,
+    IChargeLineItemRepository chargeLineItemRepository,
+    IPaymentStoreResolver storeResolver,
+    IPaymentBusinessRules paymentBusinessRules) : IPaymentService, ITransactionalService
 {
     public Task<List<PaymentListItemDto>> GetAllAsync(GetPaymentsInput input)
         => paymentRepository.GetListAsync(
@@ -57,20 +60,32 @@ public class PaymentService(
         return charge;
     }
 
+    public Task<List<ChargeLineItemPaymentBalanceDto>> GetPayableLineItemsAsync(int chargeId)
+        => GetPayableLineItemBalancesAsync(chargeId);
+
     public async Task<int> CreateAsync(CreatePaymentInput input)
     {
         var charge = await GetCreationContextAsync(
             new GetPaymentCreationContextInput(input.ChargeId, input.AccessScope));
-        var remainingAmount = charge.TotalAmount - charge.PaidAmount;
-        Guard.InvalidField(
-            input.Amount > remainingAmount,
-            nameof(input.Amount),
-            $"Tutar kalan borçtan ({remainingAmount:N2} ₺) küçük veya eşit olmalıdır.",
-            "PAYMENT_AMOUNT_EXCEEDS_REMAINING");
+
+        var lineItemId = await ResolveTargetLineItemIdAsync(input.ChargeId, input.ChargeLineItemId);
+        await chargeLineItemRepository.AcquirePaymentLockAsync(lineItemId);
+
+        var balance = Guard.NotFound(
+            await chargeLineItemRepository.GetPaymentBalanceAsync(lineItemId),
+            "Tahakkuk kalemi bulunamadı.",
+            "PAYMENT_LINE_ITEM_NOT_FOUND");
+        paymentBusinessRules.EnsureLineItemBelongsToCharge(balance, input.ChargeId);
+        paymentBusinessRules.EnsureLineItemPayable(balance);
+        paymentBusinessRules.EnsureAdminAmountWithinAvailable(balance, input.Amount);
+
+        var resolved = await storeResolver.ResolveAsync(balance.ChargeTypeId, balance.UnitId);
 
         var payment = new PaymentAllocation
         {
             ChargeId = input.ChargeId,
+            ChargeLineItemId = balance.ChargeLineItemId,
+            StoreAccountId = resolved.StoreAccountId,
             LeaseId = charge.LeaseId,
             PaymentDate = input.PaymentDate,
             Amount = input.Amount,
@@ -106,14 +121,18 @@ public class PaymentService(
             "Tahakkukun kalan borcu bulunmuyor.",
             "TENANT_PAYMENT_CHARGE_PAID");
 
-        var pendingAmount = await paymentRepository.GetPendingAmountAsync(
-            input.ChargeId,
-            input.TenantId);
-        var availableAmount = charge.TotalAmount - charge.PaidAmount - pendingAmount;
-        Guard.Against(
-            input.Amount > availableAmount,
-            $"Tutar 0'dan büyük ve kalan borçtan ({Math.Max(0, availableAmount):N2} ₺) küçük/eşit olmalıdır.",
-            "TENANT_PAYMENT_AMOUNT_EXCEEDS_AVAILABLE");
+        var lineItemId = await ResolveTargetLineItemIdAsync(input.ChargeId, input.ChargeLineItemId);
+        await chargeLineItemRepository.AcquirePaymentLockAsync(lineItemId);
+
+        var balance = Guard.NotFound(
+            await chargeLineItemRepository.GetPaymentBalanceAsync(lineItemId),
+            "Tahakkuk kalemi bulunamadı.",
+            "PAYMENT_LINE_ITEM_NOT_FOUND");
+        paymentBusinessRules.EnsureLineItemBelongsToCharge(balance, input.ChargeId);
+        paymentBusinessRules.EnsureLineItemPayable(balance);
+        paymentBusinessRules.EnsureTenantAmountWithinAvailable(balance, input.Amount);
+
+        var resolved = await storeResolver.ResolveAsync(balance.ChargeTypeId, balance.UnitId);
 
         var receiptType = Guard.NotFound(
             (await documentService.GetTypesAsync(
@@ -125,6 +144,8 @@ public class PaymentService(
         var payment = new PaymentAllocation
         {
             ChargeId = input.ChargeId,
+            ChargeLineItemId = balance.ChargeLineItemId,
+            StoreAccountId = resolved.StoreAccountId,
             LeaseId = charge.LeaseId,
             PaymentDate = input.PaymentDate,
             Amount = input.Amount,
@@ -154,6 +175,10 @@ public class PaymentService(
 
     public async Task ApproveAsync(ApprovePaymentInput input)
     {
+        var lineItemId = await paymentRepository.GetChargeLineItemIdAsync(input.PaymentId)
+            ?? throw new BusinessException("Ödeme bulunamadı.", ErrorType.NotFound, "PAYMENT_NOT_FOUND");
+        await chargeLineItemRepository.AcquirePaymentLockAsync(lineItemId);
+
         var payment = Guard.NotFound(
             await paymentRepository.GetForDecisionAsync(
                 input.PaymentId,
@@ -166,11 +191,11 @@ public class PaymentService(
             "Yalnızca onay bekleyen ödeme onaylanabilir.",
             "PAYMENT_NOT_PENDING");
 
-        var approvedAmount = await paymentRepository.GetPaidAmountAsync(payment.ChargeId);
-        Guard.Conflict(
-            approvedAmount + payment.Amount > payment.Charge.TotalAmount,
-            "Ödeme tutarı tahakkukun kalan borcunu aşıyor.",
-            "PAYMENT_APPROVAL_EXCEEDS_REMAINING");
+        var balance = Guard.NotFound(
+            await chargeLineItemRepository.GetPaymentBalanceAsync(payment.ChargeLineItemId),
+            "Tahakkuk kalemi bulunamadı.",
+            "PAYMENT_LINE_ITEM_NOT_FOUND");
+        paymentBusinessRules.EnsureApprovalWithinRemaining(balance, payment.Amount);
 
         payment.Status = PaymentStatus.Approved;
         payment.ApprovedByUserId = input.ApprovedByUserId;
@@ -178,11 +203,16 @@ public class PaymentService(
         await paymentRepository.UpdateAsync(payment);
         await unitOfWork.SaveChangesAsync();
 
-        await chargeService.UpdatePaidAmountAsync(new UpdateChargePaidAmountInput(payment.ChargeId));
+        await chargeService.UpdatePaidAmountAsync(
+            new UpdateChargePaidAmountInput(payment.ChargeId, payment.ChargeLineItemId));
     }
 
     public async Task RejectAsync(RejectPaymentInput input)
     {
+        var lineItemId = await paymentRepository.GetChargeLineItemIdAsync(input.PaymentId)
+            ?? throw new BusinessException("Ödeme bulunamadı.", ErrorType.NotFound, "PAYMENT_NOT_FOUND");
+        await chargeLineItemRepository.AcquirePaymentLockAsync(lineItemId);
+
         var payment = Guard.NotFound(
             await paymentRepository.GetForDecisionAsync(
                 input.PaymentId,
@@ -200,7 +230,22 @@ public class PaymentService(
         await paymentRepository.UpdateAsync(payment);
         await unitOfWork.SaveChangesAsync();
 
-        await chargeService.UpdatePaidAmountAsync(new UpdateChargePaidAmountInput(payment.ChargeId));
+        await chargeService.UpdatePaidAmountAsync(
+            new UpdateChargePaidAmountInput(payment.ChargeId, payment.ChargeLineItemId));
+    }
+
+    private async Task<int> ResolveTargetLineItemIdAsync(int chargeId, int? explicitLineItemId)
+    {
+        if (explicitLineItemId.HasValue) return explicitLineItemId.Value;
+
+        var payable = await GetPayableLineItemBalancesAsync(chargeId);
+        return paymentBusinessRules.ResolveAutoSelectedLineItem(payable).ChargeLineItemId;
+    }
+
+    private async Task<List<ChargeLineItemPaymentBalanceDto>> GetPayableLineItemBalancesAsync(int chargeId)
+    {
+        var balances = await chargeLineItemRepository.GetPaymentBalancesByChargeAsync(chargeId);
+        return balances.Where(balance => balance.AvailableAmount > 0).ToList();
     }
 
     private static bool IsOutsideScope(

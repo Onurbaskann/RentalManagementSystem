@@ -53,6 +53,7 @@ public class TenantChargeQueryViewModel
 public class TenantChargePaymentFormViewModel
 {
     public int ChargeId { get; set; }
+    public int? ChargeLineItemId { get; set; }
     public decimal Amount { get; set; }
     public DateTime PaymentDate { get; set; } = DateTime.Today;
     public PaymentChannel PaymentChannel { get; set; } = PaymentChannel.BankTransfer;

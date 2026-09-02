@@ -74,6 +74,7 @@
                     <th class="w-48">Karşı Taraf</th>
                     <th class="w-32 num">Tutar</th>
                     <th class="w-24 cell-center">Banka</th>
+                    <th class="w-28">Mağaza</th>
                     <th class="w-32">Durum</th>
                     @if (canMatch) { <th class="w-24"></th> }
                 </tr>
@@ -97,6 +98,7 @@
                         <td class="text-muted truncate max-w-[150px]">@(transaction.SenderInfo ?? transaction.SenderIban ?? "—")</td>
                         <td class="num">@transaction.TransactionAmount.ToString("N2") ₺</td>
                         <td class="cell-center">@transaction.BankCode</td>
+                        <td class="text-muted truncate max-w-[110px]" title="@transaction.StoreName">@transaction.StoreName</td>
                         <td><span class="badge @matchClass">@matchLabel</span></td>
                         @if (canMatch)
                         {
@@ -111,7 +113,7 @@
                 }
                 @if (Model.Total == 0)
                 {
-                    <tr><td colspan="7" class="text-center py-12 text-muted italic">Filtreye uygun hareket bulunamadı.</td></tr>
+                    <tr><td colspan="8" class="text-center py-12 text-muted italic">Filtreye uygun hareket bulunamadı.</td></tr>
                 }
             </tbody>
         </table>

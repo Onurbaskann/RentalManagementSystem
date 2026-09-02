@@ -27,6 +27,7 @@ public class BankTransactionRepository : RepositoryBase<BankTransaction>, IBankT
                           SenderInfo = transaction.SenderInfo,
                           BankCode = transaction.BankCode,
                           MatchStatus = transaction.MatchStatus,
+                          StoreName = transaction.StoreAccount.Store.Name,
                       })
                       .ToListAsync();
     }
@@ -72,6 +73,7 @@ public class BankTransactionRepository : RepositoryBase<BankTransaction>, IBankT
                 SenderInfo = transaction.SenderInfo,
                 BankCode = transaction.BankCode,
                 MatchStatus = transaction.MatchStatus,
+                StoreName = transaction.StoreAccount.Store.Name,
             });
 
         return await GetPagedResultAsync(query, itemsQuery, tableQuery);
@@ -90,6 +92,7 @@ public class BankTransactionRepository : RepositoryBase<BankTransaction>, IBankT
                            SenderInfo = transaction.SenderInfo,
                            BankCode = transaction.BankCode,
                            MatchStatus = transaction.MatchStatus,
+                           StoreName = transaction.StoreAccount.Store.Name,
                            Matches = transaction.Matches.Select(match => new PaymentBankMatchDto
                            {
                                Id = match.Id,
@@ -105,7 +108,8 @@ public class BankTransactionRepository : RepositoryBase<BankTransaction>, IBankT
     public Task<PaymentMatchingBasisDto?> GetMatchingBasisAsync(int bankTransactionId)
         => _dbSet.AsNoTracking()
             .Where(transaction => transaction.Id == bankTransactionId)
-            .Select(transaction => new PaymentMatchingBasisDto(transaction.TransactionAmount, transaction.TransactionDate))
+            .Select(transaction => new PaymentMatchingBasisDto(
+                transaction.TransactionAmount, transaction.TransactionDate, transaction.StoreAccountId))
             .FirstOrDefaultAsync();
 
     public async Task<List<BankTransactionListItemDto>> GetTransactionCandidatesAsync(
@@ -119,6 +123,7 @@ public class BankTransactionRepository : RepositoryBase<BankTransaction>, IBankT
         var candidates = await _dbSet.AsNoTracking()
             .Where(transaction => transaction.MatchStatus == BankMatchStatus.Unmatched)
             .Where(transaction => !_ctx.PaymentMatches.Any(match => match.BankTransactionId == transaction.Id))
+            .Where(transaction => transaction.StoreAccountId == basis.StoreAccountId)
             .Select(transaction => new BankTransactionListItemDto
             {
                 Id = transaction.Id,
@@ -129,6 +134,7 @@ public class BankTransactionRepository : RepositoryBase<BankTransaction>, IBankT
                 SenderInfo = transaction.SenderInfo,
                 BankCode = transaction.BankCode,
                 MatchStatus = transaction.MatchStatus,
+                StoreName = transaction.StoreAccount.Store.Name,
             })
             .ToListAsync();
 

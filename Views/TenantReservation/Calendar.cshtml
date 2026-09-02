@@ -11,12 +11,10 @@
         : Model.Units;
 }
 
-<div class="page-header flex items-center justify-between gap-3 flex-wrap">
-    <div>
-        <div class="page-title">Rezervasyon Uygunluğu</div>
-        <div class="page-subtitle">@Model.FromDate.ToString("dd.MM.yyyy") – @Model.ToDate.ToString("dd.MM.yyyy")</div>
-    </div>
-    <a asp-controller="TenantReservation" asp-action="Index" class="btn btn-secondary">Rezervasyonlarıma Dön</a>
+<div class="page-header">
+    <a asp-controller="TenantReservation" asp-action="Index" class="text-[12.5px] text-muted no-underline inline-block mb-2">← Rezervasyonlarım</a>
+    <div class="page-title">Rezervasyon Uygunluğu</div>
+    <div class="page-subtitle">@Model.FromDate.ToString("dd.MM.yyyy") – @Model.ToDate.ToString("dd.MM.yyyy")</div>
 </div>
 
 <div class="card mb-4">

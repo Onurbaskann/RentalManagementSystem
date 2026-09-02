@@ -38,6 +38,10 @@ public class ChargeLineItem : BaseEntity
     [Column("KaynakTipi")]
     public LineItemSourceType SourceType { get; set; }
 
+    [Column("OdenenTutar")]
+    public decimal PaidAmount { get; set; }
+
     public Charge Charge { get; set; } = null!;
     public ChargeType ChargeType { get; set; } = null!;
+    public List<PaymentAllocation> Allocations { get; set; } = [];
 }

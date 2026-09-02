@@ -4,6 +4,13 @@ public class PaymentDetailDto
 {
     public int Id { get; set; }
     public int ChargeId { get; set; }
+    public int ChargeLineItemId { get; set; }
+    public string ChargeLineItemDescription { get; set; } = string.Empty;
+    public string ChargeTypeName { get; set; } = string.Empty;
+    public int StoreAccountId { get; set; }
+    public string StoreName { get; set; } = string.Empty;
+    public string StoreProviderCode { get; set; } = string.Empty;
+    public string StoreCurrency { get; set; } = string.Empty;
     public int? LeaseId { get; set; }
     public DateTime PaymentDate { get; set; }
     public decimal Amount { get; set; }

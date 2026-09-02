@@ -10,4 +10,5 @@ public class BankTransactionListItemDto
     public string? SenderInfo { get; set; }
     public string BankCode { get; set; } = string.Empty;
     public BankMatchStatus MatchStatus { get; set; }
+    public string StoreName { get; set; } = string.Empty;
 }

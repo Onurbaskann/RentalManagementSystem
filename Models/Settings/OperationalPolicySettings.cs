@@ -2,7 +2,6 @@ namespace KiraTakip.Models.Settings;
 
 public sealed class OperationalPolicySettings
 {
-    public int PaymentLinkValidityHours { get; init; } = 168;
     public int PaymentReminderDaysBefore { get; init; } = 5;
     public int PaymentReminderCooldownDays { get; init; } = 7;
     public int InvitationValidityDays { get; init; } = 7;

@@ -16,7 +16,7 @@ public record GetChargesPageInput(
 
 public record GetChargeDetailsInput(int Id);
 
-public record UpdateChargePaidAmountInput(int ChargeId);
+public record UpdateChargePaidAmountInput(int ChargeId, int ChargeLineItemId);
 
 public record GetChargeIndexOptionsInput(
     bool HasGlobalAccess,

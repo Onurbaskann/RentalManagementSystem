@@ -8,6 +8,12 @@ public class PaymentAllocation : BaseEntity
     [Column("TahakkukId")]
     public int ChargeId { get; set; }
 
+    [Column("TahakkukKalemiId")]
+    public int ChargeLineItemId { get; set; }
+
+    [Column("MagazaHesapBilgisiId")]
+    public int StoreAccountId { get; set; }
+
     [Column("SozlesmeId")]
     public int? LeaseId { get; set; }
 
@@ -48,6 +54,8 @@ public class PaymentAllocation : BaseEntity
     public string? RejectionReason { get; set; }
 
     public Charge Charge { get; set; } = null!;
+    public ChargeLineItem ChargeLineItem { get; set; } = null!;
+    public StoreAccount StoreAccount { get; set; } = null!;
     public Lease? Lease { get; set; }
     public ApplicationUser GirenUser { get; set; } = null!;
     public ApplicationUser? OnaylayanUser { get; set; }

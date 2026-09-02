@@ -18,6 +18,7 @@ public class SeedDataService
     private readonly IRoleService _rolService;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IUserRoleService _userRolService;
+    private readonly IStoreAccountCredentialProtector _credentialProtector;
 
     public SeedDataService(
         ApplicationDbContext ctx,
@@ -25,7 +26,8 @@ public class SeedDataService
         IRateResolverService rateResolver,
         IRoleService roleService,
         UserManager<ApplicationUser> userManager,
-        IUserRoleService userRoleService)
+        IUserRoleService userRoleService,
+        IStoreAccountCredentialProtector credentialProtector)
     {
         _ctx = ctx;
         _chargeGeneration = tahakkukUretim;
@@ -33,6 +35,7 @@ public class SeedDataService
         _rolService = roleService;
         _userManager = userManager;
         _userRolService = userRoleService;
+        _credentialProtector = credentialProtector;
     }
 
     public async Task SeedEnumDegerleriAsync()
@@ -84,6 +87,140 @@ public class SeedDataService
         // Mevcut kayıtların davranışlarını doğrula (Idempotency)
         await _ctx.ChargeTypes.Where(b => b.Code == "TOPLANTI").ExecuteUpdateAsync(s => s.SetProperty(b => b.Behavior, ChargeTypeBehavior.ReservationSpecific));
         await _ctx.ChargeTypes.Where(b => b.Code == "ETKINLIK").ExecuteUpdateAsync(s => s.SetProperty(b => b.Behavior, ChargeTypeBehavior.ReservationSpecific));
+    }
+
+    /// <summary>
+    /// Faz 20 kalem bazlı ödeme çekirdeği için gereken seed mağaza/hesap ve her borç tipi
+    /// için genel ödeme yönlendirmesini oluşturur. Idempotent — "SEED" mağazası zaten varsa
+    /// yeniden oluşturulmaz, ama <see cref="ClearDomainDataAsync"/> sonrası sistem-dışı borç
+    /// tipleri yeniden oluşturulup yeni Id aldığı için eksik kalan genel yönlendirmeler her
+    /// çağrıda tamamlanır (yalnız mağaza varlığına bakıp tamamen çıkmaz).
+    /// </summary>
+    public async Task SeedOdemeMagazalariAsync()
+    {
+        var store = await _ctx.Stores.FirstOrDefaultAsync(s => s.Code == "SEED");
+        if (store == null)
+        {
+            store = new Store
+            {
+                Code = "SEED",
+                Name = "Seed Mağaza",
+                Description = "Geliştirme ortamı için otomatik oluşturulan varsayılan mağaza.",
+                IsActive = true
+            };
+            store.Accounts.Add(new StoreAccount
+            {
+                ProviderCode = PaymentProviderCodes.Paratika,
+                Currency = CurrencyCodes.Try,
+                MerchantId = "SEED-MERCHANT",
+                MerchantUser = "seed-user",
+                ProtectedMerchantPassword = _credentialProtector.Protect("seed-dummy-password"),
+                ValidFrom = DateTime.UtcNow,
+                IsActive = true
+            });
+            _ctx.Stores.Add(store);
+            await _ctx.SaveChangesAsync();
+        }
+
+        var chargeTypeIds = await _ctx.ChargeTypes.Select(ct => ct.Id).ToListAsync();
+        var routedChargeTypeIds = await _ctx.PaymentStoreRoutings
+            .Where(r => r.PropertyId == null && r.UnitId == null && r.IsActive)
+            .Select(r => r.ChargeTypeId)
+            .ToListAsync();
+        var missingChargeTypeIds = chargeTypeIds.Except(routedChargeTypeIds);
+        foreach (var chargeTypeId in missingChargeTypeIds)
+        {
+            _ctx.PaymentStoreRoutings.Add(new PaymentStoreRouting
+            {
+                ChargeTypeId = chargeTypeId,
+                PropertyId = null,
+                UnitId = null,
+                StoreId = store.Id,
+                IsActive = true
+            });
+        }
+        await _ctx.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Ödeme yönlendirmesinin Birim → Taşınmaz → Genel öncelik sırasını gerçek seed
+    /// verisiyle (Teknokent A Blok / Ofis 101) gösteren örnek override'lar oluşturur.
+    /// Idempotent — ilgili override zaten varsa tekrar oluşturmaz. `SeedDomainDataAsync`
+    /// çalışıp Teknokent/Ofis 101 kaydı oluştuktan sonra çağrılmalıdır.
+    /// </summary>
+    public async Task SeedOrnekMagazaYonlendirmeleriAsync()
+    {
+        var teknokent = await _ctx.Properties.FirstOrDefaultAsync(p => p.Name == "Teknokent A Blok");
+        var ofis101 = teknokent == null
+            ? null
+            : await _ctx.Units.FirstOrDefaultAsync(u => u.PropertyId == teknokent.Id && u.UnitNo == "101");
+        if (teknokent == null || ofis101 == null) return;
+
+        var kiraTipi = await _ctx.ChargeTypes.FirstAsync(b => b.Code == BorcTipiConsts.Kira);
+        var ortakTipi = await _ctx.ChargeTypes.FirstOrDefaultAsync(b => b.Code == "ORTAK");
+
+        // Senaryo 1: Ofis 101 için Kira Bedeli'nde birim özel yönlendirme (Genel'in önüne geçer).
+        var unitOverrideExists = await _ctx.PaymentStoreRoutings.AnyAsync(r =>
+            r.ChargeTypeId == kiraTipi.Id && r.UnitId == ofis101.Id && r.IsActive);
+        if (!unitOverrideExists)
+        {
+            var unitStore = await GetOrCreateSeedStoreAsync(
+                "SEED-UNIT101", "Ofis 101 Mağazası", "SEED-MERCHANT-U101", "seed-unit101-user");
+            _ctx.PaymentStoreRoutings.Add(new PaymentStoreRouting
+            {
+                ChargeTypeId = kiraTipi.Id,
+                PropertyId = null,
+                UnitId = ofis101.Id,
+                StoreId = unitStore.Id,
+                IsActive = true
+            });
+        }
+
+        // Senaryo 2: Teknokent A Blok'un tamamı için Ortak Gider'de taşınmaz özel yönlendirme
+        // (birim override'ı olmayan tüm birimlerde Genel'in önüne geçer).
+        if (ortakTipi != null)
+        {
+            var propertyOverrideExists = await _ctx.PaymentStoreRoutings.AnyAsync(r =>
+                r.ChargeTypeId == ortakTipi.Id && r.PropertyId == teknokent.Id && r.IsActive);
+            if (!propertyOverrideExists)
+            {
+                var propertyStore = await GetOrCreateSeedStoreAsync(
+                    "SEED-ORTAK-TEKNOKENT", "Teknokent Ortak Gider Mağazası",
+                    "SEED-MERCHANT-ORTAK", "seed-ortak-user");
+                _ctx.PaymentStoreRoutings.Add(new PaymentStoreRouting
+                {
+                    ChargeTypeId = ortakTipi.Id,
+                    PropertyId = teknokent.Id,
+                    UnitId = null,
+                    StoreId = propertyStore.Id,
+                    IsActive = true
+                });
+            }
+        }
+
+        await _ctx.SaveChangesAsync();
+    }
+
+    private async Task<Store> GetOrCreateSeedStoreAsync(
+        string code, string name, string merchantId, string merchantUser)
+    {
+        var existing = await _ctx.Stores.FirstOrDefaultAsync(s => s.Code == code);
+        if (existing != null) return existing;
+
+        var store = new Store { Code = code, Name = name, IsActive = true };
+        store.Accounts.Add(new StoreAccount
+        {
+            ProviderCode = PaymentProviderCodes.Paratika,
+            Currency = CurrencyCodes.Try,
+            MerchantId = merchantId,
+            MerchantUser = merchantUser,
+            ProtectedMerchantPassword = _credentialProtector.Protect("seed-dummy-password"),
+            ValidFrom = DateTime.UtcNow,
+            IsActive = true
+        });
+        _ctx.Stores.Add(store);
+        await _ctx.SaveChangesAsync();
+        return store;
     }
 
     public async Task EnsureVarsayilanReservationRateOverrideAsync()
@@ -824,6 +961,11 @@ public class SeedDataService
         {
             var adminUser = await _ctx.Users.FirstOrDefaultAsync();
             var adminId = adminUser?.Id ?? "admin-id-missing";
+            var seedStoreAccountId = await _ctx.Stores
+                .Where(s => s.Code == "SEED")
+                .SelectMany(s => s.Accounts)
+                .Select(a => a.Id)
+                .FirstAsync();
 
             // 1. Manuel Borçlar ve İptaller
             var manuelBorcTipi = await _ctx.ChargeTypes.FirstOrDefaultAsync(b => b.Code == BorcTipiConsts.Diger);
@@ -872,12 +1014,12 @@ public class SeedDataService
 
             // 2. Geçmiş Yıl Ödemeleri (%90 ve %95 oranları)
             var currentYear = DateTime.Today.Year;
-            await SeedGecmisYilOdemeleriAsync(currentYear - 1, 0.90, adminId);
-            await SeedGecmisYilOdemeleriAsync(currentYear, 0.60, adminId);
-            await SeedGecmisYilOdemeleriAsync(currentYear + 1, 0.05, adminId);
+            await SeedGecmisYilOdemeleriAsync(currentYear - 1, 0.90, adminId, seedStoreAccountId);
+            await SeedGecmisYilOdemeleriAsync(currentYear, 0.60, adminId, seedStoreAccountId);
+            await SeedGecmisYilOdemeleriAsync(currentYear + 1, 0.05, adminId, seedStoreAccountId);
 
             // 4. Kısmi Ödemeler
-            await SeedKismiOdemelerAsync(adminId);
+            await SeedKismiOdemelerAsync(adminId, seedStoreAccountId);
 
             await _ctx.SaveChangesAsync();
         }
@@ -888,9 +1030,10 @@ public class SeedDataService
         }
     }
 
-    private async Task SeedGecmisYilOdemeleriAsync(int yil, double oran, string adminId)
+    private async Task SeedGecmisYilOdemeleriAsync(int yil, double oran, string adminId, int storeAccountId)
     {
         var query = _ctx.Charges
+            .Include(t => t.LineItems)
             .Where(t => t.PeriodStart.Year == yil && t.Status == ChargeStatus.Pending);
 
         // Eğer cari yıl ise (2026), sadece bugünü ve geçmiş ayları öde (Gerçekçilik için)
@@ -919,27 +1062,21 @@ public class SeedDataService
                 odemeTutari = Math.Round(t.TotalAmount * kismiOran, 2);
             }
 
-            var payment = new PaymentAllocation
-            {
-                LeaseId = t.LeaseId,
-                ChargeId = t.Id,
-                PaymentDate = gecikmis ? t.DueDate.AddDays(Random.Shared.Next(15, 45)) : t.DueDate.AddDays(Random.Shared.Next(-5, 5)),
-                Amount = odemeTutari,
-                PaymentChannel = (PaymentChannel)Random.Shared.Next(1, 5),
-                Status = PaymentStatus.Approved,
-                Description = (kismiMi ? "Kısmi " : "") + (gecikmis ? "gecikmeli seed ödemesi" : "zamanında seed ödemesi"),
-                CreatedByUserId = adminId
-            };
+            var paymentDate = gecikmis ? t.DueDate.AddDays(Random.Shared.Next(15, 45)) : t.DueDate.AddDays(Random.Shared.Next(-5, 5));
+            var paymentChannel = (PaymentChannel)Random.Shared.Next(1, 5);
+            var description = (kismiMi ? "Kısmi " : "") + (gecikmis ? "gecikmeli seed ödemesi" : "zamanında seed ödemesi");
+
+            DagitKalemBazliOdeme(t, odemeTutari, storeAccountId, adminId, paymentDate, paymentChannel, description);
 
             t.PaidAmount = odemeTutari;
             t.Status = kismiMi ? ChargeStatus.PartiallyPaid : ChargeStatus.Paid;
-            _ctx.PaymentAllocations.Add(payment);
         }
     }
 
-    private async Task SeedKismiOdemelerAsync(string adminId)
+    private async Task SeedKismiOdemelerAsync(string adminId, int storeAccountId)
     {
         var bekleyenler = await _ctx.Charges
+            .Include(t => t.LineItems)
             .Where(t => t.Status == ChargeStatus.Pending)
             .Take(3)
             .ToListAsync();
@@ -947,20 +1084,59 @@ public class SeedDataService
         foreach (var t in bekleyenler)
         {
             var kismiTutar = Math.Round(t.TotalAmount / 2, 2);
-            var payment = new PaymentAllocation
-            {
-                LeaseId = t.LeaseId,
-                ChargeId = t.Id,
-                PaymentDate = DateTime.Today.AddDays(-2),
-                Amount = kismiTutar,
-                PaymentChannel = PaymentChannel.Eft,
-                Status = PaymentStatus.Approved,
-                Description = "Seed kısmi ödeme",
-                CreatedByUserId = adminId
-            };
+
+            DagitKalemBazliOdeme(
+                t, kismiTutar, storeAccountId, adminId,
+                DateTime.Today.AddDays(-2), PaymentChannel.Eft, "Seed kısmi ödeme");
+
             t.PaidAmount = kismiTutar;
             t.Status = ChargeStatus.PartiallyPaid;
-            _ctx.PaymentAllocations.Add(payment);
+        }
+    }
+
+    /// <summary>
+    /// Bir tahakkuk için toplam ödeme tutarını, kalemlerin ToplamTutar oranına göre her
+    /// kaleme bir PaymentAllocation olarak dağıtır. Kalem bazlı ödeme çekirdeğinde her
+    /// PaymentAllocation tek bir ChargeLineItem'a bağlı olmak zorunda olduğu için seed
+    /// verisi de bu invariant'a uymalıdır; tahmine dayalı tek-kalem ataması yapılmaz.
+    /// </summary>
+    private void DagitKalemBazliOdeme(
+        Charge charge,
+        decimal totalToPay,
+        int storeAccountId,
+        string adminId,
+        DateTime paymentDate,
+        PaymentChannel paymentChannel,
+        string description)
+    {
+        var lineItems = charge.LineItems.ToList();
+        if (lineItems.Count == 0 || totalToPay <= 0) return;
+
+        decimal remaining = totalToPay;
+        for (int i = 0; i < lineItems.Count; i++)
+        {
+            var lineItem = lineItems[i];
+            var isLast = i == lineItems.Count - 1;
+            var share = isLast
+                ? remaining
+                : Math.Round(totalToPay * (lineItem.TotalAmount / charge.TotalAmount), 2);
+            remaining -= share;
+            if (share <= 0) continue;
+
+            _ctx.PaymentAllocations.Add(new PaymentAllocation
+            {
+                LeaseId = charge.LeaseId,
+                ChargeId = charge.Id,
+                ChargeLineItemId = lineItem.Id,
+                StoreAccountId = storeAccountId,
+                PaymentDate = paymentDate,
+                Amount = share,
+                PaymentChannel = paymentChannel,
+                Status = PaymentStatus.Approved,
+                Description = description,
+                CreatedByUserId = adminId
+            });
+            lineItem.PaidAmount = share;
         }
     }
 
@@ -1147,7 +1323,6 @@ public class SeedDataService
         _ctx.KullaniciYetkiKapsamlari.RemoveRange(_ctx.KullaniciYetkiKapsamlari.IgnoreQueryFilters());
         _ctx.Davetiyeler.RemoveRange(_ctx.Davetiyeler.IgnoreQueryFilters());
         _ctx.SifreSifirlamaTalepleri.RemoveRange(_ctx.SifreSifirlamaTalepleri.IgnoreQueryFilters());
-        _ctx.OdemeLinkKayitlari.RemoveRange(_ctx.OdemeLinkKayitlari.IgnoreQueryFilters());
 
         // Temizlik sırası önemlidir (FK kısıtlamaları nedeniyle)
         _ctx.PaymentMatches.RemoveRange(_ctx.PaymentMatches.IgnoreQueryFilters());
@@ -1161,8 +1336,13 @@ public class SeedDataService
         _ctx.Charges.RemoveRange(_ctx.Charges.IgnoreQueryFilters());
 
         _ctx.SozlesmeTarifeler.RemoveRange(_ctx.SozlesmeTarifeler.IgnoreQueryFilters());
+        _ctx.SozlesmeIncelemeGecmisleri.RemoveRange(_ctx.SozlesmeIncelemeGecmisleri.IgnoreQueryFilters());
         _ctx.SozlesmeIslemGecmisleri.RemoveRange(_ctx.SozlesmeIslemGecmisleri.IgnoreQueryFilters());
         _ctx.Leases.RemoveRange(_ctx.Leases.IgnoreQueryFilters());
+
+        _ctx.PaymentStoreRoutings.RemoveRange(_ctx.PaymentStoreRoutings.IgnoreQueryFilters());
+        _ctx.StoreAccounts.RemoveRange(_ctx.StoreAccounts.IgnoreQueryFilters());
+        _ctx.Stores.RemoveRange(_ctx.Stores.IgnoreQueryFilters());
 
         _ctx.UnitRates.RemoveRange(_ctx.UnitRates.IgnoreQueryFilters());
         _ctx.Units.RemoveRange(_ctx.Units.IgnoreQueryFilters());
@@ -1190,6 +1370,13 @@ public class SeedDataService
 
         // Artık üzerinde hiçbir referans kalmayan Tenants tablosunu silebiliriz
         _ctx.Tenants.RemoveRange(_ctx.Tenants.IgnoreQueryFilters());
+        await _ctx.SaveChangesAsync();
+
+        // Sistem-dışı borç tipleri silinmeden önce onlara referans veren ödeme yönlendirmeleri
+        // kaldırılmalıdır (FK Restrict); Magazalar/MagazaHesapBilgileri kasıtlı olarak
+        // silinmez — SeedOdemeMagazalariAsync/SeedOrnekMagazaYonlendirmeleriAsync eksik
+        // yönlendirmeleri bir sonraki seed çalışmasında yeniden oluşturur.
+        _ctx.PaymentStoreRoutings.RemoveRange(_ctx.PaymentStoreRoutings.IgnoreQueryFilters());
         await _ctx.SaveChangesAsync();
 
         // Sistem Tanımları (Baştan seed edileceği için temizlenebilir)

@@ -74,4 +74,75 @@ public class ChargeLineItemRepository(ApplicationDbContext context)
             .Take(5)
             .ToList();
     }
+
+    public Task<ChargeLineItemPaymentBalanceDto?> GetPaymentBalanceAsync(
+        int chargeLineItemId,
+        CancellationToken cancellationToken = default)
+        => _dbSet.AsNoTracking()
+            .Where(lineItem => lineItem.Id == chargeLineItemId)
+            .Select(lineItem => new ChargeLineItemPaymentBalanceDto(
+                lineItem.Id,
+                lineItem.ChargeId,
+                lineItem.ChargeTypeId,
+                lineItem.Charge.UnitId,
+                lineItem.Charge.TenantId,
+                lineItem.ChargeType.Name,
+                lineItem.Description,
+                lineItem.TotalAmount,
+                lineItem.Allocations
+                    .Where(allocation => allocation.Status == PaymentStatus.Approved)
+                    .Sum(allocation => (decimal?)allocation.Amount) ?? 0m,
+                lineItem.Allocations
+                    .Where(allocation => allocation.Status == PaymentStatus.PendingApproval)
+                    .Sum(allocation => (decimal?)allocation.Amount) ?? 0m))
+            .FirstOrDefaultAsync(cancellationToken);
+
+    public Task<List<ChargeLineItemPaymentBalanceDto>> GetPaymentBalancesByChargeAsync(
+        int chargeId,
+        CancellationToken cancellationToken = default)
+        => _dbSet.AsNoTracking()
+            .Where(lineItem => lineItem.ChargeId == chargeId)
+            .OrderBy(lineItem => lineItem.ChargeType.SortOrder)
+            .ThenBy(lineItem => lineItem.Id)
+            .Select(lineItem => new ChargeLineItemPaymentBalanceDto(
+                lineItem.Id,
+                lineItem.ChargeId,
+                lineItem.ChargeTypeId,
+                lineItem.Charge.UnitId,
+                lineItem.Charge.TenantId,
+                lineItem.ChargeType.Name,
+                lineItem.Description,
+                lineItem.TotalAmount,
+                lineItem.Allocations
+                    .Where(allocation => allocation.Status == PaymentStatus.Approved)
+                    .Sum(allocation => (decimal?)allocation.Amount) ?? 0m,
+                lineItem.Allocations
+                    .Where(allocation => allocation.Status == PaymentStatus.PendingApproval)
+                    .Sum(allocation => (decimal?)allocation.Amount) ?? 0m))
+            .ToListAsync(cancellationToken);
+
+    public Task<ChargeLineItem?> GetForPaymentUpdateAsync(int chargeLineItemId)
+        => _dbSet.FirstOrDefaultAsync(lineItem => lineItem.Id == chargeLineItemId);
+
+    public async Task<decimal> GetChargePaidAmountTotalAsync(int chargeId)
+        => await _dbSet.AsNoTracking()
+            .Where(lineItem => lineItem.ChargeId == chargeId)
+            .SumAsync(lineItem => (decimal?)lineItem.PaidAmount) ?? 0m;
+
+    public Task AcquirePaymentLockAsync(int chargeLineItemId)
+    {
+        if (_ctx.Database.CurrentTransaction == null)
+            throw new InvalidOperationException("Tahakkuk kalemi ödeme kilidi aktif transaction gerektirir.");
+
+        var resource = $"KiraTakip.Payment.ChargeLineItem.{chargeLineItemId}";
+        return _ctx.Database.ExecuteSqlInterpolatedAsync($@"
+            DECLARE @result int;
+            EXEC @result = sys.sp_getapplock
+                @Resource = {resource},
+                @LockMode = 'Exclusive',
+                @LockOwner = 'Transaction',
+                @LockTimeout = 10000;
+            IF @result < 0
+                THROW 51000, 'Tahakkuk kalemi ödeme kilidi alınamadı.', 1;");
+    }
 }

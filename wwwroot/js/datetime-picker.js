@@ -190,6 +190,23 @@ document.addEventListener('alpine:init', () => {
                 this.open = !this.open;
             },
 
+            setValue(valStr) {
+                if (valStr && /^\d{4}-\d{2}-\d{2}/.test(valStr)) {
+                    const [datePart, timePart] = valStr.split('T');
+                    const [y, mo, d] = datePart.split('-').map(Number);
+                    this.year = y; this.month = mo - 1; this.day = d;
+                    this.viewYear = y; this.viewMonth = mo - 1;
+                    if (timePart) {
+                        const [h, mi] = timePart.split(':').map(Number);
+                        this.hour = isNaN(h) ? 9 : h;
+                        this.minute = isNaN(mi) ? 0 : mi;
+                    }
+                    this.hasValue = true;
+                } else {
+                    this.hasValue = false;
+                }
+            },
+
             emit() {
                 this.$dispatch('datechanged', { value: this.isoValue, field: this.field });
             }

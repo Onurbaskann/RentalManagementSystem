@@ -84,6 +84,17 @@
                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Giriş Yapan</div>
                     <div class="text-[14px] font-medium text-slate-600">@(Model.CreatedByUserDisplayName ?? "—")</div>
                 </div>
+                <div>
+                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Tahakkuk Kalemi</div>
+                    <div class="text-[14px] font-bold text-slate-700">@Model.ChargeTypeName</div>
+                    <div class="text-[12px] text-slate-500">@Model.ChargeLineItemDescription</div>
+                </div>
+                <div>
+                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Hedef Mağaza</div>
+                    <div class="text-[14px] font-bold text-slate-700"
+                         title="Ödeme oluşturulurken çözülen mağaza hesabı; sonraki yönlendirme değişiklikleri bu kaydı etkilemez.">@Model.StoreName</div>
+                    <div class="text-[12px] text-slate-500">@Model.StoreProviderCode / @Model.StoreCurrency</div>
+                </div>
                 @if (Model.Status == PaymentStatus.Approved)
                 {
                     <div>

@@ -12,6 +12,7 @@
 
 <div class="relative @dpWrapperClass"
      x-data="datetimePicker({ value: '@dpValue', mode: '@dpMode', field: '@dpField' })"
+     @@set-date-value.window="if ($event.detail && $event.detail.field === field) setValue($event.detail.value)"
      @@click.outside="open = false">
 
     <input type="hidden" name="@dpName" :value="isoValue" />

@@ -56,11 +56,13 @@ public class PaymentController(
     {
         var charge = await paymentService.GetCreationContextAsync(
             new GetPaymentCreationContextInput(chargeId, GetAccessScope()));
+        var payable = charge.LineItems.Where(item => item.AvailableAmount > 0).ToList();
 
         return View(new CreatePaymentViewModel
         {
             ChargeId = chargeId,
-            Amount = charge.TotalAmount - charge.PaidAmount,
+            ChargeLineItemId = payable.Count == 1 ? payable[0].Id : null,
+            Amount = payable.Count == 1 ? payable[0].AvailableAmount : 0m,
             Charge = charge
         });
     }
@@ -89,7 +91,8 @@ public class PaymentController(
                 PaymentSourceType.Manual,
                 viewModel.Description,
                 userManager.GetUserId(User)!,
-                GetAccessScope()));
+                GetAccessScope(),
+                ChargeLineItemId: viewModel.ChargeLineItemId));
         }
         catch (BusinessValidationException exception)
         {

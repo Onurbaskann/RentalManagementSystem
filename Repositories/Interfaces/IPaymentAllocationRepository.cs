@@ -23,6 +23,7 @@ public interface IPaymentAllocationRepository : IRepositoryBase<PaymentAllocatio
         List<int>? authorizedPropertyIds,
         List<int>? authorizedUnitIds = null);
     Task<decimal> GetPaidAmountAsync(int chargeId);
+    Task<int?> GetChargeLineItemIdAsync(int paymentId);
     Task<decimal> GetTenantApprovedTotalAsync(int tenantId, List<int>? authorizedPropertyIds = null, List<int>? authorizedUnitIds = null);
     Task<decimal> GetPendingAmountAsync(int chargeId, int tenantId);
     Task<TenantPanelPaymentDataDto> GetTenantPanelDataAsync(GetTenantPanelPaymentDataInput input);

@@ -13,12 +13,10 @@
 }
 
 
-<div class="page-header flex items-center justify-between">
-    <div>
-        <div class="page-title">@Model.Year Tarifeleri</div>
-        <div class="page-subtitle">Kiracı kategorisi × borç tipi bazında yıllık birim fiyatlar</div>
-    </div>
-    <a href="/Admin/Rate" class="btn btn-secondary">← Geri</a>
+<div class="page-header">
+    <a href="/Admin/Rate" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">← Tarifeler</a>
+    <div class="page-title">@Model.Year Tarifeleri</div>
+    <div class="page-subtitle">Kiracı kategorisi × borç tipi bazında yıllık birim fiyatlar</div>
 </div>
 
 <form method="post" action="/Admin/Rate/Year/@Model.Year/UpdateLine">

@@ -57,7 +57,7 @@
                 <option value="">-- Borç Tipi Seçin --</option>
                 @foreach (var chargeType in Model.ChargeTypeCandidates)
                 {
-                    <option value="@chargeType.Id">@chargeType.Name (@chargeType.Code)</option>
+                    <option value="@chargeType.Id">@chargeType.Name</option>
                 }
             </select>
             <div class="text-xs text-muted mt-1">Rezervasyonlar tahakkuka aktarılırken bu borç tipi kullanılacaktır.</div>
