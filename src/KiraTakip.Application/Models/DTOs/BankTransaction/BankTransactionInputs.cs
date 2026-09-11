@@ -1,0 +1,40 @@
+using KiraTakip.Models.Enums;
+
+namespace KiraTakip.Models.Dtos.BankTransaction;
+
+public record ImportBankTransactionsInput(Stream File, string BankCode, int StoreId);
+
+public record GetBankTransactionsInput(BankMatchStatus? Status = null);
+
+public record GetBankTransactionByIdInput(int Id);
+
+public record MatchBankTransactionInput(
+    int PaymentId,
+    int BankTransactionId,
+    IReadOnlyList<int>? PropertyIds = null,
+    IReadOnlyList<int>? UnitIds = null);
+
+public record UnmatchBankTransactionInput(
+    int MatchId,
+    IReadOnlyList<int>? PropertyIds = null,
+    IReadOnlyList<int>? UnitIds = null);
+
+public record GetBankTransactionPaymentCandidatesInput(
+    int BankTransactionId,
+    IReadOnlyList<int>? PropertyIds = null,
+    IReadOnlyList<int>? UnitIds = null);
+
+public record GetBankTransactionCandidatesInput(int PaymentId);
+
+public record PaymentMatchingBasisDto(decimal Amount, DateTime Date, int StoreAccountId);
+
+public record PaymentMatchingPolicyDto(
+    decimal AmountTolerancePercent,
+    int DateToleranceDays);
+
+public record PaymentMatchingContextDto(
+    int PaymentId,
+    int PropertyId,
+    int UnitId,
+    PaymentStatus Status,
+    int StoreAccountId);

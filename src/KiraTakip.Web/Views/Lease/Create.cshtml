@@ -1,0 +1,50 @@
+﻿@model KiraTakip.Web.Models.ViewModels.CreateLeaseViewModel
+@{
+    ViewData["Title"] = "Yeni Sözleşme Başvurusu";
+    ViewData["UseCentralFeedback"] = true;
+}
+
+<div class="max-w-[1000px] mx-auto">
+    <div class="page-header">
+        <a href="/Lease" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Sözleşmeler</a>
+        <div class="page-title">Yeni Sözleşme Başvurusu</div>
+        <div class="page-subtitle">Başvuru onaylanana kadar sözleşme aktifleşmez ve tahakkuk oluşmaz.</div>
+    </div>
+
+    <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        Bu işlem sözleşmeyi doğrudan başlatmaz. Kaydınız onay bekleyen bir taslak olarak oluşturulur.
+    </div>
+
+    <div x-data="leaseForm()" x-init="init()" x-cloak @@datechanged="onPickerChanged($event)">
+        <form asp-action="Create" method="post" enctype="multipart/form-data" id="leaseForm"
+              asp-form-write-permission="@PermissionCatalog.Lease.Create"
+              x-on:submit="submitting = true">
+            @await Html.PartialAsync("_LeaseForm", Model, new ViewDataDictionary(ViewData)
+            {
+                ["ReadOnly"] = false,
+                ["LeaseId"] = null
+            })
+
+            @await Html.PartialAsync("_BelgeEkleForm", Model.DocumentTypes, new ViewDataDictionary(ViewData)
+            {
+                ["EnforceRequired"] = false
+            })
+
+            <div class="flex gap-3 mt-6">
+                <button type="submit" class="btn btn-primary px-6 flex items-center gap-2"
+                        asp-permission="@PermissionCatalog.Lease.Create" :disabled="submitting">
+                    <span x-text="submitting ? 'Gönderiliyor…' : 'Onaya Gönder'"></span>
+                </button>
+                <a href="/Lease" class="btn btn-secondary px-6">İptal</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_LeaseFormScripts", Model, new ViewDataDictionary(ViewData)
+    {
+        ["LeaseId"] = null,
+        ["ReadOnly"] = false
+    })
+}

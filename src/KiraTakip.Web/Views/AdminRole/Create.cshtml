@@ -1,0 +1,44 @@
+﻿@model KiraTakip.Web.Models.ViewModels.RoleCreateViewModel
+@{
+    ViewData["Title"] = "Yeni Rol";
+    ViewData["UseCentralFeedback"] = true;
+}
+
+<div class="page-header">
+    <div>
+        <a href="/Admin/Roles" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">
+            ← Rol Yönetimi
+        </a>
+        <div class="page-title">Yeni Rol Oluştur</div>
+    </div>
+</div>
+
+<div class="card">
+    <form method="post" action="/Admin/Roles/Create" asp-form-write-permission="@PermissionCatalog.Role.Create">
+        @Html.AntiForgeryToken()
+
+
+        <div class="form-group">
+            <label class="form-label">Rol Adı <span class="text-red-500">*</span></label>
+            <input asp-for="Name" class="form-control" placeholder="Örn: Muhasebe Yöneticisi" />
+            <span asp-validation-for="Name" class="form-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Açıklama</label>
+            <input asp-for="Description" class="form-control" placeholder="Opsiyonel" />
+        </div>
+
+        <div class="mt-5">
+            <label class="form-label mb-2">İzinler</label>
+            @await Html.PartialAsync(
+                "_TreePicker",
+                KiraTakip.Web.Models.ViewModels.PermissionTreePickerViewModelFactory.Create(Model.Permissions))
+        </div>
+
+        <div class="flex gap-2 mt-6">
+            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Role.Create">Oluştur</button>
+            <a href="/Admin/Roles" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>

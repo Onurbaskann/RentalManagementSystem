@@ -1,3 +1,7 @@
 <Solution>
-  <Project Path="KiraTakip.csproj" />
+  <Project Path="src/KiraTakip.Web/KiraTakip.Web.csproj" />
+  <Project Path="src/KiraTakip.Application/KiraTakip.Application.csproj" />
+  <Project Path="src/KiraTakip.Domain/KiraTakip.Domain.csproj" />
+  <Project Path="src/KiraTakip.Infrastructure/KiraTakip.Infrastructure.csproj" />
+  <Project Path="tests/KiraTakip.Tests/KiraTakip.Tests.csproj" />
 </Solution>

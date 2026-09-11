@@ -1,0 +1,77 @@
+﻿@model KiraTakip.Web.Models.ViewModels.ReservationRateOverrideViewModel
+@{
+    ViewData["Title"] = "Ücret Kuralı Düzenle";
+    ViewData["UseCentralFeedback"] = true;
+}
+
+<div class="page-header">
+    <a href="/Admin/ReservationRateOverride" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">← Rezervasyon Ücret Kuralları</a>
+    <div class="page-title">Ücret Kuralı Düzenle</div>
+</div>
+
+<div class="card">
+    <form asp-action="Edit" asp-hashid="@Model.Id" method="post" asp-form-write-permission="@PermissionCatalog.ReservationRateRule.Edit">
+        @Html.AntiForgeryToken()
+
+
+
+        <div class="form-group">
+            <label asp-for="UnitId" class="form-label">Birim <span style="color:#dc2626;">*</span></label>
+            <select asp-for="UnitId" class="form-control">
+                <option value="">— Birim seçin —</option>
+                @foreach (var b in Model.ReservableUnits)
+                {
+                    <option value="@b.Id" selected="@(Model.UnitId == b.Id ? "selected" : null)">
+                        @b.PropertyName — @b.Name
+                    </option>
+                }
+            </select>
+            <span asp-validation-for="UnitId" class="form-error"></span>
+        </div>
+
+        <div class="two-col">
+            <div class="form-group">
+                <label asp-for="FreeDurationMinutes" class="form-label">Ücretsiz Süre (dk) <span style="color:#dc2626;">*</span></label>
+                <input asp-for="FreeDurationMinutes" type="number" class="form-control" />
+                <span asp-validation-for="FreeDurationMinutes" class="form-error"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="BillingPeriodMinutes" class="form-label">Periyot Süresi (dk) <span style="color:#dc2626;">*</span></label>
+                <input asp-for="BillingPeriodMinutes" type="number" class="form-control" />
+                <span asp-validation-for="BillingPeriodMinutes" class="form-error"></span>
+            </div>
+        </div>
+
+        <div class="two-col">
+            <div class="form-group">
+                <label asp-for="PeriodRate" class="form-label">Periyot Ücreti (₺) <span style="color:#dc2626;">*</span></label>
+                <input asp-for="PeriodRate" type="number" step="0.01" class="form-control" />
+                <span asp-validation-for="PeriodRate" class="form-error"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="KdvRate" class="form-label">KDV Oranı (%)</label>
+                <input asp-for="KdvRate" type="number" step="1" min="0" max="100" class="form-control" />
+                <span asp-validation-for="KdvRate" class="form-error"></span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Description" class="form-label">Açıklama</label>
+            <input asp-for="Description" type="text" class="form-control" placeholder="Opsiyonel not…" />
+            <span asp-validation-for="Description" class="form-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input asp-for="IsActive" type="checkbox" />
+                <span class="form-label" style="margin:0;">Aktif</span>
+            </label>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:8px;">
+            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.ReservationRateRule.Edit">Güncelle</button>
+            <a href="/Admin/ReservationRateOverride" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+</div>

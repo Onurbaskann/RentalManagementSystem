@@ -54,14 +54,14 @@ Projeyi yerel ortamınızda çalıştırmak için aşağıdaki adımları izleye
    ```
 2. Bağımlılıkları yükleyin:
    ```bash
-   dotnet restore KiraTakip/KiraTakip.csproj
+   dotnet restore src/KiraTakip.Web/KiraTakip.Web.csproj
    ```
-3. `appsettings.json` dosyasındaki `DefaultConnection` bağlantı dizesini kendi SQL Server örneğinize göre düzenleyin.
+3. `src/KiraTakip.Web/appsettings.json` dosyasındaki `DefaultConnection` bağlantı dizesini kendi SQL Server örneğinize göre düzenleyin.
 4. Veritabanını güncelleyin:
    ```bash
-   dotnet ef database update --project KiraTakip --startup-project KiraTakip
+   dotnet ef database update --project src/KiraTakip.Infrastructure/KiraTakip.Infrastructure.csproj --startup-project src/KiraTakip.Web/KiraTakip.Web.csproj
    ```
 5. Uygulamayı çalıştırın:
    ```bash
-   dotnet run --project KiraTakip
+   dotnet run --project src/KiraTakip.Web/KiraTakip.Web.csproj
    ```

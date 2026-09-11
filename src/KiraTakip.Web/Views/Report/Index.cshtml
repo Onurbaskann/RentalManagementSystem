@@ -1,0 +1,171 @@
+﻿@model KiraTakip.Web.Models.ViewModels.MonthlyCollectionReportViewModel
+@{
+    ViewData["Title"] = "Tahsilat Raporu";
+    string FormatCurrency(decimal value) => value.ToString("N2") + " ₺";
+    var availableYears = Model.AvailableYears;
+}
+
+<div class="page-header flex items-center justify-between">
+    <div>
+        <div class="page-title">Tahsilat Raporu</div>
+        <div class="page-subtitle">@Model.Year yılı aylık tahakkuk özeti</div>
+    </div>
+    <div>
+        <form method="get" class="flex items-center">
+            <select name="year" class="form-control w-32 font-bold" onchange="this.form.submit()">
+                @foreach (var availableYear in availableYears)
+                {
+                    <option value="@availableYear" selected="@(availableYear == Model.Year ? "selected" : null)">@availableYear Yılı</option>
+                }
+            </select>
+        </form>
+    </div>
+</div>
+
+<!-- Özet Kartlar -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="card bg-white border border-slate-200">
+        <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Yıllık Tahakkuk</div>
+        <div class="text-2xl font-bold text-slate-800">@FormatCurrency(Model.TotalExpected)</div>
+        <div class="text-[11px] text-muted font-medium mt-1">@Model.Rows.Sum(s => s.ChargeCount) tahakkuk kaydı</div>
+    </div>
+    <div class="card bg-emerald-50/50 border border-emerald-100">
+        <div class="text-[11px] font-bold text-emerald-600/60 uppercase tracking-wider mb-1">Yıllık Tahsil Edilen</div>
+        <div class="text-2xl font-bold text-emerald-700">@FormatCurrency(Model.TotalCollected)</div>
+        <div class="text-[11px] text-emerald-600/80 font-bold mt-1 flex items-center gap-1">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            %@Model.OverallCollectionRate.ToString("F0") tahsilat başarısı
+        </div>
+    </div>
+    <div class="card bg-red-50/50 border border-red-100">
+        <div class="text-[11px] font-bold text-red-600/60 uppercase tracking-wider mb-1">Tahsil Edilemeyen</div>
+        <div class="text-2xl font-bold text-red-700">@FormatCurrency(Model.TotalExpected - Model.TotalCollected)</div>
+        <div class="text-[10px] text-red-600/80 font-bold mt-1">
+            @Model.TotalOverdueCount gecikmiş · @FormatCurrency(Model.TotalOverdueAmount) toplam gecikme
+        </div>
+    </div>
+</div>
+
+<!-- Aylık Tablo -->
+<div class="card p-0 overflow-hidden">
+    <div class="table-wrapper">
+        <table class="w-full">
+            <thead>
+                <tr>
+                    <th class="w-32">Ay</th>
+                    <th class="w-24 cell-center">Tahakkuk</th>
+                    <th class="w-40 num">Tahakkuk Tutarı</th>
+                    <th class="w-40 num">Tahsil Edilen</th>
+                    <th class="w-40 num">Kalan</th>
+                    <th class="w-48">Tahsilat Oranı</th>
+                    <th class="w-48 cell-center" title="Vade tarihi geçmiş ve henüz tamamı tahsil edilmemiş tahakkukların adedi ve kalan tutar toplamı.">
+                        Gecikmiş Tahakkuk
+                        <span class="inline-flex items-center justify-center w-3.5 h-3.5 leading-[14px] text-center rounded-full bg-slate-200 text-slate-500 text-[9px] font-bold ml-1 cursor-help">i</span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    bool isCurrentMonth = row.Month == DateTime.Today.Month && Model.Year == DateTime.Today.Year;
+                    decimal remainingAmount = row.ExpectedAmount - row.CollectedAmount;
+                    <tr class="@(isCurrentMonth ? "bg-amber-50/40" : "")">
+                        <td class="@(isCurrentMonth ? "font-bold text-slate-800" : "font-medium text-slate-700")">
+                            @row.MonthName
+                            @if (isCurrentMonth) { <span class="badge badge-surek ml-1">Bu Ay</span> }
+                        </td>
+                        <td class="cell-center text-muted">
+                            @(row.ChargeCount > 0 ? row.ChargeCount.ToString() : "—")
+                        </td>
+                        <td class="num">
+                            @(row.ExpectedAmount > 0 ? FormatCurrency(row.ExpectedAmount) : "—")
+                        </td>
+                        <td class="num num-positive">
+                            @(row.CollectedAmount > 0 ? FormatCurrency(row.CollectedAmount) : (row.ExpectedAmount > 0 ? "0,00 ₺" : "—"))
+                        </td>
+                        <td class="num @(remainingAmount > 0 ? "num-negative" : "num-positive")">
+                            @(row.ExpectedAmount > 0 ? FormatCurrency(remainingAmount) : "—")
+                        </td>
+                        <td>
+                            @if (row.ExpectedAmount > 0)
+                            {
+                                string barColorClass = row.CollectionRate >= 100 ? "bg-emerald-500" : row.CollectionRate >= 50 ? "bg-amber-500" : "bg-red-500";
+                                string textColorClass = row.CollectionRate >= 100 ? "text-emerald-600" : row.CollectionRate >= 50 ? "text-amber-600" : "text-red-600";
+                                <div class="flex items-center gap-2">
+                                    <div class="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                                        <div class="h-full transition-all duration-700 @barColorClass" style="width:@Math.Min(row.CollectionRate,100).ToString("F0")%;"></div>
+                                    </div>
+                                    <span class="text-[11px] font-bold w-10 @textColorClass text-right">%@row.CollectionRate.ToString("F0")</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted text-xs">—</span>
+                            }
+                        </td>
+                        <td class="cell-center">
+                            @if (row.OverdueChargeCount > 0)
+                            {
+                                var monthStart = new DateTime(Model.Year, row.Month, 1).ToString("yyyy-MM-dd");
+                                var monthEnd = new DateTime(Model.Year, row.Month, DateTime.DaysInMonth(Model.Year, row.Month)).ToString("yyyy-MM-dd");
+                                var drillDownUrl = Url.Action(
+                                    nameof(KiraTakip.Web.Controllers.ChargeController.Index),
+                                    nameof(KiraTakip.Web.Controllers.ChargeController).Replace("Controller", ""),
+                                    new { status = "gecikti", from = monthStart, to = monthEnd });
+                                <a href="@drillDownUrl" class="no-underline inline-flex flex-col items-center group" title="@row.MonthName ayının gecikmiş tahakkuklarını görüntüle">
+                                    <span class="badge badge-gecmis group-hover:scale-110 transition-transform">@row.OverdueChargeCount Adet</span>
+                                    <span class="text-[10px] text-red-700 font-bold mt-0.5">@FormatCurrency(row.OverdueAmount)</span>
+                                </a>
+                            }
+                            else if (row.ChargeCount > 0)
+                            {
+                                <span class="text-emerald-500 text-sm font-bold">✓</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted text-xs">—</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr class="bg-slate-50 border-t-2 border-slate-200">
+                    <td class="font-bold">Yıllık Toplam</td>
+                    <td class="cell-center font-bold">@Model.Rows.Sum(s => s.ChargeCount)</td>
+                    <td class="num font-bold">@FormatCurrency(Model.TotalExpected)</td>
+                    <td class="num num-positive font-bold">@FormatCurrency(Model.TotalCollected)</td>
+                    <td class="num num-negative font-bold">@FormatCurrency(Model.TotalExpected - Model.TotalCollected)</td>
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <div class="h-2 flex-1 bg-white rounded-full border border-slate-200 overflow-hidden">
+                                <div class="h-full bg-emerald-500" style="width:@Math.Min(Model.OverallCollectionRate,100).ToString("F0")%;"></div>
+                            </div>
+                            <span class="text-xs font-bold text-emerald-600">%@Model.OverallCollectionRate.ToString("F0")</span>
+                        </div>
+                    </td>
+                    <td class="cell-center">
+                        @if (Model.TotalOverdueCount > 0)
+                        {
+                            var yearStart = new DateTime(Model.Year, 1, 1).ToString("yyyy-MM-dd");
+                            var yearEnd = new DateTime(Model.Year, 12, 31).ToString("yyyy-MM-dd");
+                            var annualDrillDownUrl = Url.Action(
+                                nameof(KiraTakip.Web.Controllers.ChargeController.Index),
+                                nameof(KiraTakip.Web.Controllers.ChargeController).Replace("Controller", ""),
+                                new { status = "gecikti", from = yearStart, to = yearEnd });
+                            <a href="@annualDrillDownUrl" class="no-underline inline-flex flex-col items-center group" title="@Model.Year yılının gecikmiş tahakkuklarını görüntüle">
+                                <span class="badge badge-gecmis group-hover:scale-110 transition-transform">@Model.TotalOverdueCount Toplam</span>
+                                <span class="text-[10px] text-red-700 font-bold mt-0.5">@FormatCurrency(Model.TotalOverdueAmount)</span>
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="text-emerald-500 font-bold">✓</span>
+                        }
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+

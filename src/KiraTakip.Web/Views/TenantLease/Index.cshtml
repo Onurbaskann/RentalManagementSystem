@@ -1,0 +1,91 @@
+﻿@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.LeaseListItemDto>
+@using KiraTakip.Models.Common
+@using KiraTakip.Models.Enums
+@{
+    Layout = "_KiraciLayout";
+    ViewData["Title"] = "Sözleşmelerim";
+    ViewData["UseCentralFeedback"] = true;
+    var query = ViewBag.Query as TableQuery ?? new TableQuery();
+    var pagination = PaginationModel.FromPaged(Model, "/Tenant/Leases", query.ToQueryDict());
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Sözleşmelerim</div>
+        <div class="page-subtitle">@Model.Total sözleşme</div>
+    </div>
+</div>
+
+<div class="card p-0 overflow-hidden">
+    <form method="get" action="/Tenant/Leases" class="flex items-center gap-3 p-3 bg-slate-50/50 border-b border-slate-200">
+        <input type="hidden" name="size" value="@query.Size" />
+        <input type="search" name="q" value="@query.Q" class="form-control w-full max-w-sm" placeholder="Ara: birim, taşınmaz…" />
+        <button type="submit" class="btn btn-secondary">Ara</button>
+        @if (!string.IsNullOrWhiteSpace(query.Q))
+        {
+            <a href="/Tenant/Leases?size=@query.Size" class="btn btn-secondary">Temizle</a>
+        }
+        <span class="ml-auto text-xs text-muted"><strong>@Model.Total</strong> kayıt</span>
+    </form>
+    <div class="table-wrapper">
+        <table class="w-full">
+            <thead>
+                <tr>
+                    <th>Birim</th>
+                    <th>Taşınmaz</th>
+                    <th class="w-28 cell-center">Başlangıç</th>
+                    <th class="w-28 cell-center">Bitiş</th>
+                    <th class="w-32 num">Aylık Bedel</th>
+                    <th class="w-24 cell-center">Kalan</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var lease in Model.Items)
+                {
+                    bool isActive = lease.IsActive;
+                    int remainingDays = lease.RemainingDays;
+                    bool isExpiringSoon = isActive && remainingDays <= 30;
+                    bool isTerminated = lease.Status == LeaseStatus.Terminated;
+                    string dayBadgeClass = remainingDays <= 10 ? "bg-red-50 text-red-700 border-red-200" : remainingDays <= 30 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200";
+                    var search = $"{lease.UnitName} {lease.PropertyName}".ToLower();
+                    var detailsHref = Url.Action(
+                        nameof(KiraTakip.Web.Controllers.TenantLeaseController.Details),
+                        nameof(KiraTakip.Web.Controllers.TenantLeaseController).Replace("Controller", string.Empty),
+                        new { id = lease.Id.ToHashId() });
+
+                    <tr data-row data-search="@search" data-href="@detailsHref"
+                        class="cursor-pointer hover:bg-slate-50 transition-colors"
+                        @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
+                        <td class="font-semibold">@lease.UnitName</td>
+                        <td class="text-sm text-muted">@lease.PropertyName</td>
+                        <td class="cell-center text-sm">@lease.StartDate.Tarih()</td>
+                        <td class="cell-center text-sm">@lease.EndDate.Tarih()</td>
+                        <td class="num text-sm font-medium">@lease.MonthlyAmount.Tl()</td>
+                        <td class="cell-center">
+                            @if (isTerminated)
+                            {
+                                <span class="text-muted text-[11px] italic" title="Durum: Feshedildi">Feshedildi</span>
+                            }
+                            else if (isActive)
+                            {
+
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold border @dayBadgeClass" title="Durum: @(isExpiringSoon ? "Doluyor" : "Aktif")">@remainingDays GÜN</span>
+                            }
+                            else
+                            {
+
+                                <span class="text-muted text-[11px] italic" title="Durum: Sona Erdi">Sona erdi</span>
+                            }
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Items.Any())
+                {
+                    <tr><td colspan="6" class="text-center py-12 text-muted italic">Henüz sözleşmeniz yok.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @await Html.PartialAsync("_Pagination", pagination)
+</div>
+

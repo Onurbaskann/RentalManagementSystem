@@ -1,0 +1,112 @@
+﻿@model KiraTakip.Web.Models.ViewModels.TenantIndexViewModel
+@using KiraTakip.Models
+@using KiraTakip.Models.Common
+@{
+    ViewData["Title"] = "Kiracılar";
+    var controllerName = nameof(KiraTakip.Web.Controllers.TenantController).Replace("Controller", "");
+    var createUrl = Url.Action(nameof(KiraTakip.Web.Controllers.TenantController.Create), controllerName)!;
+    var pagination = PaginationModel.FromPaged(Model.Tenants, "/Tenant", Model.Query.ToQueryDict());
+}
+
+<div class="page-header flex items-center justify-between">
+    <div>
+        <div class="page-title">Kiracılar</div>
+        <div class="page-subtitle">@Model.Tenants.Total kayıtlı kiracı</div>
+    </div>
+    @if (Model.CanCreate)
+    {
+        <a href="@createUrl" class="btn btn-primary flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Yeni Kiracı
+        </a>
+    }
+</div>
+
+<div class="card p-0 overflow-hidden">
+    <form method="get" asp-controller="Tenant" asp-action="Index" class="flex items-center gap-3 p-3 bg-slate-50/50 border-b border-slate-200">
+        <input type="hidden" name="size" value="@Model.Query.Size" />
+        <input type="search" name="q" value="@Model.Query.Q" class="form-control w-full max-w-sm" placeholder="Ara: ad, no, telefon, e-posta…" />
+        <button type="submit" class="btn btn-secondary">Ara</button>
+        @if (!string.IsNullOrWhiteSpace(Model.Query.Q))
+        {
+            <a asp-controller="Tenant" asp-action="Index" asp-route-size="@Model.Query.Size" class="btn btn-secondary">Temizle</a>
+        }
+        <span class="ml-auto text-xs text-muted"><strong>@Model.Tenants.Total</strong> kayıt</span>
+    </form>
+    <div class="table-wrapper">
+        <table class="w-full">
+            <thead>
+                <tr>
+                    <th class="w-24">No</th>
+                    <th>Kiracı Bilgisi</th>
+                    <th class="w-32">Kategori</th>
+                    <th class="w-32">İletişim</th>
+                    <th class="w-32">Sözleşme</th>
+                    <th class="w-28 cell-center">Kayıt Tarihi</th>
+                    <th class="w-36"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var tenant in Model.Tenants.Items)
+                {
+                    var activeLeaseCount = tenant.ActiveLeaseCount;
+                    var detailsUrl = Url.Action(nameof(KiraTakip.Web.Controllers.TenantController.Details), controllerName, new { id = tenant.Id.ToHashId() })!;
+                    var editUrl = Url.Action(nameof(KiraTakip.Web.Controllers.TenantController.Edit), controllerName, new { id = tenant.Id.ToHashId() })!;
+                    <tr data-href="@detailsUrl"
+                        class="cursor-pointer hover:bg-slate-50 transition-colors"
+                        @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
+                        <td class="font-mono text-xs text-muted">@tenant.TenantNo</td>
+                        <td>
+                            <div class="font-semibold">@tenant.DisplayName</div>
+                            @if (!string.IsNullOrEmpty(tenant.TaxNo))
+                            {
+                                <span class="cell-sub">VKN: @tenant.TaxNo</span>
+                            }
+                        </td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(tenant.TenantCategoryName))
+                            {
+                                <span class="inline-block bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md text-[11px] font-medium border border-slate-200">@tenant.TenantCategoryName</span>
+                            }
+                            else
+                            {
+                                <span class="text-slate-300 text-xs">—</span>
+                            }
+                        </td>
+                        <td>
+                            <div>@tenant.Phone</div>
+                            <span class="cell-sub truncate max-w-[120px]">@tenant.Email</span>
+                        </td>
+                        <td>
+                            @if (activeLeaseCount > 0)
+                            {
+                                <span class="badge badge-kirali">@activeLeaseCount Sözleşme</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-bos">Yok</span>
+                            }
+                        </td>
+                        <td class="cell-center whitespace-nowrap">@tenant.RegistrationDate.Tarih()</td>
+                        @if (Model.CanEdit)
+                        {
+                            <td class="text-right">
+                                <a href="@editUrl" class="btn btn-sm btn-secondary">Düzenle</a>
+                            </td>
+                        }
+                        else
+                        {
+                            <td></td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (!Model.Tenants.Items.Any())
+    {
+        <div class="p-8 text-center text-slate-400 font-medium">Aramaya uyan kayıt bulunamadı.</div>
+    }
+    @await Html.PartialAsync("_Pagination", pagination)
+</div>
+

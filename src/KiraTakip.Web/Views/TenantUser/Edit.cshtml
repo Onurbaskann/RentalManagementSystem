@@ -1,0 +1,16 @@
+﻿@model KiraTakip.Web.Models.ViewModels.TenantUserEditViewModel
+@{
+    Layout = "_KiraciLayout";
+    ViewData["Title"] = "Kullanıcı Düzenle";
+    ViewData["UseCentralFeedback"] = true;
+    var controllerName = nameof(KiraTakip.Web.Controllers.TenantUserController).Replace("Controller", "");
+}
+<div class="page-header"><div><a asp-controller="@controllerName" asp-action="@nameof(KiraTakip.Web.Controllers.TenantUserController.Index)" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">← Kullanıcılar</a><div class="page-title">Kullanıcı Düzenle</div><div class="page-subtitle">@Model.Email</div></div></div>
+<div class="card">
+<form method="post" asp-controller="@controllerName" asp-action="@nameof(KiraTakip.Web.Controllers.TenantUserController.Edit)" asp-route-id="@Model.Id" asp-form-write-permission="@PermissionCatalog.TenantPortal.System.User.Edit">
+    @Html.AntiForgeryToken()<input type="hidden" asp-for="Id" />
+
+    @await Html.PartialAsync("_TenantUserEditFields", Model)
+    <div class="flex gap-2.5 mt-6"><button type="submit" class="btn btn-primary px-6" asp-permission="@PermissionCatalog.TenantPortal.System.User.Edit">Kaydet</button><a asp-controller="@controllerName" asp-action="@nameof(KiraTakip.Web.Controllers.TenantUserController.Index)" class="btn btn-secondary px-6">İptal</a></div>
+</form>
+</div>
