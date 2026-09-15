@@ -22,6 +22,14 @@ public class UtilityServiceTests
         Assert.Equal("—", ((DateTime?)null).TurkiyeTarihSaat());
     }
 
+    [Fact]
+    public void M2_ShouldFormatWithTwoDecimalPlacesByDefault()
+    {
+        Assert.Equal("38,72 m²", 38.72m.M2());
+        Assert.Equal("38,72 m²", 38.72d.M2());
+        Assert.Equal("—", ((decimal?)null).M2());
+    }
+
     // ── CodeSlugger Tests ────────────────────────────────────────────────────
 
     [Theory]

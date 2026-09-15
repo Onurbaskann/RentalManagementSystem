@@ -14,4 +14,14 @@ public class OnlinePaymentTransactionRepository(ApplicationDbContext context)
             transaction => transaction.ChargeLineItemId == chargeLineItemId
                 && transaction.Status == OnlinePaymentTransactionStatus.Pending,
             cancellationToken);
+
+    public Task<OnlinePaymentTransaction?> GetByMerchantPaymentIdAsync(
+        string merchantPaymentId,
+        CancellationToken cancellationToken = default)
+        => _dbSet
+            .Include(transaction => transaction.ChargeLineItem)
+                .ThenInclude(lineItem => lineItem.Charge)
+            .FirstOrDefaultAsync(
+                transaction => transaction.MerchantPaymentId == merchantPaymentId,
+                cancellationToken);
 }

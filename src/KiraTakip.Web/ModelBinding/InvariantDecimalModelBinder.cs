@@ -25,11 +25,8 @@ public class InvariantDecimalModelBinder : IModelBinder
             return Task.CompletedTask;
         }
 
-        // Önce InvariantCulture dene (browser type=number invariant gönderir),
-        // başarısız olursa tr-TR dene (kullanıcı virgüllü girmiş olabilir).
         var normalized = raw.Trim().Replace(" ", "");
-        if (decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out var value) ||
-            decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.GetCultureInfo("tr-TR"), out value))
+        if (TryParseFlexibleDecimal(normalized, out var value))
         {
             ctx.Result = ModelBindingResult.Success(value);
         }
@@ -39,6 +36,32 @@ public class InvariantDecimalModelBinder : IModelBinder
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Virgül/nokta hangisinin ondalık ayracı olduğunu kültüre göre TAHMİN ETMEK yerine
+    /// (bu, "38,72" gibi değerlerin binlik ayraçlı 3872 olarak yanlış ayrıştırılmasına yol
+    /// açıyordu — bkz. m² alanı hatası) metindeki SON virgül/nokta karakterini her zaman
+    /// ondalık ayracı sayar; ondan önceki virgül/nokta karakterleri binlik ayracı kabul edilip
+    /// temizlenir. "38,72", "38.72", "12.500,75" ve "12,500.75" hepsi doğru ayrıştırılır.
+    /// </summary>
+    public static bool TryParseFlexibleDecimal(string input, out decimal value)
+    {
+        var lastSeparatorIndex = input.LastIndexOfAny(['.', ',']);
+
+        var normalized = input;
+        if (lastSeparatorIndex >= 0)
+        {
+            var integerPart = input[..lastSeparatorIndex].Replace(",", "").Replace(".", "");
+            var fractionalPart = input[(lastSeparatorIndex + 1)..];
+            normalized = fractionalPart.Length > 0 ? $"{integerPart}.{fractionalPart}" : integerPart;
+        }
+
+        return decimal.TryParse(
+            normalized,
+            NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
+            CultureInfo.InvariantCulture,
+            out value);
     }
 }
 

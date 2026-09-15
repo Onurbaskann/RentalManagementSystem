@@ -35,4 +35,10 @@ public interface ITenantRepository : IRepositoryBase<Tenant>
     Task<Tenant?> GetByIdIgnoreQueryFiltersAsync(int id, CancellationToken ct = default);
     Task<Tenant?> GetActiveByIdAsync(int id, CancellationToken ct = default);
     Task<DocumentOwnerContextDto?> GetDocumentOwnerContextAsync(int tenantId);
+
+    /// <summary>
+    /// Kiracının sözleşme/tahakkuk/rezervasyon/kullanıcı geçmişi var mı — varsa silinemez
+    /// (UnitRepository.HasHistoricalDependencyAsync ile aynı desen).
+    /// </summary>
+    Task<bool> HasHistoricalDependencyAsync(int tenantId);
 }

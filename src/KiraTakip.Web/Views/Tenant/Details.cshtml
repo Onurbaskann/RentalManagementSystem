@@ -7,12 +7,14 @@
     ViewData["UseCentralFeedback"] = true;
     var tenant = Model.Tenant;
     bool canEdit = User.HasPermission(PermissionCatalog.Tenant.Edit);
+    bool canDelete = User.HasPermission(PermissionCatalog.Tenant.Delete);
     bool hasLeaseModule = User.HasModuleAccess(PermissionCatalog.Lease.Module);
     var tenantControllerName = nameof(KiraTakip.Web.Controllers.TenantController).Replace("Controller", "");
     var leaseControllerName = nameof(KiraTakip.Web.Controllers.LeaseController).Replace("Controller", "");
     var tenantUserControllerName = nameof(KiraTakip.Web.Controllers.AdminTenantUserController).Replace("Controller", "");
     var tenantIndexUrl = Url.Action(nameof(KiraTakip.Web.Controllers.TenantController.Index), tenantControllerName)!;
     var tenantEditUrl = Url.Action(nameof(KiraTakip.Web.Controllers.TenantController.Edit), tenantControllerName, new { id = tenant.Id.ToHashId() })!;
+    var tenantDeleteUrl = Url.Action(nameof(KiraTakip.Web.Controllers.TenantController.Delete), tenantControllerName, new { id = tenant.Id.ToHashId() })!;
     var tenantUsersUrl = Url.Action(nameof(KiraTakip.Web.Controllers.AdminTenantUserController.Index), tenantUserControllerName, new { tenantId = tenant.Id.ToHashId() })!;
     var leaseCreateUrl = Url.Action(nameof(KiraTakip.Web.Controllers.LeaseController.Create), leaseControllerName)!;
 }
@@ -46,6 +48,15 @@
         @if (hasLeaseModule && User.HasPermission(PermissionCatalog.Lease.Create))
         {
             <a href="@leaseCreateUrl" class="btn btn-primary">Sözleşme Ekle</a>
+        }
+        @if (canDelete)
+        {
+            <form method="post" action="@tenantDeleteUrl"
+                  data-confirm="'@tenant.DisplayName' kiracısını silmek istediğinizden emin misiniz?"
+                  class="inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-danger">Sil</button>
+            </form>
         }
     </div>
 </div>

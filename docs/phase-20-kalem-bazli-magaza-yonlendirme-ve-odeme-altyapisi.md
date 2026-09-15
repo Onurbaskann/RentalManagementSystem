@@ -1,9 +1,16 @@
 # Faz 20 — Kalem Bazlı Mağaza Yönlendirme ve Ödeme Altyapısı
 
 **Durum:** Uygulamada; İç Faz 1-5 kullanıcı tarafından kabul edildi (İç Faz 5: 2026-09-01).
-İç Faz 6 implementasyonu tamamlandı, `dotnet build`/`dotnet test` tam yeşil (352/352, 0 skip),
-kullanıcı onayı bekleniyor.
-**Aktif iç faz:** İç Faz 6 — Provider soyutu ve sanal POS işlem omurgası (kullanıcı onayı bekleniyor)  
+İç Faz 6 implementasyonu tamamlandı (352/352 yeşil); kullanıcı "Faz 7'ye geçelim" diyerek
+bir sonraki faza yönlendi (2026-09-11) — ayrı, yazılı bir "onaylıyorum" cümlesi alınmadı.
+Bu arada proje Clean Architecture katmanlarına ayrıldı (`src/KiraTakip.{Domain,Application,
+Infrastructure,Web}`); İç Faz 6 kodu bu yapıya sorunsuz taşındı, 757/757 test yeşil.
+İç Faz 7 implementasyonu tamamlandı — backend (provider, completion servisi) **ve** kiracı
+arayüzündeki tetikleyici ("Kart ile Öde" butonu artık aktif, dönüş action'ı bağlandı) dahil.
+`dotnet build`/`dotnet test` tam yeşil (776/776, 0 skip). Gerçek Paratika sandbox'ına karşı
+manuel duman testi ve kullanıcı onayı bekleniyor.
+**Aktif iç faz:** İç Faz 7 — Paratika Hosted Payment Page entegrasyonu (manuel duman testi ve
+kullanıcı onayı bekleniyor)  
 **Ön koşullar:** Faz 18 ve Faz 19 tamamlandı.  
 **Ana hedef:** Her tahakkuk kaleminin güncel kurallarla doğru mağaza hesabına yönlendirilmesi,
 mevcut ödeme kanallarının kalem bazında izlenmesi ve bu çekirdeğin üzerine en son aşamalarda
@@ -528,33 +535,54 @@ Tamamlanma kapısı:
 - [x] Yeni provider eklemek ortak ödeme servisini değiştirmeyi gerektirmez.
 - [ ] Kullanıcı İç Faz 6 sonucunu onaylar.
 
-### İç Faz 7 — Paratika PayByLink entegrasyonu
+### İç Faz 7 — Paratika Hosted Payment Page entegrasyonu
 
-**Ön not (2026-08-31):** Resmi API dokümanı elde edildi (bkz. §11), ana akış ve uç noktalar
-netleşti. Ancak imza doğrulama algoritmasının (`sdSha512`/`SD_SHA512`) tam alan sırası bir
-web-fetch özetinden geliyor — implementasyona başlamadan önce doküman sayfasının ilgili
-bölümü harfi harfine tekrar okunup teyit edilmeli.
+**Doküman güncellemesi (2026-09-11/14):** Kullanıcı, Paratika API v2 dokümanının SESSIONTOKEN
+ve QUERYTRANSACTION bölümlerinin HAM METNİNİ doğrudan yapıştırdı (WebFetch özetlemesi değil) —
+tam istek/yanıt alan listeleri artık güvenilir şekilde biliniyor (bkz. implementasyon planı).
+`sdSha512`/`SD_SHA512` imza şeması ise dokümanın **Direct POST/MOTO** (farklı bir entegrasyon
+yöntemi) bölümüne ait olduğu ve bizim kullandığımız **Hosted Payment Page (SESSIONTOKEN)**
+akışına uygulanabilirliği doğrulanamadığı için **bilinçli olarak implement edilmedi** — bunun
+yerine RETURNURL/NOTIFICATIONURL verisine hiç güvenilmeyen, yalnızca authenticated
+QUERYTRANSACTION sonucuna dayanan bir tamamlama mimarisi kuruldu (aşağıya bakınız).
 
-- [ ] `ParatikaOnlinePaymentProvider` session, query ve callback metotlarını uygular.
-- [ ] `SESSIONTOKEN` isteği doğru account ve tek kalem tutarıyla oluşturulur; hosted payment
-  page (`/payment/[SESSION_TOKEN]`) adresine yönlendirilir.
-- [ ] MerchantPaymentId işlem oluşturulmadan önce kalıcı ve unique üretilir.
-- [ ] Session token başarılıysa hosted PayByLink sayfasına güvenli yönlendirme yapılır.
-- [ ] Kısmi tutar Paratika isteğinden hemen önce transaction içinde yeniden doğrulanır.
-- [ ] Sağlayıcı callback alanları (`RETURNURL` POST-redirect ve/veya `NOTIFICATIONURL`
-  webhook) provider sınıfında parse ve normalize edilir.
-- [ ] İmza doğrulama algoritması, dokümandan harfi harfine teyit edildikten sonra uygulanır;
-  doğrulanmayan callback ödeme oluşturamaz.
-- [ ] Referans başarı kodları adapter testleriyle doğrulanır.
-- [ ] Başarılı sonuç ortak completion servisiyle tek Approved ödeme oluşturur.
-- [ ] Taksit, komisyon, maskeli kart ve provider işlem bilgileri yalnız sağlayıcının döndürdüğü
-  ölçüde güvenli biçimde kaydedilir/gösterilir.
-- [ ] İptal ve iade başlatma endpoint/metotları eklenmez.
+- [x] `ParatikaOnlinePaymentProvider` session ve query metotlarını uygular (`CreateSessionAsync`,
+  `QueryAsync`); `ValidateCallbackAsync` bilinçli olarak no-op (yalnız `merchantPaymentId`'yi
+  okur, imza doğrulamaz — gerekçe yukarıda).
+- [x] `SESSIONTOKEN` isteği doğru account ve tek kalem tutarıyla oluşturulur; hosted payment
+  page adresine (`{HostedPaymentPageBaseUrl}/{sessionToken}`) yönlendirilir — hem "Kart ile
+  Öde" butonu aktifleştirildi (`TenantChargeController.StartOnlinePayment`) hem de dönüş
+  (`OnlinePaymentReturn`) uçtan uca bağlandı.
+- [x] MerchantPaymentId işlem oluşturulmadan önce kalıcı ve unique üretilir (İç Faz 6'dan).
+- [x] Session token başarılıysa hosted sayfaya güvenli yönlendirme yapılır (`Redirect()`,
+  provider'ın kendi ürettiği URL — kullanıcı girdisi değil).
+- [x] Kısmi tutar Paratika isteğinden hemen önce transaction içinde yeniden doğrulanır
+  (`EnsureAmountWithinAvailable`, İç Faz 6'dan reuse).
+- [x] Sağlayıcı callback alanları — **mimari karar gereği** yalnız `merchantPaymentId` bir sorgu
+  anahtarı olarak okunur; asıl durum/tutar/imza gibi alanlara hiç bakılmaz.
+- [x] İmza doğrulama — **yerine geçen eşdeğer güvence**: hiçbir callback verisi doğrudan ödeme
+  oluşturamaz; yalnız bizim başlattığımız authenticated `QUERYTRANSACTION` sonucu karar verir.
+  Orijinal madde ("dokümandan harfi harfine teyit edildikten sonra uygulanır") bu nedenle
+  uygulanmadı — teyit edilse bile Direct POST/MOTO şemasının bize uygun olmadığı görüldü.
+- [x] Referans başarı kodları (`AP`/`FA`/`CA`/`VD`/`IP`/`MR`) adapter ve business-rules
+  testleriyle doğrulanır (`ParatikaOnlinePaymentProviderTests`, `NormalizeProviderStatus`
+  testleri — kullanıcının yapıştırdığı gerçek örnek yanıtlarla).
+- [x] Başarılı sonuç ortak completion servisiyle (`OnlinePaymentService.CompleteAsync`) tek
+  Approved ödeme oluşturur; idempotent (ikinci çağrı yeni ödeme oluşturmaz).
+- [ ] Taksit, komisyon, maskeli kart bilgileri — QUERYTRANSACTION yanıtında mevcut
+  (`installmentCount`, `panLast4` vb.) ama bu fazda ayrıca saklanmadı/gösterilmedi; İç Faz 8
+  veya ayrı bir UI iyileştirmesine bırakıldı.
+- [x] İptal ve iade başlatma endpoint/metotları eklenmedi.
 
 Tamamlanma kapısı:
 
-- [ ] Authenticated kiracı tek kaleme tam/kısmi Paratika ödemesi başlatabilir.
-- [ ] Mağaza bilgisi tenant'a sızmadan doğru merchant hesabı kullanılır.
+- [x] Authenticated kiracı tek kaleme tam Paratika ödemesi başlatabilir (backend + UI tetikleyicisi
+  bağlandı — kısmi/özel tutar girişi POS sekmesinde henüz yok, her zaman kalemin kullanılabilir
+  tam tutarı gönderilir; havale/EFT sekmesindeki gibi ayrı bir tutar alanı eklenmedi).
+- [x] Mağaza bilgisi tenant'a sızmadan doğru merchant hesabı kullanılır (İç Faz 6'dan reuse).
+- [ ] Gerçek Paratika sandbox'ına karşı manuel duman testi yapılmadı — `ApiBaseUrl` yolu,
+  `HostedPaymentPageBaseUrl` formatı ve RETURNURL POST body'sindeki gerçek alan adı
+  (`merchantPaymentId` varsayımı) hiçbiri gerçek sunucuya karşı doğrulanmadı.
 - [ ] Kullanıcı İç Faz 7 sonucunu onaylar.
 
 ### İç Faz 8 — Callback, mutabakat ve operasyonel dayanıklılık

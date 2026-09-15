@@ -9,6 +9,7 @@ using KiraTakip.Repositories;
 using KiraTakip.Repositories.Charges;
 using KiraTakip.Repositories.Payments;
 using KiraTakip.Repositories.Properties;
+using KiraTakip.Repositories.Tenants;
 using KiraTakip.Services.Charges;
 using KiraTakip.Services.Interfaces.Payments;
 using KiraTakip.Services.Payments;
@@ -23,7 +24,8 @@ namespace KiraTakip.Tests;
 /// Production koduna eklenmeyen, yalnız test projesine özel sağlayıcı sahte implementasyonu
 /// (ChargeReminderServiceTests'teki FakeMailService deseniyle aynı).
 /// </summary>
-internal sealed class FakeOnlinePaymentProvider(bool succeeds = true) : IOnlinePaymentProvider
+internal sealed class FakeOnlinePaymentProvider(bool succeeds = true, PaymentInquiryResult? queryResult = null)
+    : IOnlinePaymentProvider
 {
     public string ProviderCode => PaymentProviderCodes.Paratika;
 
@@ -53,11 +55,16 @@ internal sealed class FakeOnlinePaymentProvider(bool succeeds = true) : IOnlineP
 
     public Task<PaymentInquiryResult> QueryAsync(
         PaymentInquiryRequest request, PaymentProviderAccount account, CancellationToken cancellationToken)
-        => throw new NotSupportedException("İç Faz 6 kapsamında kullanılmıyor.");
+        => queryResult is not null
+            ? Task.FromResult(queryResult)
+            : throw new NotSupportedException("Bu test senaryosunda QueryAsync sonucu tanımlanmadı.");
 
     public Task<PaymentCallbackResult> ValidateCallbackAsync(
         PaymentCallbackRequest request, PaymentProviderAccount account, CancellationToken cancellationToken)
-        => throw new NotSupportedException("İç Faz 6 kapsamında kullanılmıyor.");
+        => throw new NotSupportedException("İç Faz 7 kapsamında controller seviyesinde kullanılmıyor.");
+
+    public string BuildHostedPaymentPageUrl(string sessionToken)
+        => $"https://fake-hosted-page.local/payment/{sessionToken}";
 }
 
 [Collection("Database collection")]
@@ -97,6 +104,7 @@ public class OnlinePaymentServiceTests : IDisposable
         Assert.Equal(OnlinePaymentTransactionStatus.Pending, result.Status);
         Assert.Equal(PaymentProviderCodes.Paratika, result.ProviderCode);
         Assert.Equal("FAKE-SESSION-TOKEN", result.SessionToken);
+        Assert.Equal("https://fake-hosted-page.local/payment/FAKE-SESSION-TOKEN", result.RedirectUrl);
 
         var transaction = await _context.OnlinePaymentTransactions.SingleAsync(t => t.Id == result.OnlinePaymentTransactionId);
         Assert.Equal(scenario.LineItemId, transaction.ChargeLineItemId);
@@ -211,6 +219,133 @@ public class OnlinePaymentServiceTests : IDisposable
         await Assert.ThrowsAsync<DbUpdateException>(() => _context.SaveChangesAsync());
     }
 
+    [Fact]
+    public async Task CompleteAsync_ShouldCreateApprovedPaymentAllocation_WhenQueryReturnsApproved()
+    {
+        var scenario = await SeedScenarioAsync();
+        var initiateResult = await CreateService([new FakeOnlinePaymentProvider()]).InitiateAsync(
+            new InitiateOnlinePaymentInput(
+                scenario.TenantId,
+                scenario.ChargeId,
+                scenario.LineItemId,
+                600m,
+                scenario.ActorId,
+                new PaymentAccessScopeInput()));
+
+        var queryResult = new PaymentInquiryResult(
+            IsSuccessful: true,
+            ProviderTransactionId: "PGTRAN-APPROVED",
+            ResponseCode: "00",
+            TransactionStatus: "AP",
+            ErrorCode: null,
+            SafeMessage: "Approved");
+
+        var result = await CreateService([new FakeOnlinePaymentProvider(queryResult: queryResult)]).CompleteAsync(
+            new CompleteOnlinePaymentInput(initiateResult.MerchantPaymentId, scenario.TenantId));
+
+        Assert.Equal(OnlinePaymentTransactionStatus.Approved, result.Status);
+        Assert.NotNull(result.PaymentAllocationId);
+        Assert.Equal(scenario.ChargeId, result.ChargeId);
+
+        var payment = await _context.PaymentAllocations.SingleAsync(p => p.Id == result.PaymentAllocationId);
+        Assert.Equal(PaymentStatus.Approved, payment.Status);
+        Assert.Equal(PaymentSourceType.VirtualPos, payment.PaymentSourceType);
+        Assert.Equal(PaymentChannel.Card, payment.PaymentChannel);
+        Assert.Equal("PGTRAN-APPROVED", payment.PosReferenceNo);
+        Assert.Equal(600m, payment.Amount);
+
+        var chargeLineItem = await _context.ChargeLineItems.SingleAsync(li => li.Id == scenario.LineItemId);
+        Assert.Equal(600m, chargeLineItem.PaidAmount);
+
+        var events = await _context.OnlinePaymentEvents
+            .Where(e => e.OnlinePaymentTransactionId == initiateResult.OnlinePaymentTransactionId)
+            .ToListAsync();
+        Assert.Contains(events, e => e.EventType == OnlinePaymentEventType.InquiryPerformed);
+        Assert.Contains(events, e => e.EventType == OnlinePaymentEventType.Succeeded);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_ShouldNotCreatePayment_WhenQueryReturnsFailed()
+    {
+        var scenario = await SeedScenarioAsync();
+        var initiateResult = await CreateService([new FakeOnlinePaymentProvider()]).InitiateAsync(
+            new InitiateOnlinePaymentInput(
+                scenario.TenantId,
+                scenario.ChargeId,
+                scenario.LineItemId,
+                600m,
+                scenario.ActorId,
+                new PaymentAccessScopeInput()));
+
+        var queryResult = new PaymentInquiryResult(
+            IsSuccessful: true,
+            ProviderTransactionId: "PGTRAN-FAILED",
+            ResponseCode: "00",
+            TransactionStatus: "FA",
+            ErrorCode: null,
+            SafeMessage: "Declined");
+
+        var result = await CreateService([new FakeOnlinePaymentProvider(queryResult: queryResult)]).CompleteAsync(
+            new CompleteOnlinePaymentInput(initiateResult.MerchantPaymentId, scenario.TenantId));
+
+        Assert.Equal(OnlinePaymentTransactionStatus.Failed, result.Status);
+        Assert.Null(result.PaymentAllocationId);
+        Assert.False(await _context.PaymentAllocations.AnyAsync(p => p.ChargeLineItemId == scenario.LineItemId));
+    }
+
+    [Fact]
+    public async Task CompleteAsync_ShouldBeIdempotent_WhenCalledAgainAfterApproval()
+    {
+        var scenario = await SeedScenarioAsync();
+        var initiateResult = await CreateService([new FakeOnlinePaymentProvider()]).InitiateAsync(
+            new InitiateOnlinePaymentInput(
+                scenario.TenantId,
+                scenario.ChargeId,
+                scenario.LineItemId,
+                600m,
+                scenario.ActorId,
+                new PaymentAccessScopeInput()));
+
+        var approvedResult = new PaymentInquiryResult(
+            IsSuccessful: true,
+            ProviderTransactionId: "PGTRAN-APPROVED",
+            ResponseCode: "00",
+            TransactionStatus: "AP",
+            ErrorCode: null,
+            SafeMessage: "Approved");
+        await CreateService([new FakeOnlinePaymentProvider(queryResult: approvedResult)]).CompleteAsync(
+            new CompleteOnlinePaymentInput(initiateResult.MerchantPaymentId, scenario.TenantId));
+
+        var secondResult = await CreateService([new FakeOnlinePaymentProvider(queryResult: approvedResult)]).CompleteAsync(
+            new CompleteOnlinePaymentInput(initiateResult.MerchantPaymentId, scenario.TenantId));
+
+        Assert.Equal(OnlinePaymentTransactionStatus.Approved, secondResult.Status);
+        var paymentCount = await _context.PaymentAllocations.CountAsync(p => p.ChargeLineItemId == scenario.LineItemId);
+        Assert.Equal(1, paymentCount);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_ShouldThrowForbidden_WhenTenantDoesNotOwnTransaction()
+    {
+        var scenario = await SeedScenarioAsync();
+        var initiateResult = await CreateService([new FakeOnlinePaymentProvider()]).InitiateAsync(
+            new InitiateOnlinePaymentInput(
+                scenario.TenantId,
+                scenario.ChargeId,
+                scenario.LineItemId,
+                600m,
+                scenario.ActorId,
+                new PaymentAccessScopeInput()));
+
+        var otherTenantId = scenario.TenantId + 1;
+
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            CreateService([new FakeOnlinePaymentProvider()]).CompleteAsync(
+                new CompleteOnlinePaymentInput(initiateResult.MerchantPaymentId, otherTenantId)));
+
+        Assert.Equal("ONLINE_PAYMENT_TRANSACTION_FORBIDDEN", exception.Code);
+    }
+
     private OnlinePaymentService CreateService(IEnumerable<IOnlinePaymentProvider> providers)
     {
         var unitOfWork = new UnitOfWork(_context);
@@ -229,9 +364,11 @@ public class OnlinePaymentServiceTests : IDisposable
             new OnlinePaymentBusinessRules(),
             new OnlinePaymentTransactionRepository(_context),
             new OnlinePaymentEventRepository(_context),
+            new PaymentAllocationRepository(_context),
             storeResolver,
             new StoreAccountRepository(_context),
             _protector,
+            new TenantRepository(_context),
             providers,
             unitOfWork);
     }
@@ -485,9 +622,11 @@ public class OnlinePaymentServiceConcurrencyTests(DatabaseFixture fixture)
                 new OnlinePaymentBusinessRules(),
                 new OnlinePaymentTransactionRepository(context),
                 new OnlinePaymentEventRepository(context),
+                new PaymentAllocationRepository(context),
                 new PaymentStoreResolver(new PaymentStoreRoutingRepository(context)),
                 new StoreAccountRepository(context),
                 protector,
+                new TenantRepository(context),
                 [new FakeOnlinePaymentProvider()],
                 unitOfWork);
             try
@@ -567,5 +706,24 @@ public class OnlinePaymentBusinessRulesTests
             rules.EnsureAmountWithinAvailable(balance, 0m));
 
         Assert.Equal("ONLINE_PAYMENT_AMOUNT_NOT_POSITIVE", exception.Code);
+    }
+
+    [Theory]
+    [InlineData("AP", OnlinePaymentTransactionStatus.Approved)]
+    [InlineData("FA", OnlinePaymentTransactionStatus.Failed)]
+    [InlineData("CA", OnlinePaymentTransactionStatus.Failed)]
+    [InlineData("VD", OnlinePaymentTransactionStatus.Cancelled)]
+    [InlineData("IP", OnlinePaymentTransactionStatus.Pending)]
+    [InlineData("MR", OnlinePaymentTransactionStatus.Unknown)]
+    [InlineData("SOMETHING_UNKNOWN", OnlinePaymentTransactionStatus.Unknown)]
+    [InlineData(null, OnlinePaymentTransactionStatus.Unknown)]
+    public void NormalizeProviderStatus_ShouldMapTransactionStatusPerMainPlanSection54(
+        string? transactionStatus, OnlinePaymentTransactionStatus expected)
+    {
+        var rules = new OnlinePaymentBusinessRules();
+
+        var result = rules.NormalizeProviderStatus("00", transactionStatus);
+
+        Assert.Equal(expected, result);
     }
 }

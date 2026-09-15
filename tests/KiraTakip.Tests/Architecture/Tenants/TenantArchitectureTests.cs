@@ -190,6 +190,71 @@ public class TenantArchitectureTests : IDisposable
         Assert.Equal(nameof(UpdateTenantInput.TenantCategoryId), exception.Field);
     }
 
+    [Fact]
+    public async Task Delete_SoftDeletesTenantWithNoHistory()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var category = new Category { Type = CategoryType.Tenant, Name = $"Kategori {suffix}", Code = $"KAT_{suffix}", Order = 1 };
+        var tenant = new Tenant { TenantNo = $"BARE-{suffix}", Name = $"Boş Kiracı {suffix}", TenantCategory = category };
+        _context.AddRange(category, tenant);
+        await _context.SaveChangesAsync();
+        var service = CreateService();
+
+        await service.DeleteAsync(tenant.Id, new TenantAccessScopeInput());
+
+        var deleted = await _context.Tenants.IgnoreQueryFilters().SingleAsync(item => item.Id == tenant.Id);
+        Assert.True(deleted.IsDeleted);
+        Assert.False(deleted.IsActive);
+        Assert.False(await _context.Tenants.AnyAsync(item => item.Id == tenant.Id));
+    }
+
+    [Fact]
+    public async Task Delete_RejectsTenantWithLeaseHistory()
+    {
+        var seed = await SeedAsync();
+        var service = CreateService();
+
+        var exception = await Assert.ThrowsAsync<BusinessException>(
+            () => service.DeleteAsync(seed.FirstTenantId, new TenantAccessScopeInput()));
+
+        Assert.Equal("Tenant.HasHistory", exception.Code);
+        Assert.False(await _context.Tenants
+            .IgnoreQueryFilters()
+            .Where(item => item.Id == seed.FirstTenantId)
+            .Select(item => item.IsDeleted)
+            .SingleAsync());
+    }
+
+    [Fact]
+    public async Task Delete_ThrowsNotFound_WhenTenantOutOfScope()
+    {
+        var seed = await SeedAsync();
+        var service = CreateService();
+
+        var exception = await Assert.ThrowsAsync<BusinessException>(() => service.DeleteAsync(
+            seed.SecondTenantId,
+            new TenantAccessScopeInput([], [seed.FirstUnitId])));
+
+        Assert.Equal(ErrorType.NotFound, exception.ErrorType);
+    }
+
+    [Fact]
+    public async Task Delete_AllowsReusingTenantNoAfterwards()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var category = new Category { Type = CategoryType.Tenant, Name = $"Kategori {suffix}", Code = $"KAT_{suffix}", Order = 1 };
+        var tenantNo = $"REUSE-{suffix}";
+        var tenant = new Tenant { TenantNo = tenantNo, Name = $"Yanlış Kiracı {suffix}", TenantCategory = category };
+        _context.AddRange(category, tenant);
+        await _context.SaveChangesAsync();
+        var repository = new TenantRepository(_context);
+        var service = CreateService();
+
+        await service.DeleteAsync(tenant.Id, new TenantAccessScopeInput());
+
+        Assert.False(await repository.TenantNoExistsAsync(tenantNo));
+    }
+
     private TenantService CreateService()
     {
         var unitOfWork = new UnitOfWork(_context);

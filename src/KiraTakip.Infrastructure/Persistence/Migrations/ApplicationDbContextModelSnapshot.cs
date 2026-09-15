@@ -17,7 +17,7 @@ namespace KiraTakip.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.19")
+                .HasAnnotation("ProductVersion", "9.0.20")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -1675,7 +1675,7 @@ namespace KiraTakip.Migrations
                     b.Property<int>("PaymentChannel")
                         .HasColumnType("int")
                         .HasColumnName("OdemeKanali")
-                        .HasComment("BankTransfer=1, Eft=2, Cash=3, Other=4");
+                        .HasComment("BankTransfer=1, Eft=2, Cash=3, Other=4, Card=5");
 
                     b.Property<DateTime>("PaymentDate")
                         .HasColumnType("datetime2")
@@ -2875,12 +2875,14 @@ namespace KiraTakip.Migrations
                     b.HasIndex("TaxNo")
                         .IsUnique()
                         .HasDatabaseName("UX_Kiraciler_VergiNo")
-                        .HasFilter("[VergiNo] IS NOT NULL AND [VergiNo] <> ''");
+                        .HasFilter("[VergiNo] IS NOT NULL AND [VergiNo] <> '' AND [IsDeleted] = 0");
 
                     b.HasIndex("TenantCategoryId");
 
                     b.HasIndex("TenantNo")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_Kiraciler_KiraciNo_Silinmemis")
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("Kiracilar");
                 });

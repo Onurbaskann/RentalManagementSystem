@@ -142,6 +142,26 @@ public class TenantService(
         await unitOfWork.SaveChangesAsync();
     }
 
+    public async Task DeleteAsync(int id, TenantAccessScopeInput accessScope)
+    {
+        var tenant = Guard.NotFound(
+            await tenantRepository.GetForUpdateAsync(
+                id,
+                accessScope.PropertyIds?.ToList(),
+                accessScope.UnitIds?.ToList()),
+            "Kiracı bulunamadı.",
+            "Tenant.NotFound");
+
+        Guard.Conflict(
+            await tenantRepository.HasHistoricalDependencyAsync(id),
+            "Bu kiracının sözleşme, tahakkuk, rezervasyon veya kullanıcı geçmişi bulunduğu için silinemez.",
+            "Tenant.HasHistory");
+
+        tenant.IsDeleted = true;
+        tenant.IsActive = false;
+        await unitOfWork.SaveChangesAsync();
+    }
+
     public async Task<string> GenerateTenantNoAsync()
     {
         var existingTenantNos = await tenantRepository.GetExistingTenantNosAsync();

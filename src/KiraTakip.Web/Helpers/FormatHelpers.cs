@@ -26,16 +26,16 @@ public static class FormatHelpers
     public static string Tl(this int? value) =>
         value.HasValue ? value.Value.Tl() : "—";
 
-    public static string M2(this decimal value, int decimalPlaces = 0) =>
+    public static string M2(this decimal value, int decimalPlaces = 2) =>
         value.ToString($"N{decimalPlaces}", TrCulture) + " m²";
 
-    public static string M2(this decimal? value, int decimalPlaces = 0) =>
+    public static string M2(this decimal? value, int decimalPlaces = 2) =>
         value.HasValue ? value.Value.M2(decimalPlaces) : "—";
 
-    public static string M2(this double value, int decimalPlaces = 0) =>
+    public static string M2(this double value, int decimalPlaces = 2) =>
         value.ToString($"N{decimalPlaces}", TrCulture) + " m²";
 
-    public static string M2(this double? value, int decimalPlaces = 0) =>
+    public static string M2(this double? value, int decimalPlaces = 2) =>
         value.HasValue ? value.Value.M2(decimalPlaces) : "—";
 
     public static string M2(this int value) =>

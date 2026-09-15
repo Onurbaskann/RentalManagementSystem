@@ -39,7 +39,8 @@ public static class PermissionCatalog
         public const string Module = "Internal.Tenant";
         public const string Create = "Internal.Tenant.Create";
         public const string Edit   = "Internal.Tenant.Edit";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle")];
+        public const string Delete = "Internal.Tenant.Delete";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(Delete, "Sil")];
     }
 
     public static class Lease
@@ -355,7 +356,7 @@ public static class PermissionCatalog
     [
         Property.Module, Property.Create, Property.Edit,
         Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate,
-        Tenant.Module, Tenant.Create, Tenant.Edit,
+        Tenant.Module, Tenant.Create, Tenant.Edit, Tenant.Delete,
         Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
         Lease.Approve, Lease.RequestRevision, Lease.DeleteDraft,
         Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject, Payment.MatchBankTransaction,
@@ -376,7 +377,7 @@ public static class PermissionCatalog
     [
         Property.Module, Property.Create, Property.Edit,
         Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate,
-        Tenant.Module, Tenant.Create, Tenant.Edit,
+        Tenant.Module, Tenant.Create, Tenant.Edit, Tenant.Delete,
         Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
         Lease.Approve, Lease.RequestRevision, Lease.DeleteDraft,
         Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject,
@@ -428,7 +429,7 @@ public static class PermissionCatalog
         // Internal.*
         Property.Module, Property.Create, Property.Edit,
         Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate,
-        Tenant.Module, Tenant.Create, Tenant.Edit,
+        Tenant.Module, Tenant.Create, Tenant.Edit, Tenant.Delete,
         Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
         Lease.Approve, Lease.RequestRevision, Lease.DeleteDraft,
         Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject,

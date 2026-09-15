@@ -26,4 +26,11 @@ public interface IOnlinePaymentProvider
         PaymentCallbackRequest request,
         PaymentProviderAccount account,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Başarılı bir oturumdan sonra kullanıcının tarayıcısının yönlendirileceği hosted ödeme
+    /// sayfası adresini üretir. Saf, senkron bir URL birleştirme — sağlayıcıya özgü format
+    /// bilgisi yalnız provider'da yaşar, ortak servis bu formatı bilmez.
+    /// </summary>
+    string BuildHostedPaymentPageUrl(string sessionToken);
 }

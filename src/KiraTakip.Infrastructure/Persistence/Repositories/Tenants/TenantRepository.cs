@@ -174,14 +174,12 @@ public class TenantRepository(ApplicationDbContext context)
 
     public Task<bool> TenantNoExistsAsync(string tenantNo, int? excludeTenantId = null)
         => _dbSet
-            .IgnoreQueryFilters()
             .AsNoTracking()
             .AnyAsync(tenant => tenant.TenantNo == tenantNo
                 && (excludeTenantId == null || tenant.Id != excludeTenantId));
 
     public Task<bool> TaxNoExistsAsync(string taxNo, int? excludeTenantId = null)
         => _dbSet
-            .IgnoreQueryFilters()
             .AsNoTracking()
             .AnyAsync(tenant => tenant.TaxNo == taxNo
                 && (excludeTenantId == null || tenant.Id != excludeTenantId));
@@ -234,6 +232,13 @@ public class TenantRepository(ApplicationDbContext context)
             leaseScopes.Select(scope => scope.PropertyId).Distinct().ToList(),
             leaseScopes.Select(scope => scope.UnitId).Distinct().ToList());
     }
+
+    public async Task<bool> HasHistoricalDependencyAsync(int tenantId)
+        => await _ctx.Leases.IgnoreQueryFilters().AnyAsync(lease => lease.TenantId == tenantId)
+            || await _ctx.Charges.IgnoreQueryFilters().AnyAsync(charge => charge.TenantId == tenantId)
+            || await _ctx.Reservations.IgnoreQueryFilters().AnyAsync(reservation => reservation.TenantId == tenantId)
+            || await _ctx.Users.IgnoreQueryFilters().AnyAsync(user => user.TenantId == tenantId)
+            || await _ctx.Roller.IgnoreQueryFilters().AnyAsync(role => role.TenantId == tenantId);
 
     private IQueryable<Tenant> ApplyScope(
         IQueryable<Tenant> query,

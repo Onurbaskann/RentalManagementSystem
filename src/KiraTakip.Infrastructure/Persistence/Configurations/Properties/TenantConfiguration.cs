@@ -10,7 +10,10 @@ internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
     public void Configure(EntityTypeBuilder<Tenant> entity)
     {
         entity.Property(k => k.TenantNo).HasMaxLength(20);
-        entity.HasIndex(k => k.TenantNo).IsUnique();
+        entity.HasIndex(k => k.TenantNo)
+              .IsUnique()
+              .HasDatabaseName("UX_Kiraciler_KiraciNo_Silinmemis")
+              .HasFilter("[IsDeleted] = 0");
         entity.Property(k => k.Name).HasMaxLength(200);
         entity.Property(k => k.Phone).HasMaxLength(30);
         entity.Property(k => k.Email).HasMaxLength(200);
@@ -18,7 +21,7 @@ internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
         entity.HasIndex(k => k.TaxNo)
               .IsUnique()
               .HasDatabaseName("UX_Kiraciler_VergiNo")
-              .HasFilter("[VergiNo] IS NOT NULL AND [VergiNo] <> ''");
+              .HasFilter("[VergiNo] IS NOT NULL AND [VergiNo] <> '' AND [IsDeleted] = 0");
         entity.HasOne(k => k.TenantCategory)
               .WithMany()
               .OnDelete(DeleteBehavior.SetNull);

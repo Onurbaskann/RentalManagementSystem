@@ -82,7 +82,8 @@ public enum PaymentChannel
     BankTransfer = 1,
     Eft = 2,
     Cash = 3,
-    Other = 4
+    Other = 4,
+    Card = 5
 }
 
 public enum BankMatchStatus

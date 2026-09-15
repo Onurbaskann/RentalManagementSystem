@@ -1,6 +1,7 @@
 using KiraTakip.Data;
 using KiraTakip.Infrastructure.Auditing;
 using KiraTakip.Infrastructure.Notifications;
+using KiraTakip.Infrastructure.Payments;
 using KiraTakip.Infrastructure.Persistence;
 using KiraTakip.Infrastructure.Seeding;
 using KiraTakip.Models.Settings;
@@ -18,6 +19,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace KiraTakip.Infrastructure.DependencyInjection
 {
@@ -57,6 +59,11 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.Configure<ReservationCompletionSettings>(configuration.GetSection("ReservationCompletion"));
             services.Configure<DataProtectionSettings>(configuration.GetSection("DataProtection"));
             services.Configure<ParatikaOptions>(configuration.GetSection("Paratika"));
+            services.AddHttpClient<IOnlinePaymentProvider, ParatikaOnlinePaymentProvider>((sp, client) =>
+            {
+                var paratikaOptions = sp.GetRequiredService<IOptions<ParatikaOptions>>().Value;
+                client.Timeout = TimeSpan.FromSeconds(paratikaOptions.HttpTimeoutSeconds);
+            });
             var dataProtection = services.AddDataProtection().SetApplicationName("KiraTakip");
             var keyRingPath = configuration["DataProtection:KeyRingPath"];
             if (!string.IsNullOrWhiteSpace(keyRingPath))

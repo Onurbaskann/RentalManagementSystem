@@ -33,4 +33,19 @@ public class OnlinePaymentBusinessRules : IOnlinePaymentBusinessRules
             $"Sanal POS işlemi '{from}' durumundan '{to}' durumuna geçemez.",
             "ONLINE_PAYMENT_INVALID_STATUS_TRANSITION");
     }
+
+    public OnlinePaymentTransactionStatus NormalizeProviderStatus(string? responseCode, string? transactionStatus)
+    {
+        if (string.IsNullOrWhiteSpace(transactionStatus))
+            return OnlinePaymentTransactionStatus.Unknown;
+
+        return transactionStatus.Trim().ToUpperInvariant() switch
+        {
+            "AP" => OnlinePaymentTransactionStatus.Approved,
+            "FA" or "CA" => OnlinePaymentTransactionStatus.Failed,
+            "VD" => OnlinePaymentTransactionStatus.Cancelled,
+            "IP" => OnlinePaymentTransactionStatus.Pending,
+            _ => OnlinePaymentTransactionStatus.Unknown
+        };
+    }
 }

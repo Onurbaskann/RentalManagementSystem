@@ -11,10 +11,22 @@ public record PaymentProviderAccount(
     string MerchantPassword,
     string Currency);
 
+/// <summary>
+/// SESSIONTOKEN isteği için gerekli alanlar (Paratika API v2 dokümanı — kullanıcı tarafından
+/// doğrulanmış ham metin, 2026-09-11). CustomerCode/Name/Email/Phone kaynağı Tenant entity'sinin
+/// TenantNo/Name/Email/Phone alanları — provider sınıfı Tenant/EF bilmediği için bu alanlar
+/// orkestrasyon servisi tarafından geçirilir. ReturnUrl/SessionType gibi Paratika'ya özgü,
+/// ortam bazlı sabit config değerleri ise (ParatikaOptions) bilinçli olarak bu DTO'da YOK —
+/// provider kendi ayarını kendi okur, ortak servis provider-config'e bağımlı olmaz.
+/// </summary>
 public record CreatePaymentSessionRequest(
     string MerchantPaymentId,
     decimal Amount,
-    string Currency);
+    string Currency,
+    string CustomerCode,
+    string CustomerName,
+    string CustomerEmail,
+    string CustomerPhone);
 
 public record CreatePaymentSessionResult(
     bool IsSuccessful,

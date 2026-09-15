@@ -221,6 +221,15 @@ public class TenantController(
         return RedirectToAction(nameof(Details), new { id });
     }
 
+    [HttpPost("Delete/{id}")]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.Tenant.Delete)]
+    public async Task<IActionResult> Delete(int id)
+    {
+        await tenantService.DeleteAsync(id, BuildAccessScope());
+        return RedirectToAction(nameof(Index));
+    }
+
     private async Task PopulateTenantFormOptionsAsync(TenantFormViewModel viewModel)
     {
         await PopulateCategoryAndSectorOptionsAsync(viewModel);

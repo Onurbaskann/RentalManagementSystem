@@ -5,16 +5,18 @@
 > [`PROGRESS-HISTORY.md`](PROGRESS-HISTORY.md) yalnız ilgili bölüm için okunur; dosya artık güncellenmez.
 
 **Aktif çalışma:** Kalem bazlı mağaza yönlendirme ve ödeme altyapısı  
-**Aktif faz:** Faz 20 / İç Faz 6 — Provider soyutu ve sanal POS işlem omurgası (implementasyon tamamlandı, kullanıcı onayı bekleniyor)  
-**Durum:** İç Faz 6 implementasyonu tamamlandı; `dotnet build`/`dotnet test` tam yeşil (352/352, 0 skip)  
+**Aktif faz:** Faz 20 / İç Faz 7 — Paratika Hosted Payment Page entegrasyonu (implementasyon tamamlandı, manuel duman testi ve kullanıcı onayı bekleniyor)  
+**Durum:** İç Faz 7 implementasyonu tamamlandı (backend + kiracı arayüzü tetikleyicisi); `dotnet build`/`dotnet test` tam yeşil (776/776, 0 skip). Proje bu arada Clean Architecture katmanlarına ayrıldı (`src/KiraTakip.{Domain,Application,Infrastructure,Web}`).
+**BLOKAJ (2026-09-14):** DURMA KAPISI C (manuel duman testi) Paratika test merchant kimlik bilgisi (MERCHANT/MERCHANTUSER/MERCHANTPASSWORD) eksikliğinden bekliyor. Bu bilgi genel API dokümanında yayınlanmaz — Paratika/Payten'den hesaba özel bir test/sandbox üye iş yeri kaydı talep edilmesi gerekiyor. Test kartları dokümanda var ama kimlik bilgisi olmadan hiçbir istek (SESSIONTOKEN dahil) atılamıyor. Kullanıcı kararı: kimlik bilgisi gelene kadar burada durulacak, İç Faz 8'e şimdilik geçilmeyecek.  
 **Detaylı plan:** [`phase-20-kalem-bazli-magaza-yonlendirme-ve-odeme-altyapisi.md`](phase-20-kalem-bazli-magaza-yonlendirme-ve-odeme-altyapisi.md)  
 **Tamamlanan İç Faz 1 planı:** [`phase-20-inner-phase-1-implementation-plan.md`](phase-20-inner-phase-1-implementation-plan.md)  
 **Tamamlanan İç Faz 2 planı:** [`phase-20-inner-phase-2-implementation-plan.md`](phase-20-inner-phase-2-implementation-plan.md)  
 **Tamamlanan İç Faz 3 planı:** [`phase-20-inner-phase-3-implementation-plan.md`](phase-20-inner-phase-3-implementation-plan.md)  
 **Tamamlanan İç Faz 4 planı:** [`phase-20-inner-phase-4-implementation-plan.md`](phase-20-inner-phase-4-implementation-plan.md)  
 **Tamamlanan İç Faz 5 planı:** [`phase-20-inner-phase-5-implementation-plan.md`](phase-20-inner-phase-5-implementation-plan.md)  
-**İç Faz 6 planı (onay bekliyor):** [`phase-20-inner-phase-6-implementation-plan.md`](phase-20-inner-phase-6-implementation-plan.md)  
-**Sonraki adım:** Kullanıcı İç Faz 6 sonucunu kontrol edip onaylayacak; onay sonrası İç Faz 7 (Paratika PayByLink entegrasyonu) planlanacak
+**İç Faz 6 planı:** [`phase-20-inner-phase-6-implementation-plan.md`](phase-20-inner-phase-6-implementation-plan.md) (implementasyon tamamlandı; kullanıcı yazılı "onaylıyorum" vermeden "Faz 7'ye geçelim" diyerek ilerledi)  
+**İç Faz 7 planı (onay bekliyor):** [`phase-20-inner-phase-7-implementation-plan.md`](phase-20-inner-phase-7-implementation-plan.md)  
+**Sonraki adım:** Kullanıcı Paratika/Payten'den test merchant kimlik bilgisi (MERCHANT/MERCHANTUSER/MERCHANTPASSWORD) aldığında bu sohbete dönülüp gerçek Paratika test ortamına karşı manuel duman testi yapılacak (ApiBaseUrl/HostedPaymentPageBaseUrl/RETURNURL alan adı hiçbiri gerçek sunucuya karşı doğrulanmadı); ardından kullanıcı İç Faz 7 sonucunu onaylayacak, onay sonrası İç Faz 8 (callback, mutabakat, operasyonel dayanıklılık) planlanacak
 
 ---
 
@@ -38,7 +40,7 @@ Aktif faz dışındaki büyük phase/spec dosyaları bağlam amacıyla baştan s
 - [x] Faz 19 sözleşme başvuru, onay ve revizyon mekanizması tamamlandı.
 - [x] Faz 18 rezervasyon sisteminin genişletilmesi tamamlandı; kullanıcı kapanış onayı 2026-08-17 tarihinde verildi ve production migrationları uygulandı.
 - [x] Merkezi `SistemAyarlari` altyapısı ile rezervasyon ve operasyon ayarları tamamlandı.
-- [ ] Faz 20 kalem bazlı mağaza yönlendirme ve ödeme altyapısında İç Faz 1-5 kabul edildi; İç Faz 6 implementasyonu tamamlandı, kullanıcı onayı sırada.
+- [ ] Faz 20 kalem bazlı mağaza yönlendirme ve ödeme altyapısında İç Faz 1-5 kabul edildi, İç Faz 6 implementasyonu tamamlanıp bir sonraki faza geçildi; İç Faz 7 implementasyonu tamamlandı, manuel duman testi ve kullanıcı onayı sırada.
 
 ---
 

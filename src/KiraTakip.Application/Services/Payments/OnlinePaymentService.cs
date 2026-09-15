@@ -8,9 +8,11 @@ using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Repositories.Interfaces.Charges;
 using KiraTakip.Repositories.Interfaces.Payments;
+using KiraTakip.Repositories.Interfaces.Tenants;
 using KiraTakip.Services.Interfaces.Charges;
 using KiraTakip.Services.Interfaces.Payments;
 using KiraTakip.Models.Dtos.Charge;
+using KiraTakip.Models.Dtos.Payment;
 
 namespace KiraTakip.Services.Payments;
 
@@ -20,9 +22,11 @@ public class OnlinePaymentService(
     IOnlinePaymentBusinessRules businessRules,
     IOnlinePaymentTransactionRepository transactionRepository,
     IOnlinePaymentEventRepository eventRepository,
+    IPaymentAllocationRepository paymentAllocationRepository,
     IPaymentStoreResolver storeResolver,
     IStoreAccountRepository storeAccountRepository,
     IStoreAccountCredentialProtector credentialProtector,
+    ITenantRepository tenantRepository,
     IEnumerable<IOnlinePaymentProvider> providers,
     IUnitOfWork unitOfWork) : IOnlinePaymentService, ITransactionalService
 {
@@ -86,10 +90,22 @@ public class OnlinePaymentService(
             credentialProtector.Unprotect(storeAccount.ProtectedMerchantPassword),
             storeAccount.Currency);
 
+        var tenant = Guard.NotFound(
+            await tenantRepository.GetActiveByIdAsync(input.TenantId, cancellationToken),
+            "Kiracı bulunamadı.",
+            "ONLINE_PAYMENT_TENANT_NOT_FOUND");
+
         var merchantPaymentId = Guid.NewGuid().ToString("N");
 
         var sessionResult = await provider.CreateSessionAsync(
-            new CreatePaymentSessionRequest(merchantPaymentId, input.Amount, storeAccount.Currency),
+            new CreatePaymentSessionRequest(
+                merchantPaymentId,
+                input.Amount,
+                storeAccount.Currency,
+                tenant.TenantNo,
+                tenant.Name,
+                tenant.Email,
+                tenant.Phone),
             account,
             cancellationToken);
 
@@ -136,6 +152,142 @@ public class OnlinePaymentService(
             transaction.MerchantPaymentId,
             sessionResult.SessionToken,
             transaction.SessionExpiresAt,
-            transaction.Status);
+            transaction.Status,
+            sessionResult.IsSuccessful && sessionResult.SessionToken is not null
+                ? provider.BuildHostedPaymentPageUrl(sessionResult.SessionToken)
+                : null);
+    }
+
+    public async Task<CompleteOnlinePaymentResult> CompleteAsync(
+        CompleteOnlinePaymentInput input,
+        CancellationToken cancellationToken = default)
+    {
+        var transaction = Guard.NotFound(
+            await transactionRepository.GetByMerchantPaymentIdAsync(input.MerchantPaymentId, cancellationToken),
+            "Sanal POS işlemi bulunamadı.",
+            "ONLINE_PAYMENT_TRANSACTION_NOT_FOUND");
+
+        Guard.Forbidden(
+            transaction.ChargeLineItem.Charge.TenantId != input.TenantId,
+            "Bu işlem için erişim yetkiniz bulunmuyor.",
+            "ONLINE_PAYMENT_TRANSACTION_FORBIDDEN");
+
+        await chargeLineItemRepository.AcquirePaymentLockAsync(transaction.ChargeLineItemId);
+
+        var provider = Guard.NotFound(
+            providers.FirstOrDefault(candidate => candidate.ProviderCode == transaction.ProviderCode),
+            $"'{transaction.ProviderCode}' için sanal POS sağlayıcısı bulunamadı.",
+            "ONLINE_PAYMENT_PROVIDER_NOT_FOUND");
+
+        var storeAccount = Guard.NotFound(
+            await storeAccountRepository.GetByIdAsync(transaction.StoreAccountId),
+            "Mağaza hesabı bulunamadı.",
+            "ONLINE_PAYMENT_STORE_ACCOUNT_NOT_FOUND");
+
+        var account = new PaymentProviderAccount(
+            storeAccount.ProviderCode,
+            storeAccount.MerchantId,
+            storeAccount.MerchantUser,
+            credentialProtector.Unprotect(storeAccount.ProtectedMerchantPassword),
+            storeAccount.Currency);
+
+        var inquiryResult = await provider.QueryAsync(
+            new PaymentInquiryRequest(transaction.MerchantPaymentId),
+            account,
+            cancellationToken);
+
+        var newStatus = businessRules.NormalizeProviderStatus(
+            inquiryResult.ResponseCode,
+            inquiryResult.TransactionStatus);
+
+        transaction.LastInquiryAt = DateTime.UtcNow;
+        transaction.InquiryCount += 1;
+        transaction.ResponseCode = inquiryResult.ResponseCode;
+        transaction.TransactionStatus = inquiryResult.TransactionStatus;
+        if (!string.IsNullOrWhiteSpace(inquiryResult.ProviderTransactionId))
+            transaction.ProviderTransactionId = inquiryResult.ProviderTransactionId;
+
+        await eventRepository.AddAsync(new OnlinePaymentEvent
+        {
+            OnlinePaymentTransactionId = transaction.Id,
+            EventType = OnlinePaymentEventType.InquiryPerformed,
+            ProviderResponseCode = inquiryResult.ResponseCode,
+            ProviderTransactionStatus = inquiryResult.TransactionStatus,
+            SafeSummary = inquiryResult.SafeMessage
+        }, cancellationToken);
+
+        // Geçersiz geçiş (örn. zaten terminal durumda, sayfa yenilendi) sessizce yok sayılır —
+        // hata fırlatılmaz, yalnız sorgulama izi kaydedilir (İç Faz 7 planı, idempotent no-op).
+        if (businessRules.IsValidStatusTransition(transaction.Status, newStatus))
+        {
+            transaction.Status = newStatus;
+
+            if (newStatus == OnlinePaymentTransactionStatus.Approved)
+            {
+                var charge = transaction.ChargeLineItem.Charge;
+                var payment = new PaymentAllocation
+                {
+                    ChargeId = charge.Id,
+                    ChargeLineItemId = transaction.ChargeLineItemId,
+                    StoreAccountId = transaction.StoreAccountId,
+                    LeaseId = charge.LeaseId,
+                    CreatedByUserId = transaction.InitiatedByUserId,
+                    PaymentDate = DateTime.Today,
+                    Amount = transaction.Amount,
+                    PaymentChannel = PaymentChannel.Card,
+                    PaymentSourceType = PaymentSourceType.VirtualPos,
+                    PosReferenceNo = transaction.ProviderTransactionId,
+                    Status = PaymentStatus.Approved,
+                    EntryDate = DateTime.Now,
+                    ApprovalDate = DateTime.Now
+                };
+
+                await paymentAllocationRepository.AddAsync(payment);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+
+                transaction.PaymentAllocationId = payment.Id;
+                transaction.CompletedAt = DateTime.UtcNow;
+
+                await eventRepository.AddAsync(new OnlinePaymentEvent
+                {
+                    OnlinePaymentTransactionId = transaction.Id,
+                    EventType = OnlinePaymentEventType.Succeeded,
+                    ProviderResponseCode = inquiryResult.ResponseCode,
+                    ProviderTransactionStatus = inquiryResult.TransactionStatus,
+                    SafeSummary = "Ödeme onaylandı."
+                }, cancellationToken);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+
+                await chargeService.UpdatePaidAmountAsync(
+                    new UpdateChargePaidAmountInput(charge.Id, transaction.ChargeLineItemId));
+            }
+            else if (newStatus is OnlinePaymentTransactionStatus.Failed or OnlinePaymentTransactionStatus.Cancelled)
+            {
+                transaction.CompletedAt = DateTime.UtcNow;
+
+                await eventRepository.AddAsync(new OnlinePaymentEvent
+                {
+                    OnlinePaymentTransactionId = transaction.Id,
+                    EventType = OnlinePaymentEventType.Failed,
+                    ProviderResponseCode = inquiryResult.ResponseCode,
+                    ProviderTransactionStatus = inquiryResult.TransactionStatus,
+                    SafeSummary = inquiryResult.SafeMessage
+                }, cancellationToken);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            else
+            {
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        return new CompleteOnlinePaymentResult(
+            transaction.Status,
+            transaction.PaymentAllocationId,
+            transaction.ChargeLineItem.ChargeId);
     }
 }
