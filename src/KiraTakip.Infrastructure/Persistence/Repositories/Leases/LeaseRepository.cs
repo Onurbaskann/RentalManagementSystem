@@ -59,6 +59,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
                 StartDate = s.StartDate,
                 EndDate = s.EndDate,
                 MonthlyAmount = 0,
+                IsRentFree = s.IsRentFree,
                 Status = s.Status,
                 UnitArea = s.Unit.Area
             })
@@ -126,6 +127,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
                 StartDate = lease.StartDate,
                 EndDate = lease.EndDate,
                 MonthlyAmount = 0,
+                IsRentFree = lease.IsRentFree,
                 Status = lease.Status,
                 UnitArea = lease.Unit.Area
             })
@@ -186,6 +188,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
                 StartDate = lease.StartDate,
                 EndDate = lease.EndDate,
                 MonthlyAmount = 0,
+                IsRentFree = lease.IsRentFree,
                 Status = lease.Status,
                 UnitArea = lease.Unit.Area
             });
@@ -238,6 +241,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
                 StartDate = lease.StartDate,
                 EndDate = lease.EndDate,
                 MonthlyAmount = 0,
+                IsRentFree = lease.IsRentFree,
                 Status = lease.Status,
                 UnitArea = lease.Unit.Area
             });
@@ -274,6 +278,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             TerminationDate = s.TerminationDate,
             TerminationReason = s.TerminationReason,
             IsVatApplied = s.IsKdvApplied,
+            IsRentFree = s.IsRentFree,
             DueDateRuleType = s.DueDateRuleType,
             DueDay = s.DueDay,
             ActivityLog = s.ActivityLog
@@ -340,6 +345,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
                 StartDate = s.StartDate,
                 EndDate = s.EndDate,
                 MonthlyAmount = 0,
+                IsRentFree = s.IsRentFree,
                 Status = s.Status,
                 UnitArea = s.Unit.Area
             })
@@ -364,6 +370,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
                 StartDate = s.StartDate,
                 EndDate = s.EndDate,
                 MonthlyAmount = 0,
+                IsRentFree = s.IsRentFree,
                 Status = s.Status,
                 UnitArea = s.Unit.Area
             })
@@ -502,6 +509,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             DueDateRuleType = lease.DueDateRuleType,
             DueDay = lease.DueDay,
             Description = lease.Description,
+            IsRentFree = lease.IsRentFree,
             Status = lease.Status,
             RowVersion = lease.RowVersion,
             OwnerUserId = lease.CreatedBy,

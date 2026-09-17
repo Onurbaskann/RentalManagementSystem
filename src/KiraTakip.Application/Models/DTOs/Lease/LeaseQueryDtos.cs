@@ -38,7 +38,8 @@ public record GetLeaseSummaryInput(
     DateTime StartDate,
     DateTime EndDate,
     LeaseStatus Status,
-    DateTime CurrentTime);
+    DateTime CurrentTime,
+    bool IsRentFree = false);
 
 public record LeaseSummaryDto(
     int RemainingDays,
@@ -69,7 +70,8 @@ public record CreateLeaseInput(
     int DueDay,
     string? Description,
     IReadOnlyCollection<LeaseRateOverrideInput> RateOverrides,
-    LeaseAccessScopeInput AccessScope);
+    LeaseAccessScopeInput AccessScope,
+    bool IsRentFree = false);
 
 public record ExtendLeaseInput(
     int LeaseId,

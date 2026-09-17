@@ -21,6 +21,7 @@ public sealed class LeaseDraftEditDto
     public DueDateRuleType DueDateRuleType { get; init; }
     public int DueDay { get; init; }
     public string? Description { get; init; }
+    public bool IsRentFree { get; init; }
     public LeaseStatus Status { get; init; }
     public byte[] RowVersion { get; init; } = [];
     public string OwnerUserId { get; init; } = string.Empty;
@@ -54,7 +55,8 @@ public sealed record CreateLeaseDraftInput(
     string? Description,
     IReadOnlyCollection<LeaseRateOverrideInput> RateOverrides,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope);
+    LeaseAccessScopeInput AccessScope,
+    bool IsRentFree = false);
 
 public sealed record UpdateLeaseDraftInput(
     int LeaseId,
@@ -68,7 +70,8 @@ public sealed record UpdateLeaseDraftInput(
     IReadOnlyCollection<LeaseRateOverrideInput> RateOverrides,
     byte[] ExpectedRowVersion,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope);
+    LeaseAccessScopeInput AccessScope,
+    bool IsRentFree = false);
 
 public sealed record ResubmitLeaseRevisionInput(
     int LeaseId,
@@ -83,7 +86,8 @@ public sealed record ResubmitLeaseRevisionInput(
     string? Explanation,
     byte[] ExpectedRowVersion,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope);
+    LeaseAccessScopeInput AccessScope,
+    bool IsRentFree = false);
 
 public sealed record RequestLeaseRevisionInput(
     int LeaseId,

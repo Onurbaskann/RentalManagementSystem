@@ -57,7 +57,8 @@ public class TenantLeaseController(
                 leaseDetails.StartDate,
                 leaseDetails.EndDate,
                 leaseDetails.Status,
-                now));
+                now,
+                leaseDetails.IsRentFree));
         var hasChargeAccess = await permissionService.HasModuleAccessAsync(
             PermissionCatalog.TenantPortal.Charge.Module);
         var chargeData = await chargeService.GetTenantLeaseDataAsync(

@@ -307,6 +307,10 @@
                 }
                 <div class="mb-3">
                     <span class="badge @sozlesmeDurumBadgeCls text-[12.5px] px-3.5 py-1.5">@sozlesmeDurumLabel</span>
+                    @if (s.IsRentFree)
+                    {
+                        <span class="badge bg-emerald-100 text-emerald-800 text-[12.5px] px-3.5 py-1.5 ml-1">Bedelsiz</span>
+                    }
                 </div>
                 <a href="/Property/Details/@s.PropertyId.ToHashId()" class="btn btn-sm btn-secondary">Taşınmaz Detayı</a>
             </div>
@@ -318,25 +322,33 @@
         <!-- Kira Bedeli -->
         <div class="card">
             <div class="card-title">Kira Bedeli</div>
-            <div class="mt-2.5">
-                <div class="text-xs text-muted mb-0.5">Aylık (KDV Hariç)</div>
-                <div class="font-serif text-[26px] font-bold text-primary">@aylikBedel.Tl()</div>
-            </div>
-            @if (s.IsVatApplied)
+            @if (s.IsRentFree)
             {
-                <div class="mt-2 pt-2 border-t border-[var(--color-border)]">
-                    <div class="text-[11.5px] text-muted mb-0.5">KDV (@Model.EffectiveVatRate.Yuzde(0))</div>
-                    <div class="text-sm font-semibold">+ @aylikKdv.Tl()</div>
-                    <div class="text-xs text-muted mt-1">KDV Dahil: <strong>@( (aylikBedel + aylikKdv).Tl() )</strong></div>
+                <div class="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                    <div class="font-serif text-[22px] font-bold text-emerald-700">Bedelsiz</div>
+                    <div class="mt-1 text-xs text-emerald-800">Kira bedeli tahakkuku oluşturulmaz.</div>
                 </div>
             }
-            <div class="mt-2 pt-2 border-t border-[var(--color-border)]">
-                <div class="text-[11.5px] text-muted mb-0.5">Yıllık</div>
-                <div class="text-base font-bold">@Model.AnnualAmount.Tl()</div>
-            </div>
-            <div class="mt-1.5 text-[11.5px] text-muted">
-                Tam ay üzerinden
-            </div>
+            else
+            {
+                <div class="mt-2.5">
+                    <div class="text-xs text-muted mb-0.5">Aylık (KDV Hariç)</div>
+                    <div class="font-serif text-[26px] font-bold text-primary">@aylikBedel.Tl()</div>
+                </div>
+                @if (s.IsVatApplied)
+                {
+                    <div class="mt-2 pt-2 border-t border-[var(--color-border)]">
+                        <div class="text-[11.5px] text-muted mb-0.5">KDV (@Model.EffectiveVatRate.Yuzde(0))</div>
+                        <div class="text-sm font-semibold">+ @aylikKdv.Tl()</div>
+                        <div class="text-xs text-muted mt-1">KDV Dahil: <strong>@((aylikBedel + aylikKdv).Tl())</strong></div>
+                    </div>
+                }
+                <div class="mt-2 pt-2 border-t border-[var(--color-border)]">
+                    <div class="text-[11.5px] text-muted mb-0.5">Yıllık</div>
+                    <div class="text-base font-bold">@Model.AnnualAmount.Tl()</div>
+                </div>
+                <div class="mt-1.5 text-[11.5px] text-muted">Tam ay üzerinden</div>
+            }
         </div>
 
         <!-- Sözleşme Süresi -->
@@ -572,7 +584,7 @@
                     }
                     @{
                         Row("Sözleşme No", $"#{s.Id}");
-                        Row("Kira Bedeli (KDV Hariç)", $"{aylikBedel.Tl(0)} / ay");
+                        Row("Kira Bedeli (KDV Hariç)", s.IsRentFree ? "Bedelsiz" : $"{aylikBedel.Tl(0)} / ay");
                         Row("Depozito", Model.DepositAmount.Tl(0));
                         Row("Başlangıç", s.StartDate.Tarih());
                         Row("Bitiş", s.EndDate.Tarih());
@@ -694,7 +706,7 @@
                                                 <td class="font-semibold">@gs.TenantDisplayName</td>
                                                 <td>@gs.StartDate.ToString("dd.MM.yyyy")</td>
                                                 <td>@gs.EndDate.ToString("dd.MM.yyyy")</td>
-                                                <td class="num">@gs.MonthlyAmount.ToString("N0") ₺</td>
+                                                <td class="num">@(gs.IsRentFree ? "Bedelsiz" : $"{gs.MonthlyAmount:N0} ₺")</td>
                                                 <td>
                                                     @if (gFesih)
                                                     {
@@ -752,7 +764,7 @@
                                                 <td class="font-semibold">@ks.UnitName</td>
                                                 <td>@ks.StartDate.ToString("dd.MM.yyyy")</td>
                                                 <td>@ks.EndDate.ToString("dd.MM.yyyy")</td>
-                                                <td class="num">@ks.MonthlyAmount.ToString("N0") ₺</td>
+                                                <td class="num">@(ks.IsRentFree ? "Bedelsiz" : $"{ks.MonthlyAmount:N0} ₺")</td>
                                                 <td>
                                                     @if (kFesih)
                                                     {

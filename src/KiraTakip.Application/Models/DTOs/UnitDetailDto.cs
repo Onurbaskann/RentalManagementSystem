@@ -15,6 +15,7 @@ public class UnitDetailDto
     public OccupancyStatus Status { get; set; }
     public int? ActiveLeaseId { get; set; }
     public int? ActiveLeaseTenantId { get; set; }
+    public bool ActiveLeaseIsRentFree { get; set; }
     public string? ActiveLeaseTenantDisplayName { get; set; }
     public DateTime? ActiveLeaseEndDate { get; set; }
     public decimal MonthlyRent { get; set; }

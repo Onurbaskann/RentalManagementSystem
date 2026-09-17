@@ -10,6 +10,7 @@ using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Dtos.Property;
 using KiraTakip.Models.Dtos.RateHierarchy;
 using KiraTakip.Models.Dtos.Tenant;
+using KiraTakip.Models.Constants;
 using KiraTakip.Models.Enums;
 using KiraTakip.Web.Models.ViewModels;
 using KiraTakip.Services.Interfaces.Charges;
@@ -183,9 +184,10 @@ public class LeaseController(
                 viewModel.DueDateRuleType,
                 viewModel.DueDay,
                 viewModel.Description,
-                BuildRateOverrideInputs(viewModel.LeaseLineItems),
+                BuildRateOverrideInputs(viewModel.LeaseLineItems, viewModel.IsRentFree),
                 CurrentActorUserId(),
-                BuildAccessScope()));
+                BuildAccessScope(),
+                viewModel.IsRentFree));
         }
         catch (BusinessValidationException exception)
         {
@@ -217,6 +219,7 @@ public class LeaseController(
             DueDateRuleType = draft.DueDateRuleType,
             DueDay = draft.DueDay,
             Description = draft.Description,
+            IsRentFree = draft.IsRentFree,
             Status = draft.Status,
             RowVersion = draft.RowVersion,
             OwnerDisplayName = draft.OwnerDisplayName,
@@ -262,8 +265,8 @@ public class LeaseController(
             viewModel.LeaseId, viewModel.UnitId!.Value, viewModel.TenantId,
             viewModel.StartDate, viewModel.EndDate, viewModel.DueDateRuleType,
             viewModel.DueDay, viewModel.Description,
-            BuildRateOverrideInputs(viewModel.LeaseLineItems), viewModel.RowVersion,
-            CurrentActorUserId(), BuildAccessScope()));
+            BuildRateOverrideInputs(viewModel.LeaseLineItems, viewModel.IsRentFree), viewModel.RowVersion,
+            CurrentActorUserId(), BuildAccessScope(), viewModel.IsRentFree));
         return RedirectToAction(nameof(Draft), new { id = viewModel.LeaseId });
     }
 
@@ -277,8 +280,8 @@ public class LeaseController(
             viewModel.LeaseId, viewModel.UnitId!.Value, viewModel.TenantId,
             viewModel.StartDate, viewModel.EndDate, viewModel.DueDateRuleType,
             viewModel.DueDay, viewModel.Description,
-            BuildRateOverrideInputs(viewModel.LeaseLineItems), null, viewModel.RowVersion,
-            CurrentActorUserId(), BuildAccessScope()));
+            BuildRateOverrideInputs(viewModel.LeaseLineItems, viewModel.IsRentFree), null, viewModel.RowVersion,
+            CurrentActorUserId(), BuildAccessScope(), viewModel.IsRentFree));
         return RedirectToAction(nameof(Draft), new { id = viewModel.LeaseId });
     }
 
@@ -500,6 +503,7 @@ public class LeaseController(
             EndDate = details.EndDate,
             Status = details.Status,
             TerminationDate = details.TerminationDate,
+            IsRentFree = details.IsRentFree,
             Unit = new Unit
             {
                 Id = details.UnitId,
@@ -509,9 +513,15 @@ public class LeaseController(
         };
 
     private static List<LeaseRateOverrideInput> BuildRateOverrideInputs(
-        IEnumerable<LeaseLineItemInputDto> lineItems)
+        IEnumerable<LeaseLineItemInputDto> lineItems,
+        bool isRentFree = false)
         => lineItems
-            .Where(lineItem => lineItem.IsUserModified)
+            .Where(lineItem => lineItem.IsUserModified
+                && (!isRentFree
+                    || !string.Equals(
+                        lineItem.ChargeTypeCode,
+                        BorcTipiConsts.Kira,
+                        StringComparison.OrdinalIgnoreCase)))
             .Select(lineItem => new LeaseRateOverrideInput(
                 lineItem.ChargeTypeId,
                 lineItem.UnitValue,

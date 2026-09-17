@@ -47,7 +47,8 @@ public class StatisticsService(
             lease.TenantId,
             lease.UnitId,
             lease.Unit?.Area ?? 0m,
-            DateTime.Today);
+            DateTime.Today,
+            lease.IsRentFree);
 
     public async Task<LeaseSummaryDto> GetLeaseSummaryAsync(GetLeaseSummaryInput input)
     {
@@ -56,7 +57,8 @@ public class StatisticsService(
             input.TenantId,
             input.UnitId,
             input.UnitArea,
-            input.CurrentTime.Date);
+            input.CurrentTime.Date,
+            input.IsRentFree);
         var isActive = LeaseSchedulePolicy.IsActive(input.Status, input.StartDate, input.EndDate, input.CurrentTime);
         var remainingDays = LeaseSchedulePolicy.GetRemainingDays(input.EndDate, input.CurrentTime);
         var durationPercentage = LeaseSchedulePolicy.GetDurationPercentage(input.StartDate, input.EndDate, input.CurrentTime);
@@ -79,11 +81,13 @@ public class StatisticsService(
         int tenantId,
         int unitId,
         decimal area,
-        DateTime period)
+        DateTime period,
+        bool isRentFree)
     {
         var allChargeTypes = await chargeTypeRepository.GetActiveGenerationTypesAsync();
         var chargeTypes = allChargeTypes
-            .Where(chargeType => chargeType.Behavior == ChargeTypeBehavior.MonthlyFixed)
+            .Where(chargeType => chargeType.Behavior == ChargeTypeBehavior.MonthlyFixed
+                && LeaseBillingPolicy.ShouldIncludeChargeType(isRentFree, chargeType.Code))
             .ToList();
 
         decimal total = 0m;

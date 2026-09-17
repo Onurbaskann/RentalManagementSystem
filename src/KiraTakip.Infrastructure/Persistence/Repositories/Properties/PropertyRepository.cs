@@ -166,6 +166,11 @@ public class PropertyRepository(ApplicationDbContext ctx) : RepositoryBase<Prope
                         .OrderByDescending(s => s.EndDate)
                         .Select(s => (int?)s.TenantId)
                         .FirstOrDefault(),
+                    ActiveLeaseIsRentFree = b.Leases
+                        .Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
+                        .OrderByDescending(s => s.EndDate)
+                        .Select(s => s.IsRentFree)
+                        .FirstOrDefault(),
                     ActiveLeaseTenantDisplayName = b.Leases
                         .Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
                         .OrderByDescending(s => s.EndDate)
@@ -266,6 +271,7 @@ public class PropertyRepository(ApplicationDbContext ctx) : RepositoryBase<Prope
                         StartDate = s.StartDate,
                         EndDate = s.EndDate,
                         Status = s.Status,
+                        IsRentFree = s.IsRentFree,
                         MonthlyAmount = 0
                     }).ToList()
             })

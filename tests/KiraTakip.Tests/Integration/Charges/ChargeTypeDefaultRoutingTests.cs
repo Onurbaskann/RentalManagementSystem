@@ -100,4 +100,38 @@ public sealed class ChargeTypeDefaultRoutingTests : IDisposable
 
         Assert.Equal("CHARGE_TYPE_DEFAULT_STORE_REQUIRED", exception.Code);
     }
+
+    [Fact]
+    public async Task Update_ShouldNotDeactivateAnySystemChargeType()
+    {
+        var systemChargeType = new ChargeType
+        {
+            Name = $"Sistem Borç Tipi {Guid.NewGuid():N}",
+            Code = $"SYS-{Guid.NewGuid():N}",
+            Behavior = ChargeTypeBehavior.MonthlyFixed,
+            SortOrder = 997,
+            IsSystem = true,
+            IsActive = true
+        };
+        _context.ChargeTypes.Add(systemChargeType);
+        await _context.SaveChangesAsync();
+
+        var service = new ChargeTypeService(
+            new ChargeTypeRepository(_context),
+            new UnitTypeRepository(_context),
+            new PaymentStoreRoutingRepository(_context),
+            new UnitOfWork(_context));
+
+        var exception = await Assert.ThrowsAsync<BusinessException>(() => service.UpdateAsync(
+            systemChargeType.Id,
+            new EditInput(
+                systemChargeType.Name,
+                systemChargeType.Behavior,
+                systemChargeType.SortOrder,
+                false)));
+
+        Assert.Equal("CHARGE_TYPE_SYSTEM_DEACTIVATION_FORBIDDEN", exception.Code);
+        _context.ChangeTracker.Clear();
+        Assert.True((await _context.ChargeTypes.SingleAsync(type => type.Id == systemChargeType.Id)).IsActive);
+    }
 }

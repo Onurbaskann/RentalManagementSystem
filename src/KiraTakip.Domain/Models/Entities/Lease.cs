@@ -19,6 +19,9 @@ public class Lease : BaseEntity
     [Column("KdvUygulanacakMi")]
     public bool IsKdvApplied { get; set; }
 
+    [Column("BedelsizMi")]
+    public bool IsRentFree { get; set; }
+
     [Column("VadeKuraliTipi")]
     public DueDateRuleType DueDateRuleType { get; set; } = DueDateRuleType.FixedDayOfMonth;
 

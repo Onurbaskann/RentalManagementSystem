@@ -13,6 +13,7 @@ public interface ILeaseFormViewModel
     DueDateRuleType DueDateRuleType { get; set; }
     int DueDay { get; set; }
     string? Description { get; set; }
+    bool IsRentFree { get; set; }
     List<UnitLookupDto> AvailableUnits { get; set; }
     List<TenantListItemDto> Tenants { get; set; }
     List<LeaseLineItemInputDto> LeaseLineItems { get; set; }
@@ -28,6 +29,7 @@ public sealed class LeaseDraftViewModel : ILeaseFormViewModel
     public DueDateRuleType DueDateRuleType { get; set; }
     public int DueDay { get; set; }
     public string? Description { get; set; }
+    public bool IsRentFree { get; set; }
     public LeaseStatus Status { get; set; }
     public byte[] RowVersion { get; set; } = [];
     public string OwnerDisplayName { get; set; } = string.Empty;

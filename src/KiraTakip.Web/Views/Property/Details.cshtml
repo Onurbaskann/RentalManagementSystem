@@ -746,7 +746,7 @@
                                 </td>
                                 <td>@s.StartDate.Tarih()</td>
                                 <td>@s.EndDate.Tarih()</td>
-                                <td class="font-semibold">@s.MonthlyAmount.Tl(0)/ay</td>
+                                <td class="font-semibold">@(s.IsRentFree ? "Bedelsiz" : $"{s.MonthlyAmount.Tl(0)}/ay")</td>
                                 <td>
                                     @if (isExpiringSoon)
                                     {

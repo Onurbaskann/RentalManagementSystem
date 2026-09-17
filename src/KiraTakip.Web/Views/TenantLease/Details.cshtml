@@ -132,6 +132,10 @@
             }
             <div>
                 <span class="badge @leaseStatusBadgeClass text-[12.5px] px-3.5 py-1.5">@leaseStatusLabel</span>
+                @if (leaseDetails.IsRentFree)
+                {
+                    <span class="badge bg-emerald-100 text-emerald-800 text-[12.5px] px-3.5 py-1.5 ml-1">Bedelsiz</span>
+                }
             </div>
         </div>
     </div>
@@ -142,23 +146,33 @@
     <!-- Kira Bedeli -->
     <div class="card">
         <div class="card-title">Kira Bedeli</div>
-        <div class="mt-2.5">
-            <div class="text-xs text-muted mb-0.5">Aylık (KDV Hariç)</div>
-            <div class="font-serif text-[26px] font-bold text-primary">@monthlyAmount.Tl()</div>
-        </div>
-        @if (leaseDetails.IsVatApplied)
+        @if (leaseDetails.IsRentFree)
         {
-            <div class="mt-2 pt-2 border-t border-[var(--color-border)]">
-                <div class="text-[11.5px] text-muted mb-0.5">KDV (@Model.EffectiveVatRate.Yuzde(0))</div>
-                <div class="text-sm font-semibold">+ @monthlyVatAmount.Tl()</div>
-                <div class="text-xs text-muted mt-1">KDV Dahil: <strong>@( (monthlyAmount + monthlyVatAmount).Tl() )</strong></div>
+            <div class="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                <div class="font-serif text-[22px] font-bold text-emerald-700">Bedelsiz</div>
+                <div class="mt-1 text-xs text-emerald-800">Kira bedeli tahakkuku oluşturulmaz.</div>
             </div>
         }
-        <div class="mt-2 pt-2 border-t border-[var(--color-border)]">
-            <div class="text-[11.5px] text-muted mb-0.5">Yıllık</div>
-            <div class="text-base font-bold">@Model.AnnualAmount.Tl()</div>
-        </div>
-        <div class="mt-1.5 text-[11.5px] text-muted">Tam ay üzerinden</div>
+        else
+        {
+            <div class="mt-2.5">
+                <div class="text-xs text-muted mb-0.5">Aylık (KDV Hariç)</div>
+                <div class="font-serif text-[26px] font-bold text-primary">@monthlyAmount.Tl()</div>
+            </div>
+            @if (leaseDetails.IsVatApplied)
+            {
+                <div class="mt-2 pt-2 border-t border-[var(--color-border)]">
+                    <div class="text-[11.5px] text-muted mb-0.5">KDV (@Model.EffectiveVatRate.Yuzde(0))</div>
+                    <div class="text-sm font-semibold">+ @monthlyVatAmount.Tl()</div>
+                    <div class="text-xs text-muted mt-1">KDV Dahil: <strong>@((monthlyAmount + monthlyVatAmount).Tl())</strong></div>
+                </div>
+            }
+            <div class="mt-2 pt-2 border-t border-[var(--color-border)]">
+                <div class="text-[11.5px] text-muted mb-0.5">Yıllık</div>
+                <div class="text-base font-bold">@Model.AnnualAmount.Tl()</div>
+            </div>
+            <div class="mt-1.5 text-[11.5px] text-muted">Tam ay üzerinden</div>
+        }
     </div>
 
     <!-- Sözleşme Süresi -->
@@ -367,7 +381,7 @@
                         </div>
                     }
                     Row("Sözleşme No", $"#{leaseDetails.Id}");
-                    Row("Kira Bedeli (KDV Hariç)", $"{monthlyAmount.Tl(0)} / ay");
+                    Row("Kira Bedeli (KDV Hariç)", leaseDetails.IsRentFree ? "Bedelsiz" : $"{monthlyAmount.Tl(0)} / ay");
                     Row("Depozito", Model.DepositAmount.Tl(0));
                     Row("Başlangıç", leaseDetails.StartDate.Tarih());
                     Row("Bitiş", leaseDetails.EndDate.Tarih());

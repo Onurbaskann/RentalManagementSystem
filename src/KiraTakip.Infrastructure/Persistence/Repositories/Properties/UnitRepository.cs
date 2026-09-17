@@ -110,6 +110,11 @@ public class UnitRepository(ApplicationDbContext ctx) : RepositoryBase<Unit>(ctx
                     .OrderByDescending(s => s.EndDate)
                     .Select(s => (int?)s.TenantId)
                     .FirstOrDefault(),
+                ActiveLeaseIsRentFree = b.Leases
+                    .Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
+                    .OrderByDescending(s => s.EndDate)
+                    .Select(s => s.IsRentFree)
+                    .FirstOrDefault(),
                 ActiveLeaseTenantDisplayName = b.Leases
                     .Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
                     .OrderByDescending(s => s.EndDate)

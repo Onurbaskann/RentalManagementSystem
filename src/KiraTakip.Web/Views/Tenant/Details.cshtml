@@ -217,7 +217,7 @@
                                         <span class="day-badge day-badge-amber ml-1.5 text-[11px]">@remainingDays g</span>
                                     }
                                 </td>
-                                <td class="font-bold">@lease.MonthlyAmount.Tl(0)</td>
+                                <td class="font-bold">@(lease.IsRentFree ? "Bedelsiz" : lease.MonthlyAmount.Tl(0))</td>
                                 <td>@(Model.DepositAmounts.TryGetValue(lease.Id, out var depositAmount) && depositAmount.HasValue ? depositAmount.Value.Tl(0) : "—")</td>
                                 <td>
                                     @if (isTerminated)

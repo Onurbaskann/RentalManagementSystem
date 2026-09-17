@@ -80,6 +80,10 @@ public class ChargeGenerationService(
                 });
             }
 
+            var totalAmount = lineItems.Sum(lineItem => lineItem.TotalAmount);
+            if (lease.IsRentFree && !LeaseBillingPolicy.HasChargeableAmount(totalAmount))
+                continue;
+
             var periodEnd = ChargePeriodPolicy.GetPeriodEnd(periodStartDate, lease.EndDate);
 
             var charge = new Charge
@@ -208,9 +212,16 @@ public class ChargeGenerationService(
 
         var activeChargeTypes = await chargeTypeRepository.GetActiveGenerationTypesAsync();
         var previewList = new List<ChargeLineItemPreview>();
+        var isRentFree = input.LeaseId.HasValue
+            && await leaseRepository.GetByIdAsync<bool>(
+                input.LeaseId.Value,
+                lease => lease.IsRentFree);
 
         foreach (var ct in activeChargeTypes)
         {
+            if (!LeaseBillingPolicy.ShouldIncludeChargeType(isRentFree, ct.Code))
+                continue;
+
             if (ct.Behavior == ChargeTypeBehavior.FirstMonthOneTime)
             {
                 DateTime? start = null;

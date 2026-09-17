@@ -5,6 +5,7 @@ using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
+using KiraTakip.Models.Constants;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.Document;
 using KiraTakip.Models.Dtos.Lease;
@@ -83,7 +84,8 @@ public class LeaseService(
             input.Description,
             input.RateOverrides,
             actorUserId,
-            input.AccessScope));
+            input.AccessScope,
+            input.IsRentFree));
     }
 
     public async Task<Lease> CreateDraftAsync(CreateLeaseDraftInput input)
@@ -96,7 +98,8 @@ public class LeaseService(
             input.EndDate,
             input.DueDay,
             input.RateOverrides,
-            input.AccessScope);
+            input.AccessScope,
+            input.IsRentFree);
         Guard.InvalidField(
             await leaseRepository.HasOpenApplicationForUnitAsync(input.UnitId),
             nameof(input.UnitId),
@@ -113,6 +116,7 @@ public class LeaseService(
             Status = LeaseStatus.Draft,
             DueDateRuleType = input.DueDateRuleType,
             DueDay = input.DueDay,
+            IsRentFree = input.IsRentFree,
             CreatedBy = input.ActorUserId
         };
         await leaseRepository.AddAsync(lease);
@@ -163,7 +167,8 @@ public class LeaseService(
             input.DueDay,
             input.Description,
             input.RateOverrides,
-            input.AccessScope);
+            input.AccessScope,
+            input.IsRentFree);
         await AddReviewAsync(
             lease,
             LeaseReviewActionType.DraftUpdated,
@@ -192,7 +197,8 @@ public class LeaseService(
             input.DueDay,
             input.Description,
             input.RateOverrides,
-            input.AccessScope);
+            input.AccessScope,
+            input.IsRentFree);
         lease.Status = LeaseStatus.Draft;
         await AddReviewAsync(
             lease,
@@ -278,7 +284,8 @@ public class LeaseService(
                     rate.CalculationMethod,
                     rate.KdvRate))
                 .ToList(),
-            input.AccessScope);
+            input.AccessScope,
+            lease.IsRentFree);
         Guard.Conflict(
             await leaseRepository.HasChargesAsync(lease.Id),
             "Taslak başvuruda beklenmeyen tahakkuk bulundu.",
@@ -295,10 +302,26 @@ public class LeaseService(
                 lease.TenantId,
                 lease.StartDate,
                 lease.Id));
+        if (!lease.IsRentFree)
+        {
+            var rentPreview = previews.SingleOrDefault(preview =>
+                string.Equals(preview.ChargeTypeCode, BorcTipiConsts.Kira, StringComparison.OrdinalIgnoreCase));
+            Guard.Conflict(
+                rentPreview == null,
+                "Kira Bedeli borç tipi aktif olmadan ücretli sözleşme onaylanamaz.",
+                "Lease.ActiveRentChargeTypeRequired");
+            Guard.Conflict(
+                !rentPreview!.IsRateFound || rentPreview.Amount <= 0,
+                "Ücretli sözleşme için pozitif bir kira bedeli tarifesi tanımlanmalıdır.",
+                "Lease.PositiveRentRateRequired");
+        }
         lease.IsKdvApplied = previews.Any(preview =>
             preview.Behavior == ChargeTypeBehavior.MonthlyFixed && preview.KdvRate > 0);
         var monthlyAmount = previews
-            .Where(preview => preview.Behavior == ChargeTypeBehavior.MonthlyFixed)
+            .Where(preview => string.Equals(
+                preview.ChargeTypeCode,
+                BorcTipiConsts.Kira,
+                StringComparison.OrdinalIgnoreCase))
             .Sum(preview => preview.Amount);
         lease.Status = LeaseStatus.Active;
         await AddReviewAsync(
@@ -338,7 +361,7 @@ public class LeaseService(
             "Yeni bitiş tarihi mevcut bitiş tarihinden büyük olmalıdır.",
             "Lease.InvalidExtensionDate");
         EnsureOverridePermission(input.UpdateRate, input.CanOverrideRate);
-        await EnsureRateOverridesAsync(input.RateOverrides, lease.Unit.Area);
+        await EnsureRateOverridesAsync(input.RateOverrides, lease.Unit.Area, lease.IsRentFree);
         Guard.InvalidField(
             input.IsVatApplied && !RentIncreasePolicy.IsValidVatRate(input.VatRate),
             nameof(input.VatRate),
@@ -464,7 +487,7 @@ public class LeaseService(
             "Yalnız aktif sözleşmenin tahakkukları yeniden üretilebilir.",
             "Lease.NotActive");
         EnsureOverridePermission(input.UpdateRate, input.CanOverrideRate);
-        await EnsureRateOverridesAsync(input.RateOverrides, lease.Unit.Area);
+        await EnsureRateOverridesAsync(input.RateOverrides, lease.Unit.Area, lease.IsRentFree);
 
         if (input.UpdateRate && input.RateOverrides.Count > 0)
         {
@@ -557,7 +580,8 @@ public class LeaseService(
         DateTime endDate,
         int dueDay,
         IReadOnlyCollection<LeaseRateOverrideInput> rateOverrides,
-        LeaseAccessScopeInput accessScope)
+        LeaseAccessScopeInput accessScope,
+        bool isRentFree)
     {
         Guard.InvalidField(
             !LeaseSchedulePolicy.HasValidDateRange(startDate, endDate),
@@ -600,7 +624,7 @@ public class LeaseService(
             nameof(unitId),
             "Seçilen birimde devam eden aktif sözleşme bulunmaktadır.",
             "Lease.ActiveUnitConflict");
-        await EnsureRateOverridesAsync(rateOverrides, unit.Area);
+        await EnsureRateOverridesAsync(rateOverrides, unit.Area, isRentFree);
 
         return unit;
     }
@@ -615,7 +639,8 @@ public class LeaseService(
         int dueDay,
         string? description,
         IReadOnlyCollection<LeaseRateOverrideInput> rateOverrides,
-        LeaseAccessScopeInput accessScope)
+        LeaseAccessScopeInput accessScope,
+        bool isRentFree)
     {
         await ValidateApplicationDataAsync(
             unitId,
@@ -624,7 +649,8 @@ public class LeaseService(
             endDate,
             dueDay,
             rateOverrides,
-            accessScope);
+            accessScope,
+            isRentFree);
         Guard.InvalidField(
             await leaseRepository.HasOpenApplicationForUnitAsync(unitId, lease.Id),
             nameof(unitId),
@@ -638,6 +664,7 @@ public class LeaseService(
         lease.DueDateRuleType = dueDateRuleType;
         lease.DueDay = dueDay;
         lease.Description = description;
+        lease.IsRentFree = isRentFree;
         await leaseRateOverrideRepository.ReplaceAsync(
             lease.Id,
             BuildRateOverrides(lease.Id, rateOverrides));
@@ -751,15 +778,30 @@ public class LeaseService(
 
     private async Task EnsureRateOverridesAsync(
         IReadOnlyCollection<LeaseRateOverrideInput> rateOverrides,
-        decimal unitArea)
+        decimal unitArea,
+        bool isRentFree = false)
     {
         if (rateOverrides.Count == 0) return;
 
         var validChargeTypeIds = (await chargeTypeRepository.GetActiveGenerationTypesAsync())
+            .ToList();
+        var rentChargeTypeIds = validChargeTypeIds
+            .Where(chargeType => string.Equals(
+                chargeType.Code,
+                BorcTipiConsts.Kira,
+                StringComparison.OrdinalIgnoreCase))
             .Select(chargeType => chargeType.Id)
             .ToHashSet();
         Guard.InvalidField(
-            rateOverrides.Any(rate => !validChargeTypeIds.Contains(rate.ChargeTypeId)),
+            isRentFree && rateOverrides.Any(rate => rentChargeTypeIds.Contains(rate.ChargeTypeId)),
+            "LeaseLineItems",
+            "Bedelsiz sözleşmeye kira bedeli tarifesi eklenemez.",
+            "Lease.RentFreeRentRateForbidden");
+        var validChargeTypeIdSet = validChargeTypeIds
+            .Select(chargeType => chargeType.Id)
+            .ToHashSet();
+        Guard.InvalidField(
+            rateOverrides.Any(rate => !validChargeTypeIdSet.Contains(rate.ChargeTypeId)),
             "LeaseLineItems",
             "Geçersiz veya pasif bir borç tipi için sözleşme tarifesi oluşturulamaz.",
             "Lease.InvalidChargeType");
@@ -820,6 +862,7 @@ public class LeaseService(
                 Id = item.Id,
                 TenantId = item.TenantId,
                 UnitId = item.UnitId,
+                IsRentFree = item.IsRentFree,
                 Unit = new Unit { Id = item.UnitId, Area = item.UnitArea }
             };
             item.MonthlyAmount = await statisticsService.GetMonthlyAmountAsync(lease);

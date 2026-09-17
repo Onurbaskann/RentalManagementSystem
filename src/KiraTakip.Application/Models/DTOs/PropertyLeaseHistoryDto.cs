@@ -12,5 +12,6 @@ public class PropertyLeaseHistoryDto
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public decimal MonthlyAmount { get; set; }
+    public bool IsRentFree { get; set; }
     public LeaseStatus Status { get; set; }
 }

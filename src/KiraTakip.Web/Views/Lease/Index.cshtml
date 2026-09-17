@@ -122,7 +122,16 @@
                         </td>
                         <td class="cell-center">@s.StartDate.Tarih()</td>
                         <td class="cell-center">@s.EndDate.Tarih()</td>
-                        <td class="num">@s.MonthlyAmount.Tl()</td>
+                        <td class="num">
+                            @if (s.IsRentFree)
+                            {
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold border bg-emerald-50 text-emerald-800 border-emerald-200">BEDELSİZ</span>
+                            }
+                            else
+                            {
+                                @s.MonthlyAmount.Tl()
+                            }
+                        </td>
                         <td class="cell-center">
                             @if (draft)
                             {

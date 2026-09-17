@@ -6,6 +6,7 @@ using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.Enums;
+using KiraTakip.Models.Constants;
 using KiraTakip.Repositories.Charges;
 using KiraTakip.Repositories.Documents;
 using KiraTakip.Repositories.Identity;
@@ -232,6 +233,102 @@ public class LeaseApprovalServiceTests : IDisposable
                 lease.RowVersion,
                 seed.ReviewerId,
                 Scope())));
+    }
+
+    [Fact]
+    public async Task Approval_ShouldAllowRentFreeLeaseAndKeepOtherChargeTypes()
+    {
+        var seed = await SeedAsync();
+        var lease = await CreateDraftAsync(
+            seed,
+            isRentFree: true,
+            rates: [new LeaseRateOverrideInput(
+                seed.ChargeTypeId,
+                250,
+                CalculationMethod.Fixed,
+                0)]);
+        await AddAllRequiredDocumentsAsync(lease.Id);
+
+        await CreateService(seed.ReviewerId).ApproveAsync(Approval(lease, seed.ReviewerId));
+
+        var storedLease = await _context.Leases.SingleAsync(item => item.Id == lease.Id);
+        var lineItems = await _context.ChargeLineItems
+            .Include(item => item.ChargeType)
+            .Where(item => item.Charge.LeaseId == lease.Id)
+            .ToListAsync();
+
+        Assert.True(storedLease.IsRentFree);
+        Assert.NotEmpty(lineItems);
+        Assert.DoesNotContain(lineItems, item => item.ChargeType.Code == BorcTipiConsts.Kira);
+        Assert.Contains(lineItems, item => item.ChargeTypeId == seed.ChargeTypeId);
+        Assert.All(
+            await _context.Charges.Where(charge => charge.LeaseId == lease.Id).ToListAsync(),
+            charge => Assert.True(charge.TotalAmount > 0));
+    }
+
+    [Fact]
+    public async Task Approval_ShouldNotCreateZeroAmountChargesForRentFreeLease()
+    {
+        var seed = await SeedAsync();
+        var generationTypes = await _context.ChargeTypes
+            .Where(type => type.Behavior == ChargeTypeBehavior.MonthlyFixed
+                || type.Behavior == ChargeTypeBehavior.FirstMonthOneTime)
+            .ToListAsync();
+        foreach (var chargeType in generationTypes.Where(type =>
+                     type.Code != BorcTipiConsts.Kira))
+            chargeType.IsActive = false;
+        await _context.SaveChangesAsync();
+
+        var lease = await CreateDraftAsync(seed, isRentFree: true, rates: []);
+        await AddAllRequiredDocumentsAsync(lease.Id);
+        await CreateService(seed.ReviewerId).ApproveAsync(Approval(lease, seed.ReviewerId));
+
+        Assert.Equal(LeaseStatus.Active, lease.Status);
+        Assert.False(await _context.Charges.AnyAsync(charge => charge.LeaseId == lease.Id));
+    }
+
+    [Fact]
+    public async Task RentFreeDraft_ShouldRejectRentRateOverride()
+    {
+        var seed = await SeedAsync();
+
+        var exception = await Assert.ThrowsAsync<BusinessValidationException>(() =>
+            CreateDraftAsync(seed, isRentFree: true, rates: Rates(seed)));
+
+        Assert.Equal("Lease.RentFreeRentRateForbidden", exception.Code);
+    }
+
+    [Fact]
+    public async Task Approval_ShouldRejectPaidLeaseWithoutPositiveRentRate()
+    {
+        var seed = await SeedAsync();
+        var lease = await CreateDraftAsync(seed, rates: []);
+        await AddAllRequiredDocumentsAsync(lease.Id);
+
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            CreateService(seed.ReviewerId).ApproveAsync(Approval(lease, seed.ReviewerId)));
+
+        Assert.Equal("Lease.PositiveRentRateRequired", exception.Code);
+        Assert.Equal(LeaseStatus.Draft, lease.Status);
+    }
+
+    [Fact]
+    public async Task Approval_ShouldRejectPaidLeaseWhenRentChargeTypeIsInactive()
+    {
+        var seed = await SeedAsync();
+        var lease = await CreateDraftAsync(seed, rates: []);
+        await AddAllRequiredDocumentsAsync(lease.Id);
+        var rentChargeType = await _context.ChargeTypes.SingleAsync(type =>
+            type.Id == seed.RentChargeTypeId);
+        rentChargeType.IsActive = false;
+        await _context.SaveChangesAsync();
+        await _context.Entry(lease).ReloadAsync();
+
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            CreateService(seed.ReviewerId).ApproveAsync(Approval(lease, seed.ReviewerId)));
+
+        Assert.Equal("Lease.ActiveRentChargeTypeRequired", exception.Code);
+        Assert.Equal(LeaseStatus.Draft, lease.Status);
     }
 
     [Fact]
@@ -518,6 +615,10 @@ public class LeaseApprovalServiceTests : IDisposable
         };
         _context.AddRange(property, unitType, tenant, applicant, reviewer, chargeType);
         await _context.SaveChangesAsync();
+        var rentChargeType = await _context.ChargeTypes.SingleAsync(type =>
+            type.Code == BorcTipiConsts.Kira);
+        rentChargeType.IsActive = true;
+        await _context.SaveChangesAsync();
         var unit = new Unit
         {
             PropertyId = property.Id,
@@ -535,10 +636,14 @@ public class LeaseApprovalServiceTests : IDisposable
             tenant.Id,
             applicant.Id,
             reviewer.Id,
-            chargeType.Id);
+            chargeType.Id,
+            rentChargeType.Id);
     }
 
-    private async Task<Lease> CreateDraftAsync(ServiceSeed seed)
+    private async Task<Lease> CreateDraftAsync(
+        ServiceSeed seed,
+        bool isRentFree = false,
+        IReadOnlyCollection<LeaseRateOverrideInput>? rates = null)
     {
         var service = CreateService(seed.ApplicantId);
         var lease = await service.CreateDraftAsync(new CreateLeaseDraftInput(
@@ -549,9 +654,10 @@ public class LeaseApprovalServiceTests : IDisposable
             DueDateRuleType.FixedDayOfMonth,
             10,
             "Test başvurusu",
-            Rates(seed),
+            rates ?? Rates(seed),
             seed.ApplicantId,
-            Scope()));
+            Scope(),
+            isRentFree));
         lease.CreatedBy = seed.ApplicantId;
         await _context.SaveChangesAsync();
         await _context.Entry(lease).ReloadAsync();
@@ -692,7 +798,7 @@ public class LeaseApprovalServiceTests : IDisposable
     };
 
     private static IReadOnlyCollection<LeaseRateOverrideInput> Rates(ServiceSeed seed)
-        => [new LeaseRateOverrideInput(seed.ChargeTypeId, 1000, CalculationMethod.Fixed, 20)];
+        => [new LeaseRateOverrideInput(seed.RentChargeTypeId, 1000, CalculationMethod.Fixed, 20)];
 
     private static LeaseAccessScopeInput Scope() => new();
 
@@ -707,7 +813,8 @@ public class LeaseApprovalServiceTests : IDisposable
         int TenantId,
         string ApplicantId,
         string ReviewerId,
-        int ChargeTypeId);
+        int ChargeTypeId,
+        int RentChargeTypeId);
 
     private sealed class FailingChargeGenerationService(IChargeGenerationService inner)
         : IChargeGenerationService

@@ -1,5 +1,6 @@
 ﻿using KiraTakip.Infrastructure.Validation;
 using KiraTakip.Models.Enums;
+using KiraTakip.Models.Constants;
 using KiraTakip.Web.Models.ViewModels;
 
 namespace KiraTakip.Web.Validators;
@@ -26,7 +27,10 @@ public class CreateLeaseViewModelValidator : IValidator<CreateLeaseViewModel>
             errors.Add(new ValidationError("Vade günü 1-31 arasında olmalıdır.", nameof(input.DueDay)));
 
         LeaseLineItemValidationRules.AddErrors(
-            input.LeaseLineItems,
+            input.LeaseLineItems
+                .Where(lineItem => !input.IsRentFree
+                    || !string.Equals(lineItem.ChargeTypeCode, BorcTipiConsts.Kira, StringComparison.OrdinalIgnoreCase))
+                .ToList(),
             nameof(input.LeaseLineItems),
             errors);
 

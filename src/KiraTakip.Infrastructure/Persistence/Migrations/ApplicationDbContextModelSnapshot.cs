@@ -1010,6 +1010,10 @@ namespace KiraTakip.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("KdvUygulanacakMi");
 
+                    b.Property<bool>("IsRentFree")
+                        .HasColumnType("bit")
+                        .HasColumnName("BedelsizMi");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()

@@ -60,7 +60,7 @@
                         <td class="text-sm text-muted">@lease.PropertyName</td>
                         <td class="cell-center text-sm">@lease.StartDate.Tarih()</td>
                         <td class="cell-center text-sm">@lease.EndDate.Tarih()</td>
-                        <td class="num text-sm font-medium">@lease.MonthlyAmount.Tl()</td>
+                        <td class="num text-sm font-medium">@(lease.IsRentFree ? "Bedelsiz" : lease.MonthlyAmount.Tl())</td>
                         <td class="cell-center">
                             @if (isTerminated)
                             {

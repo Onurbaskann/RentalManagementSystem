@@ -113,10 +113,18 @@
         <div class="flex items-center gap-2"><span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span><span>Sözleşme Tarifesi</span></div>
         <span x-show="loading" class="text-xs text-muted">Yükleniyor…</span>
     </div>
+    <label class="flex items-start gap-3 cursor-pointer rounded-lg border border-emerald-200 bg-emerald-50 p-3 mb-4">
+        <input asp-for="IsRentFree" type="checkbox" class="mt-1" x-model="isRentFree" disabled="@readOnly" />
+        <span>
+            <strong class="block text-sm text-emerald-900">Bedelsiz sözleşme</strong>
+            <span class="block text-xs text-emerald-800 mt-1">Kira bedeli tahakkuku oluşturulmaz. Depozito ve diğer borç kalemleri tanımlıysa uygulanmaya devam eder.</span>
+        </span>
+    </label>
     <div x-show="error" class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-sm" x-text="error"></div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <template x-for="(item, index) in lineItems" :key="item.chargeTypeId">
-            <div class="bg-slate-50/50 border border-[var(--color-border)] rounded-xl p-4">
+            <div class="bg-slate-50/50 border border-[var(--color-border)] rounded-xl p-4"
+                 x-show="!isRentFree || String(item.chargeTypeCode || '').toUpperCase() !== 'KIRA'">
                 <div class="flex justify-between gap-2 mb-3">
                     <strong class="text-sm text-slate-800" x-text="item.chargeTypeName"></strong>
                     <span class="text-[10px] px-2 py-0.5 rounded font-bold bg-slate-800 text-white" x-text="sourceLabel(item.sourceType)"></span>

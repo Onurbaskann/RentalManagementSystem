@@ -57,6 +57,11 @@ public class ChargeTypeService(
             nameof(input.Name),
             "Bu ad zaten kullanılıyor. Farklı bir ad girin.");
 
+        Guard.Conflict(
+            entity.IsSystem && entity.IsActive && !input.IsActive,
+            $"'{entity.Name}' bir sistem kaydıdır ve pasif yapılamaz.",
+            "CHARGE_TYPE_SYSTEM_DEACTIVATION_FORBIDDEN");
+
         if (!entity.IsActive && input.IsActive)
         {
             Guard.Conflict(

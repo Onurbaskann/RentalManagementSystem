@@ -28,6 +28,7 @@ public class UnitService(
                 Id = dto.ActiveLeaseId.Value,
                 TenantId = dto.ActiveLeaseTenantId ?? 0,
                 UnitId = dto.Id,
+                IsRentFree = dto.ActiveLeaseIsRentFree,
                 Unit = new Unit { Id = dto.Id, Area = dto.Area }
             };
             dto.MonthlyRent = await statisticsService.GetMonthlyAmountAsync(lease);

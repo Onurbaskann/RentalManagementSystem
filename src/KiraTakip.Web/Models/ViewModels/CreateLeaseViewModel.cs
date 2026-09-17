@@ -13,6 +13,7 @@ public class CreateLeaseViewModel : ILeaseFormViewModel
     public DueDateRuleType DueDateRuleType { get; set; } = DueDateRuleType.FixedDayOfMonth;
     public int DueDay { get; set; } = 1;
     public string? Description { get; set; }
+    public bool IsRentFree { get; set; }
     public List<UnitLookupDto> AvailableUnits { get; set; } = [];
     public List<TenantListItemDto> Tenants { get; set; } = [];
     public List<LeaseLineItemInputDto> LeaseLineItems { get; set; } = [];

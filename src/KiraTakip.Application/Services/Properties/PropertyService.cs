@@ -50,6 +50,7 @@ public class PropertyService(
                     Id = unit.ActiveLeaseId.Value,
                     TenantId = unit.ActiveLeaseTenantId ?? 0,
                     UnitId = unit.Id,
+                    IsRentFree = unit.ActiveLeaseIsRentFree,
                     Unit = new Unit { Id = unit.Id, Area = unit.Area }
                 };
                 unit.MonthlyRent = await statisticsService.GetMonthlyAmountAsync(lease);
@@ -64,6 +65,7 @@ public class PropertyService(
                 Id = leaseHistory.Id,
                 TenantId = leaseHistory.TenantId,
                 UnitId = leaseHistory.UnitId,
+                IsRentFree = leaseHistory.IsRentFree,
                 Unit = new Unit { Id = leaseHistory.UnitId, Area = unitArea }
             };
             leaseHistory.MonthlyAmount = await statisticsService.GetMonthlyAmountAsync(lease);
