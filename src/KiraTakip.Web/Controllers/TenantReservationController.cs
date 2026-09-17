@@ -38,7 +38,7 @@ public class TenantReservationController(
     }
 
     [HttpGet("Create")]
-    [Authorize(Policy = PermissionCatalog.TenantPortal.Reservation.Create)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.Reservation.Module)]
     public async Task<IActionResult> Create()
     {
         var viewModel = new TenantReservationCreateViewModel

@@ -6,8 +6,8 @@
     ViewData["UseCentralFeedback"] = true;
     string status = ViewBag.Status ?? "tum";
     var query = (TableQuery)ViewBag.Query;
-    bool canImport = User.HasPermission(PermissionCatalog.Payment.ImportBankStatement);
-    bool canMatch = User.HasPermission(PermissionCatalog.Payment.MatchBankTransaction);
+    bool canImport = await PermissionService.HasPermissionAsync(PermissionCatalog.Payment.ImportBankStatement);
+    bool canMatch = await PermissionService.HasPermissionAsync(PermissionCatalog.Payment.MatchBankTransaction);
     var pagination = new PaginationModel { Page = Model.Page, Size = Model.Size, Total = Model.Total, BasePath = "/BankTransaction", Extra = query.ToQueryDict() };
 }
 

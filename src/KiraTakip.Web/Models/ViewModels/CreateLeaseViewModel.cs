@@ -7,6 +7,7 @@ public class CreateLeaseViewModel : ILeaseFormViewModel
 {
     public int? UnitId { get; set; }
     public int TenantId { get; set; }
+    public int? SourceTenantId { get; set; }
     public DateTime StartDate { get; set; } = DateTime.Today;
     public DateTime EndDate { get; set; } = DateTime.Today.AddYears(1).AddDays(-1);
     public DueDateRuleType DueDateRuleType { get; set; } = DueDateRuleType.FixedDayOfMonth;

@@ -2,6 +2,7 @@
 @using KiraTakip.Models.Enums
 @{
     bool readOnly = ViewData["ReadOnly"] as bool? ?? false;
+    bool tenantLocked = ViewData["TenantLocked"] as bool? ?? false;
 }
 
 <div asp-validation-summary="ModelOnly" class="form-error mb-3"></div>
@@ -31,13 +32,21 @@
     </div>
     <div class="form-group mb-0">
         <label class="form-label">Kiracı *</label>
-        <select asp-for="TenantId" class="form-control" x-model="tenantId" disabled="@readOnly">
+        @if (tenantLocked && !readOnly)
+        {
+            <input type="hidden" asp-for="TenantId" />
+        }
+        <select asp-for="TenantId" class="form-control" x-model="tenantId" disabled="@(readOnly || tenantLocked)">
             <option value="">— Kiracı seçin —</option>
             @foreach (var tenant in Model.Tenants)
             {
                 <option value="@tenant.Id">@tenant.DisplayName</option>
             }
         </select>
+        @if (tenantLocked && !readOnly)
+        {
+            <div class="text-muted text-[12.5px] mt-1">Kiracı detay sayfasından seçildiği için bu alanda değiştirilemez.</div>
+        }
         <span asp-validation-for="TenantId" class="form-error"></span>
     </div>
 </div>

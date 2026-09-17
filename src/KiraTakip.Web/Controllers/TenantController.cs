@@ -1,5 +1,6 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Web.Extensions;
+using KiraTakip.Web.Authorization;
 using KiraTakip.Infrastructure;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Web.Feedback;
@@ -29,7 +30,8 @@ public class TenantController(
     ITenantUserService tenantUserService,
     ITenantCategoryService tenantCategoryService,
     ISectorService sectorService,
-    ICurrentUserContext currentUserContext) : Controller
+    ICurrentUserContext currentUserContext,
+    ICurrentUserPermissionService permissionService) : Controller
 {
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.Tenant.Module)]
@@ -44,8 +46,8 @@ public class TenantController(
             Tenants = tenants,
             Query = query,
             CanCreate = permissionScopeProvider.GlobalAccess
-                && User.HasPermission(PermissionCatalog.Tenant.Create),
-            CanEdit = User.HasPermission(PermissionCatalog.Tenant.Edit)
+                && await permissionService.HasPermissionAsync(PermissionCatalog.Tenant.Create),
+            CanEdit = await permissionService.HasPermissionAsync(PermissionCatalog.Tenant.Edit)
         });
     }
 
@@ -87,7 +89,7 @@ public class TenantController(
     }
 
     [HttpGet("Create")]
-    [Authorize(Policy = PermissionCatalog.Tenant.Create)]
+    [Authorize(Policy = PermissionCatalog.Tenant.Module)]
     public async Task<IActionResult> Create()
     {
         if (!permissionScopeProvider.GlobalAccess) return Forbid();
@@ -167,7 +169,7 @@ public class TenantController(
     }
 
     [HttpGet("Edit/{id}")]
-    [Authorize(Policy = PermissionCatalog.Tenant.Edit)]
+    [Authorize(Policy = PermissionCatalog.Tenant.Module)]
     public async Task<IActionResult> Edit(int id)
     {
         var tenant = await tenantService.GetDetailsAsync(

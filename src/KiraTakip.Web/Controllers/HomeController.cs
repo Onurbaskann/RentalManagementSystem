@@ -1,5 +1,6 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Web.Extensions;
+using KiraTakip.Web.Authorization;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Enums;
 using KiraTakip.Web.Models.ViewModels;
@@ -34,8 +35,11 @@ public class HomeController(
     IReservationService reservationService,
     IOperationalPolicyProvider operationalPolicyProvider,
     UserManager<ApplicationUser> userManager,
-    IPermissionScopeCache permissionScopeCache) : Controller
+    IPermissionScopeCache permissionScopeCache,
+    ICurrentUserPermissionService permissionService) : Controller
 {
+    private const string SuperAdminDisplayName = "Sistem Yöneticisi";
+
     public async Task<IActionResult> Index()
     {
         var user = await userManager.GetUserAsync(User);
@@ -64,7 +68,7 @@ public class HomeController(
         foreach (var lease in activeLeases)
             totalMonthlyRevenue += lease.MonthlyAmount;
 
-        var role = currentUser.IsSuperAdmin ? RoleNames.SistemYoneticisi
+        var role = currentUser.IsSuperAdmin ? SuperAdminDisplayName
             : User.Claims.FirstOrDefault(claim => claim.Type == System.Security.Claims.ClaimTypes.Role)?.Value
             ?? "Kullanıcı";
 
@@ -116,7 +120,7 @@ public class HomeController(
                 Area = unit.Area
             }).ToList();
 
-        if (User.HasModuleAccess(PermissionCatalog.Payment.Module))
+        if (await permissionService.HasModuleAccessAsync(PermissionCatalog.Payment.Module))
         {
             viewModel.HasPaymentAccess = true;
             await chargeService.UpdateDelaysAsync();

@@ -1,13 +1,13 @@
-﻿@model KiraTakip.Models.Dtos.PaymentDetailDto
+@model KiraTakip.Models.Dtos.PaymentDetailDto
 @using KiraTakip.Models.Entities
 @using KiraTakip.Models.Enums
 @{
     ViewData["Title"] = $"Ödeme #{Model.Id}";
     ViewData["UseCentralFeedback"] = true;
-    bool canApprove = User.HasPermission(PermissionCatalog.Payment.Approve);
-    bool canReject = User.HasPermission(PermissionCatalog.Payment.Reject);
-    bool canUpload = User.HasPermission(PermissionCatalog.Payment.UploadReceipt);
-    bool canMatch = User.HasPermission(PermissionCatalog.Payment.MatchBankTransaction);
+    bool canApprove = await PermissionService.HasPermissionAsync(PermissionCatalog.Payment.Approve);
+    bool canReject = await PermissionService.HasPermissionAsync(PermissionCatalog.Payment.Reject);
+    bool canUpload = await PermissionService.HasPermissionAsync(PermissionCatalog.Payment.UploadReceipt);
+    bool canMatch = await PermissionService.HasPermissionAsync(PermissionCatalog.Payment.MatchBankTransaction);
     bool pending = Model.Status == PaymentStatus.PendingApproval;
     var documents = (ViewBag.Documents as List<Document>) ?? [];
     var documentTypes = (ViewBag.DocumentTypes as List<DocumentType>) ?? [];

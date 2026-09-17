@@ -26,9 +26,8 @@ public class PaymentStoreRoutingArchitectureTests
         var expected = new[] { PermissionCatalog.PaymentRouting.Create, PermissionCatalog.PaymentRouting.Edit };
 
         Assert.All(expected, permission => Assert.Contains(permission, module.Actions));
-        Assert.Contains(PermissionCatalog.PaymentRouting.Module, PermissionCatalog.OperasyonMuduruIzinleri);
-        Assert.All(expected, permission => Assert.Contains(permission, PermissionCatalog.OperasyonMuduruIzinleri));
-        Assert.Contains(PermissionCatalog.PaymentRouting.Module, PermissionCatalog.All);
+        Assert.Contains(PermissionCatalog.PaymentRouting.Module, PermissionCatalog.InternalAll);
+        Assert.All(expected, permission => Assert.Contains(permission, PermissionCatalog.InternalAll));
         Assert.DoesNotContain(PermissionCatalog.PaymentRouting.Module, PermissionCatalog.ScopeAware);
         Assert.DoesNotContain(PermissionCatalog.PaymentRouting.Module, PermissionCatalog.TenantAll);
         Assert.All(expected, permission => Assert.DoesNotContain(permission, PermissionCatalog.TenantAll));

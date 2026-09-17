@@ -10,7 +10,7 @@ using KiraTakip.Models.Dtos.Role;
 
 namespace KiraTakip.Web.Controllers;
 
-[Authorize(Policy = "System.Role")]
+[Authorize(Policy = PermissionCatalog.Role.Module)]
 [Route("Admin/Roles")]
 public class AdminRoleController(
     IRoleService roleService,
@@ -33,6 +33,7 @@ public class AdminRoleController(
     }
 
     [HttpPost("Create")]
+    [Authorize(Policy = PermissionCatalog.Role.Create)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(RoleCreateViewModel model)
     {
@@ -77,6 +78,7 @@ public class AdminRoleController(
     }
 
     [HttpPost("Edit/{id}")]
+    [Authorize(Policy = PermissionCatalog.Role.Edit)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, RoleEditViewModel model)
     {
@@ -102,6 +104,7 @@ public class AdminRoleController(
     }
 
     [HttpPost("Delete/{id}")]
+    [Authorize(Policy = PermissionCatalog.Role.Delete)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {

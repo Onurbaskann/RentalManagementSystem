@@ -65,6 +65,7 @@ public class AdminUserController(
     }
 
     [HttpPost("Edit/{id}")]
+    [Authorize(Policy = PermissionCatalog.User.Edit)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(string id, AdminUserEditViewModel model)
     {
@@ -103,6 +104,7 @@ public class AdminUserController(
     }
 
     [HttpPost("ToggleActive/{id}")]
+    [Authorize(Policy = PermissionCatalog.User.Edit)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleActive(string id)
     {
@@ -121,6 +123,7 @@ public class AdminUserController(
     }
 
     [HttpPost("Invite")]
+    [Authorize(Policy = PermissionCatalog.Invitation.Create)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Invite(AdminUserInviteViewModel model)
     {
@@ -153,6 +156,7 @@ public class AdminUserController(
     }
 
     [HttpPost("Invitation/Cancel/{id}")]
+    [Authorize(Policy = PermissionCatalog.Invitation.Cancel)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CancelInvitation(int id)
     {
@@ -161,6 +165,7 @@ public class AdminUserController(
     }
 
     [HttpPost("Invitation/Resend/{id}")]
+    [Authorize(Policy = PermissionCatalog.Invitation.Resend)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ResendInvitation(int id)
     {

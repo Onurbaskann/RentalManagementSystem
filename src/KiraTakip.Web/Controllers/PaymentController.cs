@@ -54,7 +54,7 @@ public class PaymentController(
     }
 
     [HttpGet]
-    [Authorize(Policy = PermissionCatalog.Payment.Create)]
+    [Authorize(Policy = PermissionCatalog.Payment.Module)]
     public async Task<IActionResult> Create(int chargeId)
     {
         var charge = await paymentService.GetCreationContextAsync(

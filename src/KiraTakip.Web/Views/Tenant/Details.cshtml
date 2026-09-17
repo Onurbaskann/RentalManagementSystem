@@ -6,9 +6,9 @@
     ViewData["Title"] = Model.Tenant.DisplayName;
     ViewData["UseCentralFeedback"] = true;
     var tenant = Model.Tenant;
-    bool canEdit = User.HasPermission(PermissionCatalog.Tenant.Edit);
-    bool canDelete = User.HasPermission(PermissionCatalog.Tenant.Delete);
-    bool hasLeaseModule = User.HasModuleAccess(PermissionCatalog.Lease.Module);
+    bool canEdit = await PermissionService.HasPermissionAsync(PermissionCatalog.Tenant.Edit);
+    bool canDelete = await PermissionService.HasPermissionAsync(PermissionCatalog.Tenant.Delete);
+    bool hasLeaseModule = await PermissionService.HasModuleAccessAsync(PermissionCatalog.Lease.Module);
     var tenantControllerName = nameof(KiraTakip.Web.Controllers.TenantController).Replace("Controller", "");
     var leaseControllerName = nameof(KiraTakip.Web.Controllers.LeaseController).Replace("Controller", "");
     var tenantUserControllerName = nameof(KiraTakip.Web.Controllers.AdminTenantUserController).Replace("Controller", "");
@@ -16,7 +16,10 @@
     var tenantEditUrl = Url.Action(nameof(KiraTakip.Web.Controllers.TenantController.Edit), tenantControllerName, new { id = tenant.Id.ToHashId() })!;
     var tenantDeleteUrl = Url.Action(nameof(KiraTakip.Web.Controllers.TenantController.Delete), tenantControllerName, new { id = tenant.Id.ToHashId() })!;
     var tenantUsersUrl = Url.Action(nameof(KiraTakip.Web.Controllers.AdminTenantUserController.Index), tenantUserControllerName, new { tenantId = tenant.Id.ToHashId() })!;
-    var leaseCreateUrl = Url.Action(nameof(KiraTakip.Web.Controllers.LeaseController.Create), leaseControllerName)!;
+    var leaseCreateUrl = Url.Action(
+        nameof(KiraTakip.Web.Controllers.LeaseController.Create),
+        leaseControllerName,
+        new { tenantId = tenant.Id.ToHashId() })!;
 }
 
 <div class="page-header flex flex-wrap items-start justify-between mb-2.5 gap-4">
@@ -37,7 +40,7 @@
         </div>
     </div>
     <div class="flex gap-2">
-        @if (User.HasModuleAccess(PermissionCatalog.User.Module))
+        @if (await PermissionService.HasModuleAccessAsync(PermissionCatalog.User.Module))
         {
             <a href="@tenantUsersUrl" class="btn btn-secondary">Kullanıcılar</a>
         }
@@ -45,7 +48,7 @@
         {
             <a href="@tenantEditUrl" class="btn btn-secondary">Düzenle</a>
         }
-        @if (hasLeaseModule && User.HasPermission(PermissionCatalog.Lease.Create))
+        @if (hasLeaseModule && await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.Create))
         {
             <a href="@leaseCreateUrl" class="btn btn-primary">Sözleşme Ekle</a>
         }

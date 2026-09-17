@@ -1,12 +1,21 @@
 ﻿@model KiraTakip.Web.Models.ViewModels.CreateLeaseViewModel
+@using KiraTakip.Web.Extensions
 @{
     ViewData["Title"] = "Yeni Sözleşme Başvurusu";
     ViewData["UseCentralFeedback"] = true;
+    var returnUrl = Model.SourceTenantId.HasValue
+        ? Url.Action(
+            nameof(KiraTakip.Web.Controllers.TenantController.Details),
+            nameof(KiraTakip.Web.Controllers.TenantController).Replace("Controller", ""),
+            new { id = Model.SourceTenantId.Value.ToHashId() })
+        : Url.Action(
+            nameof(KiraTakip.Web.Controllers.LeaseController.Index),
+            nameof(KiraTakip.Web.Controllers.LeaseController).Replace("Controller", ""));
 }
 
 <div class="max-w-[1000px] mx-auto">
     <div class="page-header">
-        <a href="/Lease" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← Sözleşmeler</a>
+        <a href="@returnUrl" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← @(Model.SourceTenantId.HasValue ? "Kiracıya Dön" : "Sözleşmeler")</a>
         <div class="page-title">Yeni Sözleşme Başvurusu</div>
         <div class="page-subtitle">Başvuru onaylanana kadar sözleşme aktifleşmez ve tahakkuk oluşmaz.</div>
     </div>
@@ -19,9 +28,11 @@
         <form asp-action="Create" method="post" enctype="multipart/form-data" id="leaseForm"
               asp-form-write-permission="@PermissionCatalog.Lease.Create"
               x-on:submit="submitting = true">
+            <input type="hidden" asp-for="SourceTenantId" />
             @await Html.PartialAsync("_LeaseForm", Model, new ViewDataDictionary(ViewData)
             {
                 ["ReadOnly"] = false,
+                ["TenantLocked"] = Model.SourceTenantId.HasValue,
                 ["LeaseId"] = null
             })
 
@@ -35,7 +46,7 @@
                         asp-permission="@PermissionCatalog.Lease.Create" :disabled="submitting">
                     <span x-text="submitting ? 'Gönderiliyor…' : 'Onaya Gönder'"></span>
                 </button>
-                <a href="/Lease" class="btn btn-secondary px-6">İptal</a>
+                <a href="@returnUrl" class="btn btn-secondary px-6">İptal</a>
             </div>
         </form>
     </div>

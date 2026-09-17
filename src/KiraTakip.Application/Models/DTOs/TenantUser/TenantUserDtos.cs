@@ -43,7 +43,7 @@ public record EnsureTenantManagerExistsInput(
 
 public record CancelTenantInvitationInput(int TenantId, int InvitationId);
 public record ResendTenantInvitationInput(int TenantId, int InvitationId, string ResentByUserId);
-public record GetInviteDataInput(int TenantId);
+public record GetInviteDataInput(int TenantId, string? ActorUserId = null);
 
 public record TenantInviteDataDto(
     string TenantDisplayName,

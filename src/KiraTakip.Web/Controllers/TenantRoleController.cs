@@ -29,7 +29,7 @@ public class TenantRoleController(
     }
 
     [HttpGet("Create")]
-    [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Create)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Module)]
     public IActionResult Create()
     {
         var model = new TenantRoleFormViewModel();
@@ -72,7 +72,7 @@ public class TenantRoleController(
     }
 
     [HttpGet("Edit/{id}")]
-    [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Edit)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.Role.Module)]
     public async Task<IActionResult> Edit(int id)
     {
         var tenantId = currentUser.TenantId!.Value;

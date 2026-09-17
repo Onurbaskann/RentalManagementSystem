@@ -20,6 +20,7 @@ public class RoleService(
     IAuditService auditService,
     IUserSecurityService securityService,
     ITenantUserService tenantUserService,
+    IUserPermissionCacheInvalidator permissionCacheInvalidator,
     IUnitOfWork uow
 ) : IRoleService, ITransactionalService
 {
@@ -62,6 +63,11 @@ public class RoleService(
     public async Task<Role> CreateRoleAsync(CreateRoleInput input)
     {
         Guard.InvalidField(
+            input.Name == RoleNames.KiraciYoneticisi,
+            nameof(input.Name),
+            $"'{RoleNames.KiraciYoneticisi}' adı iç roller için kullanılamaz.");
+
+        Guard.InvalidField(
             await roleRepository.AnyAsync(r => r.Name == input.Name && r.Scope == RoleScope.Internal && !r.IsDeleted),
             nameof(input.Name),
             $"'{input.Name}' adında bir rol zaten mevcut.");
@@ -94,6 +100,11 @@ public class RoleService(
 
         if (!rol.IsSystemRole)
         {
+            Guard.InvalidField(
+                input.Name == RoleNames.KiraciYoneticisi,
+                nameof(input.Name),
+                $"'{RoleNames.KiraciYoneticisi}' adı iç roller için kullanılamaz.");
+
             Guard.InvalidField(
                 await roleRepository.AnyAsync(r =>
                     r.Name == input.Name &&
@@ -141,18 +152,26 @@ public class RoleService(
             await roleRepository.GetAsync(r => r.Id == input.RoleId && !r.IsDeleted),
             "Rol bulunamadı.");
 
+        var allowedPermissions = rol.Scope == RoleScope.Internal
+            ? PermissionCatalog.InternalAll
+            : PermissionCatalog.TenantAll;
+
+        Guard.InvalidField(
+            input.Permissions.Any(permission => !allowedPermissions.Contains(permission)),
+            nameof(input.Permissions),
+            "Geçersiz izin seçimi.");
+
         var existing = await rolePermissionRepository.GetForRoleAsync(input.RoleId);
         await rolePermissionRepository.RemoveRangeAsync(existing);
 
-        var allowedPermissions = rol.Scope == RoleScope.Internal
-            ? PermissionCatalog.All
-            : PermissionCatalog.TenantAll;
-        var validPerms = input.Permissions.Where(allowedPermissions.Contains).Distinct();
+        var validPerms = input.Permissions.Distinct();
         var toAdd = validPerms.Select(perm => new RolePermission { RoleId = input.RoleId, Permission = perm });
 
         await rolePermissionRepository.AddRangeAsync(toAdd);
+        var affectedUserIds = await userRoleRepository.GetUserIdsByRoleIdAsync(input.RoleId);
         await uow.SaveChangesAsync();
 
+        permissionCacheInvalidator.InvalidateManyAfterCommit(affectedUserIds);
         await securityService.UpdateStampForRoleUsersAsync(input.RoleId);
 
         await auditService.LogAsync("Role.Permission.Changed", "Role", input.RoleId.ToString(), input.UpdatedBy);
@@ -235,7 +254,9 @@ public class RoleService(
 
         await ReplaceRolePermissionsAsync(role.Id, input.SelectedPermissions);
 
+        var affectedUserIds = await userRoleRepository.GetUserIdsByRoleIdAsync(input.Id);
         await uow.SaveChangesAsync();
+        permissionCacheInvalidator.InvalidateManyAfterCommit(affectedUserIds);
         await securityService.UpdateStampForRoleUsersAsync(input.Id);
         await auditService.LogAsync("Role.Updated", "Role", input.Id.ToString(), role.Name);
     }
@@ -326,6 +347,8 @@ public class RoleService(
         var toAdd = PermissionCatalog.TenantAll.Select(perm => new RolePermission { RoleId = kiraciYonetici.Id, Permission = perm });
         await rolePermissionRepository.AddRangeAsync(toAdd);
 
+        var affectedUserIds = await userRoleRepository.GetUserIdsByRoleIdAsync(kiraciYonetici.Id);
         await uow.SaveChangesAsync();
+        permissionCacheInvalidator.InvalidateManyAfterCommit(affectedUserIds);
     }
 }

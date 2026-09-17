@@ -23,7 +23,7 @@
         _ => "Bekleniyor"
     };
 
-    bool canCreate = User.HasPermission(PermissionCatalog.Payment.Create);
+    bool canCreate = await PermissionService.HasPermissionAsync(PermissionCatalog.Payment.Create);
     bool isCancelled = Model.Status == ChargeStatus.Cancelled;
     bool isFullyPaid = Model.Status == ChargeStatus.Paid;
 }

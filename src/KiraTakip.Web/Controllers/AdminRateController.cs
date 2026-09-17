@@ -71,7 +71,7 @@ public class AdminRateController(IRateScheduleService rateScheduleService) : Con
         return RedirectToAction(nameof(Detail), new { year });
     }
 
-    [Authorize(Policy = PermissionCatalog.RateSchedule.Edit)]
+    [Authorize(Policy = PermissionCatalog.RateSchedule.Module)]
     [HttpGet("AddYear")]
     public async Task<IActionResult> AddYear()
     {

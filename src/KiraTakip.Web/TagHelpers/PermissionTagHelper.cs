@@ -1,34 +1,31 @@
-using KiraTakip.Authorization;
+using KiraTakip.Web.Authorization;
 using Microsoft.AspNetCore.Razor.TagHelpers;
-using System.Security.Claims;
 
 namespace KiraTakip.Web.TagHelpers;
 
 /// <summary>
-/// Renders the element only when the current user has the specified permission claim.
+/// Renders the element only when the current user has the specified permission.
 /// Usage: &lt;button asp-permission="@PermissionCatalog.Lease.Create"&gt;Kaydet&lt;/button&gt;
 /// </summary>
 [HtmlTargetElement("*", Attributes = "asp-permission")]
 public class PermissionTagHelper : TagHelper
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ICurrentUserPermissionService _permissionService;
 
     [HtmlAttributeName("asp-permission")]
     public string? Permission { get; set; }
 
-    public PermissionTagHelper(IHttpContextAccessor httpContextAccessor)
+    public PermissionTagHelper(ICurrentUserPermissionService permissionService)
     {
-        _httpContextAccessor = httpContextAccessor;
+        _permissionService = permissionService;
     }
 
-    public override void Process(TagHelperContext context, TagHelperOutput output)
+    public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
     {
         if (string.IsNullOrWhiteSpace(Permission))
             return;
 
-        var user = _httpContextAccessor.HttpContext?.User;
-        var isSuperAdmin = user?.HasClaim("IsSuperAdmin", "true") ?? false;
-        var hasPermission = isSuperAdmin || user?.HasClaim(AppClaimTypes.Permission, Permission) == true;
+        var hasPermission = await _permissionService.HasPermissionAsync(Permission);
 
         if (!hasPermission)
         {

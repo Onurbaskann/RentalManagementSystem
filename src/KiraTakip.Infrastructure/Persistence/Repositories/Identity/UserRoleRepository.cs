@@ -65,6 +65,9 @@ public class UserRoleRepository : RepositoryBase<UserRole>, IUserRoleRepository
     public Task<bool> ExistsIgnoringFiltersAsync(string userId, int roleId, CancellationToken ct = default)
         => _dbSet.IgnoreQueryFilters().AnyAsync(userRole => userRole.UserId == userId && userRole.RoleId == roleId, ct);
 
+    public Task<UserRole?> GetByUserAndRoleIdIgnoringFiltersAsync(string userId, int roleId, CancellationToken ct = default)
+        => _dbSet.IgnoreQueryFilters().FirstOrDefaultAsync(userRole => userRole.UserId == userId && userRole.RoleId == roleId, ct);
+
     public Task<List<string>> GetUserIdsByRoleIdAsync(int roleId, CancellationToken ct = default)
         => _dbSet.AsNoTracking().Where(userRole => userRole.RoleId == roleId).Select(userRole => userRole.UserId).ToListAsync(ct);
 

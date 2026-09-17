@@ -1,5 +1,5 @@
-﻿using KiraTakip.Authorization;
-using KiraTakip.Web.Extensions;
+using KiraTakip.Authorization;
+using KiraTakip.Web.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.Document;
@@ -17,7 +17,8 @@ namespace KiraTakip.Web.Controllers;
 public class DocumentController(
     IDocumentService documentService,
     IPermissionScopeCache permissionScopeCache,
-    ICurrentUserContext currentUserContext) : Controller
+    ICurrentUserContext currentUserContext,
+    ICurrentUserPermissionService permissionService) : Controller
 {
     [HttpGet("Download/{id}")]
     public async Task<IActionResult> Download(int id)
@@ -73,22 +74,25 @@ public class DocumentController(
     {
         var allowedOwnerTypes = new List<DocumentOwnerType>();
 
-        if (canEdit
-            ? User.HasPermission(PermissionCatalog.Tenant.Edit)
-            : User.HasModuleAccess(PermissionCatalog.Tenant.Module))
+        var tenantAllowed = canEdit
+            ? await permissionService.HasPermissionAsync(PermissionCatalog.Tenant.Edit)
+            : await permissionService.HasModuleAccessAsync(PermissionCatalog.Tenant.Module);
+        if (tenantAllowed)
             allowedOwnerTypes.Add(DocumentOwnerType.Tenant);
 
-        if ((canEdit
-                ? User.HasPermission(PermissionCatalog.Lease.Edit)
-                : User.HasModuleAccess(PermissionCatalog.Lease.Module))
-            || (!canEdit && User.HasModuleAccess(PermissionCatalog.TenantPortal.Lease.Module)))
+        var leaseAllowed = (canEdit
+                ? await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Edit)
+                : await permissionService.HasModuleAccessAsync(PermissionCatalog.Lease.Module))
+            || (!canEdit && await permissionService.HasModuleAccessAsync(PermissionCatalog.TenantPortal.Lease.Module));
+        if (leaseAllowed)
             allowedOwnerTypes.Add(DocumentOwnerType.Lease);
 
-        if ((canEdit
-                ? User.HasPermission(PermissionCatalog.Payment.UploadReceipt)
-                : User.HasModuleAccess(PermissionCatalog.Payment.Module))
-            || (!canEdit && (User.HasModuleAccess(PermissionCatalog.TenantPortal.Payment.Module)
-                || User.HasModuleAccess(PermissionCatalog.TenantPortal.Charge.Module))))
+        var paymentAllowed = (canEdit
+                ? await permissionService.HasPermissionAsync(PermissionCatalog.Payment.UploadReceipt)
+                : await permissionService.HasModuleAccessAsync(PermissionCatalog.Payment.Module))
+            || (!canEdit && (await permissionService.HasModuleAccessAsync(PermissionCatalog.TenantPortal.Payment.Module)
+                || await permissionService.HasModuleAccessAsync(PermissionCatalog.TenantPortal.Charge.Module)));
+        if (paymentAllowed)
             allowedOwnerTypes.Add(DocumentOwnerType.Payment);
 
         IReadOnlyList<int>? propertyIds = null;

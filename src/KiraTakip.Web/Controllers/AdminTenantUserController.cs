@@ -1,4 +1,4 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Web.Extensions;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
@@ -9,19 +9,22 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using KiraTakip.Models.Dtos.TenantUser;
 using KiraTakip.Models.Dtos.Reservation;
+using KiraTakip.Web.Authorization;
 
 namespace KiraTakip.Web.Controllers;
 
-[Authorize(Policy = "System.User")]
+[Authorize(Policy = PermissionCatalog.User.Module)]
 [Route("Admin/Tenants/{tenantId}/Users")]
 public class AdminTenantUserController(
     ITenantUserService tenantUserService,
-    UserManager<ApplicationUser> userManager
+    UserManager<ApplicationUser> userManager,
+    ICurrentUserPermissionService permissionService
 ) : Controller
 {
     private async Task PopulateRolesAndUnitsAsync(TenantInvitationFormViewModel model, int tenantId)
     {
-        var data = await tenantUserService.GetInviteDataAsync(new GetInviteDataInput(tenantId));
+        var actorUserId = userManager.GetUserId(User);
+        var data = await tenantUserService.GetInviteDataAsync(new GetInviteDataInput(tenantId, actorUserId));
         model.Roles = data.Roles.Select(r => new RoleOptionViewModel { Id = r.Id, Name = r.Name }).ToList();
         model.Units = data.Units;
         ViewBag.TenantId = tenantId;
@@ -67,7 +70,7 @@ public class AdminTenantUserController(
                     }).ToList(),
                 Query = query,
                 CanInvite = true,
-                CanEdit = User.HasPermission(PermissionCatalog.User.Edit),
+                CanEdit = await permissionService.HasPermissionAsync(PermissionCatalog.User.Edit),
                 CanDeactivate = true
             });
         }
@@ -78,7 +81,7 @@ public class AdminTenantUserController(
     }
 
     [HttpGet("Edit/{id}")]
-    [Authorize(Policy = PermissionCatalog.User.Edit)]
+    [Authorize(Policy = PermissionCatalog.User.Module)]
     public async Task<IActionResult> Edit(int tenantId, string id)
     {
         var currentUserId = userManager.GetUserId(User)!;
@@ -131,6 +134,7 @@ public class AdminTenantUserController(
     }
 
     [HttpPost("ToggleActive/{id}")]
+    [Authorize(Policy = PermissionCatalog.User.Edit)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleActive(int tenantId, string id)
     {
@@ -141,6 +145,7 @@ public class AdminTenantUserController(
     }
 
     [HttpPost("Invitation/Cancel/{id}")]
+    [Authorize(Policy = PermissionCatalog.Invitation.Cancel)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CancelInvitation(int tenantId, int id)
     {
@@ -149,6 +154,7 @@ public class AdminTenantUserController(
     }
 
     [HttpPost("Invitation/Resend/{id}")]
+    [Authorize(Policy = PermissionCatalog.Invitation.Resend)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ResendInvitation(int tenantId, int id)
     {
@@ -174,6 +180,7 @@ public class AdminTenantUserController(
     }
 
     [HttpPost("Invite")]
+    [Authorize(Policy = PermissionCatalog.Invitation.Create)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Invite(int tenantId, TenantInvitationFormViewModel model)
     {
@@ -233,7 +240,8 @@ public class AdminTenantUserController(
 
     private async Task PopulateEditContextAsync(int tenantId)
     {
-        var data = await tenantUserService.GetInviteDataAsync(new GetInviteDataInput(tenantId));
+        var actorUserId = userManager.GetUserId(User);
+        var data = await tenantUserService.GetInviteDataAsync(new GetInviteDataInput(tenantId, actorUserId));
         ViewBag.TenantId = tenantId;
         ViewBag.TenantName = data.TenantDisplayName;
     }

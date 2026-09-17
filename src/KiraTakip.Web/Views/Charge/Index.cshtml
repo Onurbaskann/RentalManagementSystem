@@ -1,10 +1,10 @@
-﻿@model KiraTakip.Web.Models.ViewModels.ChargeIndexViewModel
+@model KiraTakip.Web.Models.ViewModels.ChargeIndexViewModel
 @using KiraTakip.Models.Common
 @using KiraTakip.Models.Enums
 @{
     ViewData["Title"] = "Tahakkuklar";
     ViewData["UseCentralFeedback"] = true;
-    bool canCreate = User.HasPermission(PermissionCatalog.Payment.Create);
+    bool canCreate = await PermissionService.HasPermissionAsync(PermissionCatalog.Payment.Create);
     string status = Model.Status;
     var query = Model.Query;
     int cancelledCount = Model.CancelledCount;

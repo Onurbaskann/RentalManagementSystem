@@ -29,18 +29,26 @@ namespace KiraTakip.Infrastructure.DependencyInjection
         {
             // Database, Interceptors & Context
             services.AddScoped<AuditSaveChangesInterceptor>();
+            services.AddScoped<PermissionCacheTransactionInterceptor>();
             services.AddSingleton<IUniqueConstraintViolationDetector, SqlServerUniqueConstraintViolationDetector>();
             services.AddSingleton<IConcurrencyViolationDetector, EfCoreConcurrencyViolationDetector>();
             services.AddSingleton<ISmtpConfigurationValidator, SmtpConfigurationValidator>();
             services.AddDbContext<ApplicationDbContext>((sp, options) =>
             {
                 options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"));
-                options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+                options.AddInterceptors(
+                    sp.GetRequiredService<AuditSaveChangesInterceptor>(),
+                    sp.GetRequiredService<PermissionCacheTransactionInterceptor>());
             });
 
             // Memory Cache & Security Scope Providers
             services.AddMemoryCache();
             services.AddSingleton<IPermissionScopeCache, PermissionScopeCacheService>();
+            services.AddSingleton<IUserPermissionCache, UserPermissionCacheService>();
+            services.AddScoped<IPermissionCacheTransactionState, PermissionCacheTransactionState>();
+            services.AddScoped<IUserPermissionCacheInvalidator, UserPermissionCacheInvalidator>();
+
+
 
             // Infrastructure Services
             services.AddScoped<IdentitySeedService>();

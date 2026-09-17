@@ -32,7 +32,7 @@ public class BankTransactionController(
     }
 
     [HttpGet("Import")]
-    [Authorize(Policy = PermissionCatalog.Payment.ImportBankStatement)]
+    [Authorize(Policy = PermissionCatalog.Payment.Module)]
     public async Task<IActionResult> Import()
     {
         return View(new BankTransactionImportViewModel
@@ -69,7 +69,7 @@ public class BankTransactionController(
     }
 
     [HttpGet("SelectMatch/{id}")]
-    [Authorize(Policy = PermissionCatalog.Payment.MatchBankTransaction)]
+    [Authorize(Policy = PermissionCatalog.Payment.Module)]
     public async Task<IActionResult> SelectMatch(int id)
     {
         var bankTransaction = await bankTransactionService.GetByIdAsync(new GetBankTransactionByIdInput(id));
@@ -90,7 +90,7 @@ public class BankTransactionController(
     }
 
     [HttpGet("SelectForPayment/{id}")]
-    [Authorize(Policy = PermissionCatalog.Payment.MatchBankTransaction)]
+    [Authorize(Policy = PermissionCatalog.Payment.Module)]
     public async Task<IActionResult> SelectForPayment(int id)
     {
         var payment = await paymentService.GetByIdAsync(

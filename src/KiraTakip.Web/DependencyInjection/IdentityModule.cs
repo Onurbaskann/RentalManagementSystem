@@ -42,6 +42,32 @@ namespace KiraTakip.Web.DependencyInjection
                 options.AccessDeniedPath = "/Account/AccessDenied";
                 options.SlidingExpiration = true;
                 options.ExpireTimeSpan = TimeSpan.FromHours(8);
+                options.Events.OnValidatePrincipal = async context =>
+                {
+                    await SecurityStampValidator.ValidatePrincipalAsync(context);
+
+                    if (context.Principal == null)
+                        return;
+
+                    var hasLegacyPermissionClaims = false;
+                    foreach (var identity in context.Principal.Identities)
+                    {
+                        var legacyClaims = identity.Claims.Where(c => c.Type == AppClaimTypes.Permission).ToList();
+                        if (legacyClaims.Count > 0)
+                        {
+                            hasLegacyPermissionClaims = true;
+                            foreach (var claim in legacyClaims)
+                            {
+                                identity.RemoveClaim(claim);
+                            }
+                        }
+                    }
+
+                    if (hasLegacyPermissionClaims)
+                    {
+                        context.ShouldRenew = true;
+                    }
+                };
             });
 
             services.AddAuthorization(options =>
@@ -49,11 +75,11 @@ namespace KiraTakip.Web.DependencyInjection
                 foreach (var m in PermissionCatalog.AllModules)
                 {
                     var modulePath = m.Path;
-                    options.AddPolicy(modulePath, policy => policy.RequireClaim(AppClaimTypes.Permission, modulePath));
+                    options.AddPolicy(modulePath, policy => policy.AddRequirements(new PermissionRequirement(modulePath)));
                     foreach (var action in m.Actions)
                     {
                         var actionPath = action;
-                        options.AddPolicy(actionPath, policy => policy.RequireClaim(AppClaimTypes.Permission, actionPath));
+                        options.AddPolicy(actionPath, policy => policy.AddRequirements(new PermissionRequirement(actionPath)));
                     }
                 }
 
@@ -61,6 +87,9 @@ namespace KiraTakip.Web.DependencyInjection
                     policy.RequireClaim(AppClaimTypes.UserType, ((int)UserType.Tenant).ToString()));
             });
 
+            services.AddScoped<ICurrentUserPermissionContext, CurrentUserPermissionContext>();
+            services.AddScoped<ICurrentUserPermissionService, CurrentUserPermissionService>();
+            services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
             services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, PermissionClaimsTransformer>();
             services.AddSingleton<IAuthorizationHandler, AdminBypassHandler>();
             services.AddScoped<KiraTakip.Services.Interfaces.Identity.IApplicationUserManager, KiraTakip.Infrastructure.Identity.ApplicationUserManagerAdapter>();

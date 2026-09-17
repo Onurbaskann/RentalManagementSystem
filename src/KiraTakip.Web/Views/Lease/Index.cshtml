@@ -5,7 +5,7 @@
     ViewData["Title"] = "Sözleşmeler";
     ViewData["UseCentralFeedback"] = true;
     string filtre = ViewBag.Filter ?? "tum";
-    bool canEdit = User.HasPermission(PermissionCatalog.Lease.Create);
+    bool canEdit = await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.Create);
     var query = ViewBag.Query as TableQuery ?? new TableQuery();
     var paginationExtra = query.ToQueryDict();
     paginationExtra["filter"] = filtre;
@@ -22,7 +22,7 @@
         @{
             int borcluSayisi = ViewBag.DebtorCount ?? 0;
         }
-        @if (borcluSayisi > 0 && User.HasPermission(PermissionCatalog.Notification.BorcHatirlatma))
+        @if (borcluSayisi > 0 && await PermissionService.HasPermissionAsync(PermissionCatalog.Notification.BorcHatirlatma))
         {
             <form asp-controller="ChargeReminder" asp-action="SendDebtorEmails" method="post"
                   data-confirm="@borcluSayisi kiracıya borç hatırlatma e-postası gönderilsin mi?">

@@ -1,13 +1,13 @@
-﻿@model KiraTakip.Models.Dtos.ReservationListItemDto
+@model KiraTakip.Models.Dtos.ReservationListItemDto
 @using KiraTakip.Models.Enums
 @{
     ViewData["Title"] = "Rezervasyon Detayı";
     ViewData["UseCentralFeedback"] = true;
-    bool canCancel = User.HasPermission(PermissionCatalog.Reservation.Cancel);
-    bool canTransfer = User.HasPermission(PermissionCatalog.Reservation.TransferToCharge);
-    bool canApprove = User.HasPermission(PermissionCatalog.Reservation.Approve);
-    bool canReject = User.HasPermission(PermissionCatalog.Reservation.Reject);
-    bool canEdit = User.HasPermission(PermissionCatalog.Reservation.Edit);
+    bool canCancel = await PermissionService.HasPermissionAsync(PermissionCatalog.Reservation.Cancel);
+    bool canTransfer = await PermissionService.HasPermissionAsync(PermissionCatalog.Reservation.TransferToCharge);
+    bool canApprove = await PermissionService.HasPermissionAsync(PermissionCatalog.Reservation.Approve);
+    bool canReject = await PermissionService.HasPermissionAsync(PermissionCatalog.Reservation.Reject);
+    bool canEdit = await PermissionService.HasPermissionAsync(PermissionCatalog.Reservation.Edit);
 
     string statusClass = Model.Status.GetBadgeCssClass();
     string statusLabel = Model.Status.GetDisplayLabel();

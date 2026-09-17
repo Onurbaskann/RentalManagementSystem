@@ -18,7 +18,7 @@ public class UnitController(
     IPermissionScopeProvider permissionScopeProvider,
     IUnitPricingService unitPricingService) : Controller
 {
-    [Authorize(Policy = PermissionCatalog.Unit.OverrideRate)]
+    [Authorize(Policy = PermissionCatalog.Unit.Module)]
     [HttpGet("{id}/Rates")]
     public async Task<IActionResult> Rates([FromRoute(Name = "id")] int unitId)
         => View((await GetPricingDataAsync(unitId)).ToViewModel());

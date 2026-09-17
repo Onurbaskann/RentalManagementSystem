@@ -1,4 +1,4 @@
-﻿using KiraTakip.Web.Authorization;
+using KiraTakip.Web.Authorization;
 using KiraTakip.Authorization;
 using KiraTakip.Web.Extensions;
 using KiraTakip.Models.Dtos;
@@ -27,7 +27,8 @@ public class TenantLeaseController(
     IStatisticsService statisticsService,
     IChargeService chargeService,
     IDocumentService documentService,
-    IPermissionScopeProvider permissionScopeProvider) : Controller
+    IPermissionScopeProvider permissionScopeProvider,
+    ICurrentUserPermissionService permissionService) : Controller
 {
     [HttpGet("")]
     public async Task<IActionResult> Index([FromQuery] TableQuery query)
@@ -57,7 +58,7 @@ public class TenantLeaseController(
                 leaseDetails.EndDate,
                 leaseDetails.Status,
                 now));
-        var hasChargeAccess = User.HasModuleAccess(
+        var hasChargeAccess = await permissionService.HasModuleAccessAsync(
             PermissionCatalog.TenantPortal.Charge.Module);
         var chargeData = await chargeService.GetTenantLeaseDataAsync(
             new GetTenantLeaseChargeDataInput(

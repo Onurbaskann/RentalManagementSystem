@@ -1,5 +1,6 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Web.Extensions;
+using KiraTakip.Web.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Web.Models.ViewModels;
@@ -17,7 +18,8 @@ namespace KiraTakip.Web.Controllers;
 public class ReservationController(
     IReservationService reservationService,
     IPermissionScopeProvider permissionScopeProvider,
-    ICurrentUserContext currentUserContext) : Controller
+    ICurrentUserContext currentUserContext,
+    ICurrentUserPermissionService permissionService) : Controller
 {
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.Reservation.Module)]
@@ -104,7 +106,7 @@ public class ReservationController(
     }
 
     [HttpGet("Create")]
-    [Authorize(Policy = PermissionCatalog.Reservation.Create)]
+    [Authorize(Policy = PermissionCatalog.Reservation.Module)]
     public async Task<IActionResult> Create(ReservationCreateQueryViewModel query)
     {
         if (!ModelState.IsValid)
@@ -122,7 +124,7 @@ public class ReservationController(
     }
 
     [HttpGet("Edit/{id}")]
-    [Authorize(Policy = PermissionCatalog.Reservation.Edit)]
+    [Authorize(Policy = PermissionCatalog.Reservation.Module)]
     public async Task<IActionResult> Edit(int id)
     {
         var reservation = await reservationService.GetByIdAsync(
@@ -169,7 +171,7 @@ public class ReservationController(
             await reservationService.UpdateAsync(viewModel.ToInput(
                 currentUserContext,
                 GetAccessScope(),
-                User.HasPermission(PermissionCatalog.Reservation.OverrideTimeRestriction)));
+                await permissionService.HasPermissionAsync(PermissionCatalog.Reservation.OverrideTimeRestriction)));
             return RedirectToAction(nameof(Details), new { id = id.ToHashId() });
         }
         catch (BusinessValidationException exception)
@@ -195,7 +197,7 @@ public class ReservationController(
         try
         {
             var createAndApprove = viewModel.CreateAndApprove
-                && User.HasPermission(PermissionCatalog.Reservation.Approve);
+                && await permissionService.HasPermissionAsync(PermissionCatalog.Reservation.Approve);
             await reservationService.CreateRequestAsync(
                 viewModel.ToInput(
                     currentUserContext,
@@ -226,7 +228,7 @@ public class ReservationController(
             id,
             viewModel.Reason,
             GetAccessScope(),
-            User.HasPermission(PermissionCatalog.Reservation.OverrideTimeRestriction),
+            await permissionService.HasPermissionAsync(PermissionCatalog.Reservation.OverrideTimeRestriction),
             currentUserContext.UserId));
 
         return RedirectToAction(nameof(Index));
@@ -245,7 +247,7 @@ public class ReservationController(
 
     // AJAX: ücret önizleme
     [HttpGet("Calculate")]
-    [Authorize(Policy = PermissionCatalog.Reservation.Create)]
+    [Authorize(Policy = PermissionCatalog.Reservation.Module)]
     public async Task<IActionResult> Calculate(ReservationCalculationQueryViewModel query)
     {
         if (!ModelState.IsValid)

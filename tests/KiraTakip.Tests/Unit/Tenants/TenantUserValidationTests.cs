@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using KiraTakip.Models.Dtos.TenantUser;
 using KiraTakip.Models.Dtos.Reservation;
+using KiraTakip.Web.Authorization;
 
 namespace KiraTakip.Tests;
 
@@ -103,14 +104,14 @@ public class TenantUserValidationTests
             .ToList();
 
         Assert.Equal(2, actions.Count);
-        Assert.All(actions, action =>
-        {
-            var authorize = Assert.Single(action.GetCustomAttributes(typeof(AuthorizeAttribute), true)
-                .Cast<AuthorizeAttribute>());
-            Assert.Equal(PermissionCatalog.User.Edit, authorize.Policy);
-        });
-        Assert.Contains(actions, action => action.GetCustomAttributes(typeof(HttpGetAttribute), true).Any());
-        Assert.Contains(actions, action => action.GetCustomAttributes(typeof(HttpPostAttribute), true).Any());
+        var getAction = Assert.Single(actions, action => action.GetCustomAttributes(typeof(HttpGetAttribute), true).Any());
+        var postAction = Assert.Single(actions, action => action.GetCustomAttributes(typeof(HttpPostAttribute), true).Any());
+
+        var getAuthorize = Assert.Single(getAction.GetCustomAttributes(typeof(AuthorizeAttribute), true).Cast<AuthorizeAttribute>());
+        Assert.Equal(PermissionCatalog.User.Module, getAuthorize.Policy);
+
+        var postAuthorize = Assert.Single(postAction.GetCustomAttributes(typeof(AuthorizeAttribute), true).Cast<AuthorizeAttribute>());
+        Assert.Equal(PermissionCatalog.User.Edit, postAuthorize.Policy);
     }
 
     [Fact]
@@ -137,15 +138,17 @@ public class TenantUserValidationTests
     {
         var user = new ClaimsPrincipal(new ClaimsIdentity(
         [
+            new Claim(ClaimTypes.NameIdentifier, "super-1"),
+            new Claim(AppClaimTypes.UserType, ((int)KiraTakip.Models.Enums.UserType.Internal).ToString()),
             new Claim("IsSuperAdmin", "true")
         ], "Test"));
 
-        Assert.True(user.HasPermission(PermissionCatalog.User.Edit));
+        Assert.True(PermissionEvaluator.EvaluatePermission(null, PermissionCatalog.User.Edit, PermissionEvaluator.IsSuperAdmin(user)));
     }
 
     private static TenantUserService CreateService()
     {
         return new(null!, null!, null!, null!, null!, null!, null!,
-                   null!, null!, null!, null!, null!, null!, null!);
+                   null!, null!, null!, null!, null!, null!, null!, null!);
     }
 }

@@ -1,12 +1,12 @@
-﻿@model KiraTakip.Web.Models.ViewModels.PropertyDetailsViewModel
+@model KiraTakip.Web.Models.ViewModels.PropertyDetailsViewModel
 @using KiraTakip.Models.Enums
 @{
     ViewData["Title"] = Model.Property.Name;
     ViewData["UseCentralFeedback"] = true;
-    bool canCreateLease = User.HasPermission(PermissionCatalog.Lease.Create);
-    bool canCreateReservation = User.HasPermission(PermissionCatalog.Reservation.Create);
-    bool canEditProperty = User.HasPermission(PermissionCatalog.Property.Edit);
-    bool canManageRate = User.HasPermission(PermissionCatalog.Unit.OverrideRate);
+    bool canCreateLease = await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.Create);
+    bool canCreateReservation = await PermissionService.HasPermissionAsync(PermissionCatalog.Reservation.Create);
+    bool canEditProperty = await PermissionService.HasPermissionAsync(PermissionCatalog.Property.Edit);
+    bool canManageRate = await PermissionService.HasPermissionAsync(PermissionCatalog.Unit.OverrideRate);
     var unitControllerName = nameof(KiraTakip.Web.Controllers.UnitController)
         .Replace("Controller", string.Empty);
     var unitRatesActionName = nameof(KiraTakip.Web.Controllers.UnitController.Rates);

@@ -28,8 +28,10 @@
     string gunBadgeCls = Model.RemainingDays <= 10 ? "day-badge-red" : Model.RemainingDays <= 30 ? "day-badge-amber" : "day-badge-green";
     string gunMesaj = feshedildi ? "Sözleşme feshedildi." : Model.RemainingDays <= 0 ? "Sözleşme sona erdi." : Model.RemainingDays <= 30 ? "Süresi dolmak üzere!" : "Sözleşme aktif.";
 
-    bool canEdit = User.HasPermission(PermissionCatalog.Lease.Extend) || User.HasPermission(PermissionCatalog.Lease.Terminate) || User.HasPermission(PermissionCatalog.Lease.Edit);
-    bool canRegenerate = User.HasPermission(PermissionCatalog.Charge.Regenerate);
+    bool canEdit = await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.Edit);
+    bool canExtend = await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.Extend);
+    bool canTerminate = await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.Terminate);
+    bool canRegenerate = await PermissionService.HasPermissionAsync(PermissionCatalog.Charge.Regenerate);
 
     decimal aylikBedel = Model.MonthlyAmount;
     decimal kdvTutari = s.IsVatApplied ? aylikBedel * Model.EffectiveVatRate / 100 : 0;
@@ -101,13 +103,13 @@
     mevcutBitisTarihi: '@s.EndDate.ToString("yyyy-MM-dd")' ,
     tahakkuklar: window.sozlesmeTahakkuklar || [],
     onPickerChanged(e) {
-    if (e.detail.field= = ='baslangicTarihi' ) {
+    if (e.detail.field === 'baslangicTarihi') {
     this.yenidenUretBaslangicTarihi=e.detail.value;
     if (this.tarifeYenidenUret) {
     this.yenidenUretKalemlerYuklendi=false;
     this.fetchTarifeKalemler('yenidenUret');
     }
-    } else if (e.detail.field= = ='yeniBitisTarihi' ) {
+    } else if (e.detail.field === 'yeniBitisTarihi') {
     this.yeniBitisTarihi=e.detail.value;
     }
     },
@@ -237,12 +239,15 @@
                     Tahakkuk Yeniden Üret
                 </button>
             }
-            @if (canEdit && !feshedildi)
+            @if (canExtend && !feshedildi)
             {
                 <button class="btn btn-amber" type="button" @@click="showUzat = true">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
                     Sözleşmeyi Uzat
                 </button>
+            }
+            @if (canTerminate && !feshedildi)
+            {
                 <button class="btn btn-danger" type="button" @@click="showFesih = true">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
                     Sözleşmeyi Feshet
@@ -1053,7 +1058,7 @@
                     OwnerId = Model.Lease.Id,
                     DocumentTypes = Model.DocumentTypes,
                     Documents = Model.Documents,
-                    CanEdit = User.HasPermission(KiraTakip.Authorization.PermissionCatalog.Lease.Edit)
+                    CanEdit = await PermissionService.HasPermissionAsync(KiraTakip.Authorization.PermissionCatalog.Lease.Edit)
                 })
             </div>
         }
@@ -1136,7 +1141,7 @@
                     <textarea name="Description" class="form-control" rows="2" placeholder="Opsiyonel açıklama"></textarea>
                 </div>
 
-                @if (User.HasPermission(PermissionCatalog.Lease.OverrideRate))
+                @if (await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.OverrideRate))
                 {
                     <div class="form-group mt-3">
                         <label class="flex items-center gap-2 cursor-pointer text-sm font-medium">
@@ -1440,7 +1445,7 @@
                         </div>
                     </div>
                 </div>
-                @if (User.HasPermission(PermissionCatalog.Lease.OverrideRate))
+                @if (await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.OverrideRate))
                 {
                     <div class="form-group mt-3">
                         <label class="flex items-center gap-2 cursor-pointer text-sm font-medium">

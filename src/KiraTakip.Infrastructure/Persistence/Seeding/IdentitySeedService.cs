@@ -1,7 +1,5 @@
-using KiraTakip.Data;
 using KiraTakip.Models.Enums;
 using KiraTakip.Services.Interfaces.Identity;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using KiraTakip.Models.Dtos.Role;
 
@@ -10,37 +8,29 @@ namespace KiraTakip.Infrastructure.Seeding;
 
 public class IdentitySeedService
 {
+    internal const string AdminEmail = "admin@kiratakip.local";
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IUserRoleService _userRolService;
     private readonly IRoleService _rolService;
-    private readonly ApplicationDbContext _db;
-    private readonly IWebHostEnvironment _env;
 
     public IdentitySeedService(
         UserManager<ApplicationUser> userManager,
-        IUserRoleService userRoleService,
-        IRoleService roleService,
-        ApplicationDbContext db,
-        IWebHostEnvironment env)
+        IRoleService roleService)
     {
         _userManager = userManager;
-        _userRolService = userRoleService;
         _rolService = roleService;
-        _db = db;
-        _env = env;
     }
 
     public async Task SeedAsync()
     {
         // Süper Admin her ortamda seed'lenir — sisteme giriş noktası
-        await EnsureUser("admin@kiratakip.local", "Admin123!", null, "Sistem Yöneticisi", tumTasinmazlaraErisim: true, isSuperAdmin: true);
+        var admin = await EnsureUser(AdminEmail, "Admin123!", "Sistem Yöneticisi", tumTasinmazlaraErisim: true, isSuperAdmin: true);
 
         // Global Kiracı Yöneticisi rolünü seed et
-        await _rolService.EnsureGlobalTenantRolesAsync(new EnsureGlobalTenantRolesInput("system"));
+        await _rolService.EnsureGlobalTenantRolesAsync(new EnsureGlobalTenantRolesInput(admin.Id));
     }
 
 
-    private async Task EnsureUser(string email, string password, string? roleName, string adSoyad, bool tumTasinmazlaraErisim = false, bool isSuperAdmin = false)
+    private async Task<ApplicationUser> EnsureUser(string email, string password, string adSoyad, bool tumTasinmazlaraErisim = false, bool isSuperAdmin = false)
     {
         var user = await _userManager.FindByEmailAsync(email);
         if (user == null)
@@ -56,18 +46,26 @@ public class IdentitySeedService
                 TumTasinmazlaraErisim = tumTasinmazlaraErisim,
                 IsSuperAdmin = isSuperAdmin
             };
-            await _userManager.CreateAsync(user, password);
+            var result = await _userManager.CreateAsync(user, password);
+            if (!result.Succeeded)
+                throw new InvalidOperationException($"Seed admin oluşturulamadı: {string.Join(", ", result.Errors.Select(e => e.Description))}");
         }
         else
         {
+            if (user.UserType != UserType.Internal)
+                throw new InvalidOperationException("Seed admin hesabı iç kullanıcı olmalıdır.");
             var dirty = false;
             if (!user.IsActive) { user.IsActive = true; dirty = true; }
             if (user.TumTasinmazlaraErisim != tumTasinmazlaraErisim) { user.TumTasinmazlaraErisim = tumTasinmazlaraErisim; dirty = true; }
             if (user.IsSuperAdmin != isSuperAdmin) { user.IsSuperAdmin = isSuperAdmin; dirty = true; }
-            if (dirty) await _userManager.UpdateAsync(user);
+            if (dirty)
+            {
+                var result = await _userManager.UpdateAsync(user);
+                if (!result.Succeeded)
+                    throw new InvalidOperationException($"Seed admin güncellenemedi: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+            }
         }
 
-        if (roleName != null && !await _userRolService.IsInRoleAsync(user.Id, roleName))
-            await _userRolService.AddRoleByNameAsync(user.Id, roleName, "system");
+        return user;
     }
 }

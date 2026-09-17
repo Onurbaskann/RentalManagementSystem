@@ -4,7 +4,7 @@
 @{
     ViewData["Title"] = "Taşınmazlar";
 
-    bool canEdit = User.HasPermission(PermissionCatalog.Property.Create);
+    bool canEdit = await PermissionService.HasPermissionAsync(PermissionCatalog.Property.Create);
     var query = ViewBag.Query as TableQuery ?? new TableQuery();
     var pagination = PaginationModel.FromPaged(Model, "/Property", query.ToQueryDict());
 }

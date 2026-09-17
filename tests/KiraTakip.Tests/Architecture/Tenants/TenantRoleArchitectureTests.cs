@@ -140,6 +140,7 @@ public class TenantRoleArchitectureTests : IDisposable
             auditService ?? new NoOpAuditService(),
             new NoOpUserSecurityService(),
             null!,
+            new NoOpUserPermissionCacheInvalidator(),
             new UnitOfWork(_context));
 
     private async Task<TenantRoleSeed> SeedAsync()
@@ -254,6 +255,7 @@ public class TenantRoleTransactionTests
                 new ThrowingAuditService(),
                 new NoOpUserSecurityService(),
                 null!,
+                new NoOpUserPermissionCacheInvalidator(),
                 new UnitOfWork(context));
             var interceptor = new TransactionInterceptor(
                 context,

@@ -44,7 +44,7 @@ public class ManualChargeController(
     }
 
     [HttpGet]
-    [Authorize(Policy = PermissionCatalog.ManualCharge.Create)]
+    [Authorize(Policy = PermissionCatalog.ManualCharge.Module)]
     public async Task<IActionResult> Create(int? leaseId)
     {
         var viewModel = new CreateManualChargeViewModel { DueDate = DateTime.Today };

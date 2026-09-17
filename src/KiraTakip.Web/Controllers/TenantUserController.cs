@@ -1,4 +1,5 @@
-﻿using KiraTakip.Web.Authorization;
+using KiraTakip.Web.Authorization;
+using KiraTakip.Web.Extensions;
 using KiraTakip.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
@@ -18,7 +19,8 @@ namespace KiraTakip.Web.Controllers;
 public class TenantUserController(
     ICurrentUserContext currentUser,
     ITenantUserService tenantUserService,
-    IPermissionScopeProvider permissionScopeProvider) : Controller
+    IPermissionScopeProvider permissionScopeProvider,
+    ICurrentUserPermissionService permissionService) : Controller
 {
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Module)]
@@ -57,20 +59,14 @@ public class TenantUserController(
                     ExpiresAt = invitation.ExpiresAt
                 }).ToList(),
             Query = query,
-            CanInvite = User.HasClaim(
-                AppClaimTypes.Permission,
-                PermissionCatalog.TenantPortal.System.User.Invite),
-            CanEdit = User.HasClaim(
-                AppClaimTypes.Permission,
-                PermissionCatalog.TenantPortal.System.User.Edit),
-            CanDeactivate = User.HasClaim(
-                AppClaimTypes.Permission,
-                PermissionCatalog.TenantPortal.System.User.Deactivate)
+            CanInvite = await permissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.System.User.Invite),
+            CanEdit = await permissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.System.User.Edit),
+            CanDeactivate = await permissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.System.User.Deactivate)
         });
     }
 
     [HttpGet("Invite")]
-    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Invite)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Module)]
     public async Task<IActionResult> Invite()
     {
         var model = new TenantInvitationFormViewModel();
@@ -132,7 +128,7 @@ public class TenantUserController(
     }
 
     [HttpGet("Edit/{id}")]
-    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Edit)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Module)]
     public async Task<IActionResult> Edit(string id)
     {
         var data = await tenantUserService.GetTenantUserForEditAsync(
@@ -195,7 +191,7 @@ public class TenantUserController(
     private async Task PopulateInviteOptionsAsync(TenantInvitationFormViewModel model)
     {
         var data = await tenantUserService.GetInviteDataAsync(
-            new GetInviteDataInput(currentUser.TenantId!.Value));
+            new GetInviteDataInput(currentUser.TenantId!.Value, currentUser.UserId));
         model.Roles = data.Roles
             .Select(role => new RoleOptionViewModel { Id = role.Id, Name = role.Name })
             .ToList();

@@ -1,4 +1,4 @@
-﻿using KiraTakip.Web.Authorization;
+using KiraTakip.Web.Authorization;
 using KiraTakip.Authorization;
 using KiraTakip.Web.Extensions;
 using KiraTakip.Models.Dtos;
@@ -18,17 +18,18 @@ namespace KiraTakip.Web.Controllers;
 public class TenantPanelController(
     ICurrentUserContext currentUserContext,
     ITenantPanelService tenantPanelService,
-    IPermissionScopeProvider permissionScopeProvider) : Controller
+    IPermissionScopeProvider permissionScopeProvider,
+    ICurrentUserPermissionService permissionService) : Controller
 {
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
         var tenantId = currentUserContext.TenantId!.Value;
         var today = DateTime.Today;
-        var canViewLeases = User.HasModuleAccess(PermissionCatalog.TenantPortal.Lease.Module);
-        var canViewCharges = User.HasModuleAccess(PermissionCatalog.TenantPortal.Charge.Module);
-        var canViewPayments = User.HasModuleAccess(PermissionCatalog.TenantPortal.Payment.Module);
-        var canViewReservations = User.HasModuleAccess(
+        var canViewLeases = await permissionService.HasModuleAccessAsync(PermissionCatalog.TenantPortal.Lease.Module);
+        var canViewCharges = await permissionService.HasModuleAccessAsync(PermissionCatalog.TenantPortal.Charge.Module);
+        var canViewPayments = await permissionService.HasModuleAccessAsync(PermissionCatalog.TenantPortal.Payment.Module);
+        var canViewReservations = await permissionService.HasModuleAccessAsync(
             PermissionCatalog.TenantPortal.Reservation.Module);
         var dashboard = await tenantPanelService.GetDashboardAsync(
             new GetTenantPanelDashboardInput(
@@ -41,7 +42,7 @@ public class TenantPanelController(
                 permissionScopeProvider.GlobalAccess ? null : permissionScopeProvider.AccessiblePropertyIds,
                 permissionScopeProvider.GlobalAccess ? null : permissionScopeProvider.AccessibleUnitIds));
 
-        var userRole = User.HasPermission(PermissionCatalog.TenantPortal.System.User.Invite)
+        var userRole = await permissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.System.User.Invite)
             ? "Firma Yetkilisi"
             : canViewPayments
                 ? "Finans Yetkilisi"

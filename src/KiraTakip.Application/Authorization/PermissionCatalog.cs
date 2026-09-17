@@ -371,38 +371,7 @@ public static class PermissionCatalog
 
     public static bool IsScopeAware(string permission) => ScopeAware.Contains(permission);
 
-    // ─── Preset Lists ──────────────────────────────────────────────────────
-
-    public static readonly IReadOnlyList<string> OperasyonMuduruIzinleri =
-    [
-        Property.Module, Property.Create, Property.Edit,
-        Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate,
-        Tenant.Module, Tenant.Create, Tenant.Edit, Tenant.Delete,
-        Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
-        Lease.Approve, Lease.RequestRevision, Lease.DeleteDraft,
-        Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject,
-        Payment.ImportBankStatement, Payment.MatchBankTransaction,
-        ChargeType.Module, ChargeType.Create, ChargeType.Edit,
-        Store.Module, Store.Create, Store.Edit, Store.Account,
-        PaymentRouting.Module, PaymentRouting.Create, PaymentRouting.Edit,
-        RateSchedule.Module, RateSchedule.Create, RateSchedule.Edit,
-        Charge.Module, Charge.Regenerate,
-        Parameter.Module, Parameter.Edit,
-        PropertyType.Module, PropertyType.Create, PropertyType.Edit,
-        UnitType.Module, UnitType.Create, UnitType.Edit,
-        TenantCategory.Module, TenantCategory.Create, TenantCategory.Edit,
-        Sector.Module, Sector.Create, Sector.Edit,
-        DocumentType.Module, DocumentType.Create, DocumentType.Edit, DocumentType.Delete,
-        ManualCharge.Module, ManualCharge.Create, ManualCharge.Cancel,
-        Reservation.Module, Reservation.Create, Reservation.Edit, Reservation.Cancel,
-        Reservation.Approve, Reservation.Reject, Reservation.OverrideTimeRestriction,
-        Reservation.TransferToCharge,
-        PropertyMultiplier.Module, PropertyMultiplier.Edit,
-        ReservationRateRule.Module, ReservationRateRule.Create, ReservationRateRule.Edit,
-        Notification.Module, Notification.BorcHatirlatma,
-    ];
-
-    public static readonly IReadOnlyList<string> KiraciYoneticisiIzinleri =
+    public static readonly IReadOnlyList<string> TenantAll =
     [
         TenantPortal.Lease.Module,
         TenantPortal.Charge.Module,
@@ -414,17 +383,7 @@ public static class PermissionCatalog
         TenantPortal.System.Role.Edit, TenantPortal.System.Role.Delete,
     ];
 
-    public static readonly IReadOnlyList<string> KiraciSorumlusuIzinleri =
-    [
-        TenantPortal.Lease.Module,
-        TenantPortal.Charge.Module,
-        TenantPortal.Payment.Module,
-        TenantPortal.Reservation.Module, TenantPortal.Reservation.Create, TenantPortal.Reservation.Cancel,
-    ];
-
-    public static readonly IReadOnlyList<string> TenantAll = KiraciYoneticisiIzinleri;
-
-    public static readonly IReadOnlyList<string> All =
+    public static readonly IReadOnlyList<string> InternalAll =
     [
         // Internal.*
         Property.Module, Property.Create, Property.Edit,

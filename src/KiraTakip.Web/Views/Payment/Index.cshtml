@@ -7,7 +7,7 @@
     int? chargeId = ViewBag.ChargeId;
     string status = ViewBag.Status ?? "tum";
     var tableQuery = (TableQuery)ViewBag.Query;
-    bool canApprove = User.HasPermission(PermissionCatalog.Payment.Approve);
+    bool canApprove = await PermissionService.HasPermissionAsync(PermissionCatalog.Payment.Approve);
 
     var extraQuery = tableQuery.ToQueryDict();
     if (chargeId.HasValue) extraQuery["chargeId"] = chargeId.Value.ToString();

@@ -1,4 +1,4 @@
-﻿using KiraTakip.Web.Authorization;
+using KiraTakip.Web.Authorization;
 using KiraTakip.Authorization;
 using KiraTakip.Web.Extensions;
 using KiraTakip.Infrastructure.Exceptions;
@@ -29,7 +29,8 @@ public class TenantChargeController(
     IOnlinePaymentService onlinePaymentService,
     IDocumentService documentService,
     ICurrentUserContext currentUserContext,
-    IPermissionScopeProvider permissionScopeProvider) : Controller
+    IPermissionScopeProvider permissionScopeProvider,
+    ICurrentUserPermissionService permissionService) : Controller
 {
     [HttpGet("")]
     public async Task<IActionResult> Index([FromQuery] TenantChargeQueryViewModel query)
@@ -63,7 +64,7 @@ public class TenantChargeController(
             OverdueRemainingAmount = indexData.OverdueRemainingAmount,
             Units = indexData.Units,
             AvailableYears = indexData.AvailableYears,
-            CanReportPayment = User.HasModuleAccess(
+            CanReportPayment = await permissionService.HasModuleAccessAsync(
                 PermissionCatalog.TenantPortal.Payment.Module)
         };
 
@@ -88,7 +89,7 @@ public class TenantChargeController(
         {
             Charge = charge,
             PaymentDocuments = paymentDocuments,
-            CanReportPayment = User.HasModuleAccess(
+            CanReportPayment = await permissionService.HasModuleAccessAsync(
                 PermissionCatalog.TenantPortal.Payment.Module)
         });
     }

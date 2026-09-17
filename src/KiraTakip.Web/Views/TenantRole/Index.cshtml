@@ -1,4 +1,4 @@
-﻿@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.Role.RoleListItemDto>
+@model KiraTakip.Models.Common.PagedResult<KiraTakip.Models.Dtos.Role.RoleListItemDto>
 @using KiraTakip.Authorization
 @using KiraTakip.Models.Common
 @{
@@ -10,9 +10,9 @@
     var createActionName = nameof(KiraTakip.Web.Controllers.TenantRoleController.Create);
     var editActionName = nameof(KiraTakip.Web.Controllers.TenantRoleController.Edit);
     var deleteActionName = nameof(KiraTakip.Web.Controllers.TenantRoleController.Delete);
-    var canCreate = User.HasPermission(PermissionCatalog.TenantPortal.System.Role.Create);
-    var canEdit = User.HasPermission(PermissionCatalog.TenantPortal.System.Role.Edit);
-    var canDelete = User.HasPermission(PermissionCatalog.TenantPortal.System.Role.Delete);
+    var canCreate = await PermissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.System.Role.Create);
+    var canEdit = await PermissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.System.Role.Edit);
+    var canDelete = await PermissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.System.Role.Delete);
     var query = ViewBag.Query as TableQuery ?? new TableQuery();
     var pagination = PaginationModel.FromPaged(Model, "/Tenant/Roles", query.ToQueryDict());
 }

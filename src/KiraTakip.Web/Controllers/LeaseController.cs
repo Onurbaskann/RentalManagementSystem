@@ -1,5 +1,6 @@
-﻿using KiraTakip.Authorization;
+using KiraTakip.Authorization;
 using KiraTakip.Web.Extensions;
+using KiraTakip.Web.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.Charge;
@@ -36,7 +37,8 @@ public class LeaseController(
     IDocumentService documentService,
     IPermissionScopeProvider permissionScopeProvider,
     IPermissionScopeCache permissionScopeCache,
-    ICurrentUserContext currentUserContext) : Controller
+    ICurrentUserContext currentUserContext,
+    ICurrentUserPermissionService permissionService) : Controller
 {
     [Authorize(Policy = PermissionCatalog.Lease.Module)]
     public async Task<IActionResult> Index(string? filter, [FromQuery] TableQuery query)
@@ -92,10 +94,11 @@ public class LeaseController(
                 .FirstOrDefault(rate => rate.ChargeTypeBehavior == ChargeTypeBehavior.MonthlyFixed)?.VatRate ?? 20m
         };
 
-        var hasRegeneratePermission = User.HasPermission(PermissionCatalog.Charge.Regenerate);
-        if (User.HasPermission(PermissionCatalog.Payment.Module) || hasRegeneratePermission)
+        var hasRegeneratePermission = await permissionService.HasPermissionAsync(PermissionCatalog.Charge.Regenerate);
+        var hasPaymentModule = await permissionService.HasPermissionAsync(PermissionCatalog.Payment.Module);
+        if (hasPaymentModule || hasRegeneratePermission)
         {
-            viewModel.HasPaymentAccess = User.HasPermission(PermissionCatalog.Payment.Module);
+            viewModel.HasPaymentAccess = hasPaymentModule;
             await chargeService.UpdateDelaysAsync();
 
             viewModel.Charges = await chargeService.GetListAsync(new GetChargesInput(LeaseId: id));
@@ -135,13 +138,18 @@ public class LeaseController(
 
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.Lease.Create)]
-    public async Task<IActionResult> Create(int? unitId)
+    public async Task<IActionResult> Create(int? unitId, int? tenantId)
     {
         var viewModel = new CreateLeaseViewModel
         {
-            UnitId = unitId
+            UnitId = unitId,
+            TenantId = tenantId ?? 0,
+            SourceTenantId = tenantId
         };
         await PopulateCreateOptionsAsync(viewModel);
+
+        if (tenantId.HasValue && viewModel.Tenants.All(tenant => tenant.Id != tenantId.Value))
+            return NotFound();
 
         return View(viewModel);
     }
@@ -152,6 +160,16 @@ public class LeaseController(
     public async Task<IActionResult> Create(CreateLeaseViewModel viewModel)
     {
         await PopulateCreateOptionsAsync(viewModel);
+
+        if (viewModel.SourceTenantId.HasValue)
+        {
+            if (viewModel.Tenants.All(tenant => tenant.Id != viewModel.SourceTenantId.Value))
+                return NotFound();
+
+            viewModel.TenantId = viewModel.SourceTenantId.Value;
+            ModelState.Remove(nameof(viewModel.TenantId));
+        }
+
         if (!ModelState.IsValid) return View(viewModel);
 
         Lease lease;
@@ -206,10 +224,10 @@ public class LeaseController(
             UpdatedAt = draft.UpdatedAt,
             LatestRevision = draft.LatestRevision,
             ReviewHistory = await leaseService.GetReviewHistoryAsync(id),
-            CanEdit = isOwner && User.HasPermission(PermissionCatalog.Lease.Create),
-            CanApprove = (!isOwner || currentUserContext.IsSuperAdmin) && draft.Status == LeaseStatus.Draft && User.HasPermission(PermissionCatalog.Lease.Approve),
-            CanRequestRevision = (!isOwner || currentUserContext.IsSuperAdmin) && draft.Status == LeaseStatus.Draft && User.HasPermission(PermissionCatalog.Lease.RequestRevision),
-            CanDelete = (!isOwner || currentUserContext.IsSuperAdmin) && User.HasPermission(PermissionCatalog.Lease.DeleteDraft),
+            CanEdit = isOwner && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Create),
+            CanApprove = (!isOwner || currentUserContext.IsSuperAdmin) && draft.Status == LeaseStatus.Draft && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Approve),
+            CanRequestRevision = (!isOwner || currentUserContext.IsSuperAdmin) && draft.Status == LeaseStatus.Draft && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.RequestRevision),
+            CanDelete = (!isOwner || currentUserContext.IsSuperAdmin) && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.DeleteDraft),
             LeaseLineItems = draft.RateOverrides.Select(ToLeaseLineItemInput).ToList()
         };
         await PopulateDraftOptionsAsync(model);
@@ -346,7 +364,7 @@ public class LeaseController(
             viewModel.InflationRate,
             viewModel.Description,
             viewModel.UpdateRate,
-            User.HasPermission(PermissionCatalog.Lease.OverrideRate),
+            await permissionService.HasPermissionAsync(PermissionCatalog.Lease.OverrideRate),
             BuildRateOverrideInputs(viewModel.LeaseLineItems),
             BuildAccessScope()));
 
@@ -398,7 +416,7 @@ public class LeaseController(
             id,
             viewModel.StartDate,
             viewModel.UpdateRate,
-            User.HasPermission(PermissionCatalog.Lease.OverrideRate),
+            await permissionService.HasPermissionAsync(PermissionCatalog.Lease.OverrideRate),
             BuildRateOverrideInputs(viewModel.LeaseLineItems ?? []),
             BuildAccessScope()));
 
@@ -425,9 +443,9 @@ public class LeaseController(
     [Authorize]
     public async Task<IActionResult> GetDefaultLineItems(GetDefaultLeaseLineItemsViewModel query)
     {
-        if (!User.HasPermission(PermissionCatalog.Lease.Create)
-            && !User.HasPermission(PermissionCatalog.Lease.Extend)
-            && !User.HasPermission(PermissionCatalog.Charge.Regenerate))
+        if (!await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Create)
+            && !await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Extend)
+            && !await permissionService.HasPermissionAsync(PermissionCatalog.Charge.Regenerate))
             return Forbid();
 
         if (!ModelState.IsValid) return ValidationProblem(ModelState);

@@ -33,10 +33,8 @@ public class StoreArchitectureTests
         };
 
         Assert.All(expected, permission => Assert.Contains(permission, module.Actions));
-        Assert.Contains(PermissionCatalog.Store.Module, PermissionCatalog.OperasyonMuduruIzinleri);
-        Assert.All(expected, permission => Assert.Contains(permission, PermissionCatalog.OperasyonMuduruIzinleri));
-        Assert.Contains(PermissionCatalog.Store.Module, PermissionCatalog.All);
-        Assert.All(expected, permission => Assert.Contains(permission, PermissionCatalog.All));
+        Assert.Contains(PermissionCatalog.Store.Module, PermissionCatalog.InternalAll);
+        Assert.All(expected, permission => Assert.Contains(permission, PermissionCatalog.InternalAll));
         Assert.DoesNotContain(PermissionCatalog.Store.Module, PermissionCatalog.ScopeAware);
         Assert.DoesNotContain(PermissionCatalog.Store.Module, PermissionCatalog.TenantAll);
         Assert.All(expected, permission => Assert.DoesNotContain(permission, PermissionCatalog.TenantAll));

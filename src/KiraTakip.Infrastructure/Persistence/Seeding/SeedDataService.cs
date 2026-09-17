@@ -1373,6 +1373,10 @@ public class SeedDataService(
 
     private async Task EnsureKiraciUserAsync(string email, string password, string adSoyad, int tenantId)
     {
+        var admin = await userManager.FindByEmailAsync(IdentitySeedService.AdminEmail);
+        if (admin == null || !admin.IsActive || !admin.IsSuperAdmin || admin.UserType != UserType.Internal)
+            throw new InvalidOperationException("Kiracı seed işleminden önce iç süper admin oluşturulmalıdır.");
+
         var user = await userManager.FindByEmailAsync(email);
         if (user == null)
         {
@@ -1406,7 +1410,7 @@ public class SeedDataService(
             var hasRole = await ctx.UserRoller.AnyAsync(ur => ur.UserId == user.Id && ur.RoleId == firmaRol.Id);
             if (!hasRole)
             {
-                await userRoleService.AddRoleByRolIdAsync(user.Id, firmaRol.Id, "system");
+                await userRoleService.AddRoleByRolIdAsync(user.Id, firmaRol.Id, admin.Id);
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿@model KiraTakip.Web.Models.ViewModels.DashboardViewModel
+@model KiraTakip.Web.Models.ViewModels.DashboardViewModel
 @{
     ViewData["Title"] = "Ana Sayfa";
     ViewData["UseCentralFeedback"] = true;
@@ -14,10 +14,10 @@
         : Model.MonthlyRevenueChange < 0 ? $"↓ %{Math.Abs(Model.MonthlyRevenueChange):F1}"
         : "=";
 
-    bool hasPropertyAccess = User.HasModuleAccess(PermissionCatalog.Property.Module);
-    bool hasLeaseAccess = User.HasModuleAccess(PermissionCatalog.Lease.Module);
-    bool hasPaymentAccess = User.HasModuleAccess(PermissionCatalog.Payment.Module);
-    bool hasChargeAccess = User.HasModuleAccess(PermissionCatalog.Charge.Module);
+    bool hasPropertyAccess = await PermissionService.HasModuleAccessAsync(PermissionCatalog.Property.Module);
+    bool hasLeaseAccess = await PermissionService.HasModuleAccessAsync(PermissionCatalog.Lease.Module);
+    bool hasPaymentAccess = await PermissionService.HasModuleAccessAsync(PermissionCatalog.Payment.Module);
+    bool hasChargeAccess = await PermissionService.HasModuleAccessAsync(PermissionCatalog.Charge.Module);
 
     var nameParts = (Model.UserName ?? "").Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
     var turkishCulture = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
@@ -514,7 +514,7 @@
 <!-- ─── §3.8 HIZLI EYLEMLER ─── -->
 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
 
-    @if (User.HasPermission(PermissionCatalog.Lease.Create))
+    @if (await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.Create))
     {
         <a href="/Lease/Create"
            class="block p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
@@ -526,7 +526,7 @@
         </a>
     }
 
-    @if (User.HasPermission(PermissionCatalog.Reservation.Create))
+    @if (await PermissionService.HasPermissionAsync(PermissionCatalog.Reservation.Create))
     {
         <a href="@Url.Action(
                 nameof(KiraTakip.Web.Controllers.ReservationController.Create),
@@ -540,7 +540,7 @@
         </a>
     }
 
-    @if (User.HasPermission(PermissionCatalog.ManualCharge.Create))
+    @if (await PermissionService.HasPermissionAsync(PermissionCatalog.ManualCharge.Create))
     {
         <a href="/ManualCharge/Create"
            class="block p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
@@ -552,7 +552,7 @@
         </a>
     }
 
-    @if (User.HasPermission(PermissionCatalog.Payment.ImportBankStatement))
+    @if (await PermissionService.HasPermissionAsync(PermissionCatalog.Payment.ImportBankStatement))
     {
         <a href="/BankTransaction/Import"
            class="block p-5 rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">

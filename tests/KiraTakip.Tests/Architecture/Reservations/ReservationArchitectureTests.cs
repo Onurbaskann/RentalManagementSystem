@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+﻿using KiraTakip.Authorization;
 using KiraTakip.Data;
 using KiraTakip.Domain.Reservations;
 using KiraTakip.Infrastructure.Exceptions;
@@ -109,19 +109,18 @@ public class ReservationValidationTests
     }
 
     [Fact]
-    public void CalculateAction_ShouldRequireReservationCreatePermission()
+    public void CalculateAction_ShouldRequireReservationModulePermission()
     {
         var method = typeof(ReservationController)
             .GetMethod(nameof(ReservationController.Calculate));
 
         var policy = Assert.Single(method!.GetCustomAttributes<AuthorizeAttribute>());
-        Assert.Equal(KiraTakip.Authorization.PermissionCatalog.Reservation.Create, policy.Policy);
+        Assert.Equal(KiraTakip.Authorization.PermissionCatalog.Reservation.Module, policy.Policy);
     }
 
     [Theory]
     [InlineData(nameof(ReservationController.Approve), PermissionCatalog.Reservation.Approve)]
     [InlineData(nameof(ReservationController.Reject), PermissionCatalog.Reservation.Reject)]
-    [InlineData(nameof(ReservationController.Edit), PermissionCatalog.Reservation.Edit)]
     public void DecisionActions_ShouldRequireExplicitPermission(string actionName, string permission)
     {
         var methods = typeof(ReservationController)
@@ -130,6 +129,20 @@ public class ReservationValidationTests
         Assert.All(methods, method => Assert.Contains(
             method.GetCustomAttributes<AuthorizeAttribute>(),
             attribute => attribute.Policy == permission));
+    }
+
+    [Fact]
+    public void EditActions_ShouldRequireModuleForGetAndEditForPost()
+    {
+        var methods = typeof(ReservationController)
+            .GetMethods()
+            .Where(method => method.Name == nameof(ReservationController.Edit))
+            .ToList();
+        Assert.Equal(2, methods.Count);
+        var getMethod = Assert.Single(methods, m => m.GetCustomAttributes<Microsoft.AspNetCore.Mvc.HttpGetAttribute>().Any());
+        var postMethod = Assert.Single(methods, m => m.GetCustomAttributes<Microsoft.AspNetCore.Mvc.HttpPostAttribute>().Any());
+        Assert.Contains(getMethod.GetCustomAttributes<AuthorizeAttribute>(), a => a.Policy == PermissionCatalog.Reservation.Module);
+        Assert.Contains(postMethod.GetCustomAttributes<AuthorizeAttribute>(), a => a.Policy == PermissionCatalog.Reservation.Edit);
     }
 
     [Theory]

@@ -32,6 +32,7 @@ public class TenantUserService(
     IAuditService auditService,
     IUserSecurityService userSecurityService,
     IPermissionScopeCache permissionScopeCache,
+    IUserPermissionCacheInvalidator permissionCacheInvalidator,
     IUnitOfWork unitOfWork) : ITenantUserService, ITransactionalService
 {
     public async Task EnsureTenantManagerExistsAsync(
@@ -138,20 +139,42 @@ public class TenantUserService(
             "Kiracı bulunamadı.",
             "TENANT_USER_TENANT_NOT_FOUND");
         var roles = await roleRepository.GetActiveTenantRolesAsync(input.TenantId);
+        var canAssignSystemRole = await CanAssignSystemRoleAsync(input.ActorUserId, RoleAssignmentOperation.Invitation);
+        var visibleRoles = roles
+            .Where(role => canAssignSystemRole
+                || !role.IsSystemRole && role.Name != RoleNames.KiraciYoneticisi)
+            .Select(role => new RoleLookupDto(role.Id, role.Name))
+            .ToList();
         var units = await leaseRepository.GetActiveLeaseUnitsByTenantIdAsync(input.TenantId);
 
         return new TenantInviteDataDto(
             tenant.DisplayName,
-            roles.Select(role => new RoleLookupDto(role.Id, role.Name)).ToList(),
+            visibleRoles,
             units);
     }
 
     public async Task SendInvitationAsync(SendTenantInvitationInput input)
     {
-        Guard.NotFound(
+        var tenant = Guard.NotFound(
             await tenantRepository.GetActiveByIdAsync(input.TenantId),
             "Kiracı bulunamadı.",
             "TENANT_USER_TENANT_NOT_FOUND");
+
+        var role = await roleRepository.GetTenantRoleByIdAsync(input.RoleId, input.TenantId);
+        Guard.InvalidField(
+            role == null,
+            nameof(input.RoleId),
+            "Geçersiz rol seçildi.",
+            "TENANT_INVITATION_INVALID_ROLE");
+
+        if (role.IsSystemRole || role.Name == RoleNames.KiraciYoneticisi)
+        {
+            var canAssign = await CanAssignSystemRoleAsync(input.InvitedByUserId, RoleAssignmentOperation.Invitation);
+            Guard.Forbidden(
+                !canAssign,
+                "Kiracı Yöneticisi rolü için davet gönderme yetkiniz bulunmamaktadır.",
+                "TENANT_INVITATION_FORBIDDEN_ROLE");
+        }
 
         var normalizedEmail = userManager.NormalizeEmail(input.Email.Trim());
         Guard.InvalidField(
@@ -167,13 +190,6 @@ public class TenantUserService(
             nameof(input.Email),
             "Bu e-posta adresi için bekleyen bir davet zaten bulunmaktadır.",
             "TENANT_INVITATION_ALREADY_PENDING");
-
-        var role = await roleRepository.GetTenantRoleByIdAsync(input.RoleId, input.TenantId);
-        Guard.InvalidField(
-            role == null,
-            nameof(input.RoleId),
-            "Geçersiz rol seçildi.",
-            "TENANT_INVITATION_INVALID_ROLE");
 
         var unitIds = input.UnitIds?.Distinct().ToList();
         if (unitIds is { Count: > 0 })
@@ -241,7 +257,7 @@ public class TenantUserService(
             await userRepository.GetTenantUserForEditAsync(input.UserId, input.TenantId),
             "Kullanıcı bulunamadı.",
             "TENANT_USER_NOT_FOUND");
-        var roles = await GetEditRoleOptionsAsync(input.TenantId, user.RoleId);
+        var roles = await GetEditRoleOptionsAsync(input.TenantId, user.RoleId, input.CurrentUserId);
         var (leaseUnits, reservableUnits) = await GetAssignableUnitsAsync(
             input.TenantId,
             input.AccessScope);
@@ -276,10 +292,26 @@ public class TenantUserService(
         var currentRole = await userRoleRepository.GetUserRoleInfoAsync(user.Id);
         var newRole = await roleRepository.GetTenantRoleByIdAsync(input.RoleId, input.TenantId);
         Guard.InvalidField(
-            newRole == null || newRole.IsSystemRole && currentRole?.RoleId != newRole.Id,
+            newRole == null,
             nameof(input.RoleId),
             "Geçersiz rol seçildi.",
             "TENANT_USER_INVALID_ROLE");
+
+        var roleChanged = currentRole?.RoleId != input.RoleId;
+
+        var changesSystemRole = roleChanged
+            && (newRole!.IsSystemRole
+                || newRole.Name == RoleNames.KiraciYoneticisi
+                || currentRole?.RoleName == RoleNames.KiraciYoneticisi);
+
+        if (changesSystemRole)
+        {
+            var canAssign = await CanAssignSystemRoleAsync(input.CurrentUserId, RoleAssignmentOperation.UserEdit);
+            Guard.Forbidden(
+                !canAssign,
+                "Kiracı Yöneticisi rolünü değiştirmek için gerekli işlem yetkiniz bulunmamaktadır.",
+                "TENANT_USER_ROLE_ASSIGNMENT_FORBIDDEN");
+        }
 
         var selectedUnitIds = input.HasAccessToAllUnits
             ? []
@@ -300,21 +332,25 @@ public class TenantUserService(
                 "TENANT_USER_INVALID_UNIT_SCOPE");
         }
 
-        if (currentRole?.RoleName == RoleNames.KiraciYoneticisi
+        if (roleChanged
+            && currentRole?.RoleName == RoleNames.KiraciYoneticisi
             && newRole!.Name != RoleNames.KiraciYoneticisi)
         {
             await EnsureTenantManagerExistsAsync(
                 new EnsureTenantManagerExistsInput(input.TenantId, ExcludedUserId: user.Id));
         }
 
-        var existingRoles = await userRoleRepository.GetAllByUserIgnoringFiltersAsync(user.Id);
-        userRoleRepository.RemoveRange(existingRoles);
-        await userRoleRepository.AddAsync(new UserRole
+        if (roleChanged)
         {
-            UserId = user.Id,
-            RoleId = input.RoleId,
-            CreatedBy = input.CurrentUserId
-        });
+            var existingRoles = await userRoleRepository.GetAllByUserIgnoringFiltersAsync(user.Id);
+            userRoleRepository.RemoveRange(existingRoles);
+            await userRoleRepository.AddAsync(new UserRole
+            {
+                UserId = user.Id,
+                RoleId = input.RoleId,
+                CreatedBy = input.CurrentUserId
+            });
+        }
 
         user.AdSoyad = input.FullName.Trim();
         var previousGlobalAccess = user.TumTasinmazlaraErisim;
@@ -331,13 +367,18 @@ public class TenantUserService(
         await permissionScopeRepository.ReplaceAsync(user.Id, [], selectedUnitIds);
         await unitOfWork.SaveChangesAsync();
 
+        if (roleChanged)
+        {
+            permissionCacheInvalidator.InvalidateAfterCommit(user.Id);
+            await auditService.LogAsync(
+                "User.RoleChanged",
+                "ApplicationUser",
+                user.Id,
+                $"KiraciId:{input.TenantId}");
+        }
+
         await userSecurityService.UpdateStampAsync(user.Id);
         permissionScopeCache.Invalidate(user.Id);
-        await auditService.LogAsync(
-            "User.RoleChanged",
-            "ApplicationUser",
-            user.Id,
-            $"KiraciId:{input.TenantId}");
 
         if (previousGlobalAccess != input.HasAccessToAllUnits
             || !previousUnitIds.Order().SequenceEqual(selectedUnitIds.Order()))
@@ -350,13 +391,44 @@ public class TenantUserService(
         }
     }
 
-    private async Task<List<RoleLookupDto>> GetEditRoleOptionsAsync(int tenantId, int currentRoleId)
+    public async Task<List<RoleLookupDto>> GetEditRoleOptionsAsync(
+        int tenantId,
+        int currentRoleId,
+        string? actorUserId = null)
     {
         var roles = await roleRepository.GetActiveTenantRolesAsync(tenantId);
+        var canAssignSystemRole = await CanAssignSystemRoleAsync(actorUserId, RoleAssignmentOperation.UserEdit);
         return roles
-            .Where(role => !role.IsSystemRole || role.Id == currentRoleId)
+            .Where(role => canAssignSystemRole
+                || !role.IsSystemRole && role.Name != RoleNames.KiraciYoneticisi)
             .Select(role => new RoleLookupDto(role.Id, role.Name))
             .ToList();
+    }
+
+    private async Task<bool> CanAssignSystemRoleAsync(string? actorUserId, RoleAssignmentOperation operation)
+    {
+        if (string.IsNullOrWhiteSpace(actorUserId))
+            return false;
+
+        var actor = await userRepository.GetByIdAsync(actorUserId);
+        if (actor == null)
+            return false;
+
+        if (actor.UserType != UserType.Internal)
+            return false;
+
+        if (actor.IsSuperAdmin)
+            return true;
+
+        var permissions = await userRoleRepository.GetPermissionsAsync(actor.Id);
+        var (modulePermission, actionPermission) = operation switch
+        {
+            RoleAssignmentOperation.Invitation =>
+                (PermissionCatalog.Invitation.Module, PermissionCatalog.Invitation.Create),
+            _ => (PermissionCatalog.User.Module, PermissionCatalog.User.Edit)
+        };
+
+        return permissions.Contains(modulePermission) && permissions.Contains(actionPermission);
     }
 
     private async Task<(List<UnitLookupDto> LeaseUnits, List<UnitListItemDto> ReservableUnits)>

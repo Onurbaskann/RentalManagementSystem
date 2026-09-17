@@ -38,12 +38,6 @@ public class PermissionClaimsTransformer : UserClaimsPrincipalFactory<Applicatio
         {
             identity.AddClaim(new Claim("IsSuperAdmin", "true"));
         }
-        else
-        {
-            var rolePerms = await _userRolService.GetUserPermissionsFromRolesAsync(user.Id);
-            foreach (var p in rolePerms.Distinct())
-                identity.AddClaim(new Claim(AppClaimTypes.Permission, p));
-        }
 
         return identity;
     }

@@ -53,7 +53,7 @@ public class PropertyController(
     }
 
     [HttpGet]
-    [Authorize(Policy = PermissionCatalog.Property.Create)]
+    [Authorize(Policy = PermissionCatalog.Property.Module)]
     public async Task<IActionResult> Create()
     {
         var viewModel = new CreatePropertyViewModel
@@ -91,7 +91,7 @@ public class PropertyController(
     }
 
     [HttpGet]
-    [Authorize(Policy = PermissionCatalog.Property.Edit)]
+    [Authorize(Policy = PermissionCatalog.Property.Module)]
     public async Task<IActionResult> Edit(int id)
     {
         if (!permissionScopeProvider.IsInScope(id)) return Forbid();

@@ -17,6 +17,7 @@ namespace KiraTakip.Services.Identity;
 
 public class InvitationService(
     IInvitationRepository invitationRepository,
+    IRoleRepository roleRepository,
     IUserPermissionScopeRepository scopeRepository,
     IUnitOfWork unitOfWork,
     ISecureTokenService tokenService,
@@ -101,6 +102,31 @@ public class InvitationService(
 
     public async Task<ApplicationUser> AcceptAsync(Invitation invitation, AcceptInput input, CancellationToken ct = default)
     {
+        var role = Guard.NotFound(
+            await roleRepository.GetAsync(r => r.Id == invitation.RoleId && !r.IsDeleted && r.IsActive),
+            "Davetiyedeki rol sistemde bulunamadı veya pasif.");
+
+        var expectedScope = invitation.UserType == UserType.Internal ? RoleScope.Internal : RoleScope.Tenant;
+        Guard.InvalidField(
+            role.Scope != expectedScope,
+            nameof(invitation.RoleId),
+            "Davetiyedeki rol kapsamı kullanıcı tipiyle uyumsuz.");
+
+        if (invitation.TenantId.HasValue && role.TenantId.HasValue)
+        {
+            Guard.InvalidField(
+                role.TenantId.Value != invitation.TenantId.Value,
+                nameof(invitation.RoleId),
+                "Davetiyedeki rol kiracı ile uyumsuz.");
+        }
+        else if (!invitation.TenantId.HasValue && role.TenantId.HasValue)
+        {
+            Guard.InvalidField(
+                true,
+                nameof(invitation.RoleId),
+                "İç kullanıcıya kiracıya özel rol atanamaz.");
+        }
+
         var user = new ApplicationUser
         {
             UserName = invitation.Email,
@@ -116,7 +142,11 @@ public class InvitationService(
         var result = await userManager.CreateAsync(user, input.Password);
         Guard.Against(!result.Succeeded, string.Join("; ", result.Errors));
 
-        await userRoleService.AddRoleByRolIdAsync(user.Id, invitation.RoleId, invitation.InvitedByUserId);
+        await userRoleService.AddRoleByRolIdAsync(
+            user.Id,
+            invitation.RoleId,
+            invitation.InvitedByUserId,
+            RoleAssignmentOperation.Invitation);
 
         var scopes = new List<UserPermissionScope>();
         if (!invitation.HasAccessToAllProperties && invitation.PropertyIds != null)

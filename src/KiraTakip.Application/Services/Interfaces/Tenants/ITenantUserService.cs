@@ -18,6 +18,6 @@ public interface ITenantUserService
     Task<InitialTenantInvitationResultDto> TrySendInitialRepresentativeInvitationAsync(
         SendInitialTenantRepresentativeInput input);
     Task<TenantUserEditDataDto> GetTenantUserForEditAsync(GetTenantUserForEditInput input);
+    Task<List<RoleLookupDto>> GetEditRoleOptionsAsync(int tenantId, int currentRoleId, string? actorUserId = null);
     Task EditTenantUserAsync(EditTenantUserInput input);
-
 }

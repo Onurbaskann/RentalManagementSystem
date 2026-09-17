@@ -16,6 +16,7 @@ public interface IUserRoleRepository : IRepositoryBase<UserRole>
     Task<List<string>> GetUserIdsByRoleNameAsync(string roleName, CancellationToken ct = default);
     Task<List<string>> GetPermissionsAsync(string userId, CancellationToken ct = default);
     Task<bool> ExistsIgnoringFiltersAsync(string userId, int roleId, CancellationToken ct = default);
+    Task<UserRole?> GetByUserAndRoleIdIgnoringFiltersAsync(string userId, int roleId, CancellationToken ct = default);
     Task<List<string>> GetUserIdsByRoleIdAsync(int roleId, CancellationToken ct = default);
     void RemoveRange(IEnumerable<UserRole> userRoles);
 }

@@ -1,4 +1,4 @@
-using KiraTakip.Authorization;
+using KiraTakip.Web.Authorization;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 
 namespace KiraTakip.Web.TagHelpers;
@@ -7,32 +7,28 @@ namespace KiraTakip.Web.TagHelpers;
 /// When the current user lacks the specified write permission, wraps the form body
 /// in a disabled fieldset and prepends a read-only warning banner.
 /// Usage: &lt;form asp-form-write-permission="@PermissionCatalog.Lease.Create"&gt;
-/// SistemYoneticisi (IsSuperAdmin claim) bypasses the check.
+/// SuperAdmin bypasses the check.
 /// </summary>
 [HtmlTargetElement("form", Attributes = "asp-form-write-permission")]
 public class FormWritePermissionTagHelper : TagHelper
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ICurrentUserPermissionService _permissionService;
 
     [HtmlAttributeName("asp-form-write-permission")]
     public string? Permission { get; set; }
 
-    public FormWritePermissionTagHelper(IHttpContextAccessor httpContextAccessor)
+    public FormWritePermissionTagHelper(ICurrentUserPermissionService permissionService)
     {
-        _httpContextAccessor = httpContextAccessor;
+        _permissionService = permissionService;
     }
 
-    public override void Process(TagHelperContext context, TagHelperOutput output)
+    public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
     {
         output.Attributes.RemoveAll("asp-form-write-permission");
 
         if (string.IsNullOrWhiteSpace(Permission)) return;
 
-        var user = _httpContextAccessor.HttpContext?.User;
-        if (user == null) return;
-
-        var isSuperAdmin = user.HasClaim("IsSuperAdmin", "true");
-        var hasPermission = isSuperAdmin || user.HasClaim(AppClaimTypes.Permission, Permission);
+        var hasPermission = await _permissionService.HasPermissionAsync(Permission);
 
         if (hasPermission) return;
 
