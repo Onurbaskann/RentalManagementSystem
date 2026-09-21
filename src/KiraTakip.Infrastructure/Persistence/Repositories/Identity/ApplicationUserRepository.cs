@@ -265,9 +265,17 @@ public class ApplicationUserRepository(ApplicationDbContext ctx)
     }
 
     public Task<Dictionary<string, string?>> GetDisplayNamesAsync(IReadOnlyCollection<string> userIds, CancellationToken ct = default)
-        => _ctx.Users.AsNoTracking()
+        => _ctx.Users.IgnoreQueryFilters().AsNoTracking()
             .Where(user => userIds.Contains(user.Id))
             .ToDictionaryAsync(user => user.Id, user => user.AdSoyad ?? user.Email, ct);
+
+    public Task<string?> FindIdByNormalizedEmailForAuditAsync(
+        string normalizedEmail,
+        CancellationToken ct = default)
+        => _ctx.Users.IgnoreQueryFilters().AsNoTracking()
+            .Where(user => user.NormalizedEmail == normalizedEmail)
+            .Select(user => user.Id)
+            .FirstOrDefaultAsync(ct);
 
     public Task<List<ApplicationUser>> GetByIdsAsync(IReadOnlyCollection<string> userIds, CancellationToken ct = default)
         => _ctx.Users.Where(user => userIds.Contains(user.Id)).ToListAsync(ct);

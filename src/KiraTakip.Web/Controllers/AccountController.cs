@@ -8,6 +8,7 @@ using KiraTakip.Models.Dtos.Invitation;
 using KiraTakip.Models.Dtos.PasswordReset;
 using KiraTakip.Models.Dtos.Tenant;
 using KiraTakip.Models.Enums;
+using KiraTakip.Auditing;
 using KiraTakip.Web.Models.ViewModels;
 using KiraTakip.Services.Interfaces.Auditing;
 using KiraTakip.Services.Interfaces.Identity;
@@ -52,7 +53,8 @@ public class AccountController(
         if (user != null && !user.IsActive)
         {
             ModelState.AddModelError(string.Empty, "Hesabınız pasif durumdadır. Lütfen yöneticinizle iletişime geçin.");
-            await auditService.LogAsync("User.LoginFailed", "ApplicationUser", user.Id, "Pasif hesap");
+            await auditService.LogAsync(AuditEventTypes.UserLoginFailed, AuditEntityTypes.ApplicationUser, user.Id,
+                AuditDetails.Serialize(new { reason = "Pasif hesap" }));
             return View(model);
         }
 
@@ -64,7 +66,8 @@ public class AccountController(
             if (tenantInactive)
             {
                 ModelState.AddModelError(string.Empty, "Firmanızın hesabı pasif durumdadır. Lütfen yöneticinizle iletişime geçin.");
-                await auditService.LogAsync("User.LoginFailed", "ApplicationUser", user.Id, "Pasif kiracı");
+                await auditService.LogAsync(AuditEventTypes.UserLoginFailed, AuditEntityTypes.ApplicationUser, user.Id,
+                    AuditDetails.Serialize(new { reason = "Pasif kiracı" }));
                 return View(model);
             }
         }
@@ -74,7 +77,7 @@ public class AccountController(
 
         if (result.Succeeded)
         {
-            await auditService.LogAsync("User.LoginSuccess", "ApplicationUser", user?.Id);
+            await auditService.LogAsync(AuditEventTypes.UserLoginSuccess, AuditEntityTypes.ApplicationUser, user?.Id);
             if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                 return Redirect(returnUrl);
             // Kiracı kullanıcıları kendi paneline yönlendirilir
@@ -86,12 +89,12 @@ public class AccountController(
         if (result.IsLockedOut)
         {
             if (user != null)
-                await auditService.LogAsync("User.LockedOut", "ApplicationUser", user.Id);
+                await auditService.LogAsync(AuditEventTypes.UserLockedOut, AuditEntityTypes.ApplicationUser, user.Id);
             ModelState.AddModelError(string.Empty, "Hesabınız çok fazla başarısız giriş denemesi nedeniyle geçici olarak kilitlendi. Lütfen birkaç dakika sonra tekrar deneyin.");
             return View(model);
         }
 
-        await auditService.LogAsync("User.LoginFailed", "ApplicationUser", user?.Id);
+        await auditService.LogAsync(AuditEventTypes.UserLoginFailed, AuditEntityTypes.ApplicationUser, user?.Id);
         ModelState.AddModelError(string.Empty, "Geçersiz e-posta veya şifre.");
         return View(model);
     }
@@ -103,7 +106,7 @@ public class AccountController(
     {
         var userId = userManager.GetUserId(User);
         await signInManager.SignOutAsync();
-        await auditService.LogAsync("User.Logout", "ApplicationUser", userId);
+        await auditService.LogAsync(AuditEventTypes.UserLogout, AuditEntityTypes.ApplicationUser, userId);
         return RedirectToAction(nameof(Login));
     }
 
@@ -130,7 +133,7 @@ public class AccountController(
         }
 
         await signInManager.RefreshSignInAsync(user);
-        await auditService.LogAsync("User.PasswordChanged", "ApplicationUser", user.Id);
+        await auditService.LogAsync(AuditEventTypes.UserPasswordChanged, AuditEntityTypes.ApplicationUser, user.Id);
         return RedirectToAction(nameof(ChangePassword));
     }
 

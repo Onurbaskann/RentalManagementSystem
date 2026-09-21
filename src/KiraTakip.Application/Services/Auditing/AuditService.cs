@@ -1,7 +1,6 @@
-using KiraTakip.Common;
+using KiraTakip.Auditing;
 using KiraTakip.Data;
 using KiraTakip.Models.Dtos.AuditLog;
-using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Repositories.Interfaces.Auditing;
 using KiraTakip.Repositories.Interfaces.Identity;
 using KiraTakip.Services.Interfaces.Auditing;
@@ -10,7 +9,7 @@ using KiraTakip.Services.Interfaces.Identity;
 namespace KiraTakip.Services.Auditing;
 
 public class AuditService(
-    IRequestContext requestContext,
+    IAuditContext auditContext,
     IAuditLogRepository auditLogRepository,
     IApplicationUserRepository applicationUserRepository,
     IUnitOfWork unitOfWork,
@@ -18,14 +17,24 @@ public class AuditService(
 {
     public async Task LogAsync(string eventType, string? entityType = null, string? entityId = null, string? details = null)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(eventType);
+        if (!AuditEventTypes.IsDefined(eventType))
+            throw new ArgumentException($"Tanımsız audit olay tipi: {eventType}", nameof(eventType));
+        if (entityType is not null && !AuditEntityTypes.IsDefined(entityType))
+            throw new ArgumentException($"Tanımsız audit varlık tipi: {entityType}", nameof(entityType));
+        if (details is not null)
+            AuditDetails.EnsureStructured(details);
+
         await auditLogRepository.AddAsync(new AuditLog
         {
             EventType = eventType,
             EntityType = entityType,
             EntityId = entityId,
-            UserId = requestContext.UserId,
-            IpAddress = requestContext.IpAddress,
-            UserAgent = requestContext.UserAgent is { Length: > 0 } ua
+            UserId = auditContext.UserId,
+            UserType = auditContext.UserType,
+            KiraciId = auditContext.TenantId,
+            IpAddress = auditContext.IpAddress,
+            UserAgent = auditContext.UserAgent is { Length: > 0 } ua
                 ? ua[..Math.Min(ua.Length, 500)]
                 : null,
             Details = details,
@@ -42,12 +51,9 @@ public class AuditService(
 
         if (!string.IsNullOrWhiteSpace(input.UserEmail))
         {
-            var user = await userManager.FindByEmailAsync(input.UserEmail);
-            if (user != null)
-            {
-                userId = user.Id;
-            }
-            else
+            var normalizedEmail = userManager.NormalizeEmail(input.UserEmail.Trim());
+            userId = await applicationUserRepository.FindIdByNormalizedEmailForAuditAsync(normalizedEmail, ct);
+            if (userId is null)
             {
                 noResults = true;
                 userNotFoundMessage = $"\"{input.UserEmail}\" adresine sahip bir kullanıcı bulunamadı.";
@@ -95,7 +101,10 @@ public class AuditService(
             UserFullName = r.UserId != null && userMap.TryGetValue(r.UserId, out var u)
                 ? (u ?? r.UserId)
                 : r.UserId,
+            UserType = r.UserType,
+            TenantId = r.KiraciId,
             IpAddress = r.IpAddress,
+            UserAgent = r.UserAgent,
             Details = r.Details,
             CreatedAt = r.CreatedAt
         }).ToList();

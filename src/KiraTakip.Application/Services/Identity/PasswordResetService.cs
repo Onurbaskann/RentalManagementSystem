@@ -1,4 +1,6 @@
 using KiraTakip.Data;
+using KiraTakip.Auditing;
+using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Domain.Identity;
 using KiraTakip.Models.Dtos.PasswordReset;
 using KiraTakip.Models.Enums;
@@ -52,16 +54,21 @@ public class PasswordResetService(
             Status = PasswordResetStatus.Pending,
         };
 
-        await passwordResetRequestRepository.AddAsync(talep);
-        await unitOfWork.SaveChangesAsync(ct);
+        var tokenResult = await unitOfWork.ExecuteInTransactionAsync(async transactionCt =>
+        {
+            await passwordResetRequestRepository.AddAsync(talep);
+            await unitOfWork.SaveChangesAsync(transactionCt);
 
-        var tokenResult = tokenService.Generate(talep.Id.ToString(), Purpose, Ttl);
-        talep.TokenHash = tokenResult.TokenHash;
-        talep.ExpiresAt = tokenResult.ExpiresAt;
-        await unitOfWork.SaveChangesAsync(ct);
+            var generatedToken = tokenService.Generate(talep.Id.ToString(), Purpose, Ttl);
+            talep.TokenHash = generatedToken.TokenHash;
+            talep.ExpiresAt = generatedToken.ExpiresAt;
+            await unitOfWork.SaveChangesAsync(transactionCt);
+            return generatedToken;
+        }, ct);
 
         await MailGonderAsync(user, tokenResult.RawToken, ct);
-        await auditService.LogAsync("User.PasswordReset.Requested", "PasswordResetRequest", talep.Id.ToString(), user.Id);
+        await auditService.LogAsync(AuditEventTypes.UserPasswordResetRequested, AuditEntityTypes.PasswordResetRequest, talep.Id.ToString(),
+            AuditDetails.Serialize(new { userId = user.Id }));
         return true;
     }
 
@@ -93,6 +100,7 @@ public class PasswordResetService(
         return (true, null, talep);
     }
 
+    [Transactional]
     public async Task<bool> ResetPasswordAsync(PasswordResetRequest request, ResetPasswordInput input, CancellationToken ct = default)
     {
         var talep = request;
@@ -108,7 +116,8 @@ public class PasswordResetService(
         await unitOfWork.SaveChangesAsync(ct);
 
         await userManager.UpdateSecurityStampAsync(user);
-        await auditService.LogAsync("User.PasswordReset.Completed", "PasswordResetRequest", talep.Id.ToString(), user.Id);
+        await auditService.LogAsync(AuditEventTypes.UserPasswordResetCompleted, AuditEntityTypes.PasswordResetRequest, talep.Id.ToString(),
+            AuditDetails.Serialize(new { userId = user.Id }));
         return true;
     }
 

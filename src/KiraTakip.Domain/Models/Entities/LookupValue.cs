@@ -1,8 +1,10 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using KiraTakip.Domain.Auditing;
 
 namespace KiraTakip.Models.Entities;
 
 [Table("EnumDegerleri")]
+[AuditExclude]
 public class LookupValue : BaseEntity
 {
     [Column("EnumAdi")]

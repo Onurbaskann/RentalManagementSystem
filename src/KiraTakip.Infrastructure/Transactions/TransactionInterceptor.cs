@@ -2,12 +2,14 @@ using Castle.DynamicProxy;
 using KiraTakip.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
 
 namespace KiraTakip.Infrastructure.Transactions;
 
 /// <summary>
-/// ITransactionalService implement eden servislerin async metot çağrılarını
-/// DB transaction'ı içinde çalıştırır. Nested call'larda mevcut transaction'a join eder.
+/// ITransactionalService implement eden servislerin tüm metotlarını, seçici servislerin
+/// ise yalnız [Transactional] metotlarını DB transaction'ı içinde çalıştırır.
+/// Nested call'larda mevcut transaction'a join eder.
 /// </summary>
 public class TransactionInterceptor : IAsyncInterceptor
 {
@@ -22,6 +24,12 @@ public class TransactionInterceptor : IAsyncInterceptor
 
     public void InterceptSynchronous(IInvocation invocation)
     {
+        if (!ShouldUseTransaction(invocation))
+        {
+            invocation.Proceed();
+            return;
+        }
+
         // Senkron metotlar — proje genelinde async kullanılıyor, fallback olarak destek
         if (_db.Database.CurrentTransaction != null)
         {
@@ -58,10 +66,17 @@ public class TransactionInterceptor : IAsyncInterceptor
 
     private async Task InternalInterceptAsync(IInvocation invocation)
     {
+        if (!ShouldUseTransaction(invocation))
+        {
+            invocation.Proceed();
+            await GetTask(invocation);
+            return;
+        }
+
         if (_db.Database.CurrentTransaction != null)
         {
             invocation.Proceed();
-            await (Task)invocation.ReturnValue;
+            await GetTask(invocation);
             return;
         }
 
@@ -72,7 +87,7 @@ public class TransactionInterceptor : IAsyncInterceptor
             try
             {
                 invocation.Proceed();
-                await (Task)invocation.ReturnValue;
+                await GetTask(invocation);
                 await tx.CommitAsync();
             }
             catch (Exception ex)
@@ -87,10 +102,16 @@ public class TransactionInterceptor : IAsyncInterceptor
 
     private async Task<TResult> InternalInterceptAsync<TResult>(IInvocation invocation)
     {
+        if (!ShouldUseTransaction(invocation))
+        {
+            invocation.Proceed();
+            return await GetTask<TResult>(invocation);
+        }
+
         if (_db.Database.CurrentTransaction != null)
         {
             invocation.Proceed();
-            return await (Task<TResult>)invocation.ReturnValue;
+            return await GetTask<TResult>(invocation);
         }
 
         var strategy = _db.Database.CreateExecutionStrategy();
@@ -100,7 +121,7 @@ public class TransactionInterceptor : IAsyncInterceptor
             try
             {
                 invocation.Proceed();
-                var result = await (Task<TResult>)invocation.ReturnValue;
+                var result = await GetTask<TResult>(invocation);
                 await tx.CommitAsync();
                 return result;
             }
@@ -113,4 +134,38 @@ public class TransactionInterceptor : IAsyncInterceptor
             }
         });
     }
+
+    private static bool ShouldUseTransaction(IInvocation invocation)
+    {
+        if (invocation.InvocationTarget is ITransactionalService)
+            return true;
+
+        var targetType = invocation.InvocationTarget?.GetType() ?? invocation.TargetType;
+        var targetMethod = invocation.MethodInvocationTarget
+            ?? targetType?.GetMethod(
+                invocation.Method.Name,
+                invocation.Method.GetParameters().Select(parameter => parameter.ParameterType).ToArray());
+
+        if (targetMethod?.GetCustomAttribute<TransactionalAttribute>(inherit: true) is not null)
+            return true;
+
+        // Attribute kullanan servislerde yalnız işaretli metotlar transaction'a girer.
+        // Attribute kullanmayan ve interceptor'a doğrudan bağlanan eski proxy'lerde ise
+        // geriye dönük olarak tüm metotlar transaction davranışını korur.
+        var hasSelectiveTransactionMethods = targetType?
+            .GetMethods(BindingFlags.Instance | BindingFlags.Public)
+            .Any(method => method.GetCustomAttribute<TransactionalAttribute>(inherit: true) is not null) == true;
+
+        return !hasSelectiveTransactionMethods;
+    }
+
+    private static Task GetTask(IInvocation invocation)
+        => invocation.ReturnValue as Task
+           ?? throw new InvalidOperationException(
+               $"{invocation.TargetType?.Name}.{invocation.Method.Name} Task döndürmedi.");
+
+    private static Task<TResult> GetTask<TResult>(IInvocation invocation)
+        => invocation.ReturnValue as Task<TResult>
+           ?? throw new InvalidOperationException(
+               $"{invocation.TargetType?.Name}.{invocation.Method.Name} Task<{typeof(TResult).Name}> döndürmedi.");
 }

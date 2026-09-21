@@ -1,5 +1,8 @@
 namespace KiraTakip.Domain.Auditing;
 
+[AttributeUsage(AttributeTargets.Class, Inherited = true)]
+public sealed class AuditExcludeAttribute : Attribute { }
+
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class AuditIgnoreAttribute : Attribute { }
 

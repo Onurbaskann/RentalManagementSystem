@@ -1,20 +1,52 @@
+using KiraTakip.Auditing;
+using KiraTakip.Common;
+using KiraTakip.Services.Interfaces.Documents;
+using KiraTakip.Services.Interfaces.Identity;
 using KiraTakip.Web.Authorization;
 using KiraTakip.Web.Context;
 using KiraTakip.Web.Filters;
 using KiraTakip.Web.HostedServices;
+using KiraTakip.Web.Hosting;
 using KiraTakip.Web.Identity;
 using KiraTakip.Web.ModelBinding;
 using KiraTakip.Web.Rendering;
-using KiraTakip.Services.Interfaces.Documents;
-using KiraTakip.Services.Interfaces.Identity;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.HttpOverrides;
+using System.Net;
 
 namespace KiraTakip.Web.DependencyInjection
 {
     public static class WebModule
     {
-        public static IServiceCollection AddWebModule(this IServiceCollection services)
+        public static IServiceCollection AddWebModule(
+            this IServiceCollection services,
+            IConfiguration? configuration = null)
         {
+            var reverseProxySection = configuration?.GetSection(ReverseProxySettings.SectionName);
+            var reverseProxySettings = reverseProxySection?.Get<ReverseProxySettings>()
+                ?? new ReverseProxySettings();
+
+            services.AddOptions<ReverseProxySettings>()
+                .Bind(reverseProxySection ?? new ConfigurationBuilder().Build().GetSection(ReverseProxySettings.SectionName))
+                .Validate(settings => settings.ForwardLimit is >= 1 and <= 10,
+                    "ReverseProxy:ForwardLimit 1 ile 10 arasında olmalıdır.")
+                .Validate(settings => settings.KnownProxies.All(value => IPAddress.TryParse(value, out _)),
+                    "ReverseProxy:KnownProxies yalnızca geçerli IP adresleri içermelidir.")
+                .ValidateOnStart();
+
+            if (reverseProxySettings.Enabled)
+            {
+                services.Configure<ForwardedHeadersOptions>(options =>
+                {
+                    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                    options.ForwardLimit = reverseProxySettings.ForwardLimit;
+                    foreach (var proxy in reverseProxySettings.KnownProxies)
+                    {
+                        if (IPAddress.TryParse(proxy, out var address))
+                            options.KnownProxies.Add(address);
+                    }
+                });
+            }
+
             services.AddControllersWithViews(options =>
             {
                 options.Filters.AddService<YetkiKapsamiActionFilter>();
@@ -38,7 +70,8 @@ namespace KiraTakip.Web.DependencyInjection
             });
 
             services.AddHttpContextAccessor();
-            services.AddScoped<KiraTakip.Common.IRequestContext, HttpRequestContext>();
+            services.AddScoped<IRequestContext, HttpRequestContext>();
+            services.AddScoped<IAuditContext, HttpRequestContext>();
             services.AddScoped<ICurrentUserContext, CurrentUserContext>();
             services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
             services.AddScoped<YetkiKapsamiActionFilter>();

@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using KiraTakip.Application.DependencyInjection;
+using KiraTakip.Auditing;
 using KiraTakip.Common;
 using KiraTakip.Infrastructure.DependencyInjection;
 using KiraTakip.Infrastructure.Identity;
@@ -129,6 +130,7 @@ public class DependencyInjectionArchitectureTests
     [InlineData(typeof(ICurrentUserContext), typeof(CurrentUserContext), ServiceLifetime.Scoped)]
     [InlineData(typeof(IRazorViewToStringRenderer), typeof(RazorViewToStringRenderer), ServiceLifetime.Scoped)]
     [InlineData(typeof(IRequestContext), typeof(HttpRequestContext), ServiceLifetime.Scoped)]
+    [InlineData(typeof(IAuditContext), typeof(HttpRequestContext), ServiceLifetime.Scoped)]
     public void AddWebModule_ShouldRegisterWebServicesWithCorrectLifetime(
         Type serviceType, Type implementationType, ServiceLifetime expectedLifetime)
     {

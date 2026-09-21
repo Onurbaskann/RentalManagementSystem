@@ -98,6 +98,43 @@ public sealed class GenericRepositoryKeySqlTests : IDisposable
         Assert.Null(documentContent);
         Assert.Null(documentId);
     }
+
+    [Fact]
+    public async Task AuditUserLookup_ShouldIncludeSoftDeletedUsers()
+    {
+        var suffix = Guid.NewGuid().ToString("N");
+        var email = $"audit-deleted-{suffix}@example.test";
+        var normalizedEmail = email.ToUpperInvariant();
+        var user = new ApplicationUser
+        {
+            Id = Guid.NewGuid().ToString(),
+            UserName = email,
+            NormalizedUserName = normalizedEmail,
+            Email = email,
+            NormalizedEmail = normalizedEmail,
+            AdSoyad = "Silinmiş Audit Kullanıcısı",
+            IsDeleted = true
+        };
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        try
+        {
+            var repository = new ApplicationUserRepository(_context);
+
+            var foundId = await repository.FindIdByNormalizedEmailForAuditAsync(normalizedEmail);
+            var displayNames = await repository.GetDisplayNamesAsync([user.Id]);
+
+            Assert.Equal(user.Id, foundId);
+            Assert.Equal(user.AdSoyad, displayNames[user.Id]);
+        }
+        finally
+        {
+            await _context.Users.IgnoreQueryFilters()
+                .Where(item => item.Id == user.Id)
+                .ExecuteDeleteAsync();
+        }
+    }
 }
 
 internal sealed class GuidTestEntity : BaseEntity<Guid>

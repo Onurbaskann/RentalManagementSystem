@@ -1,9 +1,11 @@
 using KiraTakip.Models.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
+using KiraTakip.Domain.Auditing;
 
 namespace KiraTakip.Models.Entities;
 
 [Table("SozlesmeIncelemeGecmisleri")]
+[AuditExclude]
 public class LeaseReviewHistory : BaseEntity
 {
     [Column("SozlesmeId")]

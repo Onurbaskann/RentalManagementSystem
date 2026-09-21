@@ -1,14 +1,36 @@
+using KiraTakip.Auditing;
 using KiraTakip.Common;
-using Microsoft.AspNetCore.Http;
-using System.Security.Claims;
+using KiraTakip.Models.Enums;
+using KiraTakip.Services.Interfaces.Identity;
+using KiraTakip.Web.Identity;
 
 namespace KiraTakip.Web.Context;
 
-public class HttpRequestContext(IHttpContextAccessor httpContextAccessor) : IRequestContext
+public class HttpRequestContext(
+    IHttpContextAccessor httpContextAccessor,
+    ICurrentUserContext currentUserContext) : IRequestContext, IAuditContext
 {
-    public string? UserId => httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+    public HttpRequestContext(IHttpContextAccessor httpContextAccessor)
+        : this(httpContextAccessor, new CurrentUserContext(httpContextAccessor))
+    {
+    }
 
-    public string? IpAddress => httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString();
+    public string? UserId => currentUserContext.UserId;
+
+    public UserType? UserType => currentUserContext.UserType;
+
+    public int? TenantId => currentUserContext.TenantId;
+
+    public string? IpAddress
+    {
+        get
+        {
+            var address = httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress;
+            if (address?.IsIPv4MappedToIPv6 == true)
+                address = address.MapToIPv4();
+            return address?.ToString();
+        }
+    }
 
     public string? UserAgent => httpContextAccessor.HttpContext?.Request?.Headers.UserAgent.ToString();
 

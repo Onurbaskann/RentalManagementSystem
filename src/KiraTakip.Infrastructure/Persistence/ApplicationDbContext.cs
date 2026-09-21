@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using System.Security.Claims;
+using KiraTakip.Domain.Auditing;
 
 namespace KiraTakip.Data;
 
@@ -12,7 +13,51 @@ public class ApplicationDbContext(
     IHttpContextAccessor httpContextAccessor,
     ICurrentUserContext currentUser) : IdentityUserContext<ApplicationUser>(options)
 {
-    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        PrepareTrackedEntities();
+
+        if (!RequiresGeneratedAuditIdTransaction())
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+
+        using var transaction = Database.BeginTransaction();
+        try
+        {
+            var result = base.SaveChanges(acceptAllChangesOnSuccess);
+            transaction.Commit();
+            return result;
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
+    public override async Task<int> SaveChangesAsync(
+        bool acceptAllChangesOnSuccess,
+        CancellationToken cancellationToken = default)
+    {
+        PrepareTrackedEntities();
+
+        if (!RequiresGeneratedAuditIdTransaction())
+            return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+
+        await using var transaction = await Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return result;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
+    private void PrepareTrackedEntities()
     {
         var userId = httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
         var now = DateTime.UtcNow;
@@ -40,8 +85,19 @@ public class ApplicationDbContext(
                 throw new InvalidOperationException("Bir Süper Admin aynı zamanda bir kiracıya ait olamaz!");
             }
         }
+    }
 
-        return await base.SaveChangesAsync(cancellationToken);
+    private bool RequiresGeneratedAuditIdTransaction()
+    {
+        if (Database.CurrentTransaction is not null)
+            return false;
+
+        return ChangeTracker.Entries<IAuditable>()
+            .Where(entry => entry.State == EntityState.Added)
+            .Where(entry => entry.Metadata.ClrType
+                .GetCustomAttributes(typeof(AuditExcludeAttribute), inherit: true).Length == 0)
+            .SelectMany(entry => entry.Properties)
+            .Any(property => property.Metadata.IsPrimaryKey() && property.IsTemporary);
     }
 
     public DbSet<Property> Properties { get; set; }

@@ -1,7 +1,7 @@
 using KiraTakip.Models.Dtos;
-using KiraTakip.Repositories.Interfaces.Common;
 using KiraTakip.Models.Dtos.AdminUser;
 using KiraTakip.Models.Dtos.TenantUser;
+using KiraTakip.Repositories.Interfaces.Common;
 
 namespace KiraTakip.Repositories.Interfaces.Identity;
 
@@ -24,5 +24,6 @@ public interface IApplicationUserRepository : IRepository<ApplicationUser, strin
         int? excludedRoleId = null,
         CancellationToken ct = default);
     Task<Dictionary<string, string?>> GetDisplayNamesAsync(IReadOnlyCollection<string> userIds, CancellationToken ct = default);
+    Task<string?> FindIdByNormalizedEmailForAuditAsync(string normalizedEmail, CancellationToken ct = default);
     Task<List<ApplicationUser>> GetByIdsAsync(IReadOnlyCollection<string> userIds, CancellationToken ct = default);
 }

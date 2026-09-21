@@ -1,4 +1,4 @@
-using KiraTakip.Models.Common;
+using KiraTakip.Models.Enums;
 
 namespace KiraTakip.Models.Dtos.AuditLog;
 
@@ -17,7 +17,10 @@ public class RowResult
     public string? EntityType { get; set; }
     public string? EntityId { get; set; }
     public string? UserFullName { get; set; }
+    public UserType? UserType { get; set; }
+    public int? TenantId { get; set; }
     public string? IpAddress { get; set; }
+    public string? UserAgent { get; set; }
     public string? Details { get; set; }
     public DateTime CreatedAt { get; set; }
 }

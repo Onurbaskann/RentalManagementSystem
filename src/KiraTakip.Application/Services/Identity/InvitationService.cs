@@ -1,4 +1,5 @@
 using KiraTakip.Data;
+using KiraTakip.Auditing;
 using KiraTakip.Domain.Identity;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Infrastructure.Transactions;
@@ -29,7 +30,7 @@ public class InvitationService(
     IUserRoleService userRoleService,
     IPermissionScopeCache permissionScopeCache,
     IOperationalPolicyProvider operationalPolicyProvider,
-    ILogger<InvitationService> logger) : IInvitationService, ITransactionalService
+    ILogger<InvitationService> logger) : IInvitationService
 {
     private const string Purpose = "invite";
 
@@ -56,17 +57,22 @@ public class InvitationService(
             Status = InvitationStatus.Pending,
         };
 
-        await invitationRepository.AddAsync(invitation);
-        await unitOfWork.SaveChangesAsync(ct);
+        var tokenResult = await unitOfWork.ExecuteInTransactionAsync(async transactionCt =>
+        {
+            await invitationRepository.AddAsync(invitation);
+            await unitOfWork.SaveChangesAsync(transactionCt);
 
-        var tokenResult = tokenService.Generate(invitation.Id.ToString(), Purpose, ttl);
-        invitation.TokenHash = tokenResult.TokenHash;
-        invitation.ExpiresAt = tokenResult.ExpiresAt;
-        await unitOfWork.SaveChangesAsync(ct);
+            var generatedToken = tokenService.Generate(invitation.Id.ToString(), Purpose, ttl);
+            invitation.TokenHash = generatedToken.TokenHash;
+            invitation.ExpiresAt = generatedToken.ExpiresAt;
+            await unitOfWork.SaveChangesAsync(transactionCt);
+            return generatedToken;
+        }, ct);
 
         await SendEmailAsync(invitation, tokenResult.RawToken, ct);
 
-        await auditService.LogAsync("Invite.Sent", "Invitation", invitation.Id.ToString(), input.Email);
+        await auditService.LogAsync(AuditEventTypes.InviteSent, AuditEntityTypes.Invitation, invitation.Id.ToString(),
+            AuditDetails.Serialize(new { email = input.Email }));
         return invitation;
     }
 
@@ -100,6 +106,7 @@ public class InvitationService(
         return (true, null, invitation);
     }
 
+    [Transactional]
     public async Task<ApplicationUser> AcceptAsync(Invitation invitation, AcceptInput input, CancellationToken ct = default)
     {
         var role = Guard.NotFound(
@@ -189,10 +196,12 @@ public class InvitationService(
         await unitOfWork.SaveChangesAsync(ct);
         permissionScopeCache.Invalidate(user.Id);
 
-        await auditService.LogAsync("Invite.Accepted", "Invitation", invitation.Id.ToString(), user.Id);
+        await auditService.LogAsync(AuditEventTypes.InviteAccepted, AuditEntityTypes.Invitation, invitation.Id.ToString(),
+            AuditDetails.Serialize(new { userId = user.Id }));
         return user;
     }
 
+    [Transactional]
     public async Task CancelAsync(int invitationId, CancellationToken ct = default)
     {
         var invitation = Guard.NotFound(
@@ -206,7 +215,7 @@ public class InvitationService(
         invitation.Status = InvitationStatus.Cancelled;
 
         await unitOfWork.SaveChangesAsync(ct);
-        await auditService.LogAsync("Invite.Cancelled", "Invitation", invitationId.ToString());
+        await auditService.LogAsync(AuditEventTypes.InviteCancelled, AuditEntityTypes.Invitation, invitationId.ToString());
     }
 
     public async Task ResendAsync(int invitationId, string invitedByUserId, CancellationToken ct = default)
@@ -243,7 +252,8 @@ public class InvitationService(
         await unitOfWork.SaveChangesAsync(ct);
 
         await SendEmailAsync(invitation, tokenResult.RawToken, ct);
-        await auditService.LogAsync("Invite.Resent", "Invitation", invitationId.ToString(), invitation.Email);
+        await auditService.LogAsync(AuditEventTypes.InviteResent, AuditEntityTypes.Invitation, invitationId.ToString(),
+            AuditDetails.Serialize(new { email = invitation.Email }));
     }
 
     public async Task<List<Invitation>> GetPendingAsync(CancellationToken ct = default)

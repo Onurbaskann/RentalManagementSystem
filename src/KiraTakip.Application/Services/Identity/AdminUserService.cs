@@ -1,4 +1,6 @@
 using KiraTakip.Data;
+using KiraTakip.Auditing;
+using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.Invitation;
@@ -133,6 +135,7 @@ public class AdminUserService(
             await GetFormOptionsAsync());
     }
 
+    [Transactional]
     public async Task UpdateAsync(UpdateAdminUserInput input)
     {
         var user = await userManager.FindByIdAsync(input.UserId);
@@ -167,6 +170,7 @@ public class AdminUserService(
         await SetScopeAsync(user.Id, propertyScopeIds, unitScopeIds);
     }
 
+    [Transactional]
     public async Task ToggleActiveAsync(ToggleAdminUserActiveInput input)
     {
         var user = await userManager.FindByIdAsync(input.UserId);
@@ -183,8 +187,9 @@ public class AdminUserService(
         await userManager.UpdateAsync(user);
         await userManager.UpdateSecurityStampAsync(user);
 
-        var eventType = user.IsActive ? "User.Activated" : "User.Deactivated";
-        await auditService.LogAsync(eventType, "ApplicationUser", user.Id, user.Email);
+        var eventType = user.IsActive ? AuditEventTypes.UserActivated : AuditEventTypes.UserDeactivated;
+        await auditService.LogAsync(eventType, AuditEntityTypes.ApplicationUser, user.Id,
+            AuditDetails.Serialize(new { email = user.Email }));
     }
 
     public async Task SendInvitationAsync(SendAdminUserInvitationInput input)
@@ -274,12 +279,13 @@ public class AdminUserService(
 
         scopeCache.Invalidate(userId);
 
-        var parts = new List<string>();
-        if (propertyIds.Count > 0) parts.Add($"{propertyIds.Count} taşınmaz");
-        if (unitIds.Count > 0) parts.Add($"{unitIds.Count} birim");
+        var details = AuditDetails.Serialize(new
+        {
+            propertyCount = propertyIds.Count,
+            unitCount = unitIds.Count,
+            cleared = propertyIds.Count == 0 && unitIds.Count == 0
+        });
 
-        var detail = parts.Count > 0 ? $"Kapsam: {string.Join(", ", parts)}" : "Kapsam temizlendi";
-
-        await auditService.LogAsync("User.ScopeChanged", "ApplicationUser", userId, detail);
+        await auditService.LogAsync(AuditEventTypes.UserScopeChanged, AuditEntityTypes.ApplicationUser, userId, details);
     }
 }

@@ -1,5 +1,6 @@
 using Castle.DynamicProxy;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace KiraTakip.Infrastructure.Transactions;
 
@@ -9,8 +10,9 @@ public static class TransactionalServiceCollectionExtensions
 
     /// <summary>
     /// Daha önce register edilmiş tüm interface→implementation eşleşmelerini tarar;
-    /// implementation tipi <see cref="ITransactionalService"/> implement ediyorsa
-    /// orijinal kaydı çıkartıp yerine Castle DynamicProxy ile sarmalanmış bir versiyon koyar.
+    /// implementation tipi <see cref="ITransactionalService"/> implement ediyorsa veya
+    /// en az bir public metodu <see cref="TransactionalAttribute"/> taşıyorsa orijinal
+    /// kaydı çıkartıp yerine Castle DynamicProxy ile sarmalanmış bir versiyon koyar.
     ///
     /// Bu metot Program.cs içinde TÜM servis register'larından SONRA çağrılmalıdır.
     /// </summary>
@@ -21,7 +23,8 @@ public static class TransactionalServiceCollectionExtensions
         var transactional = services
             .Where(d => d.ServiceType.IsInterface
                      && d.ImplementationType != null
-                     && typeof(ITransactionalService).IsAssignableFrom(d.ImplementationType))
+                     && (typeof(ITransactionalService).IsAssignableFrom(d.ImplementationType)
+                         || HasTransactionalMethod(d.ImplementationType)))
             .ToList();
 
         foreach (var descriptor in transactional)
@@ -51,4 +54,9 @@ public static class TransactionalServiceCollectionExtensions
 
         return services;
     }
+
+    private static bool HasTransactionalMethod(Type implementationType)
+        => implementationType
+            .GetMethods(BindingFlags.Instance | BindingFlags.Public)
+            .Any(method => method.GetCustomAttribute<TransactionalAttribute>(inherit: true) is not null);
 }

@@ -1,5 +1,6 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
+using KiraTakip.Auditing;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models.Dtos;
@@ -84,7 +85,8 @@ public class RoleService(
         };
         await roleRepository.AddAsync(rol);
         await uow.SaveChangesAsync();
-        await auditService.LogAsync("Role.Created", "Role", rol.Id.ToString(), input.Name);
+        await auditService.LogAsync(AuditEventTypes.RoleCreated, AuditEntityTypes.Role, rol.Id.ToString(),
+            AuditDetails.Serialize(new { name = input.Name }));
 
         return rol;
     }
@@ -120,7 +122,8 @@ public class RoleService(
         rol.Description = input.Description;
 
         await uow.SaveChangesAsync();
-        await auditService.LogAsync("Role.Updated", "Role", input.Id.ToString(), rol.Name);
+        await auditService.LogAsync(AuditEventTypes.RoleUpdated, AuditEntityTypes.Role, input.Id.ToString(),
+            AuditDetails.Serialize(new { name = rol.Name }));
     }
 
     public async Task DeleteRoleAsync(DeleteRoleInput input)
@@ -140,7 +143,8 @@ public class RoleService(
 
         await roleRepository.DeleteAsync(input.Id);
         await uow.SaveChangesAsync();
-        await auditService.LogAsync("Role.Deleted", "Role", input.Id.ToString(), rol.Name);
+        await auditService.LogAsync(AuditEventTypes.RoleDeleted, AuditEntityTypes.Role, input.Id.ToString(),
+            AuditDetails.Serialize(new { name = rol.Name }));
     }
 
     public Task<List<string>> GetRolePermissionsAsync(GetRolePermissionsInput input)
@@ -174,7 +178,8 @@ public class RoleService(
         permissionCacheInvalidator.InvalidateManyAfterCommit(affectedUserIds);
         await securityService.UpdateStampForRoleUsersAsync(input.RoleId);
 
-        await auditService.LogAsync("Role.Permission.Changed", "Role", input.RoleId.ToString(), input.UpdatedBy);
+        await auditService.LogAsync(AuditEventTypes.RolePermissionChanged, AuditEntityTypes.Role, input.RoleId.ToString(),
+            AuditDetails.Serialize(new { updatedBy = input.UpdatedBy }));
     }
 
     public Task<List<RoleListItemDto>> GetTenantRolesWithDetailsAsync(
@@ -220,7 +225,8 @@ public class RoleService(
         await ReplaceRolePermissionsAsync(role.Id, input.SelectedPermissions);
         await uow.SaveChangesAsync();
 
-        await auditService.LogAsync("Role.Created", "Role", role.Id.ToString(), input.Name);
+        await auditService.LogAsync(AuditEventTypes.RoleCreated, AuditEntityTypes.Role, role.Id.ToString(),
+            AuditDetails.Serialize(new { name = input.Name }));
     }
 
     public async Task UpdateTenantRoleAsync(UpdateTenantRoleInput input)
@@ -258,7 +264,8 @@ public class RoleService(
         await uow.SaveChangesAsync();
         permissionCacheInvalidator.InvalidateManyAfterCommit(affectedUserIds);
         await securityService.UpdateStampForRoleUsersAsync(input.Id);
-        await auditService.LogAsync("Role.Updated", "Role", input.Id.ToString(), role.Name);
+        await auditService.LogAsync(AuditEventTypes.RoleUpdated, AuditEntityTypes.Role, input.Id.ToString(),
+            AuditDetails.Serialize(new { name = role.Name }));
     }
 
     public async Task DeleteTenantRoleAsync(DeleteTenantRoleInput input)
@@ -285,7 +292,8 @@ public class RoleService(
 
         await roleRepository.DeleteAsync(input.Id);
         await uow.SaveChangesAsync();
-        await auditService.LogAsync("Role.Deleted", "Role", input.Id.ToString(), role.Name);
+        await auditService.LogAsync(AuditEventTypes.RoleDeleted, AuditEntityTypes.Role, input.Id.ToString(),
+            AuditDetails.Serialize(new { name = role.Name }));
     }
 
     private static void EnsureValidTenantPermissions(IReadOnlyCollection<string> permissions)

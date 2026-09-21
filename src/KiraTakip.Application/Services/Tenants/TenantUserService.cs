@@ -1,5 +1,6 @@
 using KiraTakip.Authorization;
 using KiraTakip.Data;
+using KiraTakip.Auditing;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models.Dtos;
@@ -106,10 +107,10 @@ public class TenantUserService(
         await userSecurityService.UpdateStampAsync(user.Id);
         permissionScopeCache.Invalidate(user.Id);
         await auditService.LogAsync(
-            user.IsActive ? "User.Activated" : "User.Deactivated",
-            "ApplicationUser",
+            user.IsActive ? AuditEventTypes.UserActivated : AuditEventTypes.UserDeactivated,
+            AuditEntityTypes.ApplicationUser,
             user.Id,
-            user.Email);
+            AuditDetails.Serialize(new { email = user.Email }));
     }
 
     public async Task CancelInvitationAsync(CancelTenantInvitationInput input)
@@ -371,10 +372,10 @@ public class TenantUserService(
         {
             permissionCacheInvalidator.InvalidateAfterCommit(user.Id);
             await auditService.LogAsync(
-                "User.RoleChanged",
-                "ApplicationUser",
+                AuditEventTypes.UserRoleChanged,
+                AuditEntityTypes.ApplicationUser,
                 user.Id,
-                $"KiraciId:{input.TenantId}");
+                AuditDetails.Serialize(new { tenantId = input.TenantId }));
         }
 
         await userSecurityService.UpdateStampAsync(user.Id);
@@ -384,10 +385,15 @@ public class TenantUserService(
             || !previousUnitIds.Order().SequenceEqual(selectedUnitIds.Order()))
         {
             await auditService.LogAsync(
-                "User.ScopeChanged",
-                "ApplicationUser",
+                AuditEventTypes.UserScopeChanged,
+                AuditEntityTypes.ApplicationUser,
                 user.Id,
-                $"KiraciId:{input.TenantId};TumBirimler:{input.HasAccessToAllUnits};BirimSayisi:{selectedUnitIds.Count}");
+                AuditDetails.Serialize(new
+                {
+                    tenantId = input.TenantId,
+                    hasAccessToAllUnits = input.HasAccessToAllUnits,
+                    unitCount = selectedUnitIds.Count
+                }));
         }
     }
 

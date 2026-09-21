@@ -1,6 +1,5 @@
 using KiraTakip.Application.DependencyInjection;
 using KiraTakip.Infrastructure.DependencyInjection;
-using KiraTakip.Infrastructure.Hashids;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Web.DependencyInjection;
 using KiraTakip.Web.Hosting;
@@ -13,7 +12,7 @@ builder.Services.AddIdentityModule();
 builder.Services.AddRepositoryModule();
 builder.Services.AddApplicationModule();
 builder.Services.AddValidationModule();
-builder.Services.AddWebModule();
+builder.Services.AddWebModule(builder.Configuration);
 
 // ITransactionalService implement eden tüm servisleri otomatik transaction proxy ile sar.
 // Bu çağrı TÜM AddScoped/AddTransient/AddSingleton register'larından SONRA olmalıdır.
@@ -22,6 +21,10 @@ builder.Services.AddTransactionalProxies();
 var app = builder.Build();
 
 HashidsExtensions.Configure(app.Services);
+
+if (app.Configuration.GetValue<bool>($"{ReverseProxySettings.SectionName}:Enabled"))
+    app.UseForwardedHeaders();
+
 app.UseTurkishCulture();
 
 // Production: teknik detaylar gizlenir, kullanıcı dostu hata sayfası gösterilir.

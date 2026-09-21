@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using KiraTakip.Common;
+using KiraTakip.Authorization;
+using KiraTakip.Models.Enums;
 using KiraTakip.Web.Context;
 using KiraTakip.Models.Entities;
 using KiraTakip.Services.Interfaces.Identity;
@@ -38,6 +40,8 @@ public class ApplicationUserManagerAdapterTests
         var context = new HttpRequestContext(accessor);
 
         Assert.Null(context.UserId);
+        Assert.Null(context.UserType);
+        Assert.Null(context.TenantId);
         Assert.Null(context.IpAddress);
         Assert.Null(context.UserAgent);
         Assert.Null(context.BaseUrl);
@@ -48,8 +52,10 @@ public class ApplicationUserManagerAdapterTests
     {
         var httpContext = new DefaultHttpContext();
         httpContext.User = new ClaimsPrincipal(new ClaimsIdentity([
-            new Claim(ClaimTypes.NameIdentifier, "user-123")
-        ]));
+            new Claim(ClaimTypes.NameIdentifier, "user-123"),
+            new Claim(AppClaimTypes.UserType, ((int)UserType.Tenant).ToString()),
+            new Claim(AppClaimTypes.TenantId, "42")
+        ], "Test"));
         httpContext.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("127.0.0.1");
         httpContext.Request.Headers.UserAgent = "TestAgent/1.0";
         httpContext.Request.Scheme = "https";
@@ -59,6 +65,8 @@ public class ApplicationUserManagerAdapterTests
         var context = new HttpRequestContext(accessor);
 
         Assert.Equal("user-123", context.UserId);
+        Assert.Equal(UserType.Tenant, context.UserType);
+        Assert.Equal(42, context.TenantId);
         Assert.Equal("127.0.0.1", context.IpAddress);
         Assert.Equal("TestAgent/1.0", context.UserAgent);
         Assert.Equal("https://example.com", context.BaseUrl);
