@@ -5,6 +5,7 @@ namespace KiraTakip.Models.Dtos;
 public class PaymentDetailDto
 {
     public int Id { get; set; }
+    public string PaymentNo { get; set; } = string.Empty;
     public int ChargeId { get; set; }
     public int ChargeLineItemId { get; set; }
     public string ChargeLineItemDescription { get; set; } = string.Empty;

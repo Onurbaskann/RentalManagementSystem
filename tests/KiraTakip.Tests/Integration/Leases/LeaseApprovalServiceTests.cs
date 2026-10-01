@@ -528,6 +528,7 @@ public class LeaseApprovalServiceTests : IDisposable
         var lease = await CreateDraftAsync(seed);
         _context.Charges.Add(new Charge
         {
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = seed.TenantId,
             UnitId = seed.UnitId,
             LeaseId = lease.Id,
@@ -680,6 +681,12 @@ public class LeaseApprovalServiceTests : IDisposable
             leaseRepository,
             new UnitRepository(_context),
             new TenantRepository(_context));
+        var batchRateResolver = new BatchRateResolver(
+            rateRepository,
+            new UnitRateRepository(_context),
+            new PropertyRateOverrideRepository(_context),
+            new RateScheduleRepository(_context),
+            leaseRepository);
         var chargeGeneration = new ChargeGenerationService(
             new ChargeRepository(_context),
             chargeTypeRepository,
@@ -700,6 +707,7 @@ public class LeaseApprovalServiceTests : IDisposable
             new StatisticsService(
                 chargeTypeRepository,
                 rateResolver,
+                batchRateResolver,
                 new TestOperationalPolicyProvider()),
             new LeaseReviewHistoryRepository(_context),
             new DocumentRepository(_context),

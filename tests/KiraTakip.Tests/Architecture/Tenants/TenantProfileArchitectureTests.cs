@@ -81,6 +81,7 @@ public class TenantProfileArchitectureTests : IDisposable
         return new(new TenantRepository(context),
                    null!,
                    null!,
+                   null!,
                    null!);
     }
 

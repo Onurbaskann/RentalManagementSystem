@@ -13,6 +13,9 @@ public class Lease : BaseEntity
     [Column("KiraciId")]
     public int TenantId { get; set; }
 
+    [Column("SozlesmeNo")]
+    public string LeaseNo { get; set; } = string.Empty;
+
     [Column("Durum")]
     public LeaseStatus Status { get; set; } = LeaseStatus.Active;
 

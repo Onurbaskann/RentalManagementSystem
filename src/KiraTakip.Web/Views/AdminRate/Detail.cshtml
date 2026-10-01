@@ -40,13 +40,13 @@
                 <table class="min-w-[700px] border-collapse w-full">
                     <thead>
                         <tr>
-                            <th class="p-4 text-left bg-slate-50 border-b border-[var(--color-border)] min-w-[160px] text-xs font-bold text-muted uppercase tracking-wider">
+                            <th class="p-4 text-left bg-slate-50 border-b border-[var(--color-border)] min-w-[160px] text-xs font-bold text-muted">
                                 Kiracı Kategorisi
                             </th>
                             @foreach (var kolon in Model.Columns)
                             {
                                 <th class="p-[10px_12px] text-center bg-slate-50 border-b border-[var(--color-border)] min-w-[200px]">
-                                    <div class="text-[10px] color-muted font-bold uppercase tracking-wider mb-0.5">@kolon.ChargeTypeCode</div>
+                                    <div class="text-[10px] color-muted font-bold mb-0.5">@kolon.ChargeTypeCode</div>
                                     <div class="text-[13px] font-bold text-slate-700">@kolon.ChargeTypeName</div>
                                 </th>
                             }
@@ -71,14 +71,14 @@
                                         <input type="hidden" name="Cells[@idx].ChargeTypeId" value="@hucre.ChargeTypeId" />
 
                                         <div class="mb-2">
-                                            <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">Birim Değer (₺)</label>
+                                            <label class="text-[10px] text-muted font-bold block mb-0.5">Birim Değer (₺)</label>
                                             <input type="number" name="@unitValueField"
                                                    value="@FieldValue(unitValueField, hucre.UnitValue.ToString("F2", System.Globalization.CultureInfo.InvariantCulture))"
                                                    class="form-control form-control-sm text-xs font-mono" step="0.01" />
                                             @Html.ValidationMessage(unitValueField, null, new { @class = "text-danger text-[11px] mt-1 block" })
                                         </div>
                                         <div class="mb-2">
-                                            <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">Yöntem</label>
+                                            <label class="text-[10px] text-muted font-bold block mb-0.5">Yöntem</label>
                                             <select name="@calculationMethodField" class="form-control form-control-sm text-xs">
                                                 @if (hucre.CalculationMethod == CalculationMethod.Fixed)
                                                 {
@@ -94,7 +94,7 @@
                                             @Html.ValidationMessage(calculationMethodField, null, new { @class = "text-danger text-[11px] mt-1 block" })
                                         </div>
                                         <div>
-                                            <label class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">KDV (%)</label>
+                                            <label class="text-[10px] text-muted font-bold block mb-0.5">KDV (%)</label>
                                             <input type="number" name="@kdvRateField"
                                                    value="@FieldValue(kdvRateField, hucre.KdvRate.ToString("F2", System.Globalization.CultureInfo.InvariantCulture))"
                                                    class="form-control form-control-sm text-xs font-mono" step="0.01" min="0" max="100" />
@@ -130,11 +130,11 @@
                 <table class="min-w-[700px] border-collapse w-full">
                     <thead>
                         <tr>
-                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted uppercase tracking-wider">Alan Türü</th>
-                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted uppercase tracking-wider w-[120px]">Ücretsiz Süre (dk)</th>
-                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted uppercase tracking-wider w-[120px]">Periyot (dk)</th>
-                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted uppercase tracking-wider w-[150px]">Periyot Ücreti (₺)</th>
-                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted uppercase tracking-wider w-[100px]">KDV (%)</th>
+                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted">Alan Türü</th>
+                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted w-[120px]">Ücretsiz Süre (dk)</th>
+                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted w-[120px]">Periyot (dk)</th>
+                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted w-[150px]">Periyot Ücreti (₺)</th>
+                            <th class="p-[12px_16px] text-left bg-slate-50 border-b border-[var(--color-border)] text-xs font-bold text-muted w-[100px]">KDV (%)</th>
                         </tr>
                     </thead>
                     <tbody>

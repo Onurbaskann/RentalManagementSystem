@@ -80,14 +80,17 @@
         <table class="w-full">
             <thead>
                 <tr>
+                    <th class="w-28">No</th>
                     <th class="w-28">Tarih</th>
                     <th>Kiracı</th>
+                    <th>Taşınmaz / Birim</th>
                     <th class="w-32">Dönem</th>
+                    <th class="w-28">Kalem Tipi</th>
                     <th class="w-32 num">Tutar</th>
                     <th class="w-24 cell-center">Kanal</th>
+                    <th class="w-28 cell-center">Kaynak</th>
                     <th class="w-32">Giren</th>
                     <th class="w-36">Durum</th>
-                    <th class="w-20"></th>
                 </tr>
             </thead>
             <tbody>
@@ -112,20 +115,34 @@
                         PaymentChannel.Cash => "Nakit",
                         _ => "Diğer"
                     };
-                    <tr>
+                    string sourceLabel = payment.PaymentSourceType switch
+                    {
+                        PaymentSourceType.BankMatch => "Banka Eşleştirme",
+                        PaymentSourceType.VirtualPos => "Sanal POS",
+                        _ => "Manuel"
+                    };
+                    <tr data-href="/Payment/Details/@payment.Id.ToHashId()"
+                        class="cursor-pointer hover:bg-slate-50 transition-colors"
+                        @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
+                        <td class="font-mono text-muted-sm">@payment.PaymentNo</td>
                         <td>@payment.PaymentDate.Tarih()</td>
                         <td class="font-semibold">@payment.TenantDisplayName</td>
+                        <td>
+                            @payment.PropertyName
+                            <span class="cell-sub">@payment.UnitName</span>
+                        </td>
                         <td class="text-muted">@payment.ChargePeriodStart.ToString("MMMM yyyy")</td>
+                        <td class="text-muted">@payment.ChargeTypeName</td>
                         <td class="num">@payment.Amount.Tl()</td>
                         <td class="cell-center">@channelLabel</td>
+                        <td class="cell-center text-muted">@sourceLabel</td>
                         <td class="text-muted truncate max-w-[120px]">@(payment.CreatedByUserDisplayName ?? "—")</td>
                         <td><span class="badge @statusClass">@statusLabel</span></td>
-                        <td class="text-right"><a href="/Payment/Details/@payment.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
                     </tr>
                 }
                 @if (Model.Total == 0)
                 {
-                    <tr><td colspan="8" class="text-center py-12 text-muted italic">Filtreye uygun ödeme kaydı bulunamadı.</td></tr>
+                    <tr><td colspan="11" class="text-center py-12 text-muted italic">Filtreye uygun ödeme kaydı bulunamadı.</td></tr>
                 }
             </tbody>
         </table>

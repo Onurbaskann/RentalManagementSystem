@@ -51,7 +51,7 @@ public class ReservationCreateViewModelValidator : IValidator<ReservationCreateV
             errors.Add(new ValidationError("Bitiş tarihi başlangıçtan sonra olmalıdır.", nameof(ReservationCreateViewModel.EndDate)));
 
         if (string.IsNullOrWhiteSpace(title) || title.Trim().Length > 200)
-            errors.Add(new ValidationError("Toplantı başlığı zorunlu ve en fazla 200 karakter olmalıdır.", nameof(ReservationCreateViewModel.Title)));
+            errors.Add(new ValidationError("Rezervasyon başlığı zorunlu ve en fazla 200 karakter olmalıdır.", nameof(ReservationCreateViewModel.Title)));
         if (description?.Length > 500)
             errors.Add(new ValidationError("Açıklama en fazla 500 karakter olabilir.", nameof(ReservationCreateViewModel.Description)));
         if (notes?.Length > 2000)

@@ -158,6 +158,7 @@ public class ManualChargeService(
 
         var charge = new Charge
         {
+            ChargeNo = await GenerateChargeNoAsync(),
             TenantId = input.TenantId,
             UnitId = input.UnitId,
             LeaseId = leaseId,
@@ -210,6 +211,20 @@ public class ManualChargeService(
             : $"{charge.CancellationNote} | İptal: {input.Reason}";
 
         await unitOfWork.SaveChangesAsync();
+    }
+
+    private async Task<string> GenerateChargeNoAsync()
+    {
+        var existingChargeNos = await chargeRepository.GetExistingChargeNosAsync();
+        var usedChargeNos = existingChargeNos.ToHashSet();
+
+        if (ChargeNumberPolicy.TryGenerateNextChargeNo(usedChargeNos, out var chargeNo))
+            return chargeNo;
+
+        throw new BusinessException(
+            "Tahakkuk No üretilemedi.",
+            ErrorType.Failure,
+            "Charge.NumberGenerationFailed");
     }
 
     private static bool IsOutsideScope(

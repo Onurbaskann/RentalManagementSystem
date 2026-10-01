@@ -5,6 +5,7 @@ namespace KiraTakip.Models.Dtos;
 public class PaymentCandidateDto
 {
     public int Id { get; set; }
+    public string PaymentNo { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     public DateTime PaymentDate { get; set; }
     public PaymentStatus Status { get; set; }

@@ -14,6 +14,7 @@ public sealed record LeaseReviewHistoryDto(
 public sealed class LeaseDraftEditDto
 {
     public int LeaseId { get; init; }
+    public string LeaseNo { get; init; } = string.Empty;
     public int UnitId { get; init; }
     public int TenantId { get; init; }
     public DateTime StartDate { get; init; }

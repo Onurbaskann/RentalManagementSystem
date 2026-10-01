@@ -36,6 +36,8 @@ public class ChargeGenerationService(
             "Yalnız aktif sözleşme için tahakkuk üretilebilir.",
             "Lease.NotActive");
 
+        var usedChargeNos = (await chargeRepository.GetExistingChargeNosAsync()).ToHashSet();
+
         foreach (var periodStartDate in ChargePeriodPolicy.GetMonthlyPeriodStarts(
             lease.StartDate,
             lease.EndDate))
@@ -86,8 +88,14 @@ public class ChargeGenerationService(
 
             var periodEnd = ChargePeriodPolicy.GetPeriodEnd(periodStartDate, lease.EndDate);
 
+            Guard.Against(
+                !ChargeNumberPolicy.TryGenerateNextChargeNo(usedChargeNos, out var chargeNo),
+                "Tahakkuk No üretilemedi.");
+            usedChargeNos.Add(chargeNo);
+
             var charge = new Charge
             {
+                ChargeNo = chargeNo,
                 TenantId = lease.TenantId,
                 UnitId = lease.UnitId,
                 LeaseId = input.LeaseId,

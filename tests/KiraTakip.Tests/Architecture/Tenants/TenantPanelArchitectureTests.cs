@@ -313,6 +313,7 @@ public class TenantPanelArchitectureTests : IDisposable
         var storeAccountId = await PaymentLineItemTestHelper.CreateStoreAccountAsync(_context);
         _context.PaymentAllocations.Add(new PaymentAllocation
         {
+            PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
             ChargeId = upcomingStaleStatusCharge.Id,
             ChargeLineItemId = upcomingLineItem.Id,
             StoreAccountId = storeAccountId,
@@ -339,6 +340,7 @@ public class TenantPanelArchitectureTests : IDisposable
         DateTime endDate)
         => new()
         {
+            LeaseNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = tenantId,
             UnitId = unitId,
             StartDate = startDate,
@@ -356,6 +358,7 @@ public class TenantPanelArchitectureTests : IDisposable
         ChargeStatus status)
         => new()
         {
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = tenantId,
             UnitId = unitId,
             LeaseId = leaseId,

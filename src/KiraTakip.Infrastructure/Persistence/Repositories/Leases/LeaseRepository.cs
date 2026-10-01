@@ -49,6 +49,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             .Select(s => new LeaseListItemDto
             {
                 Id = s.Id,
+                LeaseNo = s.LeaseNo,
                 TenantId = s.TenantId,
                 TenantDisplayName = s.Tenant.DisplayName,
                 TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Name : string.Empty,
@@ -115,6 +116,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             .Select(lease => new LeaseListItemDto
             {
                 Id = lease.Id,
+                LeaseNo = lease.LeaseNo,
                 TenantId = lease.TenantId,
                 TenantDisplayName = lease.Tenant.DisplayName,
                 TenantCategoryName = lease.Tenant.TenantCategory != null
@@ -160,7 +162,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             "feshedildi" => query.Where(lease => lease.Status == LeaseStatus.Terminated),
             "onaybekliyor" => query.Where(lease => lease.Status == LeaseStatus.Draft),
             "revizyon" => query.Where(lease => lease.Status == LeaseStatus.RevisionRequested),
-            _ => query
+            _ => query.Where(lease => lease.Status != LeaseStatus.Terminated)
         };
 
         if (!string.IsNullOrWhiteSpace(tableQuery.Q))
@@ -169,7 +171,8 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             query = query.Where(lease =>
                 EF.Functions.Like(lease.Tenant.Name, $"%{search}%")
                 || EF.Functions.Like(lease.Unit.Property.Name, $"%{search}%")
-                || EF.Functions.Like(lease.Unit.Name, $"%{search}%"));
+                || EF.Functions.Like(lease.Unit.Name, $"%{search}%")
+                || EF.Functions.Like(lease.LeaseNo, $"%{search}%"));
         }
 
         var itemsQuery = query
@@ -178,6 +181,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             .Select(lease => new LeaseListItemDto
             {
                 Id = lease.Id,
+                LeaseNo = lease.LeaseNo,
                 TenantId = lease.TenantId,
                 TenantDisplayName = lease.Tenant.DisplayName,
                 TenantCategoryName = lease.Tenant.TenantCategory != null ? lease.Tenant.TenantCategory.Name : string.Empty,
@@ -220,7 +224,8 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             var search = tableQuery.Q.Trim();
             query = query.Where(lease =>
                 EF.Functions.Like(lease.Unit.Name, $"%{search}%")
-                || EF.Functions.Like(lease.Unit.Property.Name, $"%{search}%"));
+                || EF.Functions.Like(lease.Unit.Property.Name, $"%{search}%")
+                || EF.Functions.Like(lease.LeaseNo, $"%{search}%"));
         }
 
         var itemsQuery = query
@@ -229,6 +234,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             .Select(lease => new LeaseListItemDto
             {
                 Id = lease.Id,
+                LeaseNo = lease.LeaseNo,
                 TenantId = lease.TenantId,
                 TenantDisplayName = lease.Tenant.DisplayName,
                 TenantCategoryName = lease.Tenant.TenantCategory != null
@@ -253,6 +259,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
         => query.Select(s => new LeaseDetailDto
         {
             Id = s.Id,
+            LeaseNo = s.LeaseNo,
             TenantId = s.TenantId,
             TenantDisplayName = s.Tenant.DisplayName,
             TenantPhone = s.Tenant.Phone,
@@ -335,6 +342,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             .Select(s => new LeaseListItemDto
             {
                 Id = s.Id,
+                LeaseNo = s.LeaseNo,
                 TenantId = s.TenantId,
                 TenantDisplayName = s.Tenant.DisplayName,
                 TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Name : string.Empty,
@@ -360,6 +368,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             .Select(s => new LeaseListItemDto
             {
                 Id = s.Id,
+                LeaseNo = s.LeaseNo,
                 TenantId = s.TenantId,
                 TenantDisplayName = s.Tenant.DisplayName,
                 TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Name : string.Empty,
@@ -400,6 +409,24 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
         return query.CountAsync();
     }
 
+    public Task<int> GetTerminatedCountAsync(
+        List<int>? authorizedPropertyIds,
+        List<int>? authorizedUnitIds = null)
+    {
+        var query = _dbSet.AsNoTracking().Where(lease => lease.Status == LeaseStatus.Terminated);
+
+        if (authorizedPropertyIds != null || authorizedUnitIds != null)
+        {
+            var propertyIds = authorizedPropertyIds ?? [];
+            var unitIds = authorizedUnitIds ?? [];
+            query = query.Where(lease =>
+                propertyIds.Contains(lease.Unit.PropertyId)
+                || unitIds.Contains(lease.UnitId));
+        }
+
+        return query.CountAsync();
+    }
+
     public async Task<List<Lease>> GetAktiflerAsync()
         => await _dbSet
             .Include(s => s.Tenant)
@@ -415,6 +442,17 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             .Select(s => new { s.Unit.PropertyId, s.Tenant.TenantCategoryId })
             .FirstOrDefaultAsync();
         return info == null ? null : (info.PropertyId, info.TenantCategoryId);
+    }
+
+    public async Task<Dictionary<int, (int PropertyId, int? TenantCategoryId)>> GetPropertyAndCategoriesAsync(
+        IReadOnlyCollection<int> leaseIds)
+    {
+        var rows = await _dbSet.AsNoTracking()
+            .Where(s => leaseIds.Contains(s.Id))
+            .Select(s => new { s.Id, s.Unit.PropertyId, s.Tenant.TenantCategoryId })
+            .ToListAsync();
+
+        return rows.ToDictionary(r => r.Id, r => (r.PropertyId, r.TenantCategoryId));
     }
 
     public async Task<List<LeaseDropdownDto>> GetActiveDropdownAsync(
@@ -502,6 +540,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
         var draft = await query.Select(lease => new LeaseDraftEditDto
         {
             LeaseId = lease.Id,
+            LeaseNo = lease.LeaseNo,
             UnitId = lease.UnitId,
             TenantId = lease.TenantId,
             StartDate = lease.StartDate,
@@ -626,6 +665,13 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
                 [context.PropertyId],
                 [context.UnitId]);
     }
+
+    public Task<List<string>> GetExistingLeaseNosAsync()
+        => _dbSet
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Select(lease => lease.LeaseNo)
+            .ToListAsync();
 
     private static IQueryable<Lease> ApplyScope(
         IQueryable<Lease> query,

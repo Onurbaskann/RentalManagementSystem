@@ -7,13 +7,6 @@
     double expiringPercentage = totalUnits > 0 ? (double)Model.ExpiringLeaseUnits / totalUnits * 100 : 0;
     double vacantPercentage = totalUnits > 0 ? (double)Model.VacantUnits / totalUnits * 100 : 0;
 
-    string deltaBadgeClass = Model.MonthlyRevenueChange > 0 ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-        : Model.MonthlyRevenueChange < 0 ? "bg-red-50 text-red-700 border-red-100"
-        : "bg-slate-50 text-slate-600 border-slate-100";
-    string deltaText = Model.MonthlyRevenueChange > 0 ? $"↑ %{Model.MonthlyRevenueChange:F1}"
-        : Model.MonthlyRevenueChange < 0 ? $"↓ %{Math.Abs(Model.MonthlyRevenueChange):F1}"
-        : "=";
-
     bool hasPropertyAccess = await PermissionService.HasModuleAccessAsync(PermissionCatalog.Property.Module);
     bool hasLeaseAccess = await PermissionService.HasModuleAccessAsync(PermissionCatalog.Lease.Module);
     bool hasPaymentAccess = await PermissionService.HasModuleAccessAsync(PermissionCatalog.Payment.Module);
@@ -26,215 +19,283 @@
         : nameParts.Length == 1 && nameParts[0].Length > 0
             ? nameParts[0][0].ToString().ToUpper(turkishCulture)
             : "?";
+
+    bool heroDanger = false;
+    string heroMessage;
+    if (hasChargeAccess && Model.OverdueChargeCount > 0)
+    {
+        heroDanger = true;
+        heroMessage = $"{Model.OverdueChargeCount} gecikmiş tahakkuk var ({Model.TotalOverdueAmount:N2} ₺)";
+    }
+    else if (hasPaymentAccess && Model.PendingPaymentApprovalCount > 0)
+    {
+        heroMessage = $"{Model.PendingPaymentApprovalCount} ödeme onay bekliyor";
+    }
+    else if (hasLeaseAccess && Model.RenewalsThisMonth > 0)
+    {
+        heroMessage = $"Bu ay {Model.RenewalsThisMonth} sözleşme yenilenmeli";
+    }
+    else
+    {
+        heroMessage = "Tüm akışlar güncel.";
+    }
+}
+
+@functions {
+    // Aylık Kira Geliri kartı — kaynak x zaman aralığı kombinasyonlarını JS objesine gömmek için.
+    string SerializeTrendRows(List<KiraTakip.Web.Models.ViewModels.DashboardMonthlyRevenueTrendRow> rows)
+    {
+        // rows en yeni ay üstte gelir (Model.RevenueTrend*'in genel kuralı) — grafikte soldan
+        // sağa kronolojik (en eski solda, en yeni sağda) gitmesi için ters çeviriyoruz.
+        var chronological = rows.AsEnumerable().Reverse().ToList();
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        var aylar = string.Join(",", chronological.Select(x => $"'{x.MonthLabel}'"));
+        var tahakkuk = string.Join(",", chronological.Select(x => x.Amount.ToString(culture)));
+        var tahsilat = string.Join(",", chronological.Select(x => x.CollectedAmount.ToString(culture)));
+        var oran = string.Join(",", chronological.Select(x => x.CollectionRatePercent.HasValue ? x.CollectionRatePercent.Value.ToString(culture) : "null"));
+        return $"{{ aylar: [{aylar}], tahakkuk: [{tahakkuk}], tahsilat: [{tahsilat}], oran: [{oran}] }}";
+    }
+
+    string SerializeTrendSet(KiraTakip.Web.Models.ViewModels.DashboardRevenueTrendSet set)
+        => $"{{ ay3: {SerializeTrendRows(set.Months3)}, ay6: {SerializeTrendRows(set.Months6)}, yil1: {SerializeTrendRows(set.Months12)} }}";
 }
 
 <!-- ─── §3.1 HERO BANNER ─── -->
-<div class="relative overflow-hidden rounded-3xl p-8 mb-6 bg-gradient-to-br from-[#1a6b5c] to-[#155549] text-white">
-    <svg class="absolute -right-10 -top-10 w-48 h-48 opacity-10" viewBox="0 0 200 200" fill="none">
+<div class="relative overflow-hidden rounded-3xl p-8 mb-6 bg-brand-gradient text-white">
+    <svg class="absolute -right-10 -top-10 w-48 h-48 opacity-10 pointer-events-none" viewBox="0 0 200 200" fill="none">
         <circle cx="100" cy="100" r="90" stroke="white" stroke-width="2"/>
         <circle cx="100" cy="100" r="60" stroke="white" stroke-width="2"/>
         <circle cx="100" cy="100" r="30" stroke="white" stroke-width="2"/>
     </svg>
 
-    <div class="max-w-xl">
-        <h1 class="text-2xl font-bold">Hoş geldiniz, @Model.UserName</h1>
-        <div class="text-sm text-white/80 mt-1">@Model.DateLabel</div>
-        <div class="text-xs text-white/70 mt-2">
-            @if (hasChargeAccess && Model.OverdueChargeCount > 0)
-            {
-                <span>⚠ @Model.OverdueChargeCount gecikmiş tahakkuk var (@Model.TotalOverdueAmount.ToString("N2") ₺)</span>
-            }
-            else if (hasPaymentAccess && Model.PendingPaymentApprovalCount > 0)
-            {
-                <span>@Model.PendingPaymentApprovalCount ödeme onay bekliyor</span>
-            }
-            else if (hasLeaseAccess && Model.RenewalsThisMonth > 0)
-            {
-                <span>Bu ay @Model.RenewalsThisMonth sözleşme yenilenmeli</span>
-            }
-            else
-            {
-                <span>Tüm akışlar güncel.</span>
-            }
+    <div class="flex flex-wrap items-center justify-between gap-6">
+        <div>
+            <h1 class="text-2xl font-bold font-display">Hoş geldiniz, @Model.UserName</h1>
+            <div class="text-sm text-white/80 mt-1">@Model.DateLabel</div>
+            <div class="inline-flex items-center gap-1.5 mt-3 px-2.5 py-1.5 rounded-md text-xs @(heroDanger ? "bg-danger/25 text-red-100" : "bg-white/15 text-white/90")">
+                @if (heroDanger)
+                {
+                    <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+                }
+                <span>@heroMessage</span>
+            </div>
         </div>
-    </div>
 
-    <div class="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-3">
-        <div class="w-14 h-14 rounded-full bg-white/15 text-white text-xl font-bold flex items-center justify-center">
-            @initials
-        </div>
-        <div class="text-right">
-            <div class="text-xs text-white/60">Yetki</div>
-            <span class="inline-block text-[10px] font-bold bg-white/20 text-white px-2 py-0.5 rounded">@Model.UserRole</span>
+        <div class="flex items-center gap-3 shrink-0">
+            <div class="w-10 h-10 rounded-full bg-white/15 text-white text-sm font-bold flex items-center justify-center">
+                @initials
+            </div>
+            <div>
+                <div class="text-sm font-semibold">@Model.UserName</div>
+                <div class="text-xs text-white/70">@Model.UserRole</div>
+            </div>
         </div>
     </div>
 </div>
 
 
-<!-- ─── §3.2 ÜST KPI KARTLARI ─── -->
-<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+<!-- ─── §3.2 GENEL BAKIŞ ─── -->
+@if (hasPropertyAccess || hasLeaseAccess || hasPaymentAccess)
+{
+    <div class="section-label">Genel Bakış</div>
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
 
-    <!-- A: Toplam Taşınmaz -->
-    @if (hasPropertyAccess)
-    {
-    <div class="bg-white rounded-2xl border border-slate-200 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
-        <div class="flex items-start justify-between mb-4">
-            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#1a6b5c] to-[#155549] flex items-center justify-center text-white shadow-sm">
-                <i data-lucide="building-2" class="w-5 h-5"></i>
-            </div>
-            <span class="text-[10px] font-bold uppercase tracking-wider text-[#1a6b5c] bg-[#f0faf7] border border-[#1a6b5c]/20 px-2 py-0.5 rounded-md">ADET</span>
-        </div>
-        <div class="text-3xl font-bold text-slate-800" data-countup="@Model.TotalProperties" data-decimals="0">0</div>
-        <div class="text-[12px] text-slate-500 mt-1">Toplam Taşınmaz</div>
-        <div class="text-[11px] text-slate-400 mt-1 truncate">
-            @string.Join(" · ", Model.PropertyTypeDistribution.Select(kv => $"{kv.Value} {kv.Key}"))
-        </div>
-    </div>
-    }
+        @if (hasPropertyAccess)
+        {
+        <div class="card lg:col-span-2">
+            <div class="stat-rail-label">Toplam Taşınmaz</div>
+            <div class="stat-rail-value" data-countup="@Model.TotalProperties" data-decimals="0">0</div>
+            <div class="stat-rail-sub truncate">@string.Join(", ", Model.PropertyTypeDistribution.Select(kv => $"{kv.Value} {kv.Key}"))</div>
 
-    <!-- B: Aktif Sözleşme -->
-    @if (hasLeaseAccess)
-    {
-    <div class="bg-white rounded-2xl border border-slate-200 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
-        <div class="flex items-start justify-between mb-4">
-            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-sm">
-                <i data-lucide="file-text" class="w-5 h-5"></i>
-            </div>
-            @if (Model.RenewalsThisMonth > 0)
+            @if (Model.PropertyOccupancies.Any())
             {
-                <span class="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">@Model.RenewalsThisMonth yenilenecek</span>
+                var propertyPages = Model.PropertyOccupancies.Chunk(4).ToList();
+                <div class="mt-4" x-data="{ propertySayfa: 0 }">
+                    @for (int pageIndex = 0; pageIndex < propertyPages.Count; pageIndex++)
+                    {
+                        <div class="space-y-2" x-show="propertySayfa === @pageIndex" x-cloak>
+                            @foreach (var propertyOccupancy in propertyPages[pageIndex])
+                            {
+                                var propUnitTotal = propertyOccupancy.UnitCount;
+                                var propLeasedPct = propUnitTotal > 0 ? (double)propertyOccupancy.LeasedUnitCount / propUnitTotal * 100 : 0;
+                                var propExpiringPct = propUnitTotal > 0 ? (double)propertyOccupancy.ExpiringSoonUnitCount / propUnitTotal * 100 : 0;
+                                var propVacantPct = propUnitTotal > 0 ? (double)propertyOccupancy.VacantUnitCount / propUnitTotal * 100 : 0;
+                                <div>
+                                    <div class="flex items-center justify-between text-[11px] text-slate-600 mb-1">
+                                        <span class="truncate">@propertyOccupancy.PropertyName</span>
+                                        <span class="text-muted shrink-0 ml-2">@propertyOccupancy.UnitCount birim</span>
+                                    </div>
+                                    <div class="h-1.5 rounded-full overflow-hidden bg-slate-100 flex">
+                                        <div class="h-full bg-emerald-500" style="width:@propLeasedPct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                                        <div class="h-full bg-amber-500" style="width:@propExpiringPct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                                        <div class="h-full bg-slate-400" style="width:@propVacantPct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    @if (propertyPages.Count > 1)
+                    {
+                        <div class="flex items-center justify-end gap-0.5 mt-2">
+                            <button type="button" aria-label="Önceki"
+                                    class="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                    @@click="propertySayfa = Math.max(0, propertySayfa - 1)" :disabled="propertySayfa === 0">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                            </button>
+                            <button type="button" aria-label="Sonraki"
+                                    class="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                    @@click="propertySayfa = Math.min(@(propertyPages.Count - 1), propertySayfa + 1)" :disabled="propertySayfa === @(propertyPages.Count - 1)">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                            </button>
+                            <span class="text-[10px] text-muted ml-0.5" x-text="(propertySayfa + 1) + ' / @propertyPages.Count'"></span>
+                        </div>
+                    }
+                </div>
             }
-        </div>
-        <div class="text-3xl font-bold text-slate-800" data-countup="@Model.ActiveLeases" data-decimals="0">0</div>
-        <div class="text-[12px] text-slate-500 mt-1">Aktif Sözleşme</div>
-        <a href="/Lease?filter=aktif" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-1 block">Görüntüle →</a>
-    </div>
-    }
 
-    <!-- C: Aylık Kira Geliri -->
-    @if (hasPaymentAccess)
-    {
-    <div class="bg-white rounded-2xl border border-slate-200 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
-        <div class="flex items-start justify-between mb-4">
-            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-sm">
-                <i data-lucide="trending-up" class="w-5 h-5"></i>
-            </div>
-            <span class="text-[10px] font-bold uppercase tracking-wider @deltaBadgeClass border px-2 py-0.5 rounded-md">@deltaText</span>
-        </div>
-        <div class="text-3xl font-bold text-slate-800"
-             data-countup="@Model.TotalMonthlyRevenue.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-             data-decimals="2" data-suffix=" ₺">0</div>
-        <div class="text-[12px] text-slate-500 mt-1">Aylık Kira Geliri</div>
-    </div>
-    }
-
-    <!-- D: Aktif Kiracı -->
-    @if (hasLeaseAccess)
-    {
-    <div class="bg-white rounded-2xl border border-slate-200 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
-        <div class="flex items-start justify-between mb-4">
-            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white shadow-sm">
-                <i data-lucide="users" class="w-5 h-5"></i>
+            <div class="mt-3 pt-2 border-t border-[var(--color-border)] flex items-center justify-between text-[11px] text-slate-500">
+                <span>Toplam @Model.TotalUnits birim</span>
+                <span class="font-semibold text-slate-700">Doluluk %@Model.OccupancyCountRate.ToString("F0") · m² %@Model.OccupancyAreaRate.ToString("F0")</span>
             </div>
         </div>
-        <div class="text-3xl font-bold text-slate-800" data-countup="@Model.ActiveTenantCount" data-decimals="0">0</div>
-        <div class="text-[12px] text-slate-500 mt-1">Aktif Kiracı</div>
-        <div class="text-[11px] text-slate-400 mt-1">@Model.ActiveLeases aktif sözleşme</div>
+        }
+
+        @if (hasPaymentAccess)
+        {
+            var initialTrend = Model.RevenueTrendAll.Months6.FirstOrDefault();
+        <div class="card lg:col-span-2" x-data="{ kiraKaynak: 'tumu', kiraZaman: 'ay6' }">
+            <div class="flex items-center justify-between mb-1 flex-wrap gap-2">
+                <div class="stat-rail-label mb-0">Tahakkuk & Tahsilat</div>
+                <div class="flex gap-1 bg-slate-100 rounded-lg p-0.5 flex-wrap justify-end">
+                    <button type="button" @@click="kiraKaynak = 'tumu'; renderKiraTrend(kiraKaynak, kiraZaman)"
+                            :class="kiraKaynak === 'tumu' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'"
+                            class="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all">Tümü</button>
+                    <button type="button" @@click="kiraKaynak = 'sozlesme'; renderKiraTrend(kiraKaynak, kiraZaman)"
+                            :class="kiraKaynak === 'sozlesme' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'"
+                            class="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all">Sözleşme</button>
+                    <button type="button" @@click="kiraKaynak = 'manuel'; renderKiraTrend(kiraKaynak, kiraZaman)"
+                            :class="kiraKaynak === 'manuel' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'"
+                            class="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all">Manuel</button>
+                    <button type="button" @@click="kiraKaynak = 'rezervasyon'; renderKiraTrend(kiraKaynak, kiraZaman)"
+                            :class="kiraKaynak === 'rezervasyon' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'"
+                            class="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all">Rezervasyon</button>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 mb-3">
+                <button type="button" @@click="kiraZaman = 'ay3'; renderKiraTrend(kiraKaynak, kiraZaman)"
+                        :class="kiraZaman === 'ay3' ? 'text-primary font-bold' : 'text-muted font-medium'"
+                        class="text-[11px] transition-colors">3 Ay</button>
+                <button type="button" @@click="kiraZaman = 'ay6'; renderKiraTrend(kiraKaynak, kiraZaman)"
+                        :class="kiraZaman === 'ay6' ? 'text-primary font-bold' : 'text-muted font-medium'"
+                        class="text-[11px] transition-colors">6 Ay</button>
+                <button type="button" @@click="kiraZaman = 'yil1'; renderKiraTrend(kiraKaynak, kiraZaman)"
+                        :class="kiraZaman === 'yil1' ? 'text-primary font-bold' : 'text-muted font-medium'"
+                        class="text-[11px] transition-colors">1 Yıl</button>
+            </div>
+
+            <div class="stat-rail-value" id="kira-trend-value"
+                 data-countup="@((initialTrend?.Amount ?? 0m).ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                 data-decimals="2" data-suffix=" ₺">0</div>
+
+            <div class="mt-4">
+                <div class="flex items-center justify-between text-xs mb-1">
+                    <div class="flex items-baseline gap-2">
+                        <span class="font-medium @(initialTrend?.CollectionRatePercent is null ? "text-muted" : initialTrend.CollectionRatePercent >= 100 ? "text-success" : initialTrend.CollectionRatePercent >= 50 ? "text-warning-strong" : "text-danger")" id="kira-trend-rate">
+                            @(initialTrend?.CollectionRatePercent is null ? "—" : $"%{initialTrend.CollectionRatePercent:F0}")
+                        </span>
+                        <span class="text-muted" id="kira-trend-rate-label">@(initialTrend?.MonthLabel) tahsilat oranı</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-[10px] text-slate-500">
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-accent inline-block"></span>Tahakkuk</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>Tahsilat</span>
+                    </div>
+                </div>
+                <div id="chart-kira-trend"></div>
+                <div class="text-[10px] text-muted mt-1">Kalem toplamları, KDV dahil — tahakkuk dönemine göre</div>
+            </div>
+        </div>
+        }
+
+        @if (hasLeaseAccess)
+        {
+        <div class="lg:col-span-1 flex flex-col gap-4">
+            <div class="card flex-1">
+                <div class="stat-rail-label">Aktif Sözleşme</div>
+                <div class="stat-rail-value" data-countup="@Model.ActiveLeases" data-decimals="0">0</div>
+                @if (Model.RenewalsThisMonth > 0)
+                {
+                    <div class="stat-rail-sub text-warning-strong font-medium">@Model.RenewalsThisMonth sözleşme yenilenecek</div>
+                }
+                <div class="mt-2"><a href="/Lease?filter=aktif" class="link-more">Görüntüle</a></div>
+            </div>
+
+            <div class="card flex-1">
+                <div class="stat-rail-label">Aktif Kiracı</div>
+                <div class="stat-rail-value" data-countup="@Model.ActiveTenantCount" data-decimals="0">0</div>
+                <div class="stat-rail-sub">@Model.ActiveLeases aktif sözleşme</div>
+            </div>
+        </div>
+        }
     </div>
-    }
-</div>
+}
 
 
 <!-- ─── §3.3 BUGÜN VADE DOLAN UYARI BANDI ─── -->
 @if (hasPaymentAccess && Model.ChargesDueTodayCount > 0)
 {
-    <div class="mb-6 flex items-center justify-between p-4 rounded-2xl border border-amber-200 bg-amber-50">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-sm">
-                <i data-lucide="alarm-clock" class="w-5 h-5"></i>
-            </div>
-            <div>
-                <div class="text-sm font-bold text-amber-900">Bugün vade dolan @Model.ChargesDueTodayCount tahakkuk</div>
-                <div class="text-xs text-amber-700 mt-0.5">Toplam kalan: <strong>@Model.ChargesDueTodayAmount.ToString("N2") ₺</strong> — Bugün takip et</div>
-            </div>
+    <div class="alert-warning mb-6 flex items-center justify-between gap-4">
+        <div>
+            <div class="text-sm font-bold">Bugün vade dolan @Model.ChargesDueTodayCount tahakkuk</div>
+            <div class="text-xs mt-0.5">Toplam kalan: <strong>@Model.ChargesDueTodayAmount.ToString("N2") ₺</strong>. Bugün takip et.</div>
         </div>
-        <a href="/Charge?from=@DateTime.Today.ToString("yyyy-MM-dd")&to=@DateTime.Today.ToString("yyyy-MM-dd")" class="text-xs font-semibold text-amber-800 hover:underline shrink-0">İncele →</a>
+        <a href="/Charge?from=@DateTime.Today.ToString("yyyy-MM-dd")&to=@DateTime.Today.ToString("yyyy-MM-dd")" class="link-more shrink-0">İncele</a>
     </div>
 }
 
 
-<!-- ─── §3.4 ÖDEME KPI KARTLARI ─── -->
+<!-- ─── §3.4 ÖDEME DURUMU ─── -->
 @if (hasPaymentAccess)
 {
-    <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Ödeme Durumu</div>
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    <div class="section-label">Ödeme Durumu</div>
+    <div class="stat-rail mb-6">
 
         <!-- A: Tahsilat Oranı -->
-        <div class="bg-white rounded-2xl border border-slate-200 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
-            <div class="flex items-start justify-between mb-4">
-                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-sm">
-                    <i data-lucide="gauge" class="w-5 h-5"></i>
-                </div>
-            </div>
-            <div class="text-3xl font-bold text-slate-800"
+        <div class="stat-rail-item">
+            <div class="stat-rail-label"><span class="stat-rail-dot bg-slate-300"></span>Tahsilat Oranı (30 gün)</div>
+            <div class="stat-rail-value"
                  data-countup="@Model.ThirtyDayCollectionRate.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                  data-decimals="1" data-suffix="%">0</div>
-            <div class="text-[12px] text-slate-500 mt-1">Tahsilat Oranı (30 gün)</div>
-            <div class="text-[11px] text-slate-400 mt-1">Beklenenin @Model.ThirtyDayCollectionRate.ToString("F1")%'i tahsil edildi</div>
-            <div class="h-1.5 mt-2 rounded-full overflow-hidden bg-slate-100">
-                <div class="h-full bg-emerald-500"
+            <div class="stat-rail-sub">Beklenenin @Model.ThirtyDayCollectionRate.ToString("F1")%'i tahsil edildi</div>
+            <div class="progress-bar mt-2">
+                <div class="progress-fill bg-success"
                      style="width:@Math.Min((double)Model.ThirtyDayCollectionRate, 100d).ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
             </div>
         </div>
 
-        <!-- B: Gecikmiş Charge -->
-        @{
-            var overdueBorderClass = Model.OverdueChargeCount > 0 ? "border-red-200 bg-red-50/40" : "border-slate-200 bg-white";
-        }
-        <div class="rounded-2xl border @overdueBorderClass p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
-            <div class="flex items-start justify-between mb-4">
-                <div class="relative w-11 h-11 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white shadow-sm">
-                    <i data-lucide="alert-triangle" class="w-5 h-5"></i>
-                    @if (Model.OverdueChargeCount > 0)
-                    {
-                        <span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-                    }
-                </div>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-red-700 bg-red-50 border border-red-100 px-2 py-0.5 rounded-md">@Model.TotalOverdueAmount.ToString("N2") ₺</span>
+        <!-- B: Gecikmiş Tahakkuk -->
+        <div class="stat-rail-item">
+            <div class="stat-rail-label">
+                <span class="stat-rail-dot @(Model.OverdueChargeCount > 0 ? "bg-danger" : "bg-slate-300")"></span>Gecikmiş Tahakkuk
+                <i data-lucide="info" class="w-3 h-3 text-muted"
+                   data-tip="Vade tarihi geçmiş ve tamamı ödenmemiş tüm tahakkukların kalan tutarı (tüm yıllar dahil)."></i>
             </div>
-            <div class="text-3xl font-bold text-slate-800" data-countup="@Model.OverdueChargeCount" data-decimals="0">0</div>
-            <div class="text-[12px] text-slate-500 mt-1">Gecikmiş Tahakkuk</div>
-            <a href="/Charge?status=gecikti" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-1 block">Görüntüle →</a>
+            <div class="stat-rail-value @(Model.OverdueChargeCount > 0 ? "text-danger" : "")" data-countup="@Model.OverdueChargeCount" data-decimals="0">0</div>
+            <div class="stat-rail-sub">@Model.TotalOverdueAmount.ToString("N2") ₺ toplam</div>
+            <div class="mt-2"><a href="/Charge?status=gecikti" class="link-more">Görüntüle</a></div>
         </div>
 
         <!-- C: Onay Bekleyen -->
-        @{
-            var pendingApprovalBorderClass = Model.PendingPaymentApprovalCount > 0 ? "border-amber-200 bg-amber-50/40" : "border-slate-200 bg-white";
-        }
-        <div class="rounded-2xl border @pendingApprovalBorderClass p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
-            <div class="flex items-start justify-between mb-4">
-                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-sm">
-                    <i data-lucide="clock" class="w-5 h-5"></i>
-                </div>
-            </div>
-            <div class="text-3xl font-bold text-slate-800" data-countup="@Model.PendingPaymentApprovalCount" data-decimals="0">0</div>
-            <div class="text-[12px] text-slate-500 mt-1">Onay Bekleyen Ödeme</div>
-            <a href="/Payment?status=onaybekliyor" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-1 block">İncele →</a>
+        <div class="stat-rail-item">
+            <div class="stat-rail-label"><span class="stat-rail-dot @(Model.PendingPaymentApprovalCount > 0 ? "bg-warning" : "bg-slate-300")"></span>Onay Bekleyen Ödeme</div>
+            <div class="stat-rail-value @(Model.PendingPaymentApprovalCount > 0 ? "text-warning-strong" : "")" data-countup="@Model.PendingPaymentApprovalCount" data-decimals="0">0</div>
+            <div class="mt-2"><a href="/Payment?status=onaybekliyor" class="link-more">İncele</a></div>
         </div>
 
         <!-- D: Eşleşmemiş Banka Hareketi -->
-        @{
-            var bankTransactionBorderClass = Model.UnmatchedBankTransactionCount > 0 ? "border-indigo-200 bg-indigo-50/40" : "border-slate-200 bg-white";
-        }
-        <div class="rounded-2xl border @bankTransactionBorderClass p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
-            <div class="flex items-start justify-between mb-4">
-                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white shadow-sm">
-                    <i data-lucide="link" class="w-5 h-5"></i>
-                </div>
-            </div>
-            <div class="text-3xl font-bold text-slate-800" data-countup="@Model.UnmatchedBankTransactionCount" data-decimals="0">0</div>
-            <div class="text-[12px] text-slate-500 mt-1">Eşleşmemiş Banka Hareketi</div>
-            <a href="/BankTransaction?status=eslestirilmedi" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-1 block">Eşleştir →</a>
+        <div class="stat-rail-item">
+            <div class="stat-rail-label"><span class="stat-rail-dot @(Model.UnmatchedBankTransactionCount > 0 ? "bg-info" : "bg-slate-300")"></span>Eşleşmemiş Banka Hareketi</div>
+            <div class="stat-rail-value @(Model.UnmatchedBankTransactionCount > 0 ? "text-info" : "")" data-countup="@Model.UnmatchedBankTransactionCount" data-decimals="0">0</div>
+            <div class="mt-2"><a href="/BankTransaction?status=eslestirilmedi" class="link-more">Eşleştir</a></div>
         </div>
     </div>
 }
@@ -243,47 +304,87 @@
 <!-- ─── §3.5 GRAFİK PANELİ ─── -->
 @if (hasPaymentAccess || hasPropertyAccess)
 {
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
 
-    <!-- Sol: Son 6 Ay Nakit Akışı (col-span-2) -->
+    <!-- Gelir Kırılımı Donut -->
     @if (hasPaymentAccess)
     {
-    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5">
-        <div class="flex items-center justify-between mb-4">
-            <div>
-                <div class="text-sm font-bold text-slate-800">Son 6 Ay Nakit Akışı</div>
-                <div class="text-xs text-slate-500 mt-0.5">Aylık beklenen tahsilat ve gerçekleşen ödenen tutar</div>
+    <div class="card lg:col-span-1">
+        <div class="section-title mb-1">Gelir Kırılımı</div>
+        <div class="text-xs text-muted mb-4">Son 6 ay, kalem tipine göre</div>
+        @if (Model.ChargeTypeRevenueBreakdown.Any())
+        {
+            <div id="chart-gelir-kirilim"></div>
+            var breakdownColorClasses = new[] { "bg-emerald-500", "bg-amber-500", "bg-sky-500", "bg-violet-500", "bg-rose-500", "bg-slate-400" };
+            var breakdownTotal = Model.ChargeTypeRevenueBreakdown.Sum(item => item.TotalCollected);
+            var breakdownPages = Model.ChargeTypeRevenueBreakdown
+                .Select((item, index) => (item, index))
+                .Chunk(3)
+                .ToList();
+            <div class="mt-4" x-data="{ kirilimSayfa: 0 }">
+                @for (int pageIndex = 0; pageIndex < breakdownPages.Count; pageIndex++)
+                {
+                    <div class="space-y-2" x-show="kirilimSayfa === @pageIndex" x-cloak>
+                        @foreach (var (breakdownItem, breakdownIndex) in breakdownPages[pageIndex])
+                        {
+                            var breakdownPct = breakdownTotal > 0 ? (double)(breakdownItem.TotalCollected / breakdownTotal) * 100 : 0;
+                            <div class="flex items-center justify-between">
+                                <span class="flex items-center gap-2 text-xs text-slate-600 truncate"><span class="w-2 h-2 rounded-full @breakdownColorClasses[breakdownIndex % breakdownColorClasses.Length] inline-block shrink-0"></span>@breakdownItem.ChargeTypeName</span>
+                                <span class="text-sm font-semibold tabular-nums shrink-0 ml-2">%@breakdownPct.ToString("F0")</span>
+                            </div>
+                        }
+                    </div>
+                }
+                @if (breakdownPages.Count > 1)
+                {
+                    <div class="flex items-center justify-end gap-0.5 mt-2">
+                        <button type="button" aria-label="Önceki"
+                                class="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                @@click="kirilimSayfa = Math.max(0, kirilimSayfa - 1)" :disabled="kirilimSayfa === 0">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                        </button>
+                        <button type="button" aria-label="Sonraki"
+                                class="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                @@click="kirilimSayfa = Math.min(@(breakdownPages.Count - 1), kirilimSayfa + 1)" :disabled="kirilimSayfa === @(breakdownPages.Count - 1)">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                        </button>
+                        <span class="text-[10px] text-muted ml-0.5" x-text="(kirilimSayfa + 1) + ' / @breakdownPages.Count'"></span>
+                    </div>
+                }
             </div>
-            <div class="flex items-center gap-3 text-[11px] text-slate-600">
-                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-slate-400 inline-block"></span>Beklenen</span>
-                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span>Ödenen</span>
-            </div>
-        </div>
-        <div id="chart-nakit"></div>
+        }
+        else
+        {
+            <div class="text-center py-10 text-slate-400 text-sm">Henüz tahsilat verisi yok</div>
+        }
     </div>
     }
 
-    <!-- Sağ: Doluluk Donut -->
+    <!-- Doluluk Donut -->
     @if (hasPropertyAccess)
     {
-    <div class="bg-white rounded-2xl border border-slate-200 p-5">
-        <div class="text-sm font-bold text-slate-800 mb-1">Doluluk Dağılımı</div>
-        <div class="text-xs text-slate-500 mb-4">Birim bazında (Kiralı / Dolmak Üzere / Boş)</div>
+    <div class="card lg:col-span-1">
+        <div class="section-title mb-1">Doluluk Dağılımı</div>
+        <div class="text-xs text-muted mb-4">Birim bazında</div>
         @if (Model.TotalUnits > 0)
         {
             <div id="chart-doluluk"></div>
-            <div class="flex justify-around mt-3 text-[11px]">
-                <div class="text-center">
-                    <div class="font-bold text-emerald-600">@rentedPercentage.ToString("F0")%</div>
-                    <div class="text-slate-400">Kiralı</div>
+            <div class="mt-4 space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="flex items-center gap-2 text-xs text-slate-600"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>Kiralı</span>
+                    <span class="text-sm font-semibold tabular-nums">@Model.RentedUnits <span class="text-xs font-normal text-muted">%@rentedPercentage.ToString("F0")</span></span>
                 </div>
-                <div class="text-center">
-                    <div class="font-bold text-amber-500">@expiringPercentage.ToString("F0")%</div>
-                    <div class="text-slate-400">Dolmak Üzere</div>
+                <div class="flex items-center justify-between">
+                    <span class="flex items-center gap-2 text-xs text-slate-600"><span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>Dolmak Üzere</span>
+                    <span class="text-sm font-semibold tabular-nums">@Model.ExpiringLeaseUnits <span class="text-xs font-normal text-muted">%@expiringPercentage.ToString("F0")</span></span>
                 </div>
-                <div class="text-center">
-                    <div class="font-bold text-slate-500">@vacantPercentage.ToString("F0")%</div>
-                    <div class="text-slate-400">Boş</div>
+                <div class="flex items-center justify-between">
+                    <span class="flex items-center gap-2 text-xs text-slate-600"><span class="w-2 h-2 rounded-full bg-slate-400 inline-block"></span>Boş</span>
+                    <span class="text-sm font-semibold tabular-nums">@Model.VacantUnits <span class="text-xs font-normal text-muted">%@vacantPercentage.ToString("F0")</span></span>
+                </div>
+                <div class="flex items-center justify-between border-t border-[var(--color-border)] pt-2">
+                    <span class="text-xs text-muted">Toplam</span>
+                    <span class="text-sm font-semibold tabular-nums text-primary">@totalUnits</span>
                 </div>
             </div>
         }
@@ -293,99 +394,29 @@
         }
     </div>
     }
-</div>
-}
-
-
-<!-- ─── §3.6 LİSTE PANELİ ─── -->
-@if (hasLeaseAccess || hasPropertyAccess || hasPaymentAccess)
-{
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-
-    <!-- A: Süresi Dolmak Üzere -->
-    @if (hasLeaseAccess)
-    {
-    <div class="bg-white rounded-2xl border border-slate-200 p-5">
-        <div class="flex items-center justify-between mb-4">
-            <div class="text-sm font-bold text-slate-800">Süresi Dolmak Üzere</div>
-            <a href="/Lease?filter=surek" class="text-xs font-semibold text-[#1a6b5c] hover:underline">Tümü →</a>
-        </div>
-        @if (!Model.ExpiringLeases.Any())
-        {
-            <div class="text-center py-8 text-slate-400 text-sm">Yakında dolacak sözleşme yok</div>
-        }
-        else
-        {
-            <div class="space-y-2">
-                @foreach (var leaseSummary in Model.ExpiringLeases)
-                {
-                    var borderCls = leaseSummary.RemainingDays <= 10 ? "border-red-500" : leaseSummary.RemainingDays <= 30 ? "border-amber-500" : "border-emerald-500";
-                    var badgeClass = leaseSummary.RemainingDays <= 10 ? "bg-red-100 text-red-700" : leaseSummary.RemainingDays <= 30 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700";
-                    <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50/50 border-l-4 @borderCls hover:translate-x-0.5 transition-all">
-                        <div class="flex-1 min-w-0">
-                            <div class="text-sm font-semibold text-slate-800 truncate">@leaseSummary.TenantName</div>
-                            <div class="text-xs text-slate-500 truncate mt-0.5">@leaseSummary.PropertyName · @leaseSummary.UnitName</div>
-                        </div>
-                        <div class="ml-3 shrink-0 text-right">
-                            <span class="px-2 py-1 rounded text-[11px] font-bold @badgeClass">@leaseSummary.RemainingDays gün</span>
-                            <a href="/Lease/Details/@leaseSummary.LeaseId.ToHashId()" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-0.5 block">Detay →</a>
-                        </div>
-                    </div>
-                }
-            </div>
-        }
-    </div>
-    }
-
-    <!-- B: Boş Units -->
-    @if (hasPropertyAccess)
-    {
-    <div class="bg-white rounded-2xl border border-slate-200 p-5">
-        <div class="flex items-center justify-between mb-4">
-            <div class="text-sm font-bold text-slate-800">Boş Birimler</div>
-            <a href="/Lease/Create" class="text-xs font-semibold text-[#1a6b5c] hover:underline">Kiraya Ver →</a>
-        </div>
-        @if (!Model.VacantUnitSummaries.Any())
-        {
-            <div class="text-center py-8 text-slate-400 text-sm">Tüm birimler kiralı</div>
-        }
-        else
-        {
-            <div class="space-y-2">
-                @foreach (var vacantUnit in Model.VacantUnitSummaries)
-                {
-                    <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50/50 border-l-4 border-slate-300 hover:translate-x-0.5 transition-all">
-                        <div class="flex-1 min-w-0">
-                            <div class="text-sm font-semibold text-slate-800 truncate">@vacantUnit.PropertyName</div>
-                            <div class="text-xs text-slate-500 truncate mt-0.5">@vacantUnit.UnitName · @vacantUnit.District</div>
-                        </div>
-                        <div class="ml-3 shrink-0 text-right">
-                            <span class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[11px] font-bold">@vacantUnit.Area.ToString("F0") m²</span>
-                            <a href="/Lease/Create?unitId=@vacantUnit.UnitId.ToHashId()" class="text-[11px] font-semibold text-[#1a6b5c] hover:underline mt-0.5 block">Kiraya Ver →</a>
-                        </div>
-                    </div>
-                }
-            </div>
-        }
-    </div>
-    }
 
     <!-- C: Top 5 Gelir Şampiyonları -->
     @if (hasPaymentAccess)
     {
-    <div class="bg-white rounded-2xl border border-slate-200 p-5" x-data="{ gelirSekme: 'tenant' }">
+    <div class="card" x-data="{ gelirSekme: 'tenant' }">
         <div class="flex items-center justify-between mb-3">
             <div>
-                <div class="text-sm font-bold text-slate-800">Gelir Şampiyonları</div>
+                <div class="section-title">Gelir Şampiyonları</div>
                 <div class="text-[11px] text-slate-500 mt-0.5">Son 12 ay tahsilat</div>
             </div>
-            <div class="flex gap-1 bg-slate-100 rounded-lg p-0.5">
+            <div class="flex gap-1 bg-slate-100 rounded-lg p-0.5 flex-wrap justify-end">
                 <button type="button" @@click="gelirSekme = 'tenant'"
                         :class="gelirSekme === 'tenant' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'"
                         class="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all">Kiracı</button>
                 <button type="button" @@click="gelirSekme = 'property'"
                         :class="gelirSekme === 'property' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'"
                         class="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all">Taşınmaz</button>
+                <button type="button" @@click="gelirSekme = 'store'"
+                        :class="gelirSekme === 'store' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'"
+                        class="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all">Mağaza</button>
+                <button type="button" @@click="gelirSekme = 'risk'"
+                        :class="gelirSekme === 'risk' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'"
+                        class="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all">Risk</button>
             </div>
         </div>
 
@@ -407,13 +438,13 @@
                     <a href="/Tenant/Details/@tenantRevenue.TenantId.ToHashId()" class="block p-2 rounded-lg hover:bg-slate-50 transition-colors no-underline">
                         <div class="flex items-center justify-between mb-1.5">
                             <div class="flex items-center gap-2 min-w-0">
-                                <span class="w-5 h-5 rounded-md bg-[#f0faf7] text-[#1a6b5c] text-[10px] font-bold flex items-center justify-center shrink-0">@tenantRank</span>
+                                <span class="w-5 h-5 rounded-md bg-primary-light text-primary text-[10px] font-bold flex items-center justify-center shrink-0">@tenantRank</span>
                                 <span class="text-[13px] font-semibold text-slate-800 truncate">@tenantRevenue.TenantName</span>
                             </div>
                             <span class="text-[12px] font-bold text-slate-800 shrink-0">@tenantRevenue.TotalCollected.ToString("N0") ₺</span>
                         </div>
                         <div class="h-1 rounded-full overflow-hidden bg-slate-100">
-                            <div class="h-full bg-gradient-to-r from-[#1a6b5c] to-emerald-500"
+                            <div class="h-full bg-accent"
                                  style="width:@pct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
                         </div>
                         <div class="text-[10px] text-slate-500 mt-1">@tenantRevenue.LeaseCount sözleşme</div>
@@ -441,16 +472,84 @@
                     <a href="/Property/Details/@propertyRevenue.PropertyId.ToHashId()" class="block p-2 rounded-lg hover:bg-slate-50 transition-colors no-underline">
                         <div class="flex items-center justify-between mb-1.5">
                             <div class="flex items-center gap-2 min-w-0">
-                                <span class="w-5 h-5 rounded-md bg-[#f0faf7] text-[#1a6b5c] text-[10px] font-bold flex items-center justify-center shrink-0">@rank</span>
+                                <span class="w-5 h-5 rounded-md bg-primary-light text-primary text-[10px] font-bold flex items-center justify-center shrink-0">@rank</span>
                                 <span class="text-[13px] font-semibold text-slate-800 truncate">@propertyRevenue.PropertyName</span>
                             </div>
                             <span class="text-[12px] font-bold text-slate-800 shrink-0">@propertyRevenue.TotalCollected.ToString("N0") ₺</span>
                         </div>
                         <div class="h-1 rounded-full overflow-hidden bg-slate-100">
-                            <div class="h-full bg-gradient-to-r from-[#1a6b5c] to-emerald-500"
+                            <div class="h-full bg-accent"
                                  style="width:@pct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
                         </div>
                         <div class="text-[10px] text-slate-500 mt-1">@propertyRevenue.UnitCount birim</div>
+                    </a>
+                }
+            </div>
+        }
+        </div>
+
+        <!-- Mağaza sekmesi -->
+        <div x-show="gelirSekme === 'store'" x-cloak>
+        @if (!Model.TopRevenueStores.Any())
+        {
+            <div class="text-center py-8 text-slate-400 text-sm">Henüz mağaza tahsilatı yok</div>
+        }
+        else
+        {
+            var maxStoreRevenue = Model.TopRevenueStores.Max(store => store.TotalCollected);
+            <div class="space-y-2.5">
+                @{ int storeRank = 0; }
+                @foreach (var storeRevenue in Model.TopRevenueStores)
+                {
+                    storeRank++;
+                    var pct = maxStoreRevenue > 0 ? (double)(storeRevenue.TotalCollected / maxStoreRevenue) * 100 : 0;
+                    <div class="p-2 rounded-lg">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="w-5 h-5 rounded-md bg-primary-light text-primary text-[10px] font-bold flex items-center justify-center shrink-0">@storeRank</span>
+                                <span class="text-[13px] font-semibold text-slate-800 truncate">@storeRevenue.StoreName</span>
+                            </div>
+                            <span class="text-[12px] font-bold text-slate-800 shrink-0">@storeRevenue.TotalCollected.ToString("N0") ₺</span>
+                        </div>
+                        <div class="h-1 rounded-full overflow-hidden bg-slate-100">
+                            <div class="h-full bg-accent"
+                                 style="width:@pct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                        </div>
+                        <div class="text-[10px] text-slate-500 mt-1">@storeRevenue.PaymentCount ödeme</div>
+                    </div>
+                }
+            </div>
+        }
+        </div>
+
+        <!-- Risk sekmesi -->
+        <div x-show="gelirSekme === 'risk'" x-cloak>
+        @if (!Model.RiskyTenants.Any())
+        {
+            <div class="text-center py-8 text-slate-400 text-sm">Riskli kiracı yok</div>
+        }
+        else
+        {
+            var maxRiskAmount = Model.RiskyTenants.Max(tenant => tenant.OverdueAmount);
+            <div class="space-y-2.5">
+                @{ int riskRank = 0; }
+                @foreach (var riskyTenant in Model.RiskyTenants)
+                {
+                    riskRank++;
+                    var pct = maxRiskAmount > 0 ? (double)(riskyTenant.OverdueAmount / maxRiskAmount) * 100 : 0;
+                    <a href="/Tenant/Details/@riskyTenant.TenantId.ToHashId()" class="block p-2 rounded-lg hover:bg-slate-50 transition-colors no-underline">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="w-5 h-5 rounded-md bg-red-100 text-danger text-[10px] font-bold flex items-center justify-center shrink-0">@riskRank</span>
+                                <span class="text-[13px] font-semibold text-slate-800 truncate">@riskyTenant.TenantName</span>
+                            </div>
+                            <span class="text-[12px] font-bold text-danger shrink-0">@riskyTenant.OverdueAmount.ToString("N0") ₺</span>
+                        </div>
+                        <div class="h-1 rounded-full overflow-hidden bg-slate-100">
+                            <div class="h-full bg-danger"
+                                 style="width:@pct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                        </div>
+                        <div class="text-[10px] text-slate-500 mt-1">@riskyTenant.OverdueChargeCount gecikmiş tahakkuk</div>
                     </a>
                 }
             </div>
@@ -462,50 +561,130 @@
 }
 
 
-<!-- ─── §3.7 REZERVASYON & MANUEL BORÇ İNCE SATIR ─── -->
+<!-- ─── §3.6 LİSTE PANELİ ─── -->
+@if (hasLeaseAccess || hasPropertyAccess)
+{
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+
+    <!-- A: Süresi Dolmak Üzere -->
+    @if (hasLeaseAccess)
+    {
+    <div class="card">
+        <div class="flex items-center justify-between mb-4">
+            <div class="section-title">Süresi Dolmak Üzere</div>
+            <a href="/Lease?filter=surek" class="link-more">Tümü</a>
+        </div>
+        @if (Model.LeaseStatusDistribution.Any())
+        {
+            var leaseStatusDots = new Dictionary<string, string>
+            {
+                ["Aktif"] = "bg-emerald-500",
+                ["Taslak"] = "bg-slate-400",
+                ["Revizyon İstenen"] = "bg-amber-500",
+                ["Sona Erdi"] = "bg-slate-300",
+                ["Feshedildi"] = "bg-red-400"
+            };
+            <div class="flex items-center justify-between flex-wrap gap-x-3 gap-y-1 mb-3 pb-3 border-b border-[var(--color-border)] text-[11px] text-slate-600">
+                <div class="flex items-center flex-wrap gap-x-3 gap-y-1">
+                    @foreach (var statusGroup in Model.LeaseStatusDistribution)
+                    {
+                        var statusDotClass = leaseStatusDots.TryGetValue(statusGroup.Key, out var dotCls) ? dotCls : "bg-slate-300";
+                        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full @statusDotClass inline-block"></span>@statusGroup.Key <strong class="text-slate-800">@statusGroup.Value</strong></span>
+                    }
+                </div>
+                <span class="text-muted">Ort. süre: <strong class="text-slate-700">@Model.AverageLeaseDurationMonths.ToString("F0") ay</strong></span>
+            </div>
+        }
+        @if (!Model.ExpiringLeases.Any())
+        {
+            <div class="text-center py-8 text-slate-400 text-sm">Yakında dolacak sözleşme yok</div>
+        }
+        else
+        {
+            <div class="space-y-2">
+                @foreach (var leaseSummary in Model.ExpiringLeases)
+                {
+                    var borderCls = leaseSummary.RemainingDays <= 10 ? "border-red-500" : leaseSummary.RemainingDays <= 30 ? "border-amber-500" : "border-emerald-500";
+                    var badgeClass = leaseSummary.RemainingDays <= 10 ? "bg-red-100 text-red-700" : leaseSummary.RemainingDays <= 30 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700";
+                    <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50/50 border-l-4 @borderCls hover:translate-x-0.5 transition-all">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-semibold text-slate-800 truncate">@leaseSummary.TenantName</div>
+                            <div class="text-xs text-slate-500 truncate mt-0.5">@leaseSummary.PropertyName, @leaseSummary.UnitName</div>
+                        </div>
+                        <div class="ml-3 shrink-0 text-right">
+                            <span class="px-2 py-1 rounded text-[11px] font-bold @badgeClass">@leaseSummary.RemainingDays gün</span>
+                            <a href="/Lease/Details/@leaseSummary.LeaseId.ToHashId()" class="link-more mt-0.5 flex justify-end">Detay</a>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    }
+
+    <!-- B: Boş Units -->
+    @if (hasPropertyAccess)
+    {
+    <div class="card">
+        <div class="flex items-center justify-between mb-4">
+            <div class="section-title">Boş Birimler</div>
+            <a href="/Lease/Create" class="link-more">Kiraya Ver</a>
+        </div>
+        @if (!Model.VacantUnitSummaries.Any())
+        {
+            <div class="text-center py-8 text-slate-400 text-sm">Tüm birimler kiralı</div>
+        }
+        else
+        {
+            <div class="space-y-2">
+                @foreach (var vacantUnit in Model.VacantUnitSummaries)
+                {
+                    <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50/50 border-l-4 border-slate-300 hover:translate-x-0.5 transition-all">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-semibold text-slate-800 truncate">@vacantUnit.PropertyName</div>
+                            <div class="text-xs text-slate-500 truncate mt-0.5">@vacantUnit.UnitName, @vacantUnit.District</div>
+                        </div>
+                        <div class="ml-3 shrink-0 text-right">
+                            <span class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[11px] font-bold">@vacantUnit.Area.ToString("F0") m²</span>
+                            <a href="/Lease/Create?unitId=@vacantUnit.UnitId.ToHashId()" class="link-more mt-0.5 flex justify-end">Kiraya Ver</a>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    }
+
+</div>
+}
+
+
+<!-- ─── §3.7 REZERVASYON & MANUEL BORÇ ─── -->
 @if (hasPaymentAccess && (Model.ManualChargeTotalThisMonth > 0 || Model.ReservationRevenueThisMonth > 0 || Model.UntransferredReservationCount > 0))
 {
-    <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Rezervasyon & Manuel Borç</div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="section-label">Rezervasyon & Manuel Borç</div>
+    <div class="stat-rail mb-6">
 
         <!-- Bu Ay Manuel Borç -->
-        <div class="bg-white rounded-2xl border border-slate-200 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
-            <div class="flex items-start justify-between mb-3">
-                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center text-white shadow-sm">
-                    <i data-lucide="pencil-line" class="w-4 h-4"></i>
-                </div>
-            </div>
-            <div class="text-2xl font-bold text-slate-800"
+        <div class="stat-rail-item">
+            <div class="stat-rail-label">Bu Ay Manuel Borç</div>
+            <div class="stat-rail-value"
                  data-countup="@Model.ManualChargeTotalThisMonth.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                  data-decimals="2" data-suffix=" ₺">0</div>
-            <div class="text-[12px] text-slate-500 mt-1">Bu Ay Manuel Borç</div>
         </div>
 
         <!-- Bu Ay Rezervasyon Geliri -->
-        <div class="bg-white rounded-2xl border border-slate-200 p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
-            <div class="flex items-start justify-between mb-3">
-                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-sm">
-                    <i data-lucide="calendar-check" class="w-4 h-4"></i>
-                </div>
-            </div>
-            <div class="text-2xl font-bold text-slate-800"
+        <div class="stat-rail-item">
+            <div class="stat-rail-label">Bu Ay Rezervasyon Geliri</div>
+            <div class="stat-rail-value"
                  data-countup="@Model.ReservationRevenueThisMonth.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                  data-decimals="2" data-suffix=" ₺">0</div>
-            <div class="text-[12px] text-slate-500 mt-1">Bu Ay Rezervasyon Geliri</div>
         </div>
 
         <!-- Aktarılmamış Ücretli Rezervasyon -->
-        @{
-            var reservationBorderClass = Model.UntransferredReservationCount > 0 ? "border-amber-200 bg-amber-50/40" : "border-slate-200 bg-white";
-        }
-        <div class="rounded-2xl border @reservationBorderClass p-5 hover:-translate-y-0.5 hover:shadow-md transition-all">
-            <div class="flex items-start justify-between mb-3">
-                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-sm">
-                    <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
-                </div>
-            </div>
-            <div class="text-2xl font-bold text-slate-800" data-countup="@Model.UntransferredReservationCount" data-decimals="0">0</div>
-            <div class="text-[12px] text-slate-500 mt-1">Aktarılmamış Ücretli Rezervasyon</div>
+        <div class="stat-rail-item">
+            <div class="stat-rail-label"><span class="stat-rail-dot @(Model.UntransferredReservationCount > 0 ? "bg-warning" : "bg-slate-300")"></span>Aktarılmamış Ücretli Rezervasyon</div>
+            <div class="stat-rail-value @(Model.UntransferredReservationCount > 0 ? "text-warning-strong" : "")" data-countup="@Model.UntransferredReservationCount" data-decimals="0">0</div>
         </div>
     </div>
 }
@@ -516,13 +695,10 @@
 
     @if (await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.Create))
     {
-        <a href="/Lease/Create"
-           class="block p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
-            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-sm">
-                <i data-lucide="file-plus" class="w-6 h-6"></i>
-            </div>
-            <div class="text-sm font-bold text-slate-800 mt-3">Yeni Sözleşme</div>
-            <div class="text-xs text-slate-600 mt-0.5">Kiraya verme akışı</div>
+        <a href="/Lease/Create" class="card action-tile">
+            <i data-lucide="file-plus" class="w-5 h-5 text-primary"></i>
+            <div class="text-sm font-semibold text-primary mt-3">Yeni Sözleşme</div>
+            <div class="text-xs text-muted mt-0.5">Kiraya verme akışı</div>
         </a>
     }
 
@@ -531,36 +707,28 @@
         <a href="@Url.Action(
                 nameof(KiraTakip.Web.Controllers.ReservationController.Create),
                 nameof(KiraTakip.Web.Controllers.ReservationController).Replace("Controller", ""))"
-           class="block p-5 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
-            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-sm">
-                <i data-lucide="calendar-plus" class="w-6 h-6"></i>
-            </div>
-            <div class="text-sm font-bold text-slate-800 mt-3">Yeni Rezervasyon</div>
-            <div class="text-xs text-slate-600 mt-0.5">Salon/birim rezervasyonu</div>
+           class="card action-tile">
+            <i data-lucide="calendar-plus" class="w-5 h-5 text-primary"></i>
+            <div class="text-sm font-semibold text-primary mt-3">Yeni Rezervasyon</div>
+            <div class="text-xs text-muted mt-0.5">Salon/birim rezervasyonu</div>
         </a>
     }
 
     @if (await PermissionService.HasPermissionAsync(PermissionCatalog.ManualCharge.Create))
     {
-        <a href="/ManualCharge/Create"
-           class="block p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
-            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-sm">
-                <i data-lucide="pencil-line" class="w-6 h-6"></i>
-            </div>
-            <div class="text-sm font-bold text-slate-800 mt-3">Manuel Borç</div>
-            <div class="text-xs text-slate-600 mt-0.5">Tek seferlik borç gir</div>
+        <a href="/ManualCharge/Create" class="card action-tile">
+            <i data-lucide="pencil-line" class="w-5 h-5 text-primary"></i>
+            <div class="text-sm font-semibold text-primary mt-3">Manuel Borç</div>
+            <div class="text-xs text-muted mt-0.5">Tek seferlik borç gir</div>
         </a>
     }
 
     @if (await PermissionService.HasPermissionAsync(PermissionCatalog.Payment.ImportBankStatement))
     {
-        <a href="/BankTransaction/Import"
-           class="block p-5 rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100/60 border border-white/60 hover:scale-[1.02] hover:shadow-md transition-all no-underline">
-            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white shadow-sm">
-                <i data-lucide="upload-cloud" class="w-6 h-6"></i>
-            </div>
-            <div class="text-sm font-bold text-slate-800 mt-3">Banka Hareketi İçe Aktar</div>
-            <div class="text-xs text-slate-600 mt-0.5">CSV/Excel yükle</div>
+        <a href="/BankTransaction/Import" class="card action-tile">
+            <i data-lucide="upload-cloud" class="w-5 h-5 text-primary"></i>
+            <div class="text-sm font-semibold text-primary mt-3">Banka Hareketi İçe Aktar</div>
+            <div class="text-xs text-muted mt-0.5">CSV/Excel yükle</div>
         </a>
     }
 </div>
@@ -587,43 +755,136 @@
                 if (!c.error) c.start();
             });
 
-            // §4.A — Son 6 Ay Nakit Akışı (Bar)
-            var nakitEl = document.querySelector('#chart-nakit');
-            if (nakitEl) {
-                var beklenenSeri = [@Html.Raw(string.Join(",", Model.MonthlyCashFlow.Select(x => x.Expected.ToString(System.Globalization.CultureInfo.InvariantCulture))))];
-                var odenenSeri   = [@Html.Raw(string.Join(",", Model.MonthlyCashFlow.Select(x => x.Collected.ToString(System.Globalization.CultureInfo.InvariantCulture))))];
-                var aylar        = [@Html.Raw(string.Join(",", Model.MonthlyCashFlow.Select(x => $"'{x.MonthLabel}'")))];
+            // §4.A0 — Aylık Kira Geliri mini çizgi grafiği — kaynak x zaman aralığı sekmeleri
+            // (Alpine state değişince renderKiraTrend yeniden çağrılır; yeni sunucu isteği yok).
+            var kiraTrendData = {
+                tumu: @Html.Raw(SerializeTrendSet(Model.RevenueTrendAll)),
+                sozlesme: @Html.Raw(SerializeTrendSet(Model.RevenueTrendLease)),
+                manuel: @Html.Raw(SerializeTrendSet(Model.RevenueTrendManual)),
+                rezervasyon: @Html.Raw(SerializeTrendSet(Model.RevenueTrendReservation))
+            };
+            var kiraTrendState = { kaynak: 'tumu', zaman: 'ay6' };
+            var kiraChart = null;
 
-                new ApexCharts(nakitEl, {
-                    chart: { type: 'bar', height: 260, toolbar: { show: false }, animations: { enabled: true, easing: 'easeinout', speed: 600 } },
+            // Alpine'in @@click ifadeleri global (window) kapsamda çözümlenir — bu closure'ın
+            // içindeki yerel fonksiyon Alpine'e görünmez, o yüzden window'a da atanır.
+            window.renderKiraTrend = function renderKiraTrend(kaynak, zaman) {
+                var combo = kiraTrendData[kaynak] && kiraTrendData[kaynak][zaman];
+                if (!combo || combo.aylar.length === 0) return;
+                kiraTrendState = { kaynak: kaynak, zaman: zaman };
+
+                var lastIdx = combo.tahakkuk.length - 1;
+                var valueEl = document.querySelector('#kira-trend-value');
+                var rateEl = document.querySelector('#kira-trend-rate');
+                var rateLabelEl = document.querySelector('#kira-trend-rate-label');
+
+                if (valueEl) {
+                    valueEl.textContent = combo.tahakkuk[lastIdx].toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+                }
+                if (rateEl) {
+                    var rate = combo.oran[lastIdx];
+                    rateEl.textContent = rate === null ? '—' : '%' + rate.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                    rateEl.className = 'font-medium ' + (rate === null ? 'text-muted' : rate >= 100 ? 'text-success' : rate >= 50 ? 'text-warning-strong' : 'text-danger');
+                }
+                if (rateLabelEl) {
+                    rateLabelEl.textContent = combo.aylar[lastIdx] + ' tahsilat oranı';
+                }
+
+                if (kiraChart) {
+                    kiraChart.updateOptions({ xaxis: { categories: combo.aylar } }, false, false);
+                    kiraChart.updateSeries([
+                        { name: 'Tahakkuk', data: combo.tahakkuk },
+                        { name: 'Tahsilat', data: combo.tahsilat }
+                    ]);
+                }
+            }
+
+            var kiraTrendEl = document.querySelector('#chart-kira-trend');
+            if (kiraTrendEl) {
+                var initialCombo = kiraTrendData.tumu.ay6;
+                kiraChart = new ApexCharts(kiraTrendEl, {
+                    chart: { type: 'area', height: 140, toolbar: { show: false }, animations: { enabled: true, speed: 500 } },
                     series: [
-                        { name: 'Beklenen', data: beklenenSeri },
-                        { name: 'Ödenen',   data: odenenSeri }
+                        { name: 'Tahakkuk', data: initialCombo.tahakkuk },
+                        { name: 'Tahsilat', data: initialCombo.tahsilat }
                     ],
-                    colors: ['#94a3b8', '#10b981'],
-                    plotOptions: { bar: { columnWidth: '55%', borderRadius: 4 } },
+                    colors: [brandColor('teal'), brandColor('success')],
+                    stroke: { width: 2, curve: 'smooth' },
+                    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0, stops: [0, 90, 100] } },
+                    markers: { size: 3, colors: [brandColor('teal'), brandColor('success')], strokeColors: '#fff', strokeWidth: 2 },
                     dataLabels: { enabled: false },
                     legend: { show: false },
-                    grid: { borderColor: '#e2e8f0', strokeDashArray: 4, yaxis: { lines: { show: true } }, xaxis: { lines: { show: false } } },
+                    grid: { show: false, padding: { left: 8, right: 8, top: 4, bottom: 0 } },
                     xaxis: {
-                        categories: aylar,
-                        labels: { style: { fontSize: '11px', colors: '#64748b' } },
+                        categories: initialCombo.aylar,
+                        labels: { style: { fontSize: '10px', colors: '#94a3b8' } },
                         axisBorder: { show: false },
                         axisTicks: { show: false }
                     },
-                    yaxis: {
-                        labels: {
-                            style: { fontSize: '11px', colors: '#94a3b8' },
-                            formatter: function (v) { return v.toLocaleString('tr-TR') + ' ₺'; }
-                        }
-                    },
+                    yaxis: { show: false },
                     tooltip: {
-                        y: { formatter: function (v) { return v.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺'; } }
+                        shared: true,
+                        y: {
+                            formatter: function (v) {
+                                return v.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+                            }
+                        },
+                        custom: function (opts) {
+                            var combo = kiraTrendData[kiraTrendState.kaynak][kiraTrendState.zaman];
+                            var idx = opts.dataPointIndex;
+                            var oran = combo.oran[idx];
+                            var oranText = oran === null ? '—' : '%' + oran.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                            var tahakkuk = combo.tahakkuk[idx].toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            var tahsilat = combo.tahsilat[idx].toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            return '<div class="p-2 text-xs">'
+                                + '<div class="font-semibold mb-1">' + combo.aylar[idx] + '</div>'
+                                + '<div>Tahakkuk: ' + tahakkuk + ' ₺</div>'
+                                + '<div>Tahsilat: ' + tahsilat + ' ₺ (' + oranText + ')</div>'
+                                + '</div>';
+                        }
                     }
-                }).render();
+                });
+                kiraChart.render();
             }
 
-            // §4.B — Doluluk Donut
+            // §4.A2 — Gelir Kırılımı Donut (legend HTML'de; renkler legend noktalarıyla aynı)
+            var kirilimEl = document.querySelector('#chart-gelir-kirilim');
+            if (kirilimEl) {
+                var kirilimData   = [@Html.Raw(string.Join(",", Model.ChargeTypeRevenueBreakdown.Select(x => x.TotalCollected.ToString(System.Globalization.CultureInfo.InvariantCulture))))];
+                var kirilimLabels = [@Html.Raw(string.Join(",", Model.ChargeTypeRevenueBreakdown.Select(x => $"'{x.ChargeTypeName}'")))];
+
+                if (kirilimData.reduce(function (a, b) { return a + b; }, 0) > 0) {
+                    new ApexCharts(kirilimEl, {
+                        chart: { type: 'donut', height: 200, animations: { enabled: true, speed: 600 } },
+                        series: kirilimData,
+                        labels: kirilimLabels,
+                        colors: ['#10b981', '#f59e0b', '#0ea5e9', '#8b5cf6', '#f43f5e', '#94a3b8'],
+                        plotOptions: {
+                            pie: {
+                                donut: {
+                                    size: '68%',
+                                    labels: {
+                                        show: true,
+                                        total: {
+                                            show: true,
+                                            label: 'Toplam',
+                                            formatter: function (w) {
+                                                return w.globals.seriesTotals.reduce(function (a, b) { return a + b; }, 0).toLocaleString('tr-TR') + ' ₺';
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        dataLabels: { enabled: false },
+                        legend: { show: false },
+                        stroke: { width: 2, colors: ['#fff'] },
+                        tooltip: { y: { formatter: function (v) { return v.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺'; } } }
+                    }).render();
+                }
+            }
+
+            // §4.B — Doluluk Donut (legend HTML'de; renkler legend noktalarıyla aynı: emerald/amber/slate)
             var dolulukEl = document.querySelector('#chart-doluluk');
             if (dolulukEl) {
                 var dolulukData   = [@Model.RentedUnits, @Model.ExpiringLeaseUnits, @Model.VacantUnits];
@@ -631,7 +892,7 @@
 
                 if (dolulukData.reduce(function (a, b) { return a + b; }, 0) > 0) {
                     new ApexCharts(dolulukEl, {
-                        chart: { type: 'donut', height: 240, animations: { enabled: true, speed: 600 } },
+                        chart: { type: 'donut', height: 200, animations: { enabled: true, speed: 600 } },
                         series: dolulukData,
                         labels: dolulukLabels,
                         colors: ['#10b981', '#f59e0b', '#94a3b8'],
@@ -653,7 +914,7 @@
                             }
                         },
                         dataLabels: { enabled: false },
-                        legend: { position: 'bottom', fontSize: '11px', markers: { width: 8, height: 8 } },
+                        legend: { show: false },
                         stroke: { width: 2, colors: ['#fff'] },
                         tooltip: { y: { formatter: function (v) { return v + ' birim'; } } }
                     }).render();
@@ -663,4 +924,3 @@
         });
     </script>
 }
-

@@ -28,23 +28,23 @@
 
 <!-- Mutabakat Özeti -->
 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 mb-5">
-    <div class="card bg-gradient-to-br from-slate-50 to-white border-slate-200">
-        <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-2">Toplam Tahakkuk</div>
+    <div class="card bg-slate-50 border-slate-200">
+        <div class="text-[11.5px] font-bold text-muted mb-2">Toplam Tahakkuk</div>
         <div class="text-2xl font-bold text-slate-800">@totalChargeAmount.Tl()</div>
         <div class="text-[11px] text-muted mt-1">Tüm dönemlerin brüt yükümlülüğü</div>
     </div>
-    <div class="card bg-gradient-to-br from-emerald-50/60 to-white border-emerald-100">
-        <div class="text-[11.5px] font-bold text-emerald-700 uppercase tracking-wider mb-2">Ödenen</div>
+    <div class="card bg-emerald-50/60 border-emerald-100">
+        <div class="text-[11.5px] font-bold text-emerald-700 mb-2">Ödenen</div>
         <div class="text-2xl font-bold text-emerald-700">@collectedAmount.Tl()</div>
         <div class="text-[11px] text-muted mt-1">Onaylanmış toplam ödeme</div>
     </div>
-    <div class="card bg-gradient-to-br @(remainingDebtAmount > 0 ? "from-slate-50 to-white border-slate-200" : "from-emerald-50/60 to-white border-emerald-100")">
-        <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-2">Kalan Borç</div>
+    <div class="card @(remainingDebtAmount > 0 ? "bg-slate-50 border-slate-200" : "bg-emerald-50/60 border-emerald-100")">
+        <div class="text-[11.5px] font-bold text-muted mb-2">Kalan Borç</div>
         <div class="text-2xl font-bold @(remainingDebtAmount > 0 ? "text-slate-800" : "text-emerald-700")">@remainingDebtAmount.Tl()</div>
         <div class="text-[11px] text-muted mt-1">@(remainingDebtAmount > 0 ? "Toplam tahakkuk − tahsil edilen" : "Tüm tahakkuklar karşılandı")</div>
     </div>
-    <div class="card bg-gradient-to-br @(overdueRemainingAmount > 0 ? "from-red-50/60 to-white border-red-100" : "from-emerald-50/60 to-white border-emerald-100")">
-        <div class="text-[11.5px] font-bold uppercase tracking-wider mb-2 @(overdueRemainingAmount > 0 ? "text-red-700" : "text-emerald-700")">Gecikmiş Bakiye</div>
+    <div class="card @(overdueRemainingAmount > 0 ? "bg-red-50/60 border-red-100" : "bg-emerald-50/60 border-emerald-100")">
+        <div class="text-[11.5px] font-bold mb-2 @(overdueRemainingAmount > 0 ? "text-red-700" : "text-emerald-700")">Gecikmiş Bakiye</div>
         <div class="text-2xl font-bold @(overdueRemainingAmount > 0 ? "text-red-700" : "text-emerald-700")">@overdueRemainingAmount.Tl()</div>
         <div class="text-[11px] text-muted mt-1">@(overdueRemainingAmount > 0 ? "Vadesi geçmiş ödenmemiş tutar" : "Gecikmiş borç yok")</div>
     </div>
@@ -84,40 +84,38 @@
     }">
 
     <div class="card p-0 overflow-hidden">
-        <form method="get" class="flex flex-col gap-2.5 p-3 bg-slate-50/50 border-b border-slate-200" action="@indexUrl">
+        <form method="get" class="flex flex-wrap items-center gap-2.5 p-3 bg-slate-50/50 border-b border-slate-200" action="@indexUrl">
             <input type="search" name="q" value="@query.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: dönem, taşınmaz…" />
 
-            <div class="flex flex-wrap items-center gap-2.5">
-                <select name="unitId" class="form-control w-44 text-xs font-medium">
-                    <option value="">— Tüm Birimler —</option>
-                    @foreach (var unit in Model.Units)
-                    {
-                        <option value="@unit.Id" selected="@(query.UnitId == unit.Id ? "selected" : null)">@unit.Name</option>
-                    }
-                </select>
-
-                <select name="source" class="form-control w-32 text-xs font-medium">
-                    <option value="">— Kaynak —</option>
-                    <option value="lease" selected="@(query.Source == "lease" ? "selected" : null)">Sözleşme</option>
-                    <option value="manuel" selected="@(query.Source == "manuel" ? "selected" : null)">Manuel</option>
-                    <option value="reservation" selected="@(query.Source == "reservation" ? "selected" : null)">Rezervasyon</option>
-                </select>
-
-                <select name="year" class="form-control w-24 text-xs font-medium">
-                    <option value="">— Yıl —</option>
-                    @foreach (var year in Model.AvailableYears)
-                    {
-                        <option value="@year" selected="@(query.Year == year ? "selected" : null)">@year</option>
-                    }
-                </select>
-
-                @if (status != "tum")
+            <select name="unitId" class="form-control w-44 text-xs font-medium">
+                <option value="">— Tüm Birimler —</option>
+                @foreach (var unit in Model.Units)
                 {
-                    <input type="hidden" name="status" value="@status" />
+                    <option value="@unit.Id" selected="@(query.UnitId == unit.Id ? "selected" : null)">@unit.Name</option>
                 }
-                <button type="submit" class="btn btn-primary btn-sm px-4">Filtrele</button>
-                <a href="@Url.Action(nameof(KiraTakip.Web.Controllers.TenantChargeController.Index), controllerName, status != "tum" ? new { status } : null)" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
-            </div>
+            </select>
+
+            <select name="source" class="form-control w-32 text-xs font-medium">
+                <option value="">— Kaynak —</option>
+                <option value="lease" selected="@(query.Source == "lease" ? "selected" : null)">Sözleşme</option>
+                <option value="manuel" selected="@(query.Source == "manuel" ? "selected" : null)">Manuel</option>
+                <option value="reservation" selected="@(query.Source == "reservation" ? "selected" : null)">Rezervasyon</option>
+            </select>
+
+            <select name="year" class="form-control w-24 text-xs font-medium">
+                <option value="">— Yıl —</option>
+                @foreach (var year in Model.AvailableYears)
+                {
+                    <option value="@year" selected="@(query.Year == year ? "selected" : null)">@year</option>
+                }
+            </select>
+
+            @if (status != "tum")
+            {
+                <input type="hidden" name="status" value="@status" />
+            }
+            <button type="submit" class="btn btn-primary btn-sm px-4">Filtrele</button>
+            <a href="@Url.Action(nameof(KiraTakip.Web.Controllers.TenantChargeController.Index), controllerName, status != "tum" ? new { status } : null)" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
         </form>
 
         <div class="table-wrapper">
@@ -236,11 +234,11 @@
                             <td colspan="9" class="p-4 px-12">
                                 @if (charge.LineItems.Any())
                                 {
-                                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Kalem Detayları</div>
+                                    <div class="text-[10px] font-bold text-slate-400 mb-3">Kalem Detayları</div>
                                     <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
                                         <table class="w-full text-xs">
                                             <thead class="bg-slate-50 border-b border-slate-200">
-                                                <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
+                                                <tr class="text-slate-500 font-bold text-[10px]">
                                                     <th class="p-2 px-3 text-left">Açıklama</th>
                                                     <th class="p-2 px-3 text-right">Birim</th>
                                                     <th class="p-2 px-3 text-right">Tutar</th>
@@ -296,7 +294,7 @@
 
             <!-- Kalem Seçimi (ödeme kanalından bağımsız, her iki sekmeyi de etkiler) -->
             <div class="px-5 pt-4 pb-3 border-b border-slate-200 shrink-0">
-                <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Ödeme Yapılacak Kalem *</label>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Ödeme Yapılacak Kalem *</label>
                 <template x-for="item in modalCtx?.lineItems ?? []" :key="item.id">
                     <label class="flex items-start justify-between gap-3 cursor-pointer border border-slate-200 rounded-lg px-3 py-2 mb-2 last:mb-0 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/40 transition-colors">
                         <span class="flex items-start gap-2">
@@ -309,7 +307,7 @@
                             </span>
                         </span>
                         <span class="text-right shrink-0">
-                            <span class="text-[10px] text-muted uppercase block">Kalan</span>
+                            <span class="text-[10px] text-muted block">Kalan</span>
                             <span class="text-[13px] font-bold" x-text="item.remainingText"></span>
                             <template x-if="item.pending > 0">
                                 <span class="block text-[10px] text-amber-600 font-medium mt-0.5" x-text="'⏳ ' + item.pendingText + ' onay bekliyor — ' + item.availableText + ' girilebilir'"></span>
@@ -344,17 +342,17 @@
 
                         <div class="grid grid-cols-2 gap-4 mb-4">
                             <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Tutar (₺) *</label>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Tutar (₺) *</label>
                                 <input type="number" name="Amount" step="0.01" :value="modalCtx?.amount" :max="seciliMaxAmount()" class="form-control w-full" />
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Ödeme Tarihi *</label>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Ödeme Tarihi *</label>
                                 <input type="date" name="PaymentDate" value="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control w-full" />
                             </div>
                         </div>
 
                         <div class="mb-4">
-                            <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Ödeme Kanalı *</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Ödeme Kanalı *</label>
                             <div class="grid grid-cols-4 gap-2">
                                 <label class="flex items-center gap-2 cursor-pointer border border-slate-200 rounded-lg px-3 py-2 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/40 transition-colors">
                                     <input type="radio" name="PaymentChannel" value="@((int)PaymentChannel.BankTransfer)" checked class="accent-blue-600" />
@@ -376,13 +374,13 @@
                         </div>
 
                         <div class="mb-4">
-                            <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Dekont *</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Dekont *</label>
                             <input type="file" name="Receipt" accept=".pdf,.jpg,.jpeg,.png" class="form-control w-full" />
                             <div class="text-[11px] text-muted mt-1">PDF, JPG veya PNG (zorunlu)</div>
                         </div>
 
                         <div class="mb-5">
-                            <label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Açıklama</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Açıklama</label>
                             <textarea name="Description" rows="2" class="form-control w-full" placeholder="Opsiyonel not"></textarea>
                         </div>
 
@@ -408,9 +406,9 @@
                         </p>
                     </div>
 
-                    <div class="rounded-xl bg-gradient-to-r from-slate-50 to-blue-50/40 border border-slate-200/70 px-5 py-4 mt-5">
+                    <div class="rounded-xl bg-slate-50 border border-slate-200/70 px-5 py-4 mt-5">
                         <div class="flex items-end justify-between">
-                            <div class="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Toplam Ödenecek</div>
+                            <div class="text-[11px] text-slate-500 font-semibold">Toplam Ödenecek</div>
                             <div class="text-2xl font-bold text-slate-800"><span x-text="seciliTutarText()"></span></div>
                         </div>
                     </div>
@@ -420,7 +418,7 @@
                         <input type="hidden" name="chargeId" :value="modalCtx?.chargeId" />
                         <input type="hidden" name="chargeLineItemId" :value="modalCtx?.lineItemId" />
                         <input type="hidden" name="amount" :value="modalCtx?.amount" />
-                        <button type="submit" class="w-full btn py-3 text-sm font-bold text-white rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 flex justify-center items-center gap-2">
+                        <button type="submit" class="w-full btn py-3 text-sm font-bold btn-primary rounded-xl flex justify-center items-center gap-2">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
                             Ödemeyi Tamamla
                         </button>

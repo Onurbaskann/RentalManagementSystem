@@ -8,6 +8,11 @@ internal sealed class LeaseConfiguration : IEntityTypeConfiguration<Lease>
 {
     public void Configure(EntityTypeBuilder<Lease> entity)
     {
+        entity.Property(s => s.LeaseNo).HasMaxLength(20);
+        entity.HasIndex(s => s.LeaseNo)
+              .IsUnique()
+              .HasDatabaseName("UX_Sozlesmeler_SozlesmeNo_Silinmemis")
+              .HasFilter("[IsDeleted] = 0");
         entity.Property(s => s.Status).HasComment(EnumComment.For<LeaseStatus>());
         entity.HasOne(s => s.Unit)
               .WithMany(b => b.Leases)

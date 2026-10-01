@@ -23,7 +23,7 @@
 
         <div class="card mb-4">
             <div class="text-lg font-bold mb-5 flex items-center gap-2">
-                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                <span class="w-1.5 h-4 bg-primary rounded-full"></span>
                 <span>Birim ve Kiracı</span>
             </div>
 
@@ -63,7 +63,7 @@
 
         <div class="card mb-4">
             <div class="text-lg font-bold mb-5 flex items-center gap-2">
-                <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+                <span class="w-1.5 h-4 bg-primary rounded-full"></span>
                 <span>Tarih ve Saat</span>
             </div>
 
@@ -93,7 +93,7 @@
             <!-- Ücret Önizlemesi -->
             <template x-if="hesapSonucu">
                 <div class="bg-slate-50 border border-[var(--color-border)] rounded-lg p-3.5 mt-1">
-                    <div class="text-[11px] font-bold uppercase tracking-wider text-muted mb-2.5">Ücret Önizlemesi</div>
+                    <div class="text-[11px] font-bold text-muted mb-2.5">Ücret Önizlemesi</div>
                     <div class="grid grid-cols-3 gap-3 mb-2.5">
                         <div>
                             <div class="text-[10px] text-muted">Toplam Süre</div>
@@ -136,7 +136,7 @@
 
         <div class="card mb-4">
             <div class="form-group mb-5">
-                <label asp-for="Title" class="form-label">Toplantı Başlığı <span class="text-red-500">*</span></label>
+                <label asp-for="Title" class="form-label">Rezervasyon Başlığı <span class="text-red-500">*</span></label>
                 <input asp-for="Title" class="form-control" maxlength="200" />
                 <span asp-validation-for="Title" class="form-error"></span>
             </div>
@@ -146,7 +146,7 @@
                 <span asp-validation-for="Description" class="form-error"></span>
             </div>
             <div class="form-group mt-4 mb-0">
-                <label asp-for="Notes" class="form-label">Toplantı Notları <span class="text-muted font-normal">(opsiyonel)</span></label>
+                <label asp-for="Notes" class="form-label">Rezervasyon Notları <span class="text-muted font-normal">(opsiyonel)</span></label>
                 <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
                 <span asp-validation-for="Notes" class="form-error"></span>
             </div>

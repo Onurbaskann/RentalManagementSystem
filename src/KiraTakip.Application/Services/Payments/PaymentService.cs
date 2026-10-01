@@ -95,6 +95,7 @@ public class PaymentService(
 
         var payment = new PaymentAllocation
         {
+            PaymentNo = await GeneratePaymentNoAsync(),
             ChargeId = input.ChargeId,
             ChargeLineItemId = balance.ChargeLineItemId,
             StoreAccountId = resolved.StoreAccountId,
@@ -160,6 +161,7 @@ public class PaymentService(
 
         var payment = new PaymentAllocation
         {
+            PaymentNo = await GeneratePaymentNoAsync(),
             ChargeId = input.ChargeId,
             ChargeLineItemId = balance.ChargeLineItemId,
             StoreAccountId = resolved.StoreAccountId,
@@ -249,6 +251,20 @@ public class PaymentService(
 
         await chargeService.UpdatePaidAmountAsync(
             new UpdateChargePaidAmountInput(payment.ChargeId, payment.ChargeLineItemId));
+    }
+
+    private async Task<string> GeneratePaymentNoAsync()
+    {
+        var existingPaymentNos = await paymentRepository.GetExistingPaymentNosAsync();
+        var usedPaymentNos = existingPaymentNos.ToHashSet();
+
+        if (PaymentNumberPolicy.TryGenerateNextPaymentNo(usedPaymentNos, out var paymentNo))
+            return paymentNo;
+
+        throw new BusinessException(
+            "Ödeme No üretilemedi.",
+            ErrorType.Failure,
+            "Payment.NumberGenerationFailed");
     }
 
     private async Task<int> ResolveTargetLineItemIdAsync(int chargeId, int? explicitLineItemId)

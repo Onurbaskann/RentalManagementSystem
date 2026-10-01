@@ -59,7 +59,7 @@
                             else
                             { <span class="badge badge-bos">Özel</span> }
                         </td>
-                        <td class="flex gap-1.5 justify-end items-center">
+                        <td class="text-right">
                             @if (role.IsSystemRole)
                             {
                                 <span class="inline-flex items-center gap-1 text-[11.5px] text-muted px-2 py-1" title="Sistem rolleri düzenlenemez">
@@ -70,13 +70,15 @@
                             else if (canEdit)
                             {
                                 <a asp-controller="@controllerName" asp-action="@editActionName"
-                                   asp-route-id="@role.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
+                                   asp-route-id="@role.Id.ToHashId()" class="icon-btn" data-tip="Düzenle" aria-label="Düzenle">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                                </a>
                             }
                             @if (canDelete && !role.IsSystemRole)
                             {
                                 <form asp-controller="@controllerName" asp-action="@deleteActionName"
                                       asp-route-id="@role.Id.ToHashId()" method="post"
-                                      data-confirm="'@role.Name' rolünü silmek istediğinizden emin misiniz?" class="inline">
+                                      data-confirm="'@role.Name' rolünü silmek istediğinizden emin misiniz?" class="inline ml-1.5">
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="btn btn-sm btn-danger">Sil</button>
                                 </form>

@@ -9,7 +9,6 @@ using KiraTakip.Repositories.Interfaces.Payments;
 using KiraTakip.Repositories.Interfaces.Properties;
 using KiraTakip.Services.Interfaces.Charges;
 using KiraTakip.Models.Dtos.Charge;
-using KiraTakip.Models.Dtos.Report;
 
 namespace KiraTakip.Services.Charges;
 
@@ -86,28 +85,6 @@ public class ChargeService(
             overview.OverdueRemainingAmount,
             units,
             overview.AvailableYears);
-    }
-
-    public async Task<MonthlyCollectionReportDto> GetMonthlyCollectionReportAsync(
-        GetMonthlyCollectionReportInput input)
-    {
-        var report = await chargeRepository.GetMonthlyCollectionReportAsync(input);
-        var rowsByMonth = report.Rows.ToDictionary(row => row.Month);
-
-        report.Rows = Enumerable.Range(1, 12)
-            .Select(month => rowsByMonth.GetValueOrDefault(month)
-                ?? new MonthlyCollectionReportRowDto { Month = month })
-            .ToList();
-
-        if (!report.AvailableYears.Contains(input.Year))
-        {
-            report.AvailableYears.Add(input.Year);
-            report.AvailableYears = report.AvailableYears
-                .OrderByDescending(year => year)
-                .ToList();
-        }
-
-        return report;
     }
 
     // ── Business: Gecikme Güncelleme ─────────────────────────────────────

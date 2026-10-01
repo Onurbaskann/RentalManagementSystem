@@ -240,6 +240,7 @@ public class TenantLeaseArchitectureTests : IDisposable
     private static Lease CreateLease(int tenantId, int unitId)
         => new()
         {
+            LeaseNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = tenantId,
             UnitId = unitId,
             StartDate = new DateTime(2026, 1, 1),
@@ -255,6 +256,7 @@ public class TenantLeaseArchitectureTests : IDisposable
         ChargeSourceType sourceType)
         => new()
         {
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = tenantId,
             UnitId = unitId,
             LeaseId = leaseId,

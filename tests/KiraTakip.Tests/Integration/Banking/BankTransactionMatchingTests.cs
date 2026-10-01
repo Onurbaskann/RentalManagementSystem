@@ -95,6 +95,7 @@ public class BankTransactionMatchingTests : IDisposable
 
         var lease = new Lease
         {
+            LeaseNo = $"TEST-{suffix}",
             UnitId = unit.Id,
             TenantId = tenant.Id,
             StartDate = new DateTime(2026, 1, 1),
@@ -106,6 +107,7 @@ public class BankTransactionMatchingTests : IDisposable
 
         var charge = new Charge
         {
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = tenant.Id,
             UnitId = unit.Id,
             LeaseId = lease.Id,
@@ -124,6 +126,7 @@ public class BankTransactionMatchingTests : IDisposable
 
         var payment = new PaymentAllocation
         {
+            PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
             ChargeId = charge.Id,
             ChargeLineItemId = lineItem.Id,
             StoreAccountId = storeAccountId,

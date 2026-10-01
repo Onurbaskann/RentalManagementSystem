@@ -7,6 +7,9 @@ namespace KiraTakip.Models.Entities;
 [Table("Rezervasyonlar")]
 public class Reservation : BaseEntity
 {
+    [Column("RezervasyonNo")]
+    public string ReservationNo { get; set; } = string.Empty;
+
     [Column("BirimId")]
     public int UnitId { get; set; }
 

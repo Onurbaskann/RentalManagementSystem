@@ -16,4 +16,6 @@ public class PropertyListItemDto
     public int LeasedUnitCount { get; set; }
     public int ExpiringSoonUnitCount { get; set; }
     public int VacantUnitCount { get; set; }
+    public decimal LeasedUnitArea { get; set; }
+    public decimal VacantUnitArea { get; set; }
 }

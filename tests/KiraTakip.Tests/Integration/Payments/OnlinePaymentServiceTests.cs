@@ -420,6 +420,7 @@ public class OnlinePaymentServiceTests : IDisposable
 
         var charge = new Charge
         {
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = tenant.Id,
             UnitId = unit.Id,
             PeriodStart = new DateTime(2026, 1, 1),
@@ -517,6 +518,7 @@ public class OnlinePaymentServiceConcurrencyTests(DatabaseFixture fixture)
 
             var charge = new Charge
             {
+                ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
                 TenantId = tenant.Id,
                 UnitId = unit.Id,
                 PeriodStart = new DateTime(2026, 1, 1),

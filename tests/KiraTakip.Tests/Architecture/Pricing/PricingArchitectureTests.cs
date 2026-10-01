@@ -11,61 +11,12 @@ using KiraTakip.Repositories.Tenants;
 using KiraTakip.Services.Charges;
 using KiraTakip.Services.Interfaces.Identity;
 using KiraTakip.Services.Pricing;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Configuration;
 using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Dtos.Property;
 
 namespace KiraTakip.Tests;
-
-[CollectionDefinition("Database collection")]
-public class DatabaseCollection : ICollectionFixture<DatabaseFixture>
-{
-}
-
-public class DatabaseFixture : IDisposable
-{
-    public string ConnectionString { get; }
-
-    public DatabaseFixture()
-    {
-        var config = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json")
-            .Build();
-        var configuredConnectionString = config.GetConnectionString("DefaultConnection")!;
-        var connectionBuilder = new SqlConnectionStringBuilder(configuredConnectionString);
-        var databaseName = connectionBuilder.InitialCatalog;
-        if (!string.Equals(databaseName, "KiraTakipDb_Test", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException(
-                $"Entegrasyon testleri yalnızca KiraTakipDb_Test veritabanında çalıştırılabilir. Yapılandırılan veritabanı: {databaseName}");
-        }
-
-        // Uzak test SQL Server'ın eski TLS yapılandırması yalnız test çalıştırıcısında
-        // Microsoft.Data.SqlClient'in varsayılan şifreleme davranışıyla uyuşmuyor.
-        // Uygulama connection string'i değiştirilmeden yalnız doğrulanmış test DB bağlantısı uyarlanır.
-        connectionBuilder.Encrypt = false;
-        ConnectionString = connectionBuilder.ConnectionString;
-
-        using var ctx = CreateContext();
-        ctx.Database.Migrate();
-    }
-
-    public ApplicationDbContext CreateContext(ICurrentUserContext? currentUser = null)
-    {
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseSqlServer(ConnectionString)
-            .Options;
-        return new ApplicationDbContext(
-            options,
-            new DummyHttpContextAccessor(),
-            currentUser ?? new DummyCurrentUserContext());
-    }
-
-    public void Dispose() { }
-}
 
 [Collection("Database collection")]
 public class PricingArchitectureTests : IDisposable
@@ -171,6 +122,7 @@ public class PricingArchitectureTests : IDisposable
 
         var s = new Lease
         {
+            LeaseNo = $"TEST-{Guid.NewGuid():N}"[..20],
             UnitId = seed.Unit.Id,
             TenantId = seed.Tenant.Id,
             StartDate = new DateTime(2026, 1, 1),
@@ -211,6 +163,7 @@ public class PricingArchitectureTests : IDisposable
 
         var s = new Lease
         {
+            LeaseNo = $"TEST-{Guid.NewGuid():N}"[..20],
             UnitId = seed.Unit.Id,
             TenantId = seed.Tenant.Id,
             StartDate = new DateTime(2026, 1, 1),
@@ -247,6 +200,7 @@ public class PricingArchitectureTests : IDisposable
 
         var s = new Lease
         {
+            LeaseNo = $"TEST-{Guid.NewGuid():N}"[..20],
             UnitId = seed.Unit.Id,
             TenantId = seed.Tenant.Id,
             StartDate = new DateTime(2026, 1, 1),
@@ -281,6 +235,7 @@ public class PricingArchitectureTests : IDisposable
 
         var s = new Lease
         {
+            LeaseNo = $"TEST-{Guid.NewGuid():N}"[..20],
             UnitId = seed.Unit.Id,
             TenantId = seed.Tenant.Id,
             StartDate = new DateTime(2026, 1, 1),
@@ -340,6 +295,7 @@ public class PricingArchitectureTests : IDisposable
 
         var s = new Lease
         {
+            LeaseNo = $"TEST-{Guid.NewGuid():N}"[..20],
             UnitId = seed.Unit.Id,
             TenantId = seed.Tenant.Id,
             StartDate = new DateTime(2026, 1, 1),
@@ -389,6 +345,7 @@ public class PricingArchitectureTests : IDisposable
 
         var s = new Lease
         {
+            LeaseNo = $"TEST-{Guid.NewGuid():N}"[..20],
             UnitId = seed.Unit.Id,
             TenantId = seed.Tenant.Id,
             StartDate = new DateTime(2026, 1, 1),
@@ -403,6 +360,7 @@ public class PricingArchitectureTests : IDisposable
         var manuelT = new Charge
         {
             LeaseId = s.Id,
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = seed.Tenant.Id,
             UnitId = seed.Unit.Id,
             PeriodStart = new DateTime(2026, 1, 1),

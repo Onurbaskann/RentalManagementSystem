@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using KiraTakip.Models.Dtos.TenantPanel;
 using KiraTakip.Models.Dtos.BankTransaction;
 using KiraTakip.Models.Dtos.Document;
+using KiraTakip.Models.Dtos.Report;
 
 namespace KiraTakip.Repositories.Payments;
 
@@ -33,6 +34,7 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
             .Select(o => new PaymentListItemDto
             {
                 Id = o.Id,
+                PaymentNo = o.PaymentNo,
                 ChargeId = o.ChargeId,
                 ChargeLineItemId = o.ChargeLineItemId,
                 ChargeLineItemDescription = o.ChargeLineItem.Description,
@@ -47,7 +49,11 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
                 Description = o.Description,
                 TenantDisplayName = o.Charge.Tenant.Name,
                 ChargePeriodStart = o.Charge.PeriodStart,
-                CreatedByUserDisplayName = o.GirenUser != null ? (o.GirenUser.AdSoyad ?? o.GirenUser.Email) : null
+                CreatedByUserDisplayName = o.GirenUser != null ? (o.GirenUser.AdSoyad ?? o.GirenUser.Email) : null,
+                PropertyName = o.Charge.Unit.Property.Name,
+                UnitName = o.Charge.Unit.Name,
+                StoreId = o.StoreAccount.StoreId,
+                StoreName = o.StoreAccount.Store.Name
             })
             .ToListAsync();
     }
@@ -70,11 +76,17 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
             var searchTerm = tableQuery.Q.Trim();
             query = query.Where(o =>
                 EF.Functions.Like(o.Charge.Tenant.Name, $"%{searchTerm}%") ||
+                EF.Functions.Like(o.PaymentNo, $"%{searchTerm}%") ||
+                EF.Functions.Like(o.Charge.Unit.Property.Name, $"%{searchTerm}%") ||
+                EF.Functions.Like(o.Charge.Unit.Name, $"%{searchTerm}%") ||
+                EF.Functions.Like(o.ChargeLineItem.ChargeType.Name, $"%{searchTerm}%") ||
                 (o.Description != null && EF.Functions.Like(o.Description, $"%{searchTerm}%")));
         }
 
         if (tableQuery.From.HasValue) query = query.Where(o => o.PaymentDate >= tableQuery.From.Value);
         if (tableQuery.To.HasValue) query = query.Where(o => o.PaymentDate <= tableQuery.To.Value);
+        if (tableQuery.PeriodFrom.HasValue) query = query.Where(o => o.Charge.PeriodStart >= tableQuery.PeriodFrom.Value);
+        if (tableQuery.PeriodTo.HasValue) query = query.Where(o => o.Charge.PeriodStart <= tableQuery.PeriodTo.Value);
         if (tableQuery.Min.HasValue) query = query.Where(o => o.Amount >= tableQuery.Min.Value);
         if (tableQuery.Max.HasValue) query = query.Where(o => o.Amount <= tableQuery.Max.Value);
 
@@ -97,6 +109,7 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
             .Select(o => new PaymentListItemDto
             {
                 Id = o.Id,
+                PaymentNo = o.PaymentNo,
                 ChargeId = o.ChargeId,
                 ChargeLineItemId = o.ChargeLineItemId,
                 ChargeLineItemDescription = o.ChargeLineItem.Description,
@@ -111,7 +124,11 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
                 Description = o.Description,
                 TenantDisplayName = o.Charge.Tenant.Name,
                 ChargePeriodStart = o.Charge.PeriodStart,
-                CreatedByUserDisplayName = o.GirenUser != null ? (o.GirenUser.AdSoyad ?? o.GirenUser.Email) : null
+                CreatedByUserDisplayName = o.GirenUser != null ? (o.GirenUser.AdSoyad ?? o.GirenUser.Email) : null,
+                PropertyName = o.Charge.Unit.Property.Name,
+                UnitName = o.Charge.Unit.Name,
+                StoreId = o.StoreAccount.StoreId,
+                StoreName = o.StoreAccount.Store.Name
             });
 
         return await GetPagedResultAsync(query, itemsQuery, tableQuery);
@@ -131,6 +148,7 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
             .Select(o => new PaymentDetailDto
             {
                 Id = o.Id,
+                PaymentNo = o.PaymentNo,
                 ChargeId = o.ChargeId,
                 ChargeLineItemId = o.ChargeLineItemId,
                 ChargeLineItemDescription = o.ChargeLineItem.Description,
@@ -290,6 +308,7 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
         var candidates = await query.Select(payment => new PaymentCandidateDto
         {
             Id = payment.Id,
+            PaymentNo = payment.PaymentNo,
             Amount = payment.Amount,
             PaymentDate = payment.PaymentDate,
             Status = payment.Status,
@@ -333,6 +352,13 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
                 [context.UnitId]);
     }
 
+    public Task<List<string>> GetExistingPaymentNosAsync()
+        => _dbSet
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Select(payment => payment.PaymentNo)
+            .ToListAsync();
+
     private static IQueryable<PaymentAllocation> ApplyScope(
         IQueryable<PaymentAllocation> query,
         IReadOnlyCollection<int>? propertyIds,
@@ -344,5 +370,92 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
         return query.Where(payment =>
             (propertyIds != null && propertyIds.Contains(payment.Charge.Unit.PropertyId))
             || (unitIds != null && unitIds.Contains(payment.Charge.UnitId)));
+    }
+
+    // Dönem Bazlı blok — yalnız onaylanmış ödemeler, tahakkukun ait olduğu DÖNEM (Charge.PeriodStart)
+    // eksenli (ödemenin ne zaman yapıldığına bakılmaz) — "bu yılın tahakkukundan ne kadarı ödendi".
+    // Mağaza/kalem tipi filtresi burada uygulanır (Tahsilat Raporu mağaza öncelikli görünümü).
+    public async Task<List<MonthlyCollectionReportRowDto>> GetCollectedByMonthAsync(
+        GetMonthlyCollectionReportInput input)
+    {
+        IQueryable<PaymentAllocation> query = _dbSet.AsNoTracking()
+            .Where(payment => payment.Status == PaymentStatus.Approved
+                && payment.Charge.PeriodStart.Year == input.Year);
+
+        query = ApplyScope(query, input.PropertyIds, input.UnitIds);
+
+        if (input.StoreId.HasValue)
+            query = query.Where(payment => payment.StoreAccount.StoreId == input.StoreId.Value);
+
+        if (input.ChargeTypeId.HasValue)
+            query = query.Where(payment => payment.ChargeLineItem.ChargeTypeId == input.ChargeTypeId.Value);
+
+        return await query
+            .GroupBy(payment => payment.Charge.PeriodStart.Month)
+            .Select(group => new MonthlyCollectionReportRowDto
+            {
+                Month = group.Key,
+                CollectedAmount = group.Sum(payment => payment.Amount),
+                CollectedPaymentCount = group.Count()
+            })
+            .ToListAsync();
+    }
+
+    // Ödenen kartı kırılımı — GetCollectedByMonthAsync ile birebir aynı taban (o yılın
+    // tahakkukuna yapılan tüm ödemeler, ödeme tarihi ne olursa olsun), ama ödeme tarihinin
+    // YILINA göre gruplanır — "bu yılın borcu hangi yıllarda ödenmiş" sorusuna cevap verir.
+    public async Task<List<ReportYearCountDto>> GetPaymentYearBreakdownForChargeYearAsync(
+        GetMonthlyCollectionReportInput input)
+    {
+        IQueryable<PaymentAllocation> query = _dbSet.AsNoTracking()
+            .Where(payment => payment.Status == PaymentStatus.Approved
+                && payment.Charge.PeriodStart.Year == input.Year);
+
+        query = ApplyScope(query, input.PropertyIds, input.UnitIds);
+
+        if (input.StoreId.HasValue)
+            query = query.Where(payment => payment.StoreAccount.StoreId == input.StoreId.Value);
+
+        if (input.ChargeTypeId.HasValue)
+            query = query.Where(payment => payment.ChargeLineItem.ChargeTypeId == input.ChargeTypeId.Value);
+
+        var grouped = await query
+            .GroupBy(payment => payment.PaymentDate.Year)
+            .Select(group => new { Year = group.Key, Count = group.Count() })
+            .ToListAsync();
+
+        return grouped
+            .OrderBy(item => item.Year)
+            .Select(item => new ReportYearCountDto(item.Year, item.Count))
+            .ToList();
+    }
+
+    // Nakit Bazlı blok kırılımı — yalnız onaylanmış ödemeler, ÖDEME TARİHİ (PaymentDate) yılı
+    // seçili yıla eşit olanlar ("bu yıl yapılan tüm tahsilat"), ait oldukları tahakkukun
+    // YILINA göre gruplanır — "bu yıl yapılan ödeme hangi yılların borcuna gitti" sorusuna cevap verir.
+    public async Task<List<ReportYearAmountDto>> GetCashBasisByChargeYearAsync(
+        GetMonthlyCollectionReportInput input)
+    {
+        IQueryable<PaymentAllocation> query = _dbSet.AsNoTracking()
+            .Where(payment => payment.Status == PaymentStatus.Approved
+                && payment.PaymentDate.Year == input.Year);
+
+        query = ApplyScope(query, input.PropertyIds, input.UnitIds);
+
+        if (input.StoreId.HasValue)
+            query = query.Where(payment => payment.StoreAccount.StoreId == input.StoreId.Value);
+
+        if (input.ChargeTypeId.HasValue)
+            query = query.Where(payment => payment.ChargeLineItem.ChargeTypeId == input.ChargeTypeId.Value);
+
+        var grouped = await query
+            .GroupBy(payment => payment.Charge.PeriodStart.Year)
+            .Select(group => new { Year = group.Key, Count = group.Count(), Amount = group.Sum(payment => payment.Amount) })
+            .ToListAsync();
+
+        return grouped
+            .OrderBy(item => item.Year)
+            .Select(item => new ReportYearAmountDto(item.Year, item.Count, item.Amount))
+            .ToList();
     }
 }

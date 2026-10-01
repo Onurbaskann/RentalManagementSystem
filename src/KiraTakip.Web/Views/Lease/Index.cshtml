@@ -5,6 +5,7 @@
     ViewData["Title"] = "Sözleşmeler";
     ViewData["UseCentralFeedback"] = true;
     string filtre = ViewBag.Filter ?? "tum";
+    int terminatedCount = ViewBag.TerminatedCount ?? 0;
     bool canEdit = await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.Create);
     var query = ViewBag.Query as TableQuery ?? new TableQuery();
     var paginationExtra = query.ToQueryDict();
@@ -44,7 +45,7 @@
 </div>
 
 <!-- Filtreler -->
-<div class="flex gap-1.5 flex-wrap mb-5">
+<div class="flex gap-1.5 flex-wrap @(filtre != "feshedildi" && terminatedCount > 0 ? "mb-2" : "mb-5")">
     @{
         var filters = new[] {
             ("tum",         "Tümü"),
@@ -52,8 +53,7 @@
             ("onaybekliyor", "Onay Bekleyen"),
             ("revizyon",     "Revizyon İstenen"),
             ("surek",       "Dolmak Üzere"),
-            ("gecmis",      "Sona Erdi"),
-            ("feshedildi",  "Feshedildi")
+            ("gecmis",      "Sona Erdi")
         };
     }
     @foreach (var (key, label) in filters)
@@ -62,7 +62,18 @@
         <a href="/Lease?filter=@key&q=@Uri.EscapeDataString(query.Q ?? string.Empty)&size=@query.Size"
            class="btn btn-sm @(isActive ? "btn-primary" : "btn-secondary text-slate-600 bg-white border-slate-200")">@label</a>
     }
+    @if (filtre == "feshedildi")
+    {
+        <a href="/Lease?filter=feshedildi&q=@Uri.EscapeDataString(query.Q ?? string.Empty)&size=@query.Size" class="btn btn-sm btn-primary">Feshedildi</a>
+    }
 </div>
+@if (filtre != "feshedildi" && terminatedCount > 0)
+{
+    <div class="text-xs text-muted mb-5">
+        @terminatedCount feshedilmiş kayıt gizleniyor
+        <a href="/Lease?filter=feshedildi&size=@query.Size" class="link-more ml-1">Görüntüle</a>
+    </div>
+}
 
 <div class="card p-0 overflow-hidden">
     <form method="get" asp-controller="Lease" asp-action="Index" class="flex items-center gap-3 p-3 bg-slate-50/50 border-b border-slate-200">
@@ -80,13 +91,13 @@
         <table class="w-full">
             <thead>
                 <tr>
-                    <th class="w-16">#</th>
+                    <th class="w-28">No</th>
                     <th>Kiracı</th>
                     <th>Taşınmaz / Birim</th>
                     <th class="w-28 cell-center">Başlangıç</th>
                     <th class="w-28 cell-center">Bitiş</th>
                     <th class="w-32 num">Aylık Bedel</th>
-                    <th class="w-24 cell-center">Kalan</th>
+                    <th class="w-36 cell-center">Kalan</th>
                 </tr>
             </thead>
             <tbody>
@@ -108,7 +119,7 @@
                     <tr data-row data-search="@search" data-href="@rowHref"
                         class="cursor-pointer hover:bg-slate-50 transition-colors"
                         @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
-                        <td class="text-xs text-muted font-mono">@s.Id</td>
+                        <td class="font-mono text-muted-sm">@s.LeaseNo</td>
                         <td>
                             <a href="/Tenant/Details/@s.TenantId.ToHashId()" class="font-semibold text-primary hover:underline">@s.TenantDisplayName</a>
                             @if (!string.IsNullOrEmpty(s.TenantCategoryName))
@@ -132,7 +143,7 @@
                                 @s.MonthlyAmount.Tl()
                             }
                         </td>
-                        <td class="cell-center">
+                        <td class="cell-center whitespace-nowrap">
                             @if (draft)
                             {
                                 <span class="px-2 py-0.5 rounded text-[10px] font-bold border bg-amber-50 text-amber-800 border-amber-200">ONAY BEKLİYOR</span>

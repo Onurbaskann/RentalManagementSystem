@@ -79,6 +79,7 @@ public static class ApplicationModule
 
         // Pricing
         services.AddScoped<IRateResolverService, RateResolverService>();
+        services.AddScoped<IBatchRateResolver, BatchRateResolver>();
         services.AddScoped<IPropertyPricingService, PropertyPricingService>();
         services.AddScoped<IUnitPricingService, UnitPricingService>();
         services.AddScoped<IRateHierarchyService, RateHierarchyService>();
@@ -100,6 +101,7 @@ public static class ApplicationModule
 
         // Reporting & Settings
         services.AddScoped<IStatisticsService, StatisticsService>();
+        services.AddScoped<IReportService, ReportService>();
         services.AddScoped<ISystemSettingService, SystemSettingService>();
 
         // Domain Business Rules

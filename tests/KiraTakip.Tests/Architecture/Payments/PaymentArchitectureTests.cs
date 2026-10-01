@@ -1,5 +1,6 @@
 using KiraTakip.Data;
 using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Models.Common;
 using KiraTakip.Models.Constants;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Entities;
@@ -153,6 +154,7 @@ public class PaymentArchitectureTests : IDisposable
 
         var lease = new Lease
         {
+            LeaseNo = $"TEST-{suffix}",
             UnitId = unit.Id,
             TenantId = tenant.Id,
             StartDate = new DateTime(2026, 1, 1),
@@ -164,6 +166,7 @@ public class PaymentArchitectureTests : IDisposable
 
         var charge = new Charge
         {
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = tenant.Id,
             UnitId = unit.Id,
             LeaseId = lease.Id,
@@ -279,6 +282,7 @@ public class PaymentArchitectureTests : IDisposable
         var seed = await SeedAsync();
         _context.PaymentAllocations.Add(new PaymentAllocation
         {
+            PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
             ChargeId = seed.Charge.Id,
             ChargeLineItemId = seed.LineItem.Id,
             StoreAccountId = seed.StoreAccountId,
@@ -341,6 +345,7 @@ public class PaymentArchitectureTests : IDisposable
         var seed = await SeedAsync();
         var otherCharge = new Charge
         {
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = seed.Tenant.Id,
             UnitId = seed.Unit.Id,
             LeaseId = seed.Lease.Id,
@@ -397,6 +402,7 @@ public class PaymentArchitectureTests : IDisposable
 
         var charge = new Charge
         {
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = seed.Tenant.Id,
             UnitId = seed.Unit.Id,
             LeaseId = seed.Lease.Id,
@@ -497,6 +503,7 @@ public class PaymentArchitectureTests : IDisposable
         var seed = await SeedAsync();
         var approvedPayment = new PaymentAllocation
         {
+            PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
             ChargeId = seed.Charge.Id,
             ChargeLineItemId = seed.LineItem.Id,
             StoreAccountId = seed.StoreAccountId,
@@ -509,6 +516,7 @@ public class PaymentArchitectureTests : IDisposable
         };
         var pendingPayment = new PaymentAllocation
         {
+            PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
             ChargeId = seed.Charge.Id,
             ChargeLineItemId = seed.LineItem.Id,
             StoreAccountId = seed.StoreAccountId,
@@ -602,6 +610,7 @@ public class PaymentArchitectureTests : IDisposable
         var seed = await SeedAsync();
         _context.PaymentAllocations.Add(new PaymentAllocation
         {
+            PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
             ChargeId = seed.Charge.Id,
             ChargeLineItemId = seed.LineItem.Id,
             StoreAccountId = seed.StoreAccountId,
@@ -667,11 +676,88 @@ public class PaymentArchitectureTests : IDisposable
     }
 
     [Fact]
+    public async Task GetPagedList_PeriodFromTo_FiltersByChargePeriodNotPaymentDate()
+    {
+        var seed = await SeedAsync();
+
+        // İkinci tahakkuk: dönemi farklı (2025-06), ama ödeme tarihi BİRİNCİ tahakkukla aynı gün —
+        // bu, PeriodFrom/PeriodTo'nun PaymentDate'ten bağımsız çalıştığını kanıtlamak için kasıtlı.
+        var otherCharge = new Charge
+        {
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
+            TenantId = seed.Tenant.Id,
+            UnitId = seed.Unit.Id,
+            LeaseId = seed.Lease.Id,
+            PeriodStart = new DateTime(2025, 6, 1),
+            PeriodEnd = new DateTime(2025, 6, 30),
+            DueDate = new DateTime(2025, 7, 5),
+            ExpectedAmount = 200m,
+            TotalAmount = 200m,
+            PaidAmount = 0m,
+            Status = ChargeStatus.Pending
+        };
+        _context.Charges.Add(otherCharge);
+        await _context.SaveChangesAsync();
+        var otherLineItem = new ChargeLineItem
+        {
+            ChargeId = otherCharge.Id,
+            ChargeTypeId = seed.ChargeType.Id,
+            Description = "Diğer dönem kalemi",
+            Amount = 200m,
+            TotalAmount = 200m
+        };
+        _context.ChargeLineItems.Add(otherLineItem);
+        await _context.SaveChangesAsync();
+
+        var samePaymentDate = new DateTime(2026, 2, 1);
+        _context.PaymentAllocations.AddRange(
+            new PaymentAllocation
+            {
+                PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
+                ChargeId = seed.Charge.Id,
+                ChargeLineItemId = seed.LineItem.Id,
+                StoreAccountId = seed.StoreAccountId,
+                LeaseId = seed.Lease.Id,
+                CreatedByUserId = seed.User.Id,
+                PaymentDate = samePaymentDate,
+                Amount = 100m,
+                PaymentChannel = PaymentChannel.Eft,
+                Status = PaymentStatus.Approved
+            },
+            new PaymentAllocation
+            {
+                PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
+                ChargeId = otherCharge.Id,
+                ChargeLineItemId = otherLineItem.Id,
+                StoreAccountId = seed.StoreAccountId,
+                LeaseId = seed.Lease.Id,
+                CreatedByUserId = seed.User.Id,
+                PaymentDate = samePaymentDate,
+                Amount = 200m,
+                PaymentChannel = PaymentChannel.Eft,
+                Status = PaymentStatus.Approved
+            });
+        await _context.SaveChangesAsync();
+
+        var repository = new PaymentAllocationRepository(_context);
+        var result = await repository.GetPagedListAsync(
+            new TableQuery { PeriodFrom = new DateTime(2026, 1, 1), PeriodTo = new DateTime(2026, 1, 31) },
+            null,
+            [],
+            [seed.Unit.Id]);
+
+        var item = Assert.Single(result.Items);
+        Assert.Equal(seed.Charge.Id, item.ChargeId);
+        Assert.Equal(100m, item.Amount);
+    }
+
+    [Fact]
     public async Task TenantChargeList_IsTenantScopedAndCalculatesOverdueDynamically()
     {
         var seed = await SeedAsync();
         _context.PaymentAllocations.Add(new PaymentAllocation
         {
+            PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
             ChargeId = seed.Charge.Id,
             ChargeLineItemId = seed.LineItem.Id,
             StoreAccountId = seed.StoreAccountId,

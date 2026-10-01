@@ -16,6 +16,12 @@ public class TableQuery
     public string? Source { get; set; }
     public int? Year { get; set; }
 
+    // Tahakkuk dönemi (Charge.PeriodStart) bazlı filtre — yalnız PaymentAllocationRepository
+    // tarafından kullanılır (Tahsilat Raporu drill-down'ı); From/To (PaymentDate) ile bağımsız,
+    // diğer ekranlar bu alanları kullanmaz.
+    public DateTime? PeriodFrom { get; set; }
+    public DateTime? PeriodTo { get; set; }
+
     public int Skip => (Math.Max(1, Page) - 1) * SafeSize;
     public int Take => SafeSize;
     public int SafeSize => Math.Max(1, Math.Min(200, Size));
@@ -27,6 +33,8 @@ public class TableQuery
         if (!string.IsNullOrWhiteSpace(Q)) d["q"] = Q;
         if (From.HasValue) d["from"] = From.Value.ToString("yyyy-MM-dd");
         if (To.HasValue) d["to"] = To.Value.ToString("yyyy-MM-dd");
+        if (PeriodFrom.HasValue) d["periodFrom"] = PeriodFrom.Value.ToString("yyyy-MM-dd");
+        if (PeriodTo.HasValue) d["periodTo"] = PeriodTo.Value.ToString("yyyy-MM-dd");
         if (Min.HasValue) d["min"] = Min.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
         if (Max.HasValue) d["max"] = Max.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
         if (!string.IsNullOrWhiteSpace(Status) && Status != "tum") d["status"] = Status;

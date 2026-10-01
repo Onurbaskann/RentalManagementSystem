@@ -10,6 +10,9 @@ public interface IStatisticsService
     Lease? GetActiveLease(Unit unit);
     bool IsActive(Lease lease);
     Task<decimal> GetMonthlyAmountAsync(Lease lease);
+    // Toplu hali — GetMonthlyAmountAsync(Lease) ile aynı hesaplama, çok sayıda sözleşme için N+1
+    // sorgu yerine tek seferde bulk-resolve eder (ör. Property/Details). Anahtar: Lease.Id.
+    Task<Dictionary<int, decimal>> GetMonthlyAmountsAsync(IReadOnlyCollection<Lease> leases);
     Task<decimal> GetAnnualAmountAsync(Lease lease);
     Task<LeaseSummaryDto> GetLeaseSummaryAsync(GetLeaseSummaryInput input);
     int GetRemainingDays(Lease lease);

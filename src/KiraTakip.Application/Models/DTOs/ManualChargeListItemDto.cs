@@ -5,7 +5,9 @@ namespace KiraTakip.Models.Dtos;
 public class ManualChargeListItemDto
 {
     public int Id { get; set; }
+    public string ChargeNo { get; set; } = string.Empty;
     public int? LeaseId { get; set; }
+    public string? LeaseNo { get; set; }
     public string? TenantDisplayName { get; set; }
     public string? PropertyName { get; set; }
     public string? UnitName { get; set; }

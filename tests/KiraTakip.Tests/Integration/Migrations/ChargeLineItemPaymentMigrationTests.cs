@@ -76,6 +76,7 @@ public class ChargeLineItemPaymentMigrationTests : IDisposable
 
         var charge = new Charge
         {
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = tenant.Id,
             UnitId = unit.Id,
             PeriodStart = new DateTime(2026, 1, 1),
@@ -118,6 +119,7 @@ public class ChargeLineItemPaymentMigrationTests : IDisposable
 
         var payment = new PaymentAllocation
         {
+            PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
             ChargeId = seed.Charge.Id,
             ChargeLineItemId = firstLineItem.Id,
             StoreAccountId = seed.StoreAccountId,
@@ -158,6 +160,7 @@ public class ChargeLineItemPaymentMigrationTests : IDisposable
 
         var payment = new PaymentAllocation
         {
+            PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
             ChargeId = seed.Charge.Id,
             ChargeLineItemId = lineItem.Id,
             StoreAccountId = seed.StoreAccountId,
@@ -206,6 +209,7 @@ public class ChargeLineItemPaymentMigrationTests : IDisposable
         _context.PaymentAllocations.AddRange(
             new PaymentAllocation
             {
+                PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
                 ChargeId = seed.Charge.Id,
                 ChargeLineItemId = lineItem.Id,
                 StoreAccountId = seed.StoreAccountId,
@@ -217,6 +221,7 @@ public class ChargeLineItemPaymentMigrationTests : IDisposable
             },
             new PaymentAllocation
             {
+                PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
                 ChargeId = seed.Charge.Id,
                 ChargeLineItemId = lineItem.Id,
                 StoreAccountId = seed.StoreAccountId,

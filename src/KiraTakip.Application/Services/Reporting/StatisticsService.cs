@@ -13,6 +13,7 @@ namespace KiraTakip.Services.Reporting;
 public class StatisticsService(
     IChargeTypeRepository chargeTypeRepository,
     IRateResolverService rateResolver,
+    IBatchRateResolver batchRateResolver,
     IOperationalPolicyProvider operationalPolicyProvider) : IStatisticsService
 {
     public OccupancyStatus GetUnitStatus(Unit unit)
@@ -49,6 +50,44 @@ public class StatisticsService(
             lease.Unit?.Area ?? 0m,
             DateTime.Today,
             lease.IsRentFree);
+
+    public async Task<Dictionary<int, decimal>> GetMonthlyAmountsAsync(IReadOnlyCollection<Lease> leases)
+    {
+        var result = new Dictionary<int, decimal>();
+        if (leases.Count == 0) return result;
+
+        var allChargeTypes = await chargeTypeRepository.GetActiveGenerationTypesAsync();
+        var monthlyFixedTypes = allChargeTypes
+            .Where(chargeType => chargeType.Behavior == ChargeTypeBehavior.MonthlyFixed)
+            .ToList();
+        var period = DateTime.Today;
+
+        var requests = new List<RateResolutionRequest>();
+        foreach (var lease in leases)
+        {
+            foreach (var chargeType in monthlyFixedTypes)
+            {
+                if (!LeaseBillingPolicy.ShouldIncludeChargeType(lease.IsRentFree, chargeType.Code)) continue;
+                requests.Add(new RateResolutionRequest(lease.Id, lease.TenantId, lease.UnitId, chargeType.Id, period));
+            }
+        }
+
+        var snapshots = await batchRateResolver.ResolveManyAsync(requests);
+
+        foreach (var lease in leases)
+        {
+            decimal total = 0m;
+            var area = lease.Unit?.Area ?? 0m;
+            foreach (var chargeType in monthlyFixedTypes)
+            {
+                if (!snapshots.TryGetValue((lease.Id, chargeType.Id), out var snapshot) || snapshot == null) continue;
+                total += LeaseRatePolicy.CalculateBaseAmount(snapshot.CalculationMethod, snapshot.UnitValue, area);
+            }
+            result[lease.Id] = total;
+        }
+
+        return result;
+    }
 
     public async Task<LeaseSummaryDto> GetLeaseSummaryAsync(GetLeaseSummaryInput input)
     {

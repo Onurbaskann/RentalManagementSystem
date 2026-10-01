@@ -342,6 +342,12 @@ namespace KiraTakip.Migrations
                         .HasColumnType("nvarchar(500)")
                         .HasColumnName("IptalNotu");
 
+                    b.Property<string>("ChargeNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("TahakkukNo");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -425,6 +431,11 @@ namespace KiraTakip.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ChargeNo")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Tahakkuklar_TahakkukNo_Silinmemis")
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.HasIndex("ReservationId")
                         .IsUnique()
@@ -1014,6 +1025,12 @@ namespace KiraTakip.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("BedelsizMi");
 
+                    b.Property<string>("LeaseNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("SozlesmeNo");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -1052,6 +1069,11 @@ namespace KiraTakip.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LeaseNo")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Sozlesmeler_SozlesmeNo_Silinmemis")
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.HasIndex("TenantId")
                         .HasDatabaseName("IX_Sozlesmeler_KiraciId_Aktif")
@@ -1685,6 +1707,12 @@ namespace KiraTakip.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("OdemeTarihi");
 
+                    b.Property<string>("PaymentNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("OdemeNo");
+
                     b.Property<int>("PaymentSourceType")
                         .HasColumnType("int")
                         .HasColumnName("OdemeKaynakTipi")
@@ -1724,6 +1752,11 @@ namespace KiraTakip.Migrations
                     b.HasIndex("CreatedByUserId");
 
                     b.HasIndex("LeaseId");
+
+                    b.HasIndex("PaymentNo")
+                        .IsUnique()
+                        .HasDatabaseName("UX_TahakkukOdemeleri_OdemeNo_Silinmemis")
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.HasIndex("StoreAccountId")
                         .HasDatabaseName("IX_TahakkukOdemeleri_MagazaHesapBilgisiId");
@@ -2286,6 +2319,12 @@ namespace KiraTakip.Migrations
                         .HasColumnType("nvarchar(450)")
                         .HasColumnName("TalepEdenKullaniciId");
 
+                    b.Property<string>("ReservationNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("RezervasyonNo");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -2343,6 +2382,11 @@ namespace KiraTakip.Migrations
                     b.HasIndex("RejectedByUserId");
 
                     b.HasIndex("RequestedByUserId");
+
+                    b.HasIndex("ReservationNo")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Rezervasyonlar_RezervasyonNo_Silinmemis")
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.HasIndex("TenantId")
                         .HasDatabaseName("IX_Rezervasyonlari_KiraciId_Aktif")

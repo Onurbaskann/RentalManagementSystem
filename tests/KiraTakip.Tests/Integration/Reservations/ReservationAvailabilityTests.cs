@@ -229,6 +229,7 @@ public class ReservationAvailabilityTests : IDisposable
     {
         var reservation = new Reservation
         {
+            ReservationNo = $"TEST-{Guid.NewGuid():N}"[..20],
             UnitId = unitId,
             TenantId = tenantId,
             StartDate = startDate,

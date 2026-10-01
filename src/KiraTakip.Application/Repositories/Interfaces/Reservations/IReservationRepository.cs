@@ -43,4 +43,5 @@ public interface IReservationRepository : IRepositoryBase<Reservation>
     Task<List<int>> GetActiveUnitIdsAsync(IReadOnlyCollection<int> unitIds, DateTime now);
     Task<bool> HasConfirmedForUnitTypeAsync(int unitTypeId);
     Task<bool> ExistsForUnitAsync(int unitId);
+    Task<List<string>> GetExistingReservationNosAsync();
 }

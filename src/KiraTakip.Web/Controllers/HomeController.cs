@@ -91,6 +91,49 @@ public class HomeController(
             ProjectedAnnualRevenue = totalMonthlyRevenue * 12,
         };
 
+        // Doluluk Dağılımı — taşınmaz bazlı kırılım + adet/m² karşılaştırması
+        viewModel.PropertyOccupancies = properties
+            .Select(property => new DashboardPropertyOccupancy
+            {
+                PropertyId = property.Id,
+                PropertyName = property.Name,
+                UnitCount = property.UnitCount,
+                LeasedUnitCount = property.LeasedUnitCount,
+                ExpiringSoonUnitCount = property.ExpiringSoonUnitCount,
+                VacantUnitCount = property.VacantUnitCount
+            })
+            .OrderByDescending(property => property.UnitCount)
+            .ToList();
+
+        var occupiedUnitCount = viewModel.RentedUnits + viewModel.ExpiringLeaseUnits;
+        viewModel.OccupancyCountRate = viewModel.TotalUnits > 0
+            ? Math.Round((decimal)occupiedUnitCount / viewModel.TotalUnits * 100m, 1)
+            : 0m;
+
+        var totalLeasedArea = properties.Sum(property => property.LeasedUnitArea);
+        var totalTrackedArea = totalLeasedArea + properties.Sum(property => property.VacantUnitArea);
+        viewModel.OccupancyAreaRate = totalTrackedArea > 0
+            ? Math.Round(totalLeasedArea / totalTrackedArea * 100m, 1)
+            : 0m;
+
+        // Süresi Dolmak Üzere — durum özeti + ortalama süre özeti
+        var leaseStatusLabels = new Dictionary<LeaseStatus, string>
+        {
+            [LeaseStatus.Active] = "Aktif",
+            [LeaseStatus.Draft] = "Taslak",
+            [LeaseStatus.RevisionRequested] = "Revizyon İstenen",
+            [LeaseStatus.Ended] = "Sona Erdi",
+            [LeaseStatus.Terminated] = "Feshedildi"
+        };
+        viewModel.LeaseStatusDistribution = leases
+            .GroupBy(lease => lease.Status)
+            .ToDictionary(
+                group => leaseStatusLabels.TryGetValue(group.Key, out var label) ? label : group.Key.ToString(),
+                group => group.Count());
+        viewModel.AverageLeaseDurationMonths = leases.Count > 0
+            ? Math.Round(leases.Average(lease => (lease.EndDate - lease.StartDate).TotalDays / 30.44), 1)
+            : 0;
+
         viewModel.RenewalsThisMonth = leases
             .Count(lease => lease.IsActive && lease.EndDate.Year == now.Year && lease.EndDate.Month == now.Month);
 
@@ -162,36 +205,77 @@ public class HomeController(
                     && reservation.ChargeId == null);
 
             // --- Redesign metrikleri ---
-            // Son 6 ay nakit akışı + tahsilat oranı sparkline
             var sixMonthStart = new DateTime(today.Year, today.Month, 1).AddMonths(-5);
-            var monthlyGroups = charges
+
+            // Gelir Kırılımı pastası — son 6 ay, kalem tipine göre toplam tahsilat
+            viewModel.ChargeTypeRevenueBreakdown = charges
                 .Where(charge => charge.PeriodStart >= sixMonthStart && charge.Status != ChargeStatus.Cancelled)
-                .GroupBy(charge => new { charge.PeriodStart.Year, charge.PeriodStart.Month })
-                .ToDictionary(
-                    group => (group.Key.Year, group.Key.Month),
-                    group => (
-                        Expected: group.Sum(charge => charge.TotalAmount),
-                        Collected: group.Sum(charge => charge.PaidAmount)));
-
-            for (var monthOffset = 5; monthOffset >= 0; monthOffset--)
-            {
-                var month = new DateTime(today.Year, today.Month, 1).AddMonths(-monthOffset);
-                var bucket = monthlyGroups.TryGetValue((month.Year, month.Month), out var monthlyValues)
-                    ? monthlyValues
-                    : (Expected: 0m, Collected: 0m);
-
-                viewModel.MonthlyCashFlow.Add(new DashboardMonthlyCashFlow
+                .SelectMany(charge => charge.LineItems)
+                .GroupBy(lineItem => lineItem.ChargeTypeName)
+                .Select(group => new DashboardChargeTypeTotal
                 {
-                    MonthLabel = turkishCulture.DateTimeFormat.GetAbbreviatedMonthName(month.Month),
-                    Expected = bucket.Expected,
-                    Collected = bucket.Collected
-                });
+                    ChargeTypeName = group.Key,
+                    TotalCollected = group.Sum(lineItem => lineItem.PaidAmount)
+                })
+                .OrderByDescending(item => item.TotalCollected)
+                .ToList();
 
-                var collectionRate = bucket.Expected > 0
-                    ? (double)(bucket.Collected / bucket.Expected) * 100
-                    : 0;
-                viewModel.CollectionRateSparkline.Add(Math.Round(collectionRate, 1));
+            // Aylık Kira Geliri kartı — kaynak (Tümü/Sözleşme/Manuel/Rezervasyon) × zaman aralığı
+            // (3/6/12 ay) kombinasyonları; kalemlerin toplamı, KDV dahil, tahakkuk dönemine göre.
+            List<DashboardMonthlyRevenueTrendRow> BuildTrendRows(IEnumerable<ChargeListItemDto> scopedCharges, int monthCount)
+            {
+                var windowStart = new DateTime(today.Year, today.Month, 1).AddMonths(-(monthCount - 1));
+                var groups = scopedCharges
+                    .Where(charge => charge.PeriodStart >= windowStart && charge.Status != ChargeStatus.Cancelled)
+                    .GroupBy(charge => new { charge.PeriodStart.Year, charge.PeriodStart.Month })
+                    .ToDictionary(
+                        group => (group.Key.Year, group.Key.Month),
+                        group => (
+                            Expected: group.Sum(charge => charge.TotalAmount),
+                            Collected: group.Sum(charge => charge.PaidAmount)));
+
+                var rows = new List<DashboardMonthlyRevenueTrendRow>();
+                for (var monthOffset = monthCount - 1; monthOffset >= 0; monthOffset--)
+                {
+                    var month = new DateTime(today.Year, today.Month, 1).AddMonths(-monthOffset);
+                    var bucket = groups.TryGetValue((month.Year, month.Month), out var value)
+                        ? value
+                        : (Expected: 0m, Collected: 0m);
+                    rows.Add(new DashboardMonthlyRevenueTrendRow
+                    {
+                        MonthLabel = turkishCulture.DateTimeFormat.GetAbbreviatedMonthName(month.Month),
+                        Amount = bucket.Expected,
+                        CollectedAmount = bucket.Collected,
+                        CollectionRatePercent = bucket.Expected > 0
+                            ? Math.Round(bucket.Collected / bucket.Expected * 100m, 1)
+                            : null
+                    });
+                }
+
+                rows.Reverse(); // en yeni ay üstte
+                return rows;
             }
+
+            DashboardRevenueTrendSet BuildTrendSet(IEnumerable<ChargeListItemDto> scopedCharges)
+            {
+                var scopedList = scopedCharges as List<ChargeListItemDto> ?? scopedCharges.ToList();
+                return new DashboardRevenueTrendSet
+                {
+                    Months3 = BuildTrendRows(scopedList, 3),
+                    Months6 = BuildTrendRows(scopedList, 6),
+                    Months12 = BuildTrendRows(scopedList, 12)
+                };
+            }
+
+            viewModel.RevenueTrendAll = BuildTrendSet(charges);
+            viewModel.RevenueTrendLease = BuildTrendSet(charges.Where(charge => charge.SourceType == ChargeSourceType.Lease));
+            viewModel.RevenueTrendManual = BuildTrendSet(charges.Where(charge => charge.SourceType == ChargeSourceType.Manual));
+            viewModel.RevenueTrendReservation = BuildTrendSet(charges.Where(charge => charge.SourceType == ChargeSourceType.Reservation));
+
+            // Kartın üst tutarı çizelgenin son (en güncel ay) noktasıyla birebir aynı olsun (varsayılan: Tümü + 6 Ay)
+            var latestRevenueTrend = viewModel.RevenueTrendAll.Months6.FirstOrDefault();
+            viewModel.TotalMonthlyRevenue = latestRevenueTrend?.Amount ?? 0m;
+            viewModel.MonthlyRevenueCollectionRate = latestRevenueTrend?.CollectionRatePercent ?? 0m;
 
             // Tahsilat oranı — son 30 gün vade dolan tahakkuklar
             var thirtyDaysAgo = today.AddDays(-30);
@@ -204,21 +288,6 @@ public class HomeController(
             var collectedLastThirtyDays = lastThirtyDays.Sum(charge => charge.PaidAmount);
             viewModel.ThirtyDayCollectionRate = expectedLastThirtyDays > 0
                 ? Math.Round(collectedLastThirtyDays / expectedLastThirtyDays * 100m, 1)
-                : 0m;
-
-            // Momentum — bu ay vs geçen ay (beklenen tahsilat üzerinden)
-            var previousMonthStart = new DateTime(today.Year, today.Month, 1).AddMonths(-1);
-            var previousMonthEnd = previousMonthStart.AddMonths(1).AddDays(-1);
-            viewModel.MonthlyRevenueLastMonth = charges
-                .Where(charge => charge.PeriodStart >= previousMonthStart
-                    && charge.PeriodStart <= previousMonthEnd
-                    && charge.Status != ChargeStatus.Cancelled)
-                .Sum(charge => charge.TotalAmount);
-            viewModel.MonthlyRevenueChange = viewModel.MonthlyRevenueLastMonth > 0
-                ? Math.Round(
-                    (viewModel.ExpectedCollectionThisMonth - viewModel.MonthlyRevenueLastMonth)
-                    / viewModel.MonthlyRevenueLastMonth * 100m,
-                    1)
                 : 0m;
 
             // Bugün vade dolan
@@ -266,6 +335,34 @@ public class HomeController(
                     LeaseCount = group.Select(charge => charge.LeaseId).Distinct().Count()
                 })
                 .OrderByDescending(tenant => tenant.TotalCollected)
+                .Take(5)
+                .ToList();
+
+            viewModel.TopRevenueStores = payments
+                .Where(payment => payment.PaymentDate >= lastYear && payment.Status == PaymentStatus.Approved)
+                .GroupBy(payment => new { payment.StoreId, payment.StoreName })
+                .Select(group => new DashboardStoreRevenue
+                {
+                    StoreId = group.Key.StoreId,
+                    StoreName = group.Key.StoreName,
+                    TotalCollected = group.Sum(payment => payment.Amount),
+                    PaymentCount = group.Count()
+                })
+                .OrderByDescending(store => store.TotalCollected)
+                .Take(5)
+                .ToList();
+
+            viewModel.RiskyTenants = charges
+                .Where(charge => charge.DueDate < today && charge.TotalAmount > charge.PaidAmount && charge.Status != ChargeStatus.Cancelled)
+                .GroupBy(charge => new { charge.TenantId, TenantName = charge.TenantDisplayName ?? "—" })
+                .Select(group => new DashboardRiskyTenant
+                {
+                    TenantId = group.Key.TenantId,
+                    TenantName = group.Key.TenantName,
+                    OverdueAmount = group.Sum(charge => charge.TotalAmount - charge.PaidAmount),
+                    OverdueChargeCount = group.Count()
+                })
+                .OrderByDescending(tenant => tenant.OverdueAmount)
                 .Take(5)
                 .ToList();
         }

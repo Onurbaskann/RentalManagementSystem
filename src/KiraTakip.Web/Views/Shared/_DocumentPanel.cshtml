@@ -13,7 +13,7 @@
 
 <div class="card p-0 overflow-hidden mb-5">
     <div class="p-[18px_20px_14px] border-b border-[var(--color-border)] flex items-center gap-2">
-        <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+        <span class="w-1.5 h-4 bg-primary rounded-full"></span>
         <span class="section-title">Belgeler</span>
         <span class="text-[12px] text-muted font-normal">(@uploadedCount / @Model.DocumentTypes.Count yüklendi)</span>
     </div>
@@ -64,7 +64,7 @@
                         @if (currentDocument != null)
                         {
                             <a href="/Document/Download/@currentDocument.Id.ToHashId()" target="_blank"
-                               class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="İndir">
+                               class="p-2 text-slate-400 hover:text-primary hover:bg-primary-light rounded-lg transition-all" title="İndir">
                                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                             </a>
                             @if (Model.CanEdit && !documentType.Required)
@@ -108,8 +108,8 @@
                             <div class="flex-1 w-full">
                                 <input type="file" name="file" class="form-control text-xs
                                        file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0
-                                       file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700
-                                       hover:file:bg-indigo-100 transition-all"
+                                       file:text-[11px] file:font-bold file:bg-primary-light file:text-primary
+                                       hover:file:bg-accent/20 transition-all"
                                        accept="@acceptAttribute" />
                                 <div class="text-[10.5px] text-muted mt-1.5">
                                     İzin verilen: @documentType.AllowedExtensions · Maks. @documentType.MaxSizeMb MB

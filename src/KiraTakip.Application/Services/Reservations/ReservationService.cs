@@ -1,4 +1,5 @@
 using KiraTakip.Data;
+using KiraTakip.Domain.Charges;
 using KiraTakip.Domain.Reservations;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Infrastructure.Transactions;
@@ -350,6 +351,7 @@ public class ReservationService(
 
         var reservation = new Reservation
         {
+            ReservationNo = await GenerateReservationNoAsync(),
             UnitId = input.UnitId,
             TenantId = input.TenantId,
             StartDate = input.StartDate,
@@ -438,6 +440,7 @@ public class ReservationService(
         var now = reservationBusinessRules.GetCurrentTime();
         var reservation = new Reservation
         {
+            ReservationNo = await GenerateReservationNoAsync(),
             UnitId = input.UnitId,
             TenantId = input.TenantId,
             StartDate = input.StartDate,
@@ -746,6 +749,34 @@ public class ReservationService(
             "Rezervasyon başka bir kullanıcı tarafından değiştirildi. Sayfayı yenileyip tekrar deneyin.",
             "RESERVATION_STALE_VERSION");
 
+    private async Task<string> GenerateChargeNoAsync()
+    {
+        var existingChargeNos = await chargeRepository.GetExistingChargeNosAsync();
+        var usedChargeNos = existingChargeNos.ToHashSet();
+
+        if (ChargeNumberPolicy.TryGenerateNextChargeNo(usedChargeNos, out var chargeNo))
+            return chargeNo;
+
+        throw new BusinessException(
+            "Tahakkuk No üretilemedi.",
+            ErrorType.Failure,
+            "Charge.NumberGenerationFailed");
+    }
+
+    private async Task<string> GenerateReservationNoAsync()
+    {
+        var existingReservationNos = await reservationRepository.GetExistingReservationNosAsync();
+        var usedReservationNos = existingReservationNos.ToHashSet();
+
+        if (ReservationNumberPolicy.TryGenerateNextReservationNo(usedReservationNos, out var reservationNo))
+            return reservationNo;
+
+        throw new BusinessException(
+            "Rezervasyon No üretilemedi.",
+            ErrorType.Failure,
+            "Reservation.NumberGenerationFailed");
+    }
+
     private async Task SaveDecisionAsync()
     {
         try
@@ -815,6 +846,7 @@ public class ReservationService(
 
         var charge = new Charge
         {
+            ChargeNo = await GenerateChargeNoAsync(),
             TenantId = reservation.TenantId,
             UnitId = reservation.UnitId,
             ReservationId = reservation.Id,

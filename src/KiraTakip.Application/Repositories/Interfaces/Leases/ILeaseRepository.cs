@@ -33,6 +33,7 @@ public interface ILeaseRepository : IRepositoryBase<Lease>
         List<int>? authorizedUnitIds = null);
     Task<List<LeaseListItemDto>> GetByUnitIdAsync(int unitId);
     Task<int> CountActiveByTenantAsync(int tenantId, DateTime currentTime, List<int>? authorizedPropertyIds = null, List<int>? authorizedUnitIds = null);
+    Task<int> GetTerminatedCountAsync(List<int>? authorizedPropertyIds, List<int>? authorizedUnitIds = null);
 
     // Dropdown — entity döner (Tenant + Unit + Property yüklü)
     Task<List<Lease>> GetAktiflerAsync();
@@ -44,6 +45,9 @@ public interface ILeaseRepository : IRepositoryBase<Lease>
 
     // RateResolver için projeksiyon: TasinmazId + KiraciKategoriId
     Task<(int TasinmazId, int? KategoriId)?> GetPropertyAndCategoryAsync(int leaseId);
+    // Toplu (bulk) hali — GetPropertyAndCategoryAsync ile aynı, IN(...) ile genişletilmiş.
+    Task<Dictionary<int, (int PropertyId, int? TenantCategoryId)>> GetPropertyAndCategoriesAsync(
+        IReadOnlyCollection<int> leaseIds);
 
     Task<List<UnitLookupDto>> GetActiveLeaseUnitsByTenantIdAsync(
         int tenantId,
@@ -65,4 +69,5 @@ public interface ILeaseRepository : IRepositoryBase<Lease>
     Task<Lease?> GetDeletedApplicationForAuditAsync(int leaseId);
     Task<Lease?> GetWithActivityLogAsync(int leaseId);
     Task<DocumentOwnerContextDto?> GetDocumentOwnerContextAsync(int leaseId, bool tenantPortalOnly = false);
+    Task<List<string>> GetExistingLeaseNosAsync();
 }

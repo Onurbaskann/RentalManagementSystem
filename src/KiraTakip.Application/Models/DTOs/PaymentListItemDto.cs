@@ -5,6 +5,7 @@ namespace KiraTakip.Models.Dtos;
 public class PaymentListItemDto
 {
     public int Id { get; set; }
+    public string PaymentNo { get; set; } = string.Empty;
     public int ChargeId { get; set; }
     public int ChargeLineItemId { get; set; }
     public string ChargeLineItemDescription { get; set; } = string.Empty;
@@ -20,4 +21,8 @@ public class PaymentListItemDto
     public string TenantDisplayName { get; set; } = string.Empty;
     public DateTime ChargePeriodStart { get; set; }
     public string? CreatedByUserDisplayName { get; set; }
+    public string PropertyName { get; set; } = string.Empty;
+    public string UnitName { get; set; } = string.Empty;
+    public int StoreId { get; set; }
+    public string StoreName { get; set; } = string.Empty;
 }

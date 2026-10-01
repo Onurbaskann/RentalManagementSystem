@@ -323,6 +323,7 @@ public class LeaseApprovalRepositoryTests : IDisposable
                 "Alanları kontrol edin."));
         _context.Charges.Add(new Charge
         {
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = firstTenant.Id,
             UnitId = units[3].Id,
             LeaseId = draft.Id,
@@ -363,6 +364,7 @@ public class LeaseApprovalRepositoryTests : IDisposable
         LeaseStatus status,
         string createdBy) => new()
         {
+            LeaseNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = tenantId,
             UnitId = unitId,
             Status = status,

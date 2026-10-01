@@ -16,24 +16,24 @@
         @Html.AntiForgeryToken()
 
         <div class="form-group">
-            <label class="form-label">Yıl <span style="color:red">*</span></label>
-            <input asp-for="Year" type="number" class="form-control" style="width:120px;" />
-            <span asp-validation-for="Year" class="text-danger" style="font-size:12px;"></span>
+            <label class="form-label">Yıl <span class="text-danger">*</span></label>
+            <input asp-for="Year" type="number" class="form-control w-32" />
+            <span asp-validation-for="Year" class="text-danger text-xs"></span>
         </div>
 
         <div class="form-group">
             <label class="form-label">Önceki yıldan kopyala</label>
-            <select asp-for="CopyFromYear" class="form-control" style="max-width:200px;">
+            <select asp-for="CopyFromYear" class="form-control max-w-52">
                 <option value="">— Kopyalama (boş başlat) —</option>
                 @foreach (var y in existingYears)
                 {
                     <option value="@y">@y</option>
                 }
             </select>
-            <div style="font-size:12px;color:var(--color-muted);margin-top:4px;">Seçilirse o yılın fiyatları kopyalanır.</div>
+            <div class="text-xs text-muted mt-1">Seçilirse o yılın fiyatları kopyalanır.</div>
         </div>
 
-        <div style="display:flex;gap:8px;margin-top:8px;">
+        <div class="flex gap-2 mt-2">
             <button type="submit" class="btn btn-primary">Oluştur</button>
             <a href="/Admin/Rate" class="btn btn-secondary">İptal</a>
         </div>

@@ -25,9 +25,8 @@
             @profileInitials
         </div>
         <div class="flex-1 min-w-0">
-            <div class="font-serif text-[24px] font-bold leading-tight">@Model.Name</div>
+            <div class="font-display text-[24px] font-bold leading-tight">@Model.Name</div>
             <div class="mt-1.5 flex flex-wrap gap-1.5 items-center">
-                <span class="badge badge-kurumsal">Tüzel Kişi</span>
                 @if (!string.IsNullOrEmpty(Model.TenantCategoryName))
                 {
                     <span class="badge badge-bos">@Model.TenantCategoryName</span>

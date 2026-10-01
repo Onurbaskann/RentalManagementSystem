@@ -7,6 +7,7 @@ public class MonthlyCollectionReportRowViewModel
     public int ChargeCount { get; set; }
     public decimal ExpectedAmount { get; set; }
     public decimal CollectedAmount { get; set; }
+    public int CollectedPaymentCount { get; set; }
     public int OverdueChargeCount { get; set; }
     public decimal OverdueAmount { get; set; }
     public double CollectionRate => ExpectedAmount > 0

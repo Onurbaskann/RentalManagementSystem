@@ -1,8 +1,7 @@
-﻿using KiraTakip.Authorization;
-using KiraTakip.Models.Dtos;
+using KiraTakip.Authorization;
 using KiraTakip.Web.Models.ViewModels;
-using KiraTakip.Services.Interfaces.Charges;
 using KiraTakip.Services.Interfaces.Identity;
+using KiraTakip.Services.Interfaces.Reporting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using KiraTakip.Models.Dtos.Report;
@@ -12,7 +11,7 @@ namespace KiraTakip.Web.Controllers;
 [Authorize(Policy = PermissionCatalog.Payment.Module)]
 [Route("Report")]
 public class ReportController(
-    IChargeService chargeService,
+    IReportService reportService,
     IPermissionScopeProvider permissionScopeProvider) : Controller
 {
     [HttpGet("")]
@@ -29,10 +28,12 @@ public class ReportController(
             ? null
             : permissionScopeProvider.AccessibleUnitIds;
 
-        var report = await chargeService.GetMonthlyCollectionReportAsync(
+        var report = await reportService.GetMonthlyCollectionReportAsync(
             new GetMonthlyCollectionReportInput(
                 selectedYear,
                 DateTime.Today,
+                query.StoreId,
+                query.ChargeTypeId,
                 propertyIds,
                 unitIds));
 

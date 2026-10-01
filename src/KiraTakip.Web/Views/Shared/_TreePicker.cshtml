@@ -23,7 +23,7 @@
      class="relative">
 
     <button type="button" @@click.prevent="open = !open"
-            class="w-full flex items-center justify-between gap-3 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 hover:border-[#1a6b5c] focus:outline-none focus:ring-2 focus:ring-[#1a6b5c]/30 transition-all">
+            class="w-full flex items-center justify-between gap-3 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all">
         <span class="text-left" x-text="summary"></span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
              class="flex-shrink-0 text-slate-400 transition-transform" :class="open ? 'rotate-180' : ''">
@@ -36,14 +36,14 @@
 
         <div class="px-3 py-2.5 border-b border-slate-100">
             <input x-model="query" type="text" :placeholder="config.searchPlaceholder"
-                   class="w-full text-[13px] px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#1a6b5c]/40 placeholder-slate-400" />
+                   class="w-full text-[13px] px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder-slate-400" />
         </div>
 
-        <div class="overflow-y-auto p-2" style="max-height: 250px;">
+        <div class="overflow-y-auto p-2 max-h-64">
             <template x-for="node in filteredNodes" :key="node.value">
                 <div class="mb-1">
                     <div x-show="node.groupLabel && isFirstInGroup(node)"
-                         class="px-2 pt-2 pb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400"
+                         class="px-2 pt-2 pb-1 text-[11px] font-bold text-slate-400"
                          x-text="node.groupLabel"></div>
 
                     <div class="flex items-center rounded-lg hover:bg-slate-50 transition-colors"
@@ -53,7 +53,7 @@
                                    :checked="node.selected"
                                    :indeterminate.prop="isIndeterminate(node)"
                                    @@change="toggleNode(node)"
-                                   class="w-4 h-4 rounded border-slate-300 accent-[#1a6b5c] cursor-pointer" />
+                                   class="w-4 h-4 rounded border-slate-300 accent-primary cursor-pointer" />
                             <span class="text-[13px] font-semibold text-slate-700" x-text="node.label"></span>
                             <span x-show="node.children.length === 0 && config.emptyChildrenText"
                                   class="ml-auto text-[11px] text-slate-400 font-normal italic"
@@ -86,7 +86,7 @@
                                     <input type="checkbox"
                                            :checked="child.selected"
                                            @@change="toggleChild(node, child)"
-                                           class="w-3.5 h-3.5 rounded border-slate-300 accent-[#1a6b5c] cursor-pointer" />
+                                           class="w-3.5 h-3.5 rounded border-slate-300 accent-primary cursor-pointer" />
                                     <span class="text-[12.5px] text-slate-600" x-text="child.label"></span>
                                     <span x-show="child.highlighted"
                                           class="ml-0.5 w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"

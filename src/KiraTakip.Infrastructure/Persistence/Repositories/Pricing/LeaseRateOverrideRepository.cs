@@ -20,6 +20,24 @@ public class LeaseRateOverrideRepository(
             })
             .FirstOrDefaultAsync();
 
+    public async Task<List<(int LeaseId, int ChargeTypeId, RateValueDto Rate)>> GetRatesAsync(
+        IReadOnlyCollection<int> leaseIds, IReadOnlyCollection<int> chargeTypeIds)
+    {
+        var rows = await _dbSet.AsNoTracking()
+            .Where(r => leaseIds.Contains(r.LeaseId) && chargeTypeIds.Contains(r.ChargeTypeId))
+            .Select(r => new { r.LeaseId, r.ChargeTypeId, r.CalculationMethod, r.UnitValue, r.KdvRate })
+            .ToListAsync();
+
+        return rows
+            .Select(r => (r.LeaseId, r.ChargeTypeId, new RateValueDto
+            {
+                CalculationMethod = r.CalculationMethod,
+                UnitValue = r.UnitValue,
+                KdvRate = r.KdvRate
+            }))
+            .ToList();
+    }
+
     public async Task ReplaceAsync(int leaseId, IReadOnlyCollection<LeaseRateOverride> rateOverrides)
     {
         var existingRates = await _dbSet.Where(rate => rate.LeaseId == leaseId).ToListAsync();

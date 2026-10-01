@@ -23,6 +23,8 @@ public interface IChargeRepository : IRepositoryBase<Charge>
     Task<TenantPanelChargeDataDto> GetTenantPanelDataAsync(GetTenantPanelChargeDataInput input);
     Task<MonthlyCollectionReportDto> GetMonthlyCollectionReportAsync(
         GetMonthlyCollectionReportInput input);
+    Task<PriorYearsOverdueSummary> GetPriorYearsOverdueAsync(
+        GetMonthlyCollectionReportInput input);
     // Manuel Borç — DTO döner
     Task<List<ManualChargeListItemDto>> GetManualChargeListAsync(
         List<int>? propertyIds,
@@ -58,4 +60,5 @@ public interface IChargeRepository : IRepositoryBase<Charge>
     // Üretim yardımcıları (ChargeGenerationService için)
     Task<List<Charge>> GetSilineceklerAsync(int leaseId, DateTime ilkGun);
     Task DeleteRangeAsync(IEnumerable<Charge> entities);
+    Task<List<string>> GetExistingChargeNosAsync();
 }

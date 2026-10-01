@@ -84,12 +84,6 @@ internal static class PropertyValidationRules
                 errors.Add(new ValidationError("Yüzölçümü 0'dan büyük olmalıdır.", $"{prefix}.{nameof(area.Area)}"));
             if (area.UnitTypeId is null or <= 0)
                 errors.Add(new ValidationError("Alan türü zorunludur.", $"{prefix}.{nameof(area.UnitTypeId)}"));
-            if (area.FreeDurationMinutes < 0)
-                errors.Add(new ValidationError("Ücretsiz süre negatif olamaz.", $"{prefix}.{nameof(area.FreeDurationMinutes)}"));
-            if (area.HourlyRate < 0)
-                errors.Add(new ValidationError("Saatlik ücret negatif olamaz.", $"{prefix}.{nameof(area.HourlyRate)}"));
-            if (area.VatRate is < 0 or > 100)
-                errors.Add(new ValidationError("KDV oranı 0 ile 100 arasında olmalıdır.", $"{prefix}.{nameof(area.VatRate)}"));
         }
     }
 

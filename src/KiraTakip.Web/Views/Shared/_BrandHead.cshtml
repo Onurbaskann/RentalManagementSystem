@@ -1,0 +1,40 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    // Tailwind renkleri/fontları tokens.css'teki --rgb-* ve --font-* değişkenlerinden okunur (tek kaynak).
+    // rgb(var(--x) / <alpha-value>) sayesinde bg-primary/20, ring-accent/30 gibi alfa değişkenleri çalışır.
+    const token = (name) => `rgb(var(--rgb-${name}) / <alpha-value>)`;
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    primary: { DEFAULT: token('navy'), light: token('teal-light') },
+                    navy: { DEFAULT: token('navy'), dark: token('navy-dark'), mid: token('navy-mid') },
+                    accent: { DEFAULT: token('teal'), light: token('teal-light'), bright: token('teal-bright') },
+                    success: token('success'),
+                    warning: { DEFAULT: token('warning'), strong: token('warning-strong') },
+                    danger: token('danger'),
+                    info: token('info'),
+                    surface: 'var(--color-surface)',
+                },
+                // Radius hiyerarşisi: iç kutular (md/lg) dış yüzeylerden (xl+) küçük kalır. rounded-full dokunulmaz.
+                borderRadius: {
+                    md: '5px',
+                    lg: '5px',
+                    xl: '8px',
+                    '2xl': '8px',
+                    '3xl': '8px',
+                },
+                // font-sans (varsayılan gövde), font-display (başlık), font-mono (sayılar de Inter; tabular-nums app.css'te)
+                fontFamily: {
+                    sans: ['var(--font-ui)'],
+                    display: ['var(--font-display)'],
+                    mono: ['var(--font-ui)'],
+                },
+            },
+        },
+    }
+</script>

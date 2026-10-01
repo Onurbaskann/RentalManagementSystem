@@ -25,6 +25,28 @@ public class UnitRateRepository(ApplicationDbContext ctx) : RepositoryBase<UnitR
             })
             .FirstOrDefaultAsync();
 
+    public async Task<List<(int UnitId, int TenantCategoryId, int ChargeTypeId, RateValueDto Rate)>> GetRatesAsync(
+        IReadOnlyCollection<int> unitIds, IReadOnlyCollection<int> tenantCategoryIds, IReadOnlyCollection<int> chargeTypeIds)
+    {
+        var rows = await _dbSet.AsNoTracking()
+            .Where(r => unitIds.Contains(r.UnitId)
+                     && tenantCategoryIds.Contains(r.TenantCategoryId)
+                     && chargeTypeIds.Contains(r.ChargeTypeId)
+                     && r.IsActive
+                     && !r.IsDeleted)
+            .Select(r => new { r.UnitId, r.TenantCategoryId, r.ChargeTypeId, r.CalculationMethod, r.UnitValue, r.KdvRate })
+            .ToListAsync();
+
+        return rows
+            .Select(r => (r.UnitId, r.TenantCategoryId, r.ChargeTypeId, new RateValueDto
+            {
+                CalculationMethod = r.CalculationMethod,
+                UnitValue = r.UnitValue,
+                KdvRate = r.KdvRate
+            }))
+            .ToList();
+    }
+
     public async Task<List<ParentRateRowDto>> GetRowsByUnitAsync(int unitId, int? tenantCategoryId)
     {
         var query = _dbSet.AsNoTracking()

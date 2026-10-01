@@ -57,7 +57,19 @@ public class PropertyRepository(ApplicationDbContext ctx) : RepositoryBase<Prope
                     (!hasScopeFilter || propertyIds.Contains(t.Id) || unitIds.Contains(unit.Id))
                     && !unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
                         && lease.StartDate <= now
-                        && lease.EndDate >= now))
+                        && lease.EndDate >= now)),
+                LeasedUnitArea = t.Units
+                    .Where(unit => (!hasScopeFilter || propertyIds.Contains(t.Id) || unitIds.Contains(unit.Id))
+                        && unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
+                            && lease.StartDate <= now
+                            && lease.EndDate >= now))
+                    .Sum(unit => (decimal?)unit.Area) ?? 0,
+                VacantUnitArea = t.Units
+                    .Where(unit => (!hasScopeFilter || propertyIds.Contains(t.Id) || unitIds.Contains(unit.Id))
+                        && !unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
+                            && lease.StartDate <= now
+                            && lease.EndDate >= now))
+                    .Sum(unit => (decimal?)unit.Area) ?? 0
             })
             .ToListAsync();
     }
@@ -131,7 +143,11 @@ public class PropertyRepository(ApplicationDbContext ctx) : RepositoryBase<Prope
     public async Task<PropertyDetailDto?> GetDetailsAsync(int id)
     {
         var now = DateTime.Now;
-        return await _ctx.Properties.AsNoTracking()
+        var property = await _ctx.Properties.AsNoTracking()
+            // Units/Reservations/UnitReservationRateOverrides/UnitCustomRates/LeaseHistory — 5 ayrı
+            // koleksiyon aynı projeksiyonda. AsSplitQuery olmadan EF Core bunları tek dev JOIN'de
+            // birleştirir (kartezyen çarpım — birim×rezervasyon×geçmiş sayısı katlanarak büyür).
+            .AsSplitQuery()
             .Where(t => t.Id == id)
             .Select(t => new PropertyDetailDto
             {
@@ -146,6 +162,10 @@ public class PropertyRepository(ApplicationDbContext ctx) : RepositoryBase<Prope
                 OpenArea = t.OpenArea,
                 UnitStructure = t.UnitStructure,
                 Description = t.Description,
+                // Not: ActiveLease*/Status/Reservation* alanları burada DOLDURULMAZ — aşağıda
+                // birim sayısından bağımsız, sabit sayıda bulk sorguyla doldurulur. Eskiden burada
+                // birim başına 12 ayrı correlated subquery vardı (OUTER APPLY × birim sayısı) —
+                // çok birimli taşınmazlarda asıl performans sorunu buydu.
                 Units = t.Units.Select(b => new UnitDetailDto
                 {
                     Id = b.Id,
@@ -154,58 +174,8 @@ public class PropertyRepository(ApplicationDbContext ctx) : RepositoryBase<Prope
                     FloorNo = b.FloorNo,
                     Area = b.Area,
                     UnitTypeName = b.UnitType != null ? b.UnitType.Name : string.Empty,
-                    CanBeReserved = b.UnitType != null ? b.UnitType.Usage == UnitTypeUsage.Reservable : false,
-                    CanBeRented = b.UnitType != null ? b.UnitType.Usage == UnitTypeUsage.Rentable : false,
-                    ActiveLeaseId = b.Leases
-                        .Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
-                        .OrderByDescending(s => s.EndDate)
-                        .Select(s => (int?)s.Id)
-                        .FirstOrDefault(),
-                    ActiveLeaseTenantId = b.Leases
-                        .Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
-                        .OrderByDescending(s => s.EndDate)
-                        .Select(s => (int?)s.TenantId)
-                        .FirstOrDefault(),
-                    ActiveLeaseIsRentFree = b.Leases
-                        .Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
-                        .OrderByDescending(s => s.EndDate)
-                        .Select(s => s.IsRentFree)
-                        .FirstOrDefault(),
-                    ActiveLeaseTenantDisplayName = b.Leases
-                        .Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
-                        .OrderByDescending(s => s.EndDate)
-                        .Select(s => s.Tenant.DisplayName)
-                        .FirstOrDefault(),
-                    ActiveLeaseEndDate = b.Leases
-                        .Where(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
-                        .OrderByDescending(s => s.EndDate)
-                        .Select(s => (DateTime?)s.EndDate)
-                        .FirstOrDefault(),
-                    Status = b.Leases.Any(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
-                        ? (b.Leases.Any(s => s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now && s.EndDate <= now.AddDays(30))
-                            ? OccupancyStatus.ExpiringSoon
-                            : OccupancyStatus.Leased)
-                        : OccupancyStatus.Vacant,
-                    ReservationRateOverrideId = _ctx.RezervasyonTarifeler
-                        .Where(rt => rt.UnitId == b.Id && rt.IsActive)
-                        .Select(rt => (int?)rt.Id)
-                        .FirstOrDefault(),
-                    ReservationPeriodRate = _ctx.RezervasyonTarifeler
-                        .Where(rt => rt.UnitId == b.Id && rt.IsActive)
-                        .Select(rt => (decimal?)rt.PeriodRate)
-                        .FirstOrDefault(),
-                    ReservationBillingPeriodMinutes = _ctx.RezervasyonTarifeler
-                        .Where(rt => rt.UnitId == b.Id && rt.IsActive)
-                        .Select(rt => (int?)rt.BillingPeriodMinutes)
-                        .FirstOrDefault(),
-                    ReservationFreeDurationMinutes = _ctx.RezervasyonTarifeler
-                        .Where(rt => rt.UnitId == b.Id && rt.IsActive)
-                        .Select(rt => (int?)rt.FreeDurationMinutes)
-                        .FirstOrDefault(),
-                    ReservationVatRate = _ctx.RezervasyonTarifeler
-                        .Where(rt => rt.UnitId == b.Id && rt.IsActive)
-                        .Select(rt => (decimal?)rt.KdvRate)
-                        .FirstOrDefault()
+                    CanBeReserved = b.UnitType != null && b.UnitType.Usage == UnitTypeUsage.Reservable,
+                    CanBeRented = b.UnitType != null && b.UnitType.Usage == UnitTypeUsage.Rentable
                 }).ToList(),
                 Reservations = _ctx.Reservations
                     .Where(r => t.Units.Select(b => b.Id).Contains(r.UnitId))
@@ -276,6 +246,64 @@ public class PropertyRepository(ApplicationDbContext ctx) : RepositoryBase<Prope
                     }).ToList()
             })
             .FirstOrDefaultAsync();
+
+        if (property == null) return null;
+
+        var unitIds = property.Units.Select(unit => unit.Id).ToList();
+        if (unitIds.Count == 0) return property;
+
+        var activeLeases = await _ctx.Leases.AsNoTracking()
+            .Where(s => unitIds.Contains(s.UnitId)
+                && s.Status == LeaseStatus.Active && s.StartDate <= now && s.EndDate >= now)
+            .Select(s => new
+            {
+                s.UnitId,
+                s.Id,
+                s.TenantId,
+                s.IsRentFree,
+                TenantDisplayName = s.Tenant.DisplayName,
+                s.EndDate
+            })
+            .ToListAsync();
+        var activeLeaseByUnit = activeLeases
+            .GroupBy(lease => lease.UnitId)
+            .ToDictionary(group => group.Key, group => group.OrderByDescending(lease => lease.EndDate).First());
+
+        var reservationRates = await _ctx.RezervasyonTarifeler.AsNoTracking()
+            .Where(rt => rt.UnitId != null && unitIds.Contains(rt.UnitId.Value) && rt.IsActive)
+            .Select(rt => new { UnitId = rt.UnitId!.Value, rt.Id, rt.PeriodRate, rt.BillingPeriodMinutes, rt.FreeDurationMinutes, rt.KdvRate })
+            .ToListAsync();
+        var reservationRateByUnit = reservationRates
+            .GroupBy(rate => rate.UnitId)
+            .ToDictionary(group => group.Key, group => group.First());
+
+        foreach (var unit in property.Units)
+        {
+            if (activeLeaseByUnit.TryGetValue(unit.Id, out var lease))
+            {
+                unit.ActiveLeaseId = lease.Id;
+                unit.ActiveLeaseTenantId = lease.TenantId;
+                unit.ActiveLeaseIsRentFree = lease.IsRentFree;
+                unit.ActiveLeaseTenantDisplayName = lease.TenantDisplayName;
+                unit.ActiveLeaseEndDate = lease.EndDate;
+                unit.Status = lease.EndDate <= now.AddDays(30) ? OccupancyStatus.ExpiringSoon : OccupancyStatus.Leased;
+            }
+            else
+            {
+                unit.Status = OccupancyStatus.Vacant;
+            }
+
+            if (reservationRateByUnit.TryGetValue(unit.Id, out var rate))
+            {
+                unit.ReservationRateOverrideId = rate.Id;
+                unit.ReservationPeriodRate = rate.PeriodRate;
+                unit.ReservationBillingPeriodMinutes = rate.BillingPeriodMinutes;
+                unit.ReservationFreeDurationMinutes = rate.FreeDurationMinutes;
+                unit.ReservationVatRate = rate.KdvRate;
+            }
+        }
+
+        return property;
     }
 
     public async Task<Property?> GetWithUnitsTrackedAsync(int id)

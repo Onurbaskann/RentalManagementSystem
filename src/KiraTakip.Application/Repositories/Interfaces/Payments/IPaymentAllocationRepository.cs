@@ -3,6 +3,7 @@ using KiraTakip.Repositories.Interfaces.Common;
 using KiraTakip.Models.Dtos.TenantPanel;
 using KiraTakip.Models.Dtos.BankTransaction;
 using KiraTakip.Models.Dtos.Document;
+using KiraTakip.Models.Dtos.Report;
 
 namespace KiraTakip.Repositories.Interfaces.Payments;
 
@@ -38,4 +39,8 @@ public interface IPaymentAllocationRepository : IRepositoryBase<PaymentAllocatio
         IReadOnlyList<int>? propertyIds,
         IReadOnlyList<int>? unitIds = null);
     Task<DocumentOwnerContextDto?> GetDocumentOwnerContextAsync(int paymentId);
+    Task<List<string>> GetExistingPaymentNosAsync();
+    Task<List<MonthlyCollectionReportRowDto>> GetCollectedByMonthAsync(GetMonthlyCollectionReportInput input);
+    Task<List<ReportYearCountDto>> GetPaymentYearBreakdownForChargeYearAsync(GetMonthlyCollectionReportInput input);
+    Task<List<ReportYearAmountDto>> GetCashBasisByChargeYearAsync(GetMonthlyCollectionReportInput input);
 }

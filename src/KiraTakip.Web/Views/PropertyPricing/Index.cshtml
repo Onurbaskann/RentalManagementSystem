@@ -24,7 +24,7 @@
                     @foreach (var col in Model.Columns)
                     {
                         <th class="text-center bg-slate-50/50 border-l border-slate-100">
-                            <div class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">@col.ChargeTypeCode</div>
+                            <div class="text-[10px] text-slate-400 font-bold mb-1">@col.ChargeTypeCode</div>
                             <div class="text-[13px] text-slate-700">@col.ChargeTypeName</div>
                         </th>
                     }
@@ -52,17 +52,17 @@
                                     {
                                         <div class="text-base font-bold text-slate-800 flex items-baseline justify-center gap-1">
                                             @cell.UnitValue?.ToString("N2") <span class="text-xs font-normal">₺</span>
-                                            <span class="text-[10px] font-medium text-slate-400 uppercase ml-0.5">
+                                            <span class="text-[10px] font-medium text-slate-400 ml-0.5">
                                                 @(cell.CalculationMethod == CalculationMethod.Fixed ? "Sbt" : "m²")
                                             </span>
                                         </div>
-                                        <div class="text-[10px] font-bold text-indigo-500 uppercase tracking-tighter mt-1">
+                                        <div class="text-[10px] font-bold text-indigo-500 mt-1">
                                             KDV %@cell.VatRate?.ToString("N0")
                                         </div>
                                     }
                                     else
                                     {
-                                        <div class="text-[10px] text-slate-300 font-bold uppercase tracking-widest">BOŞ</div>
+                                        <div class="text-[10px] text-slate-300 font-bold">BOŞ</div>
                                     }
                                 </td>
                             }
@@ -93,11 +93,11 @@
             <div class="flex gap-1.5">
                 @if (Model.CurrentPage > 1)
                 {
-                    <a class="btn btn-sm btn-secondary text-xs px-4" asp-action="Index" asp-route-propertyId="@Model.PropertyId" asp-route-page="@(Model.CurrentPage - 1)" asp-route-pageSize="@Model.PageSize">← Önceki</a>
+                    <a class="btn btn-sm btn-secondary text-xs px-4" asp-action="Index" asp-route-propertyId="@Model.PropertyId.ToHashId()" asp-route-page="@(Model.CurrentPage - 1)" asp-route-pageSize="@Model.PageSize">← Önceki</a>
                 }
                 @if (Model.CurrentPage * Model.PageSize < Model.TotalRows)
                 {
-                    <a class="btn btn-sm btn-secondary text-xs px-4" asp-action="Index" asp-route-propertyId="@Model.PropertyId" asp-route-page="@(Model.CurrentPage + 1)" asp-route-pageSize="@Model.PageSize">Sonraki →</a>
+                    <a class="btn btn-sm btn-secondary text-xs px-4" asp-action="Index" asp-route-propertyId="@Model.PropertyId.ToHashId()" asp-route-page="@(Model.CurrentPage + 1)" asp-route-pageSize="@Model.PageSize">Sonraki →</a>
                 }
             </div>
         }

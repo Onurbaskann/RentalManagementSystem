@@ -41,26 +41,30 @@ public class PropertyService(
         var details = await propertyRepository.GetDetailsAsync(input.PropertyId);
         if (details == null) return null;
 
+        // Units + LeaseHistory'deki tüm sözleşmeler tek seferde toplu (bulk) hesaplanır (N+1 sorgu
+        // önlenir, bkz. IStatisticsService.GetMonthlyAmountsAsync). LeaseId'ye göre dedupe edilir —
+        // bir birimin aktif sözleşmesi aynı zamanda LeaseHistory'de de göründüğü için aynı hesap
+        // tekrar yapılmaz.
+        var leasesById = new Dictionary<int, Lease>();
+
         foreach (var unit in details.Units)
         {
-            if (unit.ActiveLeaseId.HasValue)
+            if (!unit.ActiveLeaseId.HasValue) continue;
+            leasesById[unit.ActiveLeaseId.Value] = new Lease
             {
-                var lease = new Lease
-                {
-                    Id = unit.ActiveLeaseId.Value,
-                    TenantId = unit.ActiveLeaseTenantId ?? 0,
-                    UnitId = unit.Id,
-                    IsRentFree = unit.ActiveLeaseIsRentFree,
-                    Unit = new Unit { Id = unit.Id, Area = unit.Area }
-                };
-                unit.MonthlyRent = await statisticsService.GetMonthlyAmountAsync(lease);
-            }
+                Id = unit.ActiveLeaseId.Value,
+                TenantId = unit.ActiveLeaseTenantId ?? 0,
+                UnitId = unit.Id,
+                IsRentFree = unit.ActiveLeaseIsRentFree,
+                Unit = new Unit { Id = unit.Id, Area = unit.Area }
+            };
         }
 
         foreach (var leaseHistory in details.LeaseHistory)
         {
+            if (leasesById.ContainsKey(leaseHistory.Id)) continue;
             var unitArea = details.Units.FirstOrDefault(unit => unit.Id == leaseHistory.UnitId)?.Area ?? 0m;
-            var lease = new Lease
+            leasesById[leaseHistory.Id] = new Lease
             {
                 Id = leaseHistory.Id,
                 TenantId = leaseHistory.TenantId,
@@ -68,7 +72,20 @@ public class PropertyService(
                 IsRentFree = leaseHistory.IsRentFree,
                 Unit = new Unit { Id = leaseHistory.UnitId, Area = unitArea }
             };
-            leaseHistory.MonthlyAmount = await statisticsService.GetMonthlyAmountAsync(lease);
+        }
+
+        var monthlyAmounts = await statisticsService.GetMonthlyAmountsAsync(leasesById.Values.ToList());
+
+        foreach (var unit in details.Units)
+        {
+            if (unit.ActiveLeaseId.HasValue && monthlyAmounts.TryGetValue(unit.ActiveLeaseId.Value, out var amount))
+                unit.MonthlyRent = amount;
+        }
+
+        foreach (var leaseHistory in details.LeaseHistory)
+        {
+            if (monthlyAmounts.TryGetValue(leaseHistory.Id, out var amount))
+                leaseHistory.MonthlyAmount = amount;
         }
 
         return details;
@@ -138,15 +155,6 @@ public class PropertyService(
                     UnitTypeId = reservationInput.UnitTypeId!.Value
                 };
                 property.Units.Add(unit);
-                await reservationRateOverrideRepository.AddAsync(new ReservationRateOverride
-                {
-                    Unit = unit,
-                    FreeDurationMinutes = reservationInput.FreeDurationMinutes,
-                    BillingPeriodMinutes = 60,
-                    PeriodRate = reservationInput.HourlyRate,
-                    KdvRate = reservationInput.VatRate,
-                    Description = $"{reservationInput.Name} için otomatik oluşturuldu"
-                });
             }
         }
 
@@ -166,9 +174,6 @@ public class PropertyService(
 
         var now = DateTime.Now;
         var unitIds = property.Units.Select(unit => unit.Id).ToList();
-        var reservationRates = await reservationRateOverrideRepository.GetByUnitIdsAsync(
-            unitIds,
-            activeOnly: true);
         var activeReservationUnitIds = await reservationRepository.GetActiveUnitIdsAsync(unitIds, now);
 
         var result = new PropertyEditDto
@@ -197,7 +202,6 @@ public class PropertyService(
         {
             if (unit.UnitType.Usage == UnitTypeUsage.Reservable)
             {
-                reservationRates.TryGetValue(unit.Id, out var rate);
                 result.ReservationAreas.Add(new ReservationAreaInputDto
                 {
                     Id = unit.Id,
@@ -205,10 +209,7 @@ public class PropertyService(
                     Name = unit.Name,
                     Area = unit.Area,
                     UnitTypeId = unit.UnitTypeId,
-                    Description = unit.Description,
-                    FreeDurationMinutes = rate?.FreeDurationMinutes ?? 0,
-                    HourlyRate = rate?.PeriodRate ?? 0,
-                    VatRate = rate?.KdvRate ?? 20
+                    Description = unit.Description
                 });
                 if (activeReservationUnitIds.Contains(unit.Id))
                     result.ActiveReservationUnitIds.Add(unit.Id);
@@ -380,17 +381,6 @@ public class PropertyService(
             unit.Area = reservationInput.Area;
             unit.Description = reservationInput.Description;
             unit.UnitTypeId = reservationInput.UnitTypeId!.Value;
-
-            if (!reservationRates.TryGetValue(unit.Id, out var rate))
-            {
-                rate = new ReservationRateOverride { Unit = unit, BillingPeriodMinutes = 60 };
-                await reservationRateOverrideRepository.AddAsync(rate);
-            }
-
-            rate.FreeDurationMinutes = reservationInput.FreeDurationMinutes;
-            rate.PeriodRate = reservationInput.HourlyRate;
-            rate.KdvRate = reservationInput.VatRate;
-            rate.Description = $"{reservationInput.Name} için otomatik oluşturuldu";
         }
     }
 
@@ -446,16 +436,6 @@ public class PropertyService(
             nameof(input.ReservationAreas),
             "Rezervasyon alanları için aktif bir rezervasyon birim türü seçilmelidir.",
             "Property.InvalidReservationUnitType");
-        Guard.InvalidField(
-            input.ReservationAreas.Any(area =>
-                !ReservationRatePolicy.IsValid(
-                    area.FreeDurationMinutes,
-                    60,
-                    area.HourlyRate,
-                    area.VatRate)),
-            nameof(input.ReservationAreas),
-            "Rezervasyon alanı ücret kuralları değerlerinden biri geçersiz.",
-            "Property.InvalidReservationRate");
     }
 
     private async Task ValidateSubmittedUnitsAsync(Property property, UpdatePropertyInput input)

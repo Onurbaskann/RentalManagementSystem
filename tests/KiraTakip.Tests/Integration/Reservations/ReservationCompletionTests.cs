@@ -114,6 +114,7 @@ public class ReservationCompletionTests : IDisposable
     {
         var reservation = new Reservation
         {
+            ReservationNo = $"TEST-{Guid.NewGuid():N}"[..20],
             UnitId = seed.UnitId,
             TenantId = seed.TenantId,
             StartDate = endDate.AddHours(-1),
@@ -166,6 +167,7 @@ public class ReservationCompletionConcurrencyTests(DatabaseFixture fixture)
             await setup.SaveChangesAsync();
             var reservation = new Reservation
             {
+                ReservationNo = $"TEST-{Guid.NewGuid():N}"[..20],
                 UnitId = unit.Id,
                 TenantId = tenant.Id,
                 StartDate = new DateTime(2026, 8, 13, 8, 0, 0),

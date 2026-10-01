@@ -46,7 +46,7 @@
 
         @if (activeAccount != null)
         {
-            <div class="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white overflow-hidden mb-5">
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 overflow-hidden mb-5">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-b border-emerald-100">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
@@ -71,16 +71,16 @@
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-emerald-100">
                     <div class="px-4 py-3">
-                        <div class="text-[11px] uppercase tracking-wide font-semibold text-slate-400">Sağlayıcı</div>
+                        <div class="text-[11px] font-semibold text-slate-400">Sağlayıcı</div>
                         <div class="font-medium text-slate-700 mt-1">@activeAccount.ProviderCode</div>
                         <div class="text-xs text-slate-500">@activeAccount.Currency</div>
                     </div>
                     <div class="px-4 py-3">
-                        <div class="text-[11px] uppercase tracking-wide font-semibold text-slate-400">Merchant ID</div>
+                        <div class="text-[11px] font-semibold text-slate-400">Merchant ID</div>
                         <div class="font-medium text-slate-700 mt-1 break-all">@activeAccount.MerchantId</div>
                     </div>
                     <div class="px-4 py-3">
-                        <div class="text-[11px] uppercase tracking-wide font-semibold text-slate-400">Merchant Kullanıcı</div>
+                        <div class="text-[11px] font-semibold text-slate-400">Merchant Kullanıcı</div>
                         <div class="font-medium text-slate-700 mt-1 break-all">@activeAccount.MerchantUser</div>
                     </div>
                 </div>

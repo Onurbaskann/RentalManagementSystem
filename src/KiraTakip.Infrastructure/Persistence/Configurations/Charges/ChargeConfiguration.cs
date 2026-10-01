@@ -8,6 +8,11 @@ internal sealed class ChargeConfiguration : IEntityTypeConfiguration<Charge>
 {
     public void Configure(EntityTypeBuilder<Charge> entity)
     {
+        entity.Property(t => t.ChargeNo).HasMaxLength(20);
+        entity.HasIndex(t => t.ChargeNo)
+              .IsUnique()
+              .HasDatabaseName("UX_Tahakkuklar_TahakkukNo_Silinmemis")
+              .HasFilter("[IsDeleted] = 0");
         entity.Property(t => t.ExpectedAmount).HasPrecision(18, 2);
         entity.Property(t => t.Status).HasComment(EnumComment.For<ChargeStatus>());
         entity.Property(t => t.SourceType).HasComment(EnumComment.For<ChargeSourceType>());

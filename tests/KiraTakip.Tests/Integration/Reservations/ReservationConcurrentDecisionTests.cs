@@ -19,16 +19,20 @@ public class ReservationConcurrentDecisionTests(DatabaseFixture fixture)
     public async Task ConflictingPendingRequests_ShouldNotBothBeApprovedConcurrently()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        int propertyId;
-        int unitTypeId;
-        int unitId;
-        int tenantId;
-        int firstReservationId;
-        int secondReservationId;
-        string actorId;
-        byte[] firstVersion;
-        byte[] secondVersion;
+        // Seed try içinde — seed sırasında bir hata olursa o ana kadar commit edilmiş kayıtlar yine
+        // de finally'de temizlenir (bkz. PaymentConcurrentLineItemTests'teki aynı düzeltme).
+        int propertyId = 0;
+        int unitTypeId = 0;
+        int unitId = 0;
+        int tenantId = 0;
+        int firstReservationId = 0;
+        int secondReservationId = 0;
+        string actorId = string.Empty;
+        byte[] firstVersion = [];
+        byte[] secondVersion = [];
 
+        try
+        {
         await using (var setup = fixture.CreateContext())
         {
             var property = new Property { Name = $"Paralel Karar {suffix}" };
@@ -66,8 +70,6 @@ public class ReservationConcurrentDecisionTests(DatabaseFixture fixture)
             actorId = await setup.Users.Select(user => user.Id).FirstAsync();
         }
 
-        try
-        {
             var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var firstTask = ApproveAsync(firstReservationId, firstVersion, ready.Task);
             var secondTask = ApproveAsync(secondReservationId, secondVersion, ready.Task);
@@ -84,15 +86,16 @@ public class ReservationConcurrentDecisionTests(DatabaseFixture fixture)
         }
         finally
         {
+            // Where(...) + RemoveRange — SingleAsync değil: seed yarım kalmışsa NotFound patlamasın.
             await using var cleanup = fixture.CreateContext();
             cleanup.Reservations.RemoveRange(cleanup.Reservations.Where(reservation =>
                 reservation.Id == firstReservationId || reservation.Id == secondReservationId));
             await cleanup.SaveChangesAsync();
-            cleanup.Units.Remove(await cleanup.Units.SingleAsync(unit => unit.Id == unitId));
+            cleanup.Units.RemoveRange(cleanup.Units.Where(unit => unit.Id == unitId));
             await cleanup.SaveChangesAsync();
-            cleanup.Tenants.Remove(await cleanup.Tenants.SingleAsync(tenant => tenant.Id == tenantId));
-            cleanup.UnitTypes.Remove(await cleanup.UnitTypes.SingleAsync(unitType => unitType.Id == unitTypeId));
-            cleanup.Properties.Remove(await cleanup.Properties.SingleAsync(property => property.Id == propertyId));
+            cleanup.Tenants.RemoveRange(cleanup.Tenants.Where(tenant => tenant.Id == tenantId));
+            cleanup.UnitTypes.RemoveRange(cleanup.UnitTypes.Where(unitType => unitType.Id == unitTypeId));
+            cleanup.Properties.RemoveRange(cleanup.Properties.Where(property => property.Id == propertyId));
             await cleanup.SaveChangesAsync();
         }
 
@@ -128,6 +131,7 @@ public class ReservationConcurrentDecisionTests(DatabaseFixture fixture)
     private static Reservation CreatePending(int unitId, int tenantId)
         => new()
         {
+            ReservationNo = $"TEST-{Guid.NewGuid():N}"[..20],
             UnitId = unitId,
             TenantId = tenantId,
             StartDate = new DateTime(2026, 10, 1, 9, 0, 0),

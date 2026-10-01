@@ -67,6 +67,9 @@ dotnet run --project src/KiraTakip.Web/KiraTakip.Web.csproj
 
 # Testler
 dotnet test tests\KiraTakip.Tests\KiraTakip.Tests.csproj
+# Not: Testler artık KiraTakipDb_Test şemasını KENDİLİĞİNDEN migrate ETMEZ (tests/KiraTakip.Tests/Infrastructure/DatabaseFixture.cs).
+# Yeni migration eklediyse çalıştırmadan önce "DB güncelle" komutunu elle koş; entity model'de migration'a
+# dökülmemiş bir değişiklik varsa testler net bir InvalidOperationException ile erken durur.
 
 # EF migration ekle
 dotnet ef migrations add <Name> --project src/KiraTakip.Infrastructure/KiraTakip.Infrastructure.csproj --startup-project src/KiraTakip.Web/KiraTakip.Web.csproj

@@ -51,7 +51,8 @@ public class ReservationRepository(ApplicationDbContext ctx) : RepositoryBase<Re
             query = query.Where(reservation =>
                 EF.Functions.Like(reservation.Unit.Name, $"%{search}%")
                 || EF.Functions.Like(reservation.Unit.Property.Name, $"%{search}%")
-                || EF.Functions.Like(reservation.Tenant.Name, $"%{search}%"));
+                || EF.Functions.Like(reservation.Tenant.Name, $"%{search}%")
+                || EF.Functions.Like(reservation.ReservationNo, $"%{search}%"));
         }
 
         query = tableQuery.Status switch
@@ -157,6 +158,7 @@ public class ReservationRepository(ApplicationDbContext ctx) : RepositoryBase<Re
             .Select(reservation => new ReservationListItemDto
             {
                 Id = reservation.Id,
+                ReservationNo = reservation.ReservationNo,
                 UnitId = reservation.UnitId,
                 UnitName = reservation.Unit.Name,
                 PropertyId = reservation.Unit.PropertyId,
@@ -166,6 +168,10 @@ public class ReservationRepository(ApplicationDbContext ctx) : RepositoryBase<Re
                 ChargeId = _ctx.Charges
                     .Where(charge => charge.ReservationId == reservation.Id)
                     .Select(charge => (int?)charge.Id)
+                    .FirstOrDefault(),
+                ChargeNo = _ctx.Charges
+                    .Where(charge => charge.ReservationId == reservation.Id)
+                    .Select(charge => charge.ChargeNo)
                     .FirstOrDefault(),
                 StartDate = reservation.StartDate,
                 EndDate = reservation.EndDate,
@@ -197,6 +203,7 @@ public class ReservationRepository(ApplicationDbContext ctx) : RepositoryBase<Re
             .Select(r => new ReservationListItemDto
             {
                 Id = r.Id,
+                ReservationNo = r.ReservationNo,
                 UnitId = r.UnitId,
                 UnitName = r.Unit.Name,
                 PropertyId = r.Unit.PropertyId,
@@ -204,6 +211,7 @@ public class ReservationRepository(ApplicationDbContext ctx) : RepositoryBase<Re
                 TenantId = r.TenantId,
                 TenantDisplayName = r.Tenant.Name,
                 ChargeId = _ctx.Charges.Where(t => t.ReservationId == r.Id).Select(t => (int?)t.Id).FirstOrDefault(),
+                ChargeNo = _ctx.Charges.Where(t => t.ReservationId == r.Id).Select(t => t.ChargeNo).FirstOrDefault(),
                 StartDate = r.StartDate,
                 EndDate = r.EndDate,
                 TotalDurationMinutes = r.TotalDurationMinutes,
@@ -395,4 +403,10 @@ public class ReservationRepository(ApplicationDbContext ctx) : RepositoryBase<Re
     public Task<bool> ExistsForUnitAsync(int unitId)
         => _dbSet.AsNoTracking().AnyAsync(reservation => reservation.UnitId == unitId);
 
+    public Task<List<string>> GetExistingReservationNosAsync()
+        => _dbSet
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Select(reservation => reservation.ReservationNo)
+            .ToListAsync();
 }

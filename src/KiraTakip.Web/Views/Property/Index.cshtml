@@ -55,21 +55,21 @@
                     @if (t.ClosedArea > 0)
                     {
                         <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                            <div class="text-[10px] text-muted font-bold uppercase tracking-wider mb-0.5">Kapalı Alan</div>
+                            <div class="text-[10px] text-muted font-bold mb-0.5">Kapalı Alan</div>
                             <div class="text-sm font-bold text-slate-700">@t.ClosedArea.M2()</div>
                         </div>
                     }
                     @if (t.OpenArea > 0)
                     {
                         <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                            <div class="text-[10px] text-muted font-bold uppercase tracking-wider mb-0.5">Açık Alan</div>
+                            <div class="text-[10px] text-muted font-bold mb-0.5">Açık Alan</div>
                             <div class="text-sm font-bold text-slate-700">@t.OpenArea.M2()</div>
                         </div>
                     }
                     @if (t.UnitStructure == UnitStructure.MultipleUnits)
                     {
                         <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                            <div class="text-[10px] text-muted font-bold uppercase tracking-wider mb-0.5">Ofis Sayısı</div>
+                            <div class="text-[10px] text-muted font-bold mb-0.5">Ofis Sayısı</div>
                             <div class="text-sm font-bold text-slate-700">@t.UnitCount Ofis</div>
                         </div>
                     }

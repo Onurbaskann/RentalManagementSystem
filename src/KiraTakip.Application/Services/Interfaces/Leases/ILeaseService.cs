@@ -10,6 +10,7 @@ public interface ILeaseService
 {
     Task<List<LeaseListItemDto>> GetAllAsync(GetLeasesInput input);
     Task<PagedResult<LeaseListItemDto>> GetPagedAsync(GetPagedLeasesInput input);
+    Task<int> GetTerminatedCountAsync(GetTerminatedLeaseCountInput input);
     Task<LeaseDetailDto?> GetDetailsAsync(GetLeaseDetailsInput input);
     Task<LeaseDetailDto> GetTenantDetailsAsync(GetTenantLeaseDetailsInput input);
     Task<Lease> CreateAsync(CreateLeaseInput input);

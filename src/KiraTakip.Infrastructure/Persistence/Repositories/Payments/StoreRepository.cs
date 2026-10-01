@@ -1,6 +1,7 @@
 using KiraTakip.Models.Common;
 using KiraTakip.Data;
 using KiraTakip.Models.Dtos.PaymentStoreRouting;
+using KiraTakip.Models.Dtos.Report;
 using KiraTakip.Models.Dtos.Store;
 using KiraTakip.Repositories.Common;
 using KiraTakip.Repositories.Interfaces.Payments;
@@ -74,6 +75,13 @@ public class StoreRepository(ApplicationDbContext context) : RepositoryBase<Stor
     public Task<bool> CodeExistsAsync(string code, int? excludeId = null)
         => _dbSet.AsNoTracking()
             .AnyAsync(store => store.Code == code && (excludeId == null || store.Id != excludeId));
+
+    // Rapor filtre dropdown'ı — aktif+pasif tüm mağazalar (tarihsel raporlama için pasif olanlar da görünmeli).
+    public Task<List<ReportStoreOptionDto>> GetAllOptionsAsync()
+        => _dbSet.AsNoTracking()
+            .OrderBy(store => store.Name)
+            .Select(store => new ReportStoreOptionDto(store.Id, store.Name))
+            .ToListAsync();
 
     public Task<List<StoreRoutingOptionDto>> GetRoutingOptionsAsync()
         => _dbSet.AsNoTracking()

@@ -84,7 +84,7 @@ public class ReservationBusinessRules(
         Guard.InvalidField(
             string.IsNullOrWhiteSpace(input.Title) || input.Title.Trim().Length > 200,
             nameof(input.Title),
-            "Toplantı başlığı zorunlu ve en fazla 200 karakter olmalıdır.",
+            "Rezervasyon başlığı zorunlu ve en fazla 200 karakter olmalıdır.",
             "RESERVATION_INVALID_TITLE");
         Guard.InvalidField(
             input.Description?.Length > 500,
@@ -94,7 +94,7 @@ public class ReservationBusinessRules(
         Guard.InvalidField(
             input.Notes?.Length > 2000,
             nameof(input.Notes),
-            "Toplantı notları en fazla 2000 karakter olabilir.",
+            "Rezervasyon notları en fazla 2000 karakter olabilir.",
             "RESERVATION_NOTES_TOO_LONG");
         Guard.InvalidField(
             input.InternalNotes?.Length > 2000,

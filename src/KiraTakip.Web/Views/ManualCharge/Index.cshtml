@@ -37,32 +37,32 @@
 
 
 @* Durum filtre butonları *@
-<div class="flex items-center gap-2 mb-3 flex-wrap">
+<div class="flex items-center gap-2 @(cancelledCount > 0 && activeStatus != "iptal" ? "mb-2" : "mb-3") flex-wrap">
     <a href="/ManualCharge?status=tum&relation=@activeRelation" class="@ButtonClass("tum")">Tümü</a>
     <a href="/ManualCharge?status=bekliyor&relation=@activeRelation" class="@ButtonClass("bekliyor")">Bekliyor</a>
     <a href="/ManualCharge?status=kismi&relation=@activeRelation" class="@ButtonClass("kismi")">Kısmi</a>
     <a href="/ManualCharge?status=tamodendi&relation=@activeRelation" class="@ButtonClass("tamodendi")">Tam Ödendi</a>
     <a href="/ManualCharge?status=gecikti&relation=@activeRelation" class="@ButtonClass("gecikti")">Gecikti</a>
 
-    @if (cancelledCount > 0 && activeStatus != "iptal")
-    {
-        <span class="ml-2 text-xs text-muted">
-            @cancelledCount iptal edilmiş kayıt gizleniyor
-            <a href="/ManualCharge?status=iptal&relation=@activeRelation" class="text-primary font-semibold hover:underline ml-1">Görüntüle →</a>
-        </span>
-    }
     @if (activeStatus == "iptal")
     {
         <a href="/ManualCharge?status=iptal&relation=@activeRelation" class="@ButtonClass("iptal")">İptal Edildi</a>
     }
 </div>
+@if (cancelledCount > 0 && activeStatus != "iptal")
+{
+    <div class="text-xs text-muted mb-3">
+        @cancelledCount iptal edilmiş kayıt gizleniyor
+        <a href="/ManualCharge?status=iptal&relation=@activeRelation" class="text-primary font-semibold hover:underline ml-1">Görüntüle →</a>
+    </div>
+}
 
 @* Filtre formu *@
 <form method="get" action="/ManualCharge" class="card p-3 mb-3 flex flex-wrap items-center gap-3">
     <input type="hidden" name="status" value="@activeStatus" />
     <input type="hidden" name="size" value="@query.Size" />
     <input type="search" name="q" value="@query.Q" class="form-control w-full max-w-xs" placeholder="Ara: kiracı, taşınmaz, birim veya açıklama…" />
-    <select name="relation" class="form-control w-40 text-sm" onchange="this.form.submit()">
+    <select name="relation" class="form-control w-40 text-sm">
         <option value="" selected="@(activeRelation == "")">Bağlantı: Hepsi</option>
         <option value="sozlesmeli" selected="@(activeRelation == "sozlesmeli")">Sözleşmeli</option>
         <option value="sozlesmesiz" selected="@(activeRelation == "sozlesmesiz")">Sözleşmesiz</option>
@@ -74,6 +74,11 @@
             Sözleşme #@leaseId filtreli
             <a href="/ManualCharge?status=@activeStatus" class="ml-1 font-bold hover:underline">✕</a>
         </span>
+    }
+    <button type="submit" class="btn btn-primary btn-sm px-4">Filtrele</button>
+    @if (!string.IsNullOrWhiteSpace(query.Q) || !string.IsNullOrWhiteSpace(activeRelation))
+    {
+        <a href="/ManualCharge?status=@activeStatus" class="btn btn-secondary btn-sm text-slate-500">Temizle</a>
     }
 </form>
 
@@ -149,7 +154,7 @@
                         <td>
                             @if (manualCharge.LeaseId.HasValue)
                             {
-                                <a href="/Lease/Details/@manualCharge.LeaseId.ToHashId()" data-stop class="font-mono text-xs text-primary hover:underline">#@manualCharge.LeaseId</a>
+                                <a href="/Lease/Details/@manualCharge.LeaseId.ToHashId()" data-stop class="font-mono text-xs text-primary hover:underline">@manualCharge.LeaseNo</a>
                             }
                             else
                             {
@@ -207,46 +212,3 @@
     </div>
     @await Html.PartialAsync("_Pagination", pagination)
 </div>
-
-@section Scripts {
-    <script>
-        document.querySelectorAll('[data-confirm]').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const needsReason = this.dataset.confirmNeedsReason === 'true';
-                if (!needsReason) return;
-
-                const action = this.dataset.confirmAction;
-                const title = this.dataset.confirmTitle || 'Onay';
-                const message = this.dataset.confirm;
-                const reasonLabel = this.dataset.confirmReasonLabel || 'Neden';
-
-                const neden = await window.Alpine.store('confirm').ask(message, title, true, reasonLabel);
-                if (!neden) return;
-
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = action;
-
-                const token = document.querySelector('input[name="__RequestVerificationToken"]');
-                if (token) {
-                    const t = document.createElement('input');
-                    t.type = 'hidden';
-                    t.name = '__RequestVerificationToken';
-                    t.value = token.value;
-                    form.appendChild(t);
-                }
-
-                const n = document.createElement('input');
-                n.type = 'hidden';
-                n.name = 'Reason';
-                n.value = neden;
-                form.appendChild(n);
-
-                document.body.appendChild(form);
-                form.submit();
-            });
-        });
-    </script>
-    @Html.AntiForgeryToken()
-}
-

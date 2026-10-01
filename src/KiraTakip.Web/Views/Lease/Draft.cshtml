@@ -14,7 +14,7 @@
     <div class="page-header flex flex-wrap items-start justify-between gap-3">
         <div>
             <a href="/Lease" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary">← Sözleşmeler</a>
-            <div class="page-title">Sözleşme Başvurusu #@Model.LeaseId</div>
+            <div class="page-title">Sözleşme Başvurusu @Model.LeaseNo</div>
             <div class="page-subtitle">Başvuru sahibi: @Model.OwnerDisplayName</div>
         </div>
         <span class="px-3 py-1.5 rounded-full text-xs font-bold @(isRevision ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800")">

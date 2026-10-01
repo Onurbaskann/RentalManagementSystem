@@ -44,19 +44,18 @@ public class LeaseController(
     [Authorize(Policy = PermissionCatalog.Lease.Module)]
     public async Task<IActionResult> Index(string? filter, [FromQuery] TableQuery query)
     {
+        var propertyIds = permissionScopeProvider.GlobalAccess ? null : permissionScopeProvider.AccessiblePropertyIds;
+        var unitIds = permissionScopeProvider.GlobalAccess ? null : permissionScopeProvider.AccessibleUnitIds;
+
         var leases = await leaseService.GetPagedAsync(
-            new GetPagedLeasesInput(
-                query,
-                filter,
-                permissionScopeProvider.GlobalAccess ? null : permissionScopeProvider.AccessiblePropertyIds,
-                permissionScopeProvider.GlobalAccess ? null : permissionScopeProvider.AccessibleUnitIds));
+            new GetPagedLeasesInput(query, filter, propertyIds, unitIds));
 
         ViewBag.DebtorCount = await chargeReminderService.GetDebtorCountAsync(
             permissionScopeProvider.GlobalAccess
                 ? new ChargeReminderScopeInput()
-                : new ChargeReminderScopeInput(
-                    permissionScopeProvider.AccessiblePropertyIds,
-                    permissionScopeProvider.AccessibleUnitIds));
+                : new ChargeReminderScopeInput(propertyIds, unitIds));
+        ViewBag.TerminatedCount = await leaseService.GetTerminatedCountAsync(
+            new GetTerminatedLeaseCountInput(propertyIds, unitIds));
         ViewBag.Filter = filter ?? "tum";
         ViewBag.Query = query;
 
@@ -212,6 +211,7 @@ public class LeaseController(
         var model = new LeaseDraftViewModel
         {
             LeaseId = draft.LeaseId,
+            LeaseNo = draft.LeaseNo,
             UnitId = draft.UnitId,
             TenantId = draft.TenantId,
             StartDate = draft.StartDate,

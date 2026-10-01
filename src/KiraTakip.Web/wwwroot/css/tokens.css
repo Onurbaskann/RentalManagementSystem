@@ -1,0 +1,75 @@
+/* Tasarım token'ları — TEK KAYNAK. Onaylı referans: docs/design-reference/tahakkuklar-approved.css
+   - Marka/semantik renkler RGB kanalı olarak burada (--rgb-*). Tailwind config (Views/Shared/_BrandHead.cshtml)
+     bu kanalları okur; böylece hem CSS (var(--color-*)) hem Tailwind (bg-primary/20 gibi alfa) aynı değerden beslenir.
+   - Hem app.css hem de app.css yüklemeyen sayfalar (giriş/hata) bu dosyayı kullanır.
+   - Sabit hex kalanlar: e-posta şablonları (istemciler CSS değişkeni desteklemez) ve --canvas-bg içindeki SVG. */
+:root {
+    /* Kanallar (değiştirilecek tek yer) */
+    --rgb-navy:           13 26 94;
+    --rgb-navy-dark:      7 15 31;
+    --rgb-navy-mid:       10 74 138;
+    --rgb-teal:           0 184 207;
+    --rgb-teal-light:     224 248 251;
+    --rgb-teal-bright:    0 207 224;
+    --rgb-success:        13 159 110;
+    --rgb-warning:        232 150 10;
+    --rgb-warning-strong: 180 83 9;
+    --rgb-danger:         217 53 53;
+    --rgb-info:           79 82 200;
+    --rgb-on-brand:       255 255 255;
+
+    /* Brand */
+    --color-navy:        rgb(var(--rgb-navy));
+    --color-navy-dark:   rgb(var(--rgb-navy-dark));
+    --color-navy-mid:    rgb(var(--rgb-navy-mid));
+    --color-teal:        rgb(var(--rgb-teal));
+    --color-teal-light:  rgb(var(--rgb-teal-light));
+    --color-teal-bright: rgb(var(--rgb-teal-bright));
+    --color-on-brand:    rgb(var(--rgb-on-brand)); /* koyu marka yüzeyi (sidebar, buton) üzerindeki metin */
+
+    /* Neutrals */
+    --color-surface:       #f4f5f9;
+    --color-surface-hover: #f7f8fc;
+    --color-card:          #ffffff;
+    --color-border:        #dde1ec;
+    --color-border-strong: #b8bfd4;
+
+    /* Text */
+    --color-text-primary:   var(--color-navy);
+    --color-text-secondary: #3d4f78;
+    --color-text-muted:     #7a89ab;
+
+    /* Semantic */
+    --color-success:        rgb(var(--rgb-success));
+    --color-warning:        rgb(var(--rgb-warning));
+    --color-warning-strong: rgb(var(--rgb-warning-strong));
+    --color-danger:         rgb(var(--rgb-danger));
+    --color-info:           rgb(var(--rgb-info));
+
+    /* Radius hierarchy: kart/tablo 8px, kontrol 5px, badge pill */
+    --radius-card:    8px;
+    --radius-control: 5px;
+    --radius-badge:   9999px;
+
+    /* Typography (sayılar da Inter + tabular-nums; mono font yok) */
+    --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+    --font-ui:      'Inter', system-ui, sans-serif;
+
+    --sidebar-width: 15rem; /* 240px */
+
+    /* Marka gradyanı: sidebar (dikey), buton (yatay), hero (geniş banner) */
+    --gradient-brand:  linear-gradient(160deg, var(--color-navy) 0%, var(--color-navy-mid) 55%, var(--color-teal) 100%);
+    --gradient-button: linear-gradient(100deg, var(--color-navy-mid) 0%, var(--color-teal) 100%);
+    /* Hero: teal'e %135'te ulaşır; sağ uçtaki beyaz metin/avatar okunaklı kalsın (tam teal üzerinde beyaz ~2,2:1) */
+    --gradient-hero:   linear-gradient(110deg, var(--color-navy) 0%, var(--color-navy-mid) 55%, var(--color-teal) 135%);
+
+    /* Zemin deseni: çapraz çizgi, 64px karo (seyrek), %2,5 opaklık (%4 ve 44px göz yorduğu için gevşetildi).
+       SVG içinde CSS değişkeni kullanılamadığı için stroke rengi (navy) burada sabit: %230d1a5e */
+    --canvas-bg: #f4f5f9
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cline x1='0' y1='64' x2='64' y2='0' stroke='%230d1a5e' stroke-opacity='0.025' stroke-width='1'/%3E%3C/svg%3E");
+}
+
+.bg-canvas { background: var(--canvas-bg); }
+.bg-brand-gradient { background: var(--gradient-hero); }
+/* app.css yüklemeyen sayfalar (giriş/hata) için .btn-primary gradyanı; hover Tailwind hover:brightness-110 ile */
+.bg-brand-button { background: var(--gradient-button); }

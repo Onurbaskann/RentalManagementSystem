@@ -69,7 +69,9 @@
                             else { <span class="badge badge-gecmis">Pasif</span> }
                         </td>
                         <td class="flex gap-1.5 justify-end">
-                            <a href="/Admin/Users/Edit/@user.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                            <a href="/Admin/Users/Edit/@user.Id" class="icon-btn" data-tip="Düzenle" aria-label="Düzenle">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                            </a>
                             <form method="post" action="/Admin/Users/ToggleActive/@user.Id"
                                   data-confirm="@(user.IsActive ? "Kullanıcı pasif yapılsın mı? Oturum açamaz." : "Kullanıcı aktif yapılsın mı?")" class="inline">
                                 @Html.AntiForgeryToken()
@@ -131,10 +133,10 @@
                             <td class="text-sm text-muted">@(invitation.FullName ?? "—")</td>
                             <td class="text-sm text-muted">@invitation.ExpiresAt.ToString("dd.MM.yyyy HH:mm")</td>
                             <td class="flex gap-1.5 justify-end">
-                                <form method="post" action="/Admin/Users/Invitation/Resend/@invitation.Id" class="inline">
+                                <form method="post" action="/Admin/Users/Invitation/Resend/@invitation.Id.ToHashId()" class="inline">
                                     @Html.AntiForgeryToken()<button type="submit" class="btn btn-sm btn-secondary">Yeniden Gönder</button>
                                 </form>
-                                <form method="post" action="/Admin/Users/Invitation/Cancel/@invitation.Id"
+                                <form method="post" action="/Admin/Users/Invitation/Cancel/@invitation.Id.ToHashId()"
                                       data-confirm="Bu daveti iptal etmek istediğinizden emin misiniz?" class="inline">
                                     @Html.AntiForgeryToken()<button type="submit" class="btn btn-sm btn-danger">İptal Et</button>
                                 </form>

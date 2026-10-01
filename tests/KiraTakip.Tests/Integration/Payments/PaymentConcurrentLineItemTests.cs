@@ -26,18 +26,23 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
     public async Task ConcurrentApprovals_ShouldNotOverpaySingleLineItem()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        int chargeId;
-        int lineItemId;
-        int firstPaymentId;
-        int secondPaymentId;
-        int propertyId;
-        int unitTypeId;
-        int unitId;
-        int tenantId;
-        int chargeTypeId;
-        int storeId;
-        string actorId;
+        // Bu değişkenler ve aşağıdaki seed bloğu try içinde: seed sırasında bir hata olursa (ör. bir
+        // unique index çakışması) o ana kadar commit edilmiş kayıtlar yine de finally'de temizlenir —
+        // seed try'ın DIŞINDAyken bu blok gerçek KiraTakipDb_Test'te kalıcı çöp bırakmıştı.
+        int chargeId = 0;
+        int lineItemId = 0;
+        int firstPaymentId = 0;
+        int secondPaymentId = 0;
+        int propertyId = 0;
+        int unitTypeId = 0;
+        int unitId = 0;
+        int tenantId = 0;
+        int chargeTypeId = 0;
+        int storeId = 0;
+        string actorId = string.Empty;
 
+        try
+        {
         await using (var setup = fixture.CreateContext())
         {
             var property = new Property { Name = $"Eşzamanlı Onay {suffix}" };
@@ -81,6 +86,7 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
 
             var charge = new Charge
             {
+                ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
                 TenantId = tenant.Id,
                 UnitId = unit.Id,
                 PeriodStart = new DateTime(2026, 1, 1),
@@ -94,7 +100,7 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
             setup.Charges.Add(charge);
             await setup.SaveChangesAsync();
 
-            var lineItem = new ChargeLineItem
+            var seedLineItem = new ChargeLineItem
             {
                 ChargeId = charge.Id,
                 ChargeTypeId = chargeType.Id,
@@ -102,7 +108,7 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
                 Amount = 1000m,
                 TotalAmount = 1000m
             };
-            setup.ChargeLineItems.Add(lineItem);
+            setup.ChargeLineItems.Add(seedLineItem);
             setup.PaymentStoreRoutings.Add(new PaymentStoreRouting
             {
                 ChargeTypeId = chargeType.Id,
@@ -117,8 +123,9 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
             var storeAccountId = store.Accounts.Single().Id;
             var firstPayment = new PaymentAllocation
             {
+                PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
                 ChargeId = charge.Id,
-                ChargeLineItemId = lineItem.Id,
+                ChargeLineItemId = seedLineItem.Id,
                 StoreAccountId = storeAccountId,
                 CreatedByUserId = actorId,
                 PaymentDate = DateTime.Today,
@@ -128,8 +135,9 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
             };
             var secondPayment = new PaymentAllocation
             {
+                PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
                 ChargeId = charge.Id,
-                ChargeLineItemId = lineItem.Id,
+                ChargeLineItemId = seedLineItem.Id,
                 StoreAccountId = storeAccountId,
                 CreatedByUserId = actorId,
                 PaymentDate = DateTime.Today,
@@ -141,7 +149,7 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
             await setup.SaveChangesAsync();
 
             chargeId = charge.Id;
-            lineItemId = lineItem.Id;
+            lineItemId = seedLineItem.Id;
             firstPaymentId = firstPayment.Id;
             secondPaymentId = secondPayment.Id;
             propertyId = property.Id;
@@ -152,8 +160,6 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
             storeId = store.Id;
         }
 
-        try
-        {
             var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var firstTask = ApproveAsync(firstPaymentId, ready.Task);
             var secondTask = ApproveAsync(secondPaymentId, ready.Task);
@@ -173,6 +179,8 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
         }
         finally
         {
+            // Where(...) + RemoveRange — SingleAsync değil: seed yarım kalmışsa (bazı Id'ler hâlâ 0)
+            // eksik satır için NotFound fırlayıp sonraki temizlik adımlarını iptal etmesin.
             await using var cleanup = fixture.CreateContext();
             cleanup.PaymentAllocations.RemoveRange(
                 cleanup.PaymentAllocations.Where(payment => payment.ChargeId == chargeId));
@@ -180,20 +188,20 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
             cleanup.ChargeLineItems.RemoveRange(
                 cleanup.ChargeLineItems.Where(item => item.ChargeId == chargeId));
             await cleanup.SaveChangesAsync();
-            cleanup.Charges.Remove(await cleanup.Charges.SingleAsync(c => c.Id == chargeId));
+            cleanup.Charges.RemoveRange(cleanup.Charges.Where(c => c.Id == chargeId));
             await cleanup.SaveChangesAsync();
             cleanup.PaymentStoreRoutings.RemoveRange(
                 cleanup.PaymentStoreRoutings.Where(routing => routing.ChargeTypeId == chargeTypeId));
             await cleanup.SaveChangesAsync();
             cleanup.StoreAccounts.RemoveRange(cleanup.StoreAccounts.Where(a => a.StoreId == storeId));
             await cleanup.SaveChangesAsync();
-            cleanup.Stores.Remove(await cleanup.Stores.SingleAsync(s => s.Id == storeId));
-            cleanup.ChargeTypes.Remove(await cleanup.ChargeTypes.SingleAsync(ct => ct.Id == chargeTypeId));
-            cleanup.Units.Remove(await cleanup.Units.SingleAsync(u => u.Id == unitId));
+            cleanup.Stores.RemoveRange(cleanup.Stores.Where(s => s.Id == storeId));
+            cleanup.ChargeTypes.RemoveRange(cleanup.ChargeTypes.Where(ct => ct.Id == chargeTypeId));
+            cleanup.Units.RemoveRange(cleanup.Units.Where(u => u.Id == unitId));
             await cleanup.SaveChangesAsync();
-            cleanup.Tenants.Remove(await cleanup.Tenants.SingleAsync(t => t.Id == tenantId));
-            cleanup.UnitTypes.Remove(await cleanup.UnitTypes.SingleAsync(ut => ut.Id == unitTypeId));
-            cleanup.Properties.Remove(await cleanup.Properties.SingleAsync(p => p.Id == propertyId));
+            cleanup.Tenants.RemoveRange(cleanup.Tenants.Where(t => t.Id == tenantId));
+            cleanup.UnitTypes.RemoveRange(cleanup.UnitTypes.Where(ut => ut.Id == unitTypeId));
+            cleanup.Properties.RemoveRange(cleanup.Properties.Where(p => p.Id == propertyId));
             await cleanup.SaveChangesAsync();
         }
 
@@ -224,16 +232,19 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
     public async Task ConcurrentCreates_ShouldNotExceedAvailableAmountWithPendingPayments()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        int chargeId;
-        int lineItemId;
-        int propertyId;
-        int unitTypeId;
-        int unitId;
-        int tenantId;
-        int chargeTypeId;
-        int storeId;
-        string actorId;
+        // Seed try içinde — bkz. yukarıdaki ConcurrentApprovals_ShouldNotOverpaySingleLineItem notu.
+        int chargeId = 0;
+        int lineItemId = 0;
+        int propertyId = 0;
+        int unitTypeId = 0;
+        int unitId = 0;
+        int tenantId = 0;
+        int chargeTypeId = 0;
+        int storeId = 0;
+        string actorId = string.Empty;
 
+        try
+        {
         await using (var setup = fixture.CreateContext())
         {
             var property = new Property { Name = $"Eşzamanlı Oluşturma {suffix}" };
@@ -277,6 +288,7 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
 
             var charge = new Charge
             {
+                ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
                 TenantId = tenant.Id,
                 UnitId = unit.Id,
                 PeriodStart = new DateTime(2026, 1, 1),
@@ -320,8 +332,6 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
             storeId = store.Id;
         }
 
-        try
-        {
             var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var firstTask = CreateAsync(ready.Task);
             var secondTask = CreateAsync(ready.Task);
@@ -339,6 +349,8 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
         }
         finally
         {
+            // Where(...) + RemoveRange — SingleAsync değil: seed yarım kalmışsa (bazı Id'ler hâlâ 0)
+            // eksik satır için NotFound fırlayıp sonraki temizlik adımlarını iptal etmesin.
             await using var cleanup = fixture.CreateContext();
             cleanup.PaymentAllocations.RemoveRange(
                 cleanup.PaymentAllocations.Where(payment => payment.ChargeId == chargeId));
@@ -346,20 +358,20 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
             cleanup.ChargeLineItems.RemoveRange(
                 cleanup.ChargeLineItems.Where(item => item.ChargeId == chargeId));
             await cleanup.SaveChangesAsync();
-            cleanup.Charges.Remove(await cleanup.Charges.SingleAsync(c => c.Id == chargeId));
+            cleanup.Charges.RemoveRange(cleanup.Charges.Where(c => c.Id == chargeId));
             await cleanup.SaveChangesAsync();
             cleanup.PaymentStoreRoutings.RemoveRange(
                 cleanup.PaymentStoreRoutings.Where(routing => routing.ChargeTypeId == chargeTypeId));
             await cleanup.SaveChangesAsync();
             cleanup.StoreAccounts.RemoveRange(cleanup.StoreAccounts.Where(a => a.StoreId == storeId));
             await cleanup.SaveChangesAsync();
-            cleanup.Stores.Remove(await cleanup.Stores.SingleAsync(s => s.Id == storeId));
-            cleanup.ChargeTypes.Remove(await cleanup.ChargeTypes.SingleAsync(ct => ct.Id == chargeTypeId));
-            cleanup.Units.Remove(await cleanup.Units.SingleAsync(u => u.Id == unitId));
+            cleanup.Stores.RemoveRange(cleanup.Stores.Where(s => s.Id == storeId));
+            cleanup.ChargeTypes.RemoveRange(cleanup.ChargeTypes.Where(ct => ct.Id == chargeTypeId));
+            cleanup.Units.RemoveRange(cleanup.Units.Where(u => u.Id == unitId));
             await cleanup.SaveChangesAsync();
-            cleanup.Tenants.Remove(await cleanup.Tenants.SingleAsync(t => t.Id == tenantId));
-            cleanup.UnitTypes.Remove(await cleanup.UnitTypes.SingleAsync(ut => ut.Id == unitTypeId));
-            cleanup.Properties.Remove(await cleanup.Properties.SingleAsync(p => p.Id == propertyId));
+            cleanup.Tenants.RemoveRange(cleanup.Tenants.Where(t => t.Id == tenantId));
+            cleanup.UnitTypes.RemoveRange(cleanup.UnitTypes.Where(ut => ut.Id == unitTypeId));
+            cleanup.Properties.RemoveRange(cleanup.Properties.Where(p => p.Id == propertyId));
             await cleanup.SaveChangesAsync();
         }
 

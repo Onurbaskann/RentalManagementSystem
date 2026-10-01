@@ -573,6 +573,7 @@ public class ReservationArchitectureTests : IDisposable
             ReservationStatus.Confirmed);
         var charge = new Charge
         {
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = seed.ActiveTenantId,
             UnitId = seed.FirstUnitId,
             ReservationId = reservation.Id,
@@ -593,6 +594,7 @@ public class ReservationArchitectureTests : IDisposable
         var userId = await _context.Users.Select(user => user.Id).FirstAsync();
         _context.PaymentAllocations.Add(new PaymentAllocation
         {
+            PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
             ChargeId = charge.Id,
             ChargeLineItemId = lineItem.Id,
             StoreAccountId = storeAccountId,
@@ -835,6 +837,7 @@ public class ReservationArchitectureTests : IDisposable
     {
         var reservation = new Reservation
         {
+            ReservationNo = $"TEST-{Guid.NewGuid():N}"[..20],
             UnitId = unitId,
             TenantId = tenantId,
             StartDate = new DateTime(2026, 1, 1, 9, 0, 0),

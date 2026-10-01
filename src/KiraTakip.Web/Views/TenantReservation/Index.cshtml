@@ -41,7 +41,6 @@
                     <th>Bitiş</th>
                     <th>Tutar</th>
                     <th>Durum</th>
-                    <th class="text-right"></th>
                 </tr>
             </thead>
             <tbody>
@@ -49,15 +48,20 @@
                 {
                     var statusClasses = reservation.Status.GetBadgeCssClass();
                     var statusLabel = reservation.Status.GetDisplayLabel();
-                    <tr>
+                    var detailsUrl = Url.Action(
+                        nameof(KiraTakip.Web.Controllers.TenantReservationController.Details),
+                        nameof(KiraTakip.Web.Controllers.TenantReservationController).Replace("Controller", ""),
+                        new { id = reservation.Id.ToHashId() });
+                    <tr data-href="@detailsUrl"
+                        class="cursor-pointer hover:bg-slate-50 transition-colors"
+                        @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
                         <td class="font-semibold">@reservation.UnitName</td>
                         <td class="text-sm text-muted">@reservation.PropertyName</td>
                         <td class="text-sm">@reservation.StartDate.ToString("dd.MM.yyyy HH:mm")</td>
                         <td class="text-sm">@reservation.EndDate.ToString("dd.MM.yyyy HH:mm")</td>
                         <td class="text-sm font-medium">@reservation.TotalAmount.ToString("N2") ₺</td>
-                        <td><span class="badge @statusClasses">@statusLabel</span></td>
-                        <td class="text-right">
-                            <a asp-controller="TenantReservation" asp-action="Details" asp-route-id="@reservation.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a>
+                        <td>
+                            <span class="badge @statusClasses">@statusLabel</span>
                             @if (reservation.Status == ReservationStatus.PendingApproval)
                             {
                                 <span class="cell-sub">İnceleniyor</span>

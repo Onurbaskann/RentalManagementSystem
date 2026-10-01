@@ -32,6 +32,7 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                       .Select(t => new ChargeListItemDto
                       {
                           Id = t.Id,
+                          ChargeNo = t.ChargeNo,
                           LeaseId = t.LeaseId,
                           TenantId = t.TenantId,
                           TenantDisplayName = t.Tenant.Name,
@@ -86,7 +87,8 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
         {
             var s = q.Q.Trim();
             query = query.Where(t => EF.Functions.Like(t.Tenant.Name, $"%{s}%") ||
-                                     EF.Functions.Like(t.Unit.Property.Name, $"%{s}%"));
+                                     EF.Functions.Like(t.Unit.Property.Name, $"%{s}%") ||
+                                     EF.Functions.Like(t.ChargeNo, $"%{s}%"));
         }
 
         if (q.From.HasValue) query = query.Where(t => t.DueDate >= q.From.Value);
@@ -145,6 +147,7 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                                .Select(t => new ChargeListItemDto
                                {
                                    Id = t.Id,
+                                   ChargeNo = t.ChargeNo,
                                    LeaseId = t.LeaseId,
                                    TenantId = t.TenantId,
                                    TenantDisplayName = t.Tenant.Name,
@@ -201,10 +204,13 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
 
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
+            // Not: Tenant.Name buraya dahil edilmez — bu sorguda charge.TenantId zaten sabit
+            // (satır 197), yani tüm satırların Tenant.Name'i aynı: arama terimi kiracının
+            // kendi adıyla eşleşirse OR koşulu tüm sonuç kümesini true yapar ve Property/Unit
+            // filtresini devre dışı bırakırdı.
             var search = filter.Search.Trim();
             query = query.Where(charge =>
-                EF.Functions.Like(charge.Tenant.Name, $"%{search}%")
-                || EF.Functions.Like(charge.Unit.Property.Name, $"%{search}%")
+                EF.Functions.Like(charge.Unit.Property.Name, $"%{search}%")
                 || EF.Functions.Like(charge.Unit.Name, $"%{search}%"));
         }
 
@@ -252,6 +258,7 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
             .Select(charge => new ChargeListItemDto
             {
                 Id = charge.Id,
+                ChargeNo = charge.ChargeNo,
                 LeaseId = charge.LeaseId,
                 TenantId = charge.TenantId,
                 TenantDisplayName = charge.Tenant.Name,
@@ -335,7 +342,9 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                            .Select(t => new ChargeDetailDto
                            {
                                Id = t.Id,
+                               ChargeNo = t.ChargeNo,
                                LeaseId = t.LeaseId,
+                               LeaseNo = t.Lease != null ? t.Lease.LeaseNo : null,
                                TenantId = t.TenantId,
                                TenantDisplayName = t.Tenant.Name,
                                PropertyId = t.Unit.PropertyId,
@@ -493,52 +502,117 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
             overdueRemainingAmount,
             availableYears);
     }
+    // Beklenen + gecikme tarafı — tahakkuk kalemi (ChargeLineItem) bazında, dönem (PeriodStart) eksenli.
+    // Mağaza kavramı burada yok (yalnız gerçekleşen ödemeler mağazaya bağlanır, bkz. PaymentAllocationRepository).
     public async Task<MonthlyCollectionReportDto> GetMonthlyCollectionReportAsync(
         GetMonthlyCollectionReportInput input)
     {
-        IQueryable<Charge> query = _dbSet
+        IQueryable<ChargeLineItem> query = _ctx.ChargeLineItems
             .AsNoTracking()
-            .Where(charge => charge.Status != ChargeStatus.Cancelled);
+            .Where(lineItem => lineItem.Charge.Status != ChargeStatus.Cancelled);
 
-        query = ApplyScope(
+        query = ApplyLineItemScope(
             query,
             input.PropertyIds?.ToList(),
             input.UnitIds?.ToList());
 
+        if (input.ChargeTypeId.HasValue)
+            query = query.Where(lineItem => lineItem.ChargeTypeId == input.ChargeTypeId.Value);
+
         var availableYears = await query
-            .Select(charge => charge.PeriodStart.Year)
+            .Select(lineItem => lineItem.Charge.PeriodStart.Year)
             .Distinct()
             .OrderByDescending(year => year)
             .ToListAsync();
 
         var rows = await query
-            .Where(charge => charge.PeriodStart.Year == input.Year)
-            .GroupBy(charge => charge.PeriodStart.Month)
+            .Where(lineItem => lineItem.Charge.PeriodStart.Year == input.Year)
+            .GroupBy(lineItem => lineItem.Charge.PeriodStart.Month)
             .Select(group => new MonthlyCollectionReportRowDto
             {
                 Month = group.Key,
-                ChargeCount = group.Count(),
-                ExpectedAmount = group.Sum(charge => charge.TotalAmount),
-                CollectedAmount = group.Sum(charge => charge.PaidAmount),
-                OverdueChargeCount = group.Count(charge =>
-                    charge.DueDate < input.Today
-                    && charge.Status != ChargeStatus.Paid
-                    && charge.TotalAmount > charge.PaidAmount),
-                OverdueAmount = group.Sum(charge =>
-                    charge.DueDate < input.Today
-                    && charge.Status != ChargeStatus.Paid
-                    && charge.TotalAmount > charge.PaidAmount
-                        ? charge.TotalAmount - charge.PaidAmount
+                ChargeCount = group.Select(lineItem => lineItem.ChargeId).Distinct().Count(),
+                ExpectedAmount = group.Sum(lineItem => lineItem.TotalAmount),
+                OverdueChargeCount = group
+                    .Where(lineItem => lineItem.Charge.DueDate < input.Today && lineItem.TotalAmount > lineItem.PaidAmount)
+                    .Select(lineItem => lineItem.ChargeId)
+                    .Distinct()
+                    .Count(),
+                OverdueAmount = group.Sum(lineItem =>
+                    lineItem.Charge.DueDate < input.Today
+                    && lineItem.TotalAmount > lineItem.PaidAmount
+                        ? lineItem.TotalAmount - lineItem.PaidAmount
                         : 0m)
             })
+            .ToListAsync();
+
+        // Tahakkuk kartındaki "... tahakkuk kaydı" alt yazısı için kaynak tipi kırılımı
+        // (Sözleşme/Manuel/Rezervasyon) — distinct tahakkuk bazında, yıl boyunca.
+        var sourceTypeCounts = await query
+            .Where(lineItem => lineItem.Charge.PeriodStart.Year == input.Year)
+            .Select(lineItem => new { lineItem.ChargeId, lineItem.Charge.SourceType })
+            .Distinct()
+            .GroupBy(x => x.SourceType)
+            .Select(group => new { SourceType = group.Key, Count = group.Count() })
             .ToListAsync();
 
         return new MonthlyCollectionReportDto
         {
             Year = input.Year,
             Rows = rows,
-            AvailableYears = availableYears
+            AvailableYears = availableYears,
+            LeaseChargeCount = sourceTypeCounts.FirstOrDefault(x => x.SourceType == ChargeSourceType.Lease)?.Count ?? 0,
+            ManualChargeCount = sourceTypeCounts.FirstOrDefault(x => x.SourceType == ChargeSourceType.Manual)?.Count ?? 0,
+            ReservationChargeCount = sourceTypeCounts.FirstOrDefault(x => x.SourceType == ChargeSourceType.Reservation)?.Count ?? 0
         };
+    }
+
+    // Gecikme bloğu — geçmiş yıllardan (input.Year'dan önceki) kalan, hâlâ vadesi geçmiş ve
+    // ödenmemiş tahakkuklar. GetMonthlyCollectionReportAsync'in dönem-yıl filtresi bunu dışarıda
+    // bıraktığı için (Charge.PeriodStart.Year == input.Year), ayrı bir sorgu gerekir.
+    public async Task<PriorYearsOverdueSummary> GetPriorYearsOverdueAsync(
+        GetMonthlyCollectionReportInput input)
+    {
+        IQueryable<ChargeLineItem> query = _ctx.ChargeLineItems
+            .AsNoTracking()
+            .Where(lineItem => lineItem.Charge.Status != ChargeStatus.Cancelled
+                && lineItem.Charge.PeriodStart.Year < input.Year
+                && lineItem.Charge.DueDate < input.Today
+                && lineItem.TotalAmount > lineItem.PaidAmount);
+
+        query = ApplyLineItemScope(
+            query,
+            input.PropertyIds?.ToList(),
+            input.UnitIds?.ToList());
+
+        if (input.ChargeTypeId.HasValue)
+            query = query.Where(lineItem => lineItem.ChargeTypeId == input.ChargeTypeId.Value);
+
+        var overdueChargeCount = await query.Select(lineItem => lineItem.ChargeId).Distinct().CountAsync();
+        var overdueAmount = await query.SumAsync(lineItem => (decimal?)(lineItem.TotalAmount - lineItem.PaidAmount)) ?? 0m;
+
+        return new PriorYearsOverdueSummary(overdueChargeCount, overdueAmount);
+    }
+
+    private static IQueryable<ChargeLineItem> ApplyLineItemScope(
+        IQueryable<ChargeLineItem> query,
+        List<int>? propertyIds,
+        List<int>? unitIds)
+    {
+        if (propertyIds == null && unitIds == null)
+            return query;
+
+        if (propertyIds != null && unitIds != null)
+        {
+            return query.Where(lineItem =>
+                propertyIds.Contains(lineItem.Charge.Unit.PropertyId)
+                || unitIds.Contains(lineItem.Charge.UnitId));
+        }
+
+        if (propertyIds != null)
+            return query.Where(lineItem => propertyIds.Contains(lineItem.Charge.Unit.PropertyId));
+
+        return query.Where(lineItem => unitIds!.Contains(lineItem.Charge.UnitId));
     }
 
     // ── Manuel Borç — DTO ─────────────────────────────────────────────────
@@ -591,7 +665,9 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                       .Select(t => new ManualChargeListItemDto
                       {
                           Id = t.Id,
+                          ChargeNo = t.ChargeNo,
                           LeaseId = t.LeaseId,
+                          LeaseNo = t.Lease != null ? t.Lease.LeaseNo : null,
                           TenantId = t.TenantId,
                           TenantCategoryName = t.Tenant.TenantCategory != null ? t.Tenant.TenantCategory.Name : null,
                           TenantDisplayName = t.Tenant.Name,
@@ -694,7 +770,9 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
             .Select(charge => new ManualChargeListItemDto
             {
                 Id = charge.Id,
+                ChargeNo = charge.ChargeNo,
                 LeaseId = charge.LeaseId,
+                LeaseNo = charge.Lease != null ? charge.Lease.LeaseNo : null,
                 TenantId = charge.TenantId,
                 TenantCategoryName = charge.Tenant.TenantCategory != null
                     ? charge.Tenant.TenantCategory.Name
@@ -761,6 +839,7 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                 .Select(charge => new ChargeListItemDto
                 {
                     Id = charge.Id,
+                    ChargeNo = charge.ChargeNo,
                     LeaseId = charge.LeaseId,
                     TenantId = charge.TenantId,
                     TenantDisplayName = charge.Tenant.Name,
@@ -1018,6 +1097,13 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
         _dbSet.RemoveRange(entities);
         return Task.CompletedTask;
     }
+
+    public Task<List<string>> GetExistingChargeNosAsync()
+        => _dbSet
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Select(charge => charge.ChargeNo)
+            .ToListAsync();
 
     private static IQueryable<Charge> ApplyScope(
         IQueryable<Charge> query,

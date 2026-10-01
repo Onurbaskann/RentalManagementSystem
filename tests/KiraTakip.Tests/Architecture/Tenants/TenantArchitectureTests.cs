@@ -1,6 +1,7 @@
 using Castle.DynamicProxy;
 using KiraTakip.Data;
 using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Infrastructure.Persistence;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.Tenant;
@@ -262,7 +263,8 @@ public class TenantArchitectureTests : IDisposable
             new TenantRepository(_context),
             new CategoryRepository(_context),
             unitOfWork,
-            CreateDocumentService(unitOfWork));
+            CreateDocumentService(unitOfWork),
+            new SqlServerUniqueConstraintViolationDetector());
     }
 
     private DocumentService CreateDocumentService(IUnitOfWork unitOfWork)
@@ -347,6 +349,7 @@ public class TenantArchitectureTests : IDisposable
         _context.Leases.AddRange(
             new Lease
             {
+                LeaseNo = $"TEST-{Guid.NewGuid():N}"[..20],
                 UnitId = unit1.Id,
                 TenantId = tenant1.Id,
                 StartDate = new DateTime(2026, 1, 1),
@@ -355,6 +358,7 @@ public class TenantArchitectureTests : IDisposable
             },
             new Lease
             {
+                LeaseNo = $"TEST-{Guid.NewGuid():N}"[..20],
                 UnitId = unit2.Id,
                 TenantId = tenant2.Id,
                 StartDate = new DateTime(2026, 1, 1),
@@ -440,7 +444,8 @@ public class TenantTransactionTests
                 new TenantRepository(context),
                 new LeaseRepository(context),
                 new PaymentAllocationRepository(context),
-                unitOfWork));
+                unitOfWork),
+            new SqlServerUniqueConstraintViolationDetector());
         var interceptor = new TransactionInterceptor(
             context,
             NullLogger<TransactionInterceptor>.Instance);

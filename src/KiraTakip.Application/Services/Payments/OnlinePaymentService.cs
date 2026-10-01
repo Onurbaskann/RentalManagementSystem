@@ -227,6 +227,7 @@ public class OnlinePaymentService(
                 var charge = transaction.ChargeLineItem.Charge;
                 var payment = new PaymentAllocation
                 {
+                    PaymentNo = await GeneratePaymentNoAsync(),
                     ChargeId = charge.Id,
                     ChargeLineItemId = transaction.ChargeLineItemId,
                     StoreAccountId = transaction.StoreAccountId,
@@ -289,5 +290,19 @@ public class OnlinePaymentService(
             transaction.Status,
             transaction.PaymentAllocationId,
             transaction.ChargeLineItem.ChargeId);
+    }
+
+    private async Task<string> GeneratePaymentNoAsync()
+    {
+        var existingPaymentNos = await paymentAllocationRepository.GetExistingPaymentNosAsync();
+        var usedPaymentNos = existingPaymentNos.ToHashSet();
+
+        if (PaymentNumberPolicy.TryGenerateNextPaymentNo(usedPaymentNos, out var paymentNo))
+            return paymentNo;
+
+        throw new BusinessException(
+            "Ödeme No üretilemedi.",
+            ErrorType.Failure,
+            "Payment.NumberGenerationFailed");
     }
 }

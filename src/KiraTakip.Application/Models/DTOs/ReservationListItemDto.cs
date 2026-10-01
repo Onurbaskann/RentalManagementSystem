@@ -5,6 +5,7 @@ namespace KiraTakip.Models.Dtos;
 public class ReservationListItemDto
 {
     public int Id { get; set; }
+    public string ReservationNo { get; set; } = string.Empty;
     public int UnitId { get; set; }
     public string UnitName { get; set; } = string.Empty;
     public int PropertyId { get; set; }
@@ -12,6 +13,7 @@ public class ReservationListItemDto
     public int TenantId { get; set; }
     public string TenantDisplayName { get; set; } = string.Empty;
     public int? ChargeId { get; set; }
+    public string? ChargeNo { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public int TotalDurationMinutes { get; set; }

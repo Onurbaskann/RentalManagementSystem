@@ -16,6 +16,7 @@
     var tenantRoleActionName = nameof(KiraTakip.Web.Controllers.TenantRoleController.Index);
     ApplicationUser? currentUser = null;
     string userInitials = "KT";
+    string userEmail = string.Empty;
     string userAdSoyad = "Kullanıcı";
     string userRole = "Kiracı";
 
@@ -25,6 +26,7 @@
         if (currentUser != null)
         {
             userAdSoyad = currentUser.AdSoyad ?? currentUser.Email ?? "Kullanıcı";
+            userEmail = currentUser.Email ?? string.Empty;
             userInitials = string.Join("", userAdSoyad.Split(' ')
                 .Where(p => p.Length > 0).Take(2).Select(p => char.ToUpper(p[0])));
         }
@@ -40,21 +42,26 @@
     <div class="sidebar-header flex items-center gap-3">
         <div class="sidebar-logo flex-shrink-0">
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="28" height="28" rx="8" class="fill-indigo-600"/>
+                <rect width="28" height="28" rx="8" class="fill-accent"/>
                 <path d="M7 20V11L14 7L21 11V20H17V15H11V20H7Z" fill="white"/>
             </svg>
         </div>
-        <div class="overflow-hidden">
-            <div class="sidebar-title leading-tight">Kira Takip</div>
+        <div class="overflow-hidden sidebar-brand-text">
+            <div class="sidebar-title leading-tight">UniTeknopark</div>
             <div class="sidebar-subtitle leading-tight">Kiracı Portalı</div>
         </div>
+        <button type="button" class="sidebar-collapse-btn" @@click="$store.ui.toggleCollapse()"
+                :aria-label="$store.ui.collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'"
+                :data-tip="$store.ui.collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'" data-tip-side="right">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M9 3v18" /></svg>
+        </button>
     </div>
 
     <nav class="sidebar-nav">
         <a asp-controller="TenantPanel" asp-action="Index"
            class="nav-item @(currentController == "TenantPanel" ? "nav-item-active" : "")">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            Ana Sayfa
+            <span class="nav-label">Ana Sayfa</span>
         </a>
 
         @if (await PermissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.Lease.Module))
@@ -62,7 +69,7 @@
             <a asp-controller="TenantLease" asp-action="Index"
                class="nav-item @(currentController == "TenantLease" ? "nav-item-active" : "")">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                Sözleşmelerim
+                <span class="nav-label">Sözleşmelerim</span>
             </a>
         }
 
@@ -71,7 +78,7 @@
             <a asp-controller="TenantCharge" asp-action="Index"
                class="nav-item @(currentController == "TenantCharge" ? "nav-item-active" : "")">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                Tahakkuklarım
+                <span class="nav-label">Tahakkuklarım</span>
             </a>
         }
 
@@ -81,7 +88,7 @@
             <a asp-controller="@tenantReservationControllerName" asp-action="@tenantReservationActionName"
                class="nav-item @(currentController == tenantReservationControllerName ? "nav-item-active" : "")">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                Rezervasyonlarım
+                <span class="nav-label">Rezervasyonlarım</span>
             </a>
         }
 
@@ -89,7 +96,7 @@
         <a asp-controller="@tenantProfileControllerName" asp-action="@tenantProfileActionName"
            class="nav-item @(currentController == tenantProfileControllerName ? "nav-item-active" : "")">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2v-5a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-            Firma Profili
+            <span class="nav-label">Firma Profili</span>
         </a>
 
         @if (await PermissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.System.User.Module)
@@ -102,7 +109,7 @@
                 <a asp-controller="TenantUser" asp-action="Index"
                    class="nav-item @(currentController == "TenantUser" ? "nav-item-active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    Kullanıcılar
+                    <span class="nav-label">Kullanıcılar</span>
                 </a>
             }
             @if (await PermissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.System.Role.Module))
@@ -110,52 +117,56 @@
                 <a asp-controller="@tenantRoleControllerName" asp-action="@tenantRoleActionName"
                    class="nav-item @(currentController == tenantRoleControllerName ? "nav-item-active" : "")">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><polyline points="15 11 17 13 21 9"/></svg>
-                    Roller
+                    <span class="nav-label">Roller</span>
                 </a>
             }
         }
     </nav>
 
     <div class="sidebar-footer">
-        <div x-data="{ open: false }" class="relative">
-            <button type="button" @@click="open = !open"
-                class="sidebar-user flex items-center gap-3 w-full text-left hover:bg-white/10 rounded-xl px-2 py-1.5 transition-all">
+        <div x-data="{ open: false }" @@keydown.escape.window="open = false" class="relative">
+            <button type="button" class="user-trigger" :class="{ 'is-open': open }" @@click="open = !open"
+                    aria-haspopup="menu" :aria-expanded="open"
+                    data-tip="@userAdSoyad" data-tip-side="right" data-tip-when="sidebar-collapsed">
                 <div class="sidebar-avatar flex-shrink-0">@userInitials</div>
-                <div class="flex-1 min-w-0">
+                <div class="sidebar-user-text">
                     <div class="sidebar-user-name truncate">@userAdSoyad</div>
-                    <div class="sidebar-user-role truncate text-[10px] uppercase font-bold opacity-60 tracking-wider">@userRole</div>
+                    <div class="sidebar-user-role truncate">@userRole</div>
                 </div>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                     class="flex-shrink-0 opacity-50 transition-transform" :class="open ? 'rotate-180' : ''">
-                    <polyline points="18 15 12 9 6 15"/>
-                </svg>
+                <svg class="user-trigger-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6" /></svg>
             </button>
 
-            <div x-show="open" @@click.outside="open = false" x-cloak
-                 class="absolute bottom-full left-0 right-0 mb-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden z-50">
-                <a href="/Account/ChangePassword"
-                   class="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                    </svg>
+            <div class="user-menu" x-show="open" x-cloak @@click.outside="open = false" role="menu"
+                 x-transition:enter="transition ease-out duration-150"
+                 x-transition:enter-start="opacity-0 translate-y-1"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-100"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0">
+                <div class="user-menu-head">
+                    <div class="user-menu-avatar">@userInitials</div>
+                    <div class="min-w-0">
+                        <div class="user-menu-name truncate">@userAdSoyad</div>
+                        @if (!string.IsNullOrEmpty(userEmail))
+                        {
+                            <div class="user-menu-email truncate">@userEmail</div>
+                        }
+                        <span class="user-menu-role">@userRole</span>
+                    </div>
+                </div>
+                <a href="/Account/ChangePassword" class="user-menu-item" role="menuitem">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
                     Şifre Değiştir
                 </a>
-                <div class="border-t border-slate-100"></div>
+                <div class="user-menu-sep"></div>
                 <form asp-controller="Account" asp-action="Logout" method="post">
                     @Html.AntiForgeryToken()
-                    <button type="submit"
-                        class="flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                            <polyline points="16 17 21 12 16 7"/>
-                            <line x1="21" y1="12" x2="9" y2="12"/>
-                        </svg>
+                    <button type="submit" class="user-menu-item user-menu-item-danger" role="menuitem">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
                         Çıkış Yap
                     </button>
                 </form>
             </div>
-        </div>
         </div>
     </div>
 </aside>

@@ -22,6 +22,7 @@ public interface ILeaseFormViewModel
 public sealed class LeaseDraftViewModel : ILeaseFormViewModel
 {
     public int LeaseId { get; set; }
+    public string LeaseNo { get; set; } = string.Empty;
     public int? UnitId { get; set; }
     public int TenantId { get; set; }
     public DateTime StartDate { get; set; }

@@ -34,7 +34,7 @@
     </form>
     <div class="table-wrapper">
         <table>
-            <thead><tr><th>Ad Soyad</th><th>E-posta</th><th>Rol</th><th>Durum</th><th></th></tr></thead>
+            <thead><tr><th>Ad Soyad</th><th>E-posta</th><th>Rol</th><th>Durum</th><th class="w-48"></th></tr></thead>
             <tbody>
             @foreach (var user in Model.Users.Items)
             {
@@ -43,17 +43,19 @@
                     <td class="text-sm text-muted">@user.Email</td>
                     <td><span class="badge badge-bos">@user.RoleName</span></td>
                     <td>@if (user.IsActive) { <span class="badge badge-kirali">Aktif</span> } else { <span class="badge badge-gecmis">Pasif</span> }</td>
-                    <td class="flex gap-1.5 justify-end">
+                    <td>
                     @if (!user.IsCurrentUser)
                     {
                         @if (Model.CanEdit)
                         {
-                            <a asp-controller="@controllerName" asp-action="@nameof(KiraTakip.Web.Controllers.TenantUserController.Edit)" asp-route-id="@user.Id" class="btn btn-sm btn-secondary">Düzenle</a>
+                            <a asp-controller="@controllerName" asp-action="@nameof(KiraTakip.Web.Controllers.TenantUserController.Edit)" asp-route-id="@user.Id" class="icon-btn" data-tip="Düzenle" aria-label="Düzenle">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                            </a>
                         }
                         @if (Model.CanDeactivate)
                         {
                             <form method="post" asp-controller="@controllerName" asp-action="@nameof(KiraTakip.Web.Controllers.TenantUserController.ToggleStatus)" asp-route-id="@user.Id"
-                                  data-confirm="@(user.IsActive ? "Kullanıcı pasif yapılsın mı?" : "Kullanıcı aktif yapılsın mı?")" class="inline">
+                                  data-confirm="@(user.IsActive ? "Kullanıcı pasif yapılsın mı?" : "Kullanıcı aktif yapılsın mı?")" class="inline ml-1.5">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-sm @(user.IsActive ? "btn-danger" : "btn-amber")">@(user.IsActive ? "Pasif Yap" : "Aktif Yap")</button>
                             </form>

@@ -8,6 +8,11 @@ internal sealed class PaymentAllocationConfiguration : IEntityTypeConfiguration<
 {
     public void Configure(EntityTypeBuilder<PaymentAllocation> entity)
     {
+        entity.Property(o => o.PaymentNo).HasMaxLength(20);
+        entity.HasIndex(o => o.PaymentNo)
+              .IsUnique()
+              .HasDatabaseName("UX_TahakkukOdemeleri_OdemeNo_Silinmemis")
+              .HasFilter("[IsDeleted] = 0");
         entity.Property(o => o.Amount).HasPrecision(18, 2);
         entity.Property(o => o.RejectionReason).HasMaxLength(500);
         entity.Property(o => o.PosReferenceNo).HasMaxLength(100);

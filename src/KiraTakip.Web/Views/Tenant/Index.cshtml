@@ -43,7 +43,7 @@
                     <th class="w-32">İletişim</th>
                     <th class="w-32">Sözleşme</th>
                     <th class="w-28 cell-center">Kayıt Tarihi</th>
-                    <th class="w-36"></th>
+                    <th class="w-16"></th>
                 </tr>
             </thead>
             <tbody>
@@ -55,7 +55,7 @@
                     <tr data-href="@detailsUrl"
                         class="cursor-pointer hover:bg-slate-50 transition-colors"
                         @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
-                        <td class="font-mono text-xs text-muted">@tenant.TenantNo</td>
+                        <td class="font-mono text-muted-sm">@tenant.TenantNo</td>
                         <td>
                             <div class="font-semibold">@tenant.DisplayName</div>
                             @if (!string.IsNullOrEmpty(tenant.TaxNo))
@@ -91,7 +91,9 @@
                         @if (Model.CanEdit)
                         {
                             <td class="text-right">
-                                <a href="@editUrl" class="btn btn-sm btn-secondary">Düzenle</a>
+                                <a href="@editUrl" class="icon-btn" data-tip="Düzenle" aria-label="Düzenle">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                                </a>
                             </td>
                         }
                         else

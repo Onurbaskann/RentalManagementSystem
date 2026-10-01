@@ -138,6 +138,7 @@ public class ChargeLineItemPaymentBalanceTests : IDisposable
 
         var charge = new Charge
         {
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = tenant.Id,
             UnitId = unit.Id,
             PeriodStart = new DateTime(2026, 1, 1),
@@ -200,6 +201,7 @@ public class ChargeLineItemPaymentBalanceTests : IDisposable
         _context.PaymentAllocations.AddRange(
             new PaymentAllocation
             {
+                PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
                 ChargeId = seed.Charge.Id,
                 ChargeLineItemId = seed.FirstLineItem.Id,
                 StoreAccountId = seed.StoreAccountId,
@@ -211,6 +213,7 @@ public class ChargeLineItemPaymentBalanceTests : IDisposable
             },
             new PaymentAllocation
             {
+                PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
                 ChargeId = seed.Charge.Id,
                 ChargeLineItemId = seed.FirstLineItem.Id,
                 StoreAccountId = seed.StoreAccountId,
@@ -251,6 +254,7 @@ public class ChargeLineItemPaymentBalanceTests : IDisposable
         var seed = await SeedTwoLineItemChargeAsync();
         _context.PaymentAllocations.Add(new PaymentAllocation
         {
+            PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
             ChargeId = seed.Charge.Id,
             ChargeLineItemId = seed.SecondLineItem.Id,
             StoreAccountId = seed.StoreAccountId,

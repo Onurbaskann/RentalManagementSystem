@@ -41,9 +41,6 @@ public static class PropertyViewModelMapper
                 Area = area.Area,
                 UnitTypeId = area.UnitTypeId,
                 Description = area.Description,
-                FreeDurationMinutes = area.FreeDurationMinutes,
-                HourlyRate = area.HourlyRate,
-                VatRate = area.VatRate,
                 HasActiveReservation = area.Id.HasValue
                     && dto.ActiveReservationUnitIds.Contains(area.Id.Value)
             }).ToList()
@@ -133,10 +130,7 @@ public static class PropertyViewModelMapper
             Name = viewModel.Name,
             Area = viewModel.Area,
             UnitTypeId = viewModel.UnitTypeId,
-            Description = viewModel.Description,
-            FreeDurationMinutes = viewModel.FreeDurationMinutes,
-            HourlyRate = viewModel.HourlyRate,
-            VatRate = viewModel.VatRate
+            Description = viewModel.Description
         };
 
     private static ReservationAreaInputDto ToDto(ReservationAreaEditViewModel viewModel)
@@ -147,9 +141,6 @@ public static class PropertyViewModelMapper
             Name = viewModel.Name,
             Area = viewModel.Area,
             UnitTypeId = viewModel.UnitTypeId,
-            Description = viewModel.Description,
-            FreeDurationMinutes = viewModel.FreeDurationMinutes,
-            HourlyRate = viewModel.HourlyRate,
-            VatRate = viewModel.VatRate
+            Description = viewModel.Description
         };
 }

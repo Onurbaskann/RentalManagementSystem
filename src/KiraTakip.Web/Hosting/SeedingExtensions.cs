@@ -69,9 +69,17 @@ namespace KiraTakip.Web.Hosting
                     await domainSeed.EnsureVarsayilanReservationRateOverrideAsync();
 
                     await domainSeed.SeedTasinmazFiyatlarAsync();
+                    await domainSeed.SeedIcRollerVeKullanicilarAsync();
                     await domainSeed.SeedDomainDataAsync();
                     await domainSeed.SeedOrnekMagazaYonlendirmeleriAsync();
                     await domainSeed.SeedTahakkuklarAsync();
+
+                    if (runSeed)
+                    {
+                        // Seed işlemi sırasında SaveChangesInterceptor tarafından üretilen ara denetim loglarını temizle
+                        dbContext.AuditLogs.RemoveRange(dbContext.AuditLogs.IgnoreQueryFilters());
+                        await dbContext.SaveChangesAsync();
+                    }
                 }
             }
         }

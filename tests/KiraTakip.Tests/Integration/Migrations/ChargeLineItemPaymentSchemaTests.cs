@@ -82,6 +82,7 @@ public class ChargeLineItemPaymentSchemaTests : IDisposable
         var (lineItem, storeAccountId) = await SeedLineItemWithStoreAsync();
         var payment = new PaymentAllocation
         {
+            PaymentNo = $"TEST-{Guid.NewGuid():N}"[..20],
             ChargeId = lineItem.ChargeId,
             ChargeLineItemId = lineItem.Id,
             StoreAccountId = storeAccountId,
@@ -106,100 +107,105 @@ public class ChargeLineItemPaymentSchemaTests : IDisposable
     {
         // Sorgu filtresi test edilebilsin diye bu test kendi verisini AYRI, COMMIT edilmiş bir
         // bağlamda oluşturur (sınıfın paylaşılan _context/transaction'ı rollback edildiği için
-        // farklı bir bağlantıdan görünmez) ve sonunda kendi temizliğini yapar.
+        // farklı bir bağlantıdan görünmez) ve sonunda kendi temizliğini yapar. Seed adımı da
+        // try/finally İÇİNDE: seed sırasında bir hata olursa (ör. o ana kadar oluşan kayıtlar)
+        // yine de temizlenir — daha önce seed try'ın DIŞINDAydı ve tam bu yüzden bir seferinde
+        // (ChargeNo henüz zorunlu değilken ekli test verisiyle çakışınca) taşınmaz/birim/kiracı
+        // kayıtları gerçek KiraTakipDb_Test'te kalıcı çöp olarak kalmıştı.
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        int firstTenantId, secondTenantId, firstLineItemId, secondLineItemId;
-        int firstChargeId, secondChargeId, propertyId, unitTypeId, unitId, chargeTypeId;
-
-        await using (var setup = _fixture.CreateContext())
-        {
-            var property = new Property { Name = $"Kiracı İzolasyon {suffix}" };
-            var unitType = new UnitType
-            {
-                Name = $"Kiracı İzolasyon Birimi {suffix}",
-                Code = $"ISO_{suffix}",
-                Usage = UnitTypeUsage.Rentable
-            };
-            var firstTenant = new Tenant { TenantNo = $"ISO-A-{suffix}", Name = $"İzolasyon Kiracı A {suffix}" };
-            var secondTenant = new Tenant { TenantNo = $"ISO-B-{suffix}", Name = $"İzolasyon Kiracı B {suffix}" };
-            var chargeType = new ChargeType
-            {
-                Name = $"İzolasyon Borç Tipi {suffix}",
-                Code = $"ISOCT_{suffix}",
-                IsActive = true,
-                Behavior = ChargeTypeBehavior.UserManual
-            };
-            setup.AddRange(property, unitType, firstTenant, secondTenant, chargeType);
-            await setup.SaveChangesAsync();
-
-            var unit = new Unit
-            {
-                PropertyId = property.Id,
-                UnitTypeId = unitType.Id,
-                Name = $"İzolasyon Ofis {suffix}",
-                Area = 40m
-            };
-            setup.Units.Add(unit);
-            await setup.SaveChangesAsync();
-
-            var firstCharge = new Charge
-            {
-                TenantId = firstTenant.Id,
-                UnitId = unit.Id,
-                PeriodStart = new DateTime(2026, 1, 1),
-                PeriodEnd = new DateTime(2026, 1, 31),
-                DueDate = new DateTime(2026, 2, 5),
-                ExpectedAmount = 100m,
-                TotalAmount = 100m,
-                Status = ChargeStatus.Pending
-            };
-            var secondCharge = new Charge
-            {
-                TenantId = secondTenant.Id,
-                UnitId = unit.Id,
-                PeriodStart = new DateTime(2026, 1, 1),
-                PeriodEnd = new DateTime(2026, 1, 31),
-                DueDate = new DateTime(2026, 2, 5),
-                ExpectedAmount = 100m,
-                TotalAmount = 100m,
-                Status = ChargeStatus.Pending
-            };
-            setup.Charges.AddRange(firstCharge, secondCharge);
-            await setup.SaveChangesAsync();
-
-            var firstLineItem = new ChargeLineItem
-            {
-                ChargeId = firstCharge.Id,
-                ChargeTypeId = chargeType.Id,
-                Description = "A kiracısı kalemi",
-                Amount = 100m,
-                TotalAmount = 100m
-            };
-            var secondLineItem = new ChargeLineItem
-            {
-                ChargeId = secondCharge.Id,
-                ChargeTypeId = chargeType.Id,
-                Description = "B kiracısı kalemi",
-                Amount = 100m,
-                TotalAmount = 100m
-            };
-            setup.ChargeLineItems.AddRange(firstLineItem, secondLineItem);
-            await setup.SaveChangesAsync();
-
-            firstTenantId = firstTenant.Id;
-            secondTenantId = secondTenant.Id;
-            firstLineItemId = firstLineItem.Id;
-            secondLineItemId = secondLineItem.Id;
-            firstChargeId = firstCharge.Id;
-            secondChargeId = secondCharge.Id;
-            propertyId = property.Id;
-            unitTypeId = unitType.Id;
-            unitId = unit.Id;
-            chargeTypeId = chargeType.Id;
-        }
+        int firstTenantId = 0, secondTenantId = 0, firstLineItemId = 0, secondLineItemId = 0;
+        int firstChargeId = 0, secondChargeId = 0, propertyId = 0, unitTypeId = 0, unitId = 0, chargeTypeId = 0;
 
         try
         {
+            await using (var setup = _fixture.CreateContext())
+            {
+                var property = new Property { Name = $"Kiracı İzolasyon {suffix}" };
+                var unitType = new UnitType
+                {
+                    Name = $"Kiracı İzolasyon Birimi {suffix}",
+                    Code = $"ISO_{suffix}",
+                    Usage = UnitTypeUsage.Rentable
+                };
+                var firstTenant = new Tenant { TenantNo = $"ISO-A-{suffix}", Name = $"İzolasyon Kiracı A {suffix}" };
+                var secondTenant = new Tenant { TenantNo = $"ISO-B-{suffix}", Name = $"İzolasyon Kiracı B {suffix}" };
+                var chargeType = new ChargeType
+                {
+                    Name = $"İzolasyon Borç Tipi {suffix}",
+                    Code = $"ISOCT_{suffix}",
+                    IsActive = true,
+                    Behavior = ChargeTypeBehavior.UserManual
+                };
+                setup.AddRange(property, unitType, firstTenant, secondTenant, chargeType);
+                await setup.SaveChangesAsync();
+                propertyId = property.Id;
+                unitTypeId = unitType.Id;
+                firstTenantId = firstTenant.Id;
+                secondTenantId = secondTenant.Id;
+                chargeTypeId = chargeType.Id;
+
+                var unit = new Unit
+                {
+                    PropertyId = property.Id,
+                    UnitTypeId = unitType.Id,
+                    Name = $"İzolasyon Ofis {suffix}",
+                    Area = 40m
+                };
+                setup.Units.Add(unit);
+                await setup.SaveChangesAsync();
+                unitId = unit.Id;
+
+                var firstCharge = new Charge
+                {
+                    ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
+                    TenantId = firstTenant.Id,
+                    UnitId = unit.Id,
+                    PeriodStart = new DateTime(2026, 1, 1),
+                    PeriodEnd = new DateTime(2026, 1, 31),
+                    DueDate = new DateTime(2026, 2, 5),
+                    ExpectedAmount = 100m,
+                    TotalAmount = 100m,
+                    Status = ChargeStatus.Pending
+                };
+                var secondCharge = new Charge
+                {
+                    ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
+                    TenantId = secondTenant.Id,
+                    UnitId = unit.Id,
+                    PeriodStart = new DateTime(2026, 1, 1),
+                    PeriodEnd = new DateTime(2026, 1, 31),
+                    DueDate = new DateTime(2026, 2, 5),
+                    ExpectedAmount = 100m,
+                    TotalAmount = 100m,
+                    Status = ChargeStatus.Pending
+                };
+                setup.Charges.AddRange(firstCharge, secondCharge);
+                await setup.SaveChangesAsync();
+                firstChargeId = firstCharge.Id;
+                secondChargeId = secondCharge.Id;
+
+                var firstLineItem = new ChargeLineItem
+                {
+                    ChargeId = firstCharge.Id,
+                    ChargeTypeId = chargeType.Id,
+                    Description = "A kiracısı kalemi",
+                    Amount = 100m,
+                    TotalAmount = 100m
+                };
+                var secondLineItem = new ChargeLineItem
+                {
+                    ChargeId = secondCharge.Id,
+                    ChargeTypeId = chargeType.Id,
+                    Description = "B kiracısı kalemi",
+                    Amount = 100m,
+                    TotalAmount = 100m
+                };
+                setup.ChargeLineItems.AddRange(firstLineItem, secondLineItem);
+                await setup.SaveChangesAsync();
+                firstLineItemId = firstLineItem.Id;
+                secondLineItemId = secondLineItem.Id;
+            }
+
             await using var tenantContext = _fixture.CreateContext(
                 new TenantCurrentUserContext { TenantId = firstTenantId });
             var visibleIds = await tenantContext.ChargeLineItems
@@ -211,6 +217,8 @@ public class ChargeLineItemPaymentSchemaTests : IDisposable
         }
         finally
         {
+            // Her adım yalnız gerçekten oluşmuşsa (Id != 0) ve Where(...) ile — SingleAsync değil,
+            // yarım kalmış bir seed'de eksik satırlar için NotFound patlamasın.
             await using var cleanup = _fixture.CreateContext();
             cleanup.ChargeLineItems.RemoveRange(
                 cleanup.ChargeLineItems.Where(item => item.Id == firstLineItemId || item.Id == secondLineItemId));
@@ -218,13 +226,13 @@ public class ChargeLineItemPaymentSchemaTests : IDisposable
             cleanup.Charges.RemoveRange(
                 cleanup.Charges.Where(c => c.Id == firstChargeId || c.Id == secondChargeId));
             await cleanup.SaveChangesAsync();
-            cleanup.ChargeTypes.Remove(await cleanup.ChargeTypes.SingleAsync(ct => ct.Id == chargeTypeId));
-            cleanup.Units.Remove(await cleanup.Units.SingleAsync(u => u.Id == unitId));
+            cleanup.ChargeTypes.RemoveRange(cleanup.ChargeTypes.Where(ct => ct.Id == chargeTypeId));
+            cleanup.Units.RemoveRange(cleanup.Units.Where(u => u.Id == unitId));
             await cleanup.SaveChangesAsync();
             cleanup.Tenants.RemoveRange(
                 cleanup.Tenants.Where(t => t.Id == firstTenantId || t.Id == secondTenantId));
-            cleanup.UnitTypes.Remove(await cleanup.UnitTypes.SingleAsync(ut => ut.Id == unitTypeId));
-            cleanup.Properties.Remove(await cleanup.Properties.SingleAsync(p => p.Id == propertyId));
+            cleanup.UnitTypes.RemoveRange(cleanup.UnitTypes.Where(ut => ut.Id == unitTypeId));
+            cleanup.Properties.RemoveRange(cleanup.Properties.Where(p => p.Id == propertyId));
             await cleanup.SaveChangesAsync();
         }
     }
@@ -279,6 +287,7 @@ public class ChargeLineItemPaymentSchemaTests : IDisposable
 
         var charge = new Charge
         {
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = tenant.Id,
             UnitId = unit.Id,
             PeriodStart = new DateTime(2026, 1, 1),

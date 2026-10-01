@@ -31,23 +31,33 @@ public class DashboardViewModel
     public decimal ReservationRevenueThisMonth { get; set; }
     public int UntransferredReservationCount { get; set; }
 
-    public List<DashboardMonthlyCashFlow> MonthlyCashFlow { get; set; } = [];
-    public List<double> CollectionRateSparkline { get; set; } = [];
     public decimal ThirtyDayCollectionRate { get; set; }
-    public decimal MonthlyRevenueLastMonth { get; set; }
-    public decimal MonthlyRevenueChange { get; set; }
+    public decimal MonthlyRevenueCollectionRate { get; set; }
     public int ChargesDueTodayCount { get; set; }
     public decimal ChargesDueTodayAmount { get; set; }
     public List<DashboardPropertyRevenue> TopRevenueProperties { get; set; } = [];
     public List<DashboardTenantRevenue> TopRevenueTenants { get; set; } = [];
+    public List<DashboardStoreRevenue> TopRevenueStores { get; set; } = [];
+    public List<DashboardRiskyTenant> RiskyTenants { get; set; } = [];
     public int ActiveTenantCount { get; set; }
-}
 
-public class DashboardMonthlyCashFlow
-{
-    public string MonthLabel { get; set; } = string.Empty;
-    public decimal Expected { get; set; }
-    public decimal Collected { get; set; }
+    // Gelir Kırılımı — kalem tipine göre son 6 ay tahsilat toplamı
+    public List<DashboardChargeTypeTotal> ChargeTypeRevenueBreakdown { get; set; } = [];
+
+    // Aylık Kira Geliri — kaynak (Tümü/Sözleşme/Manuel/Rezervasyon) × zaman aralığı (3/6/12 ay) kombinasyonları
+    public DashboardRevenueTrendSet RevenueTrendAll { get; set; } = new();
+    public DashboardRevenueTrendSet RevenueTrendLease { get; set; } = new();
+    public DashboardRevenueTrendSet RevenueTrendManual { get; set; } = new();
+    public DashboardRevenueTrendSet RevenueTrendReservation { get; set; } = new();
+
+    // Doluluk Dağılımı — taşınmaz bazlı + m² karşılaştırması
+    public List<DashboardPropertyOccupancy> PropertyOccupancies { get; set; } = [];
+    public decimal OccupancyCountRate { get; set; }
+    public decimal OccupancyAreaRate { get; set; }
+
+    // Süresi Dolmak Üzere — durum özeti + süre özeti
+    public Dictionary<string, int> LeaseStatusDistribution { get; set; } = [];
+    public double AverageLeaseDurationMonths { get; set; }
 }
 
 public class DashboardPropertyRevenue
@@ -64,6 +74,53 @@ public class DashboardTenantRevenue
     public string TenantName { get; set; } = string.Empty;
     public decimal TotalCollected { get; set; }
     public int LeaseCount { get; set; }
+}
+
+public class DashboardStoreRevenue
+{
+    public int StoreId { get; set; }
+    public string StoreName { get; set; } = string.Empty;
+    public decimal TotalCollected { get; set; }
+    public int PaymentCount { get; set; }
+}
+
+public class DashboardRiskyTenant
+{
+    public int TenantId { get; set; }
+    public string TenantName { get; set; } = string.Empty;
+    public decimal OverdueAmount { get; set; }
+    public int OverdueChargeCount { get; set; }
+}
+
+public class DashboardChargeTypeTotal
+{
+    public string ChargeTypeName { get; set; } = string.Empty;
+    public decimal TotalCollected { get; set; }
+}
+
+public class DashboardMonthlyRevenueTrendRow
+{
+    public string MonthLabel { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public decimal CollectedAmount { get; set; }
+    public decimal? CollectionRatePercent { get; set; }
+}
+
+public class DashboardRevenueTrendSet
+{
+    public List<DashboardMonthlyRevenueTrendRow> Months3 { get; set; } = [];
+    public List<DashboardMonthlyRevenueTrendRow> Months6 { get; set; } = [];
+    public List<DashboardMonthlyRevenueTrendRow> Months12 { get; set; } = [];
+}
+
+public class DashboardPropertyOccupancy
+{
+    public int PropertyId { get; set; }
+    public string PropertyName { get; set; } = string.Empty;
+    public int UnitCount { get; set; }
+    public int LeasedUnitCount { get; set; }
+    public int ExpiringSoonUnitCount { get; set; }
+    public int VacantUnitCount { get; set; }
 }
 
 public class ExpiringLeaseSummary

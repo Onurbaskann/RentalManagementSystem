@@ -92,4 +92,21 @@ public class PropertyRateOverrideRepository(ApplicationDbContext ctx) : Reposito
                 KdvRate = f.KdvRate
             })
             .FirstOrDefaultAsync();
+
+    public async Task<List<(int TenantCategoryId, int ChargeTypeId, RateValueDto Rate)>> GetActiveRatesAsync(int propertyId)
+    {
+        var rows = await _dbSet.AsNoTracking()
+            .Where(f => f.PropertyId == propertyId && f.IsActive)
+            .Select(f => new { f.TenantCategoryId, f.ChargeTypeId, f.CalculationMethod, f.UnitValue, f.KdvRate })
+            .ToListAsync();
+
+        return rows
+            .Select(f => (f.TenantCategoryId, f.ChargeTypeId, new RateValueDto
+            {
+                CalculationMethod = f.CalculationMethod,
+                UnitValue = f.UnitValue,
+                KdvRate = f.KdvRate
+            }))
+            .ToList();
+    }
 }

@@ -189,6 +189,7 @@ public class TenantReservationArchitectureTests : IDisposable
         DateTime endDate)
         => new()
         {
+            ReservationNo = $"TEST-{Guid.NewGuid():N}"[..20],
             UnitId = unitId,
             TenantId = tenantId,
             StartDate = startDate,

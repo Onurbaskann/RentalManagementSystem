@@ -1,4 +1,5 @@
 using KiraTakip.Models.Dtos.PaymentStoreRouting;
+using KiraTakip.Models.Dtos.Report;
 using KiraTakip.Models.Dtos.Store;
 using KiraTakip.Repositories.Interfaces.Common;
 
@@ -10,5 +11,6 @@ public interface IStoreRepository : IRepositoryBase<Store>
     Task<StoreDetailDto?> GetDetailAsync(int id);
     Task<bool> CodeExistsAsync(string code, int? excludeId = null);
     Task<List<StoreRoutingOptionDto>> GetRoutingOptionsAsync();
+    Task<List<ReportStoreOptionDto>> GetAllOptionsAsync();
     Task<Store?> GetWithAccountsByIdAsync(int id, CancellationToken cancellationToken = default);
 }

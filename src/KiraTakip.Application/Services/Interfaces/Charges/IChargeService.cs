@@ -1,7 +1,6 @@
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.Charge;
-using KiraTakip.Models.Dtos.Report;
 
 namespace KiraTakip.Services.Interfaces.Charges;
 
@@ -17,8 +16,6 @@ public interface IChargeService
     Task<TenantLeaseChargeDataDto> GetTenantLeaseDataAsync(GetTenantLeaseChargeDataInput input);
     Task<ManualLeaseChargeSummaryDto> GetManualLeaseChargeSummaryAsync(GetManualLeaseChargeSummaryInput input);
     Task<TenantChargeIndexDataDto> GetTenantChargeIndexAsync(GetTenantChargeIndexInput input);
-    Task<MonthlyCollectionReportDto> GetMonthlyCollectionReportAsync(
-        GetMonthlyCollectionReportInput input);
 
     // Business operations
     Task UpdateDelaysAsync();

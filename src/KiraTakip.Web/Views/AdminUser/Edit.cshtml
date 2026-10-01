@@ -74,8 +74,8 @@
         <!-- Kapsam ayarları: Admin rolünde gizli -->
         <div x-show="seciliRolId !== '@systemAdminRoleId'" x-cloak class="mt-5">
             <div class="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full"></span>
+                <div class="text-[10px] font-bold text-slate-400 mb-3 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 bg-primary rounded-full"></span>
                     Taşınmaz Erişim Kapsamı
                 </div>
 
@@ -83,7 +83,7 @@
                     <input type="checkbox" name="HasAccessToAllProperties" value="true"
                            @(Model.HasAccessToAllProperties ? "checked" : "")
                            @@change="globalErisim = $event.target.checked"
-                           class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                           class="w-4 h-4 rounded border-slate-300 accent-primary" />
                     <input type="hidden" name="HasAccessToAllProperties" value="false" />
                     <span class="text-[13.5px] font-semibold text-slate-700">Tüm Taşınmazlara Erişim</span>
                 </label>
@@ -105,9 +105,9 @@
                                         <input type="checkbox" name="SelectedPropertyIds"
                                                value="@Model.Properties[i].PropertyId"
                                                @(Model.Properties[i].Selected ? "checked" : "")
-                                               class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                               class="w-4 h-4 rounded border-slate-300 accent-primary" />
                                         <div class="flex flex-col">
-                                            <span class="font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors">@Model.Properties[i].Name</span>
+                                            <span class="font-semibold text-slate-700 group-hover:text-primary transition-colors">@Model.Properties[i].Name</span>
                                             <span class="text-[11px] text-slate-400">@Model.Properties[i].Location</span>
                                         </div>
                                     </label>
@@ -125,9 +125,9 @@
                                             <input type="checkbox" name="SelectedUnitIds"
                                                    value="@Model.Units[i].UnitId"
                                                    @(Model.Units[i].Selected ? "checked" : "")
-                                                   class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                                   class="w-4 h-4 rounded border-slate-300 accent-primary" />
                                             <div class="flex flex-col">
-                                                <span class="font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors">@Model.Units[i].Name</span>
+                                                <span class="font-semibold text-slate-700 group-hover:text-primary transition-colors">@Model.Units[i].Name</span>
                                                 <span class="text-[11px] text-slate-400">@Model.Units[i].PropertyName</span>
                                             </div>
                                         </label>

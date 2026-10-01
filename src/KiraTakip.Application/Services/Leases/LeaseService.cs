@@ -108,6 +108,7 @@ public class LeaseService(
 
         var lease = new Lease
         {
+            LeaseNo = await GenerateLeaseNoAsync(),
             UnitId = input.UnitId,
             TenantId = input.TenantId,
             StartDate = input.StartDate,
@@ -536,6 +537,11 @@ public class LeaseService(
         return result;
     }
 
+    public Task<int> GetTerminatedCountAsync(GetTerminatedLeaseCountInput input)
+        => leaseRepository.GetTerminatedCountAsync(
+            input.PropertyIds?.ToList(),
+            input.UnitIds?.ToList());
+
     public async Task<List<LeaseListItemDto>> GetTenantPortalLeasesAsync(
         GetTenantPortalLeasesInput input)
     {
@@ -716,6 +722,20 @@ public class LeaseService(
             "Lease.ActorNotFound");
     }
 
+    private async Task<string> GenerateLeaseNoAsync()
+    {
+        var existingLeaseNos = await leaseRepository.GetExistingLeaseNosAsync();
+        var usedLeaseNos = existingLeaseNos.ToHashSet();
+
+        if (LeaseNumberPolicy.TryGenerateNextLeaseNo(usedLeaseNos, out var leaseNo))
+            return leaseNo;
+
+        throw new BusinessException(
+            "Sözleşme No üretilemedi.",
+            ErrorType.Failure,
+            "Lease.NumberGenerationFailed");
+    }
+
     private void EnsureNotSelfReview(Lease lease, string actorUserId)
         => Guard.Forbidden(
             lease.CreatedBy == actorUserId && !currentUserContext.IsSuperAdmin,
@@ -855,17 +875,20 @@ public class LeaseService(
 
     private async Task PopulateMonthlyAmountsAsync(IEnumerable<LeaseListItemDto> items)
     {
-        foreach (var item in items)
+        var itemList = items.ToList();
+        var leases = itemList.Select(item => new Lease
         {
-            var lease = new Lease
-            {
-                Id = item.Id,
-                TenantId = item.TenantId,
-                UnitId = item.UnitId,
-                IsRentFree = item.IsRentFree,
-                Unit = new Unit { Id = item.UnitId, Area = item.UnitArea }
-            };
-            item.MonthlyAmount = await statisticsService.GetMonthlyAmountAsync(lease);
+            Id = item.Id,
+            TenantId = item.TenantId,
+            UnitId = item.UnitId,
+            IsRentFree = item.IsRentFree,
+            Unit = new Unit { Id = item.UnitId, Area = item.UnitArea }
+        }).ToList();
+
+        var amounts = await statisticsService.GetMonthlyAmountsAsync(leases);
+        foreach (var item in itemList)
+        {
+            if (amounts.TryGetValue(item.Id, out var amount)) item.MonthlyAmount = amount;
         }
     }
 }

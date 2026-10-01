@@ -6,6 +6,9 @@ namespace KiraTakip.Models.Entities;
 [Table("Tahakkuklar")]
 public class Charge : BaseEntity
 {
+    [Column("TahakkukNo")]
+    public string ChargeNo { get; set; } = string.Empty;
+
     [Column("KiraciId")]
     public int TenantId { get; set; }
 

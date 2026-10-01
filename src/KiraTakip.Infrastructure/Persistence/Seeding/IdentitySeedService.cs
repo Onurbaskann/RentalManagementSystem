@@ -3,7 +3,6 @@ using KiraTakip.Services.Interfaces.Identity;
 using Microsoft.AspNetCore.Identity;
 using KiraTakip.Models.Dtos.Role;
 
-
 namespace KiraTakip.Infrastructure.Seeding;
 
 public class IdentitySeedService
@@ -28,7 +27,6 @@ public class IdentitySeedService
         // Global Kiracı Yöneticisi rolünü seed et
         await _rolService.EnsureGlobalTenantRolesAsync(new EnsureGlobalTenantRolesInput(admin.Id));
     }
-
 
     private async Task<ApplicationUser> EnsureUser(string email, string password, string adSoyad, bool tumTasinmazlaraErisim = false, bool isSuperAdmin = false)
     {

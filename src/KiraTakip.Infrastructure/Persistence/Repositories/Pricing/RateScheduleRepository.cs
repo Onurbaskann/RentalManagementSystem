@@ -37,6 +37,26 @@ public class RateScheduleRepository(ApplicationDbContext ctx) : RepositoryBase<R
             })
             .FirstOrDefaultAsync();
 
+    public async Task<List<(int TenantCategoryId, int ChargeTypeId, int Year, RateValueDto Rate)>> GetRatesAsync(
+        IReadOnlyCollection<int> tenantCategoryIds, IReadOnlyCollection<int> chargeTypeIds)
+    {
+        var rows = await _dbSet.AsNoTracking()
+            .Where(k => k.IsActive
+                     && tenantCategoryIds.Contains(k.TenantCategoryId)
+                     && chargeTypeIds.Contains(k.ChargeTypeId))
+            .Select(k => new { k.TenantCategoryId, k.ChargeTypeId, k.Year, k.CalculationMethod, k.UnitValue, k.KdvRate })
+            .ToListAsync();
+
+        return rows
+            .Select(k => (k.TenantCategoryId, k.ChargeTypeId, k.Year, new RateValueDto
+            {
+                CalculationMethod = k.CalculationMethod,
+                UnitValue = k.UnitValue,
+                KdvRate = k.KdvRate
+            }))
+            .ToList();
+    }
+
     public async Task<List<ParentRateRowDto>> GetRowsByYearAndCategoryAsync(int year, int? tenantCategoryId)
     {
         var q = _dbSet.AsNoTracking()

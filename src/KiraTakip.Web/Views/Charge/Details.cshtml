@@ -1,7 +1,7 @@
 @model ChargeDetailDto
 @using KiraTakip.Models.Enums
 @{
-    ViewData["Title"] = $"Tahakkuk #{Model.Id}";
+    ViewData["Title"] = $"Tahakkuk {Model.ChargeNo}";
     ViewData["UseCentralFeedback"] = true;
 
     var remainingAmount = Model.TotalAmount - Model.PaidAmount;
@@ -48,8 +48,8 @@
 <div class="card mb-4">
     <div class="flex items-start justify-between flex-wrap gap-5">
         <div>
-            <div class="text-[11.5px] font-bold text-muted uppercase tracking-wider mb-1.5">Dönem</div>
-            <div class="font-serif text-[28px] font-bold leading-tight">@Model.PeriodStart.ToString("MMMM yyyy")</div>
+            <div class="text-[11.5px] font-bold text-muted mb-1.5">Dönem <span class="font-mono font-normal normal-case text-muted">· @Model.ChargeNo</span></div>
+            <div class="font-display text-[28px] font-bold leading-tight">@Model.PeriodStart.ToString("MMMM yyyy")</div>
             <div class="text-[13px] text-muted mt-1">
                 @Model.PeriodStart.Tarih() — @Model.PeriodEnd.Tarih()
                 &nbsp;•&nbsp; Vade: @Model.DueDate.Tarih()
@@ -59,31 +59,31 @@
         <div class="flex flex-col items-end gap-3">
             <div class="flex gap-6 flex-wrap">
                 <div class="text-center">
-                    <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Beklenen</div>
+                    <div class="text-[11.5px] font-bold text-muted mb-1">Beklenen</div>
                     <div class="text-xl font-bold">@Model.TotalAmount.Tl()</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Ödenen</div>
+                    <div class="text-[11.5px] font-bold text-muted mb-1">Ödenen</div>
                     <div class="text-xl font-bold text-emerald-800">@Model.PaidAmount.Tl()</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-[11.5px] font-bold text-muted uppercase mb-1">Kalan</div>
+                    <div class="text-[11.5px] font-bold text-muted mb-1">Kalan</div>
                     <div class="text-xl font-bold @(remainingAmount > 0 ? "text-red-500" : "text-emerald-800")">@remainingAmount.Tl()</div>
                 </div>
             </div>
 
             <details class="group w-full">
                 <summary class="list-none cursor-pointer flex items-center gap-2.5 p-2 px-3 bg-slate-50 border border-slate-200 rounded-lg select-none group-open:rounded-b-none hover:bg-slate-100/50 transition-all">
-                    <span class="text-[9px] font-bold uppercase tracking-widest bg-indigo-50 text-indigo-600 border border-indigo-100 rounded px-1.5 py-0.5">Kalem Bazında</span>
+                    <span class="text-[10px] font-bold bg-primary-light text-primary border border-slate-200 rounded px-1.5 py-0.5">Kalem Bazında</span>
                     <span class="text-[11px] text-slate-500 font-medium">@Model.LineItems.Count kalem</span>
                     <span class="ml-auto text-[10px] text-slate-300 group-open:rotate-180 transition-transform">▼</span>
                 </summary>
                 <div class="border border-slate-200 border-t-0 rounded-b-lg bg-white p-3">
                     <div class="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 gap-y-1.5 text-xs items-center">
-                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest pb-1 border-b border-slate-100">Kalem</span>
-                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest pb-1 border-b border-slate-100 text-right">Toplam</span>
-                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest pb-1 border-b border-slate-100 text-right">Ödenen</span>
-                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest pb-1 border-b border-slate-100 text-right">Kalan</span>
+                        <span class="text-[10px] font-bold text-slate-400 pb-1 border-b border-slate-100">Kalem</span>
+                        <span class="text-[10px] font-bold text-slate-400 pb-1 border-b border-slate-100 text-right">Toplam</span>
+                        <span class="text-[10px] font-bold text-slate-400 pb-1 border-b border-slate-100 text-right">Ödenen</span>
+                        <span class="text-[10px] font-bold text-slate-400 pb-1 border-b border-slate-100 text-right">Kalan</span>
                         @foreach (var item in Model.LineItems.OrderBy(item => item.ChargeTypeSortOrder))
                         {
                             <span class="text-slate-700 font-medium">
@@ -131,7 +131,7 @@
         {
             <div>
                 <span class="text-muted">Sözleşme: </span>
-                <a href="/Lease/Details/@Model.LeaseId.ToHashId()" class="font-semibold no-underline hover:underline">#@Model.LeaseId</a>
+                <a href="/Lease/Details/@Model.LeaseId.ToHashId()" class="font-semibold no-underline hover:underline">@Model.LeaseNo</a>
             </div>
         }
     </div>
@@ -148,7 +148,7 @@
         <div class="overflow-hidden rounded-lg border border-slate-200 bg-white m-4">
             <table class="w-full text-xs">
                 <thead class="bg-slate-50 border-b border-slate-200">
-                    <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
+                    <tr class="text-slate-500 font-bold text-[10px]">
                         <th class="p-2 px-3 text-left">Açıklama</th>
                         <th class="p-2 px-3 text-left">Hesaplama</th>
                         <th class="p-2 px-3 text-right">Birim</th>
@@ -208,7 +208,7 @@
                     }
                 </tbody>
                 <tfoot class="bg-slate-50 border-t-2 border-slate-200">
-                    <tr class="font-bold text-[9px] uppercase tracking-wider text-slate-500">
+                    <tr class="font-bold text-[10px] text-slate-500">
                         <td colspan="3" class="p-2 px-3">Toplam</td>
                         <td class="p-2 px-3 text-right text-slate-600">@Model.ExpectedAmount.Tl()</td>
                         <td></td>
@@ -244,7 +244,6 @@
                         <th>Durum</th>
                         <th>Giriş Tarihi</th>
                         <th>Açıklama</th>
-                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -269,8 +268,11 @@
                             PaymentChannel.Cash => "Nakit",
                             _ => "Diğer"
                         };
-                        <tr>
-                            <td class="font-semibold">@payment.PaymentDate.Tarih()</td>
+                        var paymentDetailsUrl = $"/Payment/Details/{payment.Id.ToHashId()}";
+                        <tr data-href="@paymentDetailsUrl"
+                            class="cursor-pointer hover:bg-slate-50 transition-colors"
+                            @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
+                            <td class="font-semibold"><a href="@paymentDetailsUrl" class="cell-link">@payment.PaymentDate.Tarih()</a></td>
                             <td class="text-[13px]">
                                 <span class="font-semibold">@payment.ChargeTypeName</span>
                                 <span class="block text-[11px] text-muted">@payment.ChargeLineItemDescription</span>
@@ -280,7 +282,6 @@
                             <td><span class="badge @paymentStatusClass">@paymentStatusLabel</span></td>
                             <td class="text-[12px] text-muted">@payment.EntryDate.Tarih() @payment.EntryDate.ToString("HH:mm")</td>
                             <td class="text-[13px] text-muted">@payment.Description</td>
-                            <td><a href="/Payment/Details/@payment.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
                         </tr>
                     }
                 </tbody>

@@ -6,6 +6,9 @@ namespace KiraTakip.Models.Entities;
 [Table("TahakkukOdemeleri")]
 public class PaymentAllocation : BaseEntity
 {
+    [Column("OdemeNo")]
+    public string PaymentNo { get; set; } = string.Empty;
+
     [Column("TahakkukId")]
     public int ChargeId { get; set; }
 

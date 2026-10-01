@@ -8,6 +8,11 @@ internal sealed class ReservationConfiguration : IEntityTypeConfiguration<Reserv
 {
     public void Configure(EntityTypeBuilder<Reservation> entity)
     {
+        entity.Property(r => r.ReservationNo).HasMaxLength(20);
+        entity.HasIndex(r => r.ReservationNo)
+              .IsUnique()
+              .HasDatabaseName("UX_Rezervasyonlar_RezervasyonNo_Silinmemis")
+              .HasFilter("[IsDeleted] = 0");
         entity.Property(r => r.UnitRate).HasPrecision(18, 2);
         entity.Property(r => r.RateAmount).HasPrecision(18, 2);
         entity.Property(r => r.KdvRate).HasPrecision(5, 2);

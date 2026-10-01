@@ -181,6 +181,7 @@ public class LeaseApprovalDatabaseTests : IDisposable
 
     private static Lease CreateDraft(int unitId, int tenantId) => new()
     {
+        LeaseNo = $"TEST-{Guid.NewGuid():N}"[..20],
         UnitId = unitId,
         TenantId = tenantId,
         Status = LeaseStatus.Draft,

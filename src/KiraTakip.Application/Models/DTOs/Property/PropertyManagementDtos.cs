@@ -40,9 +40,6 @@ public class ReservationAreaInputDto
     public decimal Area { get; set; }
     public int? UnitTypeId { get; set; }
     public string? Description { get; set; }
-    public int FreeDurationMinutes { get; set; }
-    public decimal HourlyRate { get; set; }
-    public decimal VatRate { get; set; }
 }
 
 public class CreatePropertyInput

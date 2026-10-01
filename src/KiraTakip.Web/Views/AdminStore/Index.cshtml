@@ -15,16 +15,6 @@
     <a href="/Admin/Store/Create" class="btn btn-primary" asp-permission="@PermissionCatalog.Store.Create">Yeni Mağaza</a>
 </div>
 
-<form method="get" action="/Admin/Store" class="card mb-3 flex flex-wrap items-end gap-3">
-    <div class="form-group mb-0 flex-1 min-w-[240px]">
-        <label class="form-label">Ara</label>
-        <input name="q" value="@query.Q" class="form-control" placeholder="Mağaza adı veya kodu" />
-    </div>
-    <input type="hidden" name="size" value="@query.Size" />
-    <button type="submit" class="btn btn-secondary">Ara</button>
-    <a href="/Admin/Store" class="btn btn-secondary">Temizle</a>
-</form>
-
 <div class="card p-0 overflow-hidden">
     <div class="table-wrapper">
         <table class="w-full">
@@ -62,9 +52,11 @@
                                 @(store.IsActive ? "Aktif" : "Pasif")
                             </span>
                         </td>
-                        <td class="flex gap-2 justify-end">
-                            <a href="/Admin/Store/Edit/@store.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
-                            <form method="post" action="/Admin/Store/ToggleStatus/@store.Id.ToHashId()" class="inline"
+                        <td class="text-right">
+                            <a href="/Admin/Store/Edit/@store.Id.ToHashId()" class="icon-btn" data-tip="Düzenle" aria-label="Düzenle">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                            </a>
+                            <form method="post" action="/Admin/Store/ToggleStatus/@store.Id.ToHashId()" class="inline ml-2"
                                   data-confirm="'@store.Name' mağazası @(store.IsActive ? "pasif" : "aktif") yapılsın mı?">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-sm @(store.IsActive ? "btn-danger" : "btn-amber")"

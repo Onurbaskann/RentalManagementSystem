@@ -5,7 +5,7 @@
     ViewData["Title"] = "Rezervasyonlar";
     ViewData["UseCentralFeedback"] = true;
     bool canCreate = await PermissionService.HasPermissionAsync(PermissionCatalog.Reservation.Create);
-    bool canCancel = await PermissionService.HasPermissionAsync(PermissionCatalog.Reservation.Cancel);
+    bool canEdit = await PermissionService.HasPermissionAsync(PermissionCatalog.Reservation.Edit);
     bool canTransfer = await PermissionService.HasPermissionAsync(PermissionCatalog.Reservation.TransferToCharge);
     var query = ViewBag.Query as TableQuery ?? new TableQuery();
     var activeStatus = string.IsNullOrWhiteSpace(query.Status) ? "tum" : query.Status;
@@ -33,7 +33,7 @@
     </div>
 </div>
 
-<div class="flex gap-1.5 flex-wrap mb-5">
+<div class="flex gap-1.5 flex-wrap @(activeStatus != "iptal" && cancelledCount > 0 ? "mb-2" : "mb-5")">
     @{
         var statusFilters = new[] {
             ("tum", "Tümü"),
@@ -49,14 +49,16 @@
         <a href="/Reservation?status=@key&q=@Uri.EscapeDataString(query.Q ?? string.Empty)&size=@query.Size"
            class="btn btn-sm @(isActive ? "btn-primary" : "btn-secondary text-slate-600 bg-white border-slate-200")">@label</a>
     }
+    @if (activeStatus == "iptal")
+    {
+        <a href="/Reservation?status=iptal&q=@Uri.EscapeDataString(query.Q ?? string.Empty)&size=@query.Size" class="btn btn-sm btn-primary">İptal Edildi</a>
+    }
 </div>
-
-@if (cancelledCount > 0 && activeStatus == "tum")
+@if (activeStatus != "iptal" && cancelledCount > 0)
 {
-    <div class="text-[12px] text-slate-400 mb-4 -mt-3">
-        @cancelledCount iptal edilmiş kayıt varsayılan görünümde gizleniyor.
-        <a href="/Reservation?status=iptal&size=@query.Size"
-           class="text-slate-500 hover:text-primary underline ml-1">Görüntüle →</a>
+    <div class="text-xs text-muted mb-5">
+        @cancelledCount iptal edilmiş kayıt gizleniyor
+        <a href="/Reservation?status=iptal&size=@query.Size" class="link-more ml-1">Görüntüle</a>
     </div>
 }
 
@@ -76,6 +78,8 @@
         <table class="w-full">
             <thead>
                 <tr>
+                    <th class="w-28">No</th>
+                    <th>Başlık</th>
                     <th>Taşınmaz / Birim</th>
                     <th>Kiracı</th>
                     <th class="w-36">Zaman Dilimi</th>
@@ -84,7 +88,7 @@
                     <th class="w-24 cell-center">Ücretli</th>
                     <th class="w-32 num">Tutar</th>
                     <th class="w-32">Durum</th>
-                    <th class="w-40 text-right"></th>
+                    <th class="w-32 text-right"></th>
                 </tr>
             </thead>
             <tbody>
@@ -92,8 +96,15 @@
                 {
                     string statusClass = r.Status.GetBadgeCssClass();
                     string statusLabel = r.Status.GetDisplayLabel();
+                    var reservationControllerName = nameof(KiraTakip.Web.Controllers.ReservationController).Replace("Controller", "");
+                    var detailsUrl = Url.Action(nameof(KiraTakip.Web.Controllers.ReservationController.Details), reservationControllerName, new { id = r.Id.ToHashId() })!;
+                    var editUrl = Url.Action(nameof(KiraTakip.Web.Controllers.ReservationController.Edit), reservationControllerName, new { id = r.Id.ToHashId() })!;
 
-                    <tr>
+                    <tr data-href="@detailsUrl"
+                        class="cursor-pointer hover:bg-slate-50 transition-colors"
+                        @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
+                        <td class="font-mono text-muted-sm">@r.ReservationNo</td>
+                        <td><a href="@detailsUrl" class="cell-link">@(string.IsNullOrWhiteSpace(r.Title) ? "—" : r.Title)</a></td>
                         <td>
                             @r.PropertyName
                             <span class="cell-sub">@r.UnitName</span>
@@ -126,7 +137,6 @@
                         </td>
                         <td class="text-right">
                             <div class="flex gap-1.5 justify-end items-center">
-                                <a asp-controller="Reservation" asp-action="Details" asp-route-id="@r.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a>
                                 @if (canTransfer && r.Status == ReservationStatus.Confirmed && r.TotalAmount > 0 && r.ChargeId == null)
                                 {
                                     <form method="post"
@@ -134,26 +144,17 @@
                                                                                       nameof(KiraTakip.Web.Controllers.ReservationController.TransferToCharge),
                                                                                       nameof(KiraTakip.Web.Controllers.ReservationController).Replace("Controller", ""),
                                                                                       new { id = r.Id.ToHashId() })"
-                                          class="inline"
+                                          class="inline" data-stop
                                           data-confirm="Bu rezervasyonu tahakkuka aktarmak istediğinize emin misiniz?">
                                         @Html.AntiForgeryToken()
                                         <button type="submit" class="btn btn-sm btn-primary">Aktar</button>
                                     </form>
                                 }
-                                @if (canCancel && r.Status is ReservationStatus.PendingApproval or ReservationStatus.Confirmed)
+                                @if (canEdit && r.Status is ReservationStatus.PendingApproval or ReservationStatus.Confirmed)
                                 {
-                                    <button type="button" class="btn btn-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white"
-                                            data-confirm="Bu rezervasyonu iptal etmek istediğinize emin misiniz?"
-                                            data-confirm-title="Rezervasyon İptali"
-                                            data-confirm-action="@Url.Action(
-                                                                                    nameof(KiraTakip.Web.Controllers.ReservationController.Cancel),
-                                                                                    nameof(KiraTakip.Web.Controllers.ReservationController).Replace("Controller", ""),
-                                                                                    new { id = r.Id.ToHashId() })"
-                                            data-confirm-method="POST"
-                                            data-confirm-needs-reason="true"
-                                            data-confirm-reason-label="İptal nedeni">
-                                        İptal
-                                    </button>
+                                    <a href="@editUrl" class="icon-btn" data-tip="Düzenle" aria-label="Düzenle">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                                    </a>
                                 }
                             </div>
                         </td>
@@ -162,7 +163,7 @@
                 @if (!Model.Items.Any())
                 {
                     <tr>
-                        <td colspan="9" class="py-16 text-center">
+                        <td colspan="11" class="py-16 text-center">
                             <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 text-slate-300 mb-4">
                                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
                             </div>
@@ -184,46 +185,4 @@
     </div>
     @await Html.PartialAsync("_Pagination", pagination)
 </div>
-
-@section Scripts {
-    <script>
-        document.querySelectorAll('[data-confirm]').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const needsReason = this.dataset.confirmNeedsReason === 'true';
-                if (!needsReason) return;
-
-                const action = this.dataset.confirmAction;
-                const title = this.dataset.confirmTitle || 'Onay';
-                const message = this.dataset.confirm;
-                const reasonLabel = this.dataset.confirmReasonLabel || 'Neden';
-
-                const neden = await window.Alpine.store('confirm').ask(message, title, true, reasonLabel);
-                if (!neden) return;
-
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = action;
-
-                const token = document.querySelector('input[name="__RequestVerificationToken"]');
-                if (token) {
-                    const t = document.createElement('input');
-                    t.type = 'hidden';
-                    t.name = '__RequestVerificationToken';
-                    t.value = token.value;
-                    form.appendChild(t);
-                }
-
-                const n = document.createElement('input');
-                n.type = 'hidden';
-                n.name = 'reason';
-                n.value = neden;
-                form.appendChild(n);
-
-                document.body.appendChild(form);
-                form.submit();
-            });
-        });
-    </script>
-    @Html.AntiForgeryToken()
-}
 

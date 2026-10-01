@@ -132,6 +132,7 @@ public class ChargeArchitectureTests : IDisposable
 
         var lease = new Lease
         {
+            LeaseNo = $"TEST-{Guid.NewGuid():N}"[..20],
             UnitId = unit.Id,
             TenantId = tenant.Id,
             StartDate = new DateTime(2026, 1, 1),
@@ -212,6 +213,7 @@ public class ChargeArchitectureTests : IDisposable
 
         var lease = new Lease
         {
+            LeaseNo = $"TEST-{Guid.NewGuid():N}"[..20],
             UnitId = unit.Id,
             TenantId = kiraci1.Id,
             StartDate = new DateTime(2026, 1, 1),
@@ -255,6 +257,7 @@ public class ChargeArchitectureTests : IDisposable
 
         var lease = new Lease
         {
+            LeaseNo = $"TEST-{Guid.NewGuid():N}"[..20],
             UnitId = leaseUnit.Id,
             TenantId = tenant.Id,
             StartDate = new DateTime(2026, 1, 1),
@@ -371,6 +374,7 @@ public class ChargeArchitectureTests : IDisposable
         var bitis = new DateTime(2026, 3, 1, 12, 0, 0);
         var reservation = new Reservation
         {
+            ReservationNo = $"TEST-{Guid.NewGuid():N}"[..20],
             UnitId = unit.Id,
             TenantId = tenant.Id,
             StartDate = baslangic,
@@ -426,6 +430,7 @@ public class ChargeArchitectureTests : IDisposable
 
         var t1 = new Charge
         {
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = tenant.Id,
             UnitId = birim1.Id,
             PeriodStart = new DateTime(2026, 1, 1),
@@ -438,6 +443,7 @@ public class ChargeArchitectureTests : IDisposable
         };
         var t2 = new Charge
         {
+            ChargeNo = $"TEST-{Guid.NewGuid():N}"[..20],
             TenantId = tenant.Id,
             UnitId = birim2.Id,
             PeriodStart = new DateTime(2026, 1, 1),

@@ -4,7 +4,7 @@
 @using KiraTakip.Web.Extensions
 @using KiraTakip.Models.Enums
 @{
-    ViewData["Title"] = $"Sözleşme #{Model.Lease.Id}";
+    ViewData["Title"] = $"Sözleşme {Model.Lease.LeaseNo}";
     ViewData["UseCentralFeedback"] = true;
     var s = Model.Lease;
     var trCulture = new CultureInfo("tr-TR");
@@ -59,7 +59,7 @@
         .OrderBy(t => t.DueDate)
         .Select(t => (DateTime?)t.DueDate)
         .FirstOrDefault();
-    string thkSagligiRenk = thkOdemeOrani >= 90 ? "var(--color-primary)" : thkOdemeOrani >= 70 ? "#b45309" : "#dc2626";
+    string thkSagligiSinif = thkOdemeOrani >= 90 ? "text-success" : thkOdemeOrani >= 70 ? "text-warning-strong" : "text-danger";
 }
 
 
@@ -261,15 +261,14 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             <!-- Sol: Kiracı -->
             <div>
-                <div class="text-[11.5px] font-semibold text-muted uppercase tracking-wider mb-2.5">Kiracı</div>
+                <div class="text-[11.5px] font-semibold text-muted mb-2.5">Kiracı</div>
                 <div class="flex items-center gap-3.5 mb-3.5">
                     <div class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center text-[17px] font-bold flex-shrink-0">
                         @(s.TenantDisplayName.Split(' ').Where(p => p.Length > 0).Take(2).Select(p => p[0].ToString().ToUpper()).Aggregate("", (a, b) => a + b))
                     </div>
                     <div>
-                        <div class="font-serif text-[22px] font-bold leading-tight">@s.TenantDisplayName</div>
+                        <div class="font-display text-[22px] font-bold leading-tight">@s.TenantDisplayName</div>
                         <div class="mt-1 flex gap-1.5 items-center">
-                            <span class="badge badge-kurumsal">Tüzel Kişi</span>
                             @if (!string.IsNullOrEmpty(s.TenantCategoryName))
                             {
                                 <span class="badge badge-bos">@s.TenantCategoryName</span>
@@ -294,8 +293,8 @@
 
             <!-- Sağ: Taşınmaz + Sözleşme Durumu -->
             <div class="text-right">
-                <div class="text-[11.5px] font-semibold text-muted uppercase tracking-wider mb-2.5">Taşınmaz</div>
-                <div class="font-serif text-xl font-bold mb-1">@s.PropertyName</div>
+                <div class="text-[11.5px] font-semibold text-muted mb-2.5">Taşınmaz</div>
+                <div class="font-display text-xl font-bold mb-1">@s.PropertyName</div>
                 @if (s.UnitStructure == UnitStructure.MultipleUnits)
                 {
                     <div class="text-sm text-muted mb-1">Birim @s.UnitNo@(s.UnitFloorNo.HasValue ? $" • {s.UnitFloorNo}. Kat" : "") • @s.UnitArea.M2()</div>
@@ -325,7 +324,7 @@
             @if (s.IsRentFree)
             {
                 <div class="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                    <div class="font-serif text-[22px] font-bold text-emerald-700">Bedelsiz</div>
+                    <div class="font-display text-[22px] font-bold text-emerald-700">Bedelsiz</div>
                     <div class="mt-1 text-xs text-emerald-800">Kira bedeli tahakkuku oluşturulmaz.</div>
                 </div>
             }
@@ -333,7 +332,7 @@
             {
                 <div class="mt-2.5">
                     <div class="text-xs text-muted mb-0.5">Aylık (KDV Hariç)</div>
-                    <div class="font-serif text-[26px] font-bold text-primary">@aylikBedel.Tl()</div>
+                    <div class="font-display text-[26px] font-bold text-primary">@aylikBedel.Tl()</div>
                 </div>
                 @if (s.IsVatApplied)
                 {
@@ -373,8 +372,7 @@
             </div>
             <div class="mt-2.5 flex items-baseline justify-between">
                 <div class="text-xs text-muted">Toplam @((int)(s.EndDate - s.StartDate).TotalDays) gün</div>
-                <div class="text-[13px] font-semibold"
-                     style="color:@(feshedildi || Model.RemainingDays <= 0 ? "#dc2626" : Model.RemainingDays <= 30 ? "#b45309" : "var(--color-primary)");">
+                <div class="text-[13px] font-semibold @(feshedildi || Model.RemainingDays <= 0 ? "text-danger" : Model.RemainingDays <= 30 ? "text-warning-strong" : "text-success")">
                     @if (feshedildi)
                     {
                         <span>—</span>
@@ -420,7 +418,7 @@
             else
             {
                 <div class="mt-2.5 flex items-baseline gap-2">
-                    <div class="font-serif text-[40px] font-bold leading-none" style="color:@thkSagligiRenk">
+                    <div class="font-display text-[40px] font-bold leading-none @thkSagligiSinif">
                         @thkOdemeOrani.Yuzde(0)
                     </div>
                     <div class="text-[12px] text-muted">ödeme oranı</div>
@@ -429,7 +427,7 @@
                 <div class="mt-3.5 flex flex-col gap-2">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:#10b981"></span>
+                            <span class="w-2 h-2 rounded-full flex-shrink-0 bg-emerald-500"></span>
                             <span class="text-[12px] text-muted">Ödendi</span>
                             <span class="text-[10.5px] text-muted bg-slate-100 px-1.5 py-0.5 rounded-full font-medium">@thkOdenenSayi</span>
                         </div>
@@ -438,7 +436,7 @@
 
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:#94a3b8"></span>
+                            <span class="w-2 h-2 rounded-full flex-shrink-0 bg-slate-400"></span>
                             <span class="text-[12px] text-muted">Bekleyen</span>
                             <span class="text-[10.5px] text-muted bg-slate-100 px-1.5 py-0.5 rounded-full font-medium">@thkBekleyenSayi</span>
                         </div>
@@ -447,11 +445,11 @@
 
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:#dc2626"></span>
+                            <span class="w-2 h-2 rounded-full flex-shrink-0 bg-red-600"></span>
                             <span class="text-[12px] text-muted">Geciken</span>
-                            <span class="text-[10.5px] px-1.5 py-0.5 rounded-full font-medium @(thkGecikenSayi > 0 ? "bg-red-50 text-[#dc2626]" : "bg-slate-100 text-muted")">@thkGecikenSayi</span>
+                            <span class="text-[10.5px] px-1.5 py-0.5 rounded-full font-medium @(thkGecikenSayi > 0 ? "bg-red-50 text-danger" : "bg-slate-100 text-muted")">@thkGecikenSayi</span>
                         </div>
-                        <span class="text-[13px] font-semibold @(thkGecikenSayi > 0 ? "text-[#dc2626]" : "")">@thkGecikenTutar.Tl()</span>
+                        <span class="text-[13px] font-semibold @(thkGecikenSayi > 0 ? "text-danger" : "")">@thkGecikenTutar.Tl()</span>
                     </div>
                 </div>
 
@@ -496,7 +494,7 @@
         <div class="card mb-4">
             <div class="flex justify-between items-center mb-3.5">
                 <div>
-                    <span class="text-xs font-semibold text-muted uppercase tracking-wider">Aylık Tahakkuk Kalemleri</span>
+                    <span class="text-xs font-semibold text-muted">Aylık Tahakkuk Kalemleri</span>
                     @if (Model.CurrentLineItemPeriod.HasValue)
                     {
                         <span class="text-xs text-muted ml-2">— @Model.CurrentLineItemPeriod.Value.ToString("MMMM yyyy", trCulture)</span>
@@ -507,7 +505,7 @@
             <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
                 <table class="w-full text-xs">
                     <thead class="bg-slate-50 border-b border-slate-200">
-                        <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
+                        <tr class="text-slate-500 font-bold text-[10px]">
                             <th class="p-2 px-3 text-left">Açıklama</th>
                             <th class="p-2 px-3 text-left">Hesaplama</th>
                             <th class="p-2 px-3 text-right">Birim</th>
@@ -540,7 +538,7 @@
                         }
                     </tbody>
                     <tfoot class="bg-slate-50 border-t-2 border-slate-200">
-                        <tr class="font-bold text-[9px] uppercase tracking-wider text-slate-500">
+                        <tr class="font-bold text-[10px] text-slate-500">
                             <td colspan="3" class="p-2 px-3">Toplam</td>
                             <td class="p-2 px-3 text-right text-slate-600">@Model.CurrentLineItems.Sum(k => k.Amount).Tl()</td>
                             <td class="p-2 px-3 text-right text-slate-400/60">@Model.CurrentLineItems.Sum(k => k.KdvAmount).Tl()</td>
@@ -583,7 +581,7 @@
                         }
                     }
                     @{
-                        Row("Sözleşme No", $"#{s.Id}");
+                        Row("No", s.LeaseNo);
                         Row("Kira Bedeli (KDV Hariç)", s.IsRentFree ? "Bedelsiz" : $"{aylikBedel.Tl(0)} / ay");
                         Row("Depozito", Model.DepositAmount.Tl(0));
                         Row("Başlangıç", s.StartDate.Tarih());
@@ -607,7 +605,7 @@
                 </div>
                 @if (!string.IsNullOrEmpty(s.Description))
                 {
-                    <div class="px-4 py-3.5 bg-[#fafbfc] rounded-b-xl">
+                    <div class="px-4 py-3.5 bg-slate-50 rounded-b-xl">
                         <div class="detail-label mb-1.5">Açıklama</div>
                         <div class="text-sm leading-relaxed">@s.Description</div>
                     </div>
@@ -694,7 +692,6 @@
                                             <th>Bitiş</th>
                                             <th class="num">Aylık Bedel</th>
                                             <th>Durum</th>
-                                            <th></th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -702,8 +699,11 @@
                                         {
                                             bool gAktif = gs.IsActive;
                                             bool gFesih = gs.Status == LeaseStatus.Terminated;
-                                            <tr>
-                                                <td class="font-semibold">@gs.TenantDisplayName</td>
+                                            var gsDetailsUrl = $"/Lease/Details/{gs.Id.ToHashId()}";
+                                            <tr data-href="@gsDetailsUrl"
+                                                class="cursor-pointer hover:bg-slate-50 transition-colors"
+                                                @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
+                                                <td class="font-semibold"><a href="@gsDetailsUrl" class="cell-link">@gs.TenantDisplayName</a></td>
                                                 <td>@gs.StartDate.ToString("dd.MM.yyyy")</td>
                                                 <td>@gs.EndDate.ToString("dd.MM.yyyy")</td>
                                                 <td class="num">@(gs.IsRentFree ? "Bedelsiz" : $"{gs.MonthlyAmount:N0} ₺")</td>
@@ -723,7 +723,6 @@
                                                         <span class="badge badge-gecmis">Geçmiş</span>
                                                     }
                                                 </td>
-                                                <td><a href="/Lease/Details/@gs.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
                                             </tr>
                                         }
                                     </tbody>
@@ -752,7 +751,6 @@
                                             <th>Bitiş</th>
                                             <th class="num">Aylık Bedel</th>
                                             <th>Durum</th>
-                                            <th></th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -760,8 +758,11 @@
                                         {
                                             bool kAktif = ks.IsActive;
                                             bool kFesih = ks.Status == LeaseStatus.Terminated;
-                                            <tr>
-                                                <td class="font-semibold">@ks.UnitName</td>
+                                            var ksDetailsUrl = $"/Lease/Details/{ks.Id.ToHashId()}";
+                                            <tr data-href="@ksDetailsUrl"
+                                                class="cursor-pointer hover:bg-slate-50 transition-colors"
+                                                @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
+                                                <td class="font-semibold"><a href="@ksDetailsUrl" class="cell-link">@ks.UnitName</a></td>
                                                 <td>@ks.StartDate.ToString("dd.MM.yyyy")</td>
                                                 <td>@ks.EndDate.ToString("dd.MM.yyyy")</td>
                                                 <td class="num">@(ks.IsRentFree ? "Bedelsiz" : $"{ks.MonthlyAmount:N0} ₺")</td>
@@ -781,7 +782,6 @@
                                                         <span class="badge badge-gecmis">Geçmiş</span>
                                                     }
                                                 </td>
-                                                <td><a href="/Lease/Details/@ks.Id.ToHashId()" class="btn btn-sm btn-secondary">Detay</a></td>
                                             </tr>
                                         }
                                     </tbody>
@@ -894,26 +894,26 @@
                     int bekleyenSayisi = tumTahakkuklar.Count(t => t.Status == ChargeStatus.Pending || t.Status == ChargeStatus.PartiallyPaid);
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                         <div class="card text-center">
-                            <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Toplam Beklenen</div>
+                            <div class="text-[11.5px] font-semibold text-muted mb-1.5">Toplam Beklenen</div>
                             <div class="text-xl font-bold">@toplamBeklenen.ToString("N0") ₺</div>
                             <div class="text-[11.5px] text-muted">@tumTahakkuklar.Count tahakkuk</div>
                         </div>
                         <div class="card text-center">
-                            <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Tahsil Edilen</div>
-                            <div class="text-xl font-bold text-[#065f46]">@toplamOdenen.ToString("N0") ₺</div>
+                            <div class="text-[11.5px] font-semibold text-muted mb-1.5">Tahsil Edilen</div>
+                            <div class="text-xl font-bold text-emerald-800">@toplamOdenen.ToString("N0") ₺</div>
                             @{
                                 double pct = toplamBeklenen > 0 ? (double)(toplamOdenen / toplamBeklenen * 100) : 0;
                             }
                             <div class="text-[11.5px] text-muted">%@pct.ToString("F0")</div>
                         </div>
                         <div class="card text-center">
-                            <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Kalan</div>
-                            <div class="text-xl font-bold text-[#2563eb]">@toplamKalan.ToString("N0") ₺</div>
+                            <div class="text-[11.5px] font-semibold text-muted mb-1.5">Kalan</div>
+                            <div class="text-xl font-bold text-primary">@toplamKalan.ToString("N0") ₺</div>
                             <div class="text-[11.5px] text-muted">@bekleyenSayisi bekleyen</div>
                         </div>
-                        <div class="card text-center @(gecikmisSayisi > 0 ? "border-l-[3px] border-l-[#ef4444]" : "")">
-                            <div class="text-[11.5px] font-semibold text-muted uppercase mb-1.5">Gecikmiş</div>
-                            <div class="text-xl font-bold @(gecikmisSayisi > 0 ? "text-[#ef4444]" : "text-muted")">@gecikmisTutar.ToString("N0") ₺</div>
+                        <div class="card text-center @(gecikmisSayisi > 0 ? "border-l-[3px] border-l-danger" : "")">
+                            <div class="text-[11.5px] font-semibold text-muted mb-1.5">Gecikmiş</div>
+                            <div class="text-xl font-bold @(gecikmisSayisi > 0 ? "text-danger" : "text-muted")">@gecikmisTutar.ToString("N0") ₺</div>
                             <div class="text-[11.5px] text-muted">@(gecikmisSayisi > 0 ? $"{gecikmisSayisi} tahakkuk" : "Gecikme yok")</div>
                         </div>
                     </div>
@@ -953,7 +953,7 @@
                                         decimal tKalan = t.TotalAmount - t.PaidAmount;
                                         int tGecikmeGun = (t.Status != ChargeStatus.Paid && t.DueDate.Date < DateTime.Today)
                                             ? (DateTime.Today - t.DueDate.Date).Days : 0;
-                                        string tGecikmeRenk = tGecikmeGun > 7 ? "#dc2626" : tGecikmeGun > 0 ? "#b45309" : "";
+                                        string tGecikmeSinif = tGecikmeGun > 7 ? "text-danger" : tGecikmeGun > 0 ? "text-warning-strong" : "";
                                         <tr @@click="open[@t.Id] = !open[@t.Id]" class="cursor-pointer">
                                             <td>
                                                 <svg x-show="open[@t.Id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="mr-1 inline-block align-middle"><polyline points="18 15 12 9 6 15" /></svg>
@@ -964,7 +964,7 @@
                                             <td>
                                                 @if (tGecikmeGun > 0)
                                                 {
-                                                    <span class="text-[12.5px] font-semibold" style="color:@tGecikmeRenk">+@tGecikmeGun gün</span>
+                                                    <span class="text-[12.5px] font-semibold @tGecikmeSinif">+@tGecikmeGun gün</span>
                                                 }
                                                 else
                                                 {
@@ -973,7 +973,7 @@
                                             </td>
                                             <td class="num">@t.TotalAmount.ToString("N0") ₺</td>
                                             <td class="num num-positive">@t.PaidAmount.ToString("N0") ₺</td>
-                                            <td class="num @(tKalan > 0 ? "font-semibold" : "text-muted")" style="@(tKalan > 0 ? "color:#dc2626" : "")">
+                                            <td class="num @(tKalan > 0 ? "font-semibold text-danger" : "text-muted")">
                                                 @(tKalan > 0 ? tKalan.ToString("N0") + " ₺" : "—")
                                             </td>
                                             <td class="pl-4">
@@ -990,15 +990,15 @@
                                                 <a href="/Payment?chargeId=@t.Id.ToHashId()" class="btn btn-sm btn-secondary">Ödemeler</a>
                                             </td>
                                         </tr>
-                                        <tr x-show="open[@t.Id]" x-cloak class="bg-[#f7f8fb]">
+                                        <tr x-show="open[@t.Id]" x-cloak class="bg-slate-50">
                                             <td colspan="8" class="p-5 pb-3 px-5">
                                                 @if (t.LineItems.Any())
                                                 {
-                                                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Kalem Detayları</div>
+                                                    <div class="text-[10px] font-bold text-slate-400 mb-3">Kalem Detayları</div>
                                                     <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
                                                         <table class="w-full text-xs">
                                                             <thead class="bg-slate-50 border-b border-slate-200">
-                                                                <tr class="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
+                                                                <tr class="text-slate-500 font-bold text-[10px]">
                                                                     <th class="p-2 px-3 text-left">Açıklama</th>
                                                                     <th class="p-2 px-3 text-right">Birim</th>
                                                                     <th class="p-2 px-3 text-right">Tutar</th>
@@ -1112,7 +1112,7 @@
                         </span>
                     </label>
                 </div>
-                <div x-show="tufeEnabled" x-cloak class="bg-[#fffbeb] border border-[#fde68a] rounded-lg p-3.5 mb-3.5">
+                <div x-show="tufeEnabled" x-cloak class="bg-amber-50 border border-amber-200 rounded-lg p-3.5 mb-3.5">
                     <div class="form-group mb-2.5">
                         <label class="form-label">TÜFE Oranı (%)</label>
                         <input type="number" name="InflationRate" step="0.01" min="0" class="form-control"
@@ -1136,7 +1136,7 @@
                         </span>
                     </label>
                 </div>
-                <div x-show="kdvEnabled" x-cloak class="bg-[#f0f9ff] border border-[#bae6fd] rounded-lg p-3.5 mb-3.5">
+                <div x-show="kdvEnabled" x-cloak class="bg-sky-50 border border-sky-200 rounded-lg p-3.5 mb-3.5">
                     <div class="form-group mb-2.5">
                         <label class="form-label">KDV Oranı (%)</label>
                         <input type="number" name="VatRate" step="0.01" min="0" max="100" class="form-control"
@@ -1204,15 +1204,15 @@
                 }
 
                 <!-- ÖZET -->
-                <div class="border border-[var(--color-border)] rounded-lg bg-[#f7f8fa] p-4 mt-4 mb-4">
-                    <div class="text-[11px] font-semibold uppercase tracking-wider text-muted mb-3">Özet</div>
+                <div class="border border-[var(--color-border)] rounded-lg bg-slate-50 p-4 mt-4 mb-4">
+                    <div class="text-[11px] font-semibold text-muted mb-3">Özet</div>
                     <div class="grid grid-cols-2 gap-x-4 gap-y-2.5 text-[13px]">
 
                         <div class="text-muted">Bitiş Tarihi</div>
                         <div class="text-right font-medium">
                             <span x-text="formatDate(mevcutBitisTarihi)" class="text-muted"></span>
                             <span class="text-muted mx-1">→</span>
-                            <span x-text="formatDate(yeniBitisTarihi)" class="font-semibold" style="color:var(--color-primary)"></span>
+                            <span x-text="formatDate(yeniBitisTarihi)" class="font-semibold text-primary"></span>
                         </div>
 
                         <div class="text-muted">Uzatma Süresi</div>
@@ -1222,7 +1222,7 @@
                         <div class="text-right font-medium">
                             <span x-text="formatTl(currentBedel)" class="text-muted"></span>
                             <span class="text-muted mx-1">→</span>
-                            <span x-text="formatTl(goruntulenecekKiraBedeli)" class="font-semibold" style="color:var(--color-primary)"></span>
+                            <span x-text="formatTl(goruntulenecekKiraBedeli)" class="font-semibold text-primary"></span>
                         </div>
 
                         <template x-if="tufeEnabled && !tarifeUzat">
@@ -1242,7 +1242,7 @@
                         <div class="col-span-2 border-t border-[var(--color-border)] my-0.5"></div>
 
                         <div class="text-muted">Aylık Brüt</div>
-                        <div class="text-right font-semibold text-[14px]" style="color:var(--color-primary)">
+                        <div class="text-right font-semibold text-[14px] text-primary">
                             <span x-text="formatTl(goruntulenecekBrut)"></span>
                         </div>
 
@@ -1272,13 +1272,13 @@
         @@click.self="showFesih = false; showFesihConfirm = false;">
         <div class="bg-white rounded-2xl w-full max-w-[480px] p-7">
             <div class="flex justify-between items-center mb-5">
-                <div class="text-lg font-bold text-[#dc2626]">Sözleşmeyi Feshet</div>
+                <div class="text-lg font-bold text-danger">Sözleşmeyi Feshet</div>
                 <button @@click="showFesih = false; showFesihConfirm = false;" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
             </div>
 
             <!-- Adım 1: Form -->
             <div x-show="!showFesihConfirm">
-                <div class="bg-red-50 border border-red-200 rounded-lg px-3.5 py-3 mb-5 text-[12.5px] text-[#991b1b] space-y-1">
+                <div class="bg-red-50 border border-red-200 rounded-lg px-3.5 py-3 mb-5 text-[12.5px] text-red-800 space-y-1">
                     <div class="font-semibold">Bu işlem geri alınamaz.</div>
                     <div>Feshedilen sözleşme aktif gelir hesaplarına dahil edilmez ve birim yeniden kiralanabilir hale gelir.</div>
                     <div class="pt-0.5 border-t border-red-200 text-[12px]">Fesih tarihini izleyen aydan itibaren ödeme alınmamış tahakkuklar otomatik olarak <strong>iptal edilir</strong>. Mevcut ay ve önceki dönemler ile ödenmişler etkilenmez.</div>
@@ -1332,7 +1332,7 @@
 
             <!-- Adım 2: Onay -->
             <div x-show="showFesihConfirm" x-cloak>
-                <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-4 mb-5 text-[13px] text-[#991b1b] text-center">
+                <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-4 mb-5 text-[13px] text-red-800 text-center">
                     <div class="text-2xl mb-2">⚠️</div>
                     <div class="font-semibold mb-1">Sözleşmeyi feshetmek üzeresiniz.</div>
                     <div>Bu işlem <strong>geri alınamaz</strong>. Emin misiniz?</div>
@@ -1360,7 +1360,7 @@
                 <button @@click="showYenidenUret = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
             </div>
 
-            <div class="bg-[#fffbeb] border border-[#fde68a] rounded-lg px-3.5 py-2.5 mb-5 text-[13px] text-[#92400e]">
+            <div class="bg-amber-50 border border-amber-200 rounded-lg px-3.5 py-2.5 mb-5 text-[13px] text-amber-800">
                 Seçilen tarihten itibaren <strong>ödeme alınmamış</strong> tahakkuklar silinip yeniden üretilir. Ödeme kaydı olan tahakkuklara dokunulmaz.
             </div>
 
@@ -1526,7 +1526,7 @@
                 <button @@click="showVade = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
             </div>
 
-            <div class="bg-[#fffbeb] border border-[#fde68a] rounded-lg px-3.5 py-2.5 mb-5 text-[13px] text-[#92400e]">
+            <div class="bg-amber-50 border border-amber-200 rounded-lg px-3.5 py-2.5 mb-5 text-[13px] text-amber-800">
                 Vade değişikliği <strong>Bekleniyor / KısmenÖdendi / Gecikti</strong> durumundaki tahakkukların vadelerini günceller. Tam ödenmiş veya iptal edilmiş tahakkuklara dokunulmaz.
             </div>
 

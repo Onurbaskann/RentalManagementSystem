@@ -14,6 +14,10 @@ public record GetPagedLeasesInput(
     IReadOnlyList<int>? PropertyIds = null,
     IReadOnlyList<int>? UnitIds = null);
 
+public record GetTerminatedLeaseCountInput(
+    IReadOnlyList<int>? PropertyIds = null,
+    IReadOnlyList<int>? UnitIds = null);
+
 public record GetLeaseDetailsInput(int LeaseId);
 public record GetTenantLeaseDetailsInput(
     int LeaseId,
