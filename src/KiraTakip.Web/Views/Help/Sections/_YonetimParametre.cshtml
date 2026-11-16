@@ -1,0 +1,37 @@
+<section class="module-section" id="yonetim-parametre" data-role="admin">
+    <div class="module-banner">
+        <div class="module-banner-left">
+            <span class="module-num">BÖLÜM 09</span>
+            <h2>Sistem Parametreleri ve Tarifeler</h2>
+        </div>
+        <span class="role-pill">Yönetim Paneli</span>
+    </div>
+
+    <div class="page-card">
+        <div class="page-card-head">
+            <h3>Parametreler Menüsü (Tüm Tanım Ekranları)</h3>
+            <span class="menu-path">Sol Menü → Parametreler</span>
+        </div>
+        <p class="page-purpose">Sistemin hesaplama kurallarını, sanal POS mağaza yönlendirmelerini, yıllık metrekare tarifelerini ve zorunlu belge kurallarını belirler.</p>
+        <div class="sub-block">
+            <div class="btn-table-wrap">
+                <table class="btn-table">
+                    <thead><tr><th>Menü Ekranı</th><th>Amacı ve Öne Çıkan Butonlar / Kurallar</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>Birim Türleri</strong></td><td>Ofis, Laboratuvar, Konferans Salonu gibi türleri ve kullanım şeklini (<em>Kiralanabilir / Rezervasyon Yapılabilir / Kiralanamaz</em>) tanımlar. Buton: <strong>Yeni Birim Türü</strong>.</td></tr>
+                        <tr><td><strong>Kiracı Kategorileri</strong></td><td>Ar-Ge, Kuluçka gibi kiracı sınıflarını yönetir. Kiracı kategorileri yıllık tarife matrisinin satırlarını oluşturur.</td></tr>
+                        <tr><td><strong>Sektörler</strong></td><td>Kiracıların faaliyet sektörlerini yönetir. Kiracı Kategorileri'nden ayrı bir menü öğesidir.</td></tr>
+                        <tr><td><strong>Borç Tipleri</strong></td><td>Kira, Aidat, Elektrik, Depozito gibi kalemleri ve davranışlarını (<em>Aylık Sabit, İlk Ay Tek Seferlik, Kullanıcı Manuel, Rezervasyon Özel</em>) tanımlar. Buton: <strong>Yeni Borç Tipi</strong>. Yeni borç tipi <strong>Ödeme Yönlendirmesi</strong> yapılmadan aktifleştirilemez.</td></tr>
+                        <tr><td><strong>Mağazalar</strong></td><td>Tahsilatların aktarılacağı sanal POS ve banka hesaplarını tanımlar. Buton: <strong>Yeni Mağaza</strong>. Her mağazanın bir aktif hesabı olmalıdır.</td></tr>
+                        <tr><td><strong>Ödeme Yönlendirmeleri</strong></td><td>Hangi borç tipinin hangi mağaza hesabına gideceğini belirler. <strong>Yönlendirmeyi Kaydet</strong> ile <em>Birim → Taşınmaz → Genel</em> öncelik sırasına göre kural oluşturulur; <strong>Yönlendirmeyi Kaldır</strong> ile kural silinir. Liste <strong>Filtrele / Temizle</strong> ile süzülür.</td></tr>
+                        <tr><td><strong>Taşınmaz Tipleri</strong></td><td>Bina, Arsa vb. ana tipleri ve izin verilen birim yapılarını (Tek / Çoklu Birim) tanımlar. Buton: <strong>Yeni Taşınmaz Tipi</strong>.</td></tr>
+                        <tr><td><strong>Yıllık Tarifeler</strong></td><td>Menü yolu <em>Parametreler → Yıllık Tarifeler</em>, sayfa başlığı <strong>Tarifeler</strong>'dir. <strong>Yıl Ekle</strong> ile açılan <strong>Yeni Tarife Yılı</strong> formunda Yıl ve <em>Önceki yıldan kopyala</em> seçeneği bulunur (<strong>Oluştur</strong> / <strong>İptal</strong>). Yıl detayı <strong>&lt;Yıl&gt; Tarifeleri</strong> başlığıyla açılır; Kategori × Borç Tipi matrisini ve rezervasyon genel tarifelerini topluca <strong>Kaydet</strong> ile günceller.</td></tr>
+                        <tr><td><strong>Rezervasyon Ücret Kuralları</strong></td><td>Sol menüde ayrı bir öğe olarak yoktur; <em>Taşınmaz Detayı → Kira Tarifeleri</em> sekmesindeki <strong>Rezervasyon Ücret Kuralları</strong> bölümünden açılır. Buton: <strong>Yeni Kural</strong>.</td></tr>
+                        <tr><td><strong>Belge Türleri</strong></td><td>Kiracı, Sözleşme ve Ödeme süreçlerinde istenecek evrakları, zorunluluk durumunu, izinli dosya uzantılarını ve azami boyutu (MB) belirler. <strong>Belge Türü Ekle</strong> formunda <em>İzin Verilen Uzantılar</em>, <em>Maks. Boyut (MB)</em> ve <em>Zorunlu belge</em> alanları bulunur.</td></tr>
+                        <tr><td><strong>Sistem Ayarları</strong></td><td>Vade seçenekleri, gecikme eşikleri gibi merkezi sistem kurallarını günceller. <strong>Düzenle</strong> metinli bir buton değil, satırdaki bir ikondur; açılan <strong>Sistem Ayarı Düzenle</strong> formunda <strong>Kaydet</strong> kullanılır.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>

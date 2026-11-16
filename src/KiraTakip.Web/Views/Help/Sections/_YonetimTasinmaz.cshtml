@@ -1,0 +1,116 @@
+<section class="module-section" id="yonetim-tasinmaz" data-role="admin">
+    <div class="module-banner">
+        <div class="module-banner-left">
+            <span class="module-num">BÖLÜM 02</span>
+            <h2>Taşınmaz ve Birim Yönetimi</h2>
+        </div>
+        <span class="role-pill">Yönetim Paneli</span>
+    </div>
+
+    <div class="screen-preview-card">
+        <div class="screen-preview-head">
+            <span>Referans Ekran Görüntüleri — Liste ve Kart (Blok) Görünümü</span>
+            <span>Sol Menü → Taşınmazlar → Taşınmaz Kartı</span>
+        </div>
+        <div class="screen-preview-grid">
+            <div class="screen-thumb" role="button" tabindex="0" @@click="$dispatch('help-lightbox', '@Url.Content("~/images/help/02_property_unit_management.png")')" @@keydown.enter="$dispatch('help-lightbox', '@Url.Content("~/images/help/02_property_unit_management.png")')">
+                <img src="~/images/help/02_property_unit_management.png" loading="lazy" alt="Taşınmaz Birimleri Liste Görünümü">
+                <div class="screen-thumb-cap">Kat akordiyonlu detaylı liste (tablo) görünümü</div>
+            </div>
+            <div class="screen-thumb" role="button" tabindex="0" @@click="$dispatch('help-lightbox', '@Url.Content("~/images/help/02_property_unit_cards.png")')" @@keydown.enter="$dispatch('help-lightbox', '@Url.Content("~/images/help/02_property_unit_cards.png")')">
+                <img src="~/images/help/02_property_unit_cards.png" loading="lazy" alt="Taşınmaz Birimleri Kart Blok Görünümü">
+                <div class="screen-thumb-cap">Renk kodlu görsel blok (kart) görünümü</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-card">
+        <div class="page-card-head">
+            <h3>Taşınmazlar Listesi</h3>
+            <span class="menu-path">Sol Menü → Taşınmazlar</span>
+        </div>
+        <p class="page-purpose">Teknopark bünyesindeki tüm binaları ve alanları kartlar halinde listeler; her kartta kapalı/açık m² ve kiralı/boş birim sayıları özetlenir.</p>
+        <div class="sub-block">
+            <div class="btn-table-wrap">
+                <table class="btn-table">
+                    <thead><tr><th>Buton</th><th>Ne İşe Yarar?</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="ui-btn-badge primary">Yeni Taşınmaz</span></td><td>Yeni bina veya alan tanımlama formunu açar. (Ayrıca <em>Hızlı Ekle → Taşınmaz Ekle</em> yolundan da açılır.)</td></tr>
+                        <tr><td><span class="ui-btn-badge">Ara / Temizle</span></td><td>Taşınmaz adı, şehir, ilçe veya taşınmaz türüne göre listeyi filtreler veya sıfırlar.</td></tr>
+                        <tr><td><span class="ui-btn-badge">Taşınmaz Kartı</span></td><td>Kartın üzerine tıklandığında ilgili taşınmazın detaylı yönetim ekranını açar.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-card">
+        <div class="page-card-head">
+            <h3>Yeni Taşınmaz Ekle &amp; Taşınmazı Düzenle</h3>
+            <span class="menu-path">Taşınmazlar → Yeni Taşınmaz / Detay → Düzenle</span>
+        </div>
+        <p class="page-purpose">Yeni bir bina kaydetmek, kat/birim envanterini ve ortak rezervasyon salonlarını oluşturmak, adres girmek ve binaya özel fiyat tarifesi belirlemek için kullanılır.</p>
+        <div class="sub-block">
+            <div class="sub-block-title">Birim Yapısı Seçenekleri</div>
+            <div class="chip-list">
+                <span class="chip"><strong>Tek Birim:</strong> Bina komple tek bir kiracıya kiralanır.</span>
+                <span class="chip"><strong>Çoklu Birim:</strong> Kat ve ofis/laboratuvar bazında bağımsız bölümler ayrı ayrı kiralanır.</span>
+            </div>
+        </div>
+        <div class="sub-block">
+            <div class="btn-table-wrap">
+                <table class="btn-table">
+                    <thead><tr><th>Buton</th><th>Ne İşe Yarar?</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="ui-btn-badge teal">Birim Ekle</span></td><td>Çoklu birim yapısında yeni bir bağımsız bölüm satırı (Birim No, Kat, Tür, m²) ekler.</td></tr>
+                        <tr><td><span class="ui-btn-badge teal">Alan Ekle</span></td><td>Rezervasyona açık ortak alan (Konferans Salonu, Toplantı Odası vb.) satırı ekler.</td></tr>
+                        <tr><td><span class="ui-btn-badge">Tüm KDV'leri 20 yap</span></td><td>Seçili kiracı kategorisindeki depozito dışı tüm kalemlerin KDV oranını tek tıkla %20 olarak doldurur.</td></tr>
+                        <tr><td><span class="ui-btn-badge danger">Çöp Kutusu (Sil)</span></td><td>Eklenen birim veya ortak alan satırını listeden kaldırır.</td></tr>
+                        <tr><td><span class="ui-btn-badge primary">Kaydet</span></td><td>Taşınmazı, birimleri, tarife matrisini ve adres bilgilerini sisteme kaydeder.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="callout">
+            <ul>
+                <li><strong>Birim Adı Otomasyonu:</strong> Birim Adı boş bırakılırsa sistem otomatik olarak <em>[Birim Türü] [Birim No]</em> şeklinde adlandırır.</li>
+                <li><strong>Tarife Mirası:</strong> Taşınmaz tarifesinde boş bırakılan hücreler gri nokta ile görünür ve <em>Yıllık Tarifeler</em> ekranındaki genel üst tarifeden otomatik devralınır.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="page-card">
+        <div class="page-card-head">
+            <h3>Taşınmaz Detayı &amp; Birim Özel Fiyatları</h3>
+            <span class="menu-path">Taşınmazlar → Taşınmaz Kartı</span>
+        </div>
+        <p class="page-purpose">Bir binanın katlarını, her birimin doluluk durumunu, sözleşme geçmişini, salon rezervasyonlarını ve geçerli tüm tarifelerini tek merkezden yönetmenizi sağlar.</p>
+        <div class="sub-block">
+            <div class="sub-block-title">Sayfa Sekmeleri &amp; Görünüm Kontrolleri</div>
+            <div class="chip-list">
+                <span class="chip"><strong>Genel Bilgiler</strong></span>
+                <span class="chip"><strong>Birimler (Adet)</strong></span>
+                <span class="chip"><strong>Sözleşme Geçmişi</strong></span>
+                <span class="chip"><strong>Rezervasyonlar (Adet)</strong></span>
+                <span class="chip"><strong>Kira Tarifeleri</strong></span>
+                <span class="chip"><strong>Görünüm:</strong> Tablo (Liste) / Kart (Blok)</span>
+                <span class="chip"><strong>Akordiyon:</strong> Tümünü Aç / Tümünü Kapat</span>
+            </div>
+        </div>
+        <div class="sub-block">
+            <div class="btn-table-wrap">
+                <table class="btn-table">
+                    <thead><tr><th>Buton</th><th>Ne İşe Yarar?</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="ui-btn-badge">Düzenle</span></td><td>Taşınmaz bilgilerini, birimleri ve bina tarifesini güncelleme ekranını açar.</td></tr>
+                        <tr><td><span class="ui-btn-badge primary">Sözleşme Ekle</span></td><td>Bu taşınmaz için yeni sözleşme başvurusu başlatır.</td></tr>
+                        <tr><td><span class="ui-btn-badge primary">Kiraya Ver</span></td><td>Boş birimin satırında veya kartında görünür; birimi seçili getirerek sözleşme başlatır.</td></tr>
+                        <tr><td><span class="ui-btn-badge">Sözleşme</span></td><td>Kiralı birimin aktif sözleşme detay sayfasına doğrudan geçiş yapar.</td></tr>
+                        <tr><td><span class="ui-btn-badge teal">Rezervasyon</span></td><td>Rezerve edilebilir ortak alan için yeni rezervasyon ekranını açar.</td></tr>
+                        <tr><td><span class="ui-btn-badge">Özel Fiyat / ₺ İkonu</span></td><td>Seçilen birime binanın genel tarifesinden bağımsız istisnai fiyat veya özel salon ücreti tanımlar. (<em>Sıfırla</em> butonuyla genel tarifeye dönülebilir.)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>

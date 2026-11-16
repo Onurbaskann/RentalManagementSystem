@@ -1,0 +1,44 @@
+<section class="module-section" id="yonetim-rapor" data-role="admin">
+    <div class="module-banner">
+        <div class="module-banner-left">
+            <span class="module-num">BÖLÜM 06</span>
+            <h2>Tahsilat Raporu</h2>
+        </div>
+        <span class="role-pill">Yönetim Paneli</span>
+    </div>
+
+    <div class="screen-preview-card">
+        <div class="screen-preview-head">
+            <span>Referans Ekran Görüntüsü — Dönem ve Nakit Bazlı Tahsilat Raporu</span>
+            <span>Sol Menü → Tahakkuklar → Tahsilat Raporu</span>
+        </div>
+        <div class="screen-preview-grid">
+            <div class="screen-thumb" role="button" tabindex="0" @@click="$dispatch('help-lightbox', '@Url.Content("~/images/help/03_collection_report.png")')" @@keydown.enter="$dispatch('help-lightbox', '@Url.Content("~/images/help/03_collection_report.png")')">
+                <img src="~/images/help/03_collection_report.png" loading="lazy" alt="Tahsilat Raporu Ekranı">
+                <div class="screen-thumb-cap">Tahsilat Raporu — Aylık tahakkuk, ödenen, kalan ve gecikme oranları</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-card">
+        <div class="page-card-head">
+            <h3>Tahsilat Raporu</h3>
+            <span class="menu-path">Sol Menü → Tahakkuklar → Tahsilat Raporu</span>
+        </div>
+        <p class="page-purpose">Yıllık ve aylık tahakkuk, fiili tahsilat ve gecikme oranlarını <strong>Dönem Bazlı</strong> (o yılın tahakkukunun ne kadarı ödendi?) ve <strong>Nakit Bazlı</strong> (o yıl kasaya giren nakit hangi yılları kapattı?) olarak raporlar.</p>
+        <div class="sub-block">
+            <div class="sub-block-title">Üst Filtreler ve Tıklanabilir Detaylar</div>
+            <div class="chip-list">
+                <span class="chip"><strong>Yıl</strong> açılır listesi</span>
+                <span class="chip"><strong>Tüm Mağazalar</strong> açılır listesi (veya belirli bir mağaza)</span>
+                <span class="chip"><strong>Tüm Kalem Tipleri</strong> açılır listesi (Kira, Aidat vb.)</span>
+            </div>
+        </div>
+        <div class="callout">
+            <ul>
+                <li><strong>Detaya İniş (Drill-Down):</strong> Tablodaki <em>Ödenen</em> sütunundaki (yıllık blokta <em>Tahsil Edilen</em>) rakamlara tıklayarak o ayın onaylı ödemelerine, <em>Gecikmiş Tahakkuk</em> rozetlerine tıklayarak geciken borçlara doğrudan gidebilirsiniz.</li>
+                <li><strong>Mağaza Filtresi Notu:</strong> Belirli bir mağaza seçildiğinde yalnızca o mağazaya tahsil edilmiş onaylı ödemeler gösterilir; genel tahakkuk ve gecikme toplamları için <em>Tüm Mağazalar</em> seçilmelidir.</li>
+            </ul>
+        </div>
+    </div>
+</section>

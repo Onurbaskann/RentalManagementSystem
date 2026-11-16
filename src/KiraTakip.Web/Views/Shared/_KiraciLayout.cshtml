@@ -12,6 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://cdn.jsdelivr.net/npm/countup.js@2.8.0/dist/countUp.umd.js"></script>
     <link rel="stylesheet" href="~/css/app.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body x-data>
     <button type="button" class="sidebar-toggle" aria-label="Menüyü aç" @@click="$store.ui.toggle()">
@@ -48,6 +49,7 @@
     }
 
     <main class="main-content">
+        @await Html.PartialAsync("_HelpButton")
         @if (showCentralSuccessFeedback)
         {
             <div class="alert-success mb-4">✓ @centralSuccessFeedbackMessage</div>

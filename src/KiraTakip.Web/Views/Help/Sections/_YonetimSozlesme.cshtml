@@ -1,0 +1,114 @@
+<section class="module-section" id="yonetim-sozlesme" data-role="admin">
+    <div class="module-banner">
+        <div class="module-banner-left">
+            <span class="module-num">BÖLÜM 04</span>
+            <h2>Sözleşme Yaşam Döngüsü ve Onay Akışı</h2>
+        </div>
+        <span class="role-pill">Yönetim Paneli</span>
+    </div>
+
+    <div class="screen-preview-card">
+        <div class="screen-preview-head">
+            <span>Referans Ekran Görüntüsü — Sözleşme Detayı ve Otomatik Tahakkuk Planı</span>
+            <span>Sol Menü → Sözleşmeler → Aktif Sözleşme</span>
+        </div>
+        <div class="screen-preview-grid">
+            <div class="screen-thumb" role="button" tabindex="0" @@click="$dispatch('help-lightbox', '@Url.Content("~/images/help/05_lease_details.png")')" @@keydown.enter="$dispatch('help-lightbox', '@Url.Content("~/images/help/05_lease_details.png")')">
+                <img src="~/images/help/05_lease_details.png" loading="lazy" alt="Sözleşme Detay Ekranı">
+                <div class="screen-thumb-cap">Sözleşme Detayı — Finansal şartlar, kalan süre sayacı, tahakkuk sağlığı ve işlem geçmişi</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-card">
+        <div class="page-card-head">
+            <h3>Sözleşmeler Listesi</h3>
+            <span class="menu-path">Sol Menü → Sözleşmeler</span>
+        </div>
+        <p class="page-purpose">Tüm aktif sözleşmeleri, onay bekleyen başvuruları, revizyon istenen taslakları ve süresi yaklaşan sözleşmeleri takip etmenizi sağlar.</p>
+        <div class="sub-block">
+            <div class="sub-block-title">Durum Filtre Sekmeleri</div>
+            <div class="chip-list">
+                <span class="chip">Tümü</span>
+                <span class="chip">Aktif</span>
+                <span class="chip">Onay Bekleyen</span>
+                <span class="chip">Revizyon İstenen</span>
+                <span class="chip">Dolmak Üzere</span>
+                <span class="chip">Sona Erdi</span>
+            </div>
+            <p class="mt-3">Feshedilmiş kayıtlar varsayılan olarak gizlidir; "N feshedilmiş kayıt gizleniyor – Görüntüle" bağlantısıyla gösterilir.</p>
+        </div>
+        <div class="sub-block">
+            <div class="btn-table-wrap">
+                <table class="btn-table">
+                    <thead><tr><th>Buton</th><th>Ne İşe Yarar?</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="ui-btn-badge primary">Yeni Sözleşme Başvurusu</span></td><td>Taslak sözleşme başvuru formunu açar.</td></tr>
+                        <tr><td><span class="ui-btn-badge warn">Borçlulara E-posta (Adet)</span></td><td>Vadesi geçmiş borcu bulunan kiracılara toplu borç hatırlatma e-postası gönderir.</td></tr>
+                        <tr><td><span class="ui-btn-badge">Satır Tıklama</span></td><td>Taslak/revizyon aşamasındaki kayıtları <em>Başvuru İnceleme</em> ekranına, onaylanmışları <em>Sözleşme Detay</em> ekranına açar.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-card">
+        <div class="page-card-head">
+            <h3>Yeni Sözleşme Başvurusu &amp; Başvuru İnceleme (Onay Süreci)</h3>
+            <span class="menu-path">Sözleşmeler → Yeni Sözleşme Başvurusu / Onay Bekleyen Kayıt</span>
+        </div>
+        <p class="page-purpose">Sözleşmeler doğrudan aktifleşmeden önce taslak olarak hazırlanır, zorunlu belgeleri kontrol edilir ve yetkili onayından geçer.</p>
+        <div class="sub-block">
+            <div class="btn-table-wrap">
+                <table class="btn-table">
+                    <thead><tr><th>Buton</th><th>Ne İşe Yarar?</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="ui-btn-badge primary">Onaya Gönder</span></td><td>Başvuruyu taslak statüsünde kaydedip inceleme/onay sırasına alır. (Bu aşamada henüz tahakkuk oluşmaz.)</td></tr>
+                        <tr><td><span class="ui-btn-badge">Bedelsiz sözleşme (Kutucuk)</span></td><td>Kira bedeli tahakkukunu kapatır; depozito ve diğer ek hizmet kalemleri varsa kalır.</td></tr>
+                        <tr><td><span class="ui-btn-badge">Değişiklikleri Kaydet</span></td><td>Taslak üzerinde yapılan süre, vade veya tarife düzenlemelerini saklar.</td></tr>
+                        <tr><td><span class="ui-btn-badge warn">Revizyon İste</span></td><td>Başvuruda düzeltme gerektiğinde zorunlu gerekçe yazarak başvuruyu hazırlayan kullanıcıya geri gönderir.</td></tr>
+                        <tr><td><span class="ui-btn-badge teal">Revizyonu Tamamla ve Onaya Gönder</span></td><td>Revizyon sonrası yapılan düzeltmeleri kaydedip başvuruyu yeniden onaya sunar.</td></tr>
+                        <tr><td><span class="ui-btn-badge primary">Onayla</span></td><td>Başvuruyu onaylayarak sözleşmeyi <strong>Aktif</strong> duruma geçirir ve tüm dönem tahakkuklarını otomatik üretir.</td></tr>
+                        <tr><td><span class="ui-btn-badge danger">Başvuruyu Sil</span></td><td>Gerekçe girilerek onaylanmamış başvuruyu pasife alır.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="callout warn">
+            <strong>Dikkat:</strong> Eksik zorunlu belge bulunduğu sürece <strong>Onayla</strong> işlemi tamamlanamaz. Önce evrak panelinden zorunlu belgelerin yüklenmesi gerekir. İnceleme adımlarının tamamı sayfa altındaki <em>Başvuru Geçmişi</em> zaman çizelgesinde saklanır.
+        </div>
+    </div>
+
+    <div class="page-card">
+        <div class="page-card-head">
+            <h3>Sözleşme Detay Ekranı</h3>
+            <span class="menu-path">Sözleşmeler → Aktif / Sona Ermiş Sözleşme</span>
+        </div>
+        <p class="page-purpose">Aktif sözleşmenin aylık/yıllık kira bedelini, kalan gün sayacını, tahakkuk sağlığını (% ödeme oranı), aylık kalem dökümünü ve sözleşme yaşam döngüsü işlemlerini yönetir.</p>
+        <div class="sub-block">
+            <div class="sub-block-title">Alt Sekmeler</div>
+            <div class="chip-list">
+                <span class="chip">Detaylar</span>
+                <span class="chip">Birim Bilgisi</span>
+                <span class="chip">Geçmiş Sözleşmeler</span>
+                <span class="chip">İşlem Geçmişi</span>
+                <span class="chip">Ödemeler</span>
+                <span class="chip">Belgeler</span>
+            </div>
+        </div>
+        <div class="sub-block">
+            <div class="btn-table-wrap">
+                <table class="btn-table">
+                    <thead><tr><th>Buton</th><th>Ne İşe Yarar?</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="ui-btn-badge">Tahakkuk Yeniden Üret</span></td><td>Seçilen başlangıç tarihinden sonraki <strong>ödenmemiş</strong> tahakkukları silip güncel tarife veya gün hesabıyla yeniden üretir. (Ödeme görmüş tahakkuklar korunur; işlem öncesi önizleme sunar.)</td></tr>
+                        <tr><td><span class="ui-btn-badge warn">Sözleşmeyi Uzat</span></td><td>Yeni bitiş tarihi belirler; isteğe bağlı TÜFE veya sabit oranlı artış ile yeni kira bedelini hesaplayıp ek dönem tahakkuklarını otomatik üretir.</td></tr>
+                        <tr><td><span class="ui-btn-badge danger">Sözleşmeyi Feshet</span></td><td>2 adımlı onay penceresiyle fesih tarihi ve nedenini kaydeder, sözleşmeyi sonlandırır ve ileri tarihli ödenmemiş tahakkukları iptal eder.</td></tr>
+                        <tr><td><span class="ui-btn-badge">Düzenle (Vade Kuralı)</span></td><td>Sözleşmenin aylık vade gününü veya vade kuralını değiştirerek bekleyen tahakkukların vade tarihlerini günceller.</td></tr>
+                        <tr><td><span class="ui-btn-badge">Ödemelere Git</span></td><td>Alt bölümdeki Ödemeler sekmesini açarak dönem tahakkuklarını listeler.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>

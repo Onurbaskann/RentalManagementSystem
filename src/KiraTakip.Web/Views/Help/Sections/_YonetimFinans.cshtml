@@ -1,0 +1,138 @@
+<section class="module-section" id="yonetim-finans" data-role="admin">
+    <div class="module-banner">
+        <div class="module-banner-left">
+            <span class="module-num">BÖLÜM 05</span>
+            <h2>Finans, Tahakkuk, Ödeme ve Banka Eşleştirme</h2>
+        </div>
+        <span class="role-pill">Yönetim Paneli</span>
+    </div>
+
+    <div class="screen-preview-card">
+        <div class="screen-preview-head">
+            <span>Referans Ekran Görüntüsü — Çok Kalemli Tahakkuklar</span>
+            <span>Sol Menü → Tahakkuklar</span>
+        </div>
+        <div class="screen-preview-grid">
+            <div class="screen-thumb" role="button" tabindex="0" @@click="$dispatch('help-lightbox', '@Url.Content("~/images/help/03_financial_engine_billing.png")')" @@keydown.enter="$dispatch('help-lightbox', '@Url.Content("~/images/help/03_financial_engine_billing.png")')">
+                <img src="~/images/help/03_financial_engine_billing.png" loading="lazy" alt="Tahakkuklar Ekranı">
+                <div class="screen-thumb-cap">Tahakkuklar — Dönem borçları ve satır içi çok kalemli borç kırılımı</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-card">
+        <div class="page-card-head">
+            <h3>Tahakkuklar &amp; Tahakkuk Detayı</h3>
+            <span class="menu-path">Sol Menü → Tahakkuklar</span>
+        </div>
+        <p class="page-purpose">Sözleşme, manuel borç veya salon rezervasyonundan doğan tüm borç kayıtlarını takip eder; her tahakkukun altındaki kira, aidat, elektrik, internet gibi kalemleri ayrıntılı gösterir.</p>
+        <div class="sub-block">
+            <div class="sub-block-title">Durum Sekmeleri ve Filtreler</div>
+            <div class="chip-list">
+                <span class="chip">Tümü</span>
+                <span class="chip">Bekliyor</span>
+                <span class="chip">Kısmi</span>
+                <span class="chip">Tam Ödendi</span>
+                <span class="chip">Gecikti</span>
+                <span class="chip">Ödeme Onayı Bekleyen</span>
+                <span class="chip">Filtreler: Taşınmaz · Birim · Kiracı · Kaynak · Yıl · Vade Aralığı · Borç Tutarı</span>
+            </div>
+        </div>
+        <div class="sub-block">
+            <div class="btn-table-wrap">
+                <table class="btn-table">
+                    <thead><tr><th>Buton</th><th>Ne İşe Yarar?</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="ui-btn-badge">Satır Tıklama</span></td><td>Tahakkuk satırının altında <strong>Kalem Detayları</strong> tablosunu açar; her kalemin tarife kaynağını (<em>Sözleşme, Birim, Taşınmaz, Genel, Manuel, Rezervasyon</em>) rozetle gösterir.</td></tr>
+                        <tr><td><span class="ui-btn-badge">Göz İkonu (Detay)</span></td><td>Tahakkuk Detay sayfasını açarak kalem bazında ödenen/kalan dökümünü ve ödeme geçmişini gösterir.</td></tr>
+                        <tr><td><span class="ui-btn-badge primary">Ödeme / Ödeme Ekle</span></td><td>Tahakkukun seçilen bir kalemi için ödeme giriş ekranını açar. Tahakkuk satırındaki <strong>Ödeme</strong> ya da Tahakkuk Detayı / Manuel Borç satırındaki <strong>Ödeme Ekle</strong> ile açılır; Ödemeler listesinden açılmaz.</td></tr>
+                        <tr><td><span class="ui-btn-badge">Filtrele / Temizle</span></td><td>Belirlenen çoklu kriterleri uygular (buton üzerinde aktif filtre sayısını gösterir) veya temizler.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-card">
+        <div class="page-card-head">
+            <h3>Manuel Borçlar</h3>
+            <span class="menu-path">Sol Menü → Manuel Borçlar</span>
+        </div>
+        <p class="page-purpose">Sözleşme periyotları dışındaki tek seferlik ek borçları (hasar/tamirat, demirbaş, ek hizmet vb.) tanımlamak ve takip etmek için kullanılır.</p>
+        <div class="sub-block">
+            <div class="btn-table-wrap">
+                <table class="btn-table">
+                    <thead><tr><th>Buton</th><th>Ne İşe Yarar?</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="ui-btn-badge primary">Manuel Borç Ekle</span></td><td>Kiracı, varsa sözleşme/birim, borç tipi, vade, tutar ve KDV (% kutucuğu) girilerek yeni tek seferlik borç oluşturur.</td></tr>
+                        <tr><td><span class="ui-btn-badge primary">Ödeme</span></td><td>Ödenmemiş manuel borç için ödeme ekranını açar.</td></tr>
+                        <tr><td><span class="ui-btn-badge danger">İptal</span></td><td>Zorunlu iptal nedeni alarak henüz tam ödenmemiş manuel borcu iptal eder.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-card">
+        <div class="page-card-head">
+            <h3>Ödemeler (Ödeme Ekle, Onayla, Reddet)</h3>
+            <span class="menu-path">Sol Menü → Tahakkuklar → Ödemeler</span>
+        </div>
+        <p class="page-purpose">Kiracılar tarafından bildirilen havale/EFT dekontlarını, sanal POS ödemelerini veya yöneticinin girdiği ödemeleri onaylamak ve takip etmek için kullanılır.</p>
+        <div class="sub-block">
+            <div class="sub-block-title">Durum Filtreleri</div>
+            <div class="chip-list">
+                <span class="chip">Tümü</span>
+                <span class="chip">Onay Bekliyor</span>
+                <span class="chip">Onaylandı</span>
+                <span class="chip">Reddedildi</span>
+            </div>
+        </div>
+        <div class="sub-block">
+            <div class="btn-table-wrap">
+                <table class="btn-table">
+                    <thead><tr><th>Buton</th><th>Nerede?</th><th>Ne İşe Yarar?</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="ui-btn-badge primary">Kaydet</span></td><td>Ödeme Ekle</td><td>Seçilen kaleme mahsuben ödemeyi kaydeder ve onay bekleyen statüsüne alır.</td></tr>
+                        <tr><td><span class="ui-btn-badge primary">✓ Onayla</span></td><td>Ödeme Detayı</td><td>Ödemeyi onaylar; tutar tahakkuk bakiyesinden düşülür.</td></tr>
+                        <tr><td><span class="ui-btn-badge danger">✕ Reddet / Reddi Onayla</span></td><td>Ödeme Detayı</td><td>Zorunlu red gerekçesi girilerek ödemeyi reddeder; borç açık kalır ve kiracı portalında gerekçe gösterilir.</td></tr>
+                        <tr><td><span class="ui-btn-badge teal">+ Yeni Eşleşme</span></td><td>Ödeme Detayı</td><td>Bu ödemeyi banka hareketleri havuzundaki bir ekstre satırıyla eşleştirmek için seçim ekranını açar.</td></tr>
+                        <tr><td><span class="ui-btn-badge">Eşleşmeyi Kaldır</span></td><td>Ödeme Detayı</td><td>Önceden yapılmış banka hareketi eşleşmesini çözer.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="callout">
+            <strong>Önemli Kural:</strong> Ödemeler <strong>kalem bazlı</strong> işlenir (ör. Kira kalemine veya Aidat kalemine). Girilen bir ödeme yetkili tarafından <strong>Onayla</strong> denilene kadar açık borçtan düşmez. Ayrıca ödemenin yönlendirildiği hedef mağaza/banka hesabı ödeme oluşturulduğu anda sabitlenir.
+        </div>
+    </div>
+
+    <div class="page-card">
+        <div class="page-card-head">
+            <h3>Banka Hareketleri (CSV İçe Aktar &amp; Akıllı Eşleştirme)</h3>
+            <span class="menu-path">Sol Menü → Tahakkuklar → Banka Hareketleri</span>
+        </div>
+        <p class="page-purpose">Bankadan indirilen hesap ekstrelerini (CSV) sisteme aktarır, gelen EFT/havaleleri sistemdeki ödemelerle akıllı uyum puanına göre eşleştirir.</p>
+        <div class="sub-block">
+            <div class="sub-block-title">Durum Sekmeleri</div>
+            <div class="chip-list">
+                <span class="chip">Tümü</span>
+                <span class="chip">Eşleştirilmedi</span>
+                <span class="chip">Eşleşti</span>
+                <span class="chip">Manuel Eşleşti</span>
+            </div>
+        </div>
+        <div class="sub-block">
+            <div class="btn-table-wrap">
+                <table class="btn-table">
+                    <thead><tr><th>Buton</th><th>Ne İşe Yarar?</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="ui-btn-badge primary">CSV İçe Aktar</span></td><td>Banka ve hedef mağaza seçilerek ekstre dosyasını (Tarih, Açıklama, Borç, Alacak, Bakiye, Karşı Hesap/Unvan) sisteme yükler. Açılan ekranda dosya <strong>İçe Aktar</strong> butonuyla gönderilir; <strong>İptal</strong> ile vazgeçilir.</td></tr>
+                        <tr><td><span class="ui-btn-badge">Filtrele / Temizle</span></td><td>Banka hareketleri listesini seçilen ölçütlere göre süzer veya filtreyi sıfırlar.</td></tr>
+                        <tr><td><span class="ui-btn-badge teal">Eşleştir</span></td><td>Eşleşmemiş banka hareketi için en uygun aday ödemeleri <strong>Akıllı Uyum Puanı</strong> (<em>Yüksek/Yeşil: birebir tutar &le;15 gün · Orta/Mavi · Zayıf/Gri · Düşük/Kırmızı</em>) sırasıyla listeler ve eşleşmeyi tamamlar.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>

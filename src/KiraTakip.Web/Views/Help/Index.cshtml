@@ -1,0 +1,98 @@
+@using KiraTakip.Web.Help
+@model KiraTakip.Web.Models.ViewModels.HelpIndexViewModel
+@{
+    Layout = Model.IsTenant ? "_KiraciLayout" : "_Layout";
+    ViewData["Title"] = "Yardım";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/help.css" asp-append-version="true" />
+}
+
+<div class="help-center" x-data="helpCenter" @@help-lightbox.window="lightboxSrc = $event.detail">
+    <div class="page-header help-head">
+        <div>
+            <h1 class="page-title">Yardım Merkezi</h1>
+            <p class="page-subtitle">Ekran rehberi, buton açıklamaları ve temel iş akışları.</p>
+        </div>
+        <div class="help-tools">
+            @if (!Model.IsTenant)
+            {
+                <div class="role-switch" role="tablist" aria-label="Kullanıcı Rolü Filtresi">
+                    <button type="button" class="role-btn" role="tab" :aria-selected="role === 'all'" :class="{ active: role === 'all' }" @@click="role = 'all'">Tümü</button>
+                    <button type="button" class="role-btn" role="tab" :aria-selected="role === 'admin'" :class="{ active: role === 'admin' }" @@click="role = 'admin'">Yönetim Paneli</button>
+                    <button type="button" class="role-btn" role="tab" :aria-selected="role === 'tenant'" :class="{ active: role === 'tenant' }" @@click="role = 'tenant'">Kiracı Portalı</button>
+                </div>
+            }
+            <div class="search-wrap">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="search" class="search-input" aria-label="Yardımda ara" x-ref="search" x-model="query" placeholder="Sayfa, buton veya işlem ara... ( / )" />
+                <button type="button" class="search-clear" title="Temizle" x-cloak x-show="query" @@click="query = ''">&times;</button>
+            </div>
+            <button type="button" class="btn btn-secondary" onclick="window.print()">Yazdır / PDF</button>
+        </div>
+    </div>
+
+    <div class="help-layout">
+        <div class="toc-col">
+            <button type="button" class="btn btn-secondary toc-toggle" @@click="tocOpen = !tocOpen" :aria-expanded="tocOpen">
+                İçindekiler <span x-text="tocOpen ? '−' : '+'"></span>
+            </button>
+            <nav class="toc-sidebar" :class="{ open: tocOpen }" aria-label="İçindekiler">
+                @foreach (var group in Model.Sections.GroupBy(s => s.Group))
+                {
+                    <div class="toc-group-title">@group.Key</div>
+                    @foreach (var s in group)
+                    {
+                        var tocRole = s.Audience switch { HelpAudience.Admin => "admin", HelpAudience.Tenant => "tenant", _ => null };
+                        <a href="#@s.Id" class="toc-link" :class="{ active: activeId === '@s.Id' }"
+                           data-toc-role="@tocRole" @@click="go('@s.Id')">@s.Title</a>
+                    }
+                }
+            </nav>
+        </div>
+
+        <div class="doc-container">
+            <section class="doc-hero" id="baslangic">
+                <div class="doc-hero-eyebrow">UniTeknopark Yardım Merkezi</div>
+                <h1>UniTeknopark Kullanım ve Yardım Kılavuzu</h1>
+                <p>Her sayfanın amacını, menü yolunu, ekrandaki butonların işlevlerini ve temel iş akışlarını aşağıda bulabilirsiniz.</p>
+                <div class="quick-cards">
+                    @if (Model.IsTenant)
+                    {
+                        <a href="#kiraci-panel" class="quick-card"><strong>1. Ana Sayfa</strong><span>Borç özeti ve hızlı işlemler</span></a>
+                        <a href="#kiraci-sozlesme-borc" class="quick-card"><strong>2. Sözleşme &amp; Ödeme</strong><span>Sözleşmeler, borçlar ve online ödeme</span></a>
+                        <a href="#kiraci-rezervasyon-profil" class="quick-card"><strong>3. Rezervasyon &amp; Profil</strong><span>Salon talebi, profil ve ekip</span></a>
+                        <a href="#hesap-islemleri" class="quick-card"><strong>4. Hesap İşlemleri</strong><span>Giriş, şifre ve davet</span></a>
+                    }
+                    else
+                    {
+                        <a href="#yonetim-tasinmaz" class="quick-card"><strong>1. Taşınmaz &amp; Birim</strong><span>Bina, kat, ofis ve tarife kurulumu</span></a>
+                        <a href="#yonetim-sozlesme" class="quick-card"><strong>2. Sözleşme &amp; Onay</strong><span>Taslak, onay, uzatma ve fesih</span></a>
+                        <a href="#yonetim-finans" class="quick-card"><strong>3. Tahakkuk &amp; Ödeme</strong><span>Otomatik borç, POS ve banka eşleşme</span></a>
+                        <a href="#kiraci-panel" class="quick-card"><strong>4. Kiracı Portalı</strong><span>Self-servis borç ödeme ve salon talebi</span></a>
+                    }
+                </div>
+            </section>
+
+            <div class="search-status" :class="{ visible: filtered }">
+                <span x-text="statusText"></span>
+                <button type="button" class="ui-btn-badge" @@click="reset()">Filtreyi Sıfırla</button>
+            </div>
+            <div class="help-empty" :class="{ visible: noResult }">Sonuç bulunamadı.</div>
+
+            @foreach (var s in Model.Sections)
+            {
+                <partial name="@s.Partial" />
+            }
+        </div>
+    </div>
+
+    <div class="lightbox" :class="{ open: lightboxSrc }" @@click="lightboxSrc = ''">
+        <img :src="lightboxSrc" alt="Büyütülmüş Ekran Görüntüsü" />
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/help.js" asp-append-version="true"></script>
+}

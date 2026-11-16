@@ -1,0 +1,119 @@
+<section class="module-section" id="tarife-hiyerarsisi" data-role="admin">
+    <div class="module-banner">
+        <div class="module-banner-left">
+            <span class="module-num">FİYATLANDIRMA MİMARİSİ</span>
+            <h2>Tarife Hiyerarşisi (Genel → Taşınmaz → Birim → Sözleşme)</h2>
+        </div>
+        <span class="role-pill">Üst–Alt Miras Yapısı</span>
+    </div>
+
+    <div class="page-card">
+        <div class="page-card-head">
+            <h3>4 Katmanlı Fiyat Mirası ve Ezme (Override) Mantığı</h3>
+            <span class="menu-path">Genel Tarife → Taşınmaz → Birim → Sözleşme</span>
+        </div>
+        <p class="page-purpose">
+            UniTeknopark'ta her bina, ofis veya sözleşme için aynı fiyatları tek tek elle girmek zorunda değilsiniz. Sistem <strong>Üstten Alta Miras (Parent–Child)</strong> mantığıyla çalışır: üstte tanımladığınız fiyat tüm alt katmanlara otomatik yayılır; yalnızca istisna yapmak istediğiniz alt katmanda farklı fiyat girmeniz yeterlidir.
+        </p>
+
+        <div class="hierarchy-flow">
+            <div class="hier-card lvl-1">
+                <span class="hier-badge">1. Seviye · En Üst (Kök)</span>
+                <h4>Genel Tarife (Yıllık)</h4>
+                <p>Tüm teknopark için Kiracı Kategorisi × Borç Tipi bazında varsayılan fiyatları belirler.</p>
+                <div class="hier-scope">Menü: Parametreler → Yıllık Tarifeler</div>
+            </div>
+            <div class="hier-card lvl-2">
+                <span class="hier-badge">2. Seviye · Bina Bazlı</span>
+                <h4>Taşınmaz Tarifesi</h4>
+                <p>Yalnızca o binada Genel Tarife'den farklı olacak kalemleri ezer. Boş bırakılanlar Genel'den gelir.</p>
+                <div class="hier-scope">Menü: Taşınmaz Ekle / Düzenle → Taşınmaz Tarifesi; ayrıca Taşınmaz Detayı → Kira Tarifeleri</div>
+            </div>
+            <div class="hier-card lvl-3">
+                <span class="hier-badge">3. Seviye · Ofis / Salon Bazlı</span>
+                <h4>Birim Özel Fiyatı</h4>
+                <p>Sadece seçilen ofisin özel fiyatıdır. <strong>Aktif</strong> işaretli kalemler üst tarifeyi ezer; diğerleri miras alınır.</p>
+                <div class="hier-scope">Menü: Taşınmaz Detayı → Birimler → ₺ / Özel Fiyat; ayrıca Kira Tarifeleri → Birim Özel Fiyatları</div>
+            </div>
+            <div class="hier-card lvl-4">
+                <span class="hier-badge">4. Seviye · En Alt (Son Karar)</span>
+                <h4>Sözleşme Tarifesi</h4>
+                <p>Sözleşme açılırken üstteki 3 seviyeden gelen en özel fiyat otomatik dolar. İsterseniz yalnız bu sözleşme için değiştirebilirsiniz.</p>
+                <div class="hier-scope">Menü: Sözleşme Ekle / Taslak</div>
+            </div>
+        </div>
+
+        <div class="sub-block">
+            <div class="sub-block-title">Hangisini Tanımladığımda Ne Olur?</div>
+            <div class="btn-table-wrap">
+                <table class="btn-table">
+                    <thead>
+                        <tr>
+                            <th>Değişiklik Yapılan Seviye</th>
+                            <th>Nereden Yapılır?</th>
+                            <th>Neleri Etkiler?</th>
+                            <th>Özel Kural / Bilmeniz Gereken</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="ui-btn-badge primary">1. Genel Tarife</span></td>
+                            <td>Parametreler → Yıllık Tarifeler</td>
+                            <td>Özel fiyatı olmayan <strong>tüm binaları, birimleri ve yeni sözleşmeleri</strong> etkiler.</td>
+                            <td>Alt katmanlarda özel fiyat (yeşil nokta) tanımlıysa onlar etkilenmez, kendi özel fiyatlarını korur.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="ui-btn-badge !bg-indigo-50 !text-indigo-800 !border-indigo-200">2. Taşınmaz Tarifesi</span></td>
+                            <td>Taşınmaz Ekle / Düzenle → Taşınmaz Tarifesi; Taşınmaz Detayı → Kira Tarifeleri</td>
+                            <td>Yalnızca <strong>o binadaki</strong> birimleri ve o binada açılacak yeni sözleşmeleri etkiler.</td>
+                            <td>Matriste <strong>yeşil nokta</strong> binaya özel fiyatı, <strong>gri nokta</strong> Genel Tarife'den miras alınan fiyatı gösterir.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="ui-btn-badge !bg-emerald-50 !text-emerald-800 !border-emerald-200">3. Birim Özel Fiyatı</span></td>
+                            <td>Taşınmaz Detayı → Birimler → <strong>₺ / Özel Fiyat</strong>; Kira Tarifeleri → Birim Özel Fiyatları</td>
+                            <td>Yalnızca <strong>o tekil ofisi/birimi</strong> etkiler (ör. manzaralı köşe ofis veya özel laboratuvar).</td>
+                            <td>Yalnızca <strong>Aktif</strong> kutucuğu işaretli kalemler üst tarifeyi ezer. Rezervasyon salonlarında <strong>Sıfırla (Genel Tarifeyi Kullan)</strong> butonuyla genel tarifeye dönülebilir (onay: "Özel kural silinecek. Genel tarife devreye girecek.").</td>
+                        </tr>
+                        <tr>
+                            <td><span class="ui-btn-badge warn">4. Sözleşme Tarifesi</span></td>
+                            <td>Yeni Sözleşme Başvurusu / Başvuru İnceleme</td>
+                            <td>Yalnızca <strong>o tekil sözleşmeyi</strong> etkiler; diğer birimleri veya genel tarifeyi değiştirmez.</td>
+                            <td>Sözleşme onaylandığı anda fiyat kilitlenir. Sonradan Genel veya Taşınmaz tarifesi değişse bile <strong>mevcut onaylı sözleşmelerin fiyatı kendiliğinden değişmez</strong> (yalnızca yeni sözleşmeler veya <em>Tahakkuk Yeniden Üret</em> etkilenir).</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="callout">
+            <strong>Örnek Senaryo (A-301 Nolu 145 m² Ar-Ge Ofisi Nasıl Fiyatlanır?):</strong>
+            <ul>
+                <li><strong>Fiber İnternet</strong> için yalnızca <em>Genel Tarife</em> tanımladınız (3.500 ₺) → Sözleşmeye <span class="ui-btn-badge !px-1.5 !py-px !text-[0.7rem]">Genel Tarife</span> olarak 3.500 ₺ gelir.</li>
+                <li><strong>Ortak Alan Gideri</strong> için <em>A Blok Taşınmaz Tarifesi</em> girdiniz (110 ₺/m²) → Genel Tarife'yi ezer ve <span class="ui-btn-badge !px-1.5 !py-px !text-[0.7rem] !bg-indigo-50 !text-indigo-800">Taşınmaz Tarifesi</span> olarak 110 ₺/m² gelir.</li>
+                <li><strong>Ofis Kirası</strong> için <em>A-301 Birim Özel Fiyatı</em> tanımladınız (620 ₺/m²) → Taşınmaz ve Genel'i ezer, <span class="ui-btn-badge !px-1.5 !py-px !text-[0.7rem] !bg-emerald-50 !text-emerald-800">Birim Tarifesi</span> olarak 620 ₺/m² gelir.</li>
+                <li><strong>Depozito</strong> tutarını sözleşme formunda elle 120.000 ₺ yaptınız → Yalnız bu sözleşme için <span class="ui-btn-badge warn !px-1.5 !py-px !text-[0.7rem]">Sözleşmeye Özel</span> olarak uygulanır.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="screen-preview-card">
+        <div class="screen-preview-head">
+            <span>Tarife Katmanları Ekran Rehberi — Büyütmek için görsellere tıklayın</span>
+            <span>1. Genel Tarife → 3. Birim Özel → 4. Sözleşme</span>
+        </div>
+        <div class="screen-preview-grid">
+            <div class="screen-thumb" role="button" tabindex="0" @@click="$dispatch('help-lightbox', '@Url.Content("~/images/help/07_rate_general.png")')" @@keydown.enter="$dispatch('help-lightbox', '@Url.Content("~/images/help/07_rate_general.png")')">
+                <img src="~/images/help/07_rate_general.png" loading="lazy" alt="1. Seviye Genel Tarife">
+                <div class="screen-thumb-cap"><strong>1. Seviye (Genel Tarife):</strong> Parametreler → Yıllık Tarifeler üzerinden tüm teknoparkın varsayılan fiyatları tanımlanır.</div>
+            </div>
+            <div class="screen-thumb" role="button" tabindex="0" @@click="$dispatch('help-lightbox', '@Url.Content("~/images/help/08_rate_unit.png")')" @@keydown.enter="$dispatch('help-lightbox', '@Url.Content("~/images/help/08_rate_unit.png")')">
+                <img src="~/images/help/08_rate_unit.png" loading="lazy" alt="2. ve 3. Seviye Üst Tarife Mirası ve Birim Özel Fiyatı">
+                <div class="screen-thumb-cap"><strong>2. &amp; 3. Seviye (Birim Özel):</strong> Üstteki gri kart miras alınan Taşınmaz/Genel tarifeyi, yeşil işaretli satır ise birime özel ezilen fiyatı gösterir.</div>
+            </div>
+            <div class="screen-thumb" role="button" tabindex="0" @@click="$dispatch('help-lightbox', '@Url.Content("~/images/help/09_rate_lease.png")')" @@keydown.enter="$dispatch('help-lightbox', '@Url.Content("~/images/help/09_rate_lease.png")')">
+                <img src="~/images/help/09_rate_lease.png" loading="lazy" alt="4. Seviye Sözleşme Tarifesi ve Kaynak Rozetleri">
+                <div class="screen-thumb-cap"><strong>4. Seviye (Sözleşme):</strong> Sözleşme açılırken sistem her kalemin nereden geldiğini sağ üstteki rozetle (<em>Birim, Taşınmaz, Genel, Sözleşmeye Özel</em>) gösterir.</div>
+            </div>
+        </div>
+    </div>
+</section>

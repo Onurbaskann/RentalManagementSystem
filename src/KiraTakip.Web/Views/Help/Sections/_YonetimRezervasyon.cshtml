@@ -1,0 +1,54 @@
+<section class="module-section" id="yonetim-rezervasyon" data-role="admin">
+    <div class="module-banner">
+        <div class="module-banner-left">
+            <span class="module-num">BÖLÜM 07</span>
+            <h2>Konferans Salonu ve Ortak Alan Rezervasyonu</h2>
+        </div>
+        <span class="role-pill">Yönetim Paneli</span>
+    </div>
+
+    <div class="screen-preview-card">
+        <div class="screen-preview-head">
+            <span>Referans Ekran Görüntüsü — Haftalık Rezervasyon Takvimi</span>
+            <span>Sol Menü → Rezervasyonlar → Takvim</span>
+        </div>
+        <div class="screen-preview-grid">
+            <div class="screen-thumb" role="button" tabindex="0" @@click="$dispatch('help-lightbox', '@Url.Content("~/images/help/06_reservation_calendar.png")')" @@keydown.enter="$dispatch('help-lightbox', '@Url.Content("~/images/help/06_reservation_calendar.png")')">
+                <img src="~/images/help/06_reservation_calendar.png" loading="lazy" alt="Rezervasyon Takvimi Ekranı">
+                <div class="screen-thumb-cap">Rezervasyon Takvimi — Salon bazlı haftalık doluluk ve onay durumu matrisi</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-card">
+        <div class="page-card-head">
+            <h3>Rezervasyon Listesi, Takvim, Oluşturma ve Detay</h3>
+            <span class="menu-path">Sol Menü → Rezervasyonlar</span>
+        </div>
+        <p class="page-purpose">Konferans salonları, seminer alanları ve ortak toplantı odalarının rezervasyon taleplerini çakışmasız takvim üzerinden yönetir, ücretsiz kota ve aşım ücretini otomatik hesaplayarak tahakkuka aktarır.</p>
+        <div class="sub-block">
+            <div class="sub-block-title">Durum Sekmeleri ve Takvim Kontrolleri</div>
+            <div class="chip-list">
+                <span class="chip">Tümü · Onaylandı · Onay Bekliyor · Tamamlandı · Reddedildi · İptal Edildi</span>
+                <span class="chip"><strong>Takvim:</strong> Birim listesi (ilk seçenek "Tüm rezervasyon birimleri") · Hafta Seçici · ← Önceki / Sonraki → · Göster</span>
+            </div>
+            <p class="mt-3"><em>İptal Edildi</em> sekmesi yalnızca iptal edilmiş bir kayıt varken görünür.</p>
+        </div>
+        <div class="sub-block">
+            <div class="btn-table-wrap">
+                <table class="btn-table">
+                    <thead><tr><th>Buton</th><th>Nerede?</th><th>Ne İşe Yarar?</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="ui-btn-badge teal">Takvim</span></td><td>Rezervasyon Listesi</td><td>Haftalık görsel doluluk matrisine geçer.</td></tr>
+                        <tr><td><span class="ui-btn-badge primary">Rezervasyon Ekle</span></td><td>Liste / Hızlı Ekle</td><td>Yeni rezervasyon formunu açar; tarih-saat seçildiğinde ücretsiz süre, ücretli periyot ve KDV dahil toplamı canlı hesaplar.</td></tr>
+                        <tr><td><span class="ui-btn-badge">Talep Oluştur</span></td><td>Rezervasyon Ekle</td><td>Rezervasyonu <em>Onay Bekliyor</em> durumunda kaydeder.</td></tr>
+                        <tr><td><span class="ui-btn-badge primary">Oluştur ve Onayla</span></td><td>Rezervasyon Ekle</td><td>Yetkili yöneticiler için rezervasyonu tek adımda oluşturup onaylar.</td></tr>
+                        <tr><td><span class="ui-btn-badge primary">Onayla / Talebi Reddet</span></td><td>Rezervasyon Detayı</td><td>Bekleyen talebi onaylar veya zorunlu <strong>Ret Gerekçesi</strong> ile reddeder.</td></tr>
+                        <tr><td><span class="ui-btn-badge teal">Tahakkuka Aktar / Aktar</span></td><td>Detay: Tahakkuka Aktar · Liste: Aktar</td><td>Onaylanmış ve ücreti 0'dan büyük rezervasyonu ilgili firmanın dönem tahakkukuna borç kalemi olarak aktarır. Yalnızca <em>Onaylandı</em> durumundaki, tutarı 0'dan büyük ve henüz tahakkuğa bağlanmamış kayıtlarda görünür.</td></tr>
+                        <tr><td><span class="ui-btn-badge">Düzenle / İptal Et</span></td><td>Detay</td><td>Saat, katılımcı veya iç notları günceller ya da gerekçe belirterek kaydı iptal eder.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>

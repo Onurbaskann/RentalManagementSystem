@@ -372,3 +372,10 @@ summary::-webkit-details-marker { display: none; }
 /* Hızlı eylem kutusu (.card ile birlikte) */
 .action-tile { display: block; text-decoration: none; transition: border-color 0.15s; }
 .action-tile:hover { border-color: var(--color-teal); }
+
+/* Bağlamsal yardım butonu: main-content üst dolgusu (2rem) içinde, sağ üst köşede; page-header'a binmez */
+.main-content { position: relative; }
+.help-fab { position: absolute; top: 0.25rem; /* 4px */ right: 0.25rem; /* 4px */ z-index: 20; display: inline-flex; align-items: center; justify-content: center; width: 1.75rem; /* 28px */ height: 1.75rem; /* 28px */ border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-card); color: var(--color-text-muted); text-decoration: none; transition: background 0.12s, color 0.12s, border-color 0.12s; }
+.help-fab:hover { color: var(--color-navy); border-color: var(--color-navy); background: var(--color-surface); }
+.help-fab:focus-visible { outline: 2px solid var(--color-teal); outline-offset: 2px; }
+@media print { .help-fab { display: none; } }
