@@ -38,7 +38,8 @@ public enum LeaseActivityType
     Termination = 3,
     TufeIncrease = 4,
     KdvUpdate = 5,
-    ChargeRegeneration = 6
+    ChargeRegeneration = 6,
+    Expiration = 7
 }
 
 public enum UnitStructure

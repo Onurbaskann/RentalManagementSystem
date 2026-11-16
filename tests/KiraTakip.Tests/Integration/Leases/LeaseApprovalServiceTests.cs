@@ -509,16 +509,52 @@ public class LeaseApprovalServiceTests : IDisposable
             UnitId = seed.UnitId,
             TenantId = seed.TenantId,
             Status = LeaseStatus.Active,
-            StartDate = DateTime.Today.AddMonths(-1),
-            EndDate = DateTime.Today.AddMonths(1)
+            StartDate = new DateTime(2026, 10, 15),
+            EndDate = new DateTime(2026, 12, 31)
         };
         _context.Leases.Add(conflict);
         await _context.SaveChangesAsync();
         await _context.Entry(lease).ReloadAsync();
 
-        await Assert.ThrowsAnyAsync<BusinessException>(() => reviewer.ApproveAsync(
+        var ex = await Assert.ThrowsAnyAsync<BusinessException>(() => reviewer.ApproveAsync(
             Approval(lease, seed.ReviewerId)));
+        Assert.Equal("Lease.ActiveUnitConflict", ex.Code);
         Assert.Equal(LeaseStatus.Draft, lease.Status);
+    }
+
+    [Fact]
+    public async Task CreateDraft_ShouldRejectOverlappingRangeButAllowNonOverlappingRanges()
+    {
+        var seed = await SeedAsync();
+        _context.Leases.Add(new Lease
+        {
+            UnitId = seed.UnitId,
+            TenantId = seed.TenantId,
+            Status = LeaseStatus.Active,
+            StartDate = new DateTime(2026, 9, 1),
+            EndDate = new DateTime(2026, 10, 31)
+        });
+        await _context.SaveChangesAsync();
+
+        var ex = await Assert.ThrowsAnyAsync<BusinessException>(() => CreateDraftAsync(
+            seed,
+            startDate: new DateTime(2026, 10, 31),
+            endDate: new DateTime(2026, 12, 31)));
+        Assert.Equal("Lease.ActiveUnitConflict", ex.Code);
+
+        var after = await CreateDraftAsync(
+            seed,
+            startDate: new DateTime(2026, 11, 1),
+            endDate: new DateTime(2026, 12, 31));
+        Assert.Equal(LeaseStatus.Draft, after.Status);
+        after.Status = LeaseStatus.Ended;
+        await _context.SaveChangesAsync();
+
+        var before = await CreateDraftAsync(
+            seed,
+            startDate: new DateTime(2026, 6, 1),
+            endDate: new DateTime(2026, 8, 31));
+        Assert.Equal(LeaseStatus.Draft, before.Status);
     }
 
     [Fact]
@@ -595,6 +631,72 @@ public class LeaseApprovalServiceTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task Extend_EndedLease_ShouldReactivateAndGenerateMissingCharges()
+    {
+        var seed = await SeedAsync();
+        var (lease, oldEnd) = await CreateEndedLeaseAsync(seed);
+        var newEnd = DateTime.Today.AddMonths(2);
+
+        await CreateService(seed.ReviewerId).ExtendAsync(ExtendInput(lease.Id, newEnd));
+        await _context.Entry(lease).ReloadAsync();
+
+        Assert.Equal(LeaseStatus.Active, lease.Status);
+        Assert.Equal(newEnd, lease.EndDate);
+        Assert.Contains(await _context.Charges
+            .Where(charge => charge.LeaseId == lease.Id)
+            .Select(charge => charge.PeriodStart)
+            .ToListAsync(), start => start > oldEnd);
+    }
+
+    [Fact]
+    public async Task Extend_EndedLease_ShouldRejectPastEndDate()
+    {
+        var seed = await SeedAsync();
+        var (lease, oldEnd) = await CreateEndedLeaseAsync(seed);
+
+        var ex = await Assert.ThrowsAnyAsync<BusinessException>(() => CreateService(seed.ReviewerId)
+            .ExtendAsync(ExtendInput(lease.Id, oldEnd.AddDays(5))));
+
+        Assert.Equal("Lease.ExtendEndedRequiresFutureEnd", ex.Code);
+    }
+
+    [Fact]
+    public async Task Extend_ShouldRejectOverlapWithLaterActiveLease()
+    {
+        var seed = await SeedAsync();
+        var (lease, oldEnd) = await CreateEndedLeaseAsync(seed);
+        _context.Leases.Add(new Lease
+        {
+            UnitId = seed.UnitId,
+            TenantId = seed.TenantId,
+            Status = LeaseStatus.Active,
+            StartDate = oldEnd.AddDays(1),
+            EndDate = DateTime.Today.AddYears(1)
+        });
+        await _context.SaveChangesAsync();
+
+        var ex = await Assert.ThrowsAnyAsync<BusinessException>(() => CreateService(seed.ReviewerId)
+            .ExtendAsync(ExtendInput(lease.Id, DateTime.Today.AddMonths(1))));
+
+        Assert.Equal("Lease.ActiveUnitConflict", ex.Code);
+        await _context.Entry(lease).ReloadAsync();
+        Assert.Equal(LeaseStatus.Ended, lease.Status);
+    }
+
+    private async Task<(Lease Lease, DateTime OldEnd)> CreateEndedLeaseAsync(ServiceSeed seed)
+    {
+        var start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-4);
+        var end = start.AddMonths(2).AddDays(-1);
+        var lease = await CreateDraftAsync(seed, startDate: start, endDate: end);
+        lease.Status = LeaseStatus.Ended;
+        await _context.SaveChangesAsync();
+        return (lease, end);
+    }
+
+    private static ExtendLeaseInput ExtendInput(int leaseId, DateTime newEnd)
+        => new(leaseId, newEnd, false, 0, null, null, false, false, [], Scope());
+
     private async Task<ServiceSeed> SeedAsync()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
@@ -644,14 +746,16 @@ public class LeaseApprovalServiceTests : IDisposable
     private async Task<Lease> CreateDraftAsync(
         ServiceSeed seed,
         bool isRentFree = false,
-        IReadOnlyCollection<LeaseRateOverrideInput>? rates = null)
+        IReadOnlyCollection<LeaseRateOverrideInput>? rates = null,
+        DateTime? startDate = null,
+        DateTime? endDate = null)
     {
         var service = CreateService(seed.ApplicantId);
         var lease = await service.CreateDraftAsync(new CreateLeaseDraftInput(
             seed.UnitId,
             seed.TenantId,
-            new DateTime(2026, 9, 1),
-            new DateTime(2026, 10, 31),
+            startDate ?? new DateTime(2026, 9, 1),
+            endDate ?? new DateTime(2026, 10, 31),
             DueDateRuleType.FixedDayOfMonth,
             10,
             "Test başvurusu",

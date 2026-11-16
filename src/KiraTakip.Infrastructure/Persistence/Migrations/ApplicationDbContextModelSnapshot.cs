@@ -17,7 +17,7 @@ namespace KiraTakip.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.20")
+                .HasAnnotation("ProductVersion", "9.0.23")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -1106,7 +1106,7 @@ namespace KiraTakip.Migrations
                     b.Property<int>("ActivityType")
                         .HasColumnType("int")
                         .HasColumnName("IslemTipi")
-                        .HasComment("Creation=1, Extension=2, Termination=3, TufeIncrease=4, KdvUpdate=5, ChargeRegeneration=6");
+                        .HasComment("Creation=1, Extension=2, Termination=3, TufeIncrease=4, KdvUpdate=5, ChargeRegeneration=6, Expiration=7");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");

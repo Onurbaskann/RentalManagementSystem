@@ -55,15 +55,14 @@ public class UnitTypeService(
 
     public async Task CreateAsync(CreateUnitTypeInput input)
     {
-        var code = CodeSlugger.ToCode(input.Name);
         Guard.InvalidField(
-            await unitTypeRepository.KodExistsAsync(code),
+            await unitTypeRepository.NameExistsAsync(input.Name),
             nameof(input.Name),
             "Bu ad zaten kullanılıyor. Farklı bir ad girin.");
 
         await ValidateChargeTypeAsync(input.Usage, input.ChargeTypeId, nameof(input.ChargeTypeId));
 
-        var entity = new UnitType { Name = input.Name, Code = code };
+        var entity = new UnitType { Name = input.Name, Code = await GenerateUniqueCodeAsync(input.Name) };
 
         entity.SortOrder = input.SortOrder;
         entity.Usage = input.Usage;
@@ -80,16 +79,14 @@ public class UnitTypeService(
             await unitTypeRepository.GetByIdAsync(input.Id),
             "Birim türü bulunamadı.");
 
-        var code = CodeSlugger.ToCode(input.Name);
         Guard.InvalidField(
-            await unitTypeRepository.KodExistsAsync(code, input.Id),
+            await unitTypeRepository.NameExistsAsync(input.Name, input.Id),
             nameof(input.Name),
             "Bu ad zaten kullanılıyor. Farklı bir ad girin.");
 
         await ValidateChargeTypeAsync(input.Usage, input.ChargeTypeId, nameof(input.ChargeTypeId));
 
         entity.Name = input.Name;
-        entity.Code = code;
         entity.SortOrder = input.SortOrder;
         entity.Usage = input.Usage;
         entity.ChargeTypeId = PropertyStructurePolicy.ResolveChargeTypeId(input.Usage, input.ChargeTypeId);
@@ -131,6 +128,22 @@ public class UnitTypeService(
         await uow.SaveChangesAsync();
 
         return entity.IsActive;
+    }
+
+    private const int CodeMaxLength = 100;
+
+    private async Task<string> GenerateUniqueCodeAsync(string name)
+    {
+        var baseCode = CodeSlugger.ToCode(name);
+        if (baseCode.Length > CodeMaxLength) baseCode = baseCode[..CodeMaxLength];
+
+        var code = baseCode;
+        for (var suffix = 2; await unitTypeRepository.KodExistsAsync(code); suffix++)
+        {
+            var tail = $"-{suffix}";
+            code = baseCode[..Math.Min(baseCode.Length, CodeMaxLength - tail.Length)] + tail;
+        }
+        return code;
     }
 
     private async Task ValidateChargeTypeAsync(UnitTypeUsage usage, int? chargeTypeId, string field)

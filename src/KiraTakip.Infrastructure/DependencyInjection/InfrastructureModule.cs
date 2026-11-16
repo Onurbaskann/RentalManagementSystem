@@ -65,6 +65,7 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.Configure<SmtpSettings>(configuration.GetSection("Smtp"));
             services.Configure<SecureTokenSettings>(configuration.GetSection("SecureToken"));
             services.Configure<ReservationCompletionSettings>(configuration.GetSection("ReservationCompletion"));
+            services.Configure<LeaseExpirationSettings>(configuration.GetSection("LeaseExpiration"));
             services.Configure<DataProtectionSettings>(configuration.GetSection("DataProtection"));
             services.Configure<ParatikaOptions>(configuration.GetSection("Paratika"));
             services.AddHttpClient<IOnlinePaymentProvider, ParatikaOnlinePaymentProvider>((sp, client) =>

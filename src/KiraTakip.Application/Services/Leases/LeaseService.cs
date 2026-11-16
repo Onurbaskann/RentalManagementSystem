@@ -286,7 +286,8 @@ public class LeaseService(
                     rate.KdvRate))
                 .ToList(),
             input.AccessScope,
-            lease.IsRentFree);
+            lease.IsRentFree,
+            lease.Id);
         Guard.Conflict(
             await leaseRepository.HasChargesAsync(lease.Id),
             "Taslak başvuruda beklenmeyen tahakkuk bulundu.",
@@ -355,12 +356,23 @@ public class LeaseService(
         EnsureScope(lease.Unit.PropertyId, lease.UnitId, input.AccessScope);
         Guard.Conflict(
             !LeaseLifecycle.CanExtend(lease.Status),
-            "Yalnız aktif sözleşme uzatılabilir.",
+            "Yalnız aktif veya süresi dolmuş sözleşme uzatılabilir.",
             "Lease.NotActive");
         Guard.Conflict(
             !LeaseSchedulePolicy.CanExtend(lease.EndDate, input.NewEndDate),
             "Yeni bitiş tarihi mevcut bitiş tarihinden büyük olmalıdır.",
             "Lease.InvalidExtensionDate");
+        Guard.InvalidField(
+            lease.Status == LeaseStatus.Ended && input.NewEndDate.Date < DateTime.Now.Date,
+            nameof(input.NewEndDate),
+            "Süresi dolmuş sözleşme için yeni bitiş tarihi bugünden önce olamaz.",
+            "Lease.ExtendEndedRequiresFutureEnd");
+        Guard.InvalidField(
+            await leaseRepository.HasOverlappingActiveLeaseAsync(
+                lease.UnitId, lease.StartDate, input.NewEndDate, lease.Id),
+            nameof(input.NewEndDate),
+            "Seçilen birimde bu tarih aralığıyla çakışan aktif sözleşme bulunmaktadır.",
+            "Lease.ActiveUnitConflict");
         EnsureOverridePermission(input.UpdateRate, input.CanOverrideRate);
         await EnsureRateOverridesAsync(input.RateOverrides, lease.Unit.Area, lease.IsRentFree);
         Guard.InvalidField(
@@ -382,6 +394,7 @@ public class LeaseService(
 
         var oldEndDate = lease.EndDate;
         lease.EndDate = input.NewEndDate;
+        lease.Status = LeaseStatus.Active;
         lease.IsKdvApplied = input.IsVatApplied;
 
         decimal? vatAmount = input.IsVatApplied ? RentIncreasePolicy.CalculateVatAmount(newAmount, input.VatRate) : null;
@@ -587,7 +600,8 @@ public class LeaseService(
         int dueDay,
         IReadOnlyCollection<LeaseRateOverrideInput> rateOverrides,
         LeaseAccessScopeInput accessScope,
-        bool isRentFree)
+        bool isRentFree,
+        int? excludeLeaseId = null)
     {
         Guard.InvalidField(
             !LeaseSchedulePolicy.HasValidDateRange(startDate, endDate),
@@ -626,9 +640,9 @@ public class LeaseService(
                 "Lease.TenantOutOfScope");
         }
         Guard.InvalidField(
-            await leaseRepository.HasActiveLeaseForUnitAsync(unitId, DateTime.Now),
+            await leaseRepository.HasOverlappingActiveLeaseAsync(unitId, startDate, endDate, excludeLeaseId),
             nameof(unitId),
-            "Seçilen birimde devam eden aktif sözleşme bulunmaktadır.",
+            "Seçilen birimde bu tarih aralığıyla çakışan aktif sözleşme bulunmaktadır.",
             "Lease.ActiveUnitConflict");
         await EnsureRateOverridesAsync(rateOverrides, unit.Area, isRentFree);
 
@@ -656,7 +670,8 @@ public class LeaseService(
             dueDay,
             rateOverrides,
             accessScope,
-            isRentFree);
+            isRentFree,
+            lease.Id);
         Guard.InvalidField(
             await leaseRepository.HasOpenApplicationForUnitAsync(unitId, lease.Id),
             nameof(unitId),

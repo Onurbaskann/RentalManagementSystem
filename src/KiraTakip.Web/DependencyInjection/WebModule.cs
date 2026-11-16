@@ -76,6 +76,7 @@ namespace KiraTakip.Web.DependencyInjection
             services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
             services.AddScoped<YetkiKapsamiActionFilter>();
             services.AddHostedService<ReservationCompletionBackgroundService>();
+            services.AddHostedService<LeaseExpirationBackgroundService>();
 
             return services;
         }

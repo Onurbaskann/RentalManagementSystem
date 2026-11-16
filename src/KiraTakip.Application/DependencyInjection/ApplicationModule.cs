@@ -69,6 +69,7 @@ public static class ApplicationModule
         // Reservations
         services.AddScoped<IReservationService, ReservationService>();
         services.AddScoped<IReservationCompletionService, ReservationCompletionService>();
+        services.AddScoped<ILeaseExpirationService, LeaseExpirationService>();
 
         // Charges
         services.AddScoped<IChargeService, ChargeService>();

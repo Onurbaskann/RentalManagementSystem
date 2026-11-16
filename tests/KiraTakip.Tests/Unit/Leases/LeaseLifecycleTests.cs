@@ -15,10 +15,18 @@ public class LeaseLifecycleTests
         LeaseStatus status,
         bool expected)
     {
-        Assert.Equal(expected, LeaseLifecycle.CanExtend(status));
         Assert.Equal(expected, LeaseLifecycle.CanTerminate(status));
         Assert.Equal(expected, LeaseLifecycle.CanUpdateDueDate(status));
         Assert.Equal(expected, LeaseLifecycle.CanRegenerateCharges(status));
         Assert.Equal(expected, LeaseLifecycle.CanGenerateCharges(status));
     }
+
+    [Theory]
+    [InlineData(LeaseStatus.Active, true)]
+    [InlineData(LeaseStatus.Ended, true)]
+    [InlineData(LeaseStatus.Draft, false)]
+    [InlineData(LeaseStatus.RevisionRequested, false)]
+    [InlineData(LeaseStatus.Terminated, false)]
+    public void CanExtend_ShouldAllowActiveAndEnded(LeaseStatus status, bool expected)
+        => Assert.Equal(expected, LeaseLifecycle.CanExtend(status));
 }

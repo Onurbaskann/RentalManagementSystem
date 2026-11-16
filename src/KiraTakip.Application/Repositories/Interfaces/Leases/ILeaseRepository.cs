@@ -54,7 +54,11 @@ public interface ILeaseRepository : IRepositoryBase<Lease>
         List<int>? authorizedPropertyIds = null,
         List<int>? authorizedUnitIds = null,
         CancellationToken ct = default);
-    Task<bool> HasActiveLeaseForUnitAsync(int unitId, DateTime currentTime);
+    Task<bool> HasOverlappingActiveLeaseAsync(
+        int unitId,
+        DateTime startDate,
+        DateTime endDate,
+        int? excludeLeaseId);
     Task<LeaseDraftEditDto?> GetDraftForEditAsync(
         int leaseId,
         List<int>? authorizedPropertyIds,
@@ -68,6 +72,8 @@ public interface ILeaseRepository : IRepositoryBase<Lease>
     Task<bool> HasCreationActivityAsync(int leaseId);
     Task<Lease?> GetDeletedApplicationForAuditAsync(int leaseId);
     Task<Lease?> GetWithActivityLogAsync(int leaseId);
+    Task<List<int>> GetExpiredActiveLeaseIdsAsync(DateTime today, int batchSize);
+    Task<Lease?> GetForExpirationAsync(int leaseId);
     Task<DocumentOwnerContextDto?> GetDocumentOwnerContextAsync(int leaseId, bool tenantPortalOnly = false);
     Task<List<string>> GetExistingLeaseNosAsync();
 }

@@ -211,15 +211,16 @@ public class BankTransactionMatchingTests : IDisposable
     public async Task Import_AssignsSelectedStoreAccountToEveryTransaction()
     {
         var (store, storeAccountId) = await CreateStoreAsync("Dolu");
+        var marker = $"Kira Ödemesi {Guid.NewGuid():N}";
         var csv = "Tarih;Açıklama;Borç;Alacak;Bakiye;Karşı Hesap No;Karşı Hesap Adı\r\n"
-            + "01.02.2026;Kira Ödemesi 1;0;500,00;1000,00;TR00;Gönderen 1\r\n"
-            + "02.02.2026;Kira Ödemesi 2;0;300,00;1300,00;TR01;Gönderen 2\r\n";
+            + $"01.02.2026;{marker} 1;0;500,00;1000,00;TR00;Gönderen 1\r\n"
+            + $"02.02.2026;{marker} 2;0;300,00;1300,00;TR01;Gönderen 2\r\n";
         await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 
         await CreateService().ImportAsync(new ImportBankTransactionsInput(stream, "AKBANK", store.Id));
 
         var imported = await _context.BankTransactions
-            .Where(transaction => transaction.Description.StartsWith("Kira Ödemesi"))
+            .Where(transaction => transaction.Description.StartsWith(marker))
             .ToListAsync();
         Assert.Equal(2, imported.Count);
         Assert.All(imported, transaction => Assert.Equal(storeAccountId, transaction.StoreAccountId));

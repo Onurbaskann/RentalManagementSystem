@@ -5,7 +5,7 @@ namespace KiraTakip.Domain.Leases;
 public static class LeaseLifecycle
 {
     public static bool CanExtend(LeaseStatus status)
-        => status == LeaseStatus.Active;
+        => status is LeaseStatus.Active or LeaseStatus.Ended;
 
     public static bool CanTerminate(LeaseStatus status)
         => status == LeaseStatus.Active;

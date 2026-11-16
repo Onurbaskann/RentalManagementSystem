@@ -22,7 +22,7 @@ internal sealed class LeaseConfiguration : IEntityTypeConfiguration<Lease>
               .OnDelete(DeleteBehavior.Restrict);
         // Not: "Bir birimde tek devam-eden aktif sözleşme" kuralı tarih koşulu içerdiğinden
         // filtered index ile ifade edilemez (SQL Server GETDATE() destegi yok);
-        // kontrol uygulama katmanında yapılır (LeaseController.Create).
+        // kontrol uygulama katmanında yapılır (LeaseService, tarih aralığı çakışması).
         entity.HasIndex(s => s.UnitId, "IX_Lease_UnitId")
               .HasDatabaseName("IX_Sozlesmeler_BirimId");
         entity.HasIndex(s => s.TenantId)

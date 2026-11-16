@@ -32,8 +32,16 @@ public class UnitTypeRepository(ApplicationDbContext ctx) : RepositoryBase<UnitT
         => await _dbSet.AsNoTracking().MaxAsync(b => (int?)b.SortOrder) ?? 0;
 
     public async Task<bool> KodExistsAsync(string kod, int? excludeId = null)
-        => await _dbSet.AsNoTracking()
+        => await _dbSet.AsNoTracking().IgnoreQueryFilters()
             .AnyAsync(b => b.Code == kod && (excludeId == null || b.Id != excludeId));
+
+    public async Task<bool> NameExistsAsync(string name, int? excludeId = null)
+    {
+        var normalized = name.Trim().ToLower();
+        return await _dbSet.AsNoTracking()
+            .AnyAsync(b => !b.IsDeleted && b.Name.Trim().ToLower() == normalized
+                           && (excludeId == null || b.Id != excludeId));
+    }
 
     public async Task<bool> AnyAktifByBorcTipiIdAsync(int chargeTypeId, int? excludeId = null)
         => await _dbSet.AsNoTracking()

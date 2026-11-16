@@ -517,12 +517,22 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             .ToListAsync(ct);
     }
 
-    public Task<bool> HasActiveLeaseForUnitAsync(int unitId, DateTime currentTime)
-        => _dbSet.AnyAsync(lease =>
+    public Task<bool> HasOverlappingActiveLeaseAsync(
+        int unitId,
+        DateTime startDate,
+        DateTime endDate,
+        int? excludeLeaseId)
+    {
+        var start = startDate.Date;
+        var end = endDate.Date;
+        return _dbSet.AsNoTracking().AnyAsync(lease =>
             lease.UnitId == unitId
+            && !lease.IsDeleted
             && lease.Status == LeaseStatus.Active
-            && lease.StartDate <= currentTime
-            && lease.EndDate >= currentTime);
+            && (!excludeLeaseId.HasValue || lease.Id != excludeLeaseId.Value)
+            && lease.StartDate.Date <= end
+            && lease.EndDate.Date >= start);
+    }
 
     public async Task<LeaseDraftEditDto?> GetDraftForEditAsync(
         int leaseId,
@@ -635,6 +645,19 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             && lease.IsDeleted
             && (lease.Status == LeaseStatus.Draft
                 || lease.Status == LeaseStatus.RevisionRequested));
+
+    public Task<List<int>> GetExpiredActiveLeaseIdsAsync(DateTime today, int batchSize)
+        => _dbSet.AsNoTracking()
+            .Where(lease => !lease.IsDeleted
+                && lease.Status == LeaseStatus.Active
+                && lease.EndDate.Date < today.Date)
+            .OrderBy(lease => lease.Id)
+            .Select(lease => lease.Id)
+            .Take(batchSize)
+            .ToListAsync();
+
+    public Task<Lease?> GetForExpirationAsync(int leaseId)
+        => _dbSet.FirstOrDefaultAsync(lease => lease.Id == leaseId && !lease.IsDeleted);
 
     public Task<Lease?> GetWithActivityLogAsync(int leaseId)
         => _dbSet
