@@ -64,7 +64,9 @@ public static class ApplicationModule
         services.AddScoped<ITenantPanelService, TenantPanelService>();
 
         // Leases
+        services.AddScoped<ILeaseApplicationRules, LeaseApplicationRules>();
         services.AddScoped<ILeaseService, LeaseService>();
+        services.AddScoped<ILeaseGroupService, LeaseGroupService>();
 
         // Reservations
         services.AddScoped<IReservationService, ReservationService>();

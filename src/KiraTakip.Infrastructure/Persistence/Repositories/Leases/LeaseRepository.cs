@@ -639,10 +639,14 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
                 authorizedUnitIds)
             .FirstOrDefaultAsync();
 
-    public Task<bool> HasOpenApplicationForUnitAsync(int unitId, int? excludedLeaseId = null)
+    public Task<bool> HasOpenApplicationForUnitAsync(
+        int unitId,
+        int? excludedLeaseId = null,
+        int? excludedLeaseGroupId = null)
         => _dbSet.AsNoTracking().AnyAsync(lease =>
             lease.UnitId == unitId
             && (!excludedLeaseId.HasValue || lease.Id != excludedLeaseId.Value)
+            && (!excludedLeaseGroupId.HasValue || lease.LeaseGroupId != excludedLeaseGroupId.Value)
             && (lease.Status == LeaseStatus.Draft
                 || lease.Status == LeaseStatus.RevisionRequested));
 

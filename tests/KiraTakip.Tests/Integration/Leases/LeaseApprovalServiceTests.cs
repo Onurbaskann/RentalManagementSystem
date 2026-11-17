@@ -871,7 +871,18 @@ public class LeaseApprovalServiceTests : IDisposable
             new DocumentTypeRepository(_context),
             new ApplicationUserRepository(_context),
             new TestCurrentUserContext(actorUserId, isSuperAdmin),
-            new TestOperationalPolicyProvider());
+            new TestOperationalPolicyProvider(),
+            new LeaseApplicationRules(
+                leaseRepository,
+                rateRepository,
+                chargeTypeRepository,
+                new UnitRepository(_context),
+                new TenantRepository(_context),
+                chargeGenerationOverride ?? chargeGeneration,
+                new DocumentRepository(_context),
+                new DocumentTypeRepository(_context),
+                new LeaseReviewHistoryRepository(_context),
+                new TestOperationalPolicyProvider()));
     }
 
     private IChargeGenerationService CreateChargeGenerationService()

@@ -26,6 +26,7 @@ using KiraTakip.Services.Interfaces.Identity;
 using KiraTakip.Services.Interfaces.Leases;
 using KiraTakip.Services.Interfaces.Payments;
 using KiraTakip.Services.Interfaces.Reporting;
+using static KiraTakip.Services.Leases.LeaseApplicationRules;
 
 namespace KiraTakip.Services.Leases;
 
@@ -44,7 +45,8 @@ public class LeaseService(
     IDocumentTypeRepository documentTypeRepository,
     IApplicationUserRepository applicationUserRepository,
     ICurrentUserContext currentUserContext,
-    IOperationalPolicyProvider operationalPolicyProvider) : ILeaseService, ITransactionalService
+    IOperationalPolicyProvider operationalPolicyProvider,
+    ILeaseApplicationRules rules) : ILeaseService, ITransactionalService
 {
     public async Task<List<LeaseListItemDto>> GetAllAsync(GetLeasesInput input)
     {
@@ -95,7 +97,7 @@ public class LeaseService(
     public async Task<Lease> CreateDraftAsync(CreateLeaseDraftInput input)
     {
         await EnsureActorAsync(input.ActorUserId);
-        var validated = await ValidateApplicationDataAsync(
+        var validated = await rules.ValidateApplicationDataAsync(
             input.UnitId,
             input.TenantId,
             input.StartDate,
@@ -171,6 +173,7 @@ public class LeaseService(
             input.AccessScope,
             LeaseApplicationLifecycle.CanEditDraft,
             requireOwner: true);
+        EnsureNotGrouped(lease);
         await ApplyApplicationChangesAsync(
             lease,
             input.UnitId,
@@ -203,6 +206,7 @@ public class LeaseService(
             input.AccessScope,
             status => LeaseApplicationLifecycle.CanTransition(status, LeaseStatus.Draft),
             requireOwner: true);
+        EnsureNotGrouped(lease);
         await ApplyApplicationChangesAsync(
             lease,
             input.UnitId,
@@ -258,6 +262,7 @@ public class LeaseService(
             input.AccessScope,
             LeaseApplicationLifecycle.CanDeleteApplication,
             requireOwner: false);
+        EnsureNotGrouped(lease);
         Guard.Conflict(
             await leaseRepository.HasChargesAsync(lease.Id),
             "Tahakkuk bulunan başvuru silinemez.",
@@ -286,80 +291,12 @@ public class LeaseService(
             input.AccessScope,
             status => LeaseApplicationLifecycle.CanTransition(status, LeaseStatus.Active),
             requireOwner: false);
-        var storedArea = lease.RentalModeSnapshot == UnitRentalMode.CapacityBased
-            ? await leaseRepository.GetLeaseAreaAsync(lease.Id)
-            : null;
-        await ValidateApplicationDataAsync(
-            lease.UnitId,
-            lease.TenantId,
-            lease.StartDate,
-            lease.EndDate,
-            lease.DueDay,
-            (await leaseRateOverrideRepository.GetWithChargeTypeAsync(lease.Id))
-                .Select(rate => new LeaseRateOverrideInput(
-                    rate.ChargeTypeId,
-                    rate.UnitValue,
-                    rate.CalculationMethod,
-                    rate.KdvRate))
-                .ToList(),
-            input.AccessScope,
-            lease.IsRentFree,
-            storedArea?.RentedArea,
-            storedArea?.AllocatedArea,
-            lease.Id);
-        Guard.Conflict(
-            await leaseRepository.HasChargesAsync(lease.Id),
-            "Taslak başvuruda beklenmeyen tahakkuk bulundu.",
-            "Lease.DraftHasCharges");
-        Guard.Conflict(
-            await leaseRepository.HasCreationActivityAsync(lease.Id),
-            "Taslak başvuruda beklenmeyen oluşturma geçmişi bulundu.",
-            "Lease.DraftHasCreationActivity");
-        await EnsureRequiredDocumentsAsync(lease.Id);
-
-        var previews = await chargeGenerationService.ComposeLineItemsAsync(
-            new ComposeLeaseLineItemsInput(
-                lease.UnitId,
-                lease.TenantId,
-                lease.StartDate,
-                lease.Id));
-        if (!lease.IsRentFree)
-        {
-            var rentPreview = previews.SingleOrDefault(preview =>
-                string.Equals(preview.ChargeTypeCode, BorcTipiConsts.Kira, StringComparison.OrdinalIgnoreCase));
-            Guard.Conflict(
-                rentPreview == null,
-                "Kira Bedeli borç tipi aktif olmadan ücretli sözleşme onaylanamaz.",
-                "Lease.ActiveRentChargeTypeRequired");
-            Guard.Conflict(
-                !rentPreview!.IsRateFound || rentPreview.Amount <= 0,
-                "Ücretli sözleşme için pozitif bir kira bedeli tarifesi tanımlanmalıdır.",
-                "Lease.PositiveRentRateRequired");
-        }
-        lease.IsKdvApplied = previews.Any(preview =>
-            preview.Behavior == ChargeTypeBehavior.MonthlyFixed && preview.KdvRate > 0);
-        var monthlyAmount = previews
-            .Where(preview => string.Equals(
-                preview.ChargeTypeCode,
-                BorcTipiConsts.Kira,
-                StringComparison.OrdinalIgnoreCase))
-            .Sum(preview => preview.Amount);
-        lease.Status = LeaseStatus.Active;
-        await AddReviewAsync(
+        EnsureNotGrouped(lease);
+        await rules.ActivateAsync(
             lease,
-            LeaseReviewActionType.Approved,
-            LeaseStatus.Draft,
-            LeaseStatus.Active,
             input.ActorUserId,
-            NormalizeOptionalExplanation(input.Explanation));
-        lease.ActivityLog.Add(new LeaseActivityLog
-        {
-            LeaseId = lease.Id,
-            ActivityType = LeaseActivityType.Creation,
-            TransactionDate = DateTime.UtcNow,
-            Description = "Sözleşme başvurusu onaylandı.",
-            NewRentAmount = monthlyAmount
-        });
+            input.Explanation,
+            input.AccessScope);
         await uow.SaveChangesAsync();
         await chargeGenerationService.GenerateForLeaseAsync(
             new GenerateLeaseChargesInput(lease.Id));
@@ -373,6 +310,7 @@ public class LeaseService(
             "Lease.NotFound");
 
         EnsureScope(lease.Unit.PropertyId, lease.UnitId, input.AccessScope);
+        EnsureNotGrouped(lease);
         Guard.Conflict(
             !LeaseLifecycle.CanExtend(lease.Status),
             "Yalnız aktif veya süresi dolmuş sözleşme uzatılabilir.",
@@ -399,7 +337,7 @@ public class LeaseService(
                 lease.UnitId, extensionStart, input.NewEndDate, lease.Id)).ToList();
             occupants.Add(new CapacityOccupant(
                 lease.StartDate, input.NewEndDate, leaseArea?.AllocatedArea ?? 0m));
-            EnsureCapacityAvailable(
+            rules.EnsureCapacityAvailable(
                 lease.Unit.Capacity!.Value,
                 lease.Unit.Area,
                 occupants,
@@ -415,7 +353,7 @@ public class LeaseService(
                 "Seçilen birimde bu tarih aralığıyla çakışan açık sözleşme bulunmaktadır.",
                 "Lease.ActiveUnitConflict");
         EnsureOverridePermission(input.UpdateRate, input.CanOverrideRate);
-        await EnsureRateOverridesAsync(
+        await rules.EnsureRateOverridesAsync(
             input.RateOverrides,
             await leaseRepository.GetRentedAreaAsync(lease.Id) ?? lease.Unit.Area,
             lease.IsRentFree);
@@ -473,6 +411,7 @@ public class LeaseService(
             "Lease.NotFound");
 
         EnsureScope(lease.Unit.PropertyId, lease.UnitId, input.AccessScope);
+        EnsureNotGrouped(lease);
         Guard.Conflict(
             !LeaseLifecycle.CanTerminate(lease.Status),
             "Yalnız aktif sözleşme feshedilebilir.",
@@ -545,7 +484,7 @@ public class LeaseService(
             "Yalnız aktif sözleşmenin tahakkukları yeniden üretilebilir.",
             "Lease.NotActive");
         EnsureOverridePermission(input.UpdateRate, input.CanOverrideRate);
-        await EnsureRateOverridesAsync(
+        await rules.EnsureRateOverridesAsync(
             input.RateOverrides,
             await leaseRepository.GetRentedAreaAsync(lease.Id) ?? lease.Unit.Area,
             lease.IsRentFree);
@@ -639,154 +578,6 @@ public class LeaseService(
             input.LeaseIds,
             input.TenantId);
 
-    private sealed record ValidatedApplication(
-        LeaseUnitContextDto Unit,
-        (decimal Rented, decimal Allocated)? Area);
-
-    private async Task<ValidatedApplication> ValidateApplicationDataAsync(
-        int unitId,
-        int tenantId,
-        DateTime startDate,
-        DateTime endDate,
-        int dueDay,
-        IReadOnlyCollection<LeaseRateOverrideInput> rateOverrides,
-        LeaseAccessScopeInput accessScope,
-        bool isRentFree,
-        decimal? rentedArea,
-        decimal? allocatedArea,
-        int? excludeLeaseId = null)
-    {
-        Guard.InvalidField(
-            !LeaseSchedulePolicy.HasValidDateRange(startDate, endDate),
-            nameof(endDate),
-            "Bitiş tarihi başlangıç tarihinden sonra olmalıdır.",
-            "Lease.InvalidDateRange");
-        Guard.InvalidField(
-            !LeaseSchedulePolicy.IsValidDueDay(dueDay),
-            nameof(dueDay),
-            "Vade günü 1-31 arasında olmalıdır.",
-            "Lease.InvalidDueDay");
-
-        var unit = Guard.NotFound(
-            await unitRepository.GetLeaseContextAsync(unitId),
-            "Seçilen birim bulunamadı.",
-            "Lease.UnitNotFound");
-        EnsureScope(unit.PropertyId, unit.UnitId, accessScope);
-        Guard.InvalidField(
-            !unit.IsRentable,
-            nameof(unitId),
-            "Seçilen birim kiralanabilir değildir.",
-            "Lease.UnitNotRentable");
-        Guard.InvalidField(
-            await tenantRepository.GetByIdAsync(tenantId) == null,
-            nameof(tenantId),
-            "Seçilen kiracı bulunamadı.",
-            "Lease.TenantNotFound");
-        if (HasScopeRestriction(accessScope))
-        {
-            Guard.Forbidden(
-                !await tenantRepository.IsInScopeAsync(
-                    tenantId,
-                    accessScope.PropertyIds?.ToList(),
-                    accessScope.UnitIds?.ToList()),
-                "Seçilen kiracı yetki kapsamınızın dışındadır.",
-                "Lease.TenantOutOfScope");
-        }
-        (decimal Rented, decimal Allocated)? area = null;
-        if (unit.RentalMode == UnitRentalMode.CapacityBased)
-            area = await ValidateCapacityLeaseAsync(
-                unit, startDate, endDate, rentedArea, allocatedArea, excludeLeaseId);
-        else
-            Guard.InvalidField(
-                await leaseRepository.HasOverlappingActiveLeaseAsync(unitId, startDate, endDate, excludeLeaseId),
-                nameof(unitId),
-                "Seçilen birimde bu tarih aralığıyla çakışan açık sözleşme bulunmaktadır.",
-                "Lease.ActiveUnitConflict");
-        await EnsureRateOverridesAsync(rateOverrides, area?.Rented ?? unit.Area, isRentFree);
-
-        return new ValidatedApplication(unit, area);
-    }
-
-    private async Task<(decimal Rented, decimal Allocated)> ValidateCapacityLeaseAsync(
-        LeaseUnitContextDto unit,
-        DateTime startDate,
-        DateTime endDate,
-        decimal? rentedArea,
-        decimal? allocatedArea,
-        int? excludeLeaseId)
-    {
-        Guard.InvalidField(
-            unit.Capacity is null or <= 0,
-            "UnitId",
-            "Birim için kontenjan tanımlı olmadığından sözleşme açılamaz.",
-            "Lease.UnitCapacityMissing");
-        var capacity = unit.Capacity!.Value;
-        var minimumUsageArea = operationalPolicyProvider.Current.LeaseMinimumUsageArea;
-
-        Guard.InvalidField(
-            rentedArea is null or <= 0 || rentedArea < minimumUsageArea,
-            "RentedArea",
-            $"Kiralanan m² en az {minimumUsageArea:0.##} m² olmalıdır.",
-            "Lease.RentedAreaBelowMinimum");
-        var rented = rentedArea!.Value;
-
-        decimal allocated;
-        if (rented <= UnitCapacityPolicy.CalculateNormArea(unit.Area, capacity))
-            allocated = rented;
-        else
-        {
-            var (minimum, maximum) = UnitCapacityPolicy.GetAllocatedAreaRange(
-                rented, unit.Area, capacity, minimumUsageArea);
-            Guard.InvalidField(
-                allocatedArea is null
-                    || !UnitCapacityPolicy.IsAllocatedAreaAllowed(
-                        allocatedArea.Value, rented, unit.Area, capacity, minimumUsageArea),
-                "AllocatedArea",
-                $"Fiziksel m² {minimum:0.##} ile {maximum:0.##} m² arasında olmalıdır.",
-                "Lease.AllocatedAreaOutOfRange");
-            allocated = allocatedArea!.Value;
-        }
-
-        var occupants = (await leaseRepository.GetOpenLeaseAreasForUnitAsync(
-            unit.UnitId, startDate, endDate, excludeLeaseId)).ToList();
-        occupants.Add(new CapacityOccupant(startDate, endDate, allocated));
-        EnsureCapacityAvailable(capacity, unit.Area, occupants, startDate, endDate, "UnitId");
-
-        return (rented, allocated);
-    }
-
-    private void EnsureCapacityAvailable(
-        int capacity,
-        decimal unitArea,
-        IReadOnlyCollection<CapacityOccupant> occupants,
-        DateTime rangeStart,
-        DateTime rangeEnd,
-        string field)
-    {
-        var violations = UnitCapacityPolicy.GetViolations(
-            capacity,
-            unitArea,
-            operationalPolicyProvider.Current.LeaseMinimumUsageArea,
-            occupants,
-            rangeStart,
-            rangeEnd);
-        Guard.InvalidField(
-            violations.Contains(CapacityViolation.CapacityExceeded),
-            field,
-            "Seçilen tarih aralığında birimin kontenjanı dolu.",
-            "Lease.CapacityExceeded");
-        Guard.InvalidField(
-            violations.Contains(CapacityViolation.AreaExceeded),
-            field,
-            "Seçilen tarih aralığında fiziksel m² toplamı birim alanını aşıyor.",
-            "Lease.CapacityAreaExceeded");
-        Guard.InvalidField(
-            violations.Contains(CapacityViolation.NormBelowMinimum),
-            field,
-            "Boş kontenjan varken kişi başı kalan alan minimum kullanım m² değerinin altına düşüyor.",
-            "Lease.CapacityFreeAreaBelowMinimum");
-    }
-
     private async Task ApplyApplicationChangesAsync(
         Lease lease,
         int unitId,
@@ -802,7 +593,7 @@ public class LeaseService(
         decimal? rentedArea,
         decimal? allocatedArea)
     {
-        var validated = await ValidateApplicationDataAsync(
+        var validated = await rules.ValidateApplicationDataAsync(
             unitId,
             tenantId,
             startDate,
@@ -844,6 +635,12 @@ public class LeaseService(
             lease.Id,
             BuildRateOverrides(lease.Id, rateOverrides));
     }
+
+    private static void EnsureNotGrouped(Lease lease)
+        => Guard.Conflict(
+            lease.LeaseGroupId != null,
+            "Paylaşımlı grup sözleşmesi için grup işlemleri kullanılmalıdır.",
+            "Lease.GroupOperationRequired");
 
     private async Task<Lease> GetApplicationForMutationAsync(
         int leaseId,
@@ -905,130 +702,14 @@ public class LeaseService(
             "Lease.NumberGenerationFailed");
     }
 
-    private async Task EnsureRequiredDocumentsAsync(int leaseId)
-    {
-        var requiredTypes = await documentTypeRepository.GetForTargetAsync(
-            DocumentOwnerType.Lease,
-            requiredOnly: true);
-        if (requiredTypes.Count == 0) return;
-
-        var documents = await documentRepository.GetListAsync(DocumentOwnerType.Lease, leaseId);
-        var existingTypeIds = documents.Select(document => document.DocumentTypeId).ToHashSet();
-        Guard.Conflict(
-            requiredTypes.Any(type => !existingTypeIds.Contains(type.Id)),
-            "Zorunlu sözleşme belgeleri tamamlanmadan başvuru onaylanamaz.",
-            "Lease.RequiredDocumentsMissing");
-    }
-
-    private async Task AddReviewAsync(
+    private Task AddReviewAsync(
         Lease lease,
         LeaseReviewActionType actionType,
         LeaseStatus? fromStatus,
         LeaseStatus? toStatus,
         string actorUserId,
         string? explanation = null)
-        => await reviewHistoryRepository.AddAsync(new LeaseReviewHistory
-        {
-            LeaseId = lease.Id,
-            ActionType = actionType,
-            FromStatus = fromStatus,
-            ToStatus = toStatus,
-            Explanation = explanation,
-            ActorUserId = actorUserId,
-            ActionDate = DateTime.UtcNow
-        });
-
-    private static string NormalizeRequiredExplanation(string? explanation)
-    {
-        var normalized = explanation?.Trim();
-        Guard.Against(
-            string.IsNullOrEmpty(normalized) || normalized.Length > 1000,
-            "Açıklama zorunludur ve en fazla 1000 karakter olabilir.",
-            "Lease.InvalidExplanation");
-        return normalized!;
-    }
-
-    private static string? NormalizeOptionalExplanation(string? explanation)
-    {
-        var normalized = explanation?.Trim();
-        if (string.IsNullOrEmpty(normalized)) return null;
-        Guard.Against(
-            normalized.Length > 1000,
-            "Açıklama en fazla 1000 karakter olabilir.",
-            "Lease.InvalidExplanation");
-        return normalized;
-    }
-
-    private async Task EnsureRateOverridesAsync(
-        IReadOnlyCollection<LeaseRateOverrideInput> rateOverrides,
-        decimal unitArea,
-        bool isRentFree = false)
-    {
-        if (rateOverrides.Count == 0) return;
-
-        var validChargeTypeIds = (await chargeTypeRepository.GetActiveGenerationTypesAsync())
-            .ToList();
-        var rentChargeTypeIds = validChargeTypeIds
-            .Where(chargeType => string.Equals(
-                chargeType.Code,
-                BorcTipiConsts.Kira,
-                StringComparison.OrdinalIgnoreCase))
-            .Select(chargeType => chargeType.Id)
-            .ToHashSet();
-        Guard.InvalidField(
-            isRentFree && rateOverrides.Any(rate => rentChargeTypeIds.Contains(rate.ChargeTypeId)),
-            "LeaseLineItems",
-            "Bedelsiz sözleşmeye kira bedeli tarifesi eklenemez.",
-            "Lease.RentFreeRentRateForbidden");
-        var validChargeTypeIdSet = validChargeTypeIds
-            .Select(chargeType => chargeType.Id)
-            .ToHashSet();
-        Guard.InvalidField(
-            rateOverrides.Any(rate => !validChargeTypeIdSet.Contains(rate.ChargeTypeId)),
-            "LeaseLineItems",
-            "Geçersiz veya pasif bir borç tipi için sözleşme tarifesi oluşturulamaz.",
-            "Lease.InvalidChargeType");
-        Guard.InvalidField(
-            rateOverrides.Any(rate => !RateValuePolicy.IsValid(rate.UnitValue, rate.VatRate, rate.CalculationMethod)),
-            "LeaseLineItems",
-            "Sözleşme tarifesi değerlerinden biri geçersiz.",
-            "Lease.InvalidRateValue");
-        Guard.InvalidField(
-            rateOverrides.Any(rate => !LeaseRatePolicy.CanUseCalculationMethod(unitArea, rate.CalculationMethod)),
-            "LeaseLineItems",
-            "Yüzölçümü tanımlı olmayan birim için m² hesaplama yöntemi kullanılamaz.",
-            "Lease.UnitAreaRequired");
-    }
-
-    private static List<LeaseRateOverride> BuildRateOverrides(
-        int leaseId,
-        IEnumerable<LeaseRateOverrideInput> inputs)
-        => inputs.Select(input => new LeaseRateOverride
-        {
-            LeaseId = leaseId,
-            ChargeTypeId = input.ChargeTypeId,
-            UnitValue = input.UnitValue,
-            CalculationMethod = input.CalculationMethod,
-            KdvRate = input.VatRate
-        }).ToList();
-
-    private static void EnsureScope(
-        int propertyId,
-        int unitId,
-        LeaseAccessScopeInput accessScope)
-    {
-        if (!HasScopeRestriction(accessScope)) return;
-
-        var propertyAccess = accessScope.PropertyIds?.Contains(propertyId) == true;
-        var unitAccess = accessScope.UnitIds?.Contains(unitId) == true;
-        Guard.Forbidden(
-            !propertyAccess && !unitAccess,
-            "Bu sözleşme yetki kapsamınızın dışındadır.",
-            "Lease.OutOfScope");
-    }
-
-    private static bool HasScopeRestriction(LeaseAccessScopeInput accessScope)
-        => accessScope.PropertyIds != null || accessScope.UnitIds != null;
+        => rules.AddReviewAsync(lease, actionType, fromStatus, toStatus, actorUserId, explanation);
 
     private static void EnsureOverridePermission(bool updateRate, bool canOverrideRate)
         => Guard.Forbidden(

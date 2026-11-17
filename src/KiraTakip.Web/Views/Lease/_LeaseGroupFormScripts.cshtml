@@ -1,0 +1,64 @@
+@model KiraTakip.Web.Models.ViewModels.LeaseGroupFormViewModel
+@using System.Text.Json
+@{
+    var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+    var members = Model.Members.Select((member, index) => new
+    {
+        key = index + 1,
+        leaseId = member.LeaseId,
+        leaseNo = member.LeaseNo,
+        tenantId = member.TenantId,
+        area = member.Area,
+        lineItems = member.LeaseLineItems,
+        loading = false,
+        error = (string?)null
+    }).ToList();
+}
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('leaseGroupForm', () => ({
+            unitId: @(Model.UnitId?.ToString() ?? "null"),
+            startDate: '@Model.StartDate.ToString("yyyy-MM-dd")',
+            endDate: '@Model.EndDate.ToString("yyyy-MM-dd")',
+            dueDateRuleType: @((int)Model.DueDateRuleType),
+            dueDay: @Model.DueDay,
+            isRentFree: @(Model.IsRentFree ? "true" : "false"),
+            readOnly: false,
+            submitting: false,
+            nextKey: @(members.Count + 1),
+            unitAreas: @Html.Raw(ViewBag.UnitAreas ?? "{}"),
+            members: @Html.Raw(JsonSerializer.Serialize(members, jsonOptions)),
+            init() {
+                this.$watch('unitId', () => this.members.forEach(m => { m.lineItems = []; this.fetchItems(m); }));
+                this.$watch('startDate', () => this.members.forEach(m => this.fetchItems(m)));
+                this.members.forEach(m => { if (m.lineItems.length === 0) this.fetchItems(m); });
+            },
+            onPickerChanged(event) {
+                if (event.detail.field === 'start') this.startDate = event.detail.value;
+                if (event.detail.field === 'end') this.endDate = event.detail.value;
+            },
+            addMember() { this.members.push({ key: this.nextKey++, leaseId: null, leaseNo: null, tenantId: 0, area: 0, lineItems: [], loading: false, error: null }); },
+            removeMember(index) { if (this.members.length > 2) this.members.splice(index, 1); },
+            unitArea() { return Number(this.unitAreas[this.unitId] ?? 0); },
+            totalArea() { return this.members.reduce((sum, m) => sum + Number(m.area || 0), 0); },
+            remaining() { return this.unitArea() - this.totalArea(); },
+            fmt(value) { return Number(value || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 }); },
+            async fetchItems(m) {
+                if (!this.unitId || !m.tenantId || !this.startDate) return;
+                m.loading = true; m.error = null;
+                try {
+                    const leasePart = m.leaseId ? `&leaseId=${m.leaseId}` : '';
+                    const response = await fetch(`/Lease/GetDefaultLineItems?unitId=${this.unitId}&tenantId=${m.tenantId}&startDate=${this.startDate}${leasePart}`);
+                    if (!response.ok) throw new Error('Tarife kalemleri alınamadı.');
+                    m.lineItems = (await response.json()).map(item => ({ ...item }));
+                } catch (error) { m.error = error.message; }
+                finally { m.loading = false; }
+            },
+            amount(item, m) { return item.calculationMethod == 2 ? item.unitValue * Number(m.area || 0) : item.unitValue; },
+            sourceLabel(source) {
+                const labels = { LeaseRateOverride: 'Sözleşme Tarifesi', UnitRateOverride: 'Birim Tarifesi', PropertyRateOverride: 'Taşınmaz Tarifesi', RateSchedule: 'Genel Tarife', ManualInput: 'Manuel Giriş' };
+                return labels[source] || 'Tarife';
+            }
+        }));
+    });
+</script>

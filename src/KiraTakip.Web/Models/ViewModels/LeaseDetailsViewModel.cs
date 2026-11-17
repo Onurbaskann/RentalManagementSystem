@@ -6,6 +6,7 @@ namespace KiraTakip.Web.Models.ViewModels;
 public class LeaseDetailsViewModel
 {
     public LeaseDetailDto Lease { get; set; } = null!;
+    public int? GroupId { get; set; }
     public int RemainingDays { get; set; }
     public decimal MonthlyAmount { get; set; }
     public decimal AnnualAmount { get; set; }

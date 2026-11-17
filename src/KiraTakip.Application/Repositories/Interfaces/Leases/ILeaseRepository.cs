@@ -69,7 +69,10 @@ public interface ILeaseRepository : IRepositoryBase<Lease>
         int leaseId,
         List<int>? authorizedPropertyIds,
         List<int>? authorizedUnitIds = null);
-    Task<bool> HasOpenApplicationForUnitAsync(int unitId, int? excludedLeaseId = null);
+    Task<bool> HasOpenApplicationForUnitAsync(
+        int unitId,
+        int? excludedLeaseId = null,
+        int? excludedLeaseGroupId = null);
     Task<bool> HasChargesAsync(int leaseId);
     Task<bool> HasCreationActivityAsync(int leaseId);
     Task<Lease?> GetDeletedApplicationForAuditAsync(int leaseId);

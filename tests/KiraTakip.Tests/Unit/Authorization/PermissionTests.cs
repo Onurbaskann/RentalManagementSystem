@@ -190,6 +190,31 @@ public class PermissionTests
     }
 
     [Fact]
+    public void PermissionCatalog_LeaseGroupPermissions_AreConsistentAndInternalOnly()
+    {
+        var expected = new (string Path, string Label)[]
+        {
+            (PermissionCatalog.Lease.CreateGroup, "Paylaşımlı Grup Oluştur"),
+            (PermissionCatalog.Lease.UpdateGroup, "Grup Taslağı Düzenle"),
+            (PermissionCatalog.Lease.ResubmitGroup, "Grubu Yeniden Gönder"),
+            (PermissionCatalog.Lease.DeleteGroupDraft, "Grup Taslağı Sil"),
+            (PermissionCatalog.Lease.ApproveGroup, "Grup Onayla")
+        };
+
+        var leaseModule = Assert.Single(
+            PermissionCatalog.AllModules,
+            module => module.Path == PermissionCatalog.Lease.Module);
+        Assert.All(expected, item => Assert.Contains(item.Path, leaseModule.Actions));
+        Assert.All(expected, item => Assert.Contains(item.Path, PermissionCatalog.ScopeAware));
+        Assert.All(expected, item => Assert.Contains(item.Path, PermissionCatalog.InternalAll));
+        Assert.All(expected, item => Assert.DoesNotContain(item.Path, PermissionCatalog.TenantAll));
+        Assert.All(expected, item => Assert.Equal(
+            item.Label,
+            Assert.Single(leaseModule.ActionDefinitions, x => x.Path == item.Path).DisplayName));
+        Assert.Equal(PermissionCatalog.InternalAll.Count, PermissionCatalog.InternalAll.Distinct().Count());
+    }
+
+    [Fact]
     public void PermissionCatalog_ReservationDecisionPermissions_AreConsistentAndInternalOnly()
     {
         var expected = new[]

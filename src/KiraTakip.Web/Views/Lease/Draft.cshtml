@@ -4,7 +4,9 @@
     ViewData["Title"] = Model.Status == LeaseStatus.RevisionRequested ? "Revizyon İstenen Başvuru" : "Onay Bekleyen Başvuru";
     ViewData["UseCentralFeedback"] = true;
     bool isRevision = Model.Status == LeaseStatus.RevisionRequested;
-    bool readOnly = !Model.CanEdit;
+    bool readOnly = !Model.CanEdit || Model.IsGrouped;
+    bool showApprove = Model.CanApprove && !Model.IsGrouped;
+    bool showDelete = Model.CanDelete && !Model.IsGrouped;
     string editAction = isRevision ? "ResubmitRevision" : "UpdateDraft";
     var uploadedTypeIds = Model.Documents.Select(document => document.DocumentTypeId).ToHashSet();
     var missingRequiredTypes = Model.DocumentTypes.Where(type => type.Required && !uploadedTypeIds.Contains(type.Id)).ToList();
@@ -21,6 +23,15 @@
             @(isRevision ? "Revizyon İstendi" : "Onay Bekliyor")
         </span>
     </div>
+
+    @if (Model.IsGrouped)
+    {
+        <div class="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-indigo-950 text-sm">
+            <div class="font-bold">Bu sözleşme @Model.GroupMemberCount sözleşmelik paylaşımlı bir grubun parçasıdır.</div>
+            <div class="mt-1">Düzenleme, yeniden gönderme, silme ve onay işlemleri grup ekranından yapılır. Revizyon isteme ve belge yükleme bu ekranda kullanılabilir.</div>
+            <a href="@Url.Action("Group", "Lease", new { id = Model.GroupId })" class="btn btn-sm btn-secondary mt-2 inline-block">Gruba Git</a>
+        </div>
+    }
 
     @if (isRevision)
     {
@@ -71,7 +82,7 @@
                 ["LeaseId"] = Model.LeaseId
             })
 
-            @if (Model.CanEdit)
+            @if (Model.CanEdit && !Model.IsGrouped)
             {
                 <div class="flex flex-wrap gap-3 mt-6">
                     <button type="submit" class="btn btn-primary px-6" :disabled="submitting">
@@ -125,10 +136,10 @@
 
     @await Html.PartialAsync("_LeaseReviewTimeline", Model.ReviewHistory)
 
-    @if (Model.Status == LeaseStatus.Draft && (Model.CanApprove || Model.CanRequestRevision || Model.CanDelete))
+    @if (Model.Status == LeaseStatus.Draft && (showApprove || Model.CanRequestRevision || showDelete))
     {
         <div class="card mt-4 flex flex-wrap gap-3">
-            @if (Model.CanApprove)
+            @if (showApprove)
             {
                 <button type="button" class="btn btn-primary" @@click="approveOpen = true">Onayla</button>
             }
@@ -136,13 +147,13 @@
             {
                 <button type="button" class="btn btn-secondary" @@click="revisionOpen = true">Revizyon İste</button>
             }
-            @if (Model.CanDelete)
+            @if (showDelete)
             {
                 <button type="button" class="btn btn-danger" @@click="deleteOpen = true">Başvuruyu Sil</button>
             }
         </div>
     }
-    else if (isRevision && Model.CanDelete)
+    else if (isRevision && showDelete)
     {
         <div class="card mt-4"><button type="button" class="btn btn-danger" @@click="deleteOpen = true">Başvuruyu Sil</button></div>
     }

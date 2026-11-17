@@ -239,14 +239,14 @@
                     Tahakkuk Yeniden Üret
                 </button>
             }
-            @if (canExtend && LeaseLifecycle.CanExtend(s.Status))
+            @if (canExtend && Model.GroupId == null && LeaseLifecycle.CanExtend(s.Status))
             {
                 <button class="btn btn-amber" type="button" @@click="showUzat = true">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
                     Sözleşmeyi Uzat
                 </button>
             }
-            @if (canTerminate && LeaseLifecycle.CanTerminate(s.Status))
+            @if (canTerminate && Model.GroupId == null && LeaseLifecycle.CanTerminate(s.Status))
             {
                 <button class="btn btn-danger" type="button" @@click="showFesih = true">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
@@ -255,6 +255,14 @@
             }
         </div>
     </div>
+
+    @if (Model.GroupId != null)
+    {
+        <div class="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-indigo-950 text-sm flex flex-wrap items-center justify-between gap-3">
+            <div>Bu sözleşme paylaşımlı bir grubun parçasıdır; uzatma ve fesih grup düzeyinde yapılır.</div>
+            <a href="@Url.Action("Group", "Lease", new { id = Model.GroupId })" class="btn btn-sm btn-secondary">Gruba Git</a>
+        </div>
+    }
 
     <!-- Ana Kart -->
     <div class="card mb-4">

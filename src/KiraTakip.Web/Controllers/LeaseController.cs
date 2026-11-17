@@ -28,8 +28,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace KiraTakip.Web.Controllers;
 
 [Authorize]
-public class LeaseController(
+public partial class LeaseController(
     ILeaseService leaseService,
+    ILeaseGroupService leaseGroupService,
     IPropertyService propertyService,
     ITenantService tenantService,
     IStatisticsService statisticsService,
@@ -80,6 +81,7 @@ public class LeaseController(
         var viewModel = new LeaseDetailsViewModel
         {
             Lease = leaseDetails,
+            GroupId = (await leaseGroupService.GetLinkByLeaseIdAsync(id))?.GroupId,
             RemainingDays = statisticsService.GetRemainingDays(lease),
             MonthlyAmount = await statisticsService.GetMonthlyAmountAsync(lease),
             AnnualAmount = await statisticsService.GetAnnualAmountAsync(lease),
@@ -212,8 +214,11 @@ public class LeaseController(
 
         var actorUserId = CurrentActorUserId();
         var isOwner = string.Equals(draft.OwnerUserId, actorUserId, StringComparison.Ordinal);
+        var groupLink = await leaseGroupService.GetLinkByLeaseIdAsync(id);
         var model = new LeaseDraftViewModel
         {
+            GroupId = groupLink?.GroupId,
+            GroupMemberCount = groupLink?.MemberCount ?? 0,
             LeaseId = draft.LeaseId,
             LeaseNo = draft.LeaseNo,
             UnitId = draft.UnitId,
@@ -262,7 +267,7 @@ public class LeaseController(
             documentType.Required,
             documentType.AllowedExtensions,
             documentType.MaxSizeMb)).ToList();
-        return View(model);
+        return View("Draft", model);
     }
 
     [HttpPost]

@@ -9,9 +9,11 @@
 - normal birimde tek açık başvuru kuralı serviste duruyor
 - commit `a96a469`
 
-**F6 tamamlandı** (kontenjan bazlı birimde sözleşme: kapasite kontrolü, kiralanan/fiziksel m², `LeaseArea` yazımı, formda boş kontenjan/m² ve son kontenjan önerisi); tam paket 1078/1078; commit edilmedi.
+**F6 tamamlandı** (kontenjan bazlı birimde sözleşme: kapasite kontrolü, kiralanan/fiziksel m², `LeaseArea` yazımı, formda boş kontenjan/m² ve son kontenjan önerisi); commit `dcc5f1f`.
 
-**Sıradaki: F7a** (paylaşımlı grup: oluşturma, taslak, onay, revizyon, silme). Her faz sonunda kullanıcıdan "devam" beklenir. Kaynak: [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Faz 20 Paratika blokajda olduğu için bu iş öne alındı.
+**F7a tamamlandı** (paylaşımlı grup: oluşturma, taslak düzenleme, yeniden gönderme, silme, onay; 5 yeni izin; grup ekranları); tam paket 1108/1108; commit edilmedi.
+
+**Sıradaki: F7b** (paylaşımlı grup: uzatma, fesih, yeniden yapılanma). Her faz sonunda kullanıcıdan "devam" beklenir. Kaynak: [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Faz 20 Paratika blokajda olduğu için bu iş öne alındı.
 
 **Aktif çalışma:** Kalem bazlı mağaza yönlendirme ve ödeme altyapısı (blokajda)  
 **Aktif faz:** Faz 20 / İç Faz 7 — Paratika Hosted Payment Page entegrasyonu (implementasyon tamamlandı, manuel duman testi ve kullanıcı onayı bekleniyor)  

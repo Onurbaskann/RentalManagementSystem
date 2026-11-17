@@ -1,7 +1,7 @@
 # Paylaşımlı ve Açık Birim — Uygulama Planı
 
 > Kaynak (tek doğruluk kaynağı): [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Bu plan oradaki kararları uygular, yeni kural eklemez.
-> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1–F6 ve unique index migration'ı tamamlandı; sıradaki faz F7a.
+> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1–F7a ve unique index migration'ı tamamlandı; sıradaki faz F7b.
 > Kodda doğrulama: 2026-11-17, 3 Explore ajanı + ana oturum Grep/Read.
 
 ## 0. Bu planla kararlaştırılanlar (2026-11-17, kullanıcı cevabı)
@@ -322,7 +322,19 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
   - Yazma B: viewmodel, controller, form.
   - B, A'nın imzaları kesinleştikten sonra başlar (sıralı).
 
-### F7a — Paylaşımlı grup: oluşturma, taslak, onay, revizyon, silme
+### F7a — Paylaşımlı grup: oluşturma, taslak, onay, revizyon, silme — ✅ Tamamlandı (2026-11-17)
+- **Sonuç:**
+  - Yeni `LeaseGroupService` / `LeaseGroupRepository`. Onay doğrulamaları ve aktivasyon, tekil ve grup akışı aynı kodu kullansın diye `LeaseService`'ten `LeaseApplicationRules`'a çıkarıldı (kullanıcı onayı; tekil davranış değişmedi).
+  - Ortak alanlar: tarihler, vade kuralı, açıklama, bedelsiz. Sözleşme başına: kiracı, m², sözleşme tarifesi.
+  - UpdateGroup ve ResubmitGroup yalnız grubu oluşturana açık (tekildeki sahiplik kuralı). DeleteGroupDraft ve ApproveGroup izne bağlı.
+  - Ek kural: her pay > 0 m² (`LeaseGroup.InvalidArea`; kullanıcı kararı, spec'e eklendi).
+  - Seed: operasyon rolü CreateGroup, UpdateGroup, ResubmitGroup, ApproveGroup aldı; rolde DeleteDraft olmadığı için DeleteGroupDraft verilmedi.
+  - Web: `LeaseController.Group.cs` (partial), `Group`, `GroupForm` ekranları; tarife satırları ortak `_LeaseLineItemFields` partial'ında. `Draft` action'ı artık görünüm adını açıkça veriyor (F6'da not edilen 500 riski kapandı).
+  - Testler: `LeaseGroupServiceTests` (12), `LeaseGroupControllerArchitectureTests`, `PermissionTests` +1. Tam paket 1105/1105; iki yazma denetimi ve son denetim ONAY.
+- **Açık notlar (plan sonunda bakılacak):**
+  - `Lease/UpdateDueDate` gruptaki tek sözleşmede açık; doküman kapatılanlar arasında saymıyor. Grup ortak vade kuralı taşıdığı için kapatılması gerekip gerekmediği karara bağlanmalı.
+  - Formlar tarayıcıda denenmedi.
+- **Sonradan kapatılanlar (2026-11-17):** grup onayı "hepsi ya da hiçbiri" testi (`Lease.RequiredDocumentsMissing`) ile tekil ResubmitRevision/Extend/Terminate kapatma testleri eklendi; `Lease/Group/{id}/Edit` bekleyen üyesi olmayan grupta açılmıyor, detaya "Grup bu durumda düzenlenemez." uyarısıyla dönüyor; hata sonrası üye başlığı `LeaseNo` gizli alanıyla korunuyor. Tam paket 1108/1108, denetim ONAY.
 - **Servis:** Yeni `Application/Services/Leases/LeaseGroupService` (+ arayüz) ve `ILeaseGroupRepository`.
   - **CreateGroup:**
     - Yalnız Birim bazlı ve Kiralanabilir birim.
@@ -442,7 +454,7 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
 3. `PROGRESS.md` güncellenir ve kaynak dokümanda "Sonraki adım" kapatılır.
 4. Production notu: `AddSharedAndCapacityUnits` (ve bekleyen `AddLeaseExpirationActivityType`) production'a uygulanmalı.
 5. Manuel tarayıcı kontrolü kullanıcıdadır.
-6. Fazlardan kalan açık notlar kullanıcıyla birlikte tekrar değerlendirilir (2026-11-17 kullanıcı kararı): F5 "Sonraki fazlar için not" ve F6 "Açık notlar" maddeleri.
+6. Fazlardan kalan açık notlar kullanıcıyla birlikte tekrar değerlendirilir (2026-11-17 kullanıcı kararı): F5 "Sonraki fazlar için not", F6 ve F7a "Açık notlar" maddeleri.
 
 ## 4. Doğrulama maddesi → test eşlemesi
 | Dokümandaki madde | Test | Faz |

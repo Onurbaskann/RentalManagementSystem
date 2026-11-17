@@ -48,6 +48,9 @@ public sealed class LeaseDraftViewModel : ILeaseFormViewModel
     public bool CanApprove { get; set; }
     public bool CanRequestRevision { get; set; }
     public bool CanDelete { get; set; }
+    public int? GroupId { get; set; }
+    public int GroupMemberCount { get; set; }
+    public bool IsGrouped => GroupId.HasValue;
     public List<UnitLookupDto> AvailableUnits { get; set; } = [];
     public List<TenantListItemDto> Tenants { get; set; } = [];
     public List<LeaseLineItemInputDto> LeaseLineItems { get; set; } = [];

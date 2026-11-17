@@ -41,6 +41,10 @@
                 Yeni Sözleşme Başvurusu
             </a>
         }
+        @if (await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.CreateGroup))
+        {
+            <a href="/Lease/CreateGroup" class="btn btn-secondary flex items-center gap-2">Paylaşımlı Grup</a>
+        }
     </div>
 </div>
 

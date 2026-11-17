@@ -197,7 +197,59 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
             new DocumentTypeRepository(context),
             new ApplicationUserRepository(context),
             new TestUserContext(actorUserId),
+            new TestOperationalPolicyProvider(),
+            CreateRules(leaseRepository, rateRepository, chargeTypeRepository, chargeGeneration));
+    }
+
+    private LeaseApplicationRules CreateRules(
+        LeaseRepository leaseRepository,
+        LeaseRateOverrideRepository rateRepository,
+        ChargeTypeRepository chargeTypeRepository,
+        ChargeGenerationService chargeGeneration)
+        => new(
+            leaseRepository,
+            rateRepository,
+            chargeTypeRepository,
+            new UnitRepository(context),
+            new TenantRepository(context),
+            chargeGeneration,
+            new DocumentRepository(context),
+            new DocumentTypeRepository(context),
+            new LeaseReviewHistoryRepository(context),
             new TestOperationalPolicyProvider());
+
+    public LeaseGroupService CreateGroupService(string actorUserId)
+    {
+        var leaseRepository = new LeaseRepository(context);
+        var rateRepository = new LeaseRateOverrideRepository(context);
+        var chargeTypeRepository = new ChargeTypeRepository(context);
+        var rateResolver = new RateResolverService(
+            rateRepository,
+            new UnitRateRepository(context),
+            new PropertyRateOverrideRepository(context),
+            new RateScheduleRepository(context),
+            leaseRepository,
+            new UnitRepository(context),
+            new TenantRepository(context));
+        var chargeGeneration = new ChargeGenerationService(
+            new ChargeRepository(context),
+            chargeTypeRepository,
+            new UnitOfWork(context),
+            rateResolver,
+            leaseRepository,
+            new UnitRepository(context),
+            new TenantRepository(context));
+        return new LeaseGroupService(
+            new LeaseGroupRepository(context),
+            leaseRepository,
+            rateRepository,
+            new UnitRepository(context),
+            new DocumentRepository(context),
+            new ApplicationUserRepository(context),
+            chargeGeneration,
+            CreateRules(leaseRepository, rateRepository, chargeTypeRepository, chargeGeneration),
+            new TestUserContext(actorUserId),
+            new UnitOfWork(context));
     }
 
     private static ApplicationUser CreateUser(string userName, string displayName) => new()
