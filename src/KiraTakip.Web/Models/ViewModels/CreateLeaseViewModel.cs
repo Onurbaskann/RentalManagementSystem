@@ -14,6 +14,8 @@ public class CreateLeaseViewModel : ILeaseFormViewModel
     public int DueDay { get; set; } = 1;
     public string? Description { get; set; }
     public bool IsRentFree { get; set; }
+    public decimal? RentedArea { get; set; }
+    public decimal? AllocatedArea { get; set; }
     public List<UnitLookupDto> AvailableUnits { get; set; } = [];
     public List<TenantListItemDto> Tenants { get; set; } = [];
     public List<LeaseLineItemInputDto> LeaseLineItems { get; set; } = [];

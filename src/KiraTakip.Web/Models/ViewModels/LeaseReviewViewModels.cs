@@ -14,6 +14,8 @@ public interface ILeaseFormViewModel
     int DueDay { get; set; }
     string? Description { get; set; }
     bool IsRentFree { get; set; }
+    decimal? RentedArea { get; set; }
+    decimal? AllocatedArea { get; set; }
     List<UnitLookupDto> AvailableUnits { get; set; }
     List<TenantListItemDto> Tenants { get; set; }
     List<LeaseLineItemInputDto> LeaseLineItems { get; set; }
@@ -35,6 +37,8 @@ public sealed class LeaseDraftViewModel : ILeaseFormViewModel
     public int DueDay { get; set; }
     public string? Description { get; set; }
     public bool IsRentFree { get; set; }
+    public decimal? RentedArea { get; set; }
+    public decimal? AllocatedArea { get; set; }
     public LeaseStatus Status { get; set; }
     public byte[] RowVersion { get; set; } = [];
     public string OwnerDisplayName { get; set; } = string.Empty;

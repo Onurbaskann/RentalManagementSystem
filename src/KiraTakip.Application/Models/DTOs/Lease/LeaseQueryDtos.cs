@@ -66,7 +66,8 @@ public record LeaseUnitContextDto(
     bool IsRentable,
     string UnitTypeName,
     UnitTypeUsage UnitTypeUsage,
-    UnitRentalMode RentalMode);
+    UnitRentalMode RentalMode,
+    int? Capacity = null);
 
 public record CreateLeaseInput(
     int UnitId,
@@ -78,7 +79,9 @@ public record CreateLeaseInput(
     string? Description,
     IReadOnlyCollection<LeaseRateOverrideInput> RateOverrides,
     LeaseAccessScopeInput AccessScope,
-    bool IsRentFree = false);
+    bool IsRentFree = false,
+    decimal? RentedArea = null,
+    decimal? AllocatedArea = null);
 
 public record ExtendLeaseInput(
     int LeaseId,

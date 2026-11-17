@@ -2,6 +2,7 @@ using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces.Common;
 using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Dtos.Document;
+using KiraTakip.Domain.Leases;
 
 namespace KiraTakip.Repositories.Interfaces.Leases;
 
@@ -79,4 +80,12 @@ public interface ILeaseRepository : IRepositoryBase<Lease>
     Task<List<string>> GetExistingLeaseNosAsync();
     Task<decimal?> GetRentedAreaAsync(int leaseId);
     Task<Dictionary<int, decimal>> GetRentedAreasAsync(IReadOnlyCollection<int> leaseIds);
+    Task<IReadOnlyList<CapacityOccupant>> GetOpenLeaseAreasForUnitAsync(
+        int unitId,
+        DateTime start,
+        DateTime end,
+        int? excludeLeaseId);
+    Task<LeaseArea?> GetLeaseAreaAsync(int leaseId);
+    Task UpsertLeaseAreaAsync(int leaseId, decimal rentedArea, decimal allocatedArea);
+    Task RemoveLeaseAreaAsync(int leaseId);
 }

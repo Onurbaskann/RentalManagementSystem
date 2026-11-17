@@ -17,6 +17,7 @@ using KiraTakip.Services.Interfaces.Charges;
 using KiraTakip.Services.Interfaces.Documents;
 using KiraTakip.Services.Interfaces.Identity;
 using KiraTakip.Services.Interfaces.Leases;
+using KiraTakip.Services.Interfaces.Payments;
 using KiraTakip.Services.Interfaces.Pricing;
 using KiraTakip.Services.Interfaces.Properties;
 using KiraTakip.Services.Interfaces.Reporting;
@@ -39,7 +40,8 @@ public class LeaseController(
     IPermissionScopeProvider permissionScopeProvider,
     IPermissionScopeCache permissionScopeCache,
     ICurrentUserContext currentUserContext,
-    ICurrentUserPermissionService permissionService) : Controller
+    ICurrentUserPermissionService permissionService,
+    IOperationalPolicyProvider operationalPolicyProvider) : Controller
 {
     [Authorize(Policy = PermissionCatalog.Lease.Module)]
     public async Task<IActionResult> Index(string? filter, [FromQuery] TableQuery query)
@@ -186,7 +188,9 @@ public class LeaseController(
                 BuildRateOverrideInputs(viewModel.LeaseLineItems, viewModel.IsRentFree),
                 CurrentActorUserId(),
                 BuildAccessScope(),
-                viewModel.IsRentFree));
+                viewModel.IsRentFree,
+                viewModel.RentedArea,
+                viewModel.AllocatedArea));
         }
         catch (BusinessValidationException exception)
         {
@@ -224,6 +228,8 @@ public class LeaseController(
             DueDay = draft.DueDay,
             Description = draft.Description,
             IsRentFree = draft.IsRentFree,
+            RentedArea = draft.RentedArea,
+            AllocatedArea = draft.AllocatedArea,
             Status = draft.Status,
             RowVersion = draft.RowVersion,
             OwnerDisplayName = draft.OwnerDisplayName,
@@ -270,7 +276,8 @@ public class LeaseController(
             viewModel.StartDate, viewModel.EndDate, viewModel.DueDateRuleType,
             viewModel.DueDay, viewModel.Description,
             BuildRateOverrideInputs(viewModel.LeaseLineItems, viewModel.IsRentFree), viewModel.RowVersion,
-            CurrentActorUserId(), BuildAccessScope(), viewModel.IsRentFree));
+            CurrentActorUserId(), BuildAccessScope(), viewModel.IsRentFree,
+            viewModel.RentedArea, viewModel.AllocatedArea));
         return RedirectToAction(nameof(Draft), new { id = viewModel.LeaseId });
     }
 
@@ -285,7 +292,8 @@ public class LeaseController(
             viewModel.StartDate, viewModel.EndDate, viewModel.DueDateRuleType,
             viewModel.DueDay, viewModel.Description,
             BuildRateOverrideInputs(viewModel.LeaseLineItems, viewModel.IsRentFree), null, viewModel.RowVersion,
-            CurrentActorUserId(), BuildAccessScope(), viewModel.IsRentFree));
+            CurrentActorUserId(), BuildAccessScope(), viewModel.IsRentFree,
+            viewModel.RentedArea, viewModel.AllocatedArea));
         return RedirectToAction(nameof(Draft), new { id = viewModel.LeaseId });
     }
 
@@ -553,7 +561,7 @@ public class LeaseController(
     {
         var accessScope = BuildAccessScope();
         viewModel.AvailableUnits = await propertyService.GetAvailableUnitsAsync(
-            new GetAvailableUnitsInput(accessScope.PropertyIds, accessScope.UnitIds));
+            new GetAvailableUnitsInput(accessScope.PropertyIds, accessScope.UnitIds, null, true));
         viewModel.Tenants = await tenantService.GetAllAsync(
             new GetTenantsInput(accessScope.PropertyIds, accessScope.UnitIds));
         viewModel.DocumentTypes = await documentService.GetTypesAsync(
@@ -561,17 +569,20 @@ public class LeaseController(
 
         ViewBag.UnitAreas = System.Text.Json.JsonSerializer.Serialize(
             viewModel.AvailableUnits.ToDictionary(unit => unit.Id, unit => (double)unit.Area));
+        ViewBag.LeaseMinimumUsageArea = operationalPolicyProvider.Current.LeaseMinimumUsageArea;
     }
+
 
     private async Task PopulateDraftOptionsAsync(LeaseDraftViewModel viewModel)
     {
         var accessScope = BuildAccessScope();
         viewModel.AvailableUnits = await propertyService.GetAvailableUnitsAsync(
-            new GetAvailableUnitsInput(accessScope.PropertyIds, accessScope.UnitIds, viewModel.LeaseId > 0 ? viewModel.UnitId : null));
+            new GetAvailableUnitsInput(accessScope.PropertyIds, accessScope.UnitIds, viewModel.LeaseId > 0 ? viewModel.UnitId : null, true));
         viewModel.Tenants = await tenantService.GetAllAsync(
             new GetTenantsInput(accessScope.PropertyIds, accessScope.UnitIds));
         ViewBag.UnitAreas = System.Text.Json.JsonSerializer.Serialize(
             viewModel.AvailableUnits.ToDictionary(unit => unit.Id, unit => (double)unit.Area));
+        ViewBag.LeaseMinimumUsageArea = operationalPolicyProvider.Current.LeaseMinimumUsageArea;
     }
 
     private string CurrentActorUserId()

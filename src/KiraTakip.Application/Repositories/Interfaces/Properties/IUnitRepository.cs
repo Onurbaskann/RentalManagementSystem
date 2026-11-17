@@ -21,7 +21,8 @@ public interface IUnitRepository : IRepositoryBase<Unit>
     Task<List<UnitLookupDto>> GetAvailableAsync(
         List<int>? authorizedPropertyIds,
         List<int>? authorizedUnitIds = null,
-        int? includedUnitId = null);
+        int? includedUnitId = null,
+        bool includeCapacityBased = false);
     Task<LeaseUnitContextDto?> GetLeaseContextAsync(int unitId);
     Task<List<UnitLookupDto>> GetAllOptionsAsync(
         List<int>? authorizedPropertyIds,

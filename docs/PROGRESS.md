@@ -7,9 +7,11 @@
 > **Sıradaki oturumun işi (2026-11-17):** Paylaşımlı ve açık birim [uygulama planı](refactor-paylasimli-acik-birim-uygulama-plani.md) onaylandı; A1–A6 yazıldığı gibi geçerli. **F1 tamamlandı** (domain politikaları + ondalık ayar altyapısı; commit `d787d45`). **F2 tamamlandı** (şema + `AddSharedAndCapacityUnits`; commit `cae168a`; migration production'a henüz uygulanmadı, F3 ile birlikte uygulanmalı). **F3 tamamlandı** (birim anlık bilgisi, taslak çakışması, görev ayrılığı kaldırıldı; commit `7f7fb5e`). **F4 tamamlandı** (birim türü alt kırılımı ve özellik kilidi, kontenjan girişi/kuralları/tarihçe, alan ve tür kilidi; tek birimli taşınmaz da kontenjan bazlı olabiliyor; commit `81b527d`). **F5 tamamlandı** (tahakkuk/istatistik kiralanan m²'yi kullanıyor; commit `246fffe`). **Unique index kaldırıldı:**
 - migration `RemoveLeaseOpenApplicationUniqueIndex`; test DB'ye uygulandı, production'a uygulanmadı
 - normal birimde tek açık başvuru kuralı serviste duruyor
-- tam paket 1067/1067; commit edilmedi
+- commit `a96a469`
 
-**Sıradaki: F6** (açık birim sözleşme akışı). Her faz sonunda kullanıcıdan "devam" beklenir. Kaynak: [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Faz 20 Paratika blokajda olduğu için bu iş öne alındı.
+**F6 tamamlandı** (kontenjan bazlı birimde sözleşme: kapasite kontrolü, kiralanan/fiziksel m², `LeaseArea` yazımı, formda boş kontenjan/m² ve son kontenjan önerisi); tam paket 1078/1078; commit edilmedi.
+
+**Sıradaki: F7a** (paylaşımlı grup: oluşturma, taslak, onay, revizyon, silme). Her faz sonunda kullanıcıdan "devam" beklenir. Kaynak: [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Faz 20 Paratika blokajda olduğu için bu iş öne alındı.
 
 **Aktif çalışma:** Kalem bazlı mağaza yönlendirme ve ödeme altyapısı (blokajda)  
 **Aktif faz:** Faz 20 / İç Faz 7 — Paratika Hosted Payment Page entegrasyonu (implementasyon tamamlandı, manuel duman testi ve kullanıcı onayı bekleniyor)  

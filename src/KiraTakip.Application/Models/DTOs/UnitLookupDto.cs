@@ -13,4 +13,10 @@ public class UnitLookupDto
     public UnitStructure UnitStructure { get; set; }
     public string? UnitNo { get; set; }
     public int? FloorNo { get; set; }
+    public UnitRentalMode RentalMode { get; set; } = UnitRentalMode.UnitBased;
+    public int? Capacity { get; set; }
+    public int? FreeCapacity { get; set; }
+    public decimal? FreeArea { get; set; }
+    public decimal? NormArea { get; set; }
+    public decimal? SuggestedLastSlotArea { get; set; }
 }

@@ -12,4 +12,5 @@ public record GetPropertiesPageInput(
 public record GetAvailableUnitsInput(
     IReadOnlyList<int>? PropertyIds = null,
     IReadOnlyList<int>? UnitIds = null,
-    int? IncludedUnitId = null);
+    int? IncludedUnitId = null,
+    bool IncludeCapacityBased = false);

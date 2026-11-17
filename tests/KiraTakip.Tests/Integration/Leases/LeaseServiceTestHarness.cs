@@ -196,7 +196,8 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
             new DocumentRepository(context),
             new DocumentTypeRepository(context),
             new ApplicationUserRepository(context),
-            new TestUserContext(actorUserId));
+            new TestUserContext(actorUserId),
+            new TestOperationalPolicyProvider());
     }
 
     private static ApplicationUser CreateUser(string userName, string displayName) => new()

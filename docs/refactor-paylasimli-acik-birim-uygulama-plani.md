@@ -1,7 +1,7 @@
 # Paylaşımlı ve Açık Birim — Uygulama Planı
 
 > Kaynak (tek doğruluk kaynağı): [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Bu plan oradaki kararları uygular, yeni kural eklemez.
-> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1–F5 ve unique index migration'ı tamamlandı; sıradaki faz F6.
+> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1–F6 ve unique index migration'ı tamamlandı; sıradaki faz F7a.
 > Kodda doğrulama: 2026-11-17, 3 Explore ajanı + ana oturum Grep/Read.
 
 ## 0. Bu planla kararlaştırılanlar (2026-11-17, kullanıcı cevabı)
@@ -276,7 +276,20 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
   - `StatisticsService.GetMonthlyAmountAsync` aynı sonuçları verir.
 - **Ajan:** 1 yazma + 1 denetçi.
 
-### F6 — Açık birim (kontenjan bazlı) sözleşme akışı (D2'nin kontenjan kısmı)
+### F6 — Açık birim (kontenjan bazlı) sözleşme akışı (D2'nin kontenjan kısmı) — ✅ Tamamlandı (2026-11-17)
+- **Sonuç:**
+  - `LeaseService` Create/UpdateDraft/ResubmitRevision/Approve/Extend kontenjan bazlı birimde tek açık başvuru kuralını atlıyor, `UnitCapacityPolicy.GetViolations` ile kapasite kontrolü yapıyor ve `LeaseArea` yazıyor. Taslakta birim kontenjan bazlıdan normale dönerse `LeaseArea` siliniyor. Hata kodları: `Lease.UnitCapacityMissing`, `Lease.CapacityExceeded`, `Lease.CapacityAreaExceeded`, `Lease.CapacityFreeAreaBelowMinimum` (alan UnitId), `Lease.RentedAreaBelowMinimum`, `Lease.AllocatedAreaOutOfRange`.
+  - Uzatmada kapasite yalnız eklenen aralıkta (`EndDate+1..NewEndDate`) kontrol ediliyor; önceki aralık zaten sayılmış durumda.
+  - `LeaseService` yapıcısına `IOperationalPolicyProvider` eklendi.
+  - `UnitRepository.GetAvailableAsync(..., includeCapacityBased)`: yalnız sözleşme formu true geçiyor. Boş kontenjan, boş m² ve son kontenjan önerisi bugünden en geç bitişe kadarki en yoğun güne göre.
+  - Form: kontenjan bazlı birimde "Kiralanan m²", norm aşılınca uyarı ve "Fiziksel m²", son kontenjan önerisi, etikette "N kişi · X m² boş".
+  - Taslak kaydetme/yeniden gönderme hataları eskisi gibi modalla gösteriliyor (alan altı gösterim yalnız Create'te).
+  - Testler: yeni `CapacityLeaseServiceTests` (11 test). Tam paket 1078/1078; iki yazma denetimi ve son denetim ONAY.
+- **Açık notlar (düşük önem):**
+  - Onayda doğrulamanın hesapladığı fiziksel m² geri yazılmıyor; taslaktan sonra P/K değişirse DB'de eski fiziksel m² kalabilir.
+  - Taslak düzenlenirken birim listesinde taslağın kendisi de dolu sayılıyor; etikette boş kontenjan 1 eksik görünür, öneri gereğinden küçük olabilir.
+  - Onayda kapasite yeniden kontrolü ve taslakta birim değişimi ayrıca test edilmedi. Form tarayıcıda denenmedi.
+  - `LeaseController` `!ModelState.IsValid` dalında `Draft()` görünüm adı vermeden dönüyor (F6 öncesinden kalma).
 - **Servis:** `LeaseService` oluşturma, taslak güncelleme, yeniden gönderme, onay ve uzatmada birimin `RentalMode` değerine göre dallanır. Kontenjan bazlıda:
   - `HasOpenApplicationForUnitAsync` atlanır.
   - Tarih çakışması yerine kapasite kontrolü yapılır: aralıktaki en yoğun gün; Active + gelecek tarihli + Draft + RevisionRequested sayılır.
@@ -429,6 +442,7 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
 3. `PROGRESS.md` güncellenir ve kaynak dokümanda "Sonraki adım" kapatılır.
 4. Production notu: `AddSharedAndCapacityUnits` (ve bekleyen `AddLeaseExpirationActivityType`) production'a uygulanmalı.
 5. Manuel tarayıcı kontrolü kullanıcıdadır.
+6. Fazlardan kalan açık notlar kullanıcıyla birlikte tekrar değerlendirilir (2026-11-17 kullanıcı kararı): F5 "Sonraki fazlar için not" ve F6 "Açık notlar" maddeleri.
 
 ## 4. Doğrulama maddesi → test eşlemesi
 | Dokümandaki madde | Test | Faz |

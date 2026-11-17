@@ -26,6 +26,11 @@ public class CreateLeaseViewModelValidator : IValidator<CreateLeaseViewModel>
         if (input.DueDay < 1 || input.DueDay > 31)
             errors.Add(new ValidationError("Vade günü 1-31 arasında olmalıdır.", nameof(input.DueDay)));
 
+        if (input.RentedArea < 0)
+            errors.Add(new ValidationError("Kiralanan m² negatif olamaz.", nameof(input.RentedArea)));
+        if (input.AllocatedArea < 0)
+            errors.Add(new ValidationError("Fiziksel m² negatif olamaz.", nameof(input.AllocatedArea)));
+
         LeaseLineItemValidationRules.AddErrors(
             input.LeaseLineItems
                 .Where(lineItem => !input.IsRentFree

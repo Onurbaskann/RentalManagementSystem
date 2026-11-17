@@ -700,5 +700,6 @@ public class PropertyService(
         => unitRepository.GetAvailableAsync(
             input.PropertyIds?.ToList(),
             input.UnitIds?.ToList(),
-            input.IncludedUnitId);
+            input.IncludedUnitId,
+            input.IncludeCapacityBased);
 }

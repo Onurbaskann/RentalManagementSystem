@@ -1,5 +1,6 @@
 using KiraTakip.Models.Common;
 using KiraTakip.Data;
+using KiraTakip.Domain.Leases;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Common;
@@ -571,6 +572,8 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             DueDay = lease.DueDay,
             Description = lease.Description,
             IsRentFree = lease.IsRentFree,
+            RentedArea = lease.LeaseArea != null ? lease.LeaseArea.RentedArea : (decimal?)null,
+            AllocatedArea = lease.LeaseArea != null ? lease.LeaseArea.AllocatedArea : (decimal?)null,
             Status = lease.Status,
             RowVersion = lease.RowVersion,
             OwnerUserId = lease.CreatedBy,
@@ -722,6 +725,57 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             .AsNoTracking()
             .Where(area => ids.Contains(area.LeaseId))
             .ToDictionaryAsync(area => area.LeaseId, area => area.RentedArea);
+    }
+
+    public async Task<IReadOnlyList<CapacityOccupant>> GetOpenLeaseAreasForUnitAsync(
+        int unitId,
+        DateTime start,
+        DateTime end,
+        int? excludeLeaseId)
+    {
+        var rangeStart = start.Date;
+        var rangeEnd = end.Date;
+        return await _dbSet.AsNoTracking()
+            .Where(lease => lease.UnitId == unitId
+                && !lease.IsDeleted
+                && (lease.Status == LeaseStatus.Active
+                    || lease.Status == LeaseStatus.Draft
+                    || lease.Status == LeaseStatus.RevisionRequested)
+                && (!excludeLeaseId.HasValue || lease.Id != excludeLeaseId.Value)
+                && lease.StartDate.Date <= rangeEnd
+                && lease.EndDate.Date >= rangeStart)
+            .Select(lease => new CapacityOccupant(
+                lease.StartDate,
+                lease.EndDate,
+                lease.LeaseArea != null ? lease.LeaseArea.AllocatedArea : 0m))
+            .ToListAsync();
+    }
+
+    public Task<LeaseArea?> GetLeaseAreaAsync(int leaseId)
+        => ctx.LeaseAreas.AsNoTracking().FirstOrDefaultAsync(area => area.LeaseId == leaseId);
+
+    public async Task UpsertLeaseAreaAsync(int leaseId, decimal rentedArea, decimal allocatedArea)
+    {
+        var area = await ctx.LeaseAreas.FirstOrDefaultAsync(item => item.LeaseId == leaseId);
+        if (area == null)
+        {
+            ctx.LeaseAreas.Add(new LeaseArea
+            {
+                LeaseId = leaseId,
+                RentedArea = rentedArea,
+                AllocatedArea = allocatedArea
+            });
+            return;
+        }
+
+        area.RentedArea = rentedArea;
+        area.AllocatedArea = allocatedArea;
+    }
+
+    public async Task RemoveLeaseAreaAsync(int leaseId)
+    {
+        var area = await ctx.LeaseAreas.FirstOrDefaultAsync(item => item.LeaseId == leaseId);
+        if (area != null) ctx.LeaseAreas.Remove(area);
     }
 
     private static IQueryable<Lease> ApplyScope(

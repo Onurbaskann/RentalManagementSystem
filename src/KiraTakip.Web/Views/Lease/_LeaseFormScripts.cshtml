@@ -26,11 +26,26 @@
                 @foreach (var unit in Model.AvailableUnits)
             {
                                 string name = unit.UnitStructure == KiraTakip.Models.Enums.UnitStructure.MultipleUnits ? $"{unit.PropertyName} — Birim {unit.UnitNo}" : $"{unit.PropertyName} — Komple";
-                @Html.Raw($"{unit.Id}: {{name: {JsonSerializer.Serialize(name)}, meta: {JsonSerializer.Serialize(unit.Area.M2())}, district: {JsonSerializer.Serialize(unit.District)}, city: {JsonSerializer.Serialize(unit.City)}}},")
+                @Html.Raw($"{unit.Id}: {{name: {JsonSerializer.Serialize(name)}, meta: {JsonSerializer.Serialize(unit.Area.M2())}, district: {JsonSerializer.Serialize(unit.District)}, city: {JsonSerializer.Serialize(unit.City)}, isCap: {(unit.RentalMode == KiraTakip.Models.Enums.UnitRentalMode.CapacityBased ? "true" : "false")}, freeCap: {JsonSerializer.Serialize(unit.FreeCapacity)}, freeArea: {JsonSerializer.Serialize(unit.FreeArea)}, normArea: {JsonSerializer.Serialize(unit.NormArea)}, lastSlot: {JsonSerializer.Serialize(unit.SuggestedLastSlotArea)}}},")
             }
             },
         unitAreas: @Html.Raw(ViewBag.UnitAreas ?? "{}"),
-        rentedArea: null,
+        minArea: @((ViewBag.LeaseMinimumUsageArea as decimal?)?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "0"),
+        rentedArea: @(Model.RentedArea?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "null"),
+        allocatedArea: @(Model.AllocatedArea?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "null"),
+        unitInfo() { return this.unitId ? this.units[this.unitId] : null; },
+        isCap() { return !!this.unitInfo()?.isCap; },
+        overNorm() {
+            const u = this.unitInfo();
+            return this.isCap() && u.normArea > 0 && Number(this.rentedArea) > u.normArea;
+        },
+        isLastSlot() { const u = this.unitInfo(); return this.isCap() && u.freeCap === 1 && u.lastSlot > 0; },
+        applySuggestion() {
+            const u = this.unitInfo();
+            if (!this.isLastSlot()) return;
+            this.rentedArea = u.lastSlot;
+            this.allocatedArea = u.normArea > 0 && u.lastSlot > u.normArea ? u.lastSlot : null;
+        },
         calculateDefaultEndDate(startDateStr) {
             if(!startDateStr || !/^\d{4}-\d{2}-\d{2}/.test(startDateStr)) return '';
     const [y, m, d] = startDateStr.split('-').map(Number);
@@ -60,7 +75,13 @@
     },
     init() {
         if (!this.readOnly) {
-            this.$watch('unitId', () => this.fetchLineItems());
+            this.$watch('unitId', () => {
+                this.rentedArea = null; this.allocatedArea = null;
+                this.applySuggestion();
+                this.fetchLineItems();
+            });
+            this.$watch('rentedArea', () => { if (!this.overNorm()) this.allocatedArea = null; });
+            if (this.rentedArea === null && this.isLastSlot()) this.applySuggestion();
             this.$watch('tenantId', () => this.fetchLineItems());
             this.$watch('startDate', () => this.fetchLineItems());
         }
@@ -78,7 +99,7 @@
         } catch (error) { this.error = error.message; }
         finally { this.loading = false; }
     },
-    unitArea() { return this.rentedArea > 0 ? this.rentedArea : (this.unitAreas[this.unitId] ?? 0); },
+    unitArea() { return this.isCap() && this.rentedArea > 0 ? this.rentedArea : (this.unitAreas[this.unitId] ?? 0); },
     amount(item) { return item.calculationMethod == 2 ? item.unitValue * this.unitArea() : item.unitValue; },
     sourceLabel(source) {
         const labels = { LeaseRateOverride: 'Sözleşme Tarifesi', UnitRateOverride: 'Birim Tarifesi', PropertyRateOverride: 'Taşınmaz Tarifesi', RateSchedule: 'Genel Tarife', ManualInput: 'Manuel Giriş' };

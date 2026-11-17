@@ -870,7 +870,8 @@ public class LeaseApprovalServiceTests : IDisposable
             new DocumentRepository(_context),
             new DocumentTypeRepository(_context),
             new ApplicationUserRepository(_context),
-            new TestCurrentUserContext(actorUserId, isSuperAdmin));
+            new TestCurrentUserContext(actorUserId, isSuperAdmin),
+            new TestOperationalPolicyProvider());
     }
 
     private IChargeGenerationService CreateChargeGenerationService()

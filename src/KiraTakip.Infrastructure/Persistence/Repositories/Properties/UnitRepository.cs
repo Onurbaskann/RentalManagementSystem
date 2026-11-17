@@ -165,7 +165,8 @@ public class UnitRepository(ApplicationDbContext ctx) : RepositoryBase<Unit>(ctx
     public async Task<List<UnitLookupDto>> GetAvailableAsync(
         List<int>? authorizedPropertyIds,
         List<int>? authorizedUnitIds = null,
-        int? includedUnitId = null)
+        int? includedUnitId = null,
+        bool includeCapacityBased = false)
     {
         var now = DateTime.Now;
         var query = _dbSet.AsNoTracking().AsQueryable();
@@ -178,9 +179,12 @@ public class UnitRepository(ApplicationDbContext ctx) : RepositoryBase<Unit>(ctx
                 || unitIds.Contains(unit.Id));
         }
 
-        return await query
+        var units = await query
             .Where(unit => unit.UnitType != null && unit.UnitType.Usage == UnitTypeUsage.Rentable)
             .Where(unit => unit.Id == includedUnitId
+                || (includeCapacityBased
+                    && unit.UnitType.RentalMode == UnitRentalMode.CapacityBased
+                    && unit.Capacity != null)
                 || (!unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
                         && lease.StartDate <= now
                         && lease.EndDate >= now)
@@ -198,9 +202,64 @@ public class UnitRepository(ApplicationDbContext ctx) : RepositoryBase<Unit>(ctx
                 Area = unit.Area,
                 UnitStructure = unit.Property.UnitStructure,
                 UnitNo = unit.UnitNo,
-                FloorNo = unit.FloorNo
+                FloorNo = unit.FloorNo,
+                RentalMode = unit.UnitType.RentalMode,
+                Capacity = unit.Capacity
             })
             .ToListAsync();
+
+        if (!includeCapacityBased) return units;
+
+        var capacityUnits = units
+            .Where(unit => unit.RentalMode == UnitRentalMode.CapacityBased && unit.Capacity is > 0)
+            .ToList();
+        if (capacityUnits.Count == 0) return units;
+
+        var today = now.Date;
+        var capacityUnitIds = capacityUnits.Select(unit => unit.Id).ToList();
+        var leases = await _ctx.Leases.IgnoreQueryFilters().AsNoTracking()
+            .Where(lease => capacityUnitIds.Contains(lease.UnitId)
+                && !lease.IsDeleted
+                && OpenStatuses.Contains(lease.Status)
+                && lease.EndDate >= today)
+            .Select(lease => new
+            {
+                lease.UnitId,
+                lease.StartDate,
+                lease.EndDate,
+                AllocatedArea = lease.LeaseArea != null ? lease.LeaseArea.AllocatedArea : 0m
+            })
+            .ToListAsync();
+        var occupantsByUnit = leases
+            .GroupBy(item => item.UnitId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .Select(item => new CapacityOccupant(item.StartDate, item.EndDate, item.AllocatedArea))
+                    .ToList());
+
+        foreach (var unit in capacityUnits)
+        {
+            var capacity = unit.Capacity!.Value;
+            var occupants = occupantsByUnit.GetValueOrDefault(unit.Id) ?? [];
+            var rangeEnd = occupants.Count == 0
+                ? today
+                : occupants.Max(occupant => occupant.EndDate).Date;
+            if (rangeEnd < today) rangeEnd = today;
+
+            var peak = UnitCapacityPolicy.GetPeakUsage(occupants, today, rangeEnd);
+            unit.FreeCapacity = capacity - peak.OccupiedCount;
+            unit.FreeArea = Math.Max(0m, unit.Area - peak.AllocatedArea);
+            unit.NormArea = UnitCapacityPolicy.CalculateNormArea(unit.Area, capacity);
+            unit.SuggestedLastSlotArea = UnitCapacityPolicy.SuggestLastSlotArea(
+                capacity, unit.Area, peak.OccupiedCount, peak.AllocatedArea);
+        }
+
+        return units
+            .Where(unit => unit.RentalMode != UnitRentalMode.CapacityBased
+                || unit.Id == includedUnitId
+                || unit.FreeCapacity > 0)
+            .ToList();
     }
 
     public Task<ReservationUnitContextDto?> GetReservationContextAsync(int unitId)
@@ -226,7 +285,8 @@ public class UnitRepository(ApplicationDbContext ctx) : RepositoryBase<Unit>(ctx
                 unit.UnitType != null && unit.UnitType.Usage == UnitTypeUsage.Rentable,
                 unit.UnitType != null ? unit.UnitType.Name : string.Empty,
                 unit.UnitType != null ? unit.UnitType.Usage : UnitTypeUsage.Rentable,
-                unit.UnitType != null ? unit.UnitType.RentalMode : UnitRentalMode.UnitBased))
+                unit.UnitType != null ? unit.UnitType.RentalMode : UnitRentalMode.UnitBased,
+                unit.Capacity))
             .FirstOrDefaultAsync();
 
     public async Task<List<UnitLookupDto>> GetAllOptionsAsync(
