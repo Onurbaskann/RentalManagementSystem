@@ -32,6 +32,13 @@
                 {
                     <input asp-for="Value" type="number" min="@Model.MinimumValue" max="@Model.MaximumValue" class="form-control" />
                 }
+                else if (Model.InputKind == SystemSettingInputKind.Decimal)
+                {
+                    <input asp-for="Value" type="number" step="any"
+                           min="@Model.MinimumValue?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                           max="@Model.MaximumValue?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                           class="form-control" />
+                }
                 else
                 {
                     <input asp-for="Value" type="text" class="form-control" />

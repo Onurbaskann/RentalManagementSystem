@@ -11,6 +11,6 @@ public class SystemSettingEditViewModel
     public string Description { get; set; } = string.Empty;
     public string Value { get; set; } = string.Empty;
     public SystemSettingInputKind InputKind { get; set; }
-    public int? MinimumValue { get; set; }
-    public int? MaximumValue { get; set; }
+    public decimal? MinimumValue { get; set; }
+    public decimal? MaximumValue { get; set; }
 }

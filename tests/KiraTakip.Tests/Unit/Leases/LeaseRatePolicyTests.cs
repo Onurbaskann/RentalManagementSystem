@@ -30,6 +30,35 @@ public class LeaseRatePolicyTests
         Assert.Equal(expected, result);
     }
 
+    [Fact]
+    public void CalculateMultiplier_M2_ShouldUseRentedAreaOrUnitArea()
+    {
+        Assert.Equal(20m, LeaseRatePolicy.CalculateMultiplier(CalculationMethod.M2, 60m, 20m, false));
+        Assert.Equal(60m, LeaseRatePolicy.CalculateMultiplier(CalculationMethod.M2, 60m, null, false));
+    }
+
+    [Fact]
+    public void CalculateMultiplier_FixedUpperLayer_ShouldScaleByAreaRatio()
+    {
+        var third = LeaseRatePolicy.CalculateMultiplier(CalculationMethod.Fixed, 60m, 20m, false);
+        var twoThirds = LeaseRatePolicy.CalculateMultiplier(CalculationMethod.Fixed, 60m, 40m, false);
+
+        Assert.Equal(2000m, Math.Round(6000m * third, 2));
+        Assert.Equal(4000m, Math.Round(6000m * twoThirds, 2));
+    }
+
+    [Fact]
+    public void CalculateMultiplier_Fixed_ShouldReturnOne_ForLeaseRateSourceOrNullRentedArea()
+    {
+        Assert.Equal(1m, LeaseRatePolicy.CalculateMultiplier(CalculationMethod.Fixed, 60m, 20m, true));
+        Assert.Equal(1m, LeaseRatePolicy.CalculateMultiplier(CalculationMethod.Fixed, 60m, null, false));
+    }
+
+    [Fact]
+    public void CalculateMultiplier_Fixed_ShouldThrow_WhenUnitAreaNotPositive()
+        => Assert.Throws<ArgumentOutOfRangeException>(
+            () => LeaseRatePolicy.CalculateMultiplier(CalculationMethod.Fixed, 0m, 20m, false));
+
     [Theory]
     [InlineData(CalculationMethod.M2, 100, 50, 5000)]
     [InlineData(CalculationMethod.Fixed, 100, 50, 100)]

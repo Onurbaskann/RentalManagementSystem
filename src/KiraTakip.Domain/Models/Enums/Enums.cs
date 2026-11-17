@@ -52,7 +52,8 @@ public enum OccupancyStatus
 {
     Vacant = 1,
     Leased = 2,
-    ExpiringSoon = 3
+    ExpiringSoon = 3,
+    PartiallyLeased = 4
 }
 
 public enum UnitTypeUsage
@@ -195,4 +196,10 @@ public enum OnlinePaymentEventType
     InquiryPerformed = 4,
     Succeeded = 5,
     Failed = 6
+}
+
+public enum UnitRentalMode
+{
+    UnitBased = 1,
+    CapacityBased = 2
 }

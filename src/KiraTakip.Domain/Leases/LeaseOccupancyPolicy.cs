@@ -15,4 +15,13 @@ public static class LeaseOccupancyPolicy
             ? OccupancyStatus.ExpiringSoon
             : OccupancyStatus.Leased;
     }
+
+    public static OccupancyStatus DetermineCapacityStatus(int occupiedCount, int capacity)
+    {
+        if (occupiedCount <= 0) return OccupancyStatus.Vacant;
+
+        return occupiedCount < capacity
+            ? OccupancyStatus.PartiallyLeased
+            : OccupancyStatus.Leased;
+    }
 }

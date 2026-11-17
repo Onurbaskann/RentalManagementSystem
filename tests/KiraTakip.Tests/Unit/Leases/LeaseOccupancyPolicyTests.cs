@@ -35,4 +35,14 @@ public class LeaseOccupancyPolicyTests
 
         Assert.Equal(expected, status);
     }
+
+    [Theory]
+    [InlineData(0, 10, OccupancyStatus.Vacant)]
+    [InlineData(6, 10, OccupancyStatus.PartiallyLeased)]
+    [InlineData(10, 10, OccupancyStatus.Leased)]
+    public void DetermineCapacityStatus_ShouldReturnExpected(
+        int occupiedCount,
+        int capacity,
+        OccupancyStatus expected)
+        => Assert.Equal(expected, LeaseOccupancyPolicy.DetermineCapacityStatus(occupiedCount, capacity));
 }

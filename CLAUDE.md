@@ -106,5 +106,6 @@ CS derleme hatası yoksa bu normaldir, çıktıyı buna göre yorumla.
 - **DbContext:** `KiraTakip/Data/ApplicationDbContext.cs` (IdentityDbContext)
 - **Roller:** SistemYonetici · KiraciYoneticisi
 - **Yetki katmanları:** Rol → Permission (`Property.Create` vb.) → Kapsam (`KullaniciYetkiKapsami` / `AccessScope` row-level)
+- **Her write endpoint'in kendi yetkisi vardır (tüm projede zorunlu):** State değiştiren her POST endpoint için endpoint'in adıyla ayrı bir 3. seviye izin oluşturulur (örn. `POST Lease/Terminate` → `Internal.Lease.Terminate`). Yeni write endpoint = yeni izin. Mevcut izinler birleştirilerek yeni bir endpoint korunmaz. GET endpoint'leri modül seviyesindeki izinle korunur. Ayrıntı: `docs/refactor-permission-hiyerarsisi.md` §1.3.
 - **Connection string:** `appsettings.json` → `DefaultConnection` (SQL Server)
 - **Seed:** `Infrastructure/Seeding/SeedDataService.cs` (DummyDataService Phase 3'te kaldırıldı)

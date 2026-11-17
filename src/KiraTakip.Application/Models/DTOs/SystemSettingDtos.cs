@@ -11,8 +11,8 @@ public record SystemSettingListItemDto(
     string Value,
     SystemSettingInputKind InputKind,
     bool IsEditable,
-    int? MinimumValue,
-    int? MaximumValue);
+    decimal? MinimumValue,
+    decimal? MaximumValue);
 
 public record GetSystemSettingInput(int Id);
 

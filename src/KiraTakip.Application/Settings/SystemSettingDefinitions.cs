@@ -11,8 +11,8 @@ public sealed record SystemSettingDefinition(
     string DefaultValue,
     SystemSettingInputKind InputKind,
     bool IsEditable,
-    int? MinimumValue = null,
-    int? MaximumValue = null);
+    decimal? MinimumValue = null,
+    decimal? MaximumValue = null);
 
 public static class SystemSettingDefinitions
 {
@@ -140,6 +140,34 @@ public static class SystemSettingDefinitions
             }
 
             normalizedValue = number.ToString(CultureInfo.InvariantCulture);
+            return true;
+        }
+
+        if (definition.InputKind == SystemSettingInputKind.Decimal)
+        {
+            if (!decimal.TryParse(
+                    normalizedValue.Replace(',', '.'),
+                    NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign,
+                    CultureInfo.InvariantCulture,
+                    out var decimalNumber))
+            {
+                error = "Ondalık bir sayı girilmelidir.";
+                return false;
+            }
+
+            if (definition.MinimumValue.HasValue && decimalNumber < definition.MinimumValue.Value)
+            {
+                error = $"Değer en az {definition.MinimumValue.Value.ToString(CultureInfo.InvariantCulture)} olmalıdır.";
+                return false;
+            }
+
+            if (definition.MaximumValue.HasValue && decimalNumber > definition.MaximumValue.Value)
+            {
+                error = $"Değer en fazla {definition.MaximumValue.Value.ToString(CultureInfo.InvariantCulture)} olmalıdır.";
+                return false;
+            }
+
+            normalizedValue = decimalNumber.ToString(CultureInfo.InvariantCulture);
             return true;
         }
 
