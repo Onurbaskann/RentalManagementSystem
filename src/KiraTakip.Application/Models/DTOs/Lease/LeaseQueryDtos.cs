@@ -63,7 +63,10 @@ public record LeaseUnitContextDto(
     int UnitId,
     int PropertyId,
     decimal Area,
-    bool IsRentable);
+    bool IsRentable,
+    string UnitTypeName,
+    UnitTypeUsage UnitTypeUsage,
+    UnitRentalMode RentalMode);
 
 public record CreateLeaseInput(
     int UnitId,

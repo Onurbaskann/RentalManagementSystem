@@ -58,7 +58,8 @@ public interface ILeaseRepository : IRepositoryBase<Lease>
         int unitId,
         DateTime startDate,
         DateTime endDate,
-        int? excludeLeaseId);
+        int? excludeLeaseId,
+        int? excludeLeaseGroupId = null);
     Task<LeaseDraftEditDto?> GetDraftForEditAsync(
         int leaseId,
         List<int>? authorizedPropertyIds,

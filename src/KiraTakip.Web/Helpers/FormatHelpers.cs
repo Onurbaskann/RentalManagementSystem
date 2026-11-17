@@ -1,4 +1,5 @@
 using System.Globalization;
+using KiraTakip.Models.Enums;
 using KiraTakip.Models.Settings;
 
 namespace KiraTakip.Web.Helpers;
@@ -28,6 +29,22 @@ public static class FormatHelpers
 
     public static string M2(this decimal value, int decimalPlaces = 2) =>
         value.ToString($"N{decimalPlaces}", TrCulture) + " m²";
+
+    public static string UnitSnapshotText(decimal area, string unitTypeName, UnitTypeUsage usage, UnitRentalMode rentalMode)
+    {
+        var usageLabel = usage switch
+        {
+            UnitTypeUsage.Rentable => "Kiralanabilir",
+            UnitTypeUsage.Reservable => "Rezervasyon Yapılabilir",
+            _ => "Kiralanamaz"
+        };
+        var modeLabel = rentalMode switch
+        {
+            UnitRentalMode.CapacityBased => "Kontenjan bazlı",
+            _ => "Birim bazlı"
+        };
+        return $"{area.M2()} · {unitTypeName} ({usageLabel} · {modeLabel})";
+    }
 
     public static string M2(this decimal? value, int decimalPlaces = 2) =>
         value.HasValue ? value.Value.M2(decimalPlaces) : "—";

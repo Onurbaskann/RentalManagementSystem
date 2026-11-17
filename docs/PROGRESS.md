@@ -4,7 +4,14 @@
 > ilgili phase/refactor dosyalarında bulunur. Tarihsel bir karar gerektiğinde
 > [`PROGRESS-HISTORY.md`](PROGRESS-HISTORY.md) yalnız ilgili bölüm için okunur; dosya artık güncellenmez.
 
-> **Sıradaki oturumun işi (2026-11-17):** Paylaşımlı ve açık birim [uygulama planı](refactor-paylasimli-acik-birim-uygulama-plani.md) onaylandı; A1–A6 yazıldığı gibi geçerli. **F1 tamamlandı** (domain politikaları + ondalık ayar altyapısı; commit `d787d45`). **F2 tamamlandı** (şema + `AddSharedAndCapacityUnits`, mevcut sözleşmelerin anlık bilgi backfill’i, `Lease.MinimumUsageArea`; kullanıcı onayıyla üç audit entity adı eşlemesi eklendi). Build başarılı (0 hata, önceden var olan 5 ilgisiz uyarı), ayar/backfill 10/10, audit 4/4, tam paket 1022/1022 (0 skip); bağımsız denetçi APPROVE verdi. Migration test DB’ye uygulandı, production bekliyor; F2 commit edilmedi. **Sıradaki: F3** — yeni sözleşmelerde ve taslak düzenlemelerinde anlık bilgi yazımı, taslak çakışması ve görev ayrılığının kaldırılması. Her faz sonunda kullanıcıdan "devam" beklenir. Kaynak: [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Faz 20 Paratika blokajda olduğu için bu iş öne alındı.
+> **Sıradaki oturumun işi (2026-11-17):** Paylaşımlı ve açık birim [uygulama planı](refactor-paylasimli-acik-birim-uygulama-plani.md) onaylandı; A1–A6 yazıldığı gibi geçerli. **F1 tamamlandı** (domain politikaları + ondalık ayar altyapısı; commit `d787d45`). **F2 tamamlandı** (şema + `AddSharedAndCapacityUnits`; commit `cae168a`; migration production'a henüz uygulanmadı, F3 ile birlikte uygulanmalı). **F3 tamamlandı:**
+- sözleşmede birim anlık bilgisi yazılıyor ve `Lease/Details` ile `Lease/Draft` ekranlarında gösteriliyor
+- taslaklar çakışma kontrolüne giriyor
+- görev ayrılığı kaldırıldı
+- tam paket 1031/1031; commit edilmedi
+- liste projeksiyonları için açık nokta planda duruyor
+
+**Sıradaki: F4**: birim türü alt kırılımı, kontenjan alanı, birim türü özellik kilidi ve birim alanı kilidi. Her faz sonunda kullanıcıdan "devam" beklenir. Kaynak: [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Faz 20 Paratika blokajda olduğu için bu iş öne alındı.
 
 **Aktif çalışma:** Kalem bazlı mağaza yönlendirme ve ödeme altyapısı (blokajda)  
 **Aktif faz:** Faz 20 / İç Faz 7 — Paratika Hosted Payment Page entegrasyonu (implementasyon tamamlandı, manuel duman testi ve kullanıcı onayı bekleniyor)  

@@ -152,7 +152,16 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
   - Yeni `Integration/Migrations/LeaseUnitSnapshotBackfillTests`: Silinmemiş hiçbir sözleşmenin `AnlikBirimTuruAdi` alanı boş değil, `AnlikBirimYuzolcumu` birimin alanına eşit.
 - **Ajan:** 1 yazma + 1 denetçi.
 
-### F3 — Mevcut tekil akış: anlık bilgi, taslağın çakışmaya girmesi, görev ayrılığı (D1, D3)
+### F3 — Mevcut tekil akış: anlık bilgi, taslağın çakışmaya girmesi, görev ayrılığı (D1, D3) — ✅ Tamamlandı (2026-11-17)
+- **Sonuç:**
+  - **Anlık bilgi:** Oluşturmada ve taslak düzenlemesinde/yeniden gönderimde güncel birimden yazılıyor (`LeaseUnitContextDto` 3 alanla genişledi). Onay sonrası yollar yazmıyor. Seed, sözleşmeleri eklemeden önce tek döngüyle dolduruyor; `MakeSozlesme` değişmedi.
+  - **Çakışma (D3):** `HasOverlappingActiveLeaseAsync` artık Active + Draft + RevisionRequested sayıyor; `excludeLeaseGroupId` eklendi ama henüz çağrılmıyor. Mesaj "açık sözleşme" oldu, kod `Lease.ActiveUnitConflict` aynı.
+  - **Görev ayrılığı (D1):** `EnsureNotSelfReview` silindi; `Lease/Draft` butonları yalnız izin ve duruma bakıyor. Düzenlemede sahiplik korunuyor.
+  - **Ekranlar:** `Lease/Details` ve `Lease/Draft` anlık bilgiyi `FormatHelpers.UnitSnapshotText` ile gösteriyor ("70,00 m² · Ad (Kullanım · Biçim)").
+  - **Testler:** Yeni `LeaseUnitSnapshotTests`, `LeaseDraftOverlapTests` ve ortak `LeaseServiceTestHarness`. `LeaseApprovalServiceTests` güncellendi. Tam paket 1031/1031 geçti.
+  - **Denetim:** Yazma A ve B sırayla çalıştı, çünkü ikisi de `LeaseRepository.cs`'e dokunuyordu. İki denetçi ve son birleşik denetim ONAY verdi.
+- **Açık nokta (kullanıcı kararı):** Anlık alanlar yalnız ekranın kullandığı iki projeksiyona eklendi: `ProjectDetails` ve `GetDraftForEditAsync`. `LeaseListItemDto` projeksiyonlarına eklenmedi, çünkü bunları gösteren bir liste ekranı yok. Gerekirse sonraki fazda eklenir.
+- **Sonraki fazlar için not:** `ProjectDetails` kiracı tarafıyla ortak, bu yüzden kiracı `LeaseDetailDto`'su da anlık alanları taşıyor; kiracı ekranı henüz göstermiyor (F8). F2'den F3'e kadar oluşturulmuş sözleşme varsa anlık alanları "" ve 0 kalır. Veri dummy olduğu için sorun yok, ama production'a F2 ve F3 birlikte çıkmalı.
 - **Servis ve repository:**
   - `LeaseService.CreateDraftAsync` ve `ApplyApplicationChangesAsync` ([:681](../src/KiraTakip.Application/Services/Leases/LeaseService.cs#L681)) birim anlık bilgisini güncel birimden yazar. Onaydan sonra hiçbir yol bu alanları yazmaz.
   - `LeaseRepository.HasOverlappingActiveLeaseAsync`: Draft ve RevisionRequested da sayılır. İmzaya `excludeLeaseGroupId` parametresi bu fazda eklenir, kullanımı F7a'da başlar.

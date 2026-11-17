@@ -222,7 +222,10 @@ public class UnitRepository(ApplicationDbContext ctx) : RepositoryBase<Unit>(ctx
                 unit.Id,
                 unit.PropertyId,
                 unit.Area,
-                unit.UnitType != null && unit.UnitType.Usage == UnitTypeUsage.Rentable))
+                unit.UnitType != null && unit.UnitType.Usage == UnitTypeUsage.Rentable,
+                unit.UnitType != null ? unit.UnitType.Name : string.Empty,
+                unit.UnitType != null ? unit.UnitType.Usage : UnitTypeUsage.Rentable,
+                unit.UnitType != null ? unit.UnitType.RentalMode : UnitRentalMode.UnitBased))
             .FirstOrDefaultAsync();
 
     public async Task<List<UnitLookupDto>> GetAllOptionsAsync(

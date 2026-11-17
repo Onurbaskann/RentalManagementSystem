@@ -118,6 +118,10 @@ public class LeaseService(
             DueDateRuleType = input.DueDateRuleType,
             DueDay = input.DueDay,
             IsRentFree = input.IsRentFree,
+            UnitTypeNameSnapshot = unit.UnitTypeName,
+            UnitTypeUsageSnapshot = unit.UnitTypeUsage,
+            RentalModeSnapshot = unit.RentalMode,
+            UnitAreaSnapshot = unit.Area,
             CreatedBy = input.ActorUserId
         };
         await leaseRepository.AddAsync(lease);
@@ -136,7 +140,6 @@ public class LeaseService(
         });
         await uow.SaveChangesAsync();
 
-        _ = unit;
         return lease;
     }
 
@@ -220,7 +223,6 @@ public class LeaseService(
             input.AccessScope,
             status => LeaseApplicationLifecycle.CanTransition(status, LeaseStatus.RevisionRequested),
             requireOwner: false);
-        EnsureNotSelfReview(lease, input.ActorUserId);
         var explanation = NormalizeRequiredExplanation(input.Explanation);
         lease.Status = LeaseStatus.RevisionRequested;
         await AddReviewAsync(
@@ -242,7 +244,6 @@ public class LeaseService(
             input.AccessScope,
             LeaseApplicationLifecycle.CanDeleteApplication,
             requireOwner: false);
-        EnsureNotSelfReview(lease, input.ActorUserId);
         Guard.Conflict(
             await leaseRepository.HasChargesAsync(lease.Id),
             "Tahakkuk bulunan başvuru silinemez.",
@@ -271,7 +272,6 @@ public class LeaseService(
             input.AccessScope,
             status => LeaseApplicationLifecycle.CanTransition(status, LeaseStatus.Active),
             requireOwner: false);
-        EnsureNotSelfReview(lease, input.ActorUserId);
         await ValidateApplicationDataAsync(
             lease.UnitId,
             lease.TenantId,
@@ -371,7 +371,7 @@ public class LeaseService(
             await leaseRepository.HasOverlappingActiveLeaseAsync(
                 lease.UnitId, lease.StartDate, input.NewEndDate, lease.Id),
             nameof(input.NewEndDate),
-            "Seçilen birimde bu tarih aralığıyla çakışan aktif sözleşme bulunmaktadır.",
+            "Seçilen birimde bu tarih aralığıyla çakışan açık sözleşme bulunmaktadır.",
             "Lease.ActiveUnitConflict");
         EnsureOverridePermission(input.UpdateRate, input.CanOverrideRate);
         await EnsureRateOverridesAsync(input.RateOverrides, lease.Unit.Area, lease.IsRentFree);
@@ -642,7 +642,7 @@ public class LeaseService(
         Guard.InvalidField(
             await leaseRepository.HasOverlappingActiveLeaseAsync(unitId, startDate, endDate, excludeLeaseId),
             nameof(unitId),
-            "Seçilen birimde bu tarih aralığıyla çakışan aktif sözleşme bulunmaktadır.",
+            "Seçilen birimde bu tarih aralığıyla çakışan açık sözleşme bulunmaktadır.",
             "Lease.ActiveUnitConflict");
         await EnsureRateOverridesAsync(rateOverrides, unit.Area, isRentFree);
 
@@ -662,7 +662,7 @@ public class LeaseService(
         LeaseAccessScopeInput accessScope,
         bool isRentFree)
     {
-        await ValidateApplicationDataAsync(
+        var unit = await ValidateApplicationDataAsync(
             unitId,
             tenantId,
             startDate,
@@ -686,6 +686,10 @@ public class LeaseService(
         lease.DueDay = dueDay;
         lease.Description = description;
         lease.IsRentFree = isRentFree;
+        lease.UnitTypeNameSnapshot = unit.UnitTypeName;
+        lease.UnitTypeUsageSnapshot = unit.UnitTypeUsage;
+        lease.RentalModeSnapshot = unit.RentalMode;
+        lease.UnitAreaSnapshot = unit.Area;
         await leaseRateOverrideRepository.ReplaceAsync(
             lease.Id,
             BuildRateOverrides(lease.Id, rateOverrides));
@@ -750,12 +754,6 @@ public class LeaseService(
             ErrorType.Failure,
             "Lease.NumberGenerationFailed");
     }
-
-    private void EnsureNotSelfReview(Lease lease, string actorUserId)
-        => Guard.Forbidden(
-            lease.CreatedBy == actorUserId && !currentUserContext.IsSuperAdmin,
-            "Başvuru sahibi kendi başvurusunu değerlendiremez.",
-            "Lease.SelfReviewForbidden");
 
     private async Task EnsureRequiredDocumentsAsync(int leaseId)
     {

@@ -304,6 +304,7 @@
                 {
                     <div class="text-sm text-muted mb-2.5">@s.UnitName • @s.PropertyDistrict, @s.PropertyCity</div>
                 }
+                <div class="text-[13px] text-muted mb-2.5">@FormatHelpers.UnitSnapshotText(s.UnitAreaSnapshot, s.UnitTypeNameSnapshot, s.UnitTypeUsageSnapshot, s.RentalModeSnapshot)</div>
                 <div class="mb-3">
                     <span class="badge @sozlesmeDurumBadgeCls text-[12.5px] px-3.5 py-1.5">@sozlesmeDurumLabel</span>
                     @if (s.IsRentFree)

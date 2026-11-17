@@ -214,6 +214,10 @@ public class LeaseController(
             LeaseNo = draft.LeaseNo,
             UnitId = draft.UnitId,
             TenantId = draft.TenantId,
+            UnitTypeNameSnapshot = draft.UnitTypeNameSnapshot,
+            UnitTypeUsageSnapshot = draft.UnitTypeUsageSnapshot,
+            RentalModeSnapshot = draft.RentalModeSnapshot,
+            UnitAreaSnapshot = draft.UnitAreaSnapshot,
             StartDate = draft.StartDate,
             EndDate = draft.EndDate,
             DueDateRuleType = draft.DueDateRuleType,
@@ -228,9 +232,9 @@ public class LeaseController(
             LatestRevision = draft.LatestRevision,
             ReviewHistory = await leaseService.GetReviewHistoryAsync(id),
             CanEdit = isOwner && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Create),
-            CanApprove = (!isOwner || currentUserContext.IsSuperAdmin) && draft.Status == LeaseStatus.Draft && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Approve),
-            CanRequestRevision = (!isOwner || currentUserContext.IsSuperAdmin) && draft.Status == LeaseStatus.Draft && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.RequestRevision),
-            CanDelete = (!isOwner || currentUserContext.IsSuperAdmin) && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.DeleteDraft),
+            CanApprove = draft.Status == LeaseStatus.Draft && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Approve),
+            CanRequestRevision = draft.Status == LeaseStatus.Draft && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.RequestRevision),
+            CanDelete = await permissionService.HasPermissionAsync(PermissionCatalog.Lease.DeleteDraft),
             LeaseLineItems = draft.RateOverrides.Select(ToLeaseLineItemInput).ToList()
         };
         await PopulateDraftOptionsAsync(model);

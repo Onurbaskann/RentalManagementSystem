@@ -25,6 +25,10 @@ public sealed class LeaseDraftViewModel : ILeaseFormViewModel
     public string LeaseNo { get; set; } = string.Empty;
     public int? UnitId { get; set; }
     public int TenantId { get; set; }
+    public string UnitTypeNameSnapshot { get; set; } = string.Empty;
+    public UnitTypeUsage UnitTypeUsageSnapshot { get; set; }
+    public UnitRentalMode RentalModeSnapshot { get; set; }
+    public decimal UnitAreaSnapshot { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public DueDateRuleType DueDateRuleType { get; set; }

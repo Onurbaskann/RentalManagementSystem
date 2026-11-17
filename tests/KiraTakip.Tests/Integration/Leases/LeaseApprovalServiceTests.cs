@@ -137,14 +137,6 @@ public class LeaseApprovalServiceTests : IDisposable
                 lease.RowVersion,
                 seed.ReviewerId,
                 Scope())));
-        await Assert.ThrowsAsync<BusinessException>(() => applicant.RequestRevisionAsync(
-            new RequestLeaseRevisionInput(
-                lease.Id,
-                "Kendi revizyonum",
-                lease.RowVersion,
-                seed.ApplicantId,
-                Scope())));
-
         await reviewer.RequestRevisionAsync(new RequestLeaseRevisionInput(
             lease.Id,
             "İkinci revizyon turu",
@@ -386,15 +378,12 @@ public class LeaseApprovalServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Draft_ShouldRejectSelfReviewScopeAndActiveOnlyOperations()
+    public async Task Draft_ShouldRejectOutOfScopeAndActiveOnlyOperations()
     {
         var seed = await SeedAsync();
         var lease = await CreateDraftAsync(seed);
-        var applicant = CreateService(seed.ApplicantId);
         var reviewer = CreateService(seed.ReviewerId);
 
-        await Assert.ThrowsAsync<BusinessException>(() => applicant.ApproveAsync(
-            Approval(lease, seed.ApplicantId)));
         await Assert.ThrowsAsync<BusinessException>(() => reviewer.RequestRevisionAsync(
             new RequestLeaseRevisionInput(
                 lease.Id,
@@ -449,6 +438,57 @@ public class LeaseApprovalServiceTests : IDisposable
                 Scope())));
         await Assert.ThrowsAsync<BusinessException>(() => CreateChargeGenerationService()
             .GenerateForLeaseAsync(new GenerateLeaseChargesInput(lease.Id)));
+    }
+
+    [Fact]
+    public async Task Applicant_ShouldBeAllowedToApproveOwnApplication()
+    {
+        var seed = await SeedAsync();
+        var lease = await CreateDraftAsync(seed);
+        await AddAllRequiredDocumentsAsync(lease.Id);
+        await _context.Entry(lease).ReloadAsync();
+
+        await CreateService(seed.ApplicantId).ApproveAsync(Approval(lease, seed.ApplicantId));
+
+        Assert.Equal(LeaseStatus.Active, lease.Status);
+        Assert.Single(await _context.SozlesmeIncelemeGecmisleri
+            .Where(history => history.LeaseId == lease.Id
+                && history.ActionType == LeaseReviewActionType.Approved
+                && history.ActorUserId == seed.ApplicantId)
+            .ToListAsync());
+    }
+
+    [Fact]
+    public async Task Applicant_ShouldBeAllowedToRequestRevisionOnOwnApplication()
+    {
+        var seed = await SeedAsync();
+        var lease = await CreateDraftAsync(seed);
+
+        await CreateService(seed.ApplicantId).RequestRevisionAsync(new RequestLeaseRevisionInput(
+            lease.Id,
+            "Kendi revizyonum",
+            lease.RowVersion,
+            seed.ApplicantId,
+            Scope()));
+        await _context.Entry(lease).ReloadAsync();
+
+        Assert.Equal(LeaseStatus.RevisionRequested, lease.Status);
+    }
+
+    [Fact]
+    public async Task Applicant_ShouldBeAllowedToDeleteOwnApplication()
+    {
+        var seed = await SeedAsync();
+        var lease = await CreateDraftAsync(seed);
+
+        await CreateService(seed.ApplicantId).DeleteDraftAsync(new DeleteLeaseDraftInput(
+            lease.Id,
+            "Kendi başvurum silinsin",
+            lease.RowVersion,
+            seed.ApplicantId,
+            Scope()));
+
+        Assert.True(lease.IsDeleted);
     }
 
     [Fact]

@@ -271,6 +271,10 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             UnitNo = s.Unit.UnitNo,
             UnitFloorNo = s.Unit.FloorNo,
             UnitArea = s.Unit.Area,
+            UnitTypeNameSnapshot = s.UnitTypeNameSnapshot,
+            UnitTypeUsageSnapshot = s.UnitTypeUsageSnapshot,
+            RentalModeSnapshot = s.RentalModeSnapshot,
+            UnitAreaSnapshot = s.UnitAreaSnapshot,
             UnitStructure = s.Unit.Property.UnitStructure,
             PropertyId = s.Unit.PropertyId,
             PropertyName = s.Unit.Property.Name,
@@ -521,15 +525,19 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
         int unitId,
         DateTime startDate,
         DateTime endDate,
-        int? excludeLeaseId)
+        int? excludeLeaseId,
+        int? excludeLeaseGroupId = null)
     {
         var start = startDate.Date;
         var end = endDate.Date;
         return _dbSet.AsNoTracking().AnyAsync(lease =>
             lease.UnitId == unitId
             && !lease.IsDeleted
-            && lease.Status == LeaseStatus.Active
+            && (lease.Status == LeaseStatus.Active
+                || lease.Status == LeaseStatus.Draft
+                || lease.Status == LeaseStatus.RevisionRequested)
             && (!excludeLeaseId.HasValue || lease.Id != excludeLeaseId.Value)
+            && (!excludeLeaseGroupId.HasValue || lease.LeaseGroupId != excludeLeaseGroupId.Value)
             && lease.StartDate.Date <= end
             && lease.EndDate.Date >= start);
     }
@@ -553,6 +561,10 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             LeaseNo = lease.LeaseNo,
             UnitId = lease.UnitId,
             TenantId = lease.TenantId,
+            UnitTypeNameSnapshot = lease.UnitTypeNameSnapshot,
+            UnitTypeUsageSnapshot = lease.UnitTypeUsageSnapshot,
+            RentalModeSnapshot = lease.RentalModeSnapshot,
+            UnitAreaSnapshot = lease.UnitAreaSnapshot,
             StartDate = lease.StartDate,
             EndDate = lease.EndDate,
             DueDateRuleType = lease.DueDateRuleType,

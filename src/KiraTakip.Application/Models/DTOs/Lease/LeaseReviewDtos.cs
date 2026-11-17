@@ -17,6 +17,10 @@ public sealed class LeaseDraftEditDto
     public string LeaseNo { get; init; } = string.Empty;
     public int UnitId { get; init; }
     public int TenantId { get; init; }
+    public string UnitTypeNameSnapshot { get; init; } = string.Empty;
+    public UnitTypeUsage UnitTypeUsageSnapshot { get; init; }
+    public UnitRentalMode RentalModeSnapshot { get; init; }
+    public decimal UnitAreaSnapshot { get; init; }
     public DateTime StartDate { get; init; }
     public DateTime EndDate { get; init; }
     public DueDateRuleType DueDateRuleType { get; init; }

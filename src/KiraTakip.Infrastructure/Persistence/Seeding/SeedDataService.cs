@@ -617,6 +617,7 @@ public class SeedDataService(
         var now = DateTime.Now;
         var tipiMap = await ctx.TasinmazTipleri.ToDictionaryAsync(t => t.Code, k => k.Id);
         var birimTuruMap = await ctx.UnitTypes.ToDictionaryAsync(t => t.Code, t => t.Id);
+        var birimTuruById = await ctx.UnitTypes.AsNoTracking().ToDictionaryAsync(t => t.Id);
         var katMap = await ctx.Kategoriler.Where(k => k.Type == CategoryType.Tenant).ToDictionaryAsync(k => k.Code, k => k.Id);
         var sekMap = await ctx.Kategoriler.Where(k => k.Type == CategoryType.Sector).ToDictionaryAsync(k => k.Code, k => k.Id);
 
@@ -1675,6 +1676,15 @@ public class SeedDataService(
             sozlesme1, sozlesme2, sozlesme3, sozlesme4, sozlesme5,
             sozlesme6, sozlesme7, sozlesme8, sozlesme9, sozlesme10, sozlesme11, sozlesme12
         };
+
+        foreach (var sozlesme in sozlesmeler)
+        {
+            birimTuruById.TryGetValue(sozlesme.Unit.UnitTypeId, out var birimTuru);
+            sozlesme.UnitTypeNameSnapshot = birimTuru?.Name ?? string.Empty;
+            sozlesme.UnitTypeUsageSnapshot = birimTuru?.Usage ?? UnitTypeUsage.Rentable;
+            sozlesme.RentalModeSnapshot = birimTuru?.RentalMode ?? UnitRentalMode.UnitBased;
+            sozlesme.UnitAreaSnapshot = sozlesme.Unit.Area;
+        }
 
         ctx.Leases.AddRange(sozlesmeler);
         await ctx.SaveChangesAsync();
