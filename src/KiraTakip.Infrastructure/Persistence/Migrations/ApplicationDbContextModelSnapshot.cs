@@ -1109,11 +1109,6 @@ namespace KiraTakip.Migrations
                     b.HasIndex(new[] { "UnitId" }, "IX_Lease_UnitId")
                         .HasDatabaseName("IX_Sozlesmeler_BirimId");
 
-                    b.HasIndex(new[] { "UnitId" }, "UX_Lease_UnitId_OpenApplication")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Sozlesmeler_BirimId_AcikBasvuru")
-                        .HasFilter("[IsDeleted] = 0 AND [Durum] IN (4, 5)");
-
                     b.ToTable("Sozlesmeler", t =>
                         {
                             t.HasCheckConstraint("CK_Sozlesmeler_TarihSirasi", "[BitisTarihi] > [BaslangicTarihi]");

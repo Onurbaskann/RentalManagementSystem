@@ -291,6 +291,18 @@ public class LeaseApprovalServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateDraft_ShouldRejectSecondOpenApplicationForSameUnit()
+    {
+        var seed = await SeedAsync();
+        await CreateDraftAsync(seed);
+
+        var exception = await Assert.ThrowsAsync<BusinessValidationException>(() =>
+            CreateDraftAsync(seed, startDate: new DateTime(2027, 1, 1), endDate: new DateTime(2027, 2, 28)));
+
+        Assert.Equal("Lease.OpenApplicationConflict", exception.Code);
+    }
+
+    [Fact]
     public async Task Approval_ShouldRejectPaidLeaseWithoutPositiveRentRate()
     {
         var seed = await SeedAsync();

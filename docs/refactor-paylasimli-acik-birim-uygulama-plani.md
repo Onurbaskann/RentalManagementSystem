@@ -1,7 +1,7 @@
 # Paylaşımlı ve Açık Birim — Uygulama Planı
 
 > Kaynak (tek doğruluk kaynağı): [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Bu plan oradaki kararları uygular, yeni kural eklemez.
-> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1–F5 tamamlandı; sıradaki iş: unique index migration'ı, ardından F6.
+> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1–F5 ve unique index migration'ı tamamlandı; sıradaki faz F6.
 > Kodda doğrulama: 2026-11-17, 3 Explore ajanı + ana oturum Grep/Read.
 
 ## 0. Bu planla kararlaştırılanlar (2026-11-17, kullanıcı cevabı)
@@ -198,6 +198,12 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
   - **Denetim:** Yazma A ve B sırayla çalıştı, çünkü ikisi de `UnitTypeRepository`'ye dokunuyordu. İki denetçi ve son birleşik denetim ONAY verdi.
 - **Açık noktalar (kullanıcı kararı):**
   - **Tek açık başvuru index'i:** DB'de `UX_Sozlesmeler_BirimId_AcikBasvuru` filtreli unique index'i var (`IsDeleted=0 AND Durum IN (4,5)`). Birim başına tek Taslak/Revizyon kaydına izin veriyor. Bu index, F6'daki "aynı kontenjan bazlı birimde birden çok taslak" ve F7a'daki "aynı gruptaki taslaklar" kurallarını veritabanı düzeyinde engelliyor. Planda yer almıyor. **Karar (2026-11-17):** F6'dan önce ayrı bir migration adımında (tek yazma ajanı) index kaldırılır. Normal birimdeki tek açık başvuru kuralını servis (`HasOpenApplicationForUnitAsync`) korumaya devam eder.
+    - **Uygulandı (2026-11-17):**
+      - Migration `20261117143035_RemoveLeaseOpenApplicationUniqueIndex` eklendi; Down index'i aynı ad ve filtreyle geri kurar.
+      - Mimari test artık index'in olmadığını ve aynı birime ikinci taslağın DB'ye yazılabildiğini doğruluyor.
+      - `LeaseApprovalServiceTests`'e servisin ikinci taslağı `Lease.OpenApplicationConflict` ile reddettiğini doğrulayan test eklendi.
+      - Tam paket 1067/1067 geçti; denetim ONAY verdi.
+      - Kabul edilen risk: Normal birimde iki eşzamanlı istek servis kontrolünü birlikte geçerse aynı birimde iki açık başvuru oluşabilir.
   - **Tek birimli taşınmaz (kapandı, 2026-11-17 kullanıcı kararı):** "Tek birimli taşınmaz kontenjan bazlı olamaz" kuralı kaldırıldı. Tek birim bölümüne K girişi (`SingleUnitCapacity`) eklendi; çoklu birimdeki K kuralları ve tarihçe aynen uygulanıyor. Kontenjan girilmemiş birimin K'sı DB'de boş kalıyor, Edit ekranında 0 görünüyor; kayıt için K ≥ 1 gerekiyor.
   - **Sınır durumu (düşük önem):** P < min olan sözleşmesiz birimde mesaj "en yüksek K: 1" diyor, oysa 1 de reddediliyor.
 - **Birim türü:**

@@ -43,10 +43,8 @@ public class LeaseApprovalModelTests
         Assert.True(rowVersion.IsConcurrencyToken);
         Assert.Equal(ValueGenerated.OnAddOrUpdate, rowVersion.ValueGenerated);
 
-        var openApplicationIndex = leaseType.GetIndexes().Single(index =>
+        Assert.DoesNotContain(leaseType.GetIndexes(), index =>
             index.GetDatabaseName() == "UX_Sozlesmeler_BirimId_AcikBasvuru");
-        Assert.True(openApplicationIndex.IsUnique);
-        Assert.Equal("[IsDeleted] = 0 AND [Durum] IN (4, 5)", openApplicationIndex.GetFilter());
         Assert.Contains(leaseType.GetIndexes(), index =>
             index.GetDatabaseName() == "IX_Sozlesmeler_BirimId");
 
@@ -108,33 +106,16 @@ public class LeaseApprovalDatabaseTests : IDisposable
     }
 
     [Fact]
-    public async Task OpenApplicationIndex_ShouldRejectSecondDraftForSameUnit()
+    public async Task SecondDraftForSameUnit_ShouldBeAllowedAtDatabaseLevel()
     {
         var seed = await SeedAsync();
         _context.Leases.Add(CreateDraft(seed.FirstUnitId, seed.TenantId));
         await _context.SaveChangesAsync();
 
         _context.Leases.Add(CreateDraft(seed.FirstUnitId, seed.TenantId));
-
-        await Assert.ThrowsAsync<DbUpdateException>(() => _context.SaveChangesAsync());
-    }
-
-    [Fact]
-    public async Task OpenApplicationIndex_ShouldAllowSoftDeletedOrDifferentUnitRows()
-    {
-        var seed = await SeedAsync();
-        var deletedDraft = CreateDraft(seed.FirstUnitId, seed.TenantId);
-        _context.Leases.Add(deletedDraft);
         await _context.SaveChangesAsync();
 
-        deletedDraft.IsDeleted = true;
-        await _context.SaveChangesAsync();
-
-        _context.Leases.AddRange(
-            CreateDraft(seed.FirstUnitId, seed.TenantId),
-            CreateDraft(seed.SecondUnitId, seed.TenantId));
-
-        await _context.SaveChangesAsync();
+        Assert.Equal(2, await _context.Leases.CountAsync(x => x.UnitId == seed.FirstUnitId));
     }
 
     private async Task<LeaseApprovalSeed> SeedAsync()
