@@ -50,7 +50,9 @@ public class UnitTypeService(
             entity.SortOrder,
             entity.Usage,
             entity.ChargeTypeId,
-            entity.IsActive);
+            entity.IsActive,
+            entity.RentalMode,
+            await unitTypeRepository.HasAnyLeaseAsync(entity.Id));
     }
 
     public async Task CreateAsync(CreateUnitTypeInput input)
@@ -67,6 +69,7 @@ public class UnitTypeService(
         entity.SortOrder = input.SortOrder;
         entity.Usage = input.Usage;
         entity.ChargeTypeId = PropertyStructurePolicy.ResolveChargeTypeId(input.Usage, input.ChargeTypeId);
+        entity.RentalMode = ResolveRentalMode(input.Usage, input.RentalMode);
         entity.IsActive = input.IsActive;
 
         await unitTypeRepository.AddAsync(entity);
@@ -86,9 +89,25 @@ public class UnitTypeService(
 
         await ValidateChargeTypeAsync(input.Usage, input.ChargeTypeId, nameof(input.ChargeTypeId));
 
+        var rentalMode = ResolveRentalMode(input.Usage, input.RentalMode);
+        var featuresChanged = entity.Usage != input.Usage || entity.RentalMode != rentalMode;
+
+        if (featuresChanged)
+        {
+            Guard.InvalidField(
+                await unitTypeRepository.HasAnyLeaseAsync(entity.Id),
+                nameof(input.Usage),
+                "Bu birim türünün birimlerinde sözleşme bulunduğu için kullanım türü ve alt kırılım değiştirilemez. Farklı özellik gerekiyorsa yeni tür oluşturun.",
+                "UnitType.FeaturesLocked");
+
+            if (rentalMode == UnitRentalMode.UnitBased)
+                await unitTypeRepository.ClearUnitCapacitiesAsync(entity.Id);
+        }
+
         entity.Name = input.Name;
         entity.SortOrder = input.SortOrder;
         entity.Usage = input.Usage;
+        entity.RentalMode = rentalMode;
         entity.ChargeTypeId = PropertyStructurePolicy.ResolveChargeTypeId(input.Usage, input.ChargeTypeId);
         entity.IsActive = input.IsActive;
 
@@ -129,6 +148,9 @@ public class UnitTypeService(
 
         return entity.IsActive;
     }
+
+    private static UnitRentalMode ResolveRentalMode(UnitTypeUsage usage, UnitRentalMode rentalMode)
+        => usage == UnitTypeUsage.Rentable ? rentalMode : UnitRentalMode.UnitBased;
 
     private const int CodeMaxLength = 100;
 

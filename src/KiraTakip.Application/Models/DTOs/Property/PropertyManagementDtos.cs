@@ -13,14 +13,15 @@ public record PropertyTypeOptionDto(
 public record UnitTypeOptionDto(
     int Id,
     string Name,
-    UnitTypeUsage Usage);
+    UnitTypeUsage Usage,
+    UnitRentalMode RentalMode);
 
 public record PropertyFormOptionsDto(
     IReadOnlyList<PropertyTypeOptionDto> PropertyTypes,
     IReadOnlyList<UnitTypeOptionDto> UnitTypes);
 
 public record PropertyStructureSupportDto(bool SupportsSingleUnit, bool SupportsMultipleUnits);
-public record UnitTypeUsageDto(int UnitTypeId, UnitTypeUsage Usage);
+public record UnitTypeUsageDto(int UnitTypeId, UnitTypeUsage Usage, UnitRentalMode RentalMode);
 public class PropertyUnitInputDto
 {
     public int? Id { get; set; }
@@ -30,6 +31,7 @@ public class PropertyUnitInputDto
     public decimal Area { get; set; }
     public string? Description { get; set; }
     public int? UnitTypeId { get; set; }
+    public int? Capacity { get; set; }
 }
 
 public class ReservationAreaInputDto
@@ -48,6 +50,7 @@ public class CreatePropertyInput
     public int? PropertyTypeId { get; set; }
     public UnitStructure UnitStructure { get; set; }
     public int? SingleUnitTypeId { get; set; }
+    public int? SingleUnitCapacity { get; set; }
     public string City { get; set; } = string.Empty;
     public string District { get; set; } = string.Empty;
     public string Neighborhood { get; set; } = string.Empty;
@@ -73,6 +76,7 @@ public class PropertyEditDto : UpdatePropertyInput
 {
     public bool CanChangeUnitStructure { get; set; }
     public HashSet<int> ActiveLeaseUnitIds { get; set; } = [];
+    public HashSet<int> OpenLeaseUnitIds { get; set; } = [];
     public HashSet<int> ActiveReservationUnitIds { get; set; } = [];
 }
 

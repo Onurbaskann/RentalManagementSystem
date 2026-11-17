@@ -43,6 +43,20 @@ public class UnitTypeRepository(ApplicationDbContext ctx) : RepositoryBase<UnitT
                            && (excludeId == null || b.Id != excludeId));
     }
 
+    public async Task<bool> HasAnyLeaseAsync(int unitTypeId)
+        => await ctx.Set<Lease>().AsNoTracking().IgnoreQueryFilters()
+            .AnyAsync(l => !l.IsDeleted
+                           && ctx.Set<Unit>().IgnoreQueryFilters()
+                               .Any(u => u.Id == l.UnitId && u.UnitTypeId == unitTypeId));
+
+    public async Task ClearUnitCapacitiesAsync(int unitTypeId)
+    {
+        var units = await ctx.Set<Unit>().IgnoreQueryFilters()
+            .Where(u => u.UnitTypeId == unitTypeId && u.Capacity != null)
+            .ToListAsync();
+        foreach (var unit in units) unit.Capacity = null;
+    }
+
     public async Task<bool> AnyAktifByBorcTipiIdAsync(int chargeTypeId, int? excludeId = null)
         => await _dbSet.AsNoTracking()
             .AnyAsync(b => b.ChargeTypeId == chargeTypeId && b.IsActive && (excludeId == null || b.Id != excludeId));
@@ -51,7 +65,7 @@ public class UnitTypeRepository(ApplicationDbContext ctx) : RepositoryBase<UnitT
         => _dbSet.AsNoTracking()
             .Where(unitType => unitType.IsActive)
             .OrderBy(unitType => unitType.SortOrder)
-            .Select(unitType => new UnitTypeOptionDto(unitType.Id, unitType.Name, unitType.Usage))
+            .Select(unitType => new UnitTypeOptionDto(unitType.Id, unitType.Name, unitType.Usage, unitType.RentalMode))
             .ToListAsync();
 
     public Task<PagedResult<UnitTypeListItemDto>> GetPagedListAsync(TableQuery tableQuery)
@@ -82,6 +96,6 @@ public class UnitTypeRepository(ApplicationDbContext ctx) : RepositoryBase<UnitT
     public Task<List<UnitTypeUsageDto>> GetActiveUsagesAsync(IReadOnlyCollection<int> unitTypeIds)
         => _dbSet.AsNoTracking()
             .Where(unitType => unitTypeIds.Contains(unitType.Id) && unitType.IsActive)
-            .Select(unitType => new UnitTypeUsageDto(unitType.Id, unitType.Usage))
+            .Select(unitType => new UnitTypeUsageDto(unitType.Id, unitType.Usage, unitType.RentalMode))
             .ToListAsync();
 }

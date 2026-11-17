@@ -4,6 +4,7 @@ using KiraTakip.Models.Dtos.AdminUser;
 using KiraTakip.Models.Dtos.Reservation;
 using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Dtos.Charge;
+using KiraTakip.Domain.Leases;
 
 namespace KiraTakip.Repositories.Interfaces.Properties;
 
@@ -30,4 +31,7 @@ public interface IUnitRepository : IRepositoryBase<Unit>
     Task RemoveWithRatesAsync(Unit unit);
     void Remove(Unit unit);
     Task<bool> HasHistoricalDependencyAsync(int unitId);
+    Task<List<CapacityOccupant>> GetCapacityOccupantsAsync(int unitId, DateTime fromDate);
+    void AddCapacityHistory(Unit unit, int capacity, DateTime effectiveFrom);
+    Task<HashSet<int>> GetOpenLeaseUnitIdsAsync(IReadOnlyCollection<int> unitIds);
 }

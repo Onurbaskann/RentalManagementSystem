@@ -59,7 +59,11 @@
             </div>
             <div class="form-group" x-show="unitStructure === '1'">
                 <label class="form-label">Birim Türü *</label>
-                <select asp-for="SingleUnitTypeId" class="form-control">
+                @if (Model.SingleUnitHasOpenLease)
+                {
+                    <input type="hidden" asp-for="SingleUnitTypeId" />
+                }
+                <select asp-for="SingleUnitTypeId" class="form-control" disabled="@Model.SingleUnitHasOpenLease" x-model="singleUnitTypeId" @@change="if (kontenjanBazli(singleUnitTypeId) && !singleKontenjan) singleKontenjan = '0'">
                     <option value="">— Seçiniz —</option>
                     @foreach (var bt in (IEnumerable<UnitTypeOptionDto>)ViewBag.AllUnitTypes)
                     {
@@ -68,15 +72,24 @@
                 </select>
                 <div class="form-hint">Tek parça kiralanan taşınmazın birim türü (kira tarifesi bu türe göre belirlenir).</div>
                 <span asp-validation-for="SingleUnitTypeId" class="form-error"></span>
+                <div x-show="kontenjanBazli(singleUnitTypeId)" class="mt-3 w-40">
+                    <label class="form-label">Kontenjan (K) *</label>
+                    <input class="form-control" type="number" min="1" step="1" name="SingleUnitCapacity" :disabled="!kontenjanBazli(singleUnitTypeId)" x-model="singleKontenjan" placeholder="0" />
+                    <span asp-validation-for="SingleUnitCapacity" class="form-error"></span>
+                </div>
             </div>
             <div class="grid grid-cols-2 gap-3.5 mb-3">
                 <div class="form-group">
                     <label class="form-label">Kapalı Alan (m²)</label>
-                    <input asp-for="ClosedArea" type="number" min="0" step="0.01" class="form-control" placeholder="0" />
+                    <input asp-for="ClosedArea" type="number" min="0" step="0.01" class="form-control" placeholder="0" readonly="@Model.SingleUnitHasOpenLease" />
                 </div>
                 <div class="form-group">
                     <label class="form-label">Açık Alan (m²)</label>
-                    <input asp-for="OpenArea" type="number" min="0" step="0.01" class="form-control" placeholder="0" />
+                    <input asp-for="OpenArea" type="number" min="0" step="0.01" class="form-control" placeholder="0" readonly="@Model.SingleUnitHasOpenLease" />
+                    @if (Model.SingleUnitHasOpenLease)
+                    {
+                        <div class="form-hint">Açık sözleşmesi olduğu için alan ve tür değiştirilemez.</div>
+                    }
                 </div>
             </div>
 
@@ -123,7 +136,8 @@
                             </div>
                             <div>
                                 <div class="form-label mb-1">Birim Türü *</div>
-                                <select class="form-control" :name="'Units['+i+'].UnitTypeId'" x-model="unit.unitTypeId" @@change="autoAd(unit)">
+                                <input type="hidden" x-show="false" x-bind:disabled="!unit.acikSozlesmeVar" :name="'Units['+i+'].UnitTypeId'" :value="unit.unitTypeId" />
+                                <select class="form-control" :name="unit.acikSozlesmeVar ? null : 'Units['+i+'].UnitTypeId'" :disabled="unit.acikSozlesmeVar" x-model="unit.unitTypeId" @@change="autoAd(unit)">
                                     <option value="">— Seçiniz —</option>
                                     @foreach (var bt in (IEnumerable<UnitTypeOptionDto>)ViewBag.UnitTypes)
                                     {
@@ -142,13 +156,19 @@
                             </div>
                             <div>
                                 <div class="form-label mb-1">m² *</div>
-                                <input class="form-control" type="number" min="1" step="0.01" :name="'Units['+i+'].Area'" x-model="unit.yuzolcumu" placeholder="0" />
+                                <input class="form-control" type="number" min="1" step="0.01" :name="'Units['+i+'].Area'" x-model="unit.yuzolcumu" :readonly="unit.acikSozlesmeVar" placeholder="0" />
                                 <span x-show="birimErrors[i]?.yuzolcumu" x-text="birimErrors[i]?.yuzolcumu" class="form-error"></span>
                             </div>
                             <div>
                                 <div class="form-label mb-1">Açıklama</div>
                                 <input class="form-control" :name="'Units['+i+'].Description'" x-model="unit.aciklama" placeholder="Opsiyonel" />
                             </div>
+                        </div>
+                        <div x-show="unit.acikSozlesmeVar" class="form-hint mt-2">Açık sözleşmesi olduğu için alan ve tür değiştirilemez.</div>
+                        <div x-show="kontenjanBazli(unit.unitTypeId)" class="mt-3 w-40">
+                            <div class="form-label mb-1">Kontenjan (K) *</div>
+                            <input class="form-control" type="number" min="1" step="1" :name="'Units['+i+'].Capacity'" :disabled="!kontenjanBazli(unit.unitTypeId)" x-model="unit.kontenjan" placeholder="0" />
+                            <span x-show="birimErrors[i]?.kontenjan" x-text="birimErrors[i]?.kontenjan" class="form-error"></span>
                         </div>
                     </div>
                 </template>
@@ -454,6 +474,9 @@
 
 @section Scripts {
     @{
+        var kontenjanTurleri = ((IEnumerable<UnitTypeOptionDto>)ViewBag.UnitTypes)
+            .Where(bt => bt.RentalMode == UnitRentalMode.CapacityBased)
+            .ToDictionary(bt => bt.Id.ToString(), bt => true);
         var birimlerJson = System.Text.Json.JsonSerializer.Serialize(
             Model.Units.Select(b => new
             {
@@ -464,7 +487,10 @@
                 yuzolcumu = b.Area.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 aciklama = b.Description ?? "",
                 unitTypeId = b.UnitTypeId?.ToString() ?? "",
-                aktifSozlesmesiVar = b.HasActiveLease
+                kontenjan = b.Capacity?.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    ?? (b.UnitTypeId.HasValue && kontenjanTurleri.ContainsKey(b.UnitTypeId.Value.ToString()) ? "0" : ""),
+                aktifSozlesmesiVar = b.HasActiveLease,
+                acikSozlesmeVar = b.HasOpenLease
             })
         );
         var rezAlanlariJson = System.Text.Json.JsonSerializer.Serialize(
@@ -487,6 +513,7 @@
                 unitTypeId = ViewData.ModelState[$"Units[{i}].UnitTypeId"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 ad = ViewData.ModelState[$"Units[{i}].Name"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
                 yuzolcumu = ViewData.ModelState[$"Units[{i}].Area"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
+                kontenjan = ViewData.ModelState[$"Units[{i}].Capacity"]?.Errors.FirstOrDefault()?.ErrorMessage ?? "",
             }).ToList()
         );
         var rezErrorsJson = System.Text.Json.JsonSerializer.Serialize(
@@ -500,6 +527,7 @@
         );
         var birimTurleriMap = ((IEnumerable<UnitTypeOptionDto>)ViewBag.UnitTypes).ToDictionary(bt => bt.Id.ToString(), bt => bt.Name);
         var birimTurleriMapJson = System.Text.Json.JsonSerializer.Serialize(birimTurleriMap);
+        var kontenjanTurleriJson = System.Text.Json.JsonSerializer.Serialize(kontenjanTurleri);
     }
     <script>
         function tasinmazDuzenleData() {
@@ -509,10 +537,14 @@
                 birimErrors: @Html.Raw(birimErrorsJson),
                 rezErrors: @Html.Raw(rezErrorsJson),
                 birimTurleriMap: @Html.Raw(birimTurleriMapJson),
+                kontenjanTurleri: @Html.Raw(kontenjanTurleriJson),
+                kontenjanBazli(unitTypeId) { return !!this.kontenjanTurleri[unitTypeId]; },
+                singleUnitTypeId: '@(Model.SingleUnitTypeId?.ToString() ?? "")',
+                singleKontenjan: '@(Model.SingleUnitCapacity?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? (Model.SingleUnitTypeId.HasValue && kontenjanTurleri.ContainsKey(Model.SingleUnitTypeId.Value.ToString()) ? "0" : ""))',
                 tasinmazTipiId: '@(Model.PropertyTypeId?.ToString() ?? "")',
                 unitStructure: '@((int)Model.UnitStructure)',
                 addBirim() {
-                    this.birimler.push({ id: null, birimNo: '', katNo: '', ad: '', yuzolcumu: '', aciklama: '', unitTypeId: '', aktifSozlesmesiVar: false });
+                    this.birimler.push({ id: null, birimNo: '', katNo: '', ad: '', yuzolcumu: '', aciklama: '', unitTypeId: '', kontenjan: '', aktifSozlesmesiVar: false, acikSozlesmeVar: false });
                     this.birimErrors.push({});
                     this.focusNewUnit();
                 },

@@ -36,6 +36,8 @@ internal static class PropertyValidationRules
         {
             if (input.SingleUnitTypeId is null or <= 0)
                 errors.Add(new ValidationError("Tek birim yapısı için birim türü zorunludur.", nameof(input.SingleUnitTypeId)));
+            if (input.SingleUnitCapacity is <= 0)
+                errors.Add(new ValidationError("Kontenjan 0'dan büyük olmalıdır.", nameof(input.SingleUnitCapacity)));
         }
         else if (input.UnitStructure == UnitStructure.MultipleUnits)
         {
@@ -67,6 +69,8 @@ internal static class PropertyValidationRules
             MaxLength(unit.Name, 200, "Ad en fazla 200 karakter olabilir.", $"{prefix}.{nameof(unit.Name)}", errors);
             if (unit.Area <= 0)
                 errors.Add(new ValidationError("Yüzölçümü 0'dan büyük olmalıdır.", $"{prefix}.{nameof(unit.Area)}"));
+            if (unit.Capacity is <= 0)
+                errors.Add(new ValidationError("Kontenjan 0'dan büyük olmalıdır.", $"{prefix}.{nameof(unit.Capacity)}"));
         }
     }
 

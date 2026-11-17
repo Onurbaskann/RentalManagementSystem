@@ -121,7 +121,8 @@ Gereksinim 2026-11-16/17 oturumunda kullanıcıyla soru-cevap ile netleştirildi
 - `Unit`: `Capacity` (güncel kontenjan). Yalnız birim türü Kontenjan bazlı ise dolu ve zorunludur.
 - `UnitCapacityHistory`: UnitId, Capacity, EffectiveFrom. Her K değişikliğinde satır eklenir; geçmiş dönem hesapları buradan okunur.
 - **Birim alanı (`Unit.Area`) kilidi:** Açık sözleşmesi (aktif, gelecek tarihli, Taslak, Revizyon İstendi) olan hiçbir birimin alanı düzenlenemez (normal birimler dahil). Örnek: P=60 birimde A 30 + B 30 taslak grup varken alan 65 yapılamaz. Tek birimli taşınmazda alan taşınmazın kapalı/açık alanından hesaplandığı için kilit bu iki alanı da kapsar. Kilit `Property/Edit` akışında uygulanır.
-- **Tek birimli taşınmaz:** Birimi paylaşımlı olabilir; kontenjan bazlı olamaz (tek birimli taşınmazın birimi Kontenjan bazlı bir türe bağlanamaz).
+- **Tek birimli taşınmaz:** Birimi paylaşımlı veya kontenjan bazlı olabilir. Kontenjan bazlı türde K, taşınmaz formunun tek birim bölümünde girilir; P taşınmazın kapalı + açık alanıdır. (2026-11-17 kullanıcı kararıyla "kontenjan bazlı olamaz" kuralı kaldırıldı.)
+- **Kontenjan girilmemiş birim:** Tür kontenjan bazlıya çevrilince birimlerin K'sı veritabanında boş kalır, taşınmaz Edit ekranında 0 görünür; kayıt için K ≥ 1 girilmelidir.
 - Genel parametre: min. kullanım m².
 - **Çarpan formülleri:**
   - M2 yöntemi: `LeaseArea.RentedArea` varsa o, yoksa `Unit.Area`.

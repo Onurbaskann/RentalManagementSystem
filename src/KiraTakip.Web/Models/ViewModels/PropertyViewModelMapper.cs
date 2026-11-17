@@ -1,5 +1,6 @@
 ﻿using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.Property;
+using KiraTakip.Models.Enums;
 
 namespace KiraTakip.Web.Models.ViewModels;
 
@@ -14,6 +15,8 @@ public static class PropertyViewModelMapper
             UnitStructure = dto.UnitStructure,
             CanChangeUnitStructure = dto.CanChangeUnitStructure,
             SingleUnitTypeId = dto.SingleUnitTypeId,
+            SingleUnitCapacity = dto.SingleUnitCapacity,
+            SingleUnitHasOpenLease = dto.UnitStructure == UnitStructure.SingleUnit && dto.OpenLeaseUnitIds.Count > 0,
             City = dto.City,
             District = dto.District,
             Neighborhood = dto.Neighborhood,
@@ -31,7 +34,9 @@ public static class PropertyViewModelMapper
                 Area = unit.Area,
                 Description = unit.Description,
                 UnitTypeId = unit.UnitTypeId,
-                HasActiveLease = unit.Id.HasValue && dto.ActiveLeaseUnitIds.Contains(unit.Id.Value)
+                Capacity = unit.Capacity,
+                HasActiveLease = unit.Id.HasValue && dto.ActiveLeaseUnitIds.Contains(unit.Id.Value),
+                HasOpenLease = unit.Id.HasValue && dto.OpenLeaseUnitIds.Contains(unit.Id.Value)
             }).ToList(),
             ReservationAreas = dto.ReservationAreas.Select(area => new ReservationAreaEditViewModel
             {
@@ -64,6 +69,7 @@ public static class PropertyViewModelMapper
             PropertyTypeId = viewModel.PropertyTypeId,
             UnitStructure = viewModel.UnitStructure,
             SingleUnitTypeId = viewModel.SingleUnitTypeId,
+            SingleUnitCapacity = viewModel.SingleUnitCapacity,
             City = viewModel.City,
             District = viewModel.District,
             Neighborhood = viewModel.Neighborhood,
@@ -87,6 +93,7 @@ public static class PropertyViewModelMapper
         input.PropertyTypeId = viewModel.PropertyTypeId;
         input.UnitStructure = viewModel.UnitStructure;
         input.SingleUnitTypeId = viewModel.SingleUnitTypeId;
+        input.SingleUnitCapacity = viewModel.SingleUnitCapacity;
         input.City = viewModel.City;
         input.District = viewModel.District;
         input.Neighborhood = viewModel.Neighborhood;
@@ -108,7 +115,8 @@ public static class PropertyViewModelMapper
             Name = viewModel.Name,
             Area = viewModel.Area,
             Description = viewModel.Description,
-            UnitTypeId = viewModel.UnitTypeId
+            UnitTypeId = viewModel.UnitTypeId,
+            Capacity = viewModel.Capacity
         };
 
     private static PropertyUnitInputDto ToDto(PropertyUnitEditViewModel viewModel)
@@ -120,7 +128,8 @@ public static class PropertyViewModelMapper
             Name = viewModel.Name,
             Area = viewModel.Area,
             Description = viewModel.Description,
-            UnitTypeId = viewModel.UnitTypeId
+            UnitTypeId = viewModel.UnitTypeId,
+            Capacity = viewModel.Capacity
         };
 
     private static ReservationAreaInputDto ToDto(ReservationAreaInputViewModel viewModel)

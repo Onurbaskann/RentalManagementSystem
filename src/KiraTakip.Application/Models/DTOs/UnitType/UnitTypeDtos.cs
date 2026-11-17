@@ -9,7 +9,8 @@ public record CreateUnitTypeInput(
     int SortOrder,
     UnitTypeUsage Usage,
     int? ChargeTypeId,
-    bool IsActive);
+    bool IsActive,
+    UnitRentalMode RentalMode = UnitRentalMode.UnitBased);
 
 public record EditUnitTypeInput(
     int Id,
@@ -17,7 +18,8 @@ public record EditUnitTypeInput(
     int SortOrder,
     UnitTypeUsage Usage,
     int? ChargeTypeId,
-    bool IsActive);
+    bool IsActive,
+    UnitRentalMode RentalMode = UnitRentalMode.UnitBased);
 
 public record ToggleUnitTypeStatusInput(int Id);
 
@@ -27,7 +29,9 @@ public record UnitTypeDetailDto(
     int SortOrder,
     UnitTypeUsage Usage,
     int? ChargeTypeId,
-    bool IsActive);
+    bool IsActive,
+    UnitRentalMode RentalMode,
+    bool IsFeatureLocked);
 
 public record UnitTypeChargeTypeCandidateDto(
     int Id,

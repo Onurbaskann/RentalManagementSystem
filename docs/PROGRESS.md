@@ -4,14 +4,15 @@
 > ilgili phase/refactor dosyalarında bulunur. Tarihsel bir karar gerektiğinde
 > [`PROGRESS-HISTORY.md`](PROGRESS-HISTORY.md) yalnız ilgili bölüm için okunur; dosya artık güncellenmez.
 
-> **Sıradaki oturumun işi (2026-11-17):** Paylaşımlı ve açık birim [uygulama planı](refactor-paylasimli-acik-birim-uygulama-plani.md) onaylandı; A1–A6 yazıldığı gibi geçerli. **F1 tamamlandı** (domain politikaları + ondalık ayar altyapısı; commit `d787d45`). **F2 tamamlandı** (şema + `AddSharedAndCapacityUnits`; commit `cae168a`; migration production'a henüz uygulanmadı, F3 ile birlikte uygulanmalı). **F3 tamamlandı:**
-- sözleşmede birim anlık bilgisi yazılıyor ve `Lease/Details` ile `Lease/Draft` ekranlarında gösteriliyor
-- taslaklar çakışma kontrolüne giriyor
-- görev ayrılığı kaldırıldı
-- tam paket 1031/1031; commit edilmedi
-- liste projeksiyonları için açık nokta planda duruyor
+> **Sıradaki oturumun işi (2026-11-17):** Paylaşımlı ve açık birim [uygulama planı](refactor-paylasimli-acik-birim-uygulama-plani.md) onaylandı; A1–A6 yazıldığı gibi geçerli. **F1 tamamlandı** (domain politikaları + ondalık ayar altyapısı; commit `d787d45`). **F2 tamamlandı** (şema + `AddSharedAndCapacityUnits`; commit `cae168a`; migration production'a henüz uygulanmadı, F3 ile birlikte uygulanmalı). **F3 tamamlandı** (birim anlık bilgisi, taslak çakışması, görev ayrılığı kaldırıldı; commit `7f7fb5e`). **F4 tamamlandı:**
+- birim türünde alt kırılım ve özellik kilidi
+- taşınmaz formunda kontenjan (K) girişi, K alt/üst sınırı ve tarihçe
+- açık sözleşmeli birimde alan ve tür kilidi
+- tam paket 1062/1062; commit edilmedi
+- tek birimli taşınmaz da kontenjan bazlı olabiliyor (kullanıcı kararı; K boşsa ekranda 0)
+- tek açık başvuru unique index'i F6'dan önce ayrı migration ile kaldırılacak (karar planın F4 bölümünde)
 
-**Sıradaki: F4**: birim türü alt kırılımı, kontenjan alanı, birim türü özellik kilidi ve birim alanı kilidi. Her faz sonunda kullanıcıdan "devam" beklenir. Kaynak: [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Faz 20 Paratika blokajda olduğu için bu iş öne alındı.
+**Sıradaki: F5**: m² çarpanı ve sabit kalem oranı. Her faz sonunda kullanıcıdan "devam" beklenir. Kaynak: [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Faz 20 Paratika blokajda olduğu için bu iş öne alındı.
 
 **Aktif çalışma:** Kalem bazlı mağaza yönlendirme ve ödeme altyapısı (blokajda)  
 **Aktif faz:** Faz 20 / İç Faz 7 — Paratika Hosted Payment Page entegrasyonu (implementasyon tamamlandı, manuel duman testi ve kullanıcı onayı bekleniyor)  

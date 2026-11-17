@@ -10,6 +10,7 @@ public class CreatePropertyViewModel
     public int? PropertyTypeId { get; set; }
     public UnitStructure UnitStructure { get; set; } = UnitStructure.SingleUnit;
     public int? SingleUnitTypeId { get; set; }
+    public int? SingleUnitCapacity { get; set; }
     public string City { get; set; } = string.Empty;
     public string District { get; set; } = string.Empty;
     public string Neighborhood { get; set; } = string.Empty;

@@ -1,7 +1,7 @@
 # Paylaşımlı ve Açık Birim — Uygulama Planı
 
 > Kaynak (tek doğruluk kaynağı): [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Bu plan oradaki kararları uygular, yeni kural eklemez.
-> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1 ve F2 tamamlandı; sıradaki faz F3.
+> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1–F4 tamamlandı; sıradaki faz F5.
 > Kodda doğrulama: 2026-11-17, 3 Explore ajanı + ana oturum Grep/Read.
 
 ## 0. Bu planla kararlaştırılanlar (2026-11-17, kullanıcı cevabı)
@@ -186,7 +186,20 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
   - Yazma A: servis, repository, seed, testler.
   - Yazma B: controller, view, DTO projeksiyonları.
 
-### F4 — Birim türü alt kırılımı, kontenjan, kilitler (D4, D5)
+### F4 — Birim türü alt kırılımı, kontenjan, kilitler (D4, D5) — ✅ Tamamlandı (2026-11-17)
+- **Sonuç:**
+  - **Birim türü:** `RentalMode` yalnız Kiralanabilir türde kabul ediliyor; diğer kullanımlarda sessizce Birim bazlı kaydediliyor. Özellik kilidi `UnitTypeRepository.HasAnyLeaseAsync` ile çalışıyor (kod `UnitType.FeaturesLocked`; silinmemiş her sözleşme, silinmiş birimdekiler dahil). Birim bazlıya dönüşte K'lar `ClearUnitCapacitiesAsync` ile temizleniyor, tarihçe yazılmıyor.
+  - **Taşınmaz:** Kontenjan bazlı türde K zorunlu (`Property.CapacityRequired`), tek birimli taşınmaz dahil. K değişince veya alan değişince iki kontrol çalışıyor:
+    - Dolu kontenjanın altına inilemiyor (`Property.CapacityBelowOccupied`).
+    - k ≥ min bozulursa kayıt reddediliyor ve mesajda en yüksek K gösteriliyor (`Property.CapacityAboveMaximum`). Örnek: P=70, min=5 → 14.
+  - **Kilitler:** Açık sözleşmeli birimde alan değişmiyor (`Property.UnitAreaLocked`), tür de değişmiyor (`Property.UnitTypeLocked`). Tek birimde kapalı/açık alan da kilitli.
+  - **Tarihçe:** K null→değer veya değer→farklı değer olduğunda `UnitCapacityHistory` satırı yazılıyor (`EffectiveFrom` = bugün). Create'te K ile oluşan birim için de yazılıyor.
+  - **Testler:** `UnitTypeServiceTests` genişledi; yeni `PropertyUnitLockTests` ve `UnitCapacityChangeTests` eklendi. Tam paket 1062/1062 geçti.
+  - **Denetim:** Yazma A ve B sırayla çalıştı, çünkü ikisi de `UnitTypeRepository`'ye dokunuyordu. İki denetçi ve son birleşik denetim ONAY verdi.
+- **Açık noktalar (kullanıcı kararı):**
+  - **Tek açık başvuru index'i:** DB'de `UX_Sozlesmeler_BirimId_AcikBasvuru` filtreli unique index'i var (`IsDeleted=0 AND Durum IN (4,5)`). Birim başına tek Taslak/Revizyon kaydına izin veriyor. Bu index, F6'daki "aynı kontenjan bazlı birimde birden çok taslak" ve F7a'daki "aynı gruptaki taslaklar" kurallarını veritabanı düzeyinde engelliyor. Planda yer almıyor. **Karar (2026-11-17):** F6'dan önce ayrı bir migration adımında (tek yazma ajanı) index kaldırılır. Normal birimdeki tek açık başvuru kuralını servis (`HasOpenApplicationForUnitAsync`) korumaya devam eder.
+  - **Tek birimli taşınmaz (kapandı, 2026-11-17 kullanıcı kararı):** "Tek birimli taşınmaz kontenjan bazlı olamaz" kuralı kaldırıldı. Tek birim bölümüne K girişi (`SingleUnitCapacity`) eklendi; çoklu birimdeki K kuralları ve tarihçe aynen uygulanıyor. Kontenjan girilmemiş birimin K'sı DB'de boş kalıyor, Edit ekranında 0 görünüyor; kayıt için K ≥ 1 gerekiyor.
+  - **Sınır durumu (düşük önem):** P < min olan sözleşmesiz birimde mesaj "en yüksek K: 1" diyor, oysa 1 de reddediliyor.
 - **Birim türü:**
   - `UnitTypeService.CreateAsync/UpdateAsync`:
     - `RentalMode` yalnız `Usage == Rentable` iken kabul edilir.
@@ -198,7 +211,7 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
 - **Taşınmaz:**
   - `PropertyService.CreateAsync` / `UpdateWithChildrenAsync` / `ValidateDatabaseRulesAsync`:
     - `PropertyUnitInputDto.Capacity` alanı eklenir; kontenjan bazlı türde zorunludur, diğer türlerde null zorlanır.
-    - Tek birimli taşınmazda kontenjan bazlı tür seçilemez.
+    - ~~Tek birimli taşınmazda kontenjan bazlı tür seçilemez.~~ (kaldırıldı; tek birimde K `SingleUnitCapacity` ile girilir)
     - K değişikliği kuralları:
       - dolu kontenjanın altına inemez (A4)
       - artış k ≥ min'i bozuyorsa reddedilir ve izin verilen en yüksek K mesajda gösterilir
@@ -220,7 +233,7 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
     - P=60 birimde A 30 + B 30 taslak grup varken alan 65 yapılamaz. F4'te grup henüz yok; taslak sözleşme satırı test verisiyle kurulur.
     - Tek birimli taşınmazda kapalı/açık alan kilidi.
     - Yalnız bitmiş sözleşmesi olan birimin türü değişebilir; açık sözleşmesi olanınki değişemez.
-    - Tek birimli taşınmaz kontenjan bazlı türe bağlanamaz.
+    - ~~Tek birimli taşınmaz kontenjan bazlı türe bağlanamaz.~~ (yerine: tek birimde K ile kabul edilir, K kuralları geçerli)
   - Yeni `Integration/Properties/UnitCapacityChangeTests`:
     - K artışı/azaltışı, en yüksek izin verilen artış mesajı.
     - Tarihçe satırı, `GecerlilikBaslangici` = bugün.

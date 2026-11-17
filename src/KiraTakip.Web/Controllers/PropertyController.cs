@@ -149,8 +149,13 @@ public class PropertyController(
         if (editData != null)
         {
             viewModel.CanChangeUnitStructure = editData.CanChangeUnitStructure;
+            viewModel.SingleUnitHasOpenLease = editData.UnitStructure == UnitStructure.SingleUnit
+                && editData.OpenLeaseUnitIds.Count > 0;
             foreach (var unit in viewModel.Units.Where(unit => unit.Id.HasValue))
+            {
                 unit.HasActiveLease = editData.ActiveLeaseUnitIds.Contains(unit.Id!.Value);
+                unit.HasOpenLease = editData.OpenLeaseUnitIds.Contains(unit.Id!.Value);
+            }
             foreach (var area in viewModel.ReservationAreas.Where(area => area.Id.HasValue))
                 area.HasActiveReservation = editData.ActiveReservationUnitIds.Contains(area.Id!.Value);
         }

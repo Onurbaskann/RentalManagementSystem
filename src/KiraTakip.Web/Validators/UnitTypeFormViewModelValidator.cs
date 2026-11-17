@@ -21,6 +21,9 @@ public class UnitTypeFormViewModelValidator : IValidator<UnitTypeFormViewModel>
         if (!Enum.IsDefined(input.Usage))
             errors.Add(new ValidationError("Geçerli bir kullanım türü seçilmelidir.", nameof(input.Usage)));
 
+        if (!Enum.IsDefined(input.RentalMode))
+            errors.Add(new ValidationError("Geçerli bir alt kırılım seçilmelidir.", nameof(input.RentalMode)));
+
         if (input.Usage == UnitTypeUsage.Reservable &&
             (!input.ChargeTypeId.HasValue || input.ChargeTypeId <= 0))
         {

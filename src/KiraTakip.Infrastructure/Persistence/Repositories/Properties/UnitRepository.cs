@@ -8,6 +8,7 @@ using KiraTakip.Models.Dtos.AdminUser;
 using KiraTakip.Models.Dtos.Reservation;
 using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Dtos.Charge;
+using KiraTakip.Domain.Leases;
 
 namespace KiraTakip.Repositories.Properties;
 
@@ -306,4 +307,41 @@ public class UnitRepository(ApplicationDbContext ctx) : RepositoryBase<Unit>(ctx
             || await _ctx.Reservations.IgnoreQueryFilters().AnyAsync(reservation => reservation.UnitId == unitId)
             || await _ctx.Charges.IgnoreQueryFilters().AnyAsync(charge => charge.UnitId == unitId)
             || await _ctx.PaymentStoreRoutings.IgnoreQueryFilters().AnyAsync(routing => routing.UnitId == unitId);
+
+    public async Task<List<CapacityOccupant>> GetCapacityOccupantsAsync(int unitId, DateTime fromDate)
+        => await _ctx.Leases.IgnoreQueryFilters().AsNoTracking()
+            .Where(lease => lease.UnitId == unitId
+                && !lease.IsDeleted
+                && OpenStatuses.Contains(lease.Status)
+                && lease.EndDate >= fromDate
+                && lease.LeaseArea != null)
+            .Select(lease => new CapacityOccupant(
+                lease.StartDate,
+                lease.EndDate,
+                lease.LeaseArea!.AllocatedArea))
+            .ToListAsync();
+
+    public void AddCapacityHistory(Unit unit, int capacity, DateTime effectiveFrom)
+        => _ctx.UnitCapacityHistories.Add(new UnitCapacityHistory
+        {
+            Unit = unit,
+            Capacity = capacity,
+            EffectiveFrom = effectiveFrom
+        });
+
+    public async Task<HashSet<int>> GetOpenLeaseUnitIdsAsync(IReadOnlyCollection<int> unitIds)
+    {
+        if (unitIds.Count == 0) return [];
+        var ids = await _ctx.Leases.IgnoreQueryFilters().AsNoTracking()
+            .Where(lease => unitIds.Contains(lease.UnitId)
+                && !lease.IsDeleted
+                && OpenStatuses.Contains(lease.Status))
+            .Select(lease => lease.UnitId)
+            .Distinct()
+            .ToListAsync();
+        return ids.ToHashSet();
+    }
+
+    private static readonly LeaseStatus[] OpenStatuses =
+        [LeaseStatus.Active, LeaseStatus.Draft, LeaseStatus.RevisionRequested];
 }

@@ -10,6 +10,8 @@ public class EditPropertyViewModel
     public UnitStructure UnitStructure { get; set; }
     public bool CanChangeUnitStructure { get; set; }
     public int? SingleUnitTypeId { get; set; }
+    public int? SingleUnitCapacity { get; set; }
+    public bool SingleUnitHasOpenLease { get; set; }
     public string City { get; set; } = string.Empty;
     public string District { get; set; } = string.Empty;
     public string Neighborhood { get; set; } = string.Empty;

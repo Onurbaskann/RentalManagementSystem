@@ -55,7 +55,8 @@ public class AdminUnitTypeController(IUnitTypeService unitTypeService) : Control
                 model.SortOrder,
                 model.Usage,
                 model.ChargeTypeId,
-                model.IsActive));
+                model.IsActive,
+                model.RentalMode));
         }
         catch (BusinessValidationException exception)
         {
@@ -101,7 +102,8 @@ public class AdminUnitTypeController(IUnitTypeService unitTypeService) : Control
                 model.SortOrder,
                 model.Usage,
                 model.ChargeTypeId,
-                model.IsActive));
+                model.IsActive,
+                model.RentalMode));
         }
         catch (BusinessValidationException exception)
         {
@@ -129,6 +131,8 @@ public class AdminUnitTypeController(IUnitTypeService unitTypeService) : Control
         SortOrder = unitType.SortOrder,
         Usage = unitType.Usage,
         ChargeTypeId = unitType.ChargeTypeId,
+        RentalMode = unitType.RentalMode,
+        IsFeatureLocked = unitType.IsFeatureLocked,
         IsActive = unitType.IsActive
     };
 }

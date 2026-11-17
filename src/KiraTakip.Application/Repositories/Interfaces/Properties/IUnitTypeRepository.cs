@@ -11,6 +11,8 @@ public interface IUnitTypeRepository : IRepositoryBase<UnitType>
     Task<int> GetMaxSiraAsync();
     Task<bool> KodExistsAsync(string kod, int? excludeId = null);
     Task<bool> NameExistsAsync(string name, int? excludeId = null);
+    Task<bool> HasAnyLeaseAsync(int unitTypeId);
+    Task ClearUnitCapacitiesAsync(int unitTypeId);
 
     // Cross-aggregate kontroller (ChargeType DurumDegistir + UnitType DurumDegistir için)
     Task<bool> AnyAktifByBorcTipiIdAsync(int chargeTypeId, int? excludeId = null);

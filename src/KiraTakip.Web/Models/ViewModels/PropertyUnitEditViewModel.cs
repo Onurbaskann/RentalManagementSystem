@@ -9,5 +9,7 @@ public class PropertyUnitEditViewModel
     public decimal Area { get; set; }
     public string? Description { get; set; }
     public int? UnitTypeId { get; set; }
+    public int? Capacity { get; set; }
     public bool HasActiveLease { get; set; }
+    public bool HasOpenLease { get; set; }
 }

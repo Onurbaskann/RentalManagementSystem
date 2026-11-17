@@ -12,6 +12,8 @@ public class UnitTypeFormViewModel
 
     public int SortOrder { get; set; } = 1;
     public UnitTypeUsage Usage { get; set; } = UnitTypeUsage.Rentable;
+    public UnitRentalMode RentalMode { get; set; } = UnitRentalMode.UnitBased;
+    public bool IsFeatureLocked { get; set; }
     public int? ChargeTypeId { get; set; }
     public bool IsActive { get; set; } = true;
 
