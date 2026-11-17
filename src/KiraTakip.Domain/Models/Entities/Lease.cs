@@ -10,6 +10,21 @@ public class Lease : BaseEntity
     [Column("BirimId")]
     public int UnitId { get; set; }
 
+    [Column("SozlesmeGrubuId")]
+    public int? LeaseGroupId { get; set; }
+
+    [Column("AnlikBirimTuruAdi")]
+    public string UnitTypeNameSnapshot { get; set; } = string.Empty;
+
+    [Column("AnlikKullanimTuru")]
+    public UnitTypeUsage UnitTypeUsageSnapshot { get; set; }
+
+    [Column("AnlikKiralamaBicimi")]
+    public UnitRentalMode RentalModeSnapshot { get; set; }
+
+    [Column("AnlikBirimYuzolcumu")]
+    public decimal UnitAreaSnapshot { get; set; }
+
     [Column("KiraciId")]
     public int TenantId { get; set; }
 
@@ -50,6 +65,8 @@ public class Lease : BaseEntity
     public byte[] RowVersion { get; set; } = [];
 
     public Unit Unit { get; set; } = null!;
+    public LeaseGroup? LeaseGroup { get; set; }
+    public LeaseArea? LeaseArea { get; set; }
     public Tenant Tenant { get; set; } = null!;
     public List<LeaseActivityLog> ActivityLog { get; set; } = [];
     public List<LeaseRateOverride> LeaseRateOverrides { get; set; } = [];

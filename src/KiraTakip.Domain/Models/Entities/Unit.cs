@@ -23,6 +23,9 @@ public class Unit : BaseEntity
     [Column("Yuzolcumu")]
     public decimal Area { get; set; }
 
+    [Column("Kontenjan")]
+    public int? Capacity { get; set; }
+
     [Column("Aciklama")]
     public string? Description { get; set; }
 

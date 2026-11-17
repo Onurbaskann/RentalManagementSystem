@@ -41,6 +41,7 @@ public static class SystemSettingDefinitions
 
     public static class Lease
     {
+        public const string MinimumUsageArea = "Lease.MinimumUsageArea";
         public const string ExpiringSoonStatusDays = "Lease.ExpiringSoonStatusDays";
     }
 
@@ -101,7 +102,10 @@ public static class SystemSettingDefinitions
             SystemSettingInputKind.Integer, true, 0, 100),
         new(16, BankMatching.DateToleranceDays, "Tarih yakınlık süresi", "Banka Eşleştirme",
             "Ödeme ve banka hareketi aday sıralamasında yakın tarih kabul edilecek gün sayısı.", "15",
-            SystemSettingInputKind.Integer, true, 0, 365)
+            SystemSettingInputKind.Integer, true, 0, 365),
+        new(17, Lease.MinimumUsageArea, "Min. kullanım m²", "Sözleşme",
+            "Paylaşımlı ve kontenjan bazlı sözleşmeler için minimum kullanım alanı.", "5",
+            SystemSettingInputKind.Decimal, true, 0)
     ];
 
     private static readonly IReadOnlyDictionary<string, SystemSettingDefinition> ByKey =
@@ -228,11 +232,24 @@ public static class SystemSettingDefinitions
             PaymentReminderCooldownDays = ParseRequiredInt(values, Payment.ReminderCooldownDays),
             InvitationValidityDays = ParseRequiredInt(values, Invitation.ValidityDays),
             InvitationResendCooldownMinutes = ParseRequiredInt(values, Invitation.ResendCooldownMinutes),
+            LeaseMinimumUsageArea = ParseRequiredDecimal(values, Lease.MinimumUsageArea),
             LeaseExpiringSoonStatusDays = ParseRequiredInt(values, Lease.ExpiringSoonStatusDays),
             DashboardExpiringLeaseLookaheadDays = ParseRequiredInt(values, Dashboard.ExpiringLeaseLookaheadDays),
             BankMatchingAmountTolerancePercent = ParseRequiredInt(values, BankMatching.AmountTolerancePercent),
             BankMatchingDateToleranceDays = ParseRequiredInt(values, BankMatching.DateToleranceDays)
         };
+
+    private static decimal ParseRequiredDecimal(IReadOnlyDictionary<string, string> values, string key)
+    {
+        var definition = Find(key)
+            ?? throw new InvalidOperationException($"Sistem ayarı tanımı bulunamadı: {key}");
+        if (!values.TryGetValue(key, out var value))
+            throw new InvalidOperationException($"Zorunlu sistem ayarı bulunamadı: {key}");
+        if (!TryNormalizeValue(definition, value, out var normalizedValue, out var error))
+            throw new InvalidOperationException($"{key}: {error}");
+
+        return decimal.Parse(normalizedValue, CultureInfo.InvariantCulture);
+    }
 
     private static int ParseRequiredInt(IReadOnlyDictionary<string, string> values, string key)
     {

@@ -12,6 +12,7 @@ internal sealed class UnitConfiguration : IEntityTypeConfiguration<Unit>
         entity.Property(b => b.Name).HasMaxLength(200);
         entity.Property(b => b.UnitNo).HasMaxLength(50);
         entity.Property(b => b.Area).HasPrecision(18, 2);
+        entity.ToTable(t => t.HasCheckConstraint("CK_Birimler_Kontenjan", "[Kontenjan] IS NULL OR [Kontenjan] > 0"));
         entity.HasOne(b => b.Property)
               .WithMany(t => t.Units)
               .OnDelete(DeleteBehavior.Cascade);

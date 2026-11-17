@@ -18,6 +18,9 @@ public class UnitType : BaseEntity
     [Column("KullanimTuru")]
     public UnitTypeUsage Usage { get; set; } = UnitTypeUsage.Rentable;
 
+    [Column("KiralamaBicimi")]
+    public UnitRentalMode RentalMode { get; set; } = UnitRentalMode.UnitBased;
+
     [Column("Sira")]
     public int SortOrder { get; set; }
 

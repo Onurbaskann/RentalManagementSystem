@@ -51,6 +51,9 @@ public static class AuditDisplayNames
         // Domain
         ["Tenant"] = "Kiracı",
         ["Lease"] = "Sözleşme",
+        ["LeaseGroup"] = "Sözleşme grubu",
+        ["LeaseArea"] = "Sözleşme alanı",
+        ["UnitCapacityHistory"] = "Birim kontenjan geçmişi",
         ["Charge"] = "Tahakkuk",
         ["ChargeLineItem"] = "Tahakkuk kalemi",
         ["PaymentAllocation"] = "Ödeme dağıtımı",

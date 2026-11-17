@@ -104,6 +104,9 @@ public class ApplicationDbContext(
     public DbSet<Unit> Units { get; set; }
     public DbSet<Tenant> Tenants { get; set; }
     public DbSet<Lease> Leases { get; set; }
+    public DbSet<LeaseGroup> LeaseGroups { get; set; }
+    public DbSet<LeaseArea> LeaseAreas { get; set; }
+    public DbSet<UnitCapacityHistory> UnitCapacityHistories { get; set; }
     public DbSet<LeaseActivityLog> SozlesmeIslemGecmisleri { get; set; }
     public DbSet<LeaseReviewHistory> SozlesmeIncelemeGecmisleri { get; set; }
     public DbSet<UserPermissionScope> KullaniciYetkiKapsamlari { get; set; }

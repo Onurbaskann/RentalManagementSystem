@@ -1,7 +1,7 @@
 # Paylaşımlı ve Açık Birim — Uygulama Planı
 
 > Kaynak (tek doğruluk kaynağı): [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Bu plan oradaki kararları uygular, yeni kural eklemez.
-> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1 tamamlandı; sıradaki faz F2.
+> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1 ve F2 tamamlandı; sıradaki faz F3.
 > Kodda doğrulama: 2026-11-17, 3 Explore ajanı + ana oturum Grep/Read.
 
 ## 0. Bu planla kararlaştırılanlar (2026-11-17, kullanıcı cevabı)
@@ -102,7 +102,9 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
 - **Testler:** Unit/Leases altında yeni `UnitCapacityPolicyTests`, `LeaseGroupPolicyTests`, `LeaseOccupancyPolicyTests` (genişletme), `LeaseRatePolicyTests` (genişletme). Unit/Settings altında ondalık normalizasyon testi.
 - **Ajan:** 1 yazma + 1 denetçi.
 
-### F2 — Şema ve EF migration (tek yazma ajanı, başka yazma yok)
+### F2 — Şema ve EF migration (tek yazma ajanı, başka yazma yok) — ✅ Tamamlandı (2026-11-17)
+- **Sonuç:** Şema, entity ve EF konfigürasyonları ile `AddSharedAndCapacityUnits` migration’ı eklendi; mevcut sözleşmelerin dört birim anlık bilgisi silinmiş kayıtlar dahil dolduruldu. `Lease.MinimumUsageArea` (SeedId 17, varsayılan 5, ondalık) ve operasyon politikası alanı eklendi. Kullanıcının açıkça onayladığı kapsam eklemesiyle `AuditDisplayNames.EntityTypes` içine `LeaseGroup` → "Sözleşme grubu", `LeaseArea` → "Sözleşme alanı", `UnitCapacityHistory` → "Birim kontenjan geçmişi" eşlemeleri eklendi. Build: 0 hata, önceden var olan 5 ilgisiz uyarı; ayar/backfill testleri 10/10, audit testleri 4/4, tam paket 1022/1022 (0 skip, 36 sn); bağımsız denetçi APPROVE verdi. Test DB migration’ı uygulandı; production uygulaması bekliyor. F2 commit edilmedi.
+- **Sonraki faz için not:** Yeni sözleşmelerde oluşturma ve taslak düzenlemesi sırasında anlık bilgi yazımı F3 kapsamındadır; bu fazda servis/controller/UI davranışı değiştirilmedi.
 - **Entity'ler.** Sınıf adları İngilizce, tablo/kolon adları Türkçe ([Table]/[Column]); precision, check ve index ayarları `Persistence/Configurations/<Alan>/` altında:
 
 | Entity / alan | Tablo / kolon | Not |

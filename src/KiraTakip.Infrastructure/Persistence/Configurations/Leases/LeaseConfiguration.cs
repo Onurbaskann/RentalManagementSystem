@@ -8,6 +8,12 @@ internal sealed class LeaseConfiguration : IEntityTypeConfiguration<Lease>
 {
     public void Configure(EntityTypeBuilder<Lease> entity)
     {
+        entity.Property(s => s.UnitTypeNameSnapshot).IsRequired().HasMaxLength(100);
+        entity.Property(s => s.UnitAreaSnapshot).HasPrecision(18, 2);
+        entity.Property(s => s.UnitTypeUsageSnapshot).HasComment(EnumComment.For<UnitTypeUsage>());
+        entity.Property(s => s.RentalModeSnapshot).HasComment(EnumComment.For<UnitRentalMode>());
+        entity.HasOne(s => s.LeaseGroup).WithMany(g => g.Leases)
+              .HasForeignKey(s => s.LeaseGroupId).OnDelete(DeleteBehavior.Restrict);
         entity.Property(s => s.LeaseNo).HasMaxLength(20);
         entity.HasIndex(s => s.LeaseNo)
               .IsUnique()

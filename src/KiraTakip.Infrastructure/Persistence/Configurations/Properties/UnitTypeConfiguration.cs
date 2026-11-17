@@ -15,6 +15,10 @@ internal sealed class UnitTypeConfiguration : IEntityTypeConfiguration<UnitType>
               .HasDefaultValue(UnitTypeUsage.Rentable)
               .HasComment(EnumComment.For<UnitTypeUsage>());
 
+        entity.Property(b => b.RentalMode)
+              .HasDefaultValue(UnitRentalMode.UnitBased)
+              .HasComment(EnumComment.For<UnitRentalMode>());
+
         entity.HasOne(b => b.ChargeType)
               .WithMany()
               .OnDelete(DeleteBehavior.Restrict);
