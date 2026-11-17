@@ -850,6 +850,7 @@ public class LeaseApprovalServiceTests : IDisposable
             new UnitOfWork(_context),
             new StatisticsService(
                 chargeTypeRepository,
+                leaseRepository,
                 rateResolver,
                 batchRateResolver,
                 new TestOperationalPolicyProvider()),

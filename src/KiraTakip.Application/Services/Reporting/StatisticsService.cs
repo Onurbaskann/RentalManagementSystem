@@ -2,6 +2,7 @@ using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Interfaces.Charges;
+using KiraTakip.Repositories.Interfaces.Leases;
 using KiraTakip.Services.Interfaces.Payments;
 using KiraTakip.Services.Interfaces.Pricing;
 using KiraTakip.Services.Interfaces.Reporting;
@@ -12,6 +13,7 @@ namespace KiraTakip.Services.Reporting;
 
 public class StatisticsService(
     IChargeTypeRepository chargeTypeRepository,
+    ILeaseRepository leaseRepository,
     IRateResolverService rateResolver,
     IBatchRateResolver batchRateResolver,
     IOperationalPolicyProvider operationalPolicyProvider) : IStatisticsService
@@ -73,15 +75,22 @@ public class StatisticsService(
         }
 
         var snapshots = await batchRateResolver.ResolveManyAsync(requests);
+        var rentedAreas = await leaseRepository.GetRentedAreasAsync(leases.Select(lease => lease.Id).ToList());
 
         foreach (var lease in leases)
         {
             decimal total = 0m;
             var area = lease.Unit?.Area ?? 0m;
+            decimal? rentedArea = rentedAreas.TryGetValue(lease.Id, out var rented) ? rented : null;
             foreach (var chargeType in monthlyFixedTypes)
             {
                 if (!snapshots.TryGetValue((lease.Id, chargeType.Id), out var snapshot) || snapshot == null) continue;
-                total += LeaseRatePolicy.CalculateBaseAmount(snapshot.CalculationMethod, snapshot.UnitValue, area);
+                total += LeaseRatePolicy.CalculateBaseAmount(
+                    snapshot.CalculationMethod,
+                    snapshot.UnitValue,
+                    area,
+                    rentedArea,
+                    snapshot.SourceType == LineItemSourceType.LeaseRateOverride);
             }
             result[lease.Id] = total;
         }
@@ -129,6 +138,7 @@ public class StatisticsService(
                 && LeaseBillingPolicy.ShouldIncludeChargeType(isRentFree, chargeType.Code))
             .ToList();
 
+        var rentedArea = await leaseRepository.GetRentedAreaAsync(leaseId);
         decimal total = 0m;
         foreach (var chargeType in chargeTypes)
         {
@@ -143,7 +153,9 @@ public class StatisticsService(
             total += LeaseRatePolicy.CalculateBaseAmount(
                 snapshot.CalculationMethod,
                 snapshot.UnitValue,
-                area);
+                area,
+                rentedArea,
+                snapshot.SourceType == LineItemSourceType.LeaseRateOverride);
         }
 
         return total;

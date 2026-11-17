@@ -188,6 +188,7 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
             new UnitOfWork(context),
             new StatisticsService(
                 chargeTypeRepository,
+                leaseRepository,
                 rateResolver,
                 batchRateResolver,
                 new TestOperationalPolicyProvider()),

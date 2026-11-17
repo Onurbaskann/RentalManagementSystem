@@ -37,4 +37,12 @@ public static class LeaseRatePolicy
         decimal unitValue,
         decimal unitArea)
         => unitValue * CalculateMultiplier(calculationMethod, unitArea);
+
+    public static decimal CalculateBaseAmount(
+        CalculationMethod calculationMethod,
+        decimal unitValue,
+        decimal unitArea,
+        decimal? rentedArea,
+        bool isLeaseRateSource)
+        => Math.Round(unitValue * CalculateMultiplier(calculationMethod, unitArea, rentedArea, isLeaseRateSource), 2);
 }

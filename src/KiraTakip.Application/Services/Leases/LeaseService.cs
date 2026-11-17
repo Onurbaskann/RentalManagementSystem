@@ -374,7 +374,10 @@ public class LeaseService(
             "Seçilen birimde bu tarih aralığıyla çakışan açık sözleşme bulunmaktadır.",
             "Lease.ActiveUnitConflict");
         EnsureOverridePermission(input.UpdateRate, input.CanOverrideRate);
-        await EnsureRateOverridesAsync(input.RateOverrides, lease.Unit.Area, lease.IsRentFree);
+        await EnsureRateOverridesAsync(
+            input.RateOverrides,
+            await leaseRepository.GetRentedAreaAsync(lease.Id) ?? lease.Unit.Area,
+            lease.IsRentFree);
         Guard.InvalidField(
             input.IsVatApplied && !RentIncreasePolicy.IsValidVatRate(input.VatRate),
             nameof(input.VatRate),
@@ -501,7 +504,10 @@ public class LeaseService(
             "Yalnız aktif sözleşmenin tahakkukları yeniden üretilebilir.",
             "Lease.NotActive");
         EnsureOverridePermission(input.UpdateRate, input.CanOverrideRate);
-        await EnsureRateOverridesAsync(input.RateOverrides, lease.Unit.Area, lease.IsRentFree);
+        await EnsureRateOverridesAsync(
+            input.RateOverrides,
+            await leaseRepository.GetRentedAreaAsync(lease.Id) ?? lease.Unit.Area,
+            lease.IsRentFree);
 
         if (input.UpdateRate && input.RateOverrides.Count > 0)
         {

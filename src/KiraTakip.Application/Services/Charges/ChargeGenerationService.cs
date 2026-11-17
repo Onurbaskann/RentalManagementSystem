@@ -218,6 +218,10 @@ public class ChargeGenerationService(
                 "Lease.PricingContextMismatch");
         }
 
+        var rentedArea = input.LeaseId.HasValue
+            ? await leaseRepository.GetRentedAreaAsync(input.LeaseId.Value)
+            : null;
+
         var activeChargeTypes = await chargeTypeRepository.GetActiveGenerationTypesAsync();
         var previewList = new List<ChargeLineItemPreview>();
         var isRentFree = input.LeaseId.HasValue
@@ -255,7 +259,11 @@ public class ChargeGenerationService(
 
             if (snapshot != null)
             {
-                var multiplierBase = LeaseRatePolicy.CalculateMultiplier(snapshot.CalculationMethod, unit.Area);
+                var multiplierBase = LeaseRatePolicy.CalculateMultiplier(
+                    snapshot.CalculationMethod,
+                    unit.Area,
+                    rentedArea,
+                    snapshot.SourceType == LineItemSourceType.LeaseRateOverride);
                 var calculation = ChargeAmountPolicy.Calculate(
                     snapshot.UnitValue,
                     multiplierBase,

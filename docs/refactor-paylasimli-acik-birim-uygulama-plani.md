@@ -1,7 +1,7 @@
 # Paylaşımlı ve Açık Birim — Uygulama Planı
 
 > Kaynak (tek doğruluk kaynağı): [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Bu plan oradaki kararları uygular, yeni kural eklemez.
-> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1–F4 tamamlandı; sıradaki faz F5.
+> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1–F5 tamamlandı; sıradaki iş: unique index migration'ı, ardından F6.
 > Kodda doğrulama: 2026-11-17, 3 Explore ajanı + ana oturum Grep/Read.
 
 ## 0. Bu planla kararlaştırılanlar (2026-11-17, kullanıcı cevabı)
@@ -243,7 +243,18 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
   - Yazma A: birim türü (servis, repository, controller, view, testler).
   - Yazma B: taşınmaz (servis, DTO, `UnitRepository`, view, testler).
 
-### F5 — m² çarpanı ve sabit kalem oranı
+### F5 — m² çarpanı ve sabit kalem oranı — ✅ Tamamlandı (2026-11-17)
+- **Sonuç:**
+  - Tahakkuk (`ChargeGenerationService.ComposeLineItemsAsync`), istatistik (tekil ve toplu yol) ve uzatma/yeniden üretimdeki tarife doğrulaması sözleşmenin `RentedArea` değerini kullanıyor. Okuma `LeaseRepository.GetRentedAreaAsync` ve `GetRentedAreasAsync` ile yapılıyor.
+  - Sözleşme tarifesi kaynağı `SourceType == LeaseRateOverride` ile ayrılıyor.
+  - Sözleşme oluşturmada henüz kiralanan m² girişi yok, bu yüzden oluşturma `Unit.Area` kullanmaya devam ediyor.
+  - `_LeaseFormScripts.cshtml` içine `rentedArea` (varsayılan null) eklendi; giriş alanı F6 ve F7a'da gelecek.
+  - Yeni `LeaseRatePolicy.CalculateBaseAmount` overload'u kuruşa yuvarlıyor (ToEven, tahakkukla aynı). Bu yüzden istatistik ve uzatma ekranındaki tutarlar da artık kuruşa yuvarlanıyor; fark kalem başına en fazla 0,005 TL.
+  - Testler: yeni `LeaseAreaChargeGenerationTests` eklendi. Tam paket 1067/1067 geçti; denetim ONAY verdi.
+- **Sonraki fazlar için not:**
+  - `PropertyService.cs:70` civarı: istatistikte birim alanı bulunamazsa 0'a düşüyor. LeaseArea'lı ve Fixed bir kalemde `CalculateMultiplier` bu durumda istisna atar. LeaseArea yazan akış (F6/F7a) eklenince ele alınmalı.
+  - `Multiplier` kolonu (18,4) oranı 0,3333 olarak saklıyor. Tutar ayrı hesaplandığı için doğru (2.000,00), ama ekranda "birim değer × çarpan" 1.999,80 gibi görünebilir.
+  - Yeniden üretme yolu ve silinmiş LeaseArea senaryosu ayrıca test edilmedi.
 - **Tahakkuk:** `ChargeGenerationService:258`
   - Sözleşmenin `LeaseArea` satırını ve `RateSnapshot.SourceType == LineItemSourceType.LeaseRateOverride` bilgisini F1'deki yeni `CalculateMultiplier` ile kullanır.
   - Birim alanı (P) olarak hesap anındaki `Unit.Area` kullanılır. Alan kilidi sayesinde açık sözleşme boyunca sabittir.

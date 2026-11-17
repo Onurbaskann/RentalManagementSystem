@@ -708,6 +708,22 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             .Select(lease => lease.LeaseNo)
             .ToListAsync();
 
+    public async Task<decimal?> GetRentedAreaAsync(int leaseId)
+        => await ctx.LeaseAreas
+            .AsNoTracking()
+            .Where(area => area.LeaseId == leaseId)
+            .Select(area => (decimal?)area.RentedArea)
+            .FirstOrDefaultAsync();
+
+    public async Task<Dictionary<int, decimal>> GetRentedAreasAsync(IReadOnlyCollection<int> leaseIds)
+    {
+        var ids = leaseIds.ToList();
+        return await ctx.LeaseAreas
+            .AsNoTracking()
+            .Where(area => ids.Contains(area.LeaseId))
+            .ToDictionaryAsync(area => area.LeaseId, area => area.RentedArea);
+    }
+
     private static IQueryable<Lease> ApplyScope(
         IQueryable<Lease> query,
         List<int>? authorizedPropertyIds,

@@ -77,4 +77,6 @@ public interface ILeaseRepository : IRepositoryBase<Lease>
     Task<Lease?> GetForExpirationAsync(int leaseId);
     Task<DocumentOwnerContextDto?> GetDocumentOwnerContextAsync(int leaseId, bool tenantPortalOnly = false);
     Task<List<string>> GetExistingLeaseNosAsync();
+    Task<decimal?> GetRentedAreaAsync(int leaseId);
+    Task<Dictionary<int, decimal>> GetRentedAreasAsync(IReadOnlyCollection<int> leaseIds);
 }
