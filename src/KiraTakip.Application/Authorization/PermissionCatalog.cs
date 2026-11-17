@@ -59,7 +59,10 @@ public static class PermissionCatalog
         public const string ResubmitGroup = "Internal.Lease.ResubmitGroup";
         public const string DeleteGroupDraft = "Internal.Lease.DeleteGroupDraft";
         public const string ApproveGroup = "Internal.Lease.ApproveGroup";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(Extend, "Süre Uzat"), new(Terminate, "Feshet"), new(OverrideRate, "Elle Müdahale"), new(Approve, "Onayla"), new(RequestRevision, "Revizyon İste"), new(DeleteDraft, "Başvuru Sil"), new(CreateGroup, "Paylaşımlı Grup Oluştur"), new(UpdateGroup, "Grup Taslağı Düzenle"), new(ResubmitGroup, "Grubu Yeniden Gönder"), new(DeleteGroupDraft, "Grup Taslağı Sil"), new(ApproveGroup, "Grup Onayla")];
+        public const string ExtendGroup = "Internal.Lease.ExtendGroup";
+        public const string TerminateGroup = "Internal.Lease.TerminateGroup";
+        public const string RestructureGroup = "Internal.Lease.RestructureGroup";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(Extend, "Süre Uzat"), new(Terminate, "Feshet"), new(OverrideRate, "Elle Müdahale"), new(Approve, "Onayla"), new(RequestRevision, "Revizyon İste"), new(DeleteDraft, "Başvuru Sil"), new(CreateGroup, "Paylaşımlı Grup Oluştur"), new(UpdateGroup, "Grup Taslağı Düzenle"), new(ResubmitGroup, "Grubu Yeniden Gönder"), new(DeleteGroupDraft, "Grup Taslağı Sil"), new(ApproveGroup, "Grup Onayla"), new(ExtendGroup, "Grubu Uzat"), new(TerminateGroup, "Grubu Feshet"), new(RestructureGroup, "Grubu Yeniden Yapılandır")];
     }
 
     public static class Payment
@@ -365,6 +368,7 @@ public static class PermissionCatalog
         Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
         Lease.Approve, Lease.RequestRevision, Lease.DeleteDraft,
         Lease.CreateGroup, Lease.UpdateGroup, Lease.ResubmitGroup, Lease.DeleteGroupDraft, Lease.ApproveGroup,
+        Lease.ExtendGroup, Lease.TerminateGroup, Lease.RestructureGroup,
         Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject, Payment.MatchBankTransaction,
         ManualCharge.Module, ManualCharge.Create, ManualCharge.Cancel,
         Reservation.Module, Reservation.Create, Reservation.Edit, Reservation.Cancel,
@@ -398,6 +402,7 @@ public static class PermissionCatalog
         Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
         Lease.Approve, Lease.RequestRevision, Lease.DeleteDraft,
         Lease.CreateGroup, Lease.UpdateGroup, Lease.ResubmitGroup, Lease.DeleteGroupDraft, Lease.ApproveGroup,
+        Lease.ExtendGroup, Lease.TerminateGroup, Lease.RestructureGroup,
         Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject,
         Payment.ImportBankStatement, Payment.MatchBankTransaction,
         ChargeType.Module, ChargeType.Create, ChargeType.Edit,

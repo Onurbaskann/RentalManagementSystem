@@ -37,6 +37,20 @@ public interface ILeaseApplicationRules
         DateTime rangeEnd,
         string field);
 
+    /// <summary>
+    /// Uzatma doğrulamaları (durum, tarih, çakışma/kontenjan, tarife, KDV). Lease.Unit yüklü olmalıdır.
+    /// Kapsam ve gruplu sözleşme kontrolü çağırana aittir.
+    /// </summary>
+    Task EnsureExtensionAllowedAsync(
+        Lease lease,
+        DateTime newEndDate,
+        bool isVatApplied,
+        decimal vatRate,
+        bool updateRate,
+        bool canOverrideRate,
+        IReadOnlyCollection<LeaseRateOverrideInput> rateOverrides,
+        int? excludeLeaseGroupId = null);
+
     Task EnsureRateOverridesAsync(
         IReadOnlyCollection<LeaseRateOverrideInput> rateOverrides,
         decimal unitArea,

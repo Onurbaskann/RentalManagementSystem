@@ -1,7 +1,7 @@
 # Paylaşımlı ve Açık Birim — Uygulama Planı
 
 > Kaynak (tek doğruluk kaynağı): [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Bu plan oradaki kararları uygular, yeni kural eklemez.
-> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1–F7a ve unique index migration'ı tamamlandı; sıradaki faz F7b.
+> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1–F7b ve unique index migration'ı tamamlandı; sıradaki faz F8.
 > Kodda doğrulama: 2026-11-17, 3 Explore ajanı + ana oturum Grep/Read.
 
 ## 0. Bu planla kararlaştırılanlar (2026-11-17, kullanıcı cevabı)
@@ -382,7 +382,19 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
   - Yazma A: servis, repository, izin kataloğu, seed, testler.
   - Yazma B: controller, view'lar, mimari test.
 
-### F7b — Paylaşımlı grup: uzatma, fesih, yeniden yapılanma
+### F7b — Paylaşımlı grup: uzatma, fesih, yeniden yapılanma — ✅ Tamamlandı (2026-11-17)
+- **Sonuç:**
+  - `LeaseGroupService`: `ExtendGroupAsync`, `TerminateGroupAsync`, `RestructureGroupAsync`; `ApproveGroup` ön koşulu (`LeaseGroup.PreviousGroupUnsettled`, `LeaseGroup.PreviousDepositNotRefunded`). Dummy `IDepositRefundStatusService` her zaman true.
+  - Tekil uzatma doğrulamaları `LeaseApplicationRules.EnsureExtensionAllowedAsync`'e taşındı; sıra ve kodlar aynı.
+  - Kullanıcı kararları: yeniden yapılandırma formunda yeni grubun bitiş, vade kuralı, açıklama ve bedelsiz alanları formda ve eski gruptan dolu; fesih nedeni yeniden yapılandırmada zorunlu; grup fesihte tekil fesihteki gibi (web formunda zorunlu, serviste değil). `GetDefaultLineItems` izin kontrolüne `ExtendGroup` ve `RestructureGroup` eklendi.
+  - Seed: operasyon rolü `ExtendGroup`, `TerminateGroup`, `RestructureGroup` aldı.
+  - Web: grup detayında uzatma ve fesih modalları, `Lease/Group/{id}/Restructure` formu, önceki gruba bağlantı. Form `/Lease/RestructureGroup` adresine gider (denetimde bulunan 405 düzeltildi).
+  - Testler: `LeaseGroupLifecycleTests` (11), mimari ve izin testleri. Tam paket 1124/1124; iki yazma denetimi ve son denetim ONAY.
+- **Açık notlar (plan sonunda bakılacak):**
+  - Formlar tarayıcıda denenmedi (uzatma/fesih modalları, başlangıç önerisi, yeniden yapılandırma gönderimi).
+  - Grup uzatmada tarife satırları grup başlangıç tarihiyle getiriliyor; tekil uzatmadaki tarife getirme mantığından farklı olabilir.
+  - Eski grubun bitişi geçmişteyse yeniden yapılandırma formu ilk gönderimde bitiş hatası verir; kullanıcı düzeltebilir.
+  - Grup uzatma formunda tekil formdaki canlı tutar özeti yok.
 - **Servis:**
   - **ExtendGroup:** Tüm sözleşmelere ortak yeni bitiş; mevcut uzatma kuralları sözleşme başına çalışır (A2). Çakışma kontrolü grubu hariç tutar.
   - **TerminateGroup:** Ortak fesih tarihi; tüm sözleşmeler `Terminated` olur ve gelecek tahakkuklar iptal edilir (`CancelFutureChargesAsync`).
@@ -454,7 +466,7 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
 3. `PROGRESS.md` güncellenir ve kaynak dokümanda "Sonraki adım" kapatılır.
 4. Production notu: `AddSharedAndCapacityUnits` (ve bekleyen `AddLeaseExpirationActivityType`) production'a uygulanmalı.
 5. Manuel tarayıcı kontrolü kullanıcıdadır.
-6. Fazlardan kalan açık notlar kullanıcıyla birlikte tekrar değerlendirilir (2026-11-17 kullanıcı kararı): F5 "Sonraki fazlar için not", F6 ve F7a "Açık notlar" maddeleri.
+6. Fazlardan kalan açık notlar kullanıcıyla birlikte tekrar değerlendirilir (2026-11-17 kullanıcı kararı): F5 "Sonraki fazlar için not", F6, F7a ve F7b "Açık notlar" maddeleri.
 
 ## 4. Doğrulama maddesi → test eşlemesi
 | Dokümandaki madde | Test | Faz |

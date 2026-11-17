@@ -98,6 +98,72 @@ public class LeaseApplicationRules(
         return new ValidatedLeaseApplication(unit, area);
     }
 
+    public async Task EnsureExtensionAllowedAsync(
+        Lease lease,
+        DateTime newEndDate,
+        bool isVatApplied,
+        decimal vatRate,
+        bool updateRate,
+        bool canOverrideRate,
+        IReadOnlyCollection<LeaseRateOverrideInput> rateOverrides,
+        int? excludeLeaseGroupId = null)
+    {
+        Guard.Conflict(
+            !LeaseLifecycle.CanExtend(lease.Status),
+            "Yalnız aktif veya süresi dolmuş sözleşme uzatılabilir.",
+            "Lease.NotActive");
+        Guard.Conflict(
+            !LeaseSchedulePolicy.CanExtend(lease.EndDate, newEndDate),
+            "Yeni bitiş tarihi mevcut bitiş tarihinden büyük olmalıdır.",
+            "Lease.InvalidExtensionDate");
+        Guard.InvalidField(
+            lease.Status == LeaseStatus.Ended && newEndDate.Date < DateTime.Now.Date,
+            "NewEndDate",
+            "Süresi dolmuş sözleşme için yeni bitiş tarihi bugünden önce olamaz.",
+            "Lease.ExtendEndedRequiresFutureEnd");
+        if (lease.RentalModeSnapshot == UnitRentalMode.CapacityBased)
+        {
+            Guard.InvalidField(
+                lease.Unit.Capacity is null or <= 0,
+                "NewEndDate",
+                "Birim için kontenjan tanımlı olmadığından sözleşme uzatılamaz.",
+                "Lease.UnitCapacityMissing");
+            var leaseArea = await leaseRepository.GetLeaseAreaAsync(lease.Id);
+            var extensionStart = lease.EndDate.Date.AddDays(1);
+            var occupants = (await leaseRepository.GetOpenLeaseAreasForUnitAsync(
+                lease.UnitId, extensionStart, newEndDate, lease.Id)).ToList();
+            occupants.Add(new CapacityOccupant(
+                lease.StartDate, newEndDate, leaseArea?.AllocatedArea ?? 0m));
+            EnsureCapacityAvailable(
+                lease.Unit.Capacity!.Value,
+                lease.Unit.Area,
+                occupants,
+                extensionStart,
+                newEndDate,
+                "NewEndDate");
+        }
+        else
+            Guard.InvalidField(
+                await leaseRepository.HasOverlappingActiveLeaseAsync(
+                    lease.UnitId, lease.StartDate, newEndDate, lease.Id, excludeLeaseGroupId),
+                "NewEndDate",
+                "Seçilen birimde bu tarih aralığıyla çakışan açık sözleşme bulunmaktadır.",
+                "Lease.ActiveUnitConflict");
+        Guard.Forbidden(
+            updateRate && !canOverrideRate,
+            "Sözleşme tarifesini değiştirme yetkiniz bulunmuyor.",
+            "Lease.OverrideRateForbidden");
+        await EnsureRateOverridesAsync(
+            rateOverrides,
+            await leaseRepository.GetRentedAreaAsync(lease.Id) ?? lease.Unit.Area,
+            lease.IsRentFree);
+        Guard.InvalidField(
+            isVatApplied && !RentIncreasePolicy.IsValidVatRate(vatRate),
+            "VatRate",
+            "KDV oranı 0-100 arasında olmalıdır.",
+            "Lease.InvalidVatRate");
+    }
+
     private async Task<(decimal Rented, decimal Allocated)> ValidateCapacityLeaseAsync(
         LeaseUnitContextDto unit,
         DateTime startDate,

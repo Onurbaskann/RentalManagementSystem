@@ -465,6 +465,8 @@ public partial class LeaseController(
     {
         if (!await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Create)
             && !await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Extend)
+            && !await permissionService.HasPermissionAsync(PermissionCatalog.Lease.ExtendGroup)
+            && !await permissionService.HasPermissionAsync(PermissionCatalog.Lease.RestructureGroup)
             && !await permissionService.HasPermissionAsync(PermissionCatalog.Charge.Regenerate))
             return Forbid();
 

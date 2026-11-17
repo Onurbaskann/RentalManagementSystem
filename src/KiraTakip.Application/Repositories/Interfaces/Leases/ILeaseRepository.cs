@@ -74,6 +74,8 @@ public interface ILeaseRepository : IRepositoryBase<Lease>
         int? excludedLeaseId = null,
         int? excludedLeaseGroupId = null);
     Task<bool> HasChargesAsync(int leaseId);
+    /// <summary>İptal edilmemiş ve Paid olmayan tahakkuk var mı.</summary>
+    Task<bool> HasUnsettledChargesAsync(int leaseId);
     Task<bool> HasCreationActivityAsync(int leaseId);
     Task<Lease?> GetDeletedApplicationForAuditAsync(int leaseId);
     Task<Lease?> GetWithActivityLogAsync(int leaseId);

@@ -54,6 +54,48 @@ public sealed record ApproveLeaseGroupInput(
     string ActorUserId,
     LeaseAccessScopeInput AccessScope);
 
+/// <summary>Uzatmada sözleşme başına tarife satırları (A2). Listelenmeyen sözleşme için boş kabul edilir.</summary>
+public sealed record ExtendLeaseGroupMemberInput(
+    int LeaseId,
+    IReadOnlyCollection<LeaseRateOverrideInput> RateOverrides);
+
+public sealed record ExtendLeaseGroupInput(
+    int GroupId,
+    DateTime NewEndDate,
+    bool IsVatApplied,
+    decimal VatRate,
+    decimal? InflationRate,
+    string? Description,
+    bool UpdateRate,
+    bool CanOverrideRate,
+    IReadOnlyCollection<ExtendLeaseGroupMemberInput> Members,
+    string ActorUserId,
+    LeaseAccessScopeInput AccessScope);
+
+public sealed record TerminateLeaseGroupInput(
+    int GroupId,
+    DateTime TerminationDate,
+    string TerminationReason,
+    string? Description,
+    string ActorUserId,
+    LeaseAccessScopeInput AccessScope);
+
+/// <summary>Eski grup feshedilir, yeni grup (PreviousGroupId = GroupId) Draft açılır. Members satırlarında LeaseId null olmalıdır.</summary>
+public sealed record RestructureLeaseGroupInput(
+    int GroupId,
+    DateTime TerminationDate,
+    string TerminationReason,
+    string? TerminationDescription,
+    DateTime StartDate,
+    DateTime EndDate,
+    DueDateRuleType DueDateRuleType,
+    int DueDay,
+    string? Description,
+    bool IsRentFree,
+    IReadOnlyCollection<LeaseGroupMemberInput> Members,
+    string ActorUserId,
+    LeaseAccessScopeInput AccessScope);
+
 public sealed record GetLeaseGroupInput(
     int GroupId,
     LeaseAccessScopeInput AccessScope);

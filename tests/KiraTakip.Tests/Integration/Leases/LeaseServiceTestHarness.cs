@@ -12,6 +12,7 @@ using KiraTakip.Repositories.Properties;
 using KiraTakip.Repositories.Tenants;
 using KiraTakip.Services.Charges;
 using KiraTakip.Services.Interfaces.Identity;
+using KiraTakip.Services.Interfaces.Leases;
 using KiraTakip.Services.Leases;
 using KiraTakip.Services.Pricing;
 using KiraTakip.Services.Reporting;
@@ -218,7 +219,9 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
             new LeaseReviewHistoryRepository(context),
             new TestOperationalPolicyProvider());
 
-    public LeaseGroupService CreateGroupService(string actorUserId)
+    public LeaseGroupService CreateGroupService(
+        string actorUserId,
+        IDepositRefundStatusService? depositRefundStatusService = null)
     {
         var leaseRepository = new LeaseRepository(context);
         var rateRepository = new LeaseRateOverrideRepository(context);
@@ -239,6 +242,12 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
             leaseRepository,
             new UnitRepository(context),
             new TenantRepository(context));
+        var batchRateResolver = new BatchRateResolver(
+            rateRepository,
+            new UnitRateRepository(context),
+            new PropertyRateOverrideRepository(context),
+            new RateScheduleRepository(context),
+            leaseRepository);
         return new LeaseGroupService(
             new LeaseGroupRepository(context),
             leaseRepository,
@@ -248,6 +257,13 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
             new ApplicationUserRepository(context),
             chargeGeneration,
             CreateRules(leaseRepository, rateRepository, chargeTypeRepository, chargeGeneration),
+            new StatisticsService(
+                chargeTypeRepository,
+                leaseRepository,
+                rateResolver,
+                batchRateResolver,
+                new TestOperationalPolicyProvider()),
+            depositRefundStatusService ?? new DummyDepositRefundStatusService(),
             new TestUserContext(actorUserId),
             new UnitOfWork(context));
     }

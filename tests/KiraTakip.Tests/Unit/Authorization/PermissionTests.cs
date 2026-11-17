@@ -198,7 +198,10 @@ public class PermissionTests
             (PermissionCatalog.Lease.UpdateGroup, "Grup Taslağı Düzenle"),
             (PermissionCatalog.Lease.ResubmitGroup, "Grubu Yeniden Gönder"),
             (PermissionCatalog.Lease.DeleteGroupDraft, "Grup Taslağı Sil"),
-            (PermissionCatalog.Lease.ApproveGroup, "Grup Onayla")
+            (PermissionCatalog.Lease.ApproveGroup, "Grup Onayla"),
+            (PermissionCatalog.Lease.ExtendGroup, "Grubu Uzat"),
+            (PermissionCatalog.Lease.TerminateGroup, "Grubu Feshet"),
+            (PermissionCatalog.Lease.RestructureGroup, "Grubu Yeniden Yapılandır")
         };
 
         var leaseModule = Assert.Single(

@@ -70,6 +70,7 @@ public class DependencyInjectionArchitectureTests
     [InlineData(typeof(ITenantPanelService), typeof(TenantPanelService), ServiceLifetime.Scoped)]
     [InlineData(typeof(ILeaseService), typeof(LeaseService), ServiceLifetime.Scoped)]
     [InlineData(typeof(ILeaseGroupService), typeof(LeaseGroupService), ServiceLifetime.Scoped)]
+    [InlineData(typeof(IDepositRefundStatusService), typeof(DummyDepositRefundStatusService), ServiceLifetime.Scoped)]
     [InlineData(typeof(ILeaseExpirationService), typeof(LeaseExpirationService), ServiceLifetime.Scoped)]
     [InlineData(typeof(IReservationService), typeof(ReservationService), ServiceLifetime.Scoped)]
     [InlineData(typeof(IReservationCompletionService), typeof(ReservationCompletionService), ServiceLifetime.Scoped)]

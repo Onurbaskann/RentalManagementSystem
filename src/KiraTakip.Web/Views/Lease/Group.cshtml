@@ -8,16 +8,32 @@
     bool areaMatches = Math.Abs(Model.TotalArea - group.UnitArea) < 0.005m;
 }
 
-<div class="max-w-[1050px] mx-auto" x-data="{ approveOpen: false, resubmitOpen: false, deleteOpen: false }">
+<div class="max-w-[1050px] mx-auto" x-data="{ approveOpen: false, resubmitOpen: false, deleteOpen: false, extendOpen: false, terminateOpen: false }">
     <div class="page-header flex flex-wrap items-start justify-between gap-3">
         <div>
             <a href="@Url.Action("Index", "Lease")" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary">← Sözleşmeler</a>
             <div class="page-title">Paylaşımlı Sözleşme Grubu</div>
             <div class="page-subtitle">@group.PropertyName — @group.UnitName • Başvuru sahibi: @group.OwnerDisplayName</div>
+            @if (group.PreviousGroupId.HasValue)
+            {
+                <div class="text-xs mt-1"><a href="@Url.Action("Group", "Lease", new { id = group.PreviousGroupId.Value })" class="text-primary">Yeniden yapılandırılan önceki grup →</a></div>
+            }
         </div>
-        @if (Model.CanEdit || Model.CanResubmit || Model.CanApprove || Model.CanDelete)
+        @if (Model.CanEdit || Model.CanResubmit || Model.CanApprove || Model.CanDelete || Model.CanExtend || Model.CanTerminate || Model.CanRestructure)
         {
             <div class="flex flex-wrap gap-2">
+                @if (Model.CanExtend)
+                {
+                    <button type="button" class="btn btn-secondary" @@click="extendOpen = true">Grubu Uzat</button>
+                }
+                @if (Model.CanRestructure)
+                {
+                    <a href="@Url.Action("RestructureGroup", "Lease", new { id = group.GroupId })" class="btn btn-secondary">Yeniden Yapılandır</a>
+                }
+                @if (Model.CanTerminate)
+                {
+                    <button type="button" class="btn btn-danger" @@click="terminateOpen = true">Grubu Feshet</button>
+                }
                 @if (Model.CanEdit)
                 {
                     <a href="@Url.Action("EditGroup", "Lease", new { id = group.GroupId })" class="btn btn-secondary">Düzenle</a>
@@ -118,6 +134,8 @@
         </div>
     </div>
 
+    @await Html.PartialAsync("_LeaseGroupLifecycleModals", Model)
+
     @if (Model.CanApprove)
     {
         <div x-show="approveOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" @@keydown.escape.window="approveOpen = false">
@@ -156,3 +174,10 @@
         </div>
     }
 </div>
+
+@section Scripts {
+    @if (Model.CanExtend)
+    {
+        @await Html.PartialAsync("_LeaseGroupLifecycleScripts")
+    }
+}

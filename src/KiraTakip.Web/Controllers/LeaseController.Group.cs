@@ -14,6 +14,7 @@ namespace KiraTakip.Web.Controllers;
 public partial class LeaseController
 {
     private const string GroupFormView = "GroupForm";
+    private const string GroupRestructureView = "GroupRestructure";
 
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.Lease.Module)]
@@ -76,6 +77,13 @@ public partial class LeaseController
             && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.DeleteGroupDraft);
         viewModel.CanApprove = viewModel.AllDraft
             && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.ApproveGroup);
+        viewModel.CanExtend = viewModel.AllExtendable
+            && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.ExtendGroup);
+        viewModel.CanTerminate = viewModel.AllTerminable
+            && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.TerminateGroup);
+        viewModel.CanRestructure = viewModel.AllTerminable
+            && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.RestructureGroup);
+        viewModel.CanOverrideRate = await permissionService.HasPermissionAsync(PermissionCatalog.Lease.OverrideRate);
         return View("Group", viewModel);
     }
 
@@ -186,6 +194,146 @@ public partial class LeaseController
             viewModel.GroupId, viewModel.Explanation?.Trim(), CurrentActorUserId(), BuildAccessScope()));
         return RedirectToAction(nameof(Group), new { id = viewModel.GroupId });
     }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.Lease.ExtendGroup)]
+    public async Task<IActionResult> ExtendGroup(ExtendLeaseGroupViewModel viewModel)
+    {
+        ThrowIfModelStateInvalid();
+        await leaseGroupService.ExtendGroupAsync(new ExtendLeaseGroupInput(
+            viewModel.GroupId,
+            viewModel.NewEndDate,
+            viewModel.ApplyVat,
+            viewModel.VatRate ?? 20,
+            viewModel.ApplyInflation ? viewModel.InflationRate : null,
+            viewModel.Description?.Trim(),
+            viewModel.UpdateRate,
+            await permissionService.HasPermissionAsync(PermissionCatalog.Lease.OverrideRate),
+            viewModel.Members
+                .Select(member => new ExtendLeaseGroupMemberInput(
+                    member.LeaseId, BuildRateOverrideInputs(member.LeaseLineItems)))
+                .ToList(),
+            CurrentActorUserId(),
+            BuildAccessScope()));
+        TempData["Success"] = "Grup uzatıldı.";
+        return RedirectToAction(nameof(Group), new { id = viewModel.GroupId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.Lease.TerminateGroup)]
+    public async Task<IActionResult> TerminateGroup(TerminateLeaseGroupViewModel viewModel)
+    {
+        ThrowIfModelStateInvalid();
+        await leaseGroupService.TerminateGroupAsync(new TerminateLeaseGroupInput(
+            viewModel.GroupId,
+            viewModel.TerminationDate,
+            viewModel.TerminationReason,
+            viewModel.Description?.Trim(),
+            CurrentActorUserId(),
+            BuildAccessScope()));
+        TempData["Success"] = "Grup feshedildi.";
+        return RedirectToAction(nameof(Group), new { id = viewModel.GroupId });
+    }
+
+    [HttpGet("Lease/Group/{id}/Restructure")]
+    [Authorize(Policy = PermissionCatalog.Lease.Module)]
+    public async Task<IActionResult> RestructureGroup(int id)
+    {
+        var group = await leaseGroupService.GetDetailAsync(new GetLeaseGroupInput(id, BuildAccessScope()));
+        if (group == null) return NotFound();
+        if (!await permissionService.HasPermissionAsync(PermissionCatalog.Lease.RestructureGroup))
+            return Forbid();
+        if (!new LeaseGroupDetailViewModel { Group = group }.AllTerminable)
+        {
+            TempData["Error"] = "Grup bu durumda yeniden yapılandırılamaz.";
+            return RedirectToAction(nameof(Group), new { id });
+        }
+
+        var terminationDate = DateTime.Today;
+        var viewModel = new LeaseGroupRestructureViewModel
+        {
+            GroupId = group.GroupId,
+            TerminationDate = terminationDate,
+            StartDate = terminationDate.AddDays(1),
+            EndDate = group.EndDate,
+            DueDateRuleType = group.DueDateRuleType,
+            DueDay = group.DueDay,
+            Description = group.Description,
+            IsRentFree = group.IsRentFree,
+            Members = group.Members.Select(member => new LeaseGroupMemberFormModel
+            {
+                TenantId = member.TenantId,
+                Area = member.Area
+            }).ToList()
+        };
+        await PopulateGroupRestructureOptionsAsync(viewModel);
+        return View(GroupRestructureView, viewModel);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.Lease.RestructureGroup)]
+    public async Task<IActionResult> RestructureGroup(LeaseGroupRestructureViewModel viewModel)
+    {
+        if (viewModel.GroupId <= 0) return NotFound();
+        if (!ModelState.IsValid)
+        {
+            await PopulateGroupRestructureOptionsAsync(viewModel);
+            return View(GroupRestructureView, viewModel);
+        }
+
+        try
+        {
+            var newGroup = await leaseGroupService.RestructureGroupAsync(new RestructureLeaseGroupInput(
+                viewModel.GroupId,
+                viewModel.TerminationDate,
+                viewModel.TerminationReason,
+                viewModel.TerminationDescription?.Trim(),
+                viewModel.StartDate,
+                viewModel.EndDate,
+                viewModel.DueDateRuleType,
+                viewModel.DueDay,
+                viewModel.Description,
+                viewModel.IsRentFree,
+                viewModel.Members
+                    .Select(member => new LeaseGroupMemberInput(
+                        null,
+                        member.TenantId,
+                        member.Area,
+                        BuildRateOverrideInputs(member.LeaseLineItems, viewModel.IsRentFree)))
+                    .ToList(),
+                CurrentActorUserId(),
+                BuildAccessScope()));
+            TempData["Success"] = "Grup yeniden yapılandırıldı. Yeni grup onay bekliyor.";
+            return RedirectToAction(nameof(Group), new { id = newGroup.Id });
+        }
+        catch (BusinessValidationException exception)
+        {
+            ModelState.AddModelError(exception.Field, exception.Message);
+            await PopulateGroupRestructureOptionsAsync(viewModel);
+            return View(GroupRestructureView, viewModel);
+        }
+    }
+
+    private async Task PopulateGroupRestructureOptionsAsync(LeaseGroupRestructureViewModel viewModel)
+    {
+        var accessScope = BuildAccessScope();
+        var group = await leaseGroupService.GetDetailAsync(
+            new GetLeaseGroupInput(viewModel.GroupId, accessScope));
+        if (group != null)
+        {
+            viewModel.UnitId = group.UnitId;
+            viewModel.UnitName = $"{group.PropertyName} — {group.UnitName}";
+            viewModel.UnitArea = group.UnitArea;
+        }
+        viewModel.Tenants = await tenantService.GetAllAsync(
+            new GetTenantsInput(accessScope.PropertyIds, accessScope.UnitIds));
+        ViewBag.UnitAreas = System.Text.Json.JsonSerializer.Serialize(
+            new Dictionary<int, double> { [viewModel.UnitId ?? 0] = (double)viewModel.UnitArea });
+    }
+
 
     private List<LeaseGroupMemberInput> BuildGroupMemberInputs(LeaseGroupFormViewModel viewModel)
         => viewModel.Members

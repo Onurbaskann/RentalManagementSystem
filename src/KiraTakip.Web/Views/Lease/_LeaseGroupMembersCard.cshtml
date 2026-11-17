@@ -1,0 +1,62 @@
+@model List<KiraTakip.Models.Dtos.TenantListItemDto>
+@* Paylaşımlı grup kiracı + m² + tarife satırları. Alpine kapsamı leaseGroupForm olmalıdır. *@
+            <div class="card mt-4">
+                <div class="text-[15px] font-bold mb-3 pb-3 border-b border-[var(--color-border)] flex flex-wrap justify-between items-center gap-2">
+                    <div class="flex items-center gap-2"><span class="w-1.5 h-4 bg-primary rounded-full"></span><span>Kiracılar ve m² Payları</span></div>
+                    <button type="button" class="btn btn-sm btn-secondary" @@click="addMember()">+ Kiracı Ekle</button>
+                </div>
+                <div class="mb-4 rounded-lg border p-3 text-[13px]"
+                     :class="Math.abs(remaining()) < 0.005 ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'">
+                    <span>Birim alanı (P): <strong x-text="`${fmt(unitArea())} m²`"></strong></span>
+                    <span class="mx-2">•</span>
+                    <span>Σ m²: <strong x-text="`${fmt(totalArea())} m²`"></strong></span>
+                    <span class="mx-2">•</span>
+                    <span>Fark: <strong x-text="`${fmt(remaining())} m²`"></strong></span>
+                    <div class="text-xs mt-1 opacity-80">Bilgi amaçlıdır; Σ m² = P kuralı kayıtta doğrulanır. En az 2 farklı kiracı gerekir.</div>
+                </div>
+
+                <template x-for="(m, mi) in members" :key="m.key">
+                    <div class="rounded-xl border border-[var(--color-border)] p-4 mb-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <strong class="text-sm" x-text="m.leaseNo ? `Sözleşme ${m.leaseNo}` : `Kiracı ${mi + 1}`"></strong>
+                            <button type="button" class="btn btn-sm btn-danger" x-show="members.length > 2" @@click="removeMember(mi)">Çıkar</button>
+                        </div>
+                        <input type="hidden" :name="`Members[${mi}].LeaseId`" :value="m.leaseId ?? ''" />
+                        <input type="hidden" :name="`Members[${mi}].LeaseNo`" :value="m.leaseNo ?? ''" />
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                            <div class="form-group mb-0 md:col-span-2">
+                                <label class="form-label">Kiracı *</label>
+                                <select class="form-control" :name="`Members[${mi}].TenantId`" x-model.number="m.tenantId" @@change="fetchItems(m)">
+                                    <option value="0">— Kiracı seçin —</option>
+                                    @foreach (var tenant in Model)
+                                    {
+                                        <option value="@tenant.Id">@tenant.DisplayName</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label">m² *</label>
+                                <input type="number" step="0.01" min="0" class="form-control" :name="`Members[${mi}].Area`" x-model.number="m.area" />
+                            </div>
+                        </div>
+
+                        <div x-show="unitId && m.tenantId && startDate" class="mt-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[13px] font-bold">Sözleşme Tarifesi (opsiyonel)</span>
+                                <span x-show="m.loading" class="text-xs text-muted">Yükleniyor…</span>
+                            </div>
+                            <div x-show="m.error" class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-3 text-sm" x-text="m.error"></div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                @await Html.PartialAsync("_LeaseLineItemFields", null, new ViewDataDictionary(ViewData)
+                                {
+                                    ["ItemsExpr"] = "m.lineItems",
+                                    ["NamePrefix"] = "Members[${mi}].LeaseLineItems",
+                                    ["AmountExpr"] = "amount(item, m)",
+                                    ["AreaExpr"] = "Number(m.area || 0)"
+                                })
+                            </div>
+                            <div x-show="!m.loading && m.lineItems.length === 0" class="text-muted text-sm italic">Bu seçimlere uygun tarife bulunamadı.</div>
+                        </div>
+                    </div>
+                </template>
+            </div>

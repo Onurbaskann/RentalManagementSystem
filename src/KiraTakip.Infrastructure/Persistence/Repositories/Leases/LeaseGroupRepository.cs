@@ -162,6 +162,12 @@ public class LeaseGroupRepository(ApplicationDbContext ctx)
         return new LeaseGroupLinkDto(groupId.Value, count);
     }
 
+    public Task<List<int>> GetLeaseIdsAsync(int groupId)
+        => ctx.Leases.AsNoTracking()
+            .Where(lease => lease.LeaseGroupId == groupId)
+            .Select(lease => lease.Id)
+            .ToListAsync();
+
     private static IQueryable<LeaseGroup> ApplyScope(
         IQueryable<LeaseGroup> query,
         List<int>? authorizedPropertyIds,

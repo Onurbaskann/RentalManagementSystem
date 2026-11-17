@@ -653,6 +653,12 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
     public Task<bool> HasChargesAsync(int leaseId)
         => _ctx.Charges.AsNoTracking().AnyAsync(charge => charge.LeaseId == leaseId);
 
+    public Task<bool> HasUnsettledChargesAsync(int leaseId)
+        => _ctx.Charges.AsNoTracking().AnyAsync(charge =>
+            charge.LeaseId == leaseId
+            && charge.Status != ChargeStatus.Paid
+            && charge.Status != ChargeStatus.Cancelled);
+
     public Task<bool> HasCreationActivityAsync(int leaseId)
         => _ctx.SozlesmeIslemGecmisleri.AsNoTracking().AnyAsync(activity =>
             activity.LeaseId == leaseId

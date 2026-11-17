@@ -1,3 +1,4 @@
+using KiraTakip.Domain.Leases;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Enums;
@@ -40,6 +41,12 @@ public sealed class LeaseGroupDetailViewModel
     public bool CanResubmit { get; set; }
     public bool CanDelete { get; set; }
     public bool CanApprove { get; set; }
+    public bool CanExtend { get; set; }
+    public bool CanTerminate { get; set; }
+    public bool CanRestructure { get; set; }
+    public bool CanOverrideRate { get; set; }
+    public bool AllExtendable => Group.Members.Count > 0 && Group.Members.All(member => LeaseLifecycle.CanExtend(member.Status));
+    public bool AllTerminable => Group.Members.Count > 0 && Group.Members.All(member => LeaseLifecycle.CanTerminate(member.Status));
     public decimal TotalArea => Group.Members.Sum(member => member.Area);
     public bool HasRevisionRequested => Group.Members.Any(member => member.Status == LeaseStatus.RevisionRequested);
     public bool AllDraft => Group.Members.All(member => member.Status == LeaseStatus.Draft);
@@ -63,4 +70,68 @@ public sealed class DeleteLeaseGroupDraftViewModel
 {
     public int GroupId { get; set; }
     public string Explanation { get; set; } = string.Empty;
+}
+
+public sealed class ExtendLeaseGroupMemberFormModel
+{
+    public int LeaseId { get; set; }
+    public List<LeaseLineItemInputDto> LeaseLineItems { get; set; } = [];
+}
+
+public sealed class ExtendLeaseGroupViewModel
+{
+    public int GroupId { get; set; }
+    public DateTime NewEndDate { get; set; }
+    public bool ApplyInflation { get; set; }
+    public decimal? InflationRate { get; set; }
+    public bool ApplyVat { get; set; }
+    public decimal? VatRate { get; set; }
+    public string? Description { get; set; }
+    public bool UpdateRate { get; set; }
+    public List<ExtendLeaseGroupMemberFormModel> Members { get; set; } = [];
+}
+
+public sealed class TerminateLeaseGroupViewModel
+{
+    public int GroupId { get; set; }
+    public DateTime TerminationDate { get; set; } = DateTime.Today;
+    public string TerminationReason { get; set; } = string.Empty;
+    public string? Description { get; set; }
+}
+
+public sealed class LeaseGroupRestructureViewModel
+{
+    public int GroupId { get; set; }
+    public DateTime TerminationDate { get; set; } = DateTime.Today;
+    public string TerminationReason { get; set; } = string.Empty;
+    public string? TerminationDescription { get; set; }
+    public DateTime StartDate { get; set; } = DateTime.Today.AddDays(1);
+    public DateTime EndDate { get; set; } = DateTime.Today.AddYears(1);
+    public DueDateRuleType DueDateRuleType { get; set; } = DueDateRuleType.FixedDayOfMonth;
+    public int DueDay { get; set; } = 1;
+    public string? Description { get; set; }
+    public bool IsRentFree { get; set; }
+    public List<LeaseGroupMemberFormModel> Members { get; set; } = [new(), new()];
+
+    public int? UnitId { get; set; }
+    public string UnitName { get; set; } = string.Empty;
+    public decimal UnitArea { get; set; }
+    public List<TenantListItemDto> Tenants { get; set; } = [];
+
+    /// <summary>Üye/m² toplamı betiği (_LeaseGroupFormScripts) için ortak form modeline çevirir.</summary>
+    public LeaseGroupFormViewModel ToFormModel() => new()
+    {
+        GroupId = GroupId,
+        UnitId = UnitId,
+        UnitName = UnitName,
+        UnitArea = UnitArea,
+        StartDate = StartDate,
+        EndDate = EndDate,
+        DueDateRuleType = DueDateRuleType,
+        DueDay = DueDay,
+        Description = Description,
+        IsRentFree = IsRentFree,
+        Members = Members,
+        Tenants = Tenants
+    };
 }

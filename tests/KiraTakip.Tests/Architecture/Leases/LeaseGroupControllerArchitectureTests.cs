@@ -18,6 +18,9 @@ public class LeaseGroupControllerArchitectureTests
     [InlineData(nameof(LeaseController.ResubmitGroup), PermissionCatalog.Lease.ResubmitGroup)]
     [InlineData(nameof(LeaseController.DeleteGroupDraft), PermissionCatalog.Lease.DeleteGroupDraft)]
     [InlineData(nameof(LeaseController.ApproveGroup), PermissionCatalog.Lease.ApproveGroup)]
+    [InlineData(nameof(LeaseController.ExtendGroup), PermissionCatalog.Lease.ExtendGroup)]
+    [InlineData(nameof(LeaseController.TerminateGroup), PermissionCatalog.Lease.TerminateGroup)]
+    [InlineData(nameof(LeaseController.RestructureGroup), PermissionCatalog.Lease.RestructureGroup)]
     public void GroupMutations_ArePostAntiforgeryAndOwnPermissionProtected(string actionName, string policy)
     {
         var method = Assert.Single(Actions(actionName), candidate =>
@@ -34,7 +37,9 @@ public class LeaseGroupControllerArchitectureTests
         {
             PermissionCatalog.Lease.CreateGroup, PermissionCatalog.Lease.UpdateGroup,
             PermissionCatalog.Lease.ResubmitGroup, PermissionCatalog.Lease.DeleteGroupDraft,
-            PermissionCatalog.Lease.ApproveGroup
+            PermissionCatalog.Lease.ApproveGroup,
+            PermissionCatalog.Lease.ExtendGroup, PermissionCatalog.Lease.TerminateGroup,
+            PermissionCatalog.Lease.RestructureGroup
         };
         Assert.Equal(policies.Length, policies.Distinct().Count());
     }
@@ -43,6 +48,7 @@ public class LeaseGroupControllerArchitectureTests
     [InlineData(nameof(LeaseController.CreateGroup))]
     [InlineData(nameof(LeaseController.Group))]
     [InlineData(nameof(LeaseController.EditGroup))]
+    [InlineData(nameof(LeaseController.RestructureGroup))]
     public void GroupScreens_AreLeaseModuleGetEndpoints(string actionName)
     {
         var method = Assert.Single(Actions(actionName), candidate =>
@@ -69,6 +75,9 @@ public class LeaseGroupControllerArchitectureTests
         Assert.NotNull(services.GetService<KiraTakip.Infrastructure.Validation.IValidator<ApproveLeaseGroupViewModel>>());
         Assert.NotNull(services.GetService<KiraTakip.Infrastructure.Validation.IValidator<ResubmitLeaseGroupViewModel>>());
         Assert.NotNull(services.GetService<KiraTakip.Infrastructure.Validation.IValidator<DeleteLeaseGroupDraftViewModel>>());
+        Assert.NotNull(services.GetService<KiraTakip.Infrastructure.Validation.IValidator<ExtendLeaseGroupViewModel>>());
+        Assert.NotNull(services.GetService<KiraTakip.Infrastructure.Validation.IValidator<TerminateLeaseGroupViewModel>>());
+        Assert.NotNull(services.GetService<KiraTakip.Infrastructure.Validation.IValidator<LeaseGroupRestructureViewModel>>());
     }
 
     [Fact]

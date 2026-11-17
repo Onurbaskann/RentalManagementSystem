@@ -18,6 +18,8 @@ using KiraTakip.Repositories.Interfaces.Properties;
 using KiraTakip.Services.Interfaces.Charges;
 using KiraTakip.Services.Interfaces.Identity;
 using KiraTakip.Services.Interfaces.Leases;
+using KiraTakip.Services.Interfaces.Reporting;
+using KiraTakip.Domain.Pricing;
 using static KiraTakip.Services.Leases.LeaseApplicationRules;
 
 namespace KiraTakip.Services.Leases;
@@ -31,6 +33,8 @@ public class LeaseGroupService(
     IApplicationUserRepository applicationUserRepository,
     IChargeGenerationService chargeGenerationService,
     ILeaseApplicationRules rules,
+    IStatisticsService statisticsService,
+    IDepositRefundStatusService depositRefundStatusService,
     ICurrentUserContext currentUserContext,
     IUnitOfWork uow) : ILeaseGroupService, ITransactionalService
 {
@@ -48,7 +52,15 @@ public class LeaseGroupService(
             excludeGroupId: null,
             existingLeaseIds: new HashSet<int>());
 
-        var group = new LeaseGroup { UnitId = input.UnitId };
+        return await CreateValidatedGroupAsync(unit, input, previousGroupId: null);
+    }
+
+    private async Task<LeaseGroup> CreateValidatedGroupAsync(
+        LeaseUnitContextDto unit,
+        CreateLeaseGroupInput input,
+        int? previousGroupId)
+    {
+        var group = new LeaseGroup { UnitId = input.UnitId, PreviousGroupId = previousGroupId };
         await groupRepository.AddAsync(group);
         await uow.SaveChangesAsync();
 
@@ -226,6 +238,7 @@ public class LeaseGroupService(
             group.Leases.Any(lease => lease.Status == LeaseStatus.RevisionRequested),
             "Revizyon istenen sözleşme bulunan grup onaylanamaz.",
             "Lease.GroupRevisionRequested");
+        await EnsurePreviousGroupSettledAsync(group);
 
         foreach (var lease in group.Leases)
         {
@@ -239,6 +252,202 @@ public class LeaseGroupService(
         foreach (var lease in group.Leases)
             await chargeGenerationService.GenerateForLeaseAsync(
                 new GenerateLeaseChargesInput(lease.Id));
+    }
+
+    public async Task ExtendGroupAsync(ExtendLeaseGroupInput input)
+    {
+        var group = await GetGroupForMutationAsync(
+            input.GroupId, input.ActorUserId, input.AccessScope, _ => true, requireOwner: false);
+        EnsureGroupLeasesCan(
+            group,
+            LeaseLifecycle.CanExtend,
+            "Yalnız aktif veya süresi dolmuş sözleşmelerden oluşan grup uzatılabilir.");
+        Guard.InvalidField(
+            input.Members.GroupBy(member => member.LeaseId).Any(g => g.Count() > 1),
+            "Members",
+            "Aynı sözleşme birden fazla kez gönderildi.",
+            "LeaseGroup.MemberNotFound");
+        var rateInputs = input.Members.ToDictionary(member => member.LeaseId, member => member.RateOverrides);
+        Guard.InvalidField(
+            rateInputs.Keys.Any(id => group.Leases.All(lease => lease.Id != id)),
+            "Members",
+            "Grup satırlarından biri bu gruba ait değil.",
+            "LeaseGroup.MemberNotFound");
+        IReadOnlyCollection<LeaseRateOverrideInput> RatesOf(Lease lease)
+            => input.UpdateRate && rateInputs.TryGetValue(lease.Id, out var rates) ? rates : [];
+
+        var leases = await LoadLeasesWithActivityLogAsync(group);
+        foreach (var lease in leases)
+            await rules.EnsureExtensionAllowedAsync(
+                lease,
+                input.NewEndDate,
+                input.IsVatApplied,
+                input.VatRate,
+                input.UpdateRate,
+                input.CanOverrideRate,
+                RatesOf(lease),
+                excludeLeaseGroupId: group.Id);
+
+        foreach (var lease in leases)
+        {
+            var rates = RatesOf(lease);
+            var oldAmount = await statisticsService.GetMonthlyAmountAsync(lease);
+            if (input.UpdateRate && rates.Count > 0)
+            {
+                await leaseRateOverrideRepository.ReplaceAsync(
+                    lease.Id,
+                    BuildRateOverrides(lease.Id, rates));
+                await uow.SaveChangesAsync();
+            }
+            var newAmount = await statisticsService.GetMonthlyAmountAsync(lease);
+
+            var oldEndDate = lease.EndDate;
+            lease.EndDate = input.NewEndDate;
+            lease.Status = LeaseStatus.Active;
+            lease.IsKdvApplied = input.IsVatApplied;
+            lease.ActivityLog.Add(new LeaseActivityLog
+            {
+                LeaseId = lease.Id,
+                ActivityType = LeaseActivityType.Extension,
+                TransactionDate = DateTime.Now,
+                Description = input.Description ?? "Sözleşme süresi uzatıldı.",
+                OldEndDate = oldEndDate,
+                NewEndDate = input.NewEndDate,
+                OldRentAmount = oldAmount,
+                NewRentAmount = newAmount,
+                InflationRate = input.InflationRate,
+                IsKdvApplied = input.IsVatApplied,
+                KdvRate = input.IsVatApplied ? input.VatRate : null,
+                KdvAmount = input.IsVatApplied
+                    ? RentIncreasePolicy.CalculateVatAmount(newAmount, input.VatRate) : null,
+                KdvIncludedAmount = input.IsVatApplied
+                    ? RentIncreasePolicy.CalculateVatIncludedAmount(newAmount, input.VatRate) : null
+            });
+        }
+        await uow.SaveChangesAsync();
+        foreach (var lease in leases)
+            await chargeGenerationService.GenerateForLeaseAsync(
+                new GenerateLeaseChargesInput(lease.Id));
+    }
+
+    public async Task TerminateGroupAsync(TerminateLeaseGroupInput input)
+    {
+        var group = await GetGroupForMutationAsync(
+            input.GroupId, input.ActorUserId, input.AccessScope, _ => true, requireOwner: false);
+        EnsureGroupLeasesCan(
+            group,
+            LeaseLifecycle.CanTerminate,
+            "Yalnız aktif sözleşmelerden oluşan grup feshedilebilir.");
+        var leases = await LoadLeasesWithActivityLogAsync(group);
+        TerminateLeases(leases, input.TerminationDate, input.TerminationReason, input.Description);
+        await uow.SaveChangesAsync();
+        foreach (var lease in leases)
+            await chargeGenerationService.CancelFutureChargesAsync(
+                new CancelFutureLeaseChargesInput(lease.Id, input.TerminationDate));
+    }
+
+    public async Task<LeaseGroup> RestructureGroupAsync(RestructureLeaseGroupInput input)
+    {
+        var oldGroup = await GetGroupForMutationAsync(
+            input.GroupId, input.ActorUserId, input.AccessScope, _ => true, requireOwner: false);
+        EnsureGroupLeasesCan(
+            oldGroup,
+            LeaseLifecycle.CanTerminate,
+            "Yalnız aktif sözleşmelerden oluşan grup yeniden yapılandırılabilir.");
+        Guard.InvalidField(
+            string.IsNullOrWhiteSpace(input.TerminationReason),
+            "TerminationReason",
+            "Fesih nedeni zorunludur.",
+            "LeaseGroup.TerminationReasonRequired");
+        Guard.InvalidField(
+            input.StartDate.Date <= input.TerminationDate.Date,
+            "StartDate",
+            "Yeni başlangıç tarihi fesih tarihinden sonra olmalıdır.",
+            "LeaseGroup.RestructureStartNotAfterTermination");
+
+        var createInput = new CreateLeaseGroupInput(
+            oldGroup.UnitId,
+            input.StartDate,
+            input.EndDate,
+            input.DueDateRuleType,
+            input.DueDay,
+            input.Description,
+            input.IsRentFree,
+            input.Members,
+            input.ActorUserId,
+            input.AccessScope);
+        var unit = await ValidateGroupAsync(
+            createInput.UnitId,
+            createInput.StartDate,
+            createInput.EndDate,
+            createInput.DueDay,
+            createInput.IsRentFree,
+            createInput.Members,
+            createInput.AccessScope,
+            excludeGroupId: oldGroup.Id,
+            existingLeaseIds: new HashSet<int>());
+
+        var leases = await LoadLeasesWithActivityLogAsync(oldGroup);
+        TerminateLeases(
+            leases, input.TerminationDate, input.TerminationReason, input.TerminationDescription);
+        await uow.SaveChangesAsync();
+        var newGroup = await CreateValidatedGroupAsync(unit, createInput, oldGroup.Id);
+        foreach (var lease in leases)
+            await chargeGenerationService.CancelFutureChargesAsync(
+                new CancelFutureLeaseChargesInput(lease.Id, input.TerminationDate));
+        return newGroup;
+    }
+
+    private static void EnsureGroupLeasesCan(
+        LeaseGroup group, Func<LeaseStatus, bool> canProceed, string message)
+        => Guard.Conflict(
+            group.Leases.Any(lease => !canProceed(lease.Status)),
+            message,
+            "Lease.NotActive");
+
+    private async Task<List<Lease>> LoadLeasesWithActivityLogAsync(LeaseGroup group)
+    {
+        var leases = new List<Lease>();
+        foreach (var lease in group.Leases.OrderBy(item => item.Id))
+            leases.Add(Guard.NotFound(
+                await leaseRepository.GetWithActivityLogAsync(lease.Id),
+                $"Sözleşme {lease.Id} bulunamadı.",
+                "Lease.NotFound"));
+        return leases;
+    }
+
+    private static void TerminateLeases(
+        IEnumerable<Lease> leases, DateTime terminationDate, string reason, string? description)
+    {
+        foreach (var lease in leases)
+        {
+            lease.Status = LeaseStatus.Terminated;
+            lease.TerminationDate = terminationDate;
+            lease.TerminationReason = reason;
+            lease.ActivityLog.Add(new LeaseActivityLog
+            {
+                LeaseId = lease.Id,
+                ActivityType = LeaseActivityType.Termination,
+                TransactionDate = DateTime.Now,
+                Description = description ?? reason
+            });
+        }
+    }
+
+    private async Task EnsurePreviousGroupSettledAsync(LeaseGroup group)
+    {
+        if (group.PreviousGroupId is not { } previousGroupId) return;
+        var previousLeaseIds = await groupRepository.GetLeaseIdsAsync(previousGroupId);
+        foreach (var leaseId in previousLeaseIds)
+            Guard.Conflict(
+                await leaseRepository.HasUnsettledChargesAsync(leaseId),
+                "Önceki gruptaki sözleşmelerin tüm tahakkukları ödenmeden yeni grup onaylanamaz.",
+                "LeaseGroup.PreviousGroupUnsettled");
+        foreach (var leaseId in previousLeaseIds)
+            Guard.Conflict(
+                !await depositRefundStatusService.IsRefundedAsync(leaseId),
+                "Önceki gruptaki sözleşmelerin depozitosu iade edilmeden yeni grup onaylanamaz.",
+                "LeaseGroup.PreviousDepositNotRefunded");
     }
 
     public Task<LeaseGroupDetailDto?> GetDetailAsync(GetLeaseGroupInput input)

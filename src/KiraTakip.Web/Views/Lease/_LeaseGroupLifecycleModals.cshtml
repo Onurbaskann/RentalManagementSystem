@@ -1,0 +1,164 @@
+@model KiraTakip.Web.Models.ViewModels.LeaseGroupDetailViewModel
+@* Grup uzatma ve fesih modalları. Üst Alpine kapsamında extendOpen / terminateOpen bulunmalıdır. *@
+@{
+    var group = Model.Group;
+    var extendConfig = System.Text.Json.JsonSerializer.Serialize(new
+    {
+        unitId = group.UnitId,
+        startDate = group.StartDate.ToString("yyyy-MM-dd"),
+        isRentFree = group.IsRentFree,
+        members = group.Members.Select((member, index) => new
+        {
+            key = index + 1,
+            leaseId = member.LeaseId,
+            leaseNo = member.LeaseNo,
+            tenantName = member.TenantName,
+            tenantId = member.TenantId,
+            area = member.Area
+        })
+    }, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+    string[] reasons = ["Kiracı talebi", "Mal sahibi talebi", "Kira ödeme ihlali", "Erken çıkış", "Anlaşmazlık"];
+}
+
+@if (Model.CanExtend)
+{
+    <div x-show="extendOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" @@keydown.escape.window="extendOpen = false">
+        <form asp-action="ExtendGroup" method="post" class="card w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+              x-data="leaseGroupExtend(@extendConfig)"
+              x-on:submit="if ($el.dataset.submitting) $event.preventDefault(); else $el.dataset.submitting = '1'">
+            @Html.AntiForgeryToken()<input type="hidden" name="GroupId" value="@group.GroupId" />
+            <div class="text-lg font-bold">Grubu Uzat</div>
+            <p class="text-sm text-muted my-3">Yeni bitiş tarihi gruptaki tüm sözleşmelere uygulanır. Mevcut bitiş: @group.EndDate.ToString("dd.MM.yyyy")</p>
+
+            <div class="form-group">
+                <label class="form-label">Yeni Bitiş Tarihi *</label>
+                @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData)
+                {
+                    ["Name"] = "NewEndDate",
+                    ["Value"] = group.EndDate.AddYears(1).ToString("yyyy-MM-dd"),
+                    ["Mode"] = "date",
+                    ["Field"] = "grupYeniBitisTarihi"
+                })
+            </div>
+
+            <div class="form-group">
+                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                    <input type="checkbox" name="ApplyInflation" value="true" x-model="applyInflation" class="w-4 h-4 cursor-pointer" />
+                    <span>TÜFE Artışı Uygula</span>
+                </label>
+            </div>
+            <div x-show="applyInflation" x-cloak class="bg-amber-50 border border-amber-200 rounded-lg p-3.5 mb-3.5">
+                <label class="form-label">TÜFE Oranı (%)</label>
+                <input type="number" name="InflationRate" step="0.01" min="0" class="form-control" placeholder="Örn: 25" />
+            </div>
+
+            <div class="form-group">
+                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                    <input type="checkbox" name="ApplyVat" value="true" x-model="applyVat" class="w-4 h-4 cursor-pointer" />
+                    <span>KDV Uygula</span>
+                </label>
+            </div>
+            <div x-show="applyVat" x-cloak class="bg-sky-50 border border-sky-200 rounded-lg p-3.5 mb-3.5">
+                <label class="form-label">KDV Oranı (%)</label>
+                <input type="number" name="VatRate" step="0.01" min="0" max="100" value="20" class="form-control" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Açıklama</label>
+                <textarea name="Description" maxlength="1000" class="form-control" rows="2" placeholder="Opsiyonel açıklama"></textarea>
+            </div>
+
+            @if (Model.CanOverrideRate)
+            {
+                <div class="form-group">
+                    <label class="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                        <input type="checkbox" x-model="updateRate" @@change="toggleRates()" class="w-4 h-4 cursor-pointer" />
+                        Tarifeyi de güncelle
+                    </label>
+                </div>
+                <div x-show="updateRate" x-cloak class="mb-3.5">
+                    <div class="text-xs text-muted mb-2.5">Tarife her sözleşme için ayrı girilir. Yalnızca değiştirdiğiniz kalemler sözleşme tarifesi olarak yazılır.</div>
+                    <template x-if="updateRate">
+                        <div>
+                            <input type="hidden" name="UpdateRate" value="true" />
+                            <template x-for="(m, mi) in members" :key="m.key">
+                                <div class="rounded-xl border border-[var(--color-border)] p-4 mb-3">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <strong class="text-sm" x-text="`${m.leaseNo} — ${m.tenantName}`"></strong>
+                                        <span x-show="m.loading" class="text-xs text-muted">Yükleniyor…</span>
+                                    </div>
+                                    <div x-show="m.error" class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-3 text-sm" x-text="m.error"></div>
+                                    <input type="hidden" :name="`Members[${mi}].LeaseId`" :value="m.leaseId" />
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        @await Html.PartialAsync("_LeaseLineItemFields", null, new ViewDataDictionary(ViewData)
+                                        {
+                                            ["ItemsExpr"] = "m.lineItems",
+                                            ["NamePrefix"] = "Members[${mi}].LeaseLineItems",
+                                            ["AmountExpr"] = "amount(item, m)",
+                                            ["AreaExpr"] = "Number(m.area || 0)"
+                                        })
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            }
+
+            <div class="flex justify-end gap-2 mt-4">
+                <button type="button" class="btn btn-secondary" @@click="extendOpen = false">Vazgeç</button>
+                <button type="submit" class="btn btn-primary">Uzat</button>
+            </div>
+        </form>
+    </div>
+}
+
+@if (Model.CanTerminate)
+{
+    <div x-show="terminateOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" @@keydown.escape.window="terminateOpen = false">
+        <form asp-action="TerminateGroup" method="post" class="card w-full max-w-lg"
+              x-data="{ choice: '', other: '' }"
+              x-on:submit="if ($el.dataset.submitting) $event.preventDefault(); else $el.dataset.submitting = '1'">
+            @Html.AntiForgeryToken()<input type="hidden" name="GroupId" value="@group.GroupId" />
+            <div class="text-lg font-bold text-red-700">Grubu Feshet</div>
+            <div class="bg-red-50 border border-red-200 rounded-lg px-3.5 py-3 my-3 text-[12.5px] text-red-800 space-y-1">
+                <div class="font-semibold">Bu işlem geri alınamaz.</div>
+                <div>Gruptaki tüm sözleşmeler aynı tarihle feshedilir; fesih tarihini izleyen aydan itibaren ödeme alınmamış tahakkuklar iptal edilir.</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Fesih Tarihi *</label>
+                @await Html.PartialAsync("_DateTimePicker", null, new ViewDataDictionary(ViewData)
+                {
+                    ["Name"] = "TerminationDate",
+                    ["Value"] = DateTime.Today.ToString("yyyy-MM-dd"),
+                    ["Mode"] = "date",
+                    ["Field"] = "grupFesihTarihi"
+                })
+            </div>
+            <div class="form-group">
+                <label class="form-label">Fesih Nedeni *</label>
+                <select x-model="choice" class="form-control">
+                    <option value="">— Seçiniz —</option>
+                    @foreach (var reason in reasons)
+                    {
+                        <option value="@reason">@reason</option>
+                    }
+                    <option value="Diğer">Diğer</option>
+                </select>
+            </div>
+            <div class="form-group" x-show="choice === 'Diğer'" x-cloak>
+                <label class="form-label">Nedeni belirtin *</label>
+                <input type="text" class="form-control" maxlength="500" x-model="other" placeholder="Fesih nedenini açıklayın" />
+            </div>
+            <input type="hidden" name="TerminationReason" :value="choice === 'Diğer' ? other : choice" />
+            <div class="form-group">
+                <label class="form-label">Açıklama</label>
+                <textarea name="Description" maxlength="1000" class="form-control" rows="2" placeholder="Opsiyonel açıklama"></textarea>
+            </div>
+            <div class="flex justify-end gap-2 mt-4">
+                <button type="button" class="btn btn-secondary" @@click="terminateOpen = false">Vazgeç</button>
+                <button type="submit" class="btn btn-danger" :disabled="!(choice === 'Diğer' ? other.trim() : choice)">Feshet</button>
+            </div>
+        </form>
+    </div>
+}

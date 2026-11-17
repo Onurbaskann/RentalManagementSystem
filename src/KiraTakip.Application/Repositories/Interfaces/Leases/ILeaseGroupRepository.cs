@@ -17,4 +17,7 @@ public interface ILeaseGroupRepository : IRepositoryBase<LeaseGroup>
         List<int>? authorizedUnitIds = null);
 
     Task<LeaseGroupLinkDto?> GetLinkByLeaseIdAsync(int leaseId);
+
+    /// <summary>Gruptaki (silinmemiş) tüm sözleşmelerin id'leri; durumdan bağımsız.</summary>
+    Task<List<int>> GetLeaseIdsAsync(int groupId);
 }

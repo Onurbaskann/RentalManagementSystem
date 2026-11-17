@@ -11,9 +11,9 @@
 
 **F6 tamamlandı** (kontenjan bazlı birimde sözleşme: kapasite kontrolü, kiralanan/fiziksel m², `LeaseArea` yazımı, formda boş kontenjan/m² ve son kontenjan önerisi); commit `dcc5f1f`.
 
-**F7a tamamlandı** (paylaşımlı grup: oluşturma, taslak düzenleme, yeniden gönderme, silme, onay; 5 yeni izin; grup ekranları); tam paket 1108/1108; commit edilmedi.
+**F7a tamamlandı** (commit 55af9ea). **F7b tamamlandı** (paylaşımlı grup: uzatma, fesih, yeniden yapılandırma; eski grup ödeme/depozito ön koşulu; 3 yeni izin; grup detayında modallar ve yeniden yapılandırma formu); tam paket 1124/1124; commit edilmedi.
 
-**Sıradaki: F7b** (paylaşımlı grup: uzatma, fesih, yeniden yapılanma). Her faz sonunda kullanıcıdan "devam" beklenir. Kaynak: [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Faz 20 Paratika blokajda olduğu için bu iş öne alındı.
+**Sıradaki: F8** (doluluk, ana sayfa, kiracı paneli). Her faz sonunda kullanıcıdan "devam" beklenir. Kaynak: [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Faz 20 Paratika blokajda olduğu için bu iş öne alındı.
 
 **Aktif çalışma:** Kalem bazlı mağaza yönlendirme ve ödeme altyapısı (blokajda)  
 **Aktif faz:** Faz 20 / İç Faz 7 — Paratika Hosted Payment Page entegrasyonu (implementasyon tamamlandı, manuel duman testi ve kullanıcı onayı bekleniyor)  

@@ -25,12 +25,38 @@
             isRentFree: @(Model.IsRentFree ? "true" : "false"),
             readOnly: false,
             submitting: false,
+            @if (ViewData["RestructureTerminationDate"] is string restructureTermination)
+            {
+                <text>
+            terminationDate: '@restructureTermination',
+            startManual: @(ViewData["RestructureStartManual"] is true ? "true" : "false"),
+            addDays(iso, days) {
+                if (!iso) return '';
+                const d = new Date(iso + 'T00:00:00Z');
+                d.setUTCDate(d.getUTCDate() + days);
+                return d.toISOString().slice(0, 10);
+            },
+            minStart() { return this.addDays(this.terminationDate, 1); },
+            onTerminationChanged() {
+                const min = this.minStart();
+                if (!min) return;
+                if (!this.startManual || !this.startDate || min > this.startDate) {
+                    this.startDate = min;
+                    this.startManual = false;
+                }
+            },
+                </text>
+            }
             nextKey: @(members.Count + 1),
             unitAreas: @Html.Raw(ViewBag.UnitAreas ?? "{}"),
             members: @Html.Raw(JsonSerializer.Serialize(members, jsonOptions)),
             init() {
                 this.$watch('unitId', () => this.members.forEach(m => { m.lineItems = []; this.fetchItems(m); }));
                 this.$watch('startDate', () => this.members.forEach(m => this.fetchItems(m)));
+                @if (ViewData["RestructureTerminationDate"] is string)
+                {
+                    <text>this.$watch('terminationDate', () => this.onTerminationChanged());</text>
+                }
                 this.members.forEach(m => { if (m.lineItems.length === 0) this.fetchItems(m); });
             },
             onPickerChanged(event) {
