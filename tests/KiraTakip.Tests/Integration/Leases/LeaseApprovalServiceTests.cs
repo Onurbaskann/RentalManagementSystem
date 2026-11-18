@@ -714,6 +714,41 @@ public class LeaseApprovalServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Extend_EndedLease_ShouldRejectWhenUnitRentalModeChanged()
+    {
+        var seed = await SeedAsync();
+        var (lease, _) = await CreateEndedLeaseAsync(seed);
+        var unitType = await _context.UnitTypes.SingleAsync(type => type.Id == seed.UnitTypeId);
+        unitType.RentalMode = UnitRentalMode.CapacityBased;
+        await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
+
+        var ex = await Assert.ThrowsAnyAsync<BusinessException>(() => CreateService(seed.ReviewerId)
+            .ExtendAsync(ExtendInput(lease.Id, DateTime.Today.AddMonths(2))));
+
+        Assert.Equal("Lease.UnitRentalModeChanged", ex.Code);
+    }
+
+    [Fact]
+    public async Task Extend_StandaloneLease_ShouldSucceedWhenUnitAreaChanged()
+    {
+        var seed = await SeedAsync();
+        var (lease, _) = await CreateEndedLeaseAsync(seed);
+        var unit = await _context.Units.SingleAsync(item => item.Id == seed.UnitId);
+        unit.Area = 80;
+        await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
+        var newEnd = DateTime.Today.AddMonths(2);
+
+        await CreateService(seed.ReviewerId).ExtendAsync(ExtendInput(lease.Id, newEnd));
+        _context.ChangeTracker.Clear();
+
+        var reloaded = await _context.Leases.SingleAsync(item => item.Id == lease.Id);
+        Assert.Equal(LeaseStatus.Active, reloaded.Status);
+        Assert.Equal(newEnd, reloaded.EndDate);
+    }
+
+    [Fact]
     public async Task Extend_ShouldRejectOverlapWithLaterActiveLease()
     {
         var seed = await SeedAsync();

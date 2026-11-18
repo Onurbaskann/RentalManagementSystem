@@ -236,7 +236,7 @@ Proje kuralı (`CLAUDE.md`, `refactor-permission-hiyerarsisi.md` §1.3): State d
 Tüm açık noktalar 2026-11-17'de kullanıcıyla kararlaştırıldı ve ilgili bölümlere işlendi (ikinci tutarlılık turu dahil).
 
 ## Sonraki adım
-Ayrı bir uygulama planı hazırlanır (fazlar, migration, testler) ve orchestration akışıyla onaya sunulur.
+Kapandı (2026-11-18). [Uygulama planı](refactor-paylasimli-acik-birim-uygulama-plani.md) F1–F9 ile uygulandı. Kalan açık notlar planın F9 bölümünde.
 
 ## Doğrulama
 - Bu aşamada kod yok. Doğrulama, dokümanın kullanıcı tarafından gözden geçirilmesidir.

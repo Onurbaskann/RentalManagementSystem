@@ -42,6 +42,7 @@ public class LeaseApplicationRules(
         bool isRentFree,
         decimal? rentedArea,
         decimal? allocatedArea,
+        LeaseAreaMode? allocationMode,
         int? excludeLeaseId = null,
         int? excludeLeaseGroupId = null,
         decimal? rateArea = null)
@@ -82,10 +83,10 @@ public class LeaseApplicationRules(
                 "Seçilen kiracı yetki kapsamınızın dışındadır.",
                 "Lease.TenantOutOfScope");
         }
-        (decimal Rented, decimal Allocated)? area = null;
+        (decimal Rented, decimal Allocated, LeaseAreaMode Mode)? area = null;
         if (unit.RentalMode == UnitRentalMode.CapacityBased)
             area = await ValidateCapacityLeaseAsync(
-                unit, startDate, endDate, rentedArea, allocatedArea, excludeLeaseId);
+                unit, startDate, endDate, rentedArea, allocatedArea, allocationMode, excludeLeaseId);
         else
             Guard.InvalidField(
                 await leaseRepository.HasOverlappingActiveLeaseAsync(
@@ -116,6 +117,14 @@ public class LeaseApplicationRules(
             !LeaseSchedulePolicy.CanExtend(lease.EndDate, newEndDate),
             "Yeni bitiş tarihi mevcut bitiş tarihinden büyük olmalıdır.",
             "Lease.InvalidExtensionDate");
+        Guard.Conflict(
+            lease.Unit.UnitType.RentalMode != lease.RentalModeSnapshot,
+            "Birimin kiralama biçimi sözleşmeden sonra değişmiş; sözleşme uzatılamaz.",
+            "Lease.UnitRentalModeChanged");
+        Guard.Conflict(
+            lease.LeaseGroupId != null && lease.Unit.Area != lease.UnitAreaSnapshot,
+            "Birimin alanı sözleşmeden sonra değişmiş; grubu yeniden yapılandırın.",
+            "Lease.UnitAreaChanged");
         Guard.InvalidField(
             lease.Status == LeaseStatus.Ended && newEndDate.Date < DateTime.Now.Date,
             "NewEndDate",
@@ -123,20 +132,29 @@ public class LeaseApplicationRules(
             "Lease.ExtendEndedRequiresFutureEnd");
         if (lease.RentalModeSnapshot == UnitRentalMode.CapacityBased)
         {
+            await unitRepository.AcquireCapacityLocksAsync(lease.UnitId);
+            var unitContext = Guard.NotFound(
+                await unitRepository.GetLeaseContextAsync(lease.UnitId),
+                "Birim bulunamadı.");
             Guard.InvalidField(
-                lease.Unit.Capacity is null or <= 0,
+                unitContext.Capacity is null or <= 0,
                 "NewEndDate",
                 "Birim için kontenjan tanımlı olmadığından sözleşme uzatılamaz.",
                 "Lease.UnitCapacityMissing");
             var leaseArea = await leaseRepository.GetLeaseAreaAsync(lease.Id);
-            var extensionStart = lease.EndDate.Date.AddDays(1);
+            var extensionStart = Max(lease.EndDate.Date.AddDays(1), DateTime.Today);
             var occupants = (await leaseRepository.GetOpenLeaseAreasForUnitAsync(
                 lease.UnitId, extensionStart, newEndDate, lease.Id)).ToList();
             occupants.Add(new CapacityOccupant(
-                lease.StartDate, newEndDate, leaseArea?.AllocatedArea ?? 0m));
+                lease.StartDate,
+                newEndDate,
+                leaseArea?.AllocatedArea ?? 0m,
+                lease.Id,
+                leaseArea?.RentedArea,
+                leaseArea?.AllocationMode));
             EnsureCapacityAvailable(
-                lease.Unit.Capacity!.Value,
-                lease.Unit.Area,
+                unitContext.Capacity!.Value,
+                unitContext.Area,
                 occupants,
                 extensionStart,
                 newEndDate,
@@ -164,14 +182,22 @@ public class LeaseApplicationRules(
             "Lease.InvalidVatRate");
     }
 
-    private async Task<(decimal Rented, decimal Allocated)> ValidateCapacityLeaseAsync(
+    private static DateTime Max(DateTime a, DateTime b) => a > b ? a : b;
+
+    private async Task<(decimal Rented, decimal Allocated, LeaseAreaMode Mode)> ValidateCapacityLeaseAsync(
         LeaseUnitContextDto unit,
         DateTime startDate,
         DateTime endDate,
         decimal? rentedArea,
         decimal? allocatedArea,
+        LeaseAreaMode? allocationMode,
         int? excludeLeaseId)
     {
+        await unitRepository.AcquireCapacityLocksAsync(unit.UnitId);
+        unit = Guard.NotFound(
+            await unitRepository.GetLeaseContextAsync(unit.UnitId),
+            "Birim bulunamadı.");
+
         Guard.InvalidField(
             unit.Capacity is null or <= 0,
             "UnitId",
@@ -187,29 +213,31 @@ public class LeaseApplicationRules(
             "Lease.RentedAreaBelowMinimum");
         var rented = rentedArea!.Value;
 
-        decimal allocated;
-        if (rented <= UnitCapacityPolicy.CalculateNormArea(unit.Area, capacity))
-            allocated = rented;
-        else
+        var mode = allocationMode ?? LeaseAreaMode.Automatic;
+        var allocated = mode == LeaseAreaMode.Automatic
+            ? UnitCapacityPolicy.CalculateAutomaticArea(
+                rented, UnitCapacityPolicy.CalculateEffectiveNorm(unit.Area, capacity))
+            : allocatedArea ?? 0m;
+        Guard.InvalidField(
+            (mode == LeaseAreaMode.Manual && allocatedArea is null)
+                || UnitCapacityPolicy.ValidateArea(rented, allocated, minimumUsageArea).Any(violation =>
+                    violation is LeaseAreaViolation.AllocatedBelowMinimum
+                        or LeaseAreaViolation.AllocatedAboveRented),
+            "AllocatedArea",
+            $"Fiziksel m² {minimumUsageArea:0.##} ile {rented:0.##} m² arasında olmalıdır.",
+            "Lease.AllocatedAreaOutOfRange");
+
+        var rangeStart = Max(startDate.Date, DateTime.Today);
+        if (rangeStart <= endDate)
         {
-            var (minimum, maximum) = UnitCapacityPolicy.GetAllocatedAreaRange(
-                rented, unit.Area, capacity, minimumUsageArea);
-            Guard.InvalidField(
-                allocatedArea is null
-                    || !UnitCapacityPolicy.IsAllocatedAreaAllowed(
-                        allocatedArea.Value, rented, unit.Area, capacity, minimumUsageArea),
-                "AllocatedArea",
-                $"Fiziksel m² {minimum:0.##} ile {maximum:0.##} m² arasında olmalıdır.",
-                "Lease.AllocatedAreaOutOfRange");
-            allocated = allocatedArea!.Value;
+            var occupants = (await leaseRepository.GetOpenLeaseAreasForUnitAsync(
+                unit.UnitId, rangeStart, endDate, excludeLeaseId)).ToList();
+            occupants.Add(new CapacityOccupant(
+                startDate, endDate, allocated, excludeLeaseId, rented, mode));
+            EnsureCapacityAvailable(capacity, unit.Area, occupants, rangeStart, endDate, "UnitId");
         }
 
-        var occupants = (await leaseRepository.GetOpenLeaseAreasForUnitAsync(
-            unit.UnitId, startDate, endDate, excludeLeaseId)).ToList();
-        occupants.Add(new CapacityOccupant(startDate, endDate, allocated));
-        EnsureCapacityAvailable(capacity, unit.Area, occupants, startDate, endDate, "UnitId");
-
-        return (rented, allocated);
+        return (rented, allocated, mode);
     }
 
     public void EnsureCapacityAvailable(
@@ -220,28 +248,18 @@ public class LeaseApplicationRules(
         DateTime rangeEnd,
         string field)
     {
-        var violations = UnitCapacityPolicy.GetViolations(
-            capacity,
-            unitArea,
-            operationalPolicyProvider.Current.LeaseMinimumUsageArea,
-            occupants,
-            rangeStart,
-            rangeEnd);
+        var violations = UnitCapacityPolicy.GetHardViolations(
+            capacity, unitArea, occupants, rangeStart, rangeEnd);
         Guard.InvalidField(
-            violations.Contains(CapacityViolation.CapacityExceeded),
+            violations.Contains(CapacityHardViolation.CapacityExceeded),
             field,
             "Seçilen tarih aralığında birimin kontenjanı dolu.",
             "Lease.CapacityExceeded");
         Guard.InvalidField(
-            violations.Contains(CapacityViolation.AreaExceeded),
+            violations.Contains(CapacityHardViolation.AreaExceeded),
             field,
             "Seçilen tarih aralığında fiziksel m² toplamı birim alanını aşıyor.",
             "Lease.CapacityAreaExceeded");
-        Guard.InvalidField(
-            violations.Contains(CapacityViolation.NormBelowMinimum),
-            field,
-            "Boş kontenjan varken kişi başı kalan alan minimum kullanım m² değerinin altına düşüyor.",
-            "Lease.CapacityFreeAreaBelowMinimum");
     }
 
     public async Task EnsureRateOverridesAsync(
@@ -296,7 +314,7 @@ public class LeaseApplicationRules(
         var storedArea = isCapacity || isGrouped
             ? await leaseRepository.GetLeaseAreaAsync(lease.Id)
             : null;
-        await ValidateApplicationDataAsync(
+        var validated = await ValidateApplicationDataAsync(
             lease.UnitId,
             lease.TenantId,
             lease.StartDate,
@@ -313,9 +331,17 @@ public class LeaseApplicationRules(
             lease.IsRentFree,
             isCapacity ? storedArea?.RentedArea : null,
             isCapacity ? storedArea?.AllocatedArea : null,
+            isCapacity ? storedArea?.AllocationMode : null,
             lease.Id,
             lease.LeaseGroupId,
             isGrouped ? storedArea?.RentedArea : null);
+        if (isCapacity && validated.Area is { } activatedArea)
+        {
+            var area = await leaseRepository.UpsertLeaseAreaAsync(
+                lease.Id, activatedArea.Rented, activatedArea.Allocated, activatedArea.Mode);
+            leaseRepository.AddLeaseAreaHistory(
+                area, activatedArea.Mode, lease.StartDate.Date, LeaseAreaChangeReason.Activation);
+        }
         Guard.Conflict(
             await leaseRepository.HasChargesAsync(lease.Id),
             "Taslak başvuruda beklenmeyen tahakkuk bulundu.",

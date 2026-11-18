@@ -22,6 +22,7 @@
 | `Birim.Create` | Birim ekle |
 | `Birim.Edit` | Birim düzenle |
 | `Birim.ManageRate` | Birim özel fiyat (BirimRate) yönet |
+| `Internal.Unit.UpdateCapacity` | Kontenjanı değiştir — endpoint `POST UnitCapacity/Apply`; önizleme `POST UnitCapacity/Preview` modül izni `Internal.Unit` ile |
 
 ## Kiracı
 
@@ -41,6 +42,7 @@
 | `Sozlesme.Extend` | Sözleşme süresi uzat |
 | `Sozlesme.Terminate` | Sözleşme feshet |
 | `Sozlesme.OverrideRate` | Sözleşme kalem fiyatına elle müdahale (SozlesmeRate) yetkisini yönet |
+| `Internal.Lease.UpdateAllocatedArea` | Fiziksel m² düzenle (açık ofis sözleşmesi) — endpoint `POST Lease/UpdateAllocatedArea`; seed'de `Lease.Edit` sahibi rollere verilir |
 
 ## Ödeme (Faz 5'te aktifleşir, şimdiden tanımlı)
 

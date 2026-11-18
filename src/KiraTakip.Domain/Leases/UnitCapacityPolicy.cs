@@ -1,12 +1,45 @@
+using KiraTakip.Models.Enums;
+
 namespace KiraTakip.Domain.Leases;
 
-public sealed record CapacityOccupant(DateTime StartDate, DateTime EndDate, decimal AllocatedArea);
+public sealed record CapacityOccupant(
+    DateTime StartDate,
+    DateTime EndDate,
+    decimal AllocatedArea,
+    int? LeaseId,
+    decimal? RentedArea,
+    LeaseAreaMode? Mode)
+{
+    public CapacityOccupant(DateTime startDate, DateTime endDate, decimal allocatedArea)
+        : this(startDate, endDate, allocatedArea, null, null, null)
+    {
+    }
+}
 
-public enum CapacityViolation
+public enum LeaseAreaViolation
+{
+    RentedBelowMinimum = 1,
+    AllocatedBelowMinimum = 2,
+    AllocatedAboveRented = 3
+}
+
+public enum CapacityHardViolation
 {
     CapacityExceeded = 1,
-    AreaExceeded = 2,
-    NormBelowMinimum = 3
+    AreaExceeded = 2
+}
+
+public sealed record CapacitySnapshot(
+    int OccupiedCount,
+    decimal AllocatedArea,
+    int FreeSlots,
+    decimal RemainingArea,
+    decimal NormTarget,
+    decimal MinimumTarget)
+{
+    public bool NormTargetShort => FreeSlots > 0 && RemainingArea < NormTarget;
+
+    public bool MinimumTargetShort => FreeSlots > 0 && RemainingArea < MinimumTarget;
 }
 
 public sealed record CapacityUsage(int OccupiedCount, decimal AllocatedArea);
@@ -21,53 +54,80 @@ public static class UnitCapacityPolicy
         return unitArea / capacity;
     }
 
-    public static (decimal Minimum, decimal Maximum) GetAllocatedAreaRange(
-        decimal rentedArea,
-        decimal unitArea,
-        int capacity,
-        decimal minimumUsageArea)
-        => rentedArea > CalculateNormArea(unitArea, capacity)
-            ? (minimumUsageArea, rentedArea)
-            : (rentedArea, rentedArea);
-
-    public static bool IsAllocatedAreaAllowed(
-        decimal allocatedArea,
-        decimal rentedArea,
-        decimal unitArea,
-        int capacity,
-        decimal minimumUsageArea)
+    public static decimal CalculateEffectiveNorm(decimal unitArea, int capacity)
     {
-        var (minimum, maximum) = GetAllocatedAreaRange(rentedArea, unitArea, capacity, minimumUsageArea);
-        return allocatedArea >= minimum && allocatedArea <= maximum;
+        if (capacity <= 0)
+            throw new ArgumentOutOfRangeException(nameof(capacity));
+
+        return Math.Floor(unitArea / capacity * 100m) / 100m;
     }
 
-    public static IReadOnlyList<CapacityViolation> GetViolations(
+    public static decimal CalculateAutomaticArea(decimal rentedArea, decimal effectiveNorm)
+        => Math.Min(rentedArea, effectiveNorm);
+
+    public static int GetCapacityLimit(decimal unitArea, decimal minimumUsageArea)
+        => minimumUsageArea <= 0 ? int.MaxValue : (int)Math.Floor(unitArea / minimumUsageArea);
+
+    public static IReadOnlyList<LeaseAreaViolation> ValidateArea(
+        decimal rentedArea,
+        decimal allocatedArea,
+        decimal minimumUsageArea)
+    {
+        var violations = new List<LeaseAreaViolation>();
+
+        if (rentedArea < minimumUsageArea)
+            violations.Add(LeaseAreaViolation.RentedBelowMinimum);
+
+        if (allocatedArea < minimumUsageArea)
+            violations.Add(LeaseAreaViolation.AllocatedBelowMinimum);
+
+        if (allocatedArea > rentedArea)
+            violations.Add(LeaseAreaViolation.AllocatedAboveRented);
+
+        return violations;
+    }
+
+    public static IReadOnlyList<CapacityHardViolation> GetHardViolations(
         int capacity,
         decimal unitArea,
-        decimal minimumUsageArea,
         IEnumerable<CapacityOccupant> occupants,
         DateTime rangeStart,
         DateTime rangeEnd)
     {
         var list = occupants.ToList();
-        var violations = new HashSet<CapacityViolation>();
+        var violations = new HashSet<CapacityHardViolation>();
 
         foreach (var day in GetEvaluationDays(list, rangeStart, rangeEnd))
         {
             var (count, area) = Measure(list, day);
 
             if (count > capacity)
-                violations.Add(CapacityViolation.CapacityExceeded);
+                violations.Add(CapacityHardViolation.CapacityExceeded);
 
             if (area > unitArea)
-                violations.Add(CapacityViolation.AreaExceeded);
-
-            var free = capacity - count;
-            if (free > 0 && (unitArea - area) / free < minimumUsageArea)
-                violations.Add(CapacityViolation.NormBelowMinimum);
+                violations.Add(CapacityHardViolation.AreaExceeded);
         }
 
         return violations.OrderBy(v => (int)v).ToList();
+    }
+
+    public static CapacitySnapshot GetSnapshot(
+        int capacity,
+        decimal unitArea,
+        decimal minimumUsageArea,
+        IEnumerable<CapacityOccupant> occupants,
+        DateTime day)
+    {
+        var (count, area) = Measure(occupants.ToList(), day.Date);
+        var free = Math.Max(0, capacity - count);
+
+        return new CapacitySnapshot(
+            count,
+            area,
+            free,
+            unitArea - area,
+            free * CalculateEffectiveNorm(unitArea, capacity),
+            free * minimumUsageArea);
     }
 
     public static CapacityUsage GetPeakUsage(
@@ -95,22 +155,6 @@ public static class UnitCapacityPolicy
         int occupiedCount,
         decimal allocatedArea)
         => occupiedCount == capacity - 1 ? unitArea - allocatedArea : null;
-
-    public static int GetMaximumCapacity(
-        decimal unitArea,
-        decimal minimumUsageArea,
-        int occupiedCount,
-        decimal allocatedArea)
-    {
-        if (minimumUsageArea <= 0)
-            return int.MaxValue;
-
-        var extra = (int)Math.Floor((unitArea - allocatedArea) / minimumUsageArea);
-        return extra < 0 ? occupiedCount : occupiedCount + extra;
-    }
-
-    public static int GetMinimumCapacity(int occupiedCount)
-        => Math.Max(1, occupiedCount);
 
     private static IEnumerable<DateTime> GetEvaluationDays(
         List<CapacityOccupant> occupants,

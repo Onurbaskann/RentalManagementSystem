@@ -3,6 +3,7 @@ using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.Enums;
+using KiraTakip.Repositories.Leases;
 using KiraTakip.Repositories.Properties;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -71,33 +72,164 @@ public class CapacityLeaseServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_ShouldEnforceAllocatedAreaRangeWhenRentedAboveNorm()
+    public async Task Create_ManualShouldEnforceAllocatedAreaRange()
     {
         var (seed, unit) = await SeedCapacityUnitAsync(area: 70, capacity: 10);
 
-        var low = await CreateAsync(seed, unit, 10, 5);
-        var high = await CreateAsync(seed, unit, 10, 10);
-        var exception = await Assert.ThrowsAsync<BusinessValidationException>(() =>
-            CreateAsync(seed, unit, 10, 4));
+        var low = await CreateAsync(seed, unit, 10, 5, LeaseAreaMode.Manual);
+        var high = await CreateAsync(seed, unit, 10, 10, LeaseAreaMode.Manual);
+        var below = await Assert.ThrowsAsync<BusinessValidationException>(() =>
+            CreateAsync(seed, unit, 10, 4, LeaseAreaMode.Manual));
+        var above = await Assert.ThrowsAsync<BusinessValidationException>(() =>
+            CreateAsync(seed, unit, 6, 7, LeaseAreaMode.Manual));
         var missing = await Assert.ThrowsAsync<BusinessValidationException>(() =>
-            CreateAsync(seed, unit, 10));
+            CreateAsync(seed, unit, 10, null, LeaseAreaMode.Manual));
 
-        Assert.Equal("Lease.AllocatedAreaOutOfRange", exception.Code);
+        Assert.Equal("Lease.AllocatedAreaOutOfRange", below.Code);
+        Assert.Equal("Lease.AllocatedAreaOutOfRange", above.Code);
         Assert.Equal("Lease.AllocatedAreaOutOfRange", missing.Code);
         Assert.Equal(5m, (await _context.LeaseAreas.SingleAsync(a => a.LeaseId == low.Id)).AllocatedArea);
         Assert.Equal(10m, (await _context.LeaseAreas.SingleAsync(a => a.LeaseId == high.Id)).AllocatedArea);
     }
 
     [Fact]
-    public async Task Create_ShouldForceAllocatedAreaToRentedWhenAtOrBelowNorm()
+    public async Task Create_ManualShouldAllowAllocatedBelowRentedEvenWhenRentedAtOrBelowNorm()
+    {
+        _harness.MinimumUsageArea = 4;
+        var (seed, unit) = await SeedCapacityUnitAsync(area: 70, capacity: 10);
+
+        var lease = await CreateAsync(seed, unit, 5, 4, LeaseAreaMode.Manual);
+
+        var area = await _context.LeaseAreas.SingleAsync(item => item.LeaseId == lease.Id);
+        Assert.Equal(5m, area.RentedArea);
+        Assert.Equal(4m, area.AllocatedArea);
+        Assert.Equal(LeaseAreaMode.Manual, area.AllocationMode);
+    }
+
+    [Fact]
+    public async Task Create_ManualShouldRejectRentedBelowMinimum()
     {
         var (seed, unit) = await SeedCapacityUnitAsync(area: 70, capacity: 10);
 
-        var lease = await CreateAsync(seed, unit, 6, 5.5m);
+        var exception = await Assert.ThrowsAsync<BusinessValidationException>(() =>
+            CreateAsync(seed, unit, 4, 4, LeaseAreaMode.Manual));
 
-        var area = await _context.LeaseAreas.SingleAsync(item => item.LeaseId == lease.Id);
-        Assert.Equal(6m, area.RentedArea);
+        Assert.Equal("Lease.RentedAreaBelowMinimum", exception.Code);
+    }
+
+    [Fact]
+    public async Task Create_AutomaticShouldCalculateAllocatedAreaAndIgnoreInput()
+    {
+        var (seed, unit) = await SeedCapacityUnitAsync(area: 70, capacity: 10);
+
+        var above = await CreateAsync(seed, unit, 10, 9, LeaseAreaMode.Automatic);
+        var below = await CreateAsync(seed, unit, 5);
+
+        var aboveArea = await _context.LeaseAreas.SingleAsync(a => a.LeaseId == above.Id);
+        var belowArea = await _context.LeaseAreas.SingleAsync(a => a.LeaseId == below.Id);
+        Assert.Equal(7m, aboveArea.AllocatedArea);
+        Assert.Equal(LeaseAreaMode.Automatic, aboveArea.AllocationMode);
+        Assert.Equal(5m, belowArea.AllocatedArea);
+    }
+
+    [Fact]
+    public async Task Create_ShouldCountSameTenantContractsSeparately()
+    {
+        var (seed, unit) = await SeedCapacityUnitAsync(area: 70, capacity: 2);
+        await CreateAsync(seed, unit, 5);
+        await CreateAsync(seed, unit, 5);
+        var (seedSingle, unitSingle) = await SeedCapacityUnitAsync(area: 70, capacity: 1);
+        await CreateAsync(seedSingle, unitSingle, 5);
+
+        var exception = await Assert.ThrowsAsync<BusinessValidationException>(() =>
+            CreateAsync(seedSingle, unitSingle, 5));
+
+        Assert.Equal("Lease.CapacityExceeded", exception.Code);
+    }
+
+    [Fact]
+    public async Task Create_ShouldNotBlockWhenRemainingAreaIsShortAndWarnAfterwards()
+    {
+        _harness.MinimumUsageArea = 4;
+        var (seed, unit) = await SeedCapacityUnitAsync(area: 70, capacity: 14);
+        var today = DateTime.Today;
+        for (var i = 0; i < 10; i++)
+            await SeedLeaseAsync(seed, unit, LeaseStatus.Active, 6, today.AddDays(-5), today.AddDays(60));
+
+        var lease = await CreateAsync(
+            seed, unit, 5, 5, LeaseAreaMode.Manual, today, today.AddDays(30));
+        var warning = await _harness.CreateService(seed.ApplicantId).GetCapacityWarningAsync(lease.Id);
+
+        Assert.NotNull(warning);
+        Assert.Equal(3, warning.FreeSlots);
+        Assert.Equal(5m, warning.RemainingArea);
+        Assert.True(warning.NormTargetShort);
+        Assert.True(warning.MinimumTargetShort);
+    }
+
+    [Fact]
+    public async Task GetCapacityWarning_ShouldReturnNullWhenTargetsAreMet()
+    {
+        var (seed, unit) = await SeedCapacityUnitAsync(area: 70, capacity: 10);
+        var today = DateTime.Today;
+        var lease = await CreateAsync(seed, unit, 5, null, null, today, today.AddDays(30));
+
+        Assert.Null(await _harness.CreateService(seed.ApplicantId).GetCapacityWarningAsync(lease.Id));
+    }
+
+    [Fact]
+    public async Task Create_ShouldNotRemeasurePastDays()
+    {
+        var (seed, unit) = await SeedCapacityUnitAsync(area: 70, capacity: 1);
+        var today = DateTime.Today;
+        await SeedLeaseAsync(seed, unit, LeaseStatus.Active, 5, today.AddDays(-30), today.AddDays(-1));
+
+        var lease = await CreateAsync(
+            seed, unit, 5, null, null, today.AddDays(-10), today.AddDays(30));
+
+        Assert.Equal(LeaseStatus.Draft, lease.Status);
+    }
+
+    [Fact]
+    public async Task Approve_AutomaticShouldRecalculateAllocatedAreaAndWriteHistory()
+    {
+        var (seed, unit) = await SeedCapacityUnitAsync(area: 70, capacity: 10);
+        var lease = await CreateAsync(seed, unit, 10);
+        Assert.Equal(7m, (await _context.LeaseAreas.SingleAsync(a => a.LeaseId == lease.Id)).AllocatedArea);
+        unit.Capacity = 14;
+        await _context.SaveChangesAsync();
+        await _harness.AddAllRequiredDocumentsAsync(lease.Id);
+
+        await _harness.CreateService(seed.ReviewerId).ApproveAsync(
+            new ApproveLeaseInput(lease.Id, "Onaylandı", lease.RowVersion, seed.ReviewerId, LeaseServiceTestHarness.Scope()));
+
+        var area = await _context.LeaseAreas.AsNoTracking().SingleAsync(a => a.LeaseId == lease.Id);
+        var history = await new LeaseRepository(_context).GetLeaseAreaHistoryAsync(lease.Id);
+        Assert.Equal(5m, area.AllocatedArea);
+        Assert.Equal(LeaseAreaMode.Automatic, area.AllocationMode);
+        var row = Assert.Single(history);
+        Assert.Equal(LeaseAreaChangeReason.Activation, row.Reason);
+        Assert.Equal(5m, row.AllocatedArea);
+    }
+
+    [Fact]
+    public async Task Approve_ManualShouldKeepAllocatedAreaAndWriteManualHistory()
+    {
+        var (seed, unit) = await SeedCapacityUnitAsync(area: 70, capacity: 10);
+        var lease = await CreateAsync(seed, unit, 10, 6, LeaseAreaMode.Manual);
+        unit.Capacity = 14;
+        await _context.SaveChangesAsync();
+        await _harness.AddAllRequiredDocumentsAsync(lease.Id);
+
+        await _harness.CreateService(seed.ReviewerId).ApproveAsync(
+            new ApproveLeaseInput(lease.Id, "Onaylandı", lease.RowVersion, seed.ReviewerId, LeaseServiceTestHarness.Scope()));
+
+        var area = await _context.LeaseAreas.AsNoTracking().SingleAsync(a => a.LeaseId == lease.Id);
+        var row = Assert.Single(await new LeaseRepository(_context).GetLeaseAreaHistoryAsync(lease.Id));
         Assert.Equal(6m, area.AllocatedArea);
+        Assert.Equal(LeaseAreaMode.Manual, area.AllocationMode);
+        Assert.Equal(LeaseAreaMode.Manual, row.Mode);
+        Assert.Equal(6m, row.AllocatedArea);
     }
 
     [Fact]
@@ -133,19 +265,6 @@ public class CapacityLeaseServiceTests : IDisposable
             null, null, null, includeCapacityBased: true);
 
         Assert.DoesNotContain(units, item => item.Id == unit.Id);
-    }
-
-    [Fact]
-    public async Task Create_ShouldRejectWhenFreeSlotsFallBelowMinimumUsage()
-    {
-        var (seed, unit) = await SeedCapacityUnitAsync(area: 70, capacity: 10);
-        for (var i = 0; i < 5; i++)
-            await SeedLeaseAsync(seed, unit, LeaseStatus.Active, 10);
-
-        var exception = await Assert.ThrowsAsync<BusinessValidationException>(() =>
-            CreateAsync(seed, unit, 15, 15));
-
-        Assert.Equal("Lease.CapacityFreeAreaBelowMinimum", exception.Code);
     }
 
     [Fact]
@@ -260,12 +379,15 @@ public class CapacityLeaseServiceTests : IDisposable
         LeaseServiceTestHarness.Seed seed,
         Unit unit,
         decimal? rentedArea,
-        decimal? allocatedArea = null)
+        decimal? allocatedArea = null,
+        LeaseAreaMode? mode = null,
+        DateTime? start = null,
+        DateTime? end = null)
         => _harness.CreateService(seed.ApplicantId).CreateDraftAsync(new CreateLeaseDraftInput(
             unit.Id,
             seed.TenantId,
-            Start,
-            End,
+            start ?? Start,
+            end ?? End,
             DueDateRuleType.FixedDayOfMonth,
             10,
             null,
@@ -274,7 +396,8 @@ public class CapacityLeaseServiceTests : IDisposable
             LeaseServiceTestHarness.Scope(),
             false,
             rentedArea,
-            allocatedArea));
+            allocatedArea,
+            mode));
 
     private async Task<Lease> SeedLeaseAsync(
         LeaseServiceTestHarness.Seed seed,

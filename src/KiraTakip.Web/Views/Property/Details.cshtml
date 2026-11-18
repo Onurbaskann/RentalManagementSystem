@@ -7,6 +7,7 @@
     bool canCreateReservation = await PermissionService.HasPermissionAsync(PermissionCatalog.Reservation.Create);
     bool canEditProperty = await PermissionService.HasPermissionAsync(PermissionCatalog.Property.Edit);
     bool canManageRate = await PermissionService.HasPermissionAsync(PermissionCatalog.Unit.OverrideRate);
+    bool canOpenCapacity = await PermissionService.HasPermissionAsync(PermissionCatalog.Unit.Module);
     var unitControllerName = nameof(KiraTakip.Web.Controllers.UnitController)
         .Replace("Controller", string.Empty);
     var unitRatesActionName = nameof(KiraTakip.Web.Controllers.UnitController.Rates);
@@ -141,6 +142,10 @@
                             <span class="inline-block bg-slate-100 text-slate-600 text-xs font-bold px-2.5 py-0.5 rounded-[10px]">Müsait</span>
                         </div>
                         <div class="text-xs text-muted mt-2">Aktif sözleşme yok</div>
+                    }
+                    @if (canOpenCapacity && singleUnit?.Capacity is > 0)
+                    {
+                        <a href="/UnitCapacity/@singleUnit.Id.ToHashId()" class="text-[12.5px] text-primary hover:underline mt-2 inline-block">Kontenjanı değiştir</a>
                     }
                 </div>
             }
@@ -468,6 +473,10 @@
                                                                         <a href="/Lease/Create?unitId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Kiraya Ver</a>
                                                                     }
                                                                 }
+                                                                @if (canOpenCapacity && b.Capacity is > 0)
+                                                                {
+                                                                    <a href="/UnitCapacity/@b.Id.ToHashId()" class="btn btn-sm btn-secondary">Kontenjanı Değiştir</a>
+                                                                }
                                                                 @if (canManageRate)
                                                                 {
                                                                     <div x-data="{ open: false }" class="relative">
@@ -565,6 +574,10 @@
                                         </div>
                                         <div class="text-[12px] text-muted font-medium">@b.Area.M2()</div>
                                         @Html.Raw(CapacityNote(b))
+                                        @if (canOpenCapacity && b.Capacity is > 0)
+                                        {
+                                            <a href="/UnitCapacity/@b.Id.ToHashId()" data-stop class="text-[11px] text-primary hover:underline mt-1 no-underline">Kontenjanı değiştir</a>
+                                        }
                                         @if (b.ActiveLeaseTenantDisplayName != null)
                                         {
                                             <div class="text-[10.5px] font-semibold text-slate-600 mt-1 truncate" title="@b.ActiveLeaseTenantDisplayName">@b.ActiveLeaseTenantDisplayName</div>
@@ -717,6 +730,10 @@
                                             {
                                                 <a href="/Lease/Create?unitId=@b.Id.ToHashId()" class="btn btn-sm btn-primary">Kiraya Ver</a>
                                             }
+                                        }
+                                        @if (canOpenCapacity && b.Capacity is > 0)
+                                        {
+                                            <a href="/UnitCapacity/@b.Id.ToHashId()" class="btn btn-sm btn-secondary">Kontenjanı Değiştir</a>
                                         }
                                         @if (canManageRate)
                                         {

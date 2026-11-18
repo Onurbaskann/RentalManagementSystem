@@ -13,6 +13,7 @@ public interface ILeaseService
     Task<int> GetTerminatedCountAsync(GetTerminatedLeaseCountInput input);
     Task<LeaseDetailDto?> GetDetailsAsync(GetLeaseDetailsInput input);
     Task<LeaseDetailDto> GetTenantDetailsAsync(GetTenantLeaseDetailsInput input);
+    Task<LeaseCapacityWarningDto?> GetCapacityWarningAsync(int leaseId);
     Task<Lease> CreateAsync(CreateLeaseInput input);
     Task<Lease> CreateDraftAsync(CreateLeaseDraftInput input);
     Task<LeaseDraftEditDto?> GetDraftForEditAsync(GetLeaseDraftInput input);

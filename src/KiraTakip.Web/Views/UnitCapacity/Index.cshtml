@@ -1,0 +1,222 @@
+@model KiraTakip.Web.Models.ViewModels.UnitCapacityPageViewModel
+@{
+    ViewData["Title"] = "Kontenjanı Değiştir";
+    ViewData["UseCentralFeedback"] = true;
+    var unitHash = Model.UnitId.ToHashId();
+    var backUrl = $"/Property/Details/{Model.PropertyId.ToHashId()}";
+}
+
+<div class="max-w-[1100px] mx-auto">
+    <div class="page-header">
+        <a href="@backUrl" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">← @Model.PropertyName</a>
+        <div class="page-title">Kontenjanı Değiştir</div>
+        <div class="page-subtitle">@Model.UnitName</div>
+    </div>
+
+    @Html.AntiForgeryToken()
+
+    <div x-data="unitCapacityPage()" x-init="init()" x-cloak>
+        <div class="bg-primary/5 border border-primary/10 rounded-lg p-3 text-[13px] text-primary mb-4">
+            Otomatik sözleşmelerin fiziksel m²'si yeni kontenjana göre yeniden hesaplanır; elle değiştirdiğiniz satır Manuel olur.
+        </div>
+
+        <div asp-validation-summary="All" class="bg-red-50 border border-red-200 text-red-800 rounded-lg p-3 text-[13px] mb-4"></div>
+
+        <div class="card">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 items-end">
+                <div>
+                    <div class="text-[11.5px] text-muted font-semibold">Taşınmaz Alanı (TA)</div>
+                    <div class="text-[16px] font-bold" x-text="fmt(preview.unitArea) + ' m²'"></div>
+                </div>
+                <div>
+                    <div class="text-[11.5px] text-muted font-semibold">Mevcut Kontenjan</div>
+                    <div class="text-[16px] font-bold" x-text="preview.currentCapacity"></div>
+                </div>
+                <div>
+                    <div class="text-[11.5px] text-muted font-semibold">Alt Sınır (Min)</div>
+                    <div class="text-[16px] font-bold" x-text="fmt(preview.minimumUsageArea) + ' m²'"></div>
+                </div>
+                <div>
+                    <div class="text-[11.5px] text-muted font-semibold">En Yüksek Kontenjan (Kmax)</div>
+                    <div class="text-[16px] font-bold" x-text="preview.maximumCapacity"></div>
+                </div>
+                <div>
+                    <label class="form-label" for="newCapacity">Yeni Kontenjan (K)</label>
+                    <input id="newCapacity" type="number" min="1" step="1" class="form-control" x-model.number="capacity" x-on:input="schedule()" />
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-red-50 border border-red-200 text-red-800 rounded-lg p-3 text-[13px] mt-4" x-show="preview.errors.length > 0 || fetchError">
+            <template x-for="e in preview.errors" :key="e"><div x-text="e"></div></template>
+            <div x-show="fetchError" x-text="fetchError"></div>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 text-[13px] mt-4" x-show="preview.warnings.length > 0">
+            <template x-for="w in preview.warnings" :key="w"><div x-text="w"></div></template>
+        </div>
+
+        <div class="card mt-4 !p-0 overflow-x-auto" :class="loading ? 'opacity-60' : ''">
+            <table class="w-full text-[13px]">
+                <thead>
+                    <tr class="text-left text-[11.5px] text-muted border-b border-[var(--color-border)]">
+                        <th class="px-3 py-2.5">Kiracı</th>
+                        <th class="px-3 py-2.5">Sözleşme No</th>
+                        <th class="px-3 py-2.5">Tarih Aralığı</th>
+                        <th class="px-3 py-2.5">Statü</th>
+                        <th class="px-3 py-2.5 text-right">Kiralanan m²</th>
+                        <th class="px-3 py-2.5 text-right">Mevcut Mod / F</th>
+                        <th class="px-3 py-2.5 text-right">Önerilen F (m²)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="row in preview.rows" :key="row.id">
+                        <tr class="border-b border-[var(--color-border)] last:border-0 align-top">
+                            <td class="px-3 py-2.5 font-medium" x-text="row.tenant"></td>
+                            <td class="px-3 py-2.5 font-mono" x-text="row.leaseNo"></td>
+                            <td class="px-3 py-2.5 whitespace-nowrap" x-text="row.start + ' - ' + row.end"></td>
+                            <td class="px-3 py-2.5" x-text="row.status"></td>
+                            <td class="px-3 py-2.5 text-right" x-text="row.rentedArea == null ? '—' : fmt(row.rentedArea)"></td>
+                            <td class="px-3 py-2.5 text-right whitespace-nowrap">
+                                <span x-text="(row.currentMode || '—')"></span> / <span x-text="fmt(row.currentArea)"></span>
+                            </td>
+                            <td class="px-3 py-2.5 text-right">
+                                <template x-if="row.editable">
+                                    <div class="inline-flex items-center gap-2 justify-end">
+                                        <span x-show="row.manual" class="badge badge-bireysel text-[10.5px]">Manuel</span>
+                                        <input type="number" min="0" step="0.01" class="form-control !w-28 text-right"
+                                               :value="row.proposedArea"
+                                               x-on:change="setOverride(row, $event.target.value)" />
+                                        <button type="button" class="text-[12px] text-muted hover:text-primary" title="Otomatiğe döndür"
+                                                x-show="overrides[row.id] !== undefined" x-on:click="clearOverride(row)">↺</button>
+                                    </div>
+                                </template>
+                                <template x-if="!row.editable">
+                                    <span class="text-muted" x-text="row.proposedMode ? fmt(row.proposedArea) : '—'"></span>
+                                </template>
+                                <div x-show="row.error" x-text="row.error" class="text-[12px] text-red-700 mt-1"></div>
+                            </td>
+                        </tr>
+                    </template>
+                    <tr x-show="preview.rows.length === 0">
+                        <td colspan="7" class="px-3 py-6 text-center text-muted">Bu birimde etkilenen sözleşme yok.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card mt-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                    <div class="text-[11.5px] text-muted font-semibold">Kişi Başı Norm (N)</div>
+                    <div class="text-[16px] font-bold" x-text="fmt(preview.norm) + ' m²'"></div>
+                </div>
+                <div>
+                    <div class="text-[11.5px] text-muted font-semibold">Bugünkü ΣF</div>
+                    <div class="text-[16px] font-bold" x-text="fmt(preview.totalToday) + ' m²'"></div>
+                </div>
+                <div>
+                    <div class="text-[11.5px] text-muted font-semibold">Tepe ΣF</div>
+                    <div class="text-[16px] font-bold" x-text="fmt(preview.peak) + ' m²'"></div>
+                    <div class="text-[11.5px] text-muted" x-text="preview.peakDay"></div>
+                </div>
+                <div>
+                    <div class="text-[11.5px] text-muted font-semibold">Kalan Alan</div>
+                    <div class="text-[16px] font-bold" :class="preview.unitArea - preview.peak < 0 ? 'text-red-700' : ''" x-text="fmt(preview.unitArea - preview.peak) + ' m²'"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 mt-4">
+            <a href="@backUrl" class="btn btn-secondary">Vazgeç</a>
+            @if (Model.CanApply)
+            {
+                <form asp-action="Apply" asp-route-id="@unitHash" method="post">
+                    <input type="hidden" name="NewCapacity" :value="capacity" />
+                    <input type="hidden" name="ExpectedHash" :value="preview.hash" />
+                    <template x-for="(value, key) in overrides" :key="key">
+                        <input type="hidden" :name="'Overrides[' + key + ']'" :value="value" />
+                    </template>
+                    <button type="submit" class="btn btn-primary" :disabled="!canSave()">Kaydet</button>
+                </form>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function unitCapacityPage() {
+            return {
+                preview: @Html.Raw(Json.Serialize(Model.Preview)),
+                capacity: @Model.Preview.NewCapacity,
+                overrides: @Html.Raw(Json.Serialize(Model.Overrides)),
+                loading: false,
+                fetchError: '',
+                timer: null,
+                sequence: 0,
+                previewUrl: '/UnitCapacity/@unitHash/Preview',
+                init() {
+                    const known = new Set(this.preview.rows.map(r => r.id));
+                    Object.keys(this.overrides).forEach(k => { if (!known.has(k)) delete this.overrides[k]; });
+                },
+                fmt(value) {
+                    return Number(value || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 });
+                },
+                canSave() {
+                    return !this.loading
+                        && !this.fetchError
+                        && this.capacity > 0
+                        && !this.preview.hasErrors
+                        && !this.preview.rows.some(r => r.error);
+                },
+                schedule() {
+                    clearTimeout(this.timer);
+                    this.loading = true;
+                    this.timer = setTimeout(() => this.refresh(), 400);
+                },
+                setOverride(row, raw) {
+                    const value = parseFloat(raw);
+                    if (isNaN(value) || value < 0) {
+                        delete this.overrides[row.id];
+                    } else {
+                        this.overrides[row.id] = value;
+                    }
+                    this.schedule();
+                },
+                clearOverride(row) {
+                    delete this.overrides[row.id];
+                    this.schedule();
+                },
+                async refresh() {
+                    if (!(this.capacity > 0)) { this.loading = false; return; }
+                    const current = ++this.sequence;
+                    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+                    try {
+                        const response = await fetch(this.previewUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'RequestVerificationToken': token
+                            },
+                            body: JSON.stringify({ newCapacity: Number(this.capacity), overrides: this.overrides })
+                        });
+                        if (current !== this.sequence) return;
+                        if (!response.ok) {
+                            this.fetchError = (await response.text()) || 'Önizleme alınamadı.';
+                        } else {
+                            this.preview = await response.json();
+                            this.fetchError = '';
+                            const known = new Set(this.preview.rows.map(r => r.id));
+                            Object.keys(this.overrides).forEach(k => { if (!known.has(k)) delete this.overrides[k]; });
+                        }
+                    } catch (e) {
+                        if (current === this.sequence) this.fetchError = 'Önizleme alınamadı.';
+                    } finally {
+                        if (current === this.sequence) this.loading = false;
+                    }
+                }
+            };
+        }
+    </script>
+}

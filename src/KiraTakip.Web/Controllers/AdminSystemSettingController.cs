@@ -45,9 +45,10 @@ public class AdminSystemSettingController(ISystemSettingService systemSettingSer
         if (!ModelState.IsValid)
             return await ReloadEditViewAsync(model, cancellationToken);
 
+        SystemSettingUpdateResult result;
         try
         {
-            await systemSettingService.UpdateAsync(
+            result = await systemSettingService.UpdateAsync(
                 new UpdateSystemSettingInput(id, model.Value),
                 cancellationToken);
         }
@@ -55,6 +56,13 @@ public class AdminSystemSettingController(ISystemSettingService systemSettingSer
         {
             ModelState.AddModelError(nameof(model.Value), exception.Message);
             return await ReloadEditViewAsync(model, cancellationToken);
+        }
+
+        if (result.Warnings.Count > 0)
+        {
+            TempData[KiraTakip.Web.Feedback.FeedbackTempDataKeys.WarningMessage] =
+                "Ayar kaydedildi. Güncel değerin altında kalan açık sözleşmeler onaylanamaz: "
+                + string.Join(" | ", result.Warnings);
         }
 
         return RedirectToAction(nameof(Index));

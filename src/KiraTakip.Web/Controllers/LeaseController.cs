@@ -32,6 +32,7 @@ public partial class LeaseController(
     ILeaseService leaseService,
     ILeaseGroupService leaseGroupService,
     IPropertyService propertyService,
+    ICapacityPlanService capacityPlanService,
     ITenantService tenantService,
     IStatisticsService statisticsService,
     IChargeService chargeService,
@@ -81,6 +82,7 @@ public partial class LeaseController(
         var viewModel = new LeaseDetailsViewModel
         {
             Lease = leaseDetails,
+            AllocatedAreaInfo = await capacityPlanService.GetAllocatedAreaInfoAsync(id, BuildAccessScope()),
             GroupId = (await leaseGroupService.GetLinkByLeaseIdAsync(id))?.GroupId,
             RemainingDays = statisticsService.GetRemainingDays(lease),
             MonthlyAmount = await statisticsService.GetMonthlyAmountAsync(lease),
@@ -192,7 +194,8 @@ public partial class LeaseController(
                 BuildAccessScope(),
                 viewModel.IsRentFree,
                 viewModel.RentedArea,
-                viewModel.AllocatedArea));
+                viewModel.AllocatedArea,
+                viewModel.AllocationMode));
         }
         catch (BusinessValidationException exception)
         {
@@ -202,6 +205,7 @@ public partial class LeaseController(
         }
 
         await UploadDocumentsAsync(lease.Id, viewModel.DocumentTypes);
+        await SetCapacityWarningAsync(lease.Id);
         return RedirectToAction(nameof(Draft), new { id = lease.Id });
     }
 
@@ -235,6 +239,7 @@ public partial class LeaseController(
             IsRentFree = draft.IsRentFree,
             RentedArea = draft.RentedArea,
             AllocatedArea = draft.AllocatedArea,
+            AllocationMode = draft.AllocationMode,
             Status = draft.Status,
             RowVersion = draft.RowVersion,
             OwnerDisplayName = draft.OwnerDisplayName,
@@ -282,7 +287,8 @@ public partial class LeaseController(
             viewModel.DueDay, viewModel.Description,
             BuildRateOverrideInputs(viewModel.LeaseLineItems, viewModel.IsRentFree), viewModel.RowVersion,
             CurrentActorUserId(), BuildAccessScope(), viewModel.IsRentFree,
-            viewModel.RentedArea, viewModel.AllocatedArea));
+            viewModel.RentedArea, viewModel.AllocatedArea, viewModel.AllocationMode));
+        await SetCapacityWarningAsync(viewModel.LeaseId);
         return RedirectToAction(nameof(Draft), new { id = viewModel.LeaseId });
     }
 
@@ -298,7 +304,8 @@ public partial class LeaseController(
             viewModel.DueDay, viewModel.Description,
             BuildRateOverrideInputs(viewModel.LeaseLineItems, viewModel.IsRentFree), null, viewModel.RowVersion,
             CurrentActorUserId(), BuildAccessScope(), viewModel.IsRentFree,
-            viewModel.RentedArea, viewModel.AllocatedArea));
+            viewModel.RentedArea, viewModel.AllocatedArea, viewModel.AllocationMode));
+        await SetCapacityWarningAsync(viewModel.LeaseId);
         return RedirectToAction(nameof(Draft), new { id = viewModel.LeaseId });
     }
 
@@ -311,6 +318,7 @@ public partial class LeaseController(
         await leaseService.ApproveAsync(new ApproveLeaseInput(
             viewModel.LeaseId, viewModel.Explanation, viewModel.RowVersion,
             CurrentActorUserId(), BuildAccessScope()));
+        await SetCapacityWarningAsync(viewModel.LeaseId);
         return RedirectToAction(nameof(Details), new { id = viewModel.LeaseId });
     }
 
@@ -410,6 +418,20 @@ public partial class LeaseController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionCatalog.Lease.UpdateAllocatedArea)]
+    public async Task<IActionResult> UpdateAllocatedArea(int id, UpdateAllocatedAreaViewModel viewModel)
+    {
+        ThrowIfModelStateInvalid();
+
+        await capacityPlanService.UpdateAllocatedAreaAsync(
+            new UpdateAllocatedAreaInput(id, viewModel.AllocatedArea, BuildAccessScope()));
+
+        TempData[KiraTakip.Web.Feedback.FeedbackTempDataKeys.SuccessMessage] = "Fiziksel m² güncellendi.";
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     [Authorize(Policy = PermissionCatalog.Lease.Terminate)]
     public async Task<IActionResult> Terminate(int id, TerminateLeaseViewModel viewModel)
     {
@@ -498,6 +520,23 @@ public partial class LeaseController(
         }).ToList();
 
         return Json(result);
+    }
+
+    private async Task SetCapacityWarningAsync(int leaseId)
+    {
+        var warning = await leaseService.GetCapacityWarningAsync(leaseId);
+        if (warning == null) return;
+
+        var shortTargets = new List<string>();
+        if (warning.NormTargetShort)
+            shortTargets.Add($"norm hedefi ({warning.NormTarget:0.##} m²)");
+        if (warning.MinimumTargetShort)
+            shortTargets.Add($"minimum hedef ({warning.MinimumTarget:0.##} m²)");
+        if (shortTargets.Count == 0) return;
+
+        TempData[KiraTakip.Web.Feedback.FeedbackTempDataKeys.WarningMessage] =
+            $"Bu ofiste {warning.FreeSlots} boş kontenjan için kalan alan {warning.RemainingArea:0.##} m²; "
+            + $"{string.Join(" ve ", shortTargets)} karşılanmıyor.";
     }
 
     private void ThrowIfModelStateInvalid()

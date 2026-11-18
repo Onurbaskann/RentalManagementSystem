@@ -72,6 +72,32 @@ public class LeaseService(
             "Sözleşme bulunamadı.",
             "TENANT_LEASE_NOT_FOUND");
 
+    public async Task<LeaseCapacityWarningDto?> GetCapacityWarningAsync(int leaseId)
+    {
+        var details = await leaseRepository.GetDetailsAsync(leaseId);
+        if (details == null) return null;
+        var unit = await unitRepository.GetLeaseContextAsync(details.UnitId);
+        if (unit is not { RentalMode: UnitRentalMode.CapacityBased, Capacity: > 0 }) return null;
+
+        var today = DateTime.Today;
+        var occupants = await leaseRepository.GetOpenLeaseAreasForUnitAsync(unit.UnitId, today, today, null);
+        var snapshot = UnitCapacityPolicy.GetSnapshot(
+            unit.Capacity.Value,
+            unit.Area,
+            operationalPolicyProvider.Current.LeaseMinimumUsageArea,
+            occupants,
+            today);
+        return snapshot is { NormTargetShort: false, MinimumTargetShort: false }
+            ? null
+            : new LeaseCapacityWarningDto(
+                snapshot.FreeSlots,
+                snapshot.RemainingArea,
+                snapshot.NormTarget,
+                snapshot.MinimumTarget,
+                snapshot.NormTargetShort,
+                snapshot.MinimumTargetShort);
+    }
+
     public async Task<Lease> CreateAsync(CreateLeaseInput input)
     {
         var actorUserId = Guard.NotFound(
@@ -91,7 +117,8 @@ public class LeaseService(
             input.AccessScope,
             input.IsRentFree,
             input.RentedArea,
-            input.AllocatedArea));
+            input.AllocatedArea,
+            input.AllocationMode));
     }
 
     public async Task<Lease> CreateDraftAsync(CreateLeaseDraftInput input)
@@ -107,7 +134,8 @@ public class LeaseService(
             input.AccessScope,
             input.IsRentFree,
             input.RentedArea,
-            input.AllocatedArea);
+            input.AllocatedArea,
+            input.AllocationMode);
         var unit = validated.Unit;
         if (unit.RentalMode != UnitRentalMode.CapacityBased)
             Guard.InvalidField(
@@ -138,7 +166,7 @@ public class LeaseService(
         await uow.SaveChangesAsync();
 
         if (validated.Area is { } leaseArea)
-            await leaseRepository.UpsertLeaseAreaAsync(lease.Id, leaseArea.Rented, leaseArea.Allocated);
+            await leaseRepository.UpsertLeaseAreaAsync(lease.Id, leaseArea.Rented, leaseArea.Allocated, leaseArea.Mode);
         await leaseRateOverrideRepository.ReplaceAsync(
             lease.Id,
             BuildRateOverrides(lease.Id, input.RateOverrides));
@@ -187,7 +215,8 @@ public class LeaseService(
             input.AccessScope,
             input.IsRentFree,
             input.RentedArea,
-            input.AllocatedArea);
+            input.AllocatedArea,
+            input.AllocationMode);
         await AddReviewAsync(
             lease,
             LeaseReviewActionType.DraftUpdated,
@@ -220,7 +249,8 @@ public class LeaseService(
             input.AccessScope,
             input.IsRentFree,
             input.RentedArea,
-            input.AllocatedArea);
+            input.AllocatedArea,
+            input.AllocationMode);
         lease.Status = LeaseStatus.Draft;
         await AddReviewAsync(
             lease,
@@ -548,7 +578,8 @@ public class LeaseService(
         LeaseAccessScopeInput accessScope,
         bool isRentFree,
         decimal? rentedArea,
-        decimal? allocatedArea)
+        decimal? allocatedArea,
+        LeaseAreaMode? allocationMode)
     {
         var validated = await rules.ValidateApplicationDataAsync(
             unitId,
@@ -561,6 +592,7 @@ public class LeaseService(
             isRentFree,
             rentedArea,
             allocatedArea,
+            allocationMode,
             lease.Id);
         var unit = validated.Unit;
         if (unit.RentalMode != UnitRentalMode.CapacityBased)
@@ -585,7 +617,7 @@ public class LeaseService(
         lease.RentalModeSnapshot = unit.RentalMode;
         lease.UnitAreaSnapshot = unit.Area;
         if (validated.Area is { } leaseArea)
-            await leaseRepository.UpsertLeaseAreaAsync(lease.Id, leaseArea.Rented, leaseArea.Allocated);
+            await leaseRepository.UpsertLeaseAreaAsync(lease.Id, leaseArea.Rented, leaseArea.Allocated, leaseArea.Mode);
         else if (previousMode == UnitRentalMode.CapacityBased)
             await leaseRepository.RemoveLeaseAreaAsync(lease.Id);
         await leaseRateOverrideRepository.ReplaceAsync(

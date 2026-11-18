@@ -1,6 +1,13 @@
+using KiraTakip.Data;
 using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Dtos.Property;
+using KiraTakip.Models.Entities;
 using KiraTakip.Models.Enums;
+using KiraTakip.Models.Settings;
+using KiraTakip.Repositories.Leases;
+using KiraTakip.Repositories.Properties;
+using KiraTakip.Services.Properties;
 using Microsoft.EntityFrameworkCore;
 
 namespace KiraTakip.Tests;
@@ -8,42 +15,261 @@ namespace KiraTakip.Tests;
 [Collection("Database collection")]
 public class UnitCapacityChangeTests(DatabaseFixture fixture) : PropertyUnitTestBase(fixture)
 {
-    private Task<List<KiraTakip.Models.Entities.UnitCapacityHistory>> HistoryAsync(int unitId)
+    private CapacityPlanService CreatePlan(decimal minimum = 4m)
+        => new(
+            new UnitRepository(Ctx),
+            new LeaseRepository(Ctx),
+            new UnitOfWork(Ctx),
+            new TestOperationalPolicyProvider(new OperationalPolicySettings { LeaseMinimumUsageArea = minimum }),
+            new DefaultAllocationSuggestionStrategy(),
+            TimeProvider.System);
+
+    private static CapacityPlanInput Plan(
+        Unit unit,
+        int capacity,
+        Dictionary<int, decimal>? overrides = null)
+        => new(unit.Id, capacity, new LeaseAccessScopeInput(), overrides);
+
+    private Task<List<UnitCapacityHistory>> HistoryAsync(int unitId)
         => Ctx.UnitCapacityHistories.AsNoTracking()
             .Where(history => history.UnitId == unitId)
             .OrderBy(history => history.Id)
             .ToListAsync();
 
-    [Fact]
-    public async Task Update_ShouldAcceptCapacityIncreaseAndDecrease_AndWriteHistory()
+    private async Task<Unit> SeedCapacityUnitAsync(decimal area, int capacity)
     {
         var propertyType = await SeedPropertyTypeAsync();
         var capacityType = await SeedUnitTypeAsync("Kont", UnitRentalMode.CapacityBased);
         var property = await SeedPropertyAsync(propertyType, UnitStructure.MultipleUnits);
-        var unit = await SeedUnitAsync(property, capacityType, "1", 70m, 5);
+        return await SeedUnitAsync(property, capacityType, "1", area, capacity);
+    }
 
-        var increase = ToUpdateInput(property, unit);
-        increase.Units[0].Capacity = 8;
-        await CreateService().UpdateWithChildrenAsync(increase);
+    private async Task<Lease> SeedAreaLeaseAsync(
+        Unit unit,
+        decimal rented,
+        decimal allocated,
+        LeaseAreaMode mode,
+        LeaseStatus status = LeaseStatus.Active,
+        DateTime? start = null,
+        DateTime? end = null)
+    {
+        var lease = await SeedLeaseAsync(unit, status, rented, start, end);
+        lease.LeaseArea!.AllocatedArea = allocated;
+        lease.LeaseArea.AllocationMode = mode;
+        await Ctx.SaveChangesAsync();
+        return lease;
+    }
 
-        var history = await HistoryAsync(unit.Id);
-        var row = Assert.Single(history);
-        Assert.Equal(8, row.Capacity);
-        Assert.Equal(Today, row.EffectiveFrom);
+    private async Task<List<LeaseArea>> AreasAsync(int unitId)
+        => await Ctx.LeaseAreas.AsNoTracking()
+            .Where(area => area.Lease.UnitId == unitId)
+            .OrderBy(area => area.LeaseId)
+            .ToListAsync();
+
+    private Task<int> AreaHistoryCountAsync(int unitId)
+        => Ctx.LeaseAreaHistories.AsNoTracking()
+            .CountAsync(history => history.LeaseArea.Lease.UnitId == unitId
+                && history.Reason == LeaseAreaChangeReason.CapacityChange);
+
+    [Fact]
+    public async Task T01_CapacityIncrease_ShouldRecalculateAutomaticAreas_AndWriteHistory()
+    {
+        var unit = await SeedCapacityUnitAsync(70m, 10);
+        for (var i = 0; i < 10; i++)
+            await SeedAreaLeaseAsync(unit, 7m, 7m, LeaseAreaMode.Automatic);
+        var service = CreatePlan();
+
+        var preview = await service.PreviewAsync(Plan(unit, 14));
+
+        Assert.False(preview.HasErrors);
+        Assert.All(preview.Rows, row => Assert.Equal(5m, row.ProposedAllocatedArea));
+        Assert.Equal(50m, preview.TotalAllocatedToday);
+
+        await service.ApplyAsync(Plan(unit, 14), preview.Hash);
 
         Ctx.ChangeTracker.Clear();
-        var decrease = ToUpdateInput(property, unit);
-        decrease.Units[0].Capacity = 3;
-        await CreateService().UpdateWithChildrenAsync(decrease);
-
-        history = await HistoryAsync(unit.Id);
-        Assert.Equal(2, history.Count);
-        Assert.Equal(3, history[1].Capacity);
-        Assert.Equal(3, (await Ctx.Units.AsNoTracking().SingleAsync(u => u.Id == unit.Id)).Capacity);
+        Assert.Equal(14, (await Ctx.Units.AsNoTracking().SingleAsync(u => u.Id == unit.Id)).Capacity);
+        var areas = await AreasAsync(unit.Id);
+        Assert.Equal(10, areas.Count);
+        Assert.All(areas, area => Assert.Equal(5m, area.AllocatedArea));
+        Assert.Equal(10, await AreaHistoryCountAsync(unit.Id));
+        var history = Assert.Single(await HistoryAsync(unit.Id));
+        Assert.Equal(14, history.Capacity);
     }
 
     [Fact]
-    public async Task Update_ShouldRejectCapacityAboveMaximum_AndReportMaximum()
+    public async Task T02_ManualAreaKept_ShouldWarnNormTargetShort()
+    {
+        var unit = await SeedCapacityUnitAsync(70m, 14);
+        await SeedAreaLeaseAsync(unit, 10m, 6m, LeaseAreaMode.Manual);
+        for (var i = 0; i < 9; i++)
+            await SeedAreaLeaseAsync(unit, 7m, 5m, LeaseAreaMode.Automatic);
+
+        var preview = await CreatePlan().PreviewAsync(Plan(unit, 14));
+
+        Assert.False(preview.HasErrors);
+        var warning = Assert.Single(preview.Warnings, w => w.Code == CapacityPlanCodes.NormTargetShort);
+        Assert.Equal(19m, warning.RemainingArea);
+        Assert.DoesNotContain(preview.Warnings, w => w.Code == CapacityPlanCodes.MinimumTargetShort);
+    }
+
+    [Fact]
+    public async Task T03_Override_ShouldBecomeManual_AndWriteHistory()
+    {
+        var unit = await SeedCapacityUnitAsync(70m, 14);
+        var first = await SeedAreaLeaseAsync(unit, 7m, 5m, LeaseAreaMode.Automatic);
+        await SeedAreaLeaseAsync(unit, 7m, 5m, LeaseAreaMode.Automatic);
+        var service = CreatePlan();
+        var overrides = new Dictionary<int, decimal> { [first.Id] = 6m };
+
+        var preview = await service.PreviewAsync(Plan(unit, 14, overrides));
+
+        Assert.False(preview.HasErrors);
+        var row = preview.Rows.Single(r => r.LeaseId == first.Id);
+        Assert.Equal(6m, row.ProposedAllocatedArea);
+        Assert.Equal(LeaseAreaMode.Manual, row.ProposedMode);
+
+        await service.ApplyAsync(Plan(unit, 14, overrides), preview.Hash);
+
+        Ctx.ChangeTracker.Clear();
+        var area = (await AreasAsync(unit.Id)).Single(a => a.LeaseId == first.Id);
+        Assert.Equal(6m, area.AllocatedArea);
+        Assert.Equal(LeaseAreaMode.Manual, area.AllocationMode);
+        Assert.Equal(1, await AreaHistoryCountAsync(unit.Id));
+    }
+
+    [Theory]
+    [InlineData(3)]
+    [InlineData(8)]
+    public async Task T18_OverrideOutsideRange_ShouldReturnAreaOutOfRange(int overrideArea)
+    {
+        var unit = await SeedCapacityUnitAsync(70m, 14);
+        var lease = await SeedAreaLeaseAsync(unit, 7m, 5m, LeaseAreaMode.Automatic);
+
+        var preview = await CreatePlan().PreviewAsync(
+            Plan(unit, 14, new Dictionary<int, decimal> { [lease.Id] = overrideArea }));
+
+        Assert.Contains(preview.Errors, error => error.Code == CapacityPlanCodes.AreaOutOfRange);
+        Assert.NotNull(preview.Rows.Single().Error);
+    }
+
+    [Fact]
+    public async Task T08_AreaOverflow_ShouldBlockApply_UntilManualRowsCorrected()
+    {
+        var unit = await SeedCapacityUnitAsync(70m, 14);
+        var manual = new List<Lease>();
+        for (var i = 0; i < 4; i++)
+            manual.Add(await SeedAreaLeaseAsync(unit, 10m, 8m, LeaseAreaMode.Manual));
+        for (var i = 0; i < 6; i++)
+            await SeedAreaLeaseAsync(unit, 7m, 7m, LeaseAreaMode.Automatic);
+        var service = CreatePlan();
+
+        var preview = await service.PreviewAsync(Plan(unit, 10));
+
+        var error = Assert.Single(preview.Errors);
+        Assert.Equal(CapacityPlanCodes.AreaOverflow, error.Code);
+        Assert.Contains("4 m²", error.Message);
+
+        var exception = await Assert.ThrowsAsync<BusinessValidationException>(
+            () => service.ApplyAsync(Plan(unit, 10), preview.Hash));
+        Assert.Equal(CapacityPlanCodes.AreaOverflow, exception.Code);
+        Ctx.ChangeTracker.Clear();
+        Assert.Equal(14, (await Ctx.Units.AsNoTracking().SingleAsync(u => u.Id == unit.Id)).Capacity);
+        Assert.Equal(4, (await AreasAsync(unit.Id)).Count(area => area.AllocatedArea == 8m));
+        Assert.Empty(await HistoryAsync(unit.Id));
+
+        var overrides = manual.ToDictionary(lease => lease.Id, _ => 7m);
+        var fixedPreview = await service.PreviewAsync(Plan(unit, 10, overrides));
+        Assert.False(fixedPreview.HasErrors);
+
+        await service.ApplyAsync(Plan(unit, 10, overrides), fixedPreview.Hash);
+
+        Ctx.ChangeTracker.Clear();
+        Assert.Equal(10, (await Ctx.Units.AsNoTracking().SingleAsync(u => u.Id == unit.Id)).Capacity);
+        Assert.All(await AreasAsync(unit.Id), area => Assert.Equal(7m, area.AllocatedArea));
+    }
+
+    [Fact]
+    public async Task T09_OpenLeaseCountAboveNewCapacity_ShouldReturnCountExceeded()
+    {
+        var unit = await SeedCapacityUnitAsync(70m, 14);
+        for (var i = 0; i < 12; i++)
+            await SeedAreaLeaseAsync(unit, 5m, 5m, LeaseAreaMode.Automatic);
+
+        var preview = await CreatePlan().PreviewAsync(Plan(unit, 10));
+
+        var error = Assert.Single(preview.Errors, e => e.Code == CapacityPlanCodes.CountExceeded);
+        Assert.Contains("12", error.Message);
+    }
+
+    [Fact]
+    public async Task T04_CapacityAboveMaximum_ShouldReturnAboveMaximum()
+    {
+        var unit = await SeedCapacityUnitAsync(70m, 10);
+
+        var preview = await CreatePlan(5m).PreviewAsync(Plan(unit, 20));
+
+        var error = Assert.Single(preview.Errors);
+        Assert.Equal(CapacityPlanCodes.AboveMaximum, error.Code);
+        Assert.Contains("14", error.Message);
+        Assert.Equal(14, preview.MaximumCapacity);
+    }
+
+    [Fact]
+    public async Task Preview_ShouldReturnInvalid_WhenCapacityNotPositive()
+    {
+        var unit = await SeedCapacityUnitAsync(70m, 10);
+
+        var preview = await CreatePlan().PreviewAsync(Plan(unit, 0));
+
+        Assert.Contains(preview.Errors, error => error.Code == CapacityPlanCodes.Invalid);
+    }
+
+    [Fact]
+    public async Task T17_FutureDraft_ShouldUpdateArea_WithoutHistory()
+    {
+        var unit = await SeedCapacityUnitAsync(70m, 10);
+        await SeedAreaLeaseAsync(
+            unit, 7m, 7m, LeaseAreaMode.Automatic, LeaseStatus.Draft, Today.AddDays(30), Today.AddDays(90));
+        var service = CreatePlan();
+
+        var preview = await service.PreviewAsync(Plan(unit, 14));
+        Assert.False(preview.HasErrors);
+        await service.ApplyAsync(Plan(unit, 14), preview.Hash);
+
+        Ctx.ChangeTracker.Clear();
+        Assert.Equal(5m, Assert.Single(await AreasAsync(unit.Id)).AllocatedArea);
+        Assert.Equal(0, await AreaHistoryCountAsync(unit.Id));
+    }
+
+    [Fact]
+    public async Task Apply_ShouldReturnPreviewOutdated_WhenDataChangedAfterPreview()
+    {
+        var unit = await SeedCapacityUnitAsync(70m, 10);
+        var lease = await SeedAreaLeaseAsync(unit, 7m, 7m, LeaseAreaMode.Automatic);
+        var service = CreatePlan();
+        var preview = await service.PreviewAsync(Plan(unit, 14));
+
+        lease.LeaseArea!.AllocatedArea = 6m;
+        await Ctx.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<BusinessException>(
+            () => service.ApplyAsync(Plan(unit, 14), preview.Hash));
+        Assert.Equal(CapacityPlanCodes.PreviewOutdated, exception.Code);
+    }
+
+    [Fact]
+    public async Task Preview_ShouldReturnForbidden_WhenUnitOutOfScope()
+    {
+        var unit = await SeedCapacityUnitAsync(70m, 10);
+        var input = new CapacityPlanInput(unit.Id, 10, new LeaseAccessScopeInput([], []));
+
+        var exception = await Assert.ThrowsAsync<BusinessException>(() => CreatePlan().PreviewAsync(input));
+        Assert.Equal(CapacityPlanCodes.OutOfScope, exception.Code);
+    }
+
+    [Fact]
+    public async Task PropertyForm_ShouldRejectDifferentCapacity_ForExistingCapacityUnit()
     {
         var propertyType = await SeedPropertyTypeAsync();
         var capacityType = await SeedUnitTypeAsync("Kont", UnitRentalMode.CapacityBased);
@@ -51,42 +277,108 @@ public class UnitCapacityChangeTests(DatabaseFixture fixture) : PropertyUnitTest
         var unit = await SeedUnitAsync(property, capacityType, "1", 70m, 5);
 
         var input = ToUpdateInput(property, unit);
-        input.Units[0].Capacity = 15;
+        input.Units[0].Capacity = 8;
+
+        var exception = await Assert.ThrowsAsync<BusinessValidationException>(
+            () => CreateService().UpdateWithChildrenAsync(input));
+        Assert.Equal("Property.CapacityChangeNotAllowed", exception.Code);
+        Assert.Equal("Units[0].Capacity", exception.Field);
+    }
+
+    [Fact]
+    public async Task PropertyForm_ShouldKeepCapacity_WhenSubmittedEmpty()
+    {
+        var propertyType = await SeedPropertyTypeAsync();
+        var capacityType = await SeedUnitTypeAsync("Kont", UnitRentalMode.CapacityBased);
+        var property = await SeedPropertyAsync(propertyType, UnitStructure.MultipleUnits);
+        var unit = await SeedUnitAsync(property, capacityType, "1", 70m, 5);
+
+        var input = ToUpdateInput(property, unit);
+        input.Units[0].Capacity = null;
+        input.Units[0].Name = "Yeni Ad";
+        await CreateService().UpdateWithChildrenAsync(input);
+
+        Ctx.ChangeTracker.Clear();
+        Assert.Equal(5, (await Ctx.Units.AsNoTracking().SingleAsync(u => u.Id == unit.Id)).Capacity);
+        Assert.Empty(await HistoryAsync(unit.Id));
+    }
+
+    [Fact]
+    public async Task PropertyForm_SingleUnit_ShouldRejectDifferentCapacity_AndKeepWhenEmpty()
+    {
+        var propertyType = await SeedPropertyTypeAsync();
+        var capacityType = await SeedUnitTypeAsync("Kont", UnitRentalMode.CapacityBased);
+        var property = await SeedPropertyAsync(propertyType, UnitStructure.SingleUnit, 70m, 0m);
+        var unit = await SeedUnitAsync(property, capacityType, "1", 70m, 5);
+
+        var different = ToUpdateInput(property, unit);
+        different.SingleUnitCapacity = 8;
+        var exception = await Assert.ThrowsAsync<BusinessValidationException>(
+            () => CreateService().UpdateWithChildrenAsync(different));
+        Assert.Equal("Property.CapacityChangeNotAllowed", exception.Code);
+        Assert.Equal(nameof(UpdatePropertyInput.SingleUnitCapacity), exception.Field);
+
+        Ctx.ChangeTracker.Clear();
+        var empty = ToUpdateInput(property, unit);
+        empty.SingleUnitCapacity = null;
+        await CreateService().UpdateWithChildrenAsync(empty);
+
+        Ctx.ChangeTracker.Clear();
+        Assert.Equal(5, (await Ctx.Units.AsNoTracking().SingleAsync(u => u.Id == unit.Id)).Capacity);
+    }
+
+    [Fact]
+    public async Task PropertyForm_NewUnit_ShouldRejectCapacityAboveMaximum()
+    {
+        var propertyType = await SeedPropertyTypeAsync();
+        var capacityType = await SeedUnitTypeAsync("Kont", UnitRentalMode.CapacityBased);
+
+        var input = NewCreateInput(propertyType, UnitStructure.MultipleUnits);
+        input.Units.Add(new PropertyUnitInputDto
+        {
+            UnitNo = "1", FloorNo = 1, Name = "Salon", Area = 70m, UnitTypeId = capacityType.Id, Capacity = 15
+        });
+
+        var exception = await Assert.ThrowsAsync<BusinessValidationException>(
+            () => CreateService().CreateAsync(input));
+        Assert.Equal("Property.CapacityAboveMaximum", exception.Code);
+        Assert.Equal("Units[0].Capacity", exception.Field);
+        Assert.Contains("14", exception.Message);
+    }
+
+    [Fact]
+    public async Task PropertyForm_SingleUnitCreate_ShouldRejectCapacityAboveMaximum()
+    {
+        var propertyType = await SeedPropertyTypeAsync();
+        var capacityType = await SeedUnitTypeAsync("Kont", UnitRentalMode.CapacityBased);
+
+        var input = NewCreateInput(propertyType, UnitStructure.SingleUnit);
+        input.SingleUnitTypeId = capacityType.Id;
+        input.SingleUnitCapacity = 15;
+        input.ClosedArea = 70m;
+
+        var exception = await Assert.ThrowsAsync<BusinessValidationException>(
+            () => CreateService().CreateAsync(input));
+        Assert.Equal("Property.CapacityAboveMaximum", exception.Code);
+        Assert.Equal(nameof(CreatePropertyInput.SingleUnitCapacity), exception.Field);
+        Assert.Contains("14", exception.Message);
+    }
+
+    [Fact]
+    public async Task PropertyForm_AreaDecrease_ShouldRejectWhenCapacityExceedsNewLimit()
+    {
+        var propertyType = await SeedPropertyTypeAsync();
+        var capacityType = await SeedUnitTypeAsync("Kont", UnitRentalMode.CapacityBased);
+        var property = await SeedPropertyAsync(propertyType, UnitStructure.MultipleUnits);
+        var unit = await SeedUnitAsync(property, capacityType, "1", 70m, 14);
+
+        var input = ToUpdateInput(property, unit);
+        input.Units[0].Area = 50m;
 
         var exception = await Assert.ThrowsAsync<BusinessValidationException>(
             () => CreateService().UpdateWithChildrenAsync(input));
         Assert.Equal("Property.CapacityAboveMaximum", exception.Code);
-        Assert.Contains("14", exception.Message);
-
-        Ctx.ChangeTracker.Clear();
-        var accepted = ToUpdateInput(property, unit);
-        accepted.Units[0].Capacity = 14;
-        await CreateService().UpdateWithChildrenAsync(accepted);
-    }
-
-    [Fact]
-    public async Task Update_ShouldRejectCapacityBelowOccupied_AndReportMinimum()
-    {
-        var propertyType = await SeedPropertyTypeAsync();
-        var capacityType = await SeedUnitTypeAsync("Kont", UnitRentalMode.CapacityBased);
-        var property = await SeedPropertyAsync(propertyType, UnitStructure.MultipleUnits);
-        var unit = await SeedUnitAsync(property, capacityType, "1", 70m, 10);
-        await SeedLeaseAsync(unit, LeaseStatus.Active, 20m);
-        await SeedLeaseAsync(unit, LeaseStatus.Draft, 20m);
-        await SeedLeaseAsync(unit, LeaseStatus.Ended, 20m, Today.AddMonths(-6), Today.AddDays(-10));
-
-        var input = ToUpdateInput(property, unit);
-        input.Units[0].Capacity = 1;
-
-        var exception = await Assert.ThrowsAsync<BusinessValidationException>(
-            () => CreateService().UpdateWithChildrenAsync(input));
-        Assert.Equal("Property.CapacityBelowOccupied", exception.Code);
-        Assert.Contains("2", exception.Message);
-
-        Ctx.ChangeTracker.Clear();
-        var accepted = ToUpdateInput(property, unit);
-        accepted.Units[0].Capacity = 2;
-        await CreateService().UpdateWithChildrenAsync(accepted);
+        Assert.Contains("10", exception.Message);
     }
 
     [Fact]
@@ -199,41 +491,6 @@ public class UnitCapacityChangeTests(DatabaseFixture fixture) : PropertyUnitTest
         Assert.Equal(6, unit.Capacity);
         var row = Assert.Single(await HistoryAsync(unit.Id));
         Assert.Equal(6, row.Capacity);
-        Assert.Equal(Today, row.EffectiveFrom);
-    }
-
-    [Fact]
-    public async Task SingleUnit_ShouldRejectCapacityAboveMaximum_AndReportMaximum()
-    {
-        var propertyType = await SeedPropertyTypeAsync();
-        var capacityType = await SeedUnitTypeAsync("Kont", UnitRentalMode.CapacityBased);
-        var property = await SeedPropertyAsync(propertyType, UnitStructure.SingleUnit, 70m, 0m);
-        var unit = await SeedUnitAsync(property, capacityType, "1", 70m, 5);
-
-        var input = ToUpdateInput(property, unit);
-        input.SingleUnitCapacity = 15;
-
-        var exception = await Assert.ThrowsAsync<BusinessValidationException>(
-            () => CreateService().UpdateWithChildrenAsync(input));
-        Assert.Equal("Property.CapacityAboveMaximum", exception.Code);
-        Assert.Equal(nameof(UpdatePropertyInput.SingleUnitCapacity), exception.Field);
-        Assert.Contains("14", exception.Message);
-    }
-
-    [Fact]
-    public async Task SingleUnit_Update_ShouldWriteHistory_WhenCapacityChanges()
-    {
-        var propertyType = await SeedPropertyTypeAsync();
-        var capacityType = await SeedUnitTypeAsync("Kont", UnitRentalMode.CapacityBased);
-        var property = await SeedPropertyAsync(propertyType, UnitStructure.SingleUnit, 70m, 0m);
-        var unit = await SeedUnitAsync(property, capacityType, "1", 70m, 5);
-
-        var input = ToUpdateInput(property, unit);
-        input.SingleUnitCapacity = 8;
-        await CreateService().UpdateWithChildrenAsync(input);
-
-        var row = Assert.Single(await HistoryAsync(unit.Id));
-        Assert.Equal(8, row.Capacity);
         Assert.Equal(Today, row.EffectiveFrom);
     }
 

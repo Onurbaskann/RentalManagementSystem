@@ -11,7 +11,7 @@ public interface ISystemSettingService
     Task<SystemSettingListItemDto?> GetByIdAsync(
         GetSystemSettingInput input,
         CancellationToken cancellationToken = default);
-    Task UpdateAsync(
+    Task<SystemSettingUpdateResult> UpdateAsync(
         UpdateSystemSettingInput input,
         CancellationToken cancellationToken = default);
 }

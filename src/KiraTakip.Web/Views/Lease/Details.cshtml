@@ -32,6 +32,13 @@
     bool canExtend = await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.Extend);
     bool canTerminate = await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.Terminate);
     bool canRegenerate = await PermissionService.HasPermissionAsync(PermissionCatalog.Charge.Regenerate);
+    var areaInfo = Model.AllocatedAreaInfo;
+    bool showAreaCard = areaInfo != null;
+    decimal rentedAreaValue = areaInfo?.RentedArea ?? 0m;
+    decimal allocatedAreaValue = areaInfo?.AllocatedArea ?? 0m;
+    decimal minimumAreaValue = areaInfo?.MinimumUsageArea ?? 0m;
+    bool canEditArea = areaInfo is { IsEditable: true }
+        && await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.UpdateAllocatedArea);
 
     decimal aylikBedel = Model.MonthlyAmount;
     decimal kdvTutari = s.IsVatApplied ? aylikBedel * Model.EffectiveVatRate / 100 : 0;
@@ -85,6 +92,8 @@
     fesihNedeniSecim: '' ,
     showYenidenUret: false,
     showVade: false,
+    showAlan: false,
+    alanDegeri: @((Model.AllocatedAreaInfo?.AllocatedArea ?? 0m).ToString(System.Globalization.CultureInfo.InvariantCulture)),
     vadeKuraliTipi: @((int)s.DueDateRuleType),
     vadeGunu: @s.DueDay,
     tufeEnabled: false,
@@ -496,6 +505,68 @@
             </div>
         }
     </div>
+
+    @if (showAreaCard)
+    {
+        <!-- Fiziksel Alan -->
+        <div class="card mb-4">
+            <div class="flex items-center justify-between">
+                <div class="card-title">Fiziksel Alan</div>
+                @if (canEditArea)
+                {
+                    <button class="btn btn-sm btn-secondary" type="button" @@click="showAlan = true">Düzenle</button>
+                }
+            </div>
+            <div class="mt-2.5 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <div class="text-[11.5px] text-muted">Kiralanan Alan</div>
+                    <div class="text-[15px] font-semibold mt-0.5">@rentedAreaValue.M2()</div>
+                </div>
+                <div>
+                    <div class="text-[11.5px] text-muted">Fiziksel Alan</div>
+                    <div class="text-[15px] font-semibold mt-0.5">@allocatedAreaValue.M2()</div>
+                </div>
+                <div>
+                    <div class="text-[11.5px] text-muted">Hesaplama</div>
+                    <div class="text-[15px] font-semibold mt-0.5">@(areaInfo!.Mode == LeaseAreaMode.Automatic ? "Otomatik" : "Manuel")</div>
+                </div>
+            </div>
+            @if (areaInfo.History.Count > 0)
+            {
+                <div class="mt-4 overflow-hidden rounded-lg border border-slate-200 bg-white">
+                    <table class="w-full text-xs">
+                        <thead class="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th class="text-left px-3 py-2 font-semibold text-muted">Geçerlilik</th>
+                                <th class="text-left px-3 py-2 font-semibold text-muted">Fiziksel Alan</th>
+                                <th class="text-left px-3 py-2 font-semibold text-muted">Mod</th>
+                                <th class="text-left px-3 py-2 font-semibold text-muted">Neden</th>
+                                <th class="text-left px-3 py-2 font-semibold text-muted">Kayıt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var h in areaInfo.History.OrderByDescending(item => item.EffectiveFrom).ThenByDescending(item => item.CreatedAt))
+                            {
+                                <tr class="border-b border-slate-100 last:border-0">
+                                    <td class="px-3 py-2">@h.EffectiveFrom.Tarih()</td>
+                                    <td class="px-3 py-2 font-medium">@h.AllocatedArea.M2()</td>
+                                    <td class="px-3 py-2">@(h.Mode == LeaseAreaMode.Automatic ? "Otomatik" : "Manuel")</td>
+                                    <td class="px-3 py-2">@(h.Reason switch
+                                    {
+                                        LeaseAreaChangeReason.Activation => "Aktivasyon",
+                                        LeaseAreaChangeReason.CapacityChange => "Kontenjan değişikliği",
+                                        LeaseAreaChangeReason.ManualEdit => "Elle düzenleme",
+                                        _ => "Taşıma"
+                                    })</td>
+                                    <td class="px-3 py-2 text-muted">@h.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm") · @h.CreatedBy</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
 
     <!-- Aylık Tahakkuk Kalemleri -->
     @if (Model.CurrentLineItems.Any())
@@ -1525,6 +1596,45 @@
         </div>
 
     </div>
+
+    @if (canEditArea)
+    {
+        <!-- MODAL: Fiziksel m² Düzenle -->
+        <div x-show="showAlan" x-cloak
+             class="fixed inset-0 bg-black/45 z-[1000] flex items-center justify-center p-5"
+            @@click.self="showAlan = false">
+            <div class="bg-white rounded-2xl w-full max-w-[480px] p-7">
+                <div class="flex justify-between items-center mb-5">
+                    <div class="text-lg font-bold">Fiziksel m² Düzenle</div>
+                    <button @@click="showAlan = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
+                </div>
+
+                <div class="bg-amber-50 border border-amber-200 rounded-lg px-3.5 py-2.5 mb-5 text-[13px] text-amber-800">
+                    Kaydedince hesaplama modu <strong>Manuel</strong> olur.
+                </div>
+
+                <form method="post" action="/Lease/UpdateAllocatedArea/@s.Id.ToHashId()">
+                    @Html.AntiForgeryToken()
+
+                    <div class="form-group">
+                        <label class="form-label">Fiziksel m² *</label>
+                        <input type="number" name="AllocatedArea" class="form-control" step="0.01"
+                               min="@minimumAreaValue.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                               max="@rentedAreaValue.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                               x-model.number="alanDegeri" required />
+                        <div class="text-[11px] text-muted mt-1.5">
+                            @minimumAreaValue.M2() ile @rentedAreaValue.M2() (kiralanan alan) arasında olmalıdır.
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2.5 mt-1">
+                        <button type="submit" class="btn btn-primary">Kaydet</button>
+                        <button type="button" class="btn btn-secondary" @@click="showAlan = false">İptal</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
 
     <!-- MODAL: Vade Kuralını Güncelle -->
     <div x-show="showVade" x-cloak

@@ -2,7 +2,7 @@
 @using KiraTakip.Models.Settings
 @{
     ViewData["Title"] = "Sistem Ayarı Düzenle";
-    ViewData["UseCentralFeedback"] = true;
+    ViewData["UseCentralFeedback"] = false;
 }
 
 <div class="max-w-[680px] mx-auto">
@@ -43,7 +43,7 @@
                 {
                     <input asp-for="Value" type="text" class="form-control" />
                 }
-                <span asp-validation-for="Value" class="text-red-500 text-xs mt-1"></span>
+                <span asp-validation-for="Value" class="block whitespace-pre-line text-red-500 text-xs mt-1"></span>
             </div>
 
             <div class="flex gap-2 mt-5">

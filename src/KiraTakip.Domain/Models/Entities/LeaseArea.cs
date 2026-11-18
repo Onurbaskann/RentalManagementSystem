@@ -1,3 +1,4 @@
+using KiraTakip.Models.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace KiraTakip.Models.Entities;
@@ -13,6 +14,9 @@ public class LeaseArea : BaseEntity
 
     [Column("FizikselAlan")]
     public decimal AllocatedArea { get; set; }
+
+    [Column("HesaplamaModu")]
+    public LeaseAreaMode AllocationMode { get; set; } = LeaseAreaMode.Manual;
 
     public Lease Lease { get; set; } = null!;
 }

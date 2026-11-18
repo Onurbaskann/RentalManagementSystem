@@ -54,6 +54,7 @@ public static class AuditDisplayNames
         ["LeaseGroup"] = "Sözleşme grubu",
         ["LeaseArea"] = "Sözleşme alanı",
         ["UnitCapacityHistory"] = "Birim kontenjan geçmişi",
+        ["LeaseAreaHistory"] = "Fiziksel Alan Geçmişi",
         ["Charge"] = "Tahakkuk",
         ["ChargeLineItem"] = "Tahakkuk kalemi",
         ["PaymentAllocation"] = "Ödeme dağıtımı",

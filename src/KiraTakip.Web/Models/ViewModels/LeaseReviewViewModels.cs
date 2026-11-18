@@ -16,6 +16,7 @@ public interface ILeaseFormViewModel
     bool IsRentFree { get; set; }
     decimal? RentedArea { get; set; }
     decimal? AllocatedArea { get; set; }
+    LeaseAreaMode? AllocationMode { get; set; }
     List<UnitLookupDto> AvailableUnits { get; set; }
     List<TenantListItemDto> Tenants { get; set; }
     List<LeaseLineItemInputDto> LeaseLineItems { get; set; }
@@ -39,6 +40,7 @@ public sealed class LeaseDraftViewModel : ILeaseFormViewModel
     public bool IsRentFree { get; set; }
     public decimal? RentedArea { get; set; }
     public decimal? AllocatedArea { get; set; }
+    public LeaseAreaMode? AllocationMode { get; set; }
     public LeaseStatus Status { get; set; }
     public byte[] RowVersion { get; set; } = [];
     public string OwnerDisplayName { get; set; } = string.Empty;

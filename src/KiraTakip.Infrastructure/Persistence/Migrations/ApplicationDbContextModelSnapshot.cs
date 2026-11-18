@@ -1226,6 +1226,12 @@ namespace KiraTakip.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("FizikselAlan");
 
+                    b.Property<int>("AllocationMode")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(2)
+                        .HasColumnName("HesaplamaModu");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1265,6 +1271,66 @@ namespace KiraTakip.Migrations
                     b.ToTable("SozlesmeAlanlari", t =>
                         {
                             t.HasCheckConstraint("CK_SozlesmeAlanlari_Alanlar", "[KiralananAlan] > 0 AND [FizikselAlan] > 0 AND [FizikselAlan] <= [KiralananAlan]");
+                        });
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.LeaseAreaHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("AllocatedArea")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("FizikselAlan");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("EffectiveFrom")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("GecerlilikBaslangici");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("Aktif");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("LeaseAreaId")
+                        .HasColumnType("int")
+                        .HasColumnName("SozlesmeAlanId");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("int")
+                        .HasColumnName("HesaplamaModu");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("int")
+                        .HasColumnName("DegisiklikNedeni");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LeaseAreaId", "EffectiveFrom")
+                        .HasDatabaseName("IX_SozlesmeAlanGecmisleri_SozlesmeAlanId_GecerlilikBaslangici");
+
+                    b.ToTable("SozlesmeAlanGecmisleri", t =>
+                        {
+                            t.HasCheckConstraint("CK_SozlesmeAlanGecmisleri_FizikselAlan", "[FizikselAlan] > 0");
                         });
                 });
 
@@ -3700,6 +3766,17 @@ namespace KiraTakip.Migrations
                         .IsRequired();
 
                     b.Navigation("Lease");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.LeaseAreaHistory", b =>
+                {
+                    b.HasOne("KiraTakip.Models.Entities.LeaseArea", "LeaseArea")
+                        .WithMany()
+                        .HasForeignKey("LeaseAreaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("LeaseArea");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.LeaseGroup", b =>

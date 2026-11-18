@@ -43,7 +43,7 @@ public static class HelpSections
             foreach (var c in controllers) map[c] = id;
         }
         Add("yonetim-anasayfa", "Home");
-        Add("yonetim-tasinmaz", "Property", "Unit", "PropertyPricing");
+        Add("yonetim-tasinmaz", "Property", "Unit", "PropertyPricing", "UnitCapacity");
         Add("yonetim-kiraci", "Tenant");
         Add("yonetim-sozlesme", "Lease", "ChargeReminder");
         Add("yonetim-finans", "Charge", "ManualCharge", "Payment", "BankTransaction");

@@ -33,18 +33,21 @@
         minArea: @((ViewBag.LeaseMinimumUsageArea as decimal?)?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "0"),
         rentedArea: @(Model.RentedArea?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "null"),
         allocatedArea: @(Model.AllocatedArea?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "null"),
+        allocationMode: @((int)(Model.AllocationMode ?? KiraTakip.Models.Enums.LeaseAreaMode.Automatic)),
         unitInfo() { return this.unitId ? this.units[this.unitId] : null; },
         isCap() { return !!this.unitInfo()?.isCap; },
-        overNorm() {
+        isManual() { return this.allocationMode === @((int)KiraTakip.Models.Enums.LeaseAreaMode.Manual); },
+        autoArea() {
             const u = this.unitInfo();
-            return this.isCap() && u.normArea > 0 && Number(this.rentedArea) > u.normArea;
+            const rented = Number(this.rentedArea);
+            if (!this.isCap() || !(rented > 0)) return '';
+            return u.normArea > 0 ? Math.min(rented, u.normArea) : rented;
         },
         isLastSlot() { const u = this.unitInfo(); return this.isCap() && u.freeCap === 1 && u.lastSlot > 0; },
         applySuggestion() {
             const u = this.unitInfo();
             if (!this.isLastSlot()) return;
             this.rentedArea = u.lastSlot;
-            this.allocatedArea = u.normArea > 0 && u.lastSlot > u.normArea ? u.lastSlot : null;
         },
         calculateDefaultEndDate(startDateStr) {
             if(!startDateStr || !/^\d{4}-\d{2}-\d{2}/.test(startDateStr)) return '';
@@ -77,10 +80,10 @@
         if (!this.readOnly) {
             this.$watch('unitId', () => {
                 this.rentedArea = null; this.allocatedArea = null;
+                this.allocationMode = @((int)KiraTakip.Models.Enums.LeaseAreaMode.Automatic);
                 this.applySuggestion();
                 this.fetchLineItems();
             });
-            this.$watch('rentedArea', () => { if (!this.overNorm()) this.allocatedArea = null; });
             if (this.rentedArea === null && this.isLastSlot()) this.applySuggestion();
             this.$watch('tenantId', () => this.fetchLineItems());
             this.$watch('startDate', () => this.fetchLineItems());

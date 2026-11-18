@@ -1,3 +1,4 @@
+using KiraTakip.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,6 +10,7 @@ internal sealed class LeaseAreaConfiguration : IEntityTypeConfiguration<LeaseAre
     {
         entity.Property(a => a.RentedArea).HasPrecision(18, 2);
         entity.Property(a => a.AllocatedArea).HasPrecision(18, 2);
+        entity.Property(a => a.AllocationMode).HasDefaultValue(LeaseAreaMode.Manual);
         entity.HasOne(a => a.Lease).WithOne(s => s.LeaseArea)
               .HasForeignKey<LeaseArea>(a => a.LeaseId).OnDelete(DeleteBehavior.Restrict);
         entity.HasIndex(a => a.LeaseId).IsUnique()

@@ -16,6 +16,7 @@ public static class PropertyViewModelMapper
             CanChangeUnitStructure = dto.CanChangeUnitStructure,
             SingleUnitTypeId = dto.SingleUnitTypeId,
             SingleUnitCapacity = dto.SingleUnitCapacity,
+            SingleUnitCapacityLocked = dto.UnitStructure == UnitStructure.SingleUnit && dto.SingleUnitCapacity.HasValue,
             SingleUnitHasOpenLease = dto.UnitStructure == UnitStructure.SingleUnit && dto.OpenLeaseUnitIds.Count > 0,
             City = dto.City,
             District = dto.District,
@@ -35,6 +36,7 @@ public static class PropertyViewModelMapper
                 Description = unit.Description,
                 UnitTypeId = unit.UnitTypeId,
                 Capacity = unit.Capacity,
+                CapacityLocked = unit.Id.HasValue && unit.Capacity.HasValue,
                 HasActiveLease = unit.Id.HasValue && dto.ActiveLeaseUnitIds.Contains(unit.Id.Value),
                 HasOpenLease = unit.Id.HasValue && dto.OpenLeaseUnitIds.Contains(unit.Id.Value)
             }).ToList(),

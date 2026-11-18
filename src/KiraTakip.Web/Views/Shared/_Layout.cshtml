@@ -59,6 +59,7 @@
             errorMessages.AddRange(rootErrors.Errors.Select(error => error.ErrorMessage));
         }
         errorMessages = errorMessages.Distinct().ToList();
+        var warningMessage = TempData[KiraTakip.Web.Feedback.FeedbackTempDataKeys.WarningMessage] as string;
     }
 
     <main class="main-content">
@@ -67,6 +68,12 @@
         {
             <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 px-4 rounded-lg mb-4 text-[13.5px] font-medium">
                 ✓ @successFeedbackMessage
+            </div>
+        }
+        @if (!string.IsNullOrWhiteSpace(warningMessage))
+        {
+            <div class="bg-amber-50 border border-amber-200 text-amber-800 p-3 px-4 rounded-lg mb-4 text-[13.5px] font-medium">
+                ⚠ @warningMessage
             </div>
         }
         @RenderBody()

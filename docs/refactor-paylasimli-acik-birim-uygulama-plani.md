@@ -1,7 +1,7 @@
 # Paylaşımlı ve Açık Birim — Uygulama Planı
 
 > Kaynak (tek doğruluk kaynağı): [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Bu plan oradaki kararları uygular, yeni kural eklemez.
-> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1–F8 ve unique index migration'ı tamamlandı; sıradaki faz F9.
+> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1–F8 ve unique index migration'ı tamamlandı; F9'da 1–5 tamamlandı, açık notların değerlendirmesi (madde 6) sürüyor.
 > Kodda doğrulama: 2026-11-17, 3 Explore ajanı + ana oturum Grep/Read.
 
 ## 0. Bu planla kararlaştırılanlar (2026-11-17, kullanıcı cevabı)
@@ -476,7 +476,16 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
   - Birimler sayfasındaki `data-durum` filtresi `ActiveLeaseId`'ye bağlı; kısmen dolu birim "kiralı" filtresine düşüyor.
   - Tarayıcıda denenmedi.
 
-### F9 — Son doğrulama
+### F9 — Son doğrulama — 1–5 tamamlandı (2026-11-18); 6 kullanıcıyla değerlendiriliyor
+- **Sonuç:**
+  - Build 0 hata. Tam paket 1132/1132.
+  - Birleşik denetim (a09221f..273d6ee) tek bulguyla RED verdi: alan/tür kilidi Ended sözleşmeye bakmıyor, uzatma Ended'i kabul ediyor. Bu yüzden birim değiştirilip sözleşme uzatılabiliyordu. Örnek: 60 m² birimde 30+30 grubu sona erer, alan 80 yapılır, grup uzatılır; 6.000 TL aidatın yalnız 4.500 TL'si kesilir.
+  - Kullanıcı kararı (2026-11-18), kilit kuralı değişmedi. Uzatmada (`LeaseApplicationRules.EnsureExtensionAllowedAsync`) iki kontrol eklendi:
+    - Birimin kiralama biçimi `RentalModeSnapshot`'tan farklıysa ret: `Lease.UnitRentalModeChanged` (tekil + grup).
+    - Grup sözleşmesinde `Unit.Area` ≠ `UnitAreaSnapshot` ise ret: `Lease.UnitAreaChanged`.
+  - 3 test eklendi. Düzeltme denetimi ONAY; birleşik denetim ikinci turda ONAY.
+  - Production'a uygulanacak migration'lar: `20261116102739_AddLeaseExpirationActivityType`, `20261117123255_AddSharedAndCapacityUnits`, `20261117143035_RemoveLeaseOpenApplicationUniqueIndex`.
+  - Manuel tarayıcı kontrolü kullanıcıda.
 1. Ana oturum tam paketi çalıştırır: `dotnet build KiraTakip.slnx` + `dotnet test`.
 2. Birleşik değişiklik için yeni bir `orch-reviewer` (opus) çalışır; RED gelirse en fazla 2 tur.
 3. `PROGRESS.md` güncellenir ve kaynak dokümanda "Sonraki adım" kapatılır.

@@ -3,6 +3,7 @@ using KiraTakip.Models.Constants;
 using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.Enums;
+using KiraTakip.Models.Settings;
 using KiraTakip.Repositories.Charges;
 using KiraTakip.Repositories.Documents;
 using KiraTakip.Repositories.Identity;
@@ -31,6 +32,11 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
         string ApplicantId,
         string ReviewerId,
         int RentChargeTypeId);
+
+    public decimal MinimumUsageArea { get; set; } = 5m;
+
+    private TestOperationalPolicyProvider CreatePolicy()
+        => new(new OperationalPolicySettings { LeaseMinimumUsageArea = MinimumUsageArea });
 
     public static LeaseAccessScopeInput Scope() => new();
 
@@ -198,7 +204,7 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
             new DocumentTypeRepository(context),
             new ApplicationUserRepository(context),
             new TestUserContext(actorUserId),
-            new TestOperationalPolicyProvider(),
+            CreatePolicy(),
             CreateRules(leaseRepository, rateRepository, chargeTypeRepository, chargeGeneration));
     }
 
@@ -217,7 +223,7 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
             new DocumentRepository(context),
             new DocumentTypeRepository(context),
             new LeaseReviewHistoryRepository(context),
-            new TestOperationalPolicyProvider());
+            CreatePolicy());
 
     public LeaseGroupService CreateGroupService(
         string actorUserId,

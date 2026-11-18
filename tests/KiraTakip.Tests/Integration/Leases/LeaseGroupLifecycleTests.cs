@@ -78,6 +78,26 @@ public class LeaseGroupLifecycleTests : IDisposable
     }
 
     [Fact]
+    public async Task ExtendGroup_ShouldRejectWhenUnitAreaChangedAndExtendNoMember()
+    {
+        var (seed, tenantB) = await SeedAsync();
+        var group = await CreateActiveGroupAsync(seed, (seed.TenantId, 30), (tenantB, 30));
+        var unit = await _context.Units.SingleAsync(item => item.Id == seed.UnitId);
+        unit.Area = 80;
+        await _context.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAnyAsync<BusinessException>(() =>
+            _harness.CreateGroupService(seed.ReviewerId).ExtendGroupAsync(
+                new ExtendLeaseGroupInput(
+                    group.Id, End.AddYears(1), false, 0, null, null, false, false, [],
+                    seed.ReviewerId, LeaseServiceTestHarness.Scope())));
+        _context.ChangeTracker.Clear();
+
+        Assert.Equal("Lease.UnitAreaChanged", exception.Code);
+        Assert.All(await LoadLeasesAsync(group.Id), lease => Assert.Equal(End, lease.EndDate));
+    }
+
+    [Fact]
     public async Task TerminateGroup_ShouldApplyToAllLeasesAndCancelFutureCharges()
     {
         var (seed, tenantB) = await SeedAsync();

@@ -31,7 +31,8 @@ public static class PermissionCatalog
         public const string Create      = "Internal.Unit.Create";
         public const string Edit        = "Internal.Unit.Edit";
         public const string OverrideRate = "Internal.Unit.OverrideRate";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(OverrideRate, "Elle Müdahale")];
+        public const string UpdateCapacity = "Internal.Unit.UpdateCapacity";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(OverrideRate, "Elle Müdahale"), new(UpdateCapacity, "Kontenjanı Değiştir")];
     }
 
     public static class Tenant
@@ -62,7 +63,8 @@ public static class PermissionCatalog
         public const string ExtendGroup = "Internal.Lease.ExtendGroup";
         public const string TerminateGroup = "Internal.Lease.TerminateGroup";
         public const string RestructureGroup = "Internal.Lease.RestructureGroup";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(Extend, "Süre Uzat"), new(Terminate, "Feshet"), new(OverrideRate, "Elle Müdahale"), new(Approve, "Onayla"), new(RequestRevision, "Revizyon İste"), new(DeleteDraft, "Başvuru Sil"), new(CreateGroup, "Paylaşımlı Grup Oluştur"), new(UpdateGroup, "Grup Taslağı Düzenle"), new(ResubmitGroup, "Grubu Yeniden Gönder"), new(DeleteGroupDraft, "Grup Taslağı Sil"), new(ApproveGroup, "Grup Onayla"), new(ExtendGroup, "Grubu Uzat"), new(TerminateGroup, "Grubu Feshet"), new(RestructureGroup, "Grubu Yeniden Yapılandır")];
+        public const string UpdateAllocatedArea = "Internal.Lease.UpdateAllocatedArea";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(Extend, "Süre Uzat"), new(Terminate, "Feshet"), new(OverrideRate, "Elle Müdahale"), new(Approve, "Onayla"), new(RequestRevision, "Revizyon İste"), new(DeleteDraft, "Başvuru Sil"), new(CreateGroup, "Paylaşımlı Grup Oluştur"), new(UpdateGroup, "Grup Taslağı Düzenle"), new(ResubmitGroup, "Grubu Yeniden Gönder"), new(DeleteGroupDraft, "Grup Taslağı Sil"), new(ApproveGroup, "Grup Onayla"), new(ExtendGroup, "Grubu Uzat"), new(TerminateGroup, "Grubu Feshet"), new(RestructureGroup, "Grubu Yeniden Yapılandır"), new(UpdateAllocatedArea, "Fiziksel m² Düzenle")];
     }
 
     public static class Payment
@@ -363,12 +365,12 @@ public static class PermissionCatalog
     public static readonly IReadOnlyList<string> ScopeAware =
     [
         Property.Module, Property.Create, Property.Edit,
-        Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate,
+        Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate, Unit.UpdateCapacity,
         Tenant.Module, Tenant.Create, Tenant.Edit, Tenant.Delete,
         Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
         Lease.Approve, Lease.RequestRevision, Lease.DeleteDraft,
         Lease.CreateGroup, Lease.UpdateGroup, Lease.ResubmitGroup, Lease.DeleteGroupDraft, Lease.ApproveGroup,
-        Lease.ExtendGroup, Lease.TerminateGroup, Lease.RestructureGroup,
+        Lease.ExtendGroup, Lease.TerminateGroup, Lease.RestructureGroup, Lease.UpdateAllocatedArea,
         Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject, Payment.MatchBankTransaction,
         ManualCharge.Module, ManualCharge.Create, ManualCharge.Cancel,
         Reservation.Module, Reservation.Create, Reservation.Edit, Reservation.Cancel,
@@ -397,12 +399,12 @@ public static class PermissionCatalog
     [
         // Internal.*
         Property.Module, Property.Create, Property.Edit,
-        Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate,
+        Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate, Unit.UpdateCapacity,
         Tenant.Module, Tenant.Create, Tenant.Edit, Tenant.Delete,
         Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
         Lease.Approve, Lease.RequestRevision, Lease.DeleteDraft,
         Lease.CreateGroup, Lease.UpdateGroup, Lease.ResubmitGroup, Lease.DeleteGroupDraft, Lease.ApproveGroup,
-        Lease.ExtendGroup, Lease.TerminateGroup, Lease.RestructureGroup,
+        Lease.ExtendGroup, Lease.TerminateGroup, Lease.RestructureGroup, Lease.UpdateAllocatedArea,
         Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject,
         Payment.ImportBankStatement, Payment.MatchBankTransaction,
         ChargeType.Module, ChargeType.Create, ChargeType.Edit,

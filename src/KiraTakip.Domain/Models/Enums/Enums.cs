@@ -203,3 +203,17 @@ public enum UnitRentalMode
     UnitBased = 1,
     CapacityBased = 2
 }
+
+public enum LeaseAreaMode
+{
+    Automatic = 1,
+    Manual = 2
+}
+
+public enum LeaseAreaChangeReason
+{
+    Activation = 1,
+    CapacityChange = 2,
+    ManualEdit = 3,
+    Migration = 4
+}

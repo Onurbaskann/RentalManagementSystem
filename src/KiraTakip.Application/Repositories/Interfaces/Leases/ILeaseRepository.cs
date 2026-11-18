@@ -1,7 +1,9 @@
+using KiraTakip.Models.Enums;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Repositories.Interfaces.Common;
 using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Dtos.Document;
+using KiraTakip.Models.Dtos.Property;
 using KiraTakip.Domain.Leases;
 
 namespace KiraTakip.Repositories.Interfaces.Leases;
@@ -90,7 +92,12 @@ public interface ILeaseRepository : IRepositoryBase<Lease>
         DateTime start,
         DateTime end,
         int? excludeLeaseId);
+    Task<List<CapacityPlanLeaseDto>> GetOpenLeasesForCapacityPlanAsync(int unitId, DateTime fromDate);
+    Task<List<LeaseArea>> GetTrackedLeaseAreasAsync(IReadOnlyCollection<int> leaseIds);
     Task<LeaseArea?> GetLeaseAreaAsync(int leaseId);
-    Task UpsertLeaseAreaAsync(int leaseId, decimal rentedArea, decimal allocatedArea);
+    Task<LeaseArea> UpsertLeaseAreaAsync(int leaseId, decimal rentedArea, decimal allocatedArea, LeaseAreaMode mode);
+    void AddLeaseAreaHistory(LeaseArea area, LeaseAreaMode mode, DateTime effectiveFrom, LeaseAreaChangeReason reason);
+    Task<IReadOnlyList<LeaseAreaHistory>> GetLeaseAreaHistoryAsync(int leaseId);
+    Task<IReadOnlyList<LeaseAreaHistoryItemDto>> GetLeaseAreaHistoryItemsAsync(int leaseId);
     Task RemoveLeaseAreaAsync(int leaseId);
 }

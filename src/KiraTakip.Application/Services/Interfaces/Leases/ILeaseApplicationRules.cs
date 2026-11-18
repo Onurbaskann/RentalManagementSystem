@@ -7,7 +7,7 @@ namespace KiraTakip.Services.Interfaces.Leases;
 
 public sealed record ValidatedLeaseApplication(
     LeaseUnitContextDto Unit,
-    (decimal Rented, decimal Allocated)? Area);
+    (decimal Rented, decimal Allocated, LeaseAreaMode Mode)? Area);
 
 /// <summary>
 /// Tekil sözleşme ve paylaşımlı grup akışlarının ortak başvuru/onay kuralları.
@@ -25,6 +25,7 @@ public interface ILeaseApplicationRules
         bool isRentFree,
         decimal? rentedArea,
         decimal? allocatedArea,
+        LeaseAreaMode? allocationMode,
         int? excludeLeaseId = null,
         int? excludeLeaseGroupId = null,
         decimal? rateArea = null);

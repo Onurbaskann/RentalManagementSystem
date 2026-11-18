@@ -16,6 +16,7 @@ namespace KiraTakip.Web.Controllers;
 [Authorize]
 public class PropertyController(
     IPropertyService propertyService,
+    IUnitService unitService,
     IPropertyPricingService propertyPricingService,
     IRateHierarchyService rateHierarchyService,
     IPermissionScopeProvider permissionScopeProvider) : Controller
@@ -100,6 +101,7 @@ public class PropertyController(
         if (editData == null) return NotFound();
 
         var viewModel = editData.ToViewModel();
+        await PopulateSingleUnitIdAsync(viewModel);
         viewModel.PricingMatrix = (await propertyPricingService.GetMatrixAsync(
             BuildPricingInput(id))).ToViewModel();
         await PrepareCommonFormAsync(viewModel);
@@ -151,8 +153,16 @@ public class PropertyController(
             viewModel.CanChangeUnitStructure = editData.CanChangeUnitStructure;
             viewModel.SingleUnitHasOpenLease = editData.UnitStructure == UnitStructure.SingleUnit
                 && editData.OpenLeaseUnitIds.Count > 0;
+            viewModel.SingleUnitCapacityLocked = editData.UnitStructure == UnitStructure.SingleUnit
+                && editData.SingleUnitCapacity.HasValue;
+            if (viewModel.SingleUnitCapacityLocked)
+                viewModel.SingleUnitCapacity = editData.SingleUnitCapacity;
             foreach (var unit in viewModel.Units.Where(unit => unit.Id.HasValue))
             {
+                var original = editData.Units.FirstOrDefault(item => item.Id == unit.Id);
+                unit.CapacityLocked = original?.Capacity.HasValue == true;
+                if (unit.CapacityLocked)
+                    unit.Capacity = original!.Capacity;
                 unit.HasActiveLease = editData.ActiveLeaseUnitIds.Contains(unit.Id!.Value);
                 unit.HasOpenLease = editData.OpenLeaseUnitIds.Contains(unit.Id!.Value);
             }
@@ -160,7 +170,16 @@ public class PropertyController(
                 area.HasActiveReservation = editData.ActiveReservationUnitIds.Contains(area.Id!.Value);
         }
 
+        await PopulateSingleUnitIdAsync(viewModel);
         await PrepareCommonFormAsync(viewModel);
+    }
+
+    private async Task PopulateSingleUnitIdAsync(EditPropertyViewModel viewModel)
+    {
+        if (!viewModel.SingleUnitCapacityLocked) return;
+
+        var units = await unitService.GetByPropertyIdAsync(viewModel.Id);
+        viewModel.SingleUnitId = units.Count == 1 ? units[0].Id : null;
     }
 
     private async Task<PropertyPricingMatrixViewModel> MergePricingMatrixAsync(

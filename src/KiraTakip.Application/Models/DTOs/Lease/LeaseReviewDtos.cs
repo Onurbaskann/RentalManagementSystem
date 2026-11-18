@@ -29,6 +29,7 @@ public sealed class LeaseDraftEditDto
     public bool IsRentFree { get; init; }
     public decimal? RentedArea { get; init; }
     public decimal? AllocatedArea { get; init; }
+    public LeaseAreaMode? AllocationMode { get; init; }
     public LeaseStatus Status { get; init; }
     public byte[] RowVersion { get; init; } = [];
     public string OwnerUserId { get; init; } = string.Empty;
@@ -65,7 +66,8 @@ public sealed record CreateLeaseDraftInput(
     LeaseAccessScopeInput AccessScope,
     bool IsRentFree = false,
     decimal? RentedArea = null,
-    decimal? AllocatedArea = null);
+    decimal? AllocatedArea = null,
+    LeaseAreaMode? AllocationMode = null);
 
 public sealed record UpdateLeaseDraftInput(
     int LeaseId,
@@ -82,7 +84,8 @@ public sealed record UpdateLeaseDraftInput(
     LeaseAccessScopeInput AccessScope,
     bool IsRentFree = false,
     decimal? RentedArea = null,
-    decimal? AllocatedArea = null);
+    decimal? AllocatedArea = null,
+    LeaseAreaMode? AllocationMode = null);
 
 public sealed record ResubmitLeaseRevisionInput(
     int LeaseId,
@@ -100,7 +103,8 @@ public sealed record ResubmitLeaseRevisionInput(
     LeaseAccessScopeInput AccessScope,
     bool IsRentFree = false,
     decimal? RentedArea = null,
-    decimal? AllocatedArea = null);
+    decimal? AllocatedArea = null,
+    LeaseAreaMode? AllocationMode = null);
 
 public sealed record RequestLeaseRevisionInput(
     int LeaseId,

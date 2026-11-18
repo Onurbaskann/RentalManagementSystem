@@ -81,7 +81,8 @@ public record CreateLeaseInput(
     LeaseAccessScopeInput AccessScope,
     bool IsRentFree = false,
     decimal? RentedArea = null,
-    decimal? AllocatedArea = null);
+    decimal? AllocatedArea = null,
+    LeaseAreaMode? AllocationMode = null);
 
 public record ExtendLeaseInput(
     int LeaseId,

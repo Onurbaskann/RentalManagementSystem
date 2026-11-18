@@ -8,6 +8,7 @@ using KiraTakip.Repositories.Interfaces.Leases;
 using Microsoft.EntityFrameworkCore;
 using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Dtos.Document;
+using KiraTakip.Models.Dtos.Property;
 
 namespace KiraTakip.Repositories.Leases;
 
@@ -576,6 +577,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             IsRentFree = lease.IsRentFree,
             RentedArea = lease.LeaseArea != null ? lease.LeaseArea.RentedArea : (decimal?)null,
             AllocatedArea = lease.LeaseArea != null ? lease.LeaseArea.AllocatedArea : (decimal?)null,
+            AllocationMode = lease.LeaseArea != null ? lease.LeaseArea.AllocationMode : (LeaseAreaMode?)null,
             Status = lease.Status,
             RowVersion = lease.RowVersion,
             OwnerUserId = lease.CreatedBy,
@@ -689,7 +691,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
     public Task<Lease?> GetWithActivityLogAsync(int leaseId)
         => _dbSet
             .Include(lease => lease.ActivityLog)
-            .Include(lease => lease.Unit)
+            .Include(lease => lease.Unit).ThenInclude(unit => unit.UnitType)
             .FirstOrDefaultAsync(lease => lease.Id == leaseId);
 
     public async Task<DocumentOwnerContextDto?> GetDocumentOwnerContextAsync(
@@ -747,41 +749,108 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
     {
         var rangeStart = start.Date;
         var rangeEnd = end.Date;
-        return await _dbSet.AsNoTracking()
-            .Where(lease => lease.UnitId == unitId
-                && !lease.IsDeleted
-                && (lease.Status == LeaseStatus.Active
-                    || lease.Status == LeaseStatus.Draft
-                    || lease.Status == LeaseStatus.RevisionRequested)
-                && (!excludeLeaseId.HasValue || lease.Id != excludeLeaseId.Value)
+        return await CapacityOccupantQuery.OpenForUnit(ctx, unitId)
+            .Where(lease => (!excludeLeaseId.HasValue || lease.Id != excludeLeaseId.Value)
                 && lease.StartDate.Date <= rangeEnd
                 && lease.EndDate.Date >= rangeStart)
-            .Select(lease => new CapacityOccupant(
-                lease.StartDate,
-                lease.EndDate,
-                lease.LeaseArea != null ? lease.LeaseArea.AllocatedArea : 0m))
+            .Select(CapacityOccupantQuery.Projection)
             .ToListAsync();
     }
+
+    public async Task<List<CapacityPlanLeaseDto>> GetOpenLeasesForCapacityPlanAsync(int unitId, DateTime fromDate)
+    {
+        var from = fromDate.Date;
+        return await CapacityOccupantQuery.OpenForUnit(ctx, unitId)
+            .Where(lease => lease.EndDate.Date >= from)
+            .OrderBy(lease => lease.Id)
+            .Select(lease => new CapacityPlanLeaseDto(
+                lease.Id,
+                lease.LeaseNo,
+                lease.Tenant.Name,
+                lease.StartDate,
+                lease.EndDate,
+                lease.Status,
+                lease.LeaseArea != null ? (decimal?)lease.LeaseArea.RentedArea : null,
+                lease.LeaseArea != null ? lease.LeaseArea.AllocatedArea : 0m,
+                lease.LeaseArea != null ? (LeaseAreaMode?)lease.LeaseArea.AllocationMode : null))
+            .ToListAsync();
+    }
+
+    public Task<List<LeaseArea>> GetTrackedLeaseAreasAsync(IReadOnlyCollection<int> leaseIds)
+        => ctx.LeaseAreas.IgnoreQueryFilters()
+            .Where(area => leaseIds.Contains(area.LeaseId) && !area.IsDeleted)
+            .ToListAsync();
 
     public Task<LeaseArea?> GetLeaseAreaAsync(int leaseId)
         => ctx.LeaseAreas.AsNoTracking().FirstOrDefaultAsync(area => area.LeaseId == leaseId);
 
-    public async Task UpsertLeaseAreaAsync(int leaseId, decimal rentedArea, decimal allocatedArea)
+    public void AddLeaseAreaHistory(
+        LeaseArea area,
+        LeaseAreaMode mode,
+        DateTime effectiveFrom,
+        LeaseAreaChangeReason reason)
+        => ctx.LeaseAreaHistories.Add(new LeaseAreaHistory
+        {
+            LeaseArea = area,
+            AllocatedArea = area.AllocatedArea,
+            Mode = mode,
+            EffectiveFrom = effectiveFrom.Date,
+            Reason = reason
+        });
+
+    public async Task<IReadOnlyList<LeaseAreaHistory>> GetLeaseAreaHistoryAsync(int leaseId)
+        => await ctx.LeaseAreaHistories.AsNoTracking()
+            .Where(history => history.LeaseArea.LeaseId == leaseId && !history.IsDeleted)
+            .OrderBy(history => history.EffectiveFrom)
+            .ThenBy(history => history.CreatedAt)
+            .ThenBy(history => history.Id)
+            .ToListAsync();
+
+    public async Task<IReadOnlyList<LeaseAreaHistoryItemDto>> GetLeaseAreaHistoryItemsAsync(int leaseId)
+    {
+        var history = await GetLeaseAreaHistoryAsync(leaseId);
+        var userIds = history.Select(item => item.CreatedBy).Distinct().ToList();
+        var names = await ctx.Users.AsNoTracking()
+            .Where(user => userIds.Contains(user.Id))
+            .Select(user => new { user.Id, Name = user.AdSoyad ?? user.UserName })
+            .ToDictionaryAsync(user => user.Id, user => user.Name);
+        return history
+            .Select(item => new LeaseAreaHistoryItemDto(
+                item.EffectiveFrom,
+                item.AllocatedArea,
+                item.Mode,
+                item.Reason,
+                item.CreatedAt,
+                names.TryGetValue(item.CreatedBy, out var name) && !string.IsNullOrEmpty(name)
+                    ? name
+                    : item.CreatedBy))
+            .ToList();
+    }
+
+    public async Task<LeaseArea> UpsertLeaseAreaAsync(
+        int leaseId,
+        decimal rentedArea,
+        decimal allocatedArea,
+        LeaseAreaMode mode)
     {
         var area = await ctx.LeaseAreas.FirstOrDefaultAsync(item => item.LeaseId == leaseId);
         if (area == null)
         {
-            ctx.LeaseAreas.Add(new LeaseArea
+            area = new LeaseArea
             {
                 LeaseId = leaseId,
                 RentedArea = rentedArea,
-                AllocatedArea = allocatedArea
-            });
-            return;
+                AllocatedArea = allocatedArea,
+                AllocationMode = mode
+            };
+            ctx.LeaseAreas.Add(area);
+            return area;
         }
 
         area.RentedArea = rentedArea;
         area.AllocatedArea = allocatedArea;
+        area.AllocationMode = mode;
+        return area;
     }
 
     public async Task RemoveLeaseAreaAsync(int leaseId)

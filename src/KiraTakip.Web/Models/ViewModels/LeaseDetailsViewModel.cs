@@ -1,10 +1,17 @@
 ﻿using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Dtos.Property;
 using KiraTakip.Models.Enums;
 
 namespace KiraTakip.Web.Models.ViewModels;
 
+public class UpdateAllocatedAreaViewModel
+{
+    public decimal AllocatedArea { get; set; }
+}
+
 public class LeaseDetailsViewModel
 {
+    public LeaseAllocatedAreaInfoDto? AllocatedAreaInfo { get; set; }
     public LeaseDetailDto Lease { get; set; } = null!;
     public int? GroupId { get; set; }
     public int RemainingDays { get; set; }

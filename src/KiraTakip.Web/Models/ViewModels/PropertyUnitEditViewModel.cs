@@ -12,4 +12,5 @@ public class PropertyUnitEditViewModel
     public int? Capacity { get; set; }
     public bool HasActiveLease { get; set; }
     public bool HasOpenLease { get; set; }
+    public bool CapacityLocked { get; set; }
 }

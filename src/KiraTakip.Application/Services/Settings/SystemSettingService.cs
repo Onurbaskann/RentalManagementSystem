@@ -1,4 +1,8 @@
+using System.Globalization;
 using KiraTakip.Data;
+using KiraTakip.Domain.Leases;
+using KiraTakip.Models.Enums;
+using KiraTakip.Repositories.Interfaces.Properties;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Settings;
@@ -14,6 +18,8 @@ public class SystemSettingService(
     ISystemSettingRepository systemSettingRepository,
     IReservationPolicyProvider reservationPolicyProvider,
     IOperationalPolicyProvider operationalPolicyProvider,
+    IUnitRepository unitRepository,
+    TimeProvider timeProvider,
     IUnitOfWork unitOfWork) : ISystemSettingService
 {
     public async Task<PagedResult<SystemSettingListItemDto>> GetPagedAsync(
@@ -50,7 +56,7 @@ public class SystemSettingService(
         return setting == null || !setting.IsActive ? null : ToListItem(setting);
     }
 
-    public async Task UpdateAsync(
+    public async Task<SystemSettingUpdateResult> UpdateAsync(
         UpdateSystemSettingInput input,
         CancellationToken cancellationToken = default)
     {
@@ -92,11 +98,79 @@ public class SystemSettingService(
                 "SYSTEM_SETTING_INVALID_VALUE");
         }
 
-        setting.Value = normalizedValue;
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        var previousValue = setting.Value;
+        var warnings = await unitOfWork.ExecuteInTransactionAsync(async ct =>
+        {
+            var result = new List<string>();
+            if (setting.Key == SystemSettingDefinitions.Lease.MinimumUsageArea
+                && TryParseDecimal(previousValue, out var oldMinimum)
+                && TryParseDecimal(normalizedValue, out var newMinimum)
+                && newMinimum > oldMinimum)
+            {
+                result.AddRange(await CheckMinimumUsageAreaIncreaseAsync(newMinimum));
+            }
+
+            setting.Value = normalizedValue;
+            await unitOfWork.SaveChangesAsync(ct);
+            return result;
+        }, cancellationToken);
+
         await reservationPolicyProvider.RefreshAsync(cancellationToken);
         await operationalPolicyProvider.RefreshAsync(cancellationToken);
+        return new SystemSettingUpdateResult(warnings);
     }
+
+    private async Task<List<string>> CheckMinimumUsageAreaIncreaseAsync(decimal minimum)
+    {
+        await unitRepository.AcquireGlobalCapacityLockExclusiveAsync();
+        var today = timeProvider.GetLocalNow().Date;
+        var units = await unitRepository.GetCapacityUnitsWithOpenLeasesAsync(today);
+
+        var unitConflicts = new List<string>();
+        var leaseConflicts = new List<string>();
+        var warnings = new List<string>();
+
+        foreach (var unit in units)
+        {
+            var unitLabel = $"{unit.PropertyName} / {unit.UnitName}";
+            if (unit.Capacity is { } capacity
+                && capacity > UnitCapacityPolicy.GetCapacityLimit(unit.Area, minimum))
+            {
+                unitConflicts.Add(
+                    $"- {unitLabel}: kontenjan {capacity}, en fazla {UnitCapacityPolicy.GetCapacityLimit(unit.Area, minimum)}");
+            }
+
+            foreach (var lease in unit.Leases)
+            {
+                if (lease.RentedArea >= minimum && lease.AllocatedArea >= minimum)
+                    continue;
+
+                var line = $"{lease.TenantName} ({unitLabel}): kiralanan {FormatArea(lease.RentedArea)} m², fiziksel {FormatArea(lease.AllocatedArea)} m²";
+                if (lease.Status == LeaseStatus.Active)
+                    leaseConflicts.Add($"- {line}");
+                else
+                    warnings.Add(line);
+            }
+        }
+
+        var conflicts = unitConflicts.Concat(leaseConflicts).ToList();
+        if (conflicts.Count > 0)
+        {
+            throw new BusinessValidationException(
+                nameof(UpdateSystemSettingInput.Value),
+                $"Min. kullanım alanı {FormatArea(minimum)} m²'ye çıkarılamaz. Çakışanlar:\n{string.Join('\n', conflicts)}",
+                SystemSettingCodes.MinimumUsageAreaConflict);
+        }
+
+        return warnings
+            .ToList();
+    }
+
+    private static bool TryParseDecimal(string value, out decimal result)
+        => decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out result);
+
+    private static string FormatArea(decimal value)
+        => value.ToString("0.##", CultureInfo.GetCultureInfo("tr-TR"));
 
     private static SystemSettingListItemDto? ToListItem(SystemSetting setting)
     {

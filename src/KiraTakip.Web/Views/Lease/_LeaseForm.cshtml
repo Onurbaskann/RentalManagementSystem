@@ -46,14 +46,28 @@
         <div x-show="isLastSlot()" class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[13px] mb-3">
             Son kontenjan: kalan alan öneri olarak dolduruldu, değiştirebilirsiniz.
         </div>
-        <div x-show="overNorm()" class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[13px] mb-3"
-             x-text="`Kiralanan m², kişi başı norm alanı (${unitInfo()?.normArea} m²) aşıyor. Fiziksel m² girmeniz gerekir.`"></div>
-        <div class="form-group mb-0" x-show="overNorm()">
-            <label class="form-label">Fiziksel m² *</label>
-            <input name="AllocatedArea" type="number" step="0.01" min="0" class="form-control" x-model.number="allocatedArea"
-                   :disabled="readOnly || !overNorm()" />
-            <div class="text-muted text-[12.5px] mt-1"
-                 x-text="`Geçerli aralık: ${minArea} – ${rentedArea || 0} m²`"></div>
+        <div class="form-group">
+            <label class="form-label">Fiziksel m² modu</label>
+            <div class="flex gap-4 text-[13.5px]">
+                <label class="flex items-center gap-1.5">
+                    <input type="radio" name="AllocationMode" value="@((int)LeaseAreaMode.Automatic)" x-model.number="allocationMode"
+                           :disabled="readOnly || !isCap()" /> Otomatik
+                </label>
+                <label class="flex items-center gap-1.5">
+                    <input type="radio" name="AllocationMode" value="@((int)LeaseAreaMode.Manual)" x-model.number="allocationMode"
+                           :disabled="readOnly || !isCap()" /> Manuel
+                </label>
+            </div>
+            <span asp-validation-for="AllocationMode" class="form-error"></span>
+        </div>
+        <div class="form-group mb-0">
+            <label class="form-label">Fiziksel m²<span x-show="isManual()"> *</span></label>
+            <input x-show="!isManual()" type="number" class="form-control" readonly :value="autoArea()" />
+            <input x-show="isManual()" name="AllocatedArea" type="number" step="0.01" min="0" class="form-control" x-model.number="allocatedArea"
+                   :disabled="readOnly || !isCap() || !isManual()" />
+            <div class="text-muted text-[12.5px] mt-1" x-show="!isManual()">Onayda güncel kontenjanla yeniden hesaplanır.</div>
+            <div class="text-muted text-[12.5px] mt-1" x-show="isManual()"
+                 x-text="`Min ${minArea} m² – en fazla Kiralanan m²`"></div>
             <span asp-validation-for="AllocatedArea" class="form-error"></span>
         </div>
     </div>

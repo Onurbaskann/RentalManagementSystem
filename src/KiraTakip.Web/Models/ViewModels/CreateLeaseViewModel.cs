@@ -16,6 +16,7 @@ public class CreateLeaseViewModel : ILeaseFormViewModel
     public bool IsRentFree { get; set; }
     public decimal? RentedArea { get; set; }
     public decimal? AllocatedArea { get; set; }
+    public LeaseAreaMode? AllocationMode { get; set; }
     public List<UnitLookupDto> AvailableUnits { get; set; } = [];
     public List<TenantListItemDto> Tenants { get; set; } = [];
     public List<LeaseLineItemInputDto> LeaseLineItems { get; set; } = [];

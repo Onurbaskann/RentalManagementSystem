@@ -54,6 +54,8 @@ public static class ApplicationModule
         // Properties & Units
         services.AddScoped<IPropertyService, PropertyService>();
         services.AddScoped<IUnitService, UnitService>();
+        services.AddScoped<ICapacityPlanService, CapacityPlanService>();
+        services.AddScoped<IAllocationSuggestionStrategy, DefaultAllocationSuggestionStrategy>();
         services.AddScoped<IPropertyTypeService, PropertyTypeService>();
         services.AddScoped<IUnitTypeService, UnitTypeService>();
 

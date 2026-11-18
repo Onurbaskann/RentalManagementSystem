@@ -152,7 +152,7 @@ public class LeaseGroupService(
             lease.UnitTypeUsageSnapshot = unit.UnitTypeUsage;
             lease.RentalModeSnapshot = unit.RentalMode;
             lease.UnitAreaSnapshot = unit.Area;
-            await leaseRepository.UpsertLeaseAreaAsync(lease.Id, member.Area, member.Area);
+            await leaseRepository.UpsertLeaseAreaAsync(lease.Id, member.Area, member.Area, LeaseAreaMode.Manual);
             await leaseRateOverrideRepository.ReplaceAsync(
                 lease.Id,
                 BuildRateOverrides(lease.Id, member.RateOverrides));
@@ -534,6 +534,7 @@ public class LeaseGroupService(
                 isRentFree,
                 null,
                 null,
+                null,
                 member.LeaseId,
                 excludeGroupId,
                 member.Area);
@@ -588,7 +589,7 @@ public class LeaseGroupService(
         await leaseRepository.AddAsync(lease);
         await uow.SaveChangesAsync();
 
-        await leaseRepository.UpsertLeaseAreaAsync(lease.Id, member.Area, member.Area);
+        await leaseRepository.UpsertLeaseAreaAsync(lease.Id, member.Area, member.Area, LeaseAreaMode.Manual);
         await leaseRateOverrideRepository.ReplaceAsync(
             lease.Id,
             BuildRateOverrides(lease.Id, member.RateOverrides));

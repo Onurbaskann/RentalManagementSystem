@@ -12,6 +12,8 @@ public class EditPropertyViewModel
     public int? SingleUnitTypeId { get; set; }
     public int? SingleUnitCapacity { get; set; }
     public bool SingleUnitHasOpenLease { get; set; }
+    public int? SingleUnitId { get; set; }
+    public bool SingleUnitCapacityLocked { get; set; }
     public string City { get; set; } = string.Empty;
     public string District { get; set; } = string.Empty;
     public string Neighborhood { get; set; } = string.Empty;

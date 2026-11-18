@@ -9,6 +9,7 @@ using KiraTakip.Models.Dtos.Reservation;
 using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Dtos.Charge;
 using KiraTakip.Domain.Leases;
+using KiraTakip.Repositories.Leases;
 
 namespace KiraTakip.Repositories.Properties;
 
@@ -431,17 +432,94 @@ public class UnitRepository(ApplicationDbContext ctx) : RepositoryBase<Unit>(ctx
             || await _ctx.PaymentStoreRoutings.IgnoreQueryFilters().AnyAsync(routing => routing.UnitId == unitId);
 
     public async Task<List<CapacityOccupant>> GetCapacityOccupantsAsync(int unitId, DateTime fromDate)
-        => await _ctx.Leases.IgnoreQueryFilters().AsNoTracking()
-            .Where(lease => lease.UnitId == unitId
-                && !lease.IsDeleted
-                && OpenStatuses.Contains(lease.Status)
-                && lease.EndDate >= fromDate
-                && lease.LeaseArea != null)
-            .Select(lease => new CapacityOccupant(
-                lease.StartDate,
-                lease.EndDate,
-                lease.LeaseArea!.AllocatedArea))
+    {
+        var from = fromDate.Date;
+        return await CapacityOccupantQuery.OpenForUnit(_ctx, unitId)
+            .Where(lease => lease.EndDate.Date >= from)
+            .Select(CapacityOccupantQuery.Projection)
             .ToListAsync();
+    }
+
+    public async Task<List<CapacityUnitMinimumRow>> GetCapacityUnitsWithOpenLeasesAsync(DateTime fromDate)
+    {
+        var from = fromDate.Date;
+        var units = await _ctx.Units.IgnoreQueryFilters().AsNoTracking()
+            .Where(unit => !unit.IsDeleted
+                && unit.UnitType.RentalMode == UnitRentalMode.CapacityBased)
+            .Select(unit => new
+            {
+                unit.Id,
+                PropertyName = unit.Property.Name,
+                UnitName = unit.Name,
+                unit.Area,
+                unit.Capacity
+            })
+            .ToListAsync();
+
+        var unitIds = units.Select(unit => unit.Id).ToList();
+        var leases = await _ctx.Leases.IgnoreQueryFilters().AsNoTracking()
+            .Where(lease => unitIds.Contains(lease.UnitId)
+                && !lease.IsDeleted
+                && CapacityOccupantQuery.OpenStatuses.Contains(lease.Status)
+                && lease.EndDate.Date >= from)
+            .Select(lease => new
+            {
+                lease.UnitId,
+                TenantName = lease.Tenant.Name,
+                lease.Status,
+                Rented = lease.LeaseArea != null ? lease.LeaseArea.RentedArea : 0m,
+                Allocated = lease.LeaseArea != null ? lease.LeaseArea.AllocatedArea : 0m
+            })
+            .ToListAsync();
+
+        var leasesByUnit = leases.ToLookup(lease => lease.UnitId);
+        return units
+            .OrderBy(unit => unit.PropertyName).ThenBy(unit => unit.UnitName)
+            .Select(unit => new CapacityUnitMinimumRow(
+                unit.PropertyName,
+                unit.UnitName,
+                unit.Area,
+                unit.Capacity,
+                leasesByUnit[unit.Id]
+                    .OrderBy(lease => lease.TenantName)
+                    .Select(lease => new CapacityLeaseMinimumRow(
+                        lease.TenantName, lease.Status, lease.Rented, lease.Allocated))
+                    .ToList()))
+            .ToList();
+    }
+
+    public Task AcquireCapacityLocksAsync(int unitId)
+        => AcquireCapacityLocksCoreAsync(unitId);
+
+    public Task AcquireGlobalCapacityLockExclusiveAsync()
+        => AcquireCapacityLocksCoreAsync(null);
+
+    private async Task AcquireCapacityLocksCoreAsync(int? unitId)
+    {
+        if (_ctx.Database.CurrentTransaction == null)
+            throw new InvalidOperationException("Kontenjan kilidi aktif transaction gerektirir.");
+
+        if (unitId.HasValue)
+        {
+            await AcquireAppLockAsync("KiraTakip.Capacity.Global", "Shared");
+            await AcquireAppLockAsync($"KiraTakip.Capacity.Unit.{unitId.Value}", "Exclusive");
+        }
+        else
+        {
+            await AcquireAppLockAsync("KiraTakip.Capacity.Global", "Exclusive");
+        }
+    }
+
+    private Task AcquireAppLockAsync(string resource, string mode)
+        => _ctx.Database.ExecuteSqlInterpolatedAsync($@"
+            DECLARE @result int;
+            EXEC @result = sys.sp_getapplock
+                @Resource = {resource},
+                @LockMode = {mode},
+                @LockOwner = 'Transaction',
+                @LockTimeout = 10000;
+            IF @result < 0
+                THROW 51000, 'Kontenjan kilidi alınamadı.', 1;");
 
     public void AddCapacityHistory(Unit unit, int capacity, DateTime effectiveFrom)
         => _ctx.UnitCapacityHistories.Add(new UnitCapacityHistory

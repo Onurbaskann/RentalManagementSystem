@@ -106,20 +106,19 @@ public class PropertyService(
         {
             for (var i = 0; i < input.Units.Count; i++)
             {
-                var capacity = EffectiveCapacity(input.Units[i], rentalModes);
+                var capacity = EffectiveCapacity(input.Units[i], rentalModes, null, UnitCapacityField(i));
                 if (capacity.HasValue)
-                    await ValidateCapacityAsync(UnitCapacityField(i), capacity.Value, input.Units[i].Area, null);
+                    ValidateCapacityLimit(UnitCapacityField(i), capacity.Value, input.Units[i].Area);
             }
         }
         else
         {
-            var singleCapacity = EffectiveSingleCapacity(input, rentalModes);
+            var singleCapacity = EffectiveSingleCapacity(input, rentalModes, null);
             if (singleCapacity.HasValue)
-                await ValidateCapacityAsync(
+                ValidateCapacityLimit(
                     nameof(input.SingleUnitCapacity),
                     singleCapacity.Value,
-                    PropertyStructurePolicy.CalculateSingleUnitArea(input.ClosedArea, input.OpenArea),
-                    null);
+                    PropertyStructurePolicy.CalculateSingleUnitArea(input.ClosedArea, input.OpenArea));
         }
 
         var newCapacityUnits = new List<(Unit Unit, int Capacity)>();
@@ -142,7 +141,7 @@ public class PropertyService(
         {
             Guard.Against(!input.SingleUnitTypeId.HasValue, "Tek birim yapısı için birim türü zorunludur.");
 
-            var singleCapacity = EffectiveSingleCapacity(input, rentalModes);
+            var singleCapacity = EffectiveSingleCapacity(input, rentalModes, null);
             var singleUnit = new Unit
             {
                 Name = property.Name,
@@ -158,7 +157,7 @@ public class PropertyService(
         {
             foreach (var unitInput in input.Units)
             {
-                var capacity = EffectiveCapacity(unitInput, rentalModes);
+                var capacity = EffectiveCapacity(unitInput, rentalModes, null, nameof(PropertyUnitInputDto.Capacity));
                 var newUnit = new Unit
                 {
                     UnitNo = unitInput.UnitNo,
@@ -295,7 +294,9 @@ public class PropertyService(
             "Sözleşme, rezervasyon veya tahakkuk geçmişi bulunan taşınmazın birim yapısı değiştirilemez.",
             "Property.UnitStructureHasHistory");
 
-        var rentalModes = await ValidateDatabaseRulesAsync(input);
+        var rentalModes = await ValidateDatabaseRulesAsync(
+            input,
+            structureChanged ? null : property.Units.ToDictionary(unit => unit.Id));
         if (!structureChanged && property.UnitStructure == UnitStructure.MultipleUnits)
             await ValidateSubmittedUnitsAsync(property, input);
         await ValidateUnitChangesAsync(property, input, rentalModes, structureChanged);
@@ -330,7 +331,7 @@ public class PropertyService(
                 property.Units.Add(unit);
             }
 
-            var singleCapacity = EffectiveSingleCapacity(input, rentalModes);
+            var singleCapacity = EffectiveSingleCapacity(input, rentalModes, unit);
             var singleCapacityChanged = singleCapacity.HasValue && (isNew || unit.Capacity != singleCapacity);
             unit.Name = property.Name;
             unit.UnitNo = null;
@@ -396,7 +397,7 @@ public class PropertyService(
                 unit = new Unit();
                 property.Units.Add(unit);
             }
-            var capacity = EffectiveCapacity(unitInput, rentalModes);
+            var capacity = EffectiveCapacity(unitInput, rentalModes, unit, UnitCapacityField(input.Units.IndexOf(unitInput)));
             var capacityChanged = capacity.HasValue && (isNew || unit.Capacity != capacity);
             unit.UnitNo = unitInput.UnitNo;
             unit.FloorNo = unitInput.FloorNo;
@@ -444,7 +445,9 @@ public class PropertyService(
         }
     }
 
-    private async Task<IReadOnlyDictionary<int, UnitRentalMode>> ValidateDatabaseRulesAsync(CreatePropertyInput input)
+    private async Task<IReadOnlyDictionary<int, UnitRentalMode>> ValidateDatabaseRulesAsync(
+        CreatePropertyInput input,
+        IReadOnlyDictionary<int, Unit>? existingUnits = null)
     {
         Guard.InvalidField(
             input.PropertyTypeId is null or <= 0,
@@ -486,7 +489,8 @@ public class PropertyService(
                 "Property.UnitTypeUnavailable");
             Guard.InvalidField(
                 rentalModes[input.SingleUnitTypeId!.Value] == UnitRentalMode.CapacityBased
-                    && input.SingleUnitCapacity is null or <= 0,
+                    && input.SingleUnitCapacity is null or <= 0
+                    && existingUnits?.Values.SingleOrDefault()?.Capacity is null,
                 nameof(input.SingleUnitCapacity),
                 "Kontenjan bazlı birim türünde kontenjan (K) girilmeli ve 0'dan büyük olmalıdır.",
                 "Property.CapacityRequired");
@@ -508,7 +512,8 @@ public class PropertyService(
         {
             var unit = input.Units[i];
             Guard.InvalidField(
-                rentalModes[unit.UnitTypeId!.Value] == UnitRentalMode.CapacityBased && unit.Capacity is null or <= 0,
+                rentalModes[unit.UnitTypeId!.Value] == UnitRentalMode.CapacityBased && unit.Capacity is null or <= 0
+                    && !HasExistingCapacity(existingUnits, unit.Id),
                 $"Units[{i}].{nameof(unit.Capacity)}",
                 "Kontenjan bazlı birim türünde kontenjan (K) girilmeli ve 0'dan büyük olmalıdır.",
                 "Property.CapacityRequired");
@@ -517,23 +522,44 @@ public class PropertyService(
         return rentalModes;
     }
 
+    private static bool HasExistingCapacity(IReadOnlyDictionary<int, Unit>? existingUnits, int? unitId)
+        => unitId.HasValue
+            && existingUnits != null
+            && existingUnits.TryGetValue(unitId.Value, out var existing)
+            && existing.Capacity.HasValue;
+
     private static int? EffectiveCapacity(
         PropertyUnitInputDto unit,
-        IReadOnlyDictionary<int, UnitRentalMode> rentalModes)
+        IReadOnlyDictionary<int, UnitRentalMode> rentalModes,
+        Unit? existing,
+        string field)
         => unit.UnitTypeId.HasValue
             && rentalModes.TryGetValue(unit.UnitTypeId.Value, out var mode)
             && mode == UnitRentalMode.CapacityBased
-                ? unit.Capacity
+                ? ResolveCapacity(unit.Capacity, existing, field)
                 : null;
 
     private static int? EffectiveSingleCapacity(
         CreatePropertyInput input,
-        IReadOnlyDictionary<int, UnitRentalMode> rentalModes)
+        IReadOnlyDictionary<int, UnitRentalMode> rentalModes,
+        Unit? existing)
         => input.SingleUnitTypeId.HasValue
             && rentalModes.TryGetValue(input.SingleUnitTypeId.Value, out var mode)
             && mode == UnitRentalMode.CapacityBased
-                ? input.SingleUnitCapacity
+                ? ResolveCapacity(input.SingleUnitCapacity, existing, nameof(input.SingleUnitCapacity))
                 : null;
+
+    private static int? ResolveCapacity(int? submitted, Unit? existing, string field)
+    {
+        if (existing?.Capacity is not { } current) return submitted;
+
+        Guard.InvalidField(
+            submitted.HasValue && submitted.Value != current,
+            field,
+            "Kontenjan, Kontenjanı değiştir ekranından güncellenir.",
+            "Property.CapacityChangeNotAllowed");
+        return current;
+    }
 
     private static string UnitCapacityField(int index)
         => $"Units[{index}].{nameof(PropertyUnitInputDto.Capacity)}";
@@ -573,12 +599,18 @@ public class PropertyService(
                     "Property.UnitTypeLocked");
             }
 
-            var singleCapacity = EffectiveSingleCapacity(input, rentalModes);
+            var singleCapacity = EffectiveSingleCapacity(input, rentalModes, single);
             if (!singleCapacity.HasValue) return;
             var singleArea = PropertyStructurePolicy.CalculateSingleUnitArea(input.ClosedArea, input.OpenArea);
-            if (single == null || single.Capacity != singleCapacity || single.Area != singleArea)
-                await ValidateCapacityAsync(
-                    nameof(input.SingleUnitCapacity), singleCapacity.Value, singleArea, single?.Id);
+            if (single?.Capacity == null)
+                ValidateCapacityLimit(nameof(input.SingleUnitCapacity), singleCapacity.Value, singleArea);
+            else if (single.Area != singleArea)
+                await ValidateAreaChangeAsync(
+                    nameof(input.SingleUnitCapacity),
+                    nameof(input.ClosedArea),
+                    singleCapacity.Value,
+                    singleArea,
+                    single.Id);
             return;
         }
 
@@ -603,53 +635,51 @@ public class PropertyService(
                     "Property.UnitTypeLocked");
             }
 
-            var capacity = EffectiveCapacity(unitInput, rentalModes);
+            var capacity = EffectiveCapacity(unitInput, rentalModes, entity, UnitCapacityField(i));
             if (!capacity.HasValue) continue;
-            var changed = entity == null
-                || entity.Capacity != capacity
-                || entity.Area != unitInput.Area;
-            if (changed)
-                await ValidateCapacityAsync(UnitCapacityField(i), capacity.Value, unitInput.Area, entity?.Id);
+            if (entity?.Capacity == null)
+                ValidateCapacityLimit(UnitCapacityField(i), capacity.Value, unitInput.Area);
+            else if (entity.Area != unitInput.Area)
+                await ValidateAreaChangeAsync(
+                    UnitCapacityField(i),
+                    $"Units[{i}].{nameof(unitInput.Area)}",
+                    capacity.Value,
+                    unitInput.Area,
+                    entity.Id);
         }
     }
 
-    private async Task ValidateCapacityAsync(string field, int capacity, decimal unitArea, int? unitId)
+    private void ValidateCapacityLimit(string field, int capacity, decimal unitArea)
     {
-        var minimumUsageArea = operationalPolicyProvider.Current.LeaseMinimumUsageArea;
+        var maximum = UnitCapacityPolicy.GetCapacityLimit(
+            unitArea, operationalPolicyProvider.Current.LeaseMinimumUsageArea);
+        Guard.InvalidField(
+            capacity > maximum,
+            field,
+            $"Kontenjan çok yüksek. İzin verilen en yüksek kontenjan: {maximum}.",
+            "Property.CapacityAboveMaximum");
+    }
+
+    private async Task ValidateAreaChangeAsync(
+        string capacityField,
+        string areaField,
+        int capacity,
+        decimal newArea,
+        int unitId)
+    {
+        ValidateCapacityLimit(capacityField, capacity, newArea);
+
         var today = Today();
-        var occupants = unitId.HasValue
-            ? await unitRepository.GetCapacityOccupantsAsync(unitId.Value, today)
-            : [];
-        var rangeEnd = occupants.Count == 0
-            ? today
-            : occupants.Max(occupant => occupant.EndDate).Date;
+        var occupants = await unitRepository.GetCapacityOccupantsAsync(unitId, today);
+        var rangeEnd = occupants.Count == 0 ? today : occupants.Max(occupant => occupant.EndDate).Date;
         if (rangeEnd < today) rangeEnd = today;
 
-        var peak = UnitCapacityPolicy.GetPeakUsage(occupants, today, rangeEnd);
-        var minimumCapacity = UnitCapacityPolicy.GetMinimumCapacity(peak.OccupiedCount);
         Guard.InvalidField(
-            capacity < minimumCapacity,
-            field,
-            $"Kontenjan, dolu kontenjanın altına düşürülemez. İzin verilen en düşük kontenjan: {minimumCapacity}.",
-            "Property.CapacityBelowOccupied");
-
-        if (minimumUsageArea <= 0 || !HasNormViolation(capacity)) return;
-
-        var candidate = (int)Math.Min(
-            (decimal)(capacity - 1),
-            peak.OccupiedCount + Math.Floor(unitArea / minimumUsageArea));
-        while (candidate > minimumCapacity && HasNormViolation(candidate))
-            candidate--;
-        Guard.InvalidField(
-            true,
-            field,
-            $"Boş kontenjan varken kişi başı alan en az {minimumUsageArea:0.##} m² olmalıdır. İzin verilen en yüksek kontenjan: {Math.Max(candidate, minimumCapacity)}.",
-            "Property.CapacityAboveMaximum");
-
-        bool HasNormViolation(int candidateCapacity)
-            => UnitCapacityPolicy.GetViolations(
-                    candidateCapacity, unitArea, minimumUsageArea, occupants, today, rangeEnd)
-                .Contains(CapacityViolation.NormBelowMinimum);
+            UnitCapacityPolicy.GetHardViolations(capacity, newArea, occupants, today, rangeEnd)
+                .Contains(CapacityHardViolation.AreaExceeded),
+            areaField,
+            "Birim alanı, açık sözleşmelerin fiziksel alanları toplamının altına düşürülemez.",
+            "Property.CapacityAreaExceeded");
     }
 
     private async Task ValidateSubmittedUnitsAsync(Property property, UpdatePropertyInput input)

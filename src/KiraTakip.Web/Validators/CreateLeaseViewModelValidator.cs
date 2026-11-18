@@ -30,6 +30,10 @@ public class CreateLeaseViewModelValidator : IValidator<CreateLeaseViewModel>
             errors.Add(new ValidationError("Kiralanan m² negatif olamaz.", nameof(input.RentedArea)));
         if (input.AllocatedArea < 0)
             errors.Add(new ValidationError("Fiziksel m² negatif olamaz.", nameof(input.AllocatedArea)));
+        if (input.AllocationMode.HasValue && !Enum.IsDefined(input.AllocationMode.Value))
+            errors.Add(new ValidationError("Geçerli bir fiziksel m² modu seçilmelidir.", nameof(input.AllocationMode)));
+        if (input.AllocationMode == LeaseAreaMode.Manual && input.AllocatedArea is null)
+            errors.Add(new ValidationError("Manuel modda fiziksel m² zorunludur.", nameof(input.AllocatedArea)));
 
         LeaseLineItemValidationRules.AddErrors(
             input.LeaseLineItems

@@ -5,6 +5,7 @@ using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Settings;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Repositories.Interfaces.Settings;
+using KiraTakip.Repositories.Properties;
 using KiraTakip.Repositories.Settings;
 using KiraTakip.Services;
 using KiraTakip.Services.Interfaces.Reservations;
@@ -60,6 +61,8 @@ public class SystemSettingTests : IDisposable
             repository,
             provider,
             operationalProvider,
+            new UnitRepository(_context),
+            TimeProvider.System,
             new UnitOfWork(_context));
         var setting = (await repository.GetActiveListAsync()).Single(item =>
             item.Key == SystemSettingDefinitions.Reservation.MinimumDurationMinutes);
@@ -78,6 +81,8 @@ public class SystemSettingTests : IDisposable
             new SystemSettingRepository(_context),
             new RecordingPolicyProvider(),
             new TestOperationalPolicyProvider(),
+            new UnitRepository(_context),
+            TimeProvider.System,
             new UnitOfWork(_context));
 
         var result = await service.GetPagedAsync(new TableQuery { Page = 2, Size = 5 });
@@ -96,6 +101,8 @@ public class SystemSettingTests : IDisposable
             repository,
             new RecordingPolicyProvider(),
             new TestOperationalPolicyProvider(),
+            new UnitRepository(_context),
+            TimeProvider.System,
             new UnitOfWork(_context));
         var maximum = (await repository.GetActiveListAsync()).Single(item =>
             item.Key == SystemSettingDefinitions.Reservation.MaximumDurationMinutes);
