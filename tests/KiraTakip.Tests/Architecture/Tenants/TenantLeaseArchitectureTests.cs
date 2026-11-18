@@ -131,6 +131,44 @@ public class TenantLeaseArchitectureTests : IDisposable
         Assert.Empty(chargeData.Charges);
         Assert.Empty(chargeData.CurrentCharge.LineItems);
     }
+
+    [Fact]
+    public void TenantLeaseDetailModels_ShouldNotExposePhysicalAreaOrOtherTenants()
+    {
+        string[] forbidden = ["AllocatedArea", "Allocated", "Physical", "OtherTenant", "Members", "Capacity", "Kontenjan"];
+        foreach (var type in new[] { typeof(LeaseDetailDto), typeof(KiraTakip.Web.Models.ViewModels.TenantLeaseDetailsViewModel) })
+        {
+            var offending = type.GetProperties()
+                .Select(property => property.Name)
+                .Where(name => forbidden.Any(word => name.Contains(word, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+            Assert.True(offending.Count == 0, $"{type.Name}: {string.Join(", ", offending)}");
+        }
+    }
+
+    [Fact]
+    public async Task LeaseDetails_ShouldProjectRentedAreaFromLeaseArea()
+    {
+        var seed = await SeedAsync();
+        var repository = new LeaseRepository(_context);
+
+        var before = await repository.GetTenantDetailsAsync(seed.FirstLeaseId, seed.FirstTenantId);
+        Assert.NotNull(before);
+        Assert.Null(before.RentedArea);
+
+        _context.LeaseAreas.Add(new LeaseArea
+        {
+            LeaseId = seed.FirstLeaseId,
+            RentedArea = 8m,
+            AllocatedArea = 6m
+        });
+        await _context.SaveChangesAsync();
+
+        var after = await repository.GetTenantDetailsAsync(seed.FirstLeaseId, seed.FirstTenantId);
+        Assert.NotNull(after);
+        Assert.Equal(8m, after.RentedArea);
+    }
+
     private async Task<TenantLeaseSeed> SeedAsync()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];

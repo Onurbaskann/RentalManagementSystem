@@ -1,7 +1,7 @@
 # Paylaşımlı ve Açık Birim — Uygulama Planı
 
 > Kaynak (tek doğruluk kaynağı): [`refactor-paylasimli-acik-birim.md`](refactor-paylasimli-acik-birim.md). Bu plan oradaki kararları uygular, yeni kural eklemez.
-> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1–F7b ve unique index migration'ı tamamlandı; sıradaki faz F8.
+> Durum: **Onaylandı (2026-11-17); A1–A6 yazıldığı gibi geçerli.** F1–F8 ve unique index migration'ı tamamlandı; sıradaki faz F9.
 > Kodda doğrulama: 2026-11-17, 3 Explore ajanı + ana oturum Grep/Read.
 
 ## 0. Bu planla kararlaştırılanlar (2026-11-17, kullanıcı cevabı)
@@ -428,7 +428,7 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
   - Mimari test yeni üç POST'u kapsar.
 - **Ajan:** 2 yazma (sıralı) + 2 denetçi.
 
-### F8 — Doluluk, ana sayfa, kiracı paneli
+### F8 — Doluluk, ana sayfa, kiracı paneli — ✅ Tamamlandı (2026-11-18)
 - **Doluluk:** `LeaseOccupancyPolicy` ve `PropertyRepository` (`GetListAsync`, `GetPagedListAsync`, `GetDetailsAsync`) ile `UnitRepository` (`GetByPropertyIdAsync`, `GetDetayAsync`) güncellenir.
   - **Açık birim:**
     - Boş / Kısmen Dolu / Dolu.
@@ -459,6 +459,22 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
 - **Ajan:** 2 yazma + 2 denetçi.
   - Yazma A: repository, policy, Home, Property ekranları.
   - Yazma B: kiracı paneli.
+- **Sonuç:**
+  - Liste sayaçları `PropertyRepository.ApplyOccupancyAsync` içinde bellekte hesaplanıyor (sayfa başına 1 ek sorgu).
+  - Yeni alanlar:
+    - `PropertyListItemDto`: `PartiallyLeasedUnitCount`, `OccupiedUnitEquivalent`, `LeasedPhysicalArea`, `TotalCapacity`, `OccupiedCapacity`.
+    - `UnitDetailDto`/`UnitListItemDto`: `OccupiedCount`, `Capacity`, `OccupiedPhysicalArea`, `ExpiringLeaseCount`.
+    - `LeaseDetailDto`: `RentedArea`, `LeaseGroupId`.
+  - "Kısmen Dolu" rozeti `badge-bireysel` ile gösteriliyor.
+  - Kullanıcı kararıyla (2026-11-18) taşınmaz listesine (`Property/Index.cshtml`) de "N Kısmen Dolu" rozeti eklendi.
+  - Tam paket 1129/1129.
+  - Denetim: A ve B onay; son denetim tek turda Property/Index bulgusuyla RED, düzeltme sonrası ONAY.
+- **Açık notlar (plan sonunda bakılacak):**
+  - Mülk ve birim repository'lerinde "dolmak üzere" eşiği sabit 30 gün. `StatisticsService`'in kullandığı `LeaseExpiringSoonStatusDays` ayarına bağlı değil (eski durum).
+  - Birim kartındaki dolu m² (`OccupiedPhysicalArea`) birim alanıyla sınırlanmıyor. Tahsis toplamı alanı aşarsa "80/70 m²" görünebilir; oranlar sınırlı.
+  - `LeasedPhysicalArea` dolduruluyor ama hiçbir ekranda kullanılmıyor.
+  - Birimler sayfasındaki `data-durum` filtresi `ActiveLeaseId`'ye bağlı; kısmen dolu birim "kiralı" filtresine düşüyor.
+  - Tarayıcıda denenmedi.
 
 ### F9 — Son doğrulama
 1. Ana oturum tam paketi çalıştırır: `dotnet build KiraTakip.slnx` + `dotnet test`.
@@ -466,7 +482,7 @@ Her faz kendi başına derlenir ve testleri yeşil biter. Fazlar sırayla ilerle
 3. `PROGRESS.md` güncellenir ve kaynak dokümanda "Sonraki adım" kapatılır.
 4. Production notu: `AddSharedAndCapacityUnits` (ve bekleyen `AddLeaseExpirationActivityType`) production'a uygulanmalı.
 5. Manuel tarayıcı kontrolü kullanıcıdadır.
-6. Fazlardan kalan açık notlar kullanıcıyla birlikte tekrar değerlendirilir (2026-11-17 kullanıcı kararı): F5 "Sonraki fazlar için not", F6, F7a ve F7b "Açık notlar" maddeleri.
+6. Fazlardan kalan açık notlar kullanıcıyla birlikte tekrar değerlendirilir (2026-11-17 kullanıcı kararı): F5 "Sonraki fazlar için not", F6, F7a, F7b ve F8 "Açık notlar" maddeleri.
 
 ## 4. Doğrulama maddesi → test eşlemesi
 | Dokümandaki madde | Test | Faz |

@@ -81,6 +81,10 @@
                         {
                             <span class="badge badge-kirali text-[10px] font-bold px-1.5 py-0.5">@kiraliSayi Kiralı</span>
                         }
+                        @if (t.PartiallyLeasedUnitCount > 0)
+                        {
+                            <span class="badge badge-bireysel text-[10px] font-bold px-1.5 py-0.5">@t.PartiallyLeasedUnitCount Kısmen Dolu</span>
+                        }
                         @if (surekSayi > 0)
                         {
                             <span class="badge badge-surek text-[10px] font-bold px-1.5 py-0.5">@surekSayi Doluyor</span>

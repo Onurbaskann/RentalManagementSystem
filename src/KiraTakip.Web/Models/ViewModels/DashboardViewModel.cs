@@ -12,6 +12,9 @@ public class DashboardViewModel
     public int RentedUnits { get; set; }
     public int VacantUnits { get; set; }
     public int ExpiringLeaseUnits { get; set; }
+    public int PartiallyLeasedUnits { get; set; }
+    public int TotalCapacity { get; set; }
+    public int OccupiedCapacity { get; set; }
     public int ActiveLeases { get; set; }
     public int RenewalsThisMonth { get; set; }
     public decimal TotalMonthlyRevenue { get; set; }
@@ -121,6 +124,7 @@ public class DashboardPropertyOccupancy
     public int LeasedUnitCount { get; set; }
     public int ExpiringSoonUnitCount { get; set; }
     public int VacantUnitCount { get; set; }
+    public int PartiallyLeasedUnitCount { get; set; }
 }
 
 public class ExpiringLeaseSummary

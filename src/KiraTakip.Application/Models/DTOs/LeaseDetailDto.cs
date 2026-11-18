@@ -21,6 +21,8 @@ public class LeaseDetailDto
     public UnitTypeUsage UnitTypeUsageSnapshot { get; set; }
     public UnitRentalMode RentalModeSnapshot { get; set; }
     public decimal UnitAreaSnapshot { get; set; }
+    public decimal? RentedArea { get; set; }
+    public int? LeaseGroupId { get; set; }
     public UnitStructure UnitStructure { get; set; }
     public int PropertyId { get; set; }
     public string PropertyName { get; set; } = string.Empty;

@@ -30,6 +30,14 @@
                 ? "Süresi Dolmak Üzere"
                 : "Aktif";
 
+    var displayedArea = leaseDetails.RentedArea ?? leaseDetails.UnitArea;
+    string displayedAreaText = displayedArea.M2();
+    if (leaseDetails.LeaseGroupId.HasValue && leaseDetails.RentedArea.HasValue)
+    {
+        var totalArea = leaseDetails.UnitAreaSnapshot > 0 ? leaseDetails.UnitAreaSnapshot : leaseDetails.UnitArea;
+        displayedAreaText = $"{totalArea.M2()}'lik birimin {leaseDetails.RentedArea.Value.M2()}'si, paylaşımlı";
+    }
+
     decimal monthlyAmount = Model.MonthlyAmount;
     decimal vatAmount = leaseDetails.IsVatApplied ? monthlyAmount * Model.EffectiveVatRate / 100 : 0;
     decimal vatIncludedTotal = monthlyAmount + vatAmount;
@@ -122,7 +130,7 @@
             <div class="font-display text-xl font-bold mb-1">@leaseDetails.PropertyName</div>
             @if (leaseDetails.UnitStructure == UnitStructure.MultipleUnits)
             {
-                <div class="text-sm text-muted mb-1">Birim @leaseDetails.UnitNo@(leaseDetails.UnitFloorNo.HasValue ? $" • {leaseDetails.UnitFloorNo}. Kat" : "") • @leaseDetails.UnitArea.M2()</div>
+                <div class="text-sm text-muted mb-1">Birim @leaseDetails.UnitNo@(leaseDetails.UnitFloorNo.HasValue ? $" • {leaseDetails.UnitFloorNo}. Kat" : "") • @displayedAreaText</div>
                 <div class="text-[13px] text-muted mb-2.5">@leaseDetails.PropertyDistrict, @leaseDetails.PropertyCity</div>
             }
             else
@@ -423,7 +431,7 @@
                         </div>
                         <div>
                             <div class="text-xs text-muted">Yüzölçüm</div>
-                            <div class="text-[15px] font-semibold">@leaseDetails.UnitArea.M2()</div>
+                            <div class="text-[15px] font-semibold">@displayedAreaText</div>
                         </div>
                         <div>
                             <div class="text-xs text-muted">Tip</div>

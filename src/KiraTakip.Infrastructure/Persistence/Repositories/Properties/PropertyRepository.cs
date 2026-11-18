@@ -1,3 +1,4 @@
+using KiraTakip.Domain.Leases;
 using KiraTakip.Models.Common;
 using KiraTakip.Data;
 using KiraTakip.Models.Dtos;
@@ -27,7 +28,7 @@ public class PropertyRepository(ApplicationDbContext ctx) : RepositoryBase<Prope
                 || property.Units.Any(unit => unitIds.Contains(unit.Id)));
         }
 
-        return await query
+        var items = await query
             .OrderBy(t => t.Name)
             .Select(t => new PropertyListItemDto
             {
@@ -40,38 +41,12 @@ public class PropertyRepository(ApplicationDbContext ctx) : RepositoryBase<Prope
                 OpenArea = t.OpenArea,
                 UnitStructure = t.UnitStructure,
                 UnitCount = t.Units.Count(unit =>
-                    !hasScopeFilter || propertyIds.Contains(t.Id) || unitIds.Contains(unit.Id)),
-                LeasedUnitCount = t.Units.Count(unit =>
-                    (!hasScopeFilter || propertyIds.Contains(t.Id) || unitIds.Contains(unit.Id))
-                    && unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
-                        && lease.StartDate <= now
-                        && lease.EndDate >= now
-                        && lease.EndDate > now.AddDays(30))),
-                ExpiringSoonUnitCount = t.Units.Count(unit =>
-                    (!hasScopeFilter || propertyIds.Contains(t.Id) || unitIds.Contains(unit.Id))
-                    && unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
-                        && lease.StartDate <= now
-                        && lease.EndDate >= now
-                        && lease.EndDate <= now.AddDays(30))),
-                VacantUnitCount = t.Units.Count(unit =>
-                    (!hasScopeFilter || propertyIds.Contains(t.Id) || unitIds.Contains(unit.Id))
-                    && !unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
-                        && lease.StartDate <= now
-                        && lease.EndDate >= now)),
-                LeasedUnitArea = t.Units
-                    .Where(unit => (!hasScopeFilter || propertyIds.Contains(t.Id) || unitIds.Contains(unit.Id))
-                        && unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
-                            && lease.StartDate <= now
-                            && lease.EndDate >= now))
-                    .Sum(unit => (decimal?)unit.Area) ?? 0,
-                VacantUnitArea = t.Units
-                    .Where(unit => (!hasScopeFilter || propertyIds.Contains(t.Id) || unitIds.Contains(unit.Id))
-                        && !unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
-                            && lease.StartDate <= now
-                            && lease.EndDate >= now))
-                    .Sum(unit => (decimal?)unit.Area) ?? 0
+                    !hasScopeFilter || propertyIds.Contains(t.Id) || unitIds.Contains(unit.Id))
             })
             .ToListAsync();
+
+        await ApplyOccupancyAsync(items, hasScopeFilter, propertyIds, unitIds, now);
+        return items;
     }
 
     public async Task<PagedResult<PropertyListItemDto>> GetPagedListAsync(
@@ -117,27 +92,94 @@ public class PropertyRepository(ApplicationDbContext ctx) : RepositoryBase<Prope
                 OpenArea = property.OpenArea,
                 UnitStructure = property.UnitStructure,
                 UnitCount = property.Units.Count(unit =>
-                    !hasScopeFilter || propertyIds.Contains(property.Id) || unitIds.Contains(unit.Id)),
-                LeasedUnitCount = property.Units.Count(unit =>
-                    (!hasScopeFilter || propertyIds.Contains(property.Id) || unitIds.Contains(unit.Id))
-                    && unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
-                        && lease.StartDate <= now
-                        && lease.EndDate >= now
-                        && lease.EndDate > now.AddDays(30))),
-                ExpiringSoonUnitCount = property.Units.Count(unit =>
-                    (!hasScopeFilter || propertyIds.Contains(property.Id) || unitIds.Contains(unit.Id))
-                    && unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
-                        && lease.StartDate <= now
-                        && lease.EndDate >= now
-                        && lease.EndDate <= now.AddDays(30))),
-                VacantUnitCount = property.Units.Count(unit =>
-                    (!hasScopeFilter || propertyIds.Contains(property.Id) || unitIds.Contains(unit.Id))
-                    && !unit.Leases.Any(lease => lease.Status == LeaseStatus.Active
-                        && lease.StartDate <= now
-                        && lease.EndDate >= now))
+                    !hasScopeFilter || propertyIds.Contains(property.Id) || unitIds.Contains(unit.Id))
             });
 
-        return await GetPagedResultAsync(query, itemsQuery, tableQuery);
+        var paged = await GetPagedResultAsync(query, itemsQuery, tableQuery);
+        await ApplyOccupancyAsync(paged.Items, hasScopeFilter, propertyIds, unitIds, now);
+        return paged;
+    }
+
+    private async Task ApplyOccupancyAsync(
+        List<PropertyListItemDto> items,
+        bool hasScopeFilter,
+        List<int> propertyIds,
+        List<int> unitIds,
+        DateTime now)
+    {
+        if (items.Count == 0) return;
+
+        var itemIds = items.Select(item => item.Id).ToList();
+        var expiringThreshold = now.AddDays(30);
+        var units = await _ctx.Units.AsNoTracking()
+            .Where(unit => itemIds.Contains(unit.PropertyId)
+                && (!hasScopeFilter || propertyIds.Contains(unit.PropertyId) || unitIds.Contains(unit.Id)))
+            .Select(unit => new
+            {
+                unit.PropertyId,
+                unit.Area,
+                unit.Capacity,
+                IsCapacityBased = unit.UnitType != null && unit.UnitType.RentalMode == UnitRentalMode.CapacityBased,
+                ActiveLeases = unit.Leases
+                    .Where(lease => lease.Status == LeaseStatus.Active && lease.StartDate <= now && lease.EndDate >= now)
+                    .Select(lease => new
+                    {
+                        lease.EndDate,
+                        AllocatedArea = lease.LeaseArea != null ? lease.LeaseArea.AllocatedArea : 0m
+                    })
+                    .ToList()
+            })
+            .ToListAsync();
+
+        foreach (var item in items)
+        {
+            item.LeasedUnitCount = 0;
+            item.ExpiringSoonUnitCount = 0;
+            item.VacantUnitCount = 0;
+            item.PartiallyLeasedUnitCount = 0;
+            item.OccupiedUnitEquivalent = 0m;
+            item.LeasedPhysicalArea = 0m;
+            item.LeasedUnitArea = 0m;
+            item.VacantUnitArea = 0m;
+            item.TotalCapacity = 0;
+            item.OccupiedCapacity = 0;
+
+            foreach (var unit in units.Where(unit => unit.PropertyId == item.Id))
+            {
+                if (unit.IsCapacityBased && unit.Capacity is > 0)
+                {
+                    var capacity = unit.Capacity.Value;
+                    var occupied = unit.ActiveLeases.Count;
+                    switch (LeaseOccupancyPolicy.DetermineCapacityStatus(occupied, capacity))
+                    {
+                        case OccupancyStatus.Vacant: item.VacantUnitCount++; break;
+                        case OccupancyStatus.PartiallyLeased: item.PartiallyLeasedUnitCount++; break;
+                        default: item.LeasedUnitCount++; break;
+                    }
+
+                    var occupiedArea = Math.Min(unit.ActiveLeases.Sum(lease => lease.AllocatedArea), unit.Area);
+                    item.OccupiedUnitEquivalent += Math.Min(1m, (decimal)occupied / capacity);
+                    item.LeasedPhysicalArea += occupiedArea;
+                    item.LeasedUnitArea += occupiedArea;
+                    item.VacantUnitArea += unit.Area - occupiedArea;
+                    item.TotalCapacity += capacity;
+                    item.OccupiedCapacity += occupied;
+                    continue;
+                }
+
+                if (unit.ActiveLeases.Count == 0)
+                {
+                    item.VacantUnitCount++;
+                    item.VacantUnitArea += unit.Area;
+                    continue;
+                }
+
+                if (unit.ActiveLeases.Any(lease => lease.EndDate > expiringThreshold)) item.LeasedUnitCount++;
+                if (unit.ActiveLeases.Any(lease => lease.EndDate <= expiringThreshold)) item.ExpiringSoonUnitCount++;
+                item.OccupiedUnitEquivalent += 1m;
+                item.LeasedUnitArea += unit.Area;
+            }
+        }
     }
 
     public async Task<PropertyDetailDto?> GetDetailsAsync(int id)
@@ -262,9 +304,17 @@ public class PropertyRepository(ApplicationDbContext ctx) : RepositoryBase<Prope
                 s.TenantId,
                 s.IsRentFree,
                 TenantDisplayName = s.Tenant.DisplayName,
-                s.EndDate
+                s.EndDate,
+                AllocatedArea = s.LeaseArea != null ? s.LeaseArea.AllocatedArea : 0m
             })
             .ToListAsync();
+        var capacityUnits = await _ctx.Units.AsNoTracking()
+            .Where(unit => unitIds.Contains(unit.Id)
+                && unit.UnitType != null && unit.UnitType.RentalMode == UnitRentalMode.CapacityBased
+                && unit.Capacity != null && unit.Capacity > 0)
+            .Select(unit => new { unit.Id, Capacity = unit.Capacity!.Value })
+            .ToDictionaryAsync(unit => unit.Id, unit => unit.Capacity);
+        var expiringThreshold = now.AddDays(30);
         var activeLeaseByUnit = activeLeases
             .GroupBy(lease => lease.UnitId)
             .ToDictionary(group => group.Key, group => group.OrderByDescending(lease => lease.EndDate).First());
@@ -279,14 +329,31 @@ public class PropertyRepository(ApplicationDbContext ctx) : RepositoryBase<Prope
 
         foreach (var unit in property.Units)
         {
-            if (activeLeaseByUnit.TryGetValue(unit.Id, out var lease))
+            if (capacityUnits.TryGetValue(unit.Id, out var capacity))
+            {
+                var unitLeases = activeLeases.Where(item => item.UnitId == unit.Id).ToList();
+                unit.Capacity = capacity;
+                unit.OccupiedCount = unitLeases.Count;
+                unit.OccupiedPhysicalArea = unitLeases.Sum(item => item.AllocatedArea);
+                unit.ExpiringLeaseCount = unitLeases.Count(item => item.EndDate <= expiringThreshold);
+                unit.Status = LeaseOccupancyPolicy.DetermineCapacityStatus(unitLeases.Count, capacity);
+                if (activeLeaseByUnit.TryGetValue(unit.Id, out var latest))
+                {
+                    unit.ActiveLeaseId = latest.Id;
+                    unit.ActiveLeaseTenantId = latest.TenantId;
+                    unit.ActiveLeaseIsRentFree = latest.IsRentFree;
+                    unit.ActiveLeaseTenantDisplayName = latest.TenantDisplayName;
+                    unit.ActiveLeaseEndDate = latest.EndDate;
+                }
+            }
+            else if (activeLeaseByUnit.TryGetValue(unit.Id, out var lease))
             {
                 unit.ActiveLeaseId = lease.Id;
                 unit.ActiveLeaseTenantId = lease.TenantId;
                 unit.ActiveLeaseIsRentFree = lease.IsRentFree;
                 unit.ActiveLeaseTenantDisplayName = lease.TenantDisplayName;
                 unit.ActiveLeaseEndDate = lease.EndDate;
-                unit.Status = lease.EndDate <= now.AddDays(30) ? OccupancyStatus.ExpiringSoon : OccupancyStatus.Leased;
+                unit.Status = lease.EndDate <= expiringThreshold ? OccupancyStatus.ExpiringSoon : OccupancyStatus.Leased;
             }
             else
             {

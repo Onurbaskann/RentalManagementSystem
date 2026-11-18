@@ -85,6 +85,9 @@ public class HomeController(
             RentedUnits = properties.Sum(property => property.LeasedUnitCount),
             VacantUnits = properties.Sum(property => property.VacantUnitCount),
             ExpiringLeaseUnits = properties.Sum(property => property.ExpiringSoonUnitCount),
+            PartiallyLeasedUnits = properties.Sum(property => property.PartiallyLeasedUnitCount),
+            TotalCapacity = properties.Sum(property => property.TotalCapacity),
+            OccupiedCapacity = properties.Sum(property => property.OccupiedCapacity),
             ActiveLeases = activeLeases.Count,
             ActiveTenantCount = activeLeases.Select(lease => lease.TenantId).Distinct().Count(),
             TotalMonthlyRevenue = totalMonthlyRevenue,
@@ -100,14 +103,15 @@ public class HomeController(
                 UnitCount = property.UnitCount,
                 LeasedUnitCount = property.LeasedUnitCount,
                 ExpiringSoonUnitCount = property.ExpiringSoonUnitCount,
-                VacantUnitCount = property.VacantUnitCount
+                VacantUnitCount = property.VacantUnitCount,
+                PartiallyLeasedUnitCount = property.PartiallyLeasedUnitCount
             })
             .OrderByDescending(property => property.UnitCount)
             .ToList();
 
-        var occupiedUnitCount = viewModel.RentedUnits + viewModel.ExpiringLeaseUnits;
+        var occupiedUnitEquivalent = properties.Sum(property => property.OccupiedUnitEquivalent);
         viewModel.OccupancyCountRate = viewModel.TotalUnits > 0
-            ? Math.Round((decimal)occupiedUnitCount / viewModel.TotalUnits * 100m, 1)
+            ? Math.Round(occupiedUnitEquivalent / viewModel.TotalUnits * 100m, 1)
             : 0m;
 
         var totalLeasedArea = properties.Sum(property => property.LeasedUnitArea);

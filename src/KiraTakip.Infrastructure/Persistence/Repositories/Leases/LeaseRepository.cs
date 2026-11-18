@@ -276,6 +276,8 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             UnitTypeUsageSnapshot = s.UnitTypeUsageSnapshot,
             RentalModeSnapshot = s.RentalModeSnapshot,
             UnitAreaSnapshot = s.UnitAreaSnapshot,
+            RentedArea = s.LeaseArea != null ? s.LeaseArea.RentedArea : (decimal?)null,
+            LeaseGroupId = s.LeaseGroupId,
             UnitStructure = s.Unit.Property.UnitStructure,
             PropertyId = s.Unit.PropertyId,
             PropertyName = s.Unit.Property.Name,

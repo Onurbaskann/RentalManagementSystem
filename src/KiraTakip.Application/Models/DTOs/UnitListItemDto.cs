@@ -11,6 +11,10 @@ public class UnitListItemDto
     public decimal Area { get; set; }
     public string UnitTypeName { get; set; } = string.Empty;
     public OccupancyStatus Status { get; set; }
+    public int? OccupiedCount { get; set; }
+    public int? Capacity { get; set; }
+    public decimal? OccupiedPhysicalArea { get; set; }
+    public int ExpiringLeaseCount { get; set; }
     public decimal MonthlyRent { get; set; }
     public int PropertyId { get; set; }
     public string PropertyName { get; set; } = string.Empty;

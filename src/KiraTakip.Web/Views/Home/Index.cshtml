@@ -2,9 +2,10 @@
 @{
     ViewData["Title"] = "Ana Sayfa";
     ViewData["UseCentralFeedback"] = true;
-    int totalUnits = Model.RentedUnits + Model.VacantUnits + Model.ExpiringLeaseUnits;
+    int totalUnits = Model.RentedUnits + Model.VacantUnits + Model.ExpiringLeaseUnits + Model.PartiallyLeasedUnits;
     double rentedPercentage = totalUnits > 0 ? (double)Model.RentedUnits / totalUnits * 100 : 0;
     double expiringPercentage = totalUnits > 0 ? (double)Model.ExpiringLeaseUnits / totalUnits * 100 : 0;
+    double partialPercentage = totalUnits > 0 ? (double)Model.PartiallyLeasedUnits / totalUnits * 100 : 0;
     double vacantPercentage = totalUnits > 0 ? (double)Model.VacantUnits / totalUnits * 100 : 0;
 
     bool hasPropertyAccess = await PermissionService.HasModuleAccessAsync(PermissionCatalog.Property.Module);
@@ -119,6 +120,7 @@
                                 var propUnitTotal = propertyOccupancy.UnitCount;
                                 var propLeasedPct = propUnitTotal > 0 ? (double)propertyOccupancy.LeasedUnitCount / propUnitTotal * 100 : 0;
                                 var propExpiringPct = propUnitTotal > 0 ? (double)propertyOccupancy.ExpiringSoonUnitCount / propUnitTotal * 100 : 0;
+                                var propPartialPct = propUnitTotal > 0 ? (double)propertyOccupancy.PartiallyLeasedUnitCount / propUnitTotal * 100 : 0;
                                 var propVacantPct = propUnitTotal > 0 ? (double)propertyOccupancy.VacantUnitCount / propUnitTotal * 100 : 0;
                                 <div>
                                     <div class="flex items-center justify-between text-[11px] text-slate-600 mb-1">
@@ -127,6 +129,7 @@
                                     </div>
                                     <div class="h-1.5 rounded-full overflow-hidden bg-slate-100 flex">
                                         <div class="h-full bg-emerald-500" style="width:@propLeasedPct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                                        <div class="h-full bg-sky-500" style="width:@propPartialPct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
                                         <div class="h-full bg-amber-500" style="width:@propExpiringPct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
                                         <div class="h-full bg-slate-400" style="width:@propVacantPct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
                                     </div>
@@ -157,6 +160,13 @@
                 <span>Toplam @Model.TotalUnits birim</span>
                 <span class="font-semibold text-slate-700">Doluluk %@Model.OccupancyCountRate.ToString("F0") · m² %@Model.OccupancyAreaRate.ToString("F0")</span>
             </div>
+            @if (Model.TotalCapacity > 0)
+            {
+                <div class="mt-1 flex items-center justify-between text-[11px] text-slate-500">
+                    <span>Kontenjan</span>
+                    <span class="font-semibold text-slate-700">@Model.OccupiedCapacity / @Model.TotalCapacity</span>
+                </div>
+            }
         </div>
         }
 
@@ -373,6 +383,10 @@
                 <div class="flex items-center justify-between">
                     <span class="flex items-center gap-2 text-xs text-slate-600"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>Kiralı</span>
                     <span class="text-sm font-semibold tabular-nums">@Model.RentedUnits <span class="text-xs font-normal text-muted">%@rentedPercentage.ToString("F0")</span></span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="flex items-center gap-2 text-xs text-slate-600"><span class="w-2 h-2 rounded-full bg-sky-500 inline-block"></span>Kısmen Dolu</span>
+                    <span class="text-sm font-semibold tabular-nums">@Model.PartiallyLeasedUnits <span class="text-xs font-normal text-muted">%@partialPercentage.ToString("F0")</span></span>
                 </div>
                 <div class="flex items-center justify-between">
                     <span class="flex items-center gap-2 text-xs text-slate-600"><span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>Dolmak Üzere</span>
@@ -884,18 +898,18 @@
                 }
             }
 
-            // §4.B — Doluluk Donut (legend HTML'de; renkler legend noktalarıyla aynı: emerald/amber/slate)
+            // §4.B — Doluluk Donut (legend HTML'de; renkler legend noktalarıyla aynı: emerald/sky/amber/slate)
             var dolulukEl = document.querySelector('#chart-doluluk');
             if (dolulukEl) {
-                var dolulukData   = [@Model.RentedUnits, @Model.ExpiringLeaseUnits, @Model.VacantUnits];
-                var dolulukLabels = ['Kiralı', 'Dolmak Üzere', 'Boş'];
+                var dolulukData   = [@Model.RentedUnits, @Model.PartiallyLeasedUnits, @Model.ExpiringLeaseUnits, @Model.VacantUnits];
+                var dolulukLabels = ['Kiralı', 'Kısmen Dolu', 'Dolmak Üzere', 'Boş'];
 
                 if (dolulukData.reduce(function (a, b) { return a + b; }, 0) > 0) {
                     new ApexCharts(dolulukEl, {
                         chart: { type: 'donut', height: 200, animations: { enabled: true, speed: 600 } },
                         series: dolulukData,
                         labels: dolulukLabels,
-                        colors: ['#10b981', '#f59e0b', '#94a3b8'],
+                        colors: ['#10b981', '#0ea5e9', '#f59e0b', '#94a3b8'],
                         plotOptions: {
                             pie: {
                                 donut: {

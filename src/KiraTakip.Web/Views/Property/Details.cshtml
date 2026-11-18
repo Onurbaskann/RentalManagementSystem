@@ -15,8 +15,18 @@
     {
         OccupancyStatus.Leased => "<span class='badge badge-kirali'>Kiralı</span>",
         OccupancyStatus.ExpiringSoon => "<span class='badge badge-surek'>Süresi Dolmak Üzere</span>",
+        OccupancyStatus.PartiallyLeased => "<span class='badge badge-bireysel'>Kısmen Dolu</span>",
         _ => "<span class='badge badge-bos'>Boş</span>"
     };
+
+    string CapacityNote(UnitDetailDto b)
+    {
+        if (b.Capacity is not > 0) return string.Empty;
+        var note = $"<div class='text-[10.5px] font-semibold text-sky-700 mt-1'>{b.OccupiedCount}/{b.Capacity} kişi · {b.OccupiedPhysicalArea:N0}/{b.Area:N0} m²</div>";
+        if (b.ExpiringLeaseCount > 0)
+            note += $"<div class='text-[10.5px] font-semibold text-amber-700'>{b.ExpiringLeaseCount} sözleşme 30 gün içinde bitiyor</div>";
+        return note;
+    }
 }
 
 @functions {
@@ -89,13 +99,18 @@
             {
                 var occupancyLeasedCount = Model.Property.Units.Count(b => b.Status == OccupancyStatus.Leased || b.Status == OccupancyStatus.ExpiringSoon);
                 var totalCount = Model.Property.Units.Count;
-                var occupancyVacantCount = totalCount - occupancyLeasedCount;
+                var occupancyPartialCount = Model.Property.Units.Count(b => b.Status == OccupancyStatus.PartiallyLeased);
+                var occupancyVacantCount = totalCount - occupancyLeasedCount - occupancyPartialCount;
                 <div class="card">
                     <div class="card-title">Doluluk Durumu</div>
                     <div class="text-[22px] font-bold mt-1">@occupancyLeasedCount<span class="text-[15px] font-normal text-muted">/@totalCount</span></div>
                     <div class="text-xs text-muted mt-0.5">birim kiralı</div>
                     <div class="flex gap-3 mt-2.5 text-xs">
                         <span class="text-emerald-800 font-semibold">● @occupancyLeasedCount kiralı</span>
+                        @if (occupancyPartialCount > 0)
+                        {
+                            <span class="text-sky-700 font-semibold">● @occupancyPartialCount kısmen dolu</span>
+                        }
                         <span class="text-muted font-semibold">● @occupancyVacantCount boş</span>
                     </div>
                 </div>
@@ -111,10 +126,11 @@
                     {
                         <div class="mt-1.5">
                             <span class="inline-block bg-emerald-50 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-[10px]">
-                                @(status == OccupancyStatus.ExpiringSoon ? "Süresi Dolmak Üzere" : "Kiralı")
+                                @(status == OccupancyStatus.ExpiringSoon ? "Süresi Dolmak Üzere" : status == OccupancyStatus.PartiallyLeased ? "Kısmen Dolu" : "Kiralı")
                             </span>
                         </div>
                         <div class="text-sm font-semibold mt-2">@(singleUnit.ActiveLeaseTenantDisplayName ?? "—")</div>
+                        @Html.Raw(CapacityNote(singleUnit!))
                         <div class="text-xs text-muted mt-0.5">
                             Bitiş: @singleUnit.ActiveLeaseEndDate.Tarih()
                         </div>
@@ -166,11 +182,12 @@
             bool isMultiUnit = Model.Property.UnitStructure == UnitStructure.MultipleUnits;
             int totalUnits = Model.Property.Units.Count;
             int leasedCount = Model.Property.Units.Count(b => b.Status == OccupancyStatus.Leased || b.Status == OccupancyStatus.ExpiringSoon);
-            int vacantCount = totalUnits - leasedCount;
+            int partialCount = Model.Property.Units.Count(b => b.Status == OccupancyStatus.PartiallyLeased);
+            int vacantCount = totalUnits - leasedCount - partialCount;
         }
 
         <!-- Unit Özet Kartları -->
-        <div class="grid grid-cols-3 gap-3 mb-6">
+        <div class="grid @(partialCount > 0 ? "grid-cols-4" : "grid-cols-3") gap-3 mb-6">
             <div class="bg-white border border-[var(--color-border)] rounded-xl p-3.5 px-4.5">
                 <div class="text-[11px] font-semibold text-muted">Toplam Birim</div>
                 <div class="font-display text-[28px] font-bold mt-1">@totalUnits</div>
@@ -179,6 +196,13 @@
                 <div class="text-[11px] font-semibold text-emerald-800">Kiralı</div>
                 <div class="font-display text-[28px] font-bold text-emerald-800 mt-1">@leasedCount</div>
             </div>
+            @if (partialCount > 0)
+            {
+                <div class="bg-white border border-[var(--color-border)] rounded-xl p-3.5 px-4.5">
+                    <div class="text-[11px] font-semibold text-sky-700">Kısmen Dolu</div>
+                    <div class="font-display text-[28px] font-bold text-sky-700 mt-1">@partialCount</div>
+                </div>
+            }
             <div class="bg-white border border-[var(--color-border)] rounded-xl p-3.5 px-4.5">
                 <div class="text-[11px] font-semibold text-muted">Boş</div>
                 <div class="font-display text-[28px] font-bold text-muted mt-1">@vacantCount</div>
@@ -365,7 +389,7 @@
                                                             }
                                                             else
                                                             {
-                                                                @Html.Raw(StatusBadge(b.Status))
+                                                                @Html.Raw(StatusBadge(b.Status))@Html.Raw(CapacityNote(b))
                                                             }
                                                         </td>
                                                         <td>
@@ -516,6 +540,7 @@
                                         {
                                             OccupancyStatus.Leased => "border-l-emerald-500 bg-emerald-50/60",
                                             OccupancyStatus.ExpiringSoon => "border-l-amber-400 bg-amber-50",
+                                            OccupancyStatus.PartiallyLeased => "border-l-sky-500 bg-sky-50/60",
                                             _ => "border-l-slate-300 bg-white"
                                         });
                                     var typeChip = b.CanBeReserved
@@ -539,6 +564,7 @@
                                             @b.UnitNo
                                         </div>
                                         <div class="text-[12px] text-muted font-medium">@b.Area.M2()</div>
+                                        @Html.Raw(CapacityNote(b))
                                         @if (b.ActiveLeaseTenantDisplayName != null)
                                         {
                                             <div class="text-[10.5px] font-semibold text-slate-600 mt-1 truncate" title="@b.ActiveLeaseTenantDisplayName">@b.ActiveLeaseTenantDisplayName</div>
@@ -610,7 +636,7 @@
                                         }
                                         else
                                         {
-                                            @Html.Raw(StatusBadge(b.Status))
+                                            @Html.Raw(StatusBadge(b.Status))@Html.Raw(CapacityNote(b))
                                         }
                                     </td>
                                     <td>

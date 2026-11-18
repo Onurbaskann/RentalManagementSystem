@@ -13,6 +13,10 @@ public class UnitDetailDto
     public bool CanBeReserved { get; set; }
     public bool CanBeRented { get; set; }
     public OccupancyStatus Status { get; set; }
+    public int? OccupiedCount { get; set; }
+    public int? Capacity { get; set; }
+    public decimal? OccupiedPhysicalArea { get; set; }
+    public int ExpiringLeaseCount { get; set; }
     public int? ActiveLeaseId { get; set; }
     public int? ActiveLeaseTenantId { get; set; }
     public bool ActiveLeaseIsRentFree { get; set; }

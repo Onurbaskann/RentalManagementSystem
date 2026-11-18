@@ -27,7 +27,7 @@ public class UnitRepository(ApplicationDbContext ctx) : RepositoryBase<Unit>(ctx
     public async Task<List<UnitListItemDto>> GetByPropertyIdAsync(int propertyId)
     {
         var now = DateTime.Now;
-        return await _dbSet.AsNoTracking()
+        var list = await _dbSet.AsNoTracking()
             .Where(b => b.PropertyId == propertyId)
             .OrderBy(b => b.Name)
             .Select(b => new UnitListItemDto
@@ -48,6 +48,54 @@ public class UnitRepository(ApplicationDbContext ctx) : RepositoryBase<Unit>(ctx
                 MonthlyRent = 0
             })
             .ToListAsync();
+
+        var summaries = await GetCapacitySummariesAsync(list.Select(unit => unit.Id).ToList(), now);
+        foreach (var unit in list)
+        {
+            if (!summaries.TryGetValue(unit.Id, out var summary)) continue;
+            unit.Status = LeaseOccupancyPolicy.DetermineCapacityStatus(summary.Occupied, summary.Capacity);
+            unit.Capacity = summary.Capacity;
+            unit.OccupiedCount = summary.Occupied;
+            unit.OccupiedPhysicalArea = summary.OccupiedArea;
+            unit.ExpiringLeaseCount = summary.Expiring;
+        }
+
+        return list;
+    }
+
+    private sealed record CapacitySummary(int Capacity, int Occupied, decimal OccupiedArea, int Expiring);
+
+    private async Task<Dictionary<int, CapacitySummary>> GetCapacitySummariesAsync(List<int> unitIds, DateTime now)
+    {
+        if (unitIds.Count == 0) return [];
+
+        var threshold = now.AddDays(30);
+        var rows = await _dbSet.AsNoTracking()
+            .Where(unit => unitIds.Contains(unit.Id)
+                && unit.UnitType != null && unit.UnitType.RentalMode == UnitRentalMode.CapacityBased
+                && unit.Capacity != null && unit.Capacity > 0)
+            .Select(unit => new
+            {
+                unit.Id,
+                Capacity = unit.Capacity!.Value,
+                Leases = unit.Leases
+                    .Where(lease => lease.Status == LeaseStatus.Active && lease.StartDate <= now && lease.EndDate >= now)
+                    .Select(lease => new
+                    {
+                        lease.EndDate,
+                        AllocatedArea = lease.LeaseArea != null ? lease.LeaseArea.AllocatedArea : 0m
+                    })
+                    .ToList()
+            })
+            .ToListAsync();
+
+        return rows.ToDictionary(
+            row => row.Id,
+            row => new CapacitySummary(
+                row.Capacity,
+                row.Leases.Count,
+                row.Leases.Sum(lease => lease.AllocatedArea),
+                row.Leases.Count(lease => lease.EndDate <= threshold)));
     }
 
     public async Task<List<UnitListItemDto>> GetReservableUnitsAsync(
@@ -87,7 +135,7 @@ public class UnitRepository(ApplicationDbContext ctx) : RepositoryBase<Unit>(ctx
     public async Task<UnitDetailDto?> GetDetayAsync(int id)
     {
         var now = DateTime.Now;
-        return await _dbSet.AsNoTracking()
+        var detail = await _dbSet.AsNoTracking()
             .Where(b => b.Id == id)
             .Select(b => new UnitDetailDto
             {
@@ -154,6 +202,20 @@ public class UnitRepository(ApplicationDbContext ctx) : RepositoryBase<Unit>(ctx
                 MonthlyRent = 0
             })
             .FirstOrDefaultAsync();
+
+        if (detail == null) return null;
+
+        var summaries = await GetCapacitySummariesAsync([detail.Id], now);
+        if (summaries.TryGetValue(detail.Id, out var summary))
+        {
+            detail.Status = LeaseOccupancyPolicy.DetermineCapacityStatus(summary.Occupied, summary.Capacity);
+            detail.Capacity = summary.Capacity;
+            detail.OccupiedCount = summary.Occupied;
+            detail.OccupiedPhysicalArea = summary.OccupiedArea;
+            detail.ExpiringLeaseCount = summary.Expiring;
+        }
+
+        return detail;
     }
 
     public async Task<int?> GetPropertyIdAsync(int unitId)
