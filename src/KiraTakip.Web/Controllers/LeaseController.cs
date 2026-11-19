@@ -150,7 +150,7 @@ public partial class LeaseController(
         var canCreateGroup = await permissionService.HasPermissionAsync(PermissionCatalog.Lease.CreateGroup);
         if (!canCreate && !canCreateGroup) return Forbid();
 
-        if (canCreateGroup && (!canCreate || tur == LeaseCreateTypeSwitchViewModel.SharedType))
+        if (canCreateGroup && (!canCreate || tur == LeaseCreateRoutes.SharedType))
             return await CreateGroupFormAsync(unitId, tenantId);
 
         var viewModel = new CreateLeaseViewModel
@@ -623,19 +623,19 @@ public partial class LeaseController(
         ViewBag.UnitAreas = System.Text.Json.JsonSerializer.Serialize(
             viewModel.AvailableUnits.ToDictionary(unit => unit.Id, unit => (double)unit.Area));
         ViewBag.LeaseMinimumUsageArea = operationalPolicyProvider.Current.LeaseMinimumUsageArea;
-        await SetCreateTypeSwitchAsync(false, viewModel.UnitId, viewModel.SourceTenantId);
+        await SetLeaseKindChoiceAsync(false, viewModel.SourceTenantId);
     }
 
-    private async Task SetCreateTypeSwitchAsync(bool isShared, int? unitId, int? tenantId)
+    private async Task SetLeaseKindChoiceAsync(bool isShared, int? tenantId)
     {
-        ViewData[LeaseCreateTypeSwitchViewModel.ViewDataKey] = new LeaseCreateTypeSwitchViewModel(
-            await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Create),
+        var canCreate = await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Create);
+        ViewData[LeaseKindChoiceViewModel.ViewDataKey] = new LeaseKindChoiceViewModel(
+            canCreate,
             await permissionService.HasPermissionAsync(PermissionCatalog.Lease.CreateGroup),
             isShared,
-            unitId,
-            tenantId);
+            canCreate ? Url.Action(nameof(Create), "Lease", new { unitId = LeaseCreateRoutes.UnitIdPlaceholder, tenantId })! : string.Empty,
+            Url.Action(nameof(Create), "Lease", new { unitId = LeaseCreateRoutes.UnitIdPlaceholder, tenantId, tur = LeaseCreateRoutes.SharedType })!);
     }
-
 
     private async Task PopulateDraftOptionsAsync(LeaseDraftViewModel viewModel)
     {

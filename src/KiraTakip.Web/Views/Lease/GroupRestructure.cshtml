@@ -109,7 +109,7 @@
                 </label>
             </div>
 
-            @await Html.PartialAsync("_LeaseGroupMembersCard", Model.Tenants)
+            @await Html.PartialAsync("_LeaseGroupMembersCard", Model.Tenants, new ViewDataDictionary(ViewData) { ["InlineSummary"] = true })
 
             <div class="card mt-4">
                 <div class="form-group mb-0">

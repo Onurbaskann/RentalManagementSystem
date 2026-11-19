@@ -1,0 +1,25 @@
+@{
+    var kind = ViewData[LeaseKindChoiceViewModel.ViewDataKey] as LeaseKindChoiceViewModel;
+    const string baseClass = "text-left rounded-lg border p-3.5 transition-colors hover:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+    const string activeClass = baseClass + " border-primary bg-primary/5";
+    const string idleClass = baseClass + " border-[var(--color-border)] bg-[var(--color-card)]";
+}
+@if (kind is { IsVisible: true })
+{
+    <div class="card mt-4" x-show="unitId && !isCap()" x-cloak>
+        @await Html.PartialAsync("_LeaseStepHeader", null, new ViewDataDictionary(ViewData) { ["Number"] = "2", ["StepTitle"] = "Kiralama şekli" })
+        <div class="text-[13px] text-muted mb-2.5">Bu birimi kim kiralayacak?</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5" role="radiogroup" aria-label="Kiralama şekli">
+            <button type="button" role="radio" aria-checked="@(kind.IsShared ? "false" : "true")"
+                    class="@(kind.IsShared ? idleClass : activeClass)" x-on:click="chooseKind(false)">
+                <div class="text-[13.5px] font-semibold">Tek kiracı</div>
+                <div class="text-[12px] text-muted mt-0.5">Birimi tek bir kiracı kiralar.</div>
+            </button>
+            <button type="button" role="radio" aria-checked="@(kind.IsShared ? "true" : "false")"
+                    class="@(kind.IsShared ? activeClass : idleClass)" x-on:click="chooseKind(true)">
+                <div class="text-[13.5px] font-semibold">Birden çok kiracı paylaşacak</div>
+                <div class="text-[12px] text-muted mt-0.5">Ortak tarihli sözleşmeler tek başvuruda açılır.</div>
+            </button>
+        </div>
+    </div>
+}

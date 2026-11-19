@@ -20,12 +20,6 @@
         <div class="page-subtitle">Başvuru onaylanana kadar sözleşme aktifleşmez ve tahakkuk oluşmaz.</div>
     </div>
 
-    @await Html.PartialAsync("_LeaseCreateTypeSwitch")
-
-    <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        Bu işlem sözleşmeyi doğrudan başlatmaz. Kaydınız onay bekleyen bir taslak olarak oluşturulur.
-    </div>
-
     <div x-data="leaseForm()" x-init="init()" x-cloak @@datechanged="onPickerChanged($event)">
         <form asp-action="Create" method="post" enctype="multipart/form-data" id="leaseForm"
               asp-form-write-permission="@PermissionCatalog.Lease.Create"
@@ -43,12 +37,12 @@
                 ["EnforceRequired"] = false
             })
 
-            <div class="flex gap-3 mt-6">
+            <div class="sticky bottom-0 z-10 mt-6 -mx-px flex justify-end gap-3 rounded-t-xl border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+                <a href="@returnUrl" class="btn btn-secondary px-6">İptal</a>
                 <button type="submit" class="btn btn-primary px-6 flex items-center gap-2"
                         asp-permission="@PermissionCatalog.Lease.Create" :disabled="submitting">
                     <span x-text="submitting ? 'Gönderiliyor…' : 'Onaya Gönder'"></span>
                 </button>
-                <a href="@returnUrl" class="btn btn-secondary px-6">İptal</a>
             </div>
         </form>
     </div>

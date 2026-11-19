@@ -1,0 +1,72 @@
+@model IEnumerable<KiraTakip.Models.Dtos.UnitLookupDto>
+@using System.Text.Json
+@using KiraTakip.Models.Enums
+@{
+    var kind = ViewData[LeaseKindChoiceViewModel.ViewDataKey] as LeaseKindChoiceViewModel;
+    var catalog = Model.Select(unit => new
+    {
+        id = unit.Id,
+        property = unit.PropertyName,
+        name = unit.UnitStructure == UnitStructure.MultipleUnits ? $"Birim {unit.UnitNo}" : "Komple",
+        floor = unit.FloorNo,
+        area = unit.Area.M2(),
+        district = unit.District,
+        city = unit.City,
+        isCap = unit.RentalMode == UnitRentalMode.CapacityBased,
+        freeCap = unit.FreeCapacity,
+        freeArea = unit.FreeArea,
+        freeAreaText = unit.FreeArea.M2(),
+        normArea = unit.NormArea,
+        lastSlot = unit.SuggestedLastSlotArea
+    }).ToList();
+    var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+}
+<script>
+    window.leaseUnitPicker = () => ({
+        unitList: @Html.Raw(JsonSerializer.Serialize(catalog, jsonOptions)),
+        unitQuery: '',
+        changingUnit: false,
+        hasKindChoice: @(kind is { IsVisible: true } ? "true" : "false"),
+        sharedPage: @(kind?.IsShared == true ? "true" : "false"),
+        normalUrlTemplate: @Html.Raw(JsonSerializer.Serialize(kind?.NormalUrlTemplate ?? string.Empty)),
+        sharedUrlTemplate: @Html.Raw(JsonSerializer.Serialize(kind?.SharedUrlTemplate ?? string.Empty)),
+        unitPlaceholder: '@LeaseCreateRoutes.UnitIdPlaceholder',
+        get units() { return Object.fromEntries(this.unitList.map(u => [u.id, u])); },
+        unitInfo() { return this.unitId ? (this.units[this.unitId] ?? null) : null; },
+        isCap() { return !!this.unitInfo()?.isCap; },
+        kindStepShown() { return this.hasKindChoice && !!this.unitId && !this.isCap(); },
+        stepNo(n) { return this.kindStepShown() ? n : n - 1; },
+        showUnitList() { return !this.unitId || this.changingUnit; },
+        filteredUnitGroups() {
+            const q = this.unitQuery.trim().toLocaleLowerCase('tr-TR');
+            const groups = [];
+            for (const u of this.unitList) {
+                const hay = `${u.property} ${u.name} ${u.district} ${u.city} ${u.floor ?? ''}`.toLocaleLowerCase('tr-TR');
+                if (q && !hay.includes(q)) continue;
+                let g = groups.find(x => x.property === u.property);
+                if (!g) { g = { property: u.property, place: `${u.district}, ${u.city}`, units: [] }; groups.push(g); }
+                g.units.push(u);
+            }
+            return groups;
+        },
+        unitMeta(u) { return [u.floor != null ? `${u.floor}. Kat` : null, u.area].filter(Boolean).join(' · '); },
+        unitUrl(template, id) { return template.replace(this.unitPlaceholder, id); },
+        selectUnit(id) {
+            const u = this.units[id];
+            if (!u) return;
+            if (this.sharedPage && u.isCap && this.normalUrlTemplate) {
+                window.location.href = this.unitUrl(this.normalUrlTemplate, id);
+                return;
+            }
+            this.unitId = id;
+            this.changingUnit = false;
+            this.unitQuery = '';
+        },
+        clearUnit() { this.changingUnit = true; },
+        cancelChangeUnit() { this.changingUnit = false; this.unitQuery = ''; },
+        chooseKind(shared) {
+            if (!this.unitId || shared === this.sharedPage) return;
+            window.location.href = this.unitUrl(shared ? this.sharedUrlTemplate : this.normalUrlTemplate, this.unitId);
+        }
+    });
+</script>

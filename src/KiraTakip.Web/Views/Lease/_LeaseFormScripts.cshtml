@@ -5,9 +5,11 @@
     bool readOnly = ViewData["ReadOnly"] as bool? ?? false;
     var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 }
+@await Html.PartialAsync("_LeaseUnitPickerScripts", Model.AvailableUnits)
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('leaseForm', () => ({
+            ...window.leaseUnitPicker(),
             unitId: @(Model.UnitId?.ToString() ?? "null"),
             tenantId: @(Model.TenantId > 0 ? Model.TenantId : "null"),
             startDate: '@Model.StartDate.ToString("yyyy-MM-dd")',
@@ -22,20 +24,11 @@
             loading: false,
             error: null,
             lineItems: @Html.Raw(JsonSerializer.Serialize(Model.LeaseLineItems, jsonOptions)),
-            units: {
-                @foreach (var unit in Model.AvailableUnits)
-            {
-                                string name = unit.UnitStructure == KiraTakip.Models.Enums.UnitStructure.MultipleUnits ? $"{unit.PropertyName} — Birim {unit.UnitNo}" : $"{unit.PropertyName} — Komple";
-                @Html.Raw($"{unit.Id}: {{name: {JsonSerializer.Serialize(name)}, meta: {JsonSerializer.Serialize(unit.Area.M2())}, district: {JsonSerializer.Serialize(unit.District)}, city: {JsonSerializer.Serialize(unit.City)}, isCap: {(unit.RentalMode == KiraTakip.Models.Enums.UnitRentalMode.CapacityBased ? "true" : "false")}, freeCap: {JsonSerializer.Serialize(unit.FreeCapacity)}, freeArea: {JsonSerializer.Serialize(unit.FreeArea)}, normArea: {JsonSerializer.Serialize(unit.NormArea)}, lastSlot: {JsonSerializer.Serialize(unit.SuggestedLastSlotArea)}}},")
-            }
-            },
         unitAreas: @Html.Raw(ViewBag.UnitAreas ?? "{}"),
         minArea: @((ViewBag.LeaseMinimumUsageArea as decimal?)?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "0"),
         rentedArea: @(Model.RentedArea?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "null"),
         allocatedArea: @(Model.AllocatedArea?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "null"),
         allocationMode: @((int)(Model.AllocationMode ?? KiraTakip.Models.Enums.LeaseAreaMode.Automatic)),
-        unitInfo() { return this.unitId ? this.units[this.unitId] : null; },
-        isCap() { return !!this.unitInfo()?.isCap; },
         isManual() { return this.allocationMode === @((int)KiraTakip.Models.Enums.LeaseAreaMode.Manual); },
         autoArea() {
             const u = this.unitInfo();

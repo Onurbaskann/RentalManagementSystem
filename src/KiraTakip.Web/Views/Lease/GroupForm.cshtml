@@ -14,13 +14,8 @@
     <div class="page-header">
         <a href="@backUrl" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← @(Model.IsEdit ? "Gruba Dön" : "Sözleşmeler")</a>
         <div class="page-title">@(Model.IsEdit ? "Paylaşımlı Grubu Düzenle" : "Yeni Sözleşme Başvurusu")</div>
-        <div class="page-subtitle">Aynı birimi paylaşan kiracılar için ortak tarihli sözleşmeler tek taslakta açılır; onaylanana kadar sözleşmeler aktifleşmez.</div>
+        <div class="page-subtitle">Aynı birimi paylaşan kiracıların sözleşmeleri tek başvuruda açılır; onaylanana kadar sözleşmeler aktifleşmez.</div>
     </div>
-
-    @if (!Model.IsEdit)
-    {
-        @await Html.PartialAsync("_LeaseCreateTypeSwitch")
-    }
 
     <div x-data="leaseGroupForm()" x-init="init()" x-cloak @@datechanged="onPickerChanged($event)">
         <form asp-action="@(Model.IsEdit ? "UpdateGroup" : "CreateGroup")" method="post" id="leaseGroupForm"
@@ -29,40 +24,25 @@
             <div asp-validation-summary="All" class="form-error mb-3"></div>
             <input type="hidden" name="GroupId" value="@Model.GroupId" />
 
-            <div class="card">
-                <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex items-center gap-2">
-                    <span class="w-1.5 h-4 bg-primary rounded-full"></span><span>Birim</span>
-                </div>
-                @if (Model.IsEdit)
-                {
+            @if (Model.IsEdit)
+            {
+                <div class="card">
+                    @await Html.PartialAsync("_LeaseStepHeader", null, new ViewDataDictionary(ViewData) { ["Number"] = "1", ["StepTitle"] = "Birim" })
                     <input type="hidden" name="UnitId" value="@Model.UnitId" />
-                    <div class="bg-primary/5 border border-primary/10 rounded-lg p-3 text-[13.5px] font-medium text-primary">
+                    <div class="rounded-lg border border-primary bg-primary/5 p-3.5 text-[13.5px] font-semibold text-primary">
                         @Model.UnitName • @Model.UnitArea.M2()
                     </div>
-                }
-                else
-                {
-                    <div class="form-group mb-0">
-                        <label class="form-label">Birim *</label>
-                        <select asp-for="UnitId" class="form-control" x-model="unitId">
-                            <option value="">— Boş birim seçin —</option>
-                            @foreach (var unit in Model.AvailableUnits)
-                            {
-                                string label = unit.UnitStructure == UnitStructure.MultipleUnits
-                                    ? $"{unit.PropertyName} — Birim {unit.UnitNo}{(unit.FloorNo.HasValue ? $" • {unit.FloorNo}. Kat" : "")} • {unit.Area.M2()}"
-                                    : $"{unit.PropertyName} — Komple • {unit.Area.M2()} • {unit.District}";
-                                <option value="@unit.Id">@label</option>
-                            }
-                        </select>
-                        <span asp-validation-for="UnitId" class="form-error"></span>
-                    </div>
-                }
-            </div>
-
-            <div class="card mt-4">
-                <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex items-center gap-2">
-                    <span class="w-1.5 h-4 bg-primary rounded-full"></span><span>Süre ve Vade (tüm sözleşmeler için ortak)</span>
                 </div>
+            }
+            else
+            {
+                @await Html.PartialAsync("_LeaseUnitPicker", null, new ViewDataDictionary(ViewData) { ["ReadOnly"] = false })
+                @await Html.PartialAsync("_LeaseKindChoice")
+            }
+
+            @await Html.PartialAsync("_LeaseGroupMembersCard", Model.Tenants, new ViewDataDictionary(ViewData) { ["NumberExpr"] = "stepNo(3)" })
+            <div class="card mt-4">
+                @await Html.PartialAsync("_LeaseStepHeader", null, new ViewDataDictionary(ViewData) { ["Number"] = "4", ["NumberExpr"] = "stepNo(4)", ["StepTitle"] = "Süre ve vade (tüm sözleşmeler için ortak)" })
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                     <div class="form-group mb-0">
                         <label class="form-label">Başlangıç Tarihi *</label>
@@ -109,7 +89,6 @@
                 </label>
             </div>
 
-            @await Html.PartialAsync("_LeaseGroupMembersCard", Model.Tenants)
 
             <div class="card mt-4">
                 <div class="form-group mb-0">
@@ -118,12 +97,29 @@
                 </div>
             </div>
 
-            <div class="flex gap-3 mt-6">
-                <button type="submit" class="btn btn-primary px-6 flex items-center gap-2"
-                        asp-permission="@writePermission" :disabled="submitting">
-                    <span x-text="submitting ? 'Kaydediliyor…' : '@(Model.IsEdit ? "Kaydet" : "Taslak Olarak Kaydet")'"></span>
-                </button>
-                <a href="@backUrl" class="btn btn-secondary px-6">İptal</a>
+            <div class="sticky bottom-0 z-10 mt-6 -mx-px flex flex-wrap items-center justify-between gap-3 rounded-t-xl border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+                <div class="text-[13px]" :class="Math.abs(remaining()) < 0.005 ? 'text-emerald-700' : 'text-amber-700'">
+                    <span>Birim alanı <strong x-text="`${fmt(unitArea())} m²`"></strong></span>
+                    <span class="mx-2">•</span>
+                    <span>Kiracılara dağıtılan <strong x-text="`${fmt(totalArea())} m²`"></strong></span>
+                    <span class="mx-2">•</span>
+                    <span>Kalan <strong x-text="`${fmt(remaining())} m²`"></strong></span>
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                    <div class="flex gap-3">
+                        <a href="@backUrl" class="btn btn-secondary px-6">İptal</a>
+                        <button type="submit" class="btn btn-primary px-6 flex items-center gap-2"
+                                asp-permission="@writePermission" :disabled="submitting">
+                            <span x-text="submitting ? 'Kaydediliyor…' : '@(Model.IsEdit ? "Kaydet" : "Taslak Olarak Kaydet")'"></span>
+                        </button>
+                    </div>
+                    <div class="text-xs text-amber-700" x-show="Math.abs(remaining()) >= 0.005">Kalan alan 0 m² olmalı.</div>
+                    <div class="text-xs text-amber-700" x-show="distinctTenantCount() < 2">En az 2 farklı kiracı seçin.</div>
+                    @if (!Model.IsEdit)
+                    {
+                        <div class="text-xs text-muted">Taslak kaydedilir; grup sayfasından onaylayabilirsiniz.</div>
+                    }
+                </div>
             </div>
         </form>
     </div>

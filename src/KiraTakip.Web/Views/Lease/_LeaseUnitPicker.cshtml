@@ -1,0 +1,61 @@
+@{
+    bool readOnly = ViewData["ReadOnly"] as bool? ?? false;
+}
+<div class="card">
+    @await Html.PartialAsync("_LeaseStepHeader", null, new ViewDataDictionary(ViewData) { ["Number"] = "1", ["StepTitle"] = "Birim seçin" })
+    <input type="hidden" name="UnitId" :value="unitId ?? ''" />
+
+    <template x-if="unitInfo() && !showUnitList()">
+        <div class="flex items-start justify-between gap-3 rounded-lg border border-primary bg-primary/5 p-3.5">
+            <div class="min-w-0">
+                <div class="text-[14px] font-bold text-primary" x-text="`${unitInfo().property} — ${unitInfo().name}`"></div>
+                <div class="text-[12.5px] text-muted mt-0.5" x-text="`${unitMeta(unitInfo())} · ${unitInfo().district}, ${unitInfo().city}`"></div>
+                <div class="mt-1.5" x-show="unitInfo().isCap">
+                    <span class="badge" x-text="`Açık ofis · ${unitInfo().freeCap ?? 0} boş yer · ${unitInfo().freeAreaText} boş fiziksel alan`"></span>
+                </div>
+            </div>
+            @if (!readOnly)
+            {
+                <button type="button" class="btn btn-secondary btn-sm shrink-0" x-on:click="clearUnit()">Değiştir</button>
+            }
+        </div>
+    </template>
+
+    @if (!readOnly)
+    {
+        <div x-show="showUnitList()" x-cloak>
+            <div class="flex gap-2 mb-3">
+                <input type="search" class="form-control" placeholder="Taşınmaz, birim, ilçe veya kat ara…" x-model="unitQuery" aria-label="Birim ara" />
+                <button type="button" class="btn btn-secondary btn-sm shrink-0" x-show="unitId" x-on:click="cancelChangeUnit()">Vazgeç</button>
+            </div>
+            <div class="space-y-4 max-h-[420px] overflow-y-auto pr-1">
+                <template x-for="group in filteredUnitGroups()" :key="group.property">
+                    <div>
+                        <div class="text-[12.5px] font-bold text-muted mb-1.5">
+                            <span x-text="group.property"></span>
+                            <span class="font-normal" x-text="` · ${group.place}`"></span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                            <template x-for="u in group.units" :key="u.id">
+                                <button type="button"
+                                        class="text-left rounded-lg border p-3 transition-colors hover:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                        :class="String(unitId) === String(u.id) ? 'border-primary bg-primary/5' : 'border-[var(--color-border)] bg-[var(--color-card)]'"
+                                        :aria-pressed="String(unitId) === String(u.id) ? 'true' : 'false'"
+                                        x-on:click="selectUnit(u.id)">
+                                    <div class="text-[13.5px] font-semibold" x-text="u.name"></div>
+                                    <div class="text-[12px] text-muted mt-0.5" x-text="unitMeta(u)"></div>
+                                    <div class="mt-1.5">
+                                        <span class="badge" x-show="u.isCap" x-text="`Açık ofis · ${u.freeCap ?? 0} boş yer · ${u.freeAreaText} boş fiziksel alan`"></span>
+                                        <span class="text-[12px] text-muted" x-show="!u.isCap">Tek kiracı veya paylaşımlı</span>
+                                    </div>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+                <div class="text-muted text-sm italic" x-show="filteredUnitGroups().length === 0">Aramaya uygun boş birim bulunamadı.</div>
+            </div>
+        </div>
+    }
+    @Html.ValidationMessage("UnitId", new { @class = "form-error" })
+</div>

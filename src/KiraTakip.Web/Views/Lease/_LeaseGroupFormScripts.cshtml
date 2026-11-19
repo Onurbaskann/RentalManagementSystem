@@ -1,5 +1,6 @@
 @model KiraTakip.Web.Models.ViewModels.LeaseGroupFormViewModel
 @using System.Text.Json
+@using KiraTakip.Models.Constants
 @{
     var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
     var members = Model.Members.Select((member, index) => new
@@ -11,12 +12,15 @@
         area = member.Area,
         lineItems = member.LeaseLineItems,
         loading = false,
+        tariffOpen = false,
         error = (string?)null
     }).ToList();
 }
+@await Html.PartialAsync("_LeaseUnitPickerScripts", Model.PickerUnits)
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('leaseGroupForm', () => ({
+            ...window.leaseUnitPicker(),
             unitId: @(Model.UnitId?.ToString() ?? "null"),
             startDate: '@Model.StartDate.ToString("yyyy-MM-dd")',
             endDate: '@Model.EndDate.ToString("yyyy-MM-dd")',
@@ -63,11 +67,30 @@
                 if (event.detail.field === 'start') this.startDate = event.detail.value;
                 if (event.detail.field === 'end') this.endDate = event.detail.value;
             },
-            addMember() { this.members.push({ key: this.nextKey++, leaseId: null, leaseNo: null, tenantId: 0, area: 0, lineItems: [], loading: false, error: null }); },
+            addMember() { this.members.push({ key: this.nextKey++, leaseId: null, leaseNo: null, tenantId: 0, area: 0, lineItems: [], loading: false, tariffOpen: false, error: null }); },
             removeMember(index) { if (this.members.length > 2) this.members.splice(index, 1); },
             unitArea() { return Number(this.unitAreas[this.unitId] ?? 0); },
             totalArea() { return this.members.reduce((sum, m) => sum + Number(m.area || 0), 0); },
             remaining() { return this.unitArea() - this.totalArea(); },
+            round2(value) { return Math.round((Number(value) + Number.EPSILON) * 100) / 100; },
+            distinctTenantCount() { return new Set(this.members.map(m => Number(m.tenantId)).filter(id => id > 0)).size; },
+            splitEvenly() {
+                const total = this.unitArea();
+                const count = this.members.length;
+                if (!total || count === 0) return;
+                const share = Math.floor(total / count * 100 + 1e-9) / 100;
+                this.members.forEach(m => { m.area = share; });
+                this.members[count - 1].area = this.round2(total - share * (count - 1));
+            },
+            giveRemaining(m) { m.area = this.round2(Number(m.area || 0) + this.remaining()); },
+            isItemVisible(item) { return !this.isRentFree || String(item.chargeTypeCode || '').toUpperCase() !== '@BorcTipiConsts.Kira'; },
+            tariffSummary(m) {
+                if (m.loading) return 'Tarife yükleniyor…';
+                const items = m.lineItems.filter(item => this.isItemVisible(item));
+                if (items.length === 0) return 'Tarife: kalem yok';
+                const monthly = items.reduce((sum, item) => sum + Number(this.amount(item, m) || 0), 0);
+                return `Tarife: ${items.length} kalem · aylık ${this.fmt(monthly)} ₺`;
+            },
             fmt(value) { return Number(value || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 }); },
             async fetchItems(m) {
                 if (!this.unitId || !m.tenantId || !this.startDate) return;

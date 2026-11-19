@@ -63,7 +63,7 @@
                     }
                 </div>
                 <div class="bg-red-50 border border-red-200 text-red-800 rounded-lg p-3 text-[13px] font-semibold" x-show="preview.minimumShort && !fetchError"
-                     x-text="'Boş kontenjanlara kişi başı asgari fiziksel alan bile ayrılamıyor; ' + fmt(preview.minimumShortArea) + ' m² yer eksik.'"></div>
+                     x-text="'Boş kontenjanların her birine en az ' + fmt(preview.minimumUsageArea) + ' m² ayrılamıyor; ' + fmt(preview.minimumShortArea) + ' m² yer eksik.'"></div>
                 <div class="bg-primary/5 border border-primary/10 rounded-lg p-3 text-[13px] text-primary" x-show="optimizeNotice" x-text="optimizeNotice"></div>
                 <div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 text-[13px]" x-show="shortfalls.length > 0"
                      x-text="'Fiziksel alanlar en küçük değerine indirildiği halde ' + fmt(shortfallTotal()) + ' m² yetmiyor.'"></div>

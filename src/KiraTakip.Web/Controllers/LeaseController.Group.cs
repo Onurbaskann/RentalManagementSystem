@@ -19,12 +19,15 @@ public partial class LeaseController
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.Lease.Module)]
     public IActionResult CreateGroup()
-        => RedirectToAction(nameof(Create), new { tur = LeaseCreateTypeSwitchViewModel.SharedType });
+        => RedirectToAction(nameof(Create), new { tur = LeaseCreateRoutes.SharedType });
 
     private async Task<IActionResult> CreateGroupFormAsync(int? unitId, int? tenantId)
     {
         var viewModel = new LeaseGroupFormViewModel();
         await PopulateGroupCreateOptionsAsync(viewModel);
+        if (unitId.HasValue && viewModel.PickerUnits.Any(unit =>
+                unit.Id == unitId.Value && unit.RentalMode == UnitRentalMode.CapacityBased))
+            return RedirectToAction(nameof(Create), new { unitId, tenantId });
         if (unitId.HasValue && viewModel.AvailableUnits.Any(unit => unit.Id == unitId.Value))
             viewModel.UnitId = unitId;
         if (tenantId.HasValue)
@@ -32,7 +35,7 @@ public partial class LeaseController
             if (viewModel.Tenants.All(tenant => tenant.Id != tenantId.Value)) return NotFound();
             viewModel.Members[0].TenantId = tenantId.Value;
         }
-        await SetCreateTypeSwitchAsync(true, viewModel.UnitId, tenantId);
+        await SetLeaseKindChoiceAsync(true, tenantId);
         return View(GroupFormView, viewModel);
     }
 
@@ -360,11 +363,15 @@ public partial class LeaseController
         var accessScope = BuildAccessScope();
         viewModel.AvailableUnits = await propertyService.GetAvailableUnitsAsync(
             new GetAvailableUnitsInput(accessScope.PropertyIds, accessScope.UnitIds, null, false));
+        viewModel.PickerUnits = await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Create)
+            ? await propertyService.GetAvailableUnitsAsync(
+                new GetAvailableUnitsInput(accessScope.PropertyIds, accessScope.UnitIds, null, true))
+            : viewModel.AvailableUnits;
         viewModel.Tenants = await tenantService.GetAllAsync(
             new GetTenantsInput(accessScope.PropertyIds, accessScope.UnitIds));
         ViewBag.UnitAreas = System.Text.Json.JsonSerializer.Serialize(
             viewModel.AvailableUnits.ToDictionary(unit => unit.Id, unit => (double)unit.Area));
-        await SetCreateTypeSwitchAsync(true, viewModel.UnitId, null);
+        await SetLeaseKindChoiceAsync(true, null);
     }
 
     private async Task PopulateGroupEditOptionsAsync(LeaseGroupFormViewModel viewModel)

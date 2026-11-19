@@ -5,15 +5,20 @@ using KiraTakip.Models.Enums;
 
 namespace KiraTakip.Web.Models.ViewModels;
 
-public sealed record LeaseCreateTypeSwitchViewModel(
+public static class LeaseCreateRoutes
+{
+    public const string SharedType = "paylasimli";
+    public const string UnitIdPlaceholder = "__UNIT__";
+}
+
+public sealed record LeaseKindChoiceViewModel(
     bool CanCreate,
     bool CanCreateGroup,
     bool IsShared,
-    int? UnitId,
-    int? TenantId)
+    string NormalUrlTemplate,
+    string SharedUrlTemplate)
 {
-    public const string ViewDataKey = "LeaseCreateTypeSwitch";
-    public const string SharedType = "paylasimli";
+    public const string ViewDataKey = "LeaseKindChoice";
     public bool IsVisible => CanCreate && CanCreateGroup;
 }
 
@@ -41,6 +46,7 @@ public sealed class LeaseGroupFormViewModel
     public string UnitName { get; set; } = string.Empty;
     public decimal UnitArea { get; set; }
     public List<UnitLookupDto> AvailableUnits { get; set; } = [];
+    public List<UnitLookupDto> PickerUnits { get; set; } = [];
     public List<TenantListItemDto> Tenants { get; set; } = [];
 
     public bool IsEdit => GroupId > 0;

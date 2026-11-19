@@ -357,7 +357,7 @@ public class CapacityPlanService(
             if (minimumWorst is { } minimumItem)
                 warnings.Add(new(
                     CapacityPlanCodes.MinimumTargetShort,
-                    $"Boş kontenjanlara kişi başı asgari fiziksel alan bile ayrılamıyor; {minimumItem.Snapshot.MinimumTarget - minimumItem.Snapshot.RemainingArea:0.##} m² yer eksik.",
+                    $"Boş kontenjanların her birine en az {minimum:0.##} m² ayrılamıyor; {minimumItem.Snapshot.MinimumTarget - minimumItem.Snapshot.RemainingArea:0.##} m² yer eksik.",
                     minimumItem.Snapshot.FreeSlots, minimumItem.Snapshot.RemainingArea, minimumItem.Snapshot.NormTarget, minimumItem.Snapshot.MinimumTarget,
                     DayOrNull(minimumItem.Day, today)));
         }
