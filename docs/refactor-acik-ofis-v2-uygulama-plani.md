@@ -2,7 +2,7 @@
 
 **Durum:** Onaylandı (2026-11-18). G1–G8 tamamlandı (Aşama 1 bitti).
 **Kaynaklar:** `Downloads/teknopark_acik_ofis_v2_karar_ozeti_ve_claude_devir_dokumani.md` (esas belge), `Downloads/teknopark_acik_ofis_v2_kod_incelemesi.md` (kod incelemesi; satır kanıtları orada).
-**Kapsam:** Yalnız `CapacityBased` (açık ofis) birimler. Aşama 2 (optimizasyon önerisi) ve Aşama 3 (geçmiş doluluk raporu) kapsam dışı.
+**Kapsam:** Yalnız `CapacityBased` (açık ofis) birimler. Aşama 2 (manuel F oransal optimizasyonu) G5c ile tamamlandı; Aşama 3 (geçmiş doluluk raporu) kapsam dışı.
 
 ## 0. Kesinleşmiş kararlar
 
@@ -88,6 +88,9 @@ Her fazda 1 yazma ajanı (`general-purpose` / sonnet) + 1 denetçi (`orch-review
 - İzin `Internal.Unit.UpdateCapacity` + catalog + seed.
 - Test: `UnitCapacityChangeTests` yeniden yazılır. T01, T02, T03, T08, T09, T17, T18; önizleme bayatlaması.
 
+### G5c — Manuel F oransal optimizasyonu — ✅ Tamamlandı (2026-11-19)
+> `ProportionalReductionStrategy` (keyed `IAllocationSuggestionStrategy`): her değerlendirme gününde α(t)=D(t)/Σ(F−Min), satır için α_i=max, Floor 0.01; ekranda elle girilen override'lı satırlar sabit. `CapacityPlanInput.Optimize=true` yalnız `Optimization` (öneri + eksik günler) doldurur; Rows/Hash değişmez. "Optimize Et" butonu (`UnitCapacity/Index`) öneriyi override'lara yazar ve normal önizlemeyi yeniler; Kaydet bu Hash ile çalışır, yeni izin yok. Tarihçe sebebi `CapacityChange`. Norm/Min uyarıları tüm günlere bakar.
+
 ### G6 — Manuel F düzenleme (sözleşme detayı) — ✅ Tamamlandı (2026-11-18)
 > Uygulanan: `ICapacityPlanService.UpdateAllocatedAreaAsync` (kapsam → kilit → yeniden okuma; açık statü Active/Draft/RevisionRequested, diğerleri `Lease.AllocatedAreaNotEditable`; LeaseArea yoksa `Lease.AllocatedAreaMissing`; F 2 haneye yuvarlanır, aynı değer no-op; tarihçe yalnız Aktifte, `EffectiveFrom = max(StartDate, bugün)`). Okuma ayrı: `GetAllocatedAreaInfoAsync` → `LeaseAllocatedAreaInfoDto`; kiracıyla ortak `LeaseDetailDto`'ya fiziksel alan eklenmedi (mimari test kuralı). `POST Lease/UpdateAllocatedArea` + `Internal.Lease.UpdateAllocatedArea` (seed: Lease.Edit'e sahip "Tesis ve Operasyon Sorumlusu"). Details'te "Fiziksel Alan" kartı + modal; Details taslakları Draft sayfasına yönlendirdiği için ekrandan pratikte yalnız Aktif sözleşme düzenlenir (servis taslakta da çalışır). Testler `LeaseAllocatedAreaUpdateTests` 13/13; filtreli 298/298. Ekran tarayıcıda denenmedi.
 - `CapacityPlanService.UpdateAllocatedAreaAsync(leaseId, F)`: kilit, `ValidateArea`, kapasite kontrolü, mod `Manual`, Aktifse tarihçe (`ManualEdit`).
@@ -127,7 +130,7 @@ Her fazda 1 yazma ajanı (`general-purpose` / sonnet) + 1 denetçi (`orch-review
 
 ## 5. Kapsam dışı
 
-- Manuel F optimizasyon önerisi (Aşama 2).
+- ~~Manuel F optimizasyon önerisi (Aşama 2).~~ ✅ Tamamlandı (G5c).
 - Geçmiş tarihli doluluk raporu (Aşama 3).
 - İleri tarihli kontenjan değişikliği, TA(t)/Min(t) sürümleme.
 - Doluluk ekranlarının (bugün Aktif sayan) davranışı.

@@ -45,7 +45,7 @@ public class UnitCapacityController(
         [FromBody] UnitCapacityPreviewRequest request)
     {
         var preview = await capacityPlanService.PreviewAsync(
-            BuildInput(unitId, request.NewCapacity, DecodeOverrides(request.Overrides)));
+            BuildInput(unitId, request.NewCapacity, DecodeOverrides(request.Overrides), request.Optimize));
         return Json(preview.ToJson(hashids));
     }
 
@@ -118,8 +118,12 @@ public class UnitCapacityController(
         return result;
     }
 
-    private CapacityPlanInput BuildInput(int unitId, int newCapacity, IReadOnlyDictionary<int, decimal>? overrides)
-        => new(unitId, newCapacity, BuildAccessScope(), overrides);
+    private CapacityPlanInput BuildInput(
+        int unitId,
+        int newCapacity,
+        IReadOnlyDictionary<int, decimal>? overrides,
+        bool optimize = false)
+        => new(unitId, newCapacity, BuildAccessScope(), overrides, optimize);
 
     private LeaseAccessScopeInput BuildAccessScope()
         => permissionScopeProvider.GlobalAccess

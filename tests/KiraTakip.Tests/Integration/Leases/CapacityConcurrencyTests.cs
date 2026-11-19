@@ -277,6 +277,7 @@ public class CapacityConcurrencyTests(DatabaseFixture fixture)
                 new UnitOfWork(context),
                 new TestOperationalPolicyProvider(new OperationalPolicySettings { LeaseMinimumUsageArea = 5m }),
                 new DefaultAllocationSuggestionStrategy(),
+                new ProportionalReductionStrategy(),
                 TimeProvider.System),
             new TransactionInterceptor(context, NullLogger<TransactionInterceptor>.Instance).ToInterceptor());
 

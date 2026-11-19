@@ -8,6 +8,7 @@ public class UnitCapacityPreviewRequest
 {
     public int NewCapacity { get; set; }
     public Dictionary<string, decimal>? Overrides { get; set; }
+    public bool Optimize { get; set; }
 }
 
 public class UnitCapacityApplyViewModel
@@ -44,6 +45,8 @@ public record UnitCapacityRowJson(
     bool Editable,
     string? Error);
 
+public record UnitCapacityIssueJson(string Code, string Message, IReadOnlyList<string> RowIds);
+
 public record UnitCapacityPreviewJson(
     int CurrentCapacity,
     int NewCapacity,
@@ -55,10 +58,25 @@ public record UnitCapacityPreviewJson(
     decimal Peak,
     string PeakDay,
     IReadOnlyList<UnitCapacityRowJson> Rows,
-    IReadOnlyList<string> Errors,
-    IReadOnlyList<string> Warnings,
+    IReadOnlyList<UnitCapacityIssueJson> Errors,
+    IReadOnlyList<UnitCapacityIssueJson> Warnings,
     string Hash,
-    bool HasErrors);
+    bool HasErrors,
+    bool CountExceeded,
+    int FreeSlots,
+    decimal? NormShortArea,
+    bool MinimumShort,
+    decimal? MinimumShortArea,
+    UnitCapacityOptimizationJson? Optimization);
+
+public record UnitCapacitySuggestionJson(string Id, decimal Area);
+
+public record UnitCapacityShortfallJson(string Day, decimal Missing, IReadOnlyList<string> RowIds);
+
+public record UnitCapacityOptimizationJson(
+    bool IsNeeded,
+    IReadOnlyList<UnitCapacitySuggestionJson> Suggestions,
+    IReadOnlyList<UnitCapacityShortfallJson> Shortfalls);
 
 public static class UnitCapacityMapper
 {
@@ -88,15 +106,42 @@ public static class UnitCapacityMapper
                 row.ProposedMode == LeaseAreaMode.Manual,
                 row.Editable,
                 row.Error)).ToList(),
-            dto.Errors.Select(error => error.Message).ToList(),
-            dto.Warnings.Select(warning => warning.Message).ToList(),
+            dto.Errors.Select(error => new UnitCapacityIssueJson(error.Code, error.Message, RowIdsOn(dto, error.Day, hashids))).ToList(),
+            dto.Warnings.Select(warning => new UnitCapacityIssueJson(warning.Code, warning.Message, RowIdsOn(dto, warning.Day, hashids))).ToList(),
             dto.Hash,
-            dto.HasErrors);
+            dto.HasErrors,
+            dto.Errors.Any(error => error.Code == CapacityPlanCodes.CountExceeded),
+            Math.Max(0, dto.NewCapacity - dto.Rows.Count(row => row.StartDate.Date <= dto.PeakDay.Date && dto.PeakDay.Date <= row.EndDate.Date)),
+            ShortArea(dto, CapacityPlanCodes.NormTargetShort, warning => warning.NormTarget),
+            dto.Warnings.Any(warning => warning.Code == CapacityPlanCodes.MinimumTargetShort),
+            ShortArea(dto, CapacityPlanCodes.MinimumTargetShort, warning => warning.MinimumTarget),
+            dto.Optimization == null
+                ? null
+                : new UnitCapacityOptimizationJson(
+                    dto.Optimization.IsNeeded,
+                    dto.Optimization.Suggestions
+                        .Select(s => new UnitCapacitySuggestionJson(hashids.Encode(s.LeaseId), s.AllocatedArea)).ToList(),
+                    dto.Optimization.Shortfalls
+                        .Select(s => new UnitCapacityShortfallJson(
+                            s.Day.ToString("dd.MM.yyyy"),
+                            s.MissingArea,
+                            RowIdsOn(dto, s.Day.Date > DateTime.Today ? s.Day : null, hashids))).ToList()));
+
+    private static decimal? ShortArea(
+        CapacityPlanPreviewDto dto, string code, Func<CapacityPlanWarningDto, decimal> target)
+        => dto.Warnings.Where(warning => warning.Code == code)
+            .Select(warning => (decimal?)Math.Max(0, target(warning) - warning.RemainingArea))
+            .FirstOrDefault();
+
+    private static IReadOnlyList<string> RowIdsOn(CapacityPlanPreviewDto dto, DateTime? day, IHashids hashids)
+        => day is null
+            ? []
+            : dto.Rows.Where(row => row.StartDate.Date == day.Value.Date).Select(row => hashids.Encode(row.LeaseId)).ToList();
 
     private static string? ModeLabel(LeaseAreaMode? mode) => mode switch
     {
         LeaseAreaMode.Automatic => "Otomatik",
-        LeaseAreaMode.Manual => "Manuel",
+        LeaseAreaMode.Manual => "Elle girilen",
         _ => null
     };
 

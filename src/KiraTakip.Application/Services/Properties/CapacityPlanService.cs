@@ -13,6 +13,7 @@ using KiraTakip.Repositories.Interfaces.Properties;
 using KiraTakip.Services.Interfaces.Properties;
 using KiraTakip.Services.Leases;
 using KiraTakip.Services.Interfaces.Payments;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace KiraTakip.Services.Properties;
 
@@ -22,6 +23,7 @@ public class CapacityPlanService(
     IUnitOfWork unitOfWork,
     IOperationalPolicyProvider operationalPolicyProvider,
     IAllocationSuggestionStrategy suggestionStrategy,
+    [FromKeyedServices(AllocationStrategyKeys.ProportionalReduction)] IAllocationSuggestionStrategy optimizationStrategy,
     TimeProvider timeProvider) : ICapacityPlanService, ITransactionalService
 {
     public async Task<CapacityPlanPreviewDto> PreviewAsync(CapacityPlanInput input)
@@ -112,7 +114,7 @@ public class CapacityPlanService(
         Guard.InvalidField(
             !CapacityOccupantStatuses.Contains(head.Status),
             CapacityPlanCodes.AllocatedAreaField,
-            "Fiziksel m² yalnızca açık (aktif, taslak veya revizyon istenen) sözleşmelerde düzenlenebilir.",
+            "Fiziksel alan yalnızca açık (aktif, taslak veya revizyon istenen) sözleşmelerde düzenlenebilir.",
             CapacityPlanCodes.AllocatedAreaNotEditable);
 
         var area = (await leaseRepository.GetTrackedLeaseAreasAsync([input.LeaseId])).FirstOrDefault();
@@ -129,7 +131,7 @@ public class CapacityPlanService(
         Guard.InvalidField(
             UnitCapacityPolicy.ValidateArea(rented, newArea, minimum).Count > 0,
             CapacityPlanCodes.AllocatedAreaField,
-            $"Fiziksel m² {minimum:0.##} ile {rented:0.##} m² arasında olmalıdır.",
+            $"Fiziksel alan {minimum:0.##} m² ile {rented:0.##} m² arasında olmalıdır.",
             CapacityPlanCodes.AllocatedAreaOutOfRange);
 
         var today = Today();
@@ -155,14 +157,14 @@ public class CapacityPlanService(
                     .Sum(item => item.AllocatedArea));
                 throw new BusinessValidationException(
                     CapacityPlanCodes.AllocatedAreaField,
-                    $"Fiziksel alanlar toplamı birim alanını aşıyor: {peak - unit.Area:0.##} m² taşma (toplam {peak:0.##} m², birim {unit.Area:0.##} m²).",
+                    $"Toplam fiziksel alan birim toplam alanını {peak - unit.Area:0.##} m² aşıyor. Sözleşmelerin fiziksel alanlarını küçültün.",
                     CapacityPlanCodes.AreaOverflow);
             }
 
             if (hard.Contains(CapacityHardViolation.CapacityExceeded))
                 throw new BusinessValidationException(
                     CapacityPlanCodes.AllocatedAreaField,
-                    "Açık sözleşme sayısı birim kontenjanını aşıyor; fiziksel alan değişikliği bunu çözmez.",
+                    "Açık sözleşme sayısı kontenjanı aşıyor. Fiziksel alanı değiştirmek bunu çözmez.",
                     CapacityPlanCodes.CountExceeded);
         }
 
@@ -234,14 +236,20 @@ public class CapacityPlanService(
         var capacityValid = newCapacity > 0;
         var norm = capacityValid ? UnitCapacityPolicy.CalculateEffectiveNorm(unit.Area, newCapacity) : 0m;
 
+        var suggestionContext = new AllocationSuggestionContext(
+            norm,
+            unit.Area,
+            newCapacity,
+            minimum,
+            today,
+            context.Leases
+                .Select(lease => new AllocationSuggestionRow(
+                    lease.LeaseId, lease.RentedArea, lease.AllocatedArea, lease.Mode, lease.StartDate, lease.EndDate))
+                .ToList(),
+            capacityValid ? overrides : new Dictionary<int, decimal>());
         var suggestions = suggestionStrategy
-            .Suggest(
-                norm,
-                context.Leases
-                    .Select(lease => new AllocationSuggestionRow(
-                        lease.LeaseId, lease.RentedArea, lease.AllocatedArea, lease.Mode))
-                    .ToList(),
-                capacityValid ? overrides : new Dictionary<int, decimal>())
+            .Suggest(suggestionContext)
+            .Suggestions
             .ToDictionary(item => item.LeaseId);
 
         var rows = context.Leases.Select(lease =>
@@ -296,24 +304,25 @@ public class CapacityPlanService(
 
         if (!capacityValid)
         {
-            errors.Add(new(CapacityPlanCodes.Invalid, "Kontenjan 0'dan büyük olmalıdır."));
+            errors.Add(new(CapacityPlanCodes.Invalid, "Geçerli bir kontenjan girin."));
         }
         else
         {
             if (newCapacity > maximum)
                 errors.Add(new(
                     CapacityPlanCodes.AboveMaximum,
-                    $"Kontenjan en fazla {maximum} olabilir (alan {unit.Area:0.##} m², kişi başı en az {minimum:0.##} m²)."));
+                    $"Kontenjan en fazla {maximum} olabilir. Birim toplam alanı {unit.Area:0.##} m² ve kişi başı asgari fiziksel alan {minimum:0.##} m²."));
 
             var hard = UnitCapacityPolicy.GetHardViolations(newCapacity, unit.Area, occupants, today, rangeEnd);
             if (hard.Contains(CapacityHardViolation.CapacityExceeded))
                 errors.Add(new(
                     CapacityPlanCodes.CountExceeded,
-                    $"Açık sözleşme sayısı en yüksek {peakCount} olduğu için kontenjan {newCapacity} olamaz. Fiziksel alanı azaltmak bunu çözmez; sözleşme sayısı kontenjanın altına inmelidir."));
+                    $"Açık sözleşme sayısı {peakCount}; kontenjan bundan az olamaz. Fiziksel alanları küçültmek bunu çözmez."));
             if (hard.Contains(CapacityHardViolation.AreaExceeded))
                 errors.Add(new(
                     CapacityPlanCodes.AreaOverflow,
-                    $"Fiziksel alanlar toplamı birim alanını aşıyor: {peak.Area - unit.Area:0.##} m² taşma (toplam {peak.Area:0.##} m², birim {unit.Area:0.##} m²). Sözleşme alanlarını düzeltin."));
+                    $"Toplam fiziksel alan birim toplam alanını {peak.Area - unit.Area:0.##} m² aşıyor. Sözleşmelerin fiziksel alanlarını küçültün.",
+                    DayOrNull(peak.Day, today)));
 
             var invalidRows = rows.Count(row => row.Error != null);
             if (invalidRows > 0)
@@ -321,17 +330,52 @@ public class CapacityPlanService(
                     CapacityPlanCodes.AreaOutOfRange,
                     $"{invalidRows} sözleşmenin fiziksel alanı izin verilen aralığın dışında."));
 
-            var snapshot = UnitCapacityPolicy.GetSnapshot(newCapacity, unit.Area, minimum, occupants, today);
-            if (snapshot.NormTargetShort)
+            var snapshots = measures
+                .Select(measure => (measure.Day, Snapshot: UnitCapacityPolicy.GetSnapshot(
+                    newCapacity, unit.Area, minimum, occupants, measure.Day)))
+                .ToList();
+
+            var normWorst = snapshots
+                .Where(item => item.Snapshot.NormTargetShort)
+                .OrderByDescending(item => item.Snapshot.NormTarget - item.Snapshot.RemainingArea)
+                .ThenBy(item => item.Day)
+                .Cast<(DateTime Day, CapacitySnapshot Snapshot)?>()
+                .FirstOrDefault();
+            if (normWorst is { } normItem)
                 warnings.Add(new(
                     CapacityPlanCodes.NormTargetShort,
-                    $"Kalan alan ({snapshot.RemainingArea:0.##} m²), {snapshot.FreeSlots} boş kontenjan için norm hedefinin ({snapshot.NormTarget:0.##} m²) altında.",
-                    snapshot.FreeSlots, snapshot.RemainingArea, snapshot.NormTarget, snapshot.MinimumTarget));
-            if (snapshot.MinimumTargetShort)
+                    $"Boş kontenjanlar için {normItem.Snapshot.NormTarget - normItem.Snapshot.RemainingArea:0.##} m² yer eksik.",
+                    normItem.Snapshot.FreeSlots, normItem.Snapshot.RemainingArea, normItem.Snapshot.NormTarget, normItem.Snapshot.MinimumTarget,
+                    DayOrNull(normItem.Day, today)));
+
+            var minimumWorst = snapshots
+                .Where(item => item.Snapshot.MinimumTargetShort)
+                .OrderByDescending(item => item.Snapshot.MinimumTarget - item.Snapshot.RemainingArea)
+                .ThenBy(item => item.Day)
+                .Cast<(DateTime Day, CapacitySnapshot Snapshot)?>()
+                .FirstOrDefault();
+            if (minimumWorst is { } minimumItem)
                 warnings.Add(new(
                     CapacityPlanCodes.MinimumTargetShort,
-                    $"Kalan alan ({snapshot.RemainingArea:0.##} m²), {snapshot.FreeSlots} boş kontenjan için asgari hedefin ({snapshot.MinimumTarget:0.##} m²) altında.",
-                    snapshot.FreeSlots, snapshot.RemainingArea, snapshot.NormTarget, snapshot.MinimumTarget));
+                    $"Boş kontenjanlara kişi başı asgari fiziksel alan bile ayrılamıyor; {minimumItem.Snapshot.MinimumTarget - minimumItem.Snapshot.RemainingArea:0.##} m² yer eksik.",
+                    minimumItem.Snapshot.FreeSlots, minimumItem.Snapshot.RemainingArea, minimumItem.Snapshot.NormTarget, minimumItem.Snapshot.MinimumTarget,
+                    DayOrNull(minimumItem.Day, today)));
+        }
+
+        CapacityOptimizationDto? optimization = null;
+        if (input.Optimize
+            && capacityValid
+            && !errors.Any(error => error.Code == CapacityPlanCodes.CountExceeded))
+        {
+            var optimized = optimizationStrategy.Suggest(suggestionContext);
+            var changed = optimized.Suggestions
+                .Where(item => item.AllocatedArea != suggestions[item.LeaseId].AllocatedArea)
+                .Select(item => new CapacityOptimizationSuggestionDto(item.LeaseId, item.AllocatedArea))
+                .ToList();
+            var shortfalls = optimized.Shortfalls
+                .Select(item => new CapacityOptimizationShortfallDto(item.Day, item.MissingArea))
+                .ToList();
+            optimization = new CapacityOptimizationDto(changed.Count > 0 || shortfalls.Count > 0, changed, shortfalls);
         }
 
         return new CapacityPlanPreviewDto(
@@ -348,8 +392,12 @@ public class CapacityPlanService(
             rows,
             errors,
             warnings,
-            ComputeHash(unit.Capacity, newCapacity, unit.Area, minimum, context.Leases, overrides));
+            ComputeHash(unit.Capacity, newCapacity, unit.Area, minimum, context.Leases, overrides),
+            optimization);
     }
+
+    private static DateTime? DayOrNull(DateTime day, DateTime today)
+        => day.Date == today.Date ? null : day.Date;
 
     private static string? DescribeAreaViolations(
         IReadOnlyList<LeaseAreaViolation> violations,

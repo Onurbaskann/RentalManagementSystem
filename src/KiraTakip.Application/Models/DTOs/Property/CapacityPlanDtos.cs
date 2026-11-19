@@ -7,7 +7,8 @@ public record CapacityPlanInput(
     int UnitId,
     int NewCapacity,
     LeaseAccessScopeInput AccessScope,
-    IReadOnlyDictionary<int, decimal>? Overrides = null);
+    IReadOnlyDictionary<int, decimal>? Overrides = null,
+    bool Optimize = false);
 
 public record UpdateAllocatedAreaInput(
     int LeaseId,
@@ -56,7 +57,7 @@ public record CapacityPlanRowDto(
     bool Editable,
     string? Error);
 
-public record CapacityPlanErrorDto(string Code, string Message);
+public record CapacityPlanErrorDto(string Code, string Message, DateTime? Day = null);
 
 public record CapacityPlanWarningDto(
     string Code,
@@ -64,7 +65,17 @@ public record CapacityPlanWarningDto(
     int FreeSlots,
     decimal RemainingArea,
     decimal NormTarget,
-    decimal MinimumTarget);
+    decimal MinimumTarget,
+    DateTime? Day = null);
+
+public record CapacityOptimizationSuggestionDto(int LeaseId, decimal AllocatedArea);
+
+public record CapacityOptimizationShortfallDto(DateTime Day, decimal MissingArea);
+
+public record CapacityOptimizationDto(
+    bool IsNeeded,
+    IReadOnlyList<CapacityOptimizationSuggestionDto> Suggestions,
+    IReadOnlyList<CapacityOptimizationShortfallDto> Shortfalls);
 
 public record CapacityPlanPreviewDto(
     int UnitId,
@@ -80,7 +91,8 @@ public record CapacityPlanPreviewDto(
     IReadOnlyList<CapacityPlanRowDto> Rows,
     IReadOnlyList<CapacityPlanErrorDto> Errors,
     IReadOnlyList<CapacityPlanWarningDto> Warnings,
-    string Hash)
+    string Hash,
+    CapacityOptimizationDto? Optimization = null)
 {
     public bool HasErrors => Errors.Count > 0;
 }

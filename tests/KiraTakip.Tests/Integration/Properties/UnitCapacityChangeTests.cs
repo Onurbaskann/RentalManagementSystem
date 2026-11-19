@@ -22,6 +22,7 @@ public class UnitCapacityChangeTests(DatabaseFixture fixture) : PropertyUnitTest
             new UnitOfWork(Ctx),
             new TestOperationalPolicyProvider(new OperationalPolicySettings { LeaseMinimumUsageArea = minimum }),
             new DefaultAllocationSuggestionStrategy(),
+            new ProportionalReductionStrategy(),
             TimeProvider.System);
 
     private static CapacityPlanInput Plan(
@@ -169,6 +170,7 @@ public class UnitCapacityChangeTests(DatabaseFixture fixture) : PropertyUnitTest
         var error = Assert.Single(preview.Errors);
         Assert.Equal(CapacityPlanCodes.AreaOverflow, error.Code);
         Assert.Contains("4 m²", error.Message);
+        Assert.Null(error.Day);
 
         var exception = await Assert.ThrowsAsync<BusinessValidationException>(
             () => service.ApplyAsync(Plan(unit, 10), preview.Hash));
@@ -520,5 +522,94 @@ public class UnitCapacityChangeTests(DatabaseFixture fixture) : PropertyUnitTest
         await CreateService().UpdateWithChildrenAsync(input);
 
         Assert.Empty(await HistoryAsync(unit.Id));
+    }
+
+    [Fact]
+    public async Task Preview_WithOptimize_ShouldSuggestReductions_WithoutChangingRowsOrHash()
+    {
+        var unit = await SeedCapacityUnitAsync(70m, 14);
+        var ali = await SeedAreaLeaseAsync(unit, 10m, 9m, LeaseAreaMode.Manual);
+        var ayse = await SeedAreaLeaseAsync(unit, 10m, 7m, LeaseAreaMode.Manual);
+        for (var i = 0; i < 8; i++)
+            await SeedAreaLeaseAsync(unit, 7m, 5m, LeaseAreaMode.Automatic);
+        var service = CreatePlan();
+
+        var plain = await service.PreviewAsync(Plan(unit, 14));
+        var optimized = await service.PreviewAsync(Plan(unit, 14) with { Optimize = true });
+
+        Assert.Null(plain.Optimization);
+        Assert.Equal(plain.Hash, optimized.Hash);
+        Assert.Equal(plain.Rows, optimized.Rows);
+        Assert.Equal(plain.Errors, optimized.Errors);
+        Assert.Equal(plain.Warnings, optimized.Warnings);
+        var optimization = optimized.Optimization!;
+        Assert.True(optimization.IsNeeded);
+        Assert.Empty(optimization.Shortfalls);
+        Assert.Equal(2, optimization.Suggestions.Count);
+        Assert.Equal(5.25m, optimization.Suggestions.Single(item => item.LeaseId == ali.Id).AllocatedArea);
+        Assert.Equal(4.75m, optimization.Suggestions.Single(item => item.LeaseId == ayse.Id).AllocatedArea);
+    }
+
+    [Fact]
+    public async Task Preview_WithOptimize_ShouldReturnNull_WhenCountExceeded()
+    {
+        var unit = await SeedCapacityUnitAsync(70m, 10);
+        for (var i = 0; i < 4; i++)
+            await SeedAreaLeaseAsync(unit, 7m, 7m, LeaseAreaMode.Manual);
+
+        var preview = await CreatePlan().PreviewAsync(Plan(unit, 3) with { Optimize = true });
+
+        Assert.Contains(preview.Errors, error => error.Code == CapacityPlanCodes.CountExceeded);
+        Assert.Null(preview.Optimization);
+    }
+
+    [Fact]
+    public async Task Preview_ShouldWarnNormTargetShort_ForFutureDayWithWorstShortage()
+    {
+        var unit = await SeedCapacityUnitAsync(70m, 14);
+        var today = DateTime.Today;
+        for (var i = 0; i < 2; i++)
+            await SeedAreaLeaseAsync(unit, 7m, 5m, LeaseAreaMode.Automatic,
+                start: today.AddDays(-10), end: today.AddDays(365));
+        await SeedAreaLeaseAsync(unit, 20m, 20m, LeaseAreaMode.Manual, LeaseStatus.Draft,
+            today.AddDays(30), today.AddDays(365));
+
+        var preview = await CreatePlan().PreviewAsync(Plan(unit, 14));
+
+        var warning = Assert.Single(preview.Warnings, w => w.Code == CapacityPlanCodes.NormTargetShort);
+        Assert.Equal(40m, warning.RemainingArea);
+        Assert.Equal(55m, warning.NormTarget);
+        Assert.Equal(today.AddDays(30), warning.Day);
+        Assert.DoesNotContain(today.AddDays(30).ToString("dd.MM.yyyy"), warning.Message);
+    }
+
+    [Fact]
+    public async Task Preview_ShouldLeaveDayEmpty_WhenWarningComesFromToday()
+    {
+        var unit = await SeedCapacityUnitAsync(70m, 14);
+        for (var i = 0; i < 2; i++)
+            await SeedAreaLeaseAsync(unit, 30m, 30m, LeaseAreaMode.Manual);
+
+        var preview = await CreatePlan().PreviewAsync(Plan(unit, 14));
+
+        var warning = Assert.Single(preview.Warnings, w => w.Code == CapacityPlanCodes.NormTargetShort);
+        Assert.Null(warning.Day);
+    }
+
+    [Fact]
+    public async Task Preview_ShouldFillDayOnAreaOverflow_ForFutureLease()
+    {
+        var unit = await SeedCapacityUnitAsync(70m, 14);
+        var today = DateTime.Today;
+        for (var i = 0; i < 2; i++)
+            await SeedAreaLeaseAsync(unit, 20m, 20m, LeaseAreaMode.Manual,
+                start: today.AddDays(-10), end: today.AddDays(365));
+        await SeedAreaLeaseAsync(unit, 35m, 35m, LeaseAreaMode.Manual, LeaseStatus.Draft,
+            today.AddDays(30), today.AddDays(365));
+
+        var preview = await CreatePlan().PreviewAsync(Plan(unit, 14));
+
+        var error = Assert.Single(preview.Errors, e => e.Code == CapacityPlanCodes.AreaOverflow);
+        Assert.Equal(today.AddDays(30), error.Day);
     }
 }

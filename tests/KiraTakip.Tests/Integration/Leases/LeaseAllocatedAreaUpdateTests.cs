@@ -22,6 +22,7 @@ public class LeaseAllocatedAreaUpdateTests(DatabaseFixture fixture) : PropertyUn
             new UnitOfWork(Ctx),
             new TestOperationalPolicyProvider(new OperationalPolicySettings { LeaseMinimumUsageArea = minimum }),
             new DefaultAllocationSuggestionStrategy(),
+            new ProportionalReductionStrategy(),
             TimeProvider.System);
 
     private static UpdateAllocatedAreaInput Update(Lease lease, decimal area, LeaseAccessScopeInput? scope = null)
