@@ -2,7 +2,7 @@
 @using KiraTakip.Models.Enums
 @using KiraTakip.Web.Extensions
 @{
-    ViewData["Title"] = Model.IsEdit ? "Paylaşımlı Grubu Düzenle" : "Paylaşımlı Sözleşme Grubu";
+    ViewData["Title"] = Model.IsEdit ? "Paylaşımlı Grubu Düzenle" : "Yeni Sözleşme Başvurusu";
     ViewData["UseCentralFeedback"] = true;
     string writePermission = Model.IsEdit ? PermissionCatalog.Lease.UpdateGroup : PermissionCatalog.Lease.CreateGroup;
     string backUrl = Model.IsEdit
@@ -13,9 +13,14 @@
 <div class="max-w-[1000px] mx-auto">
     <div class="page-header">
         <a href="@backUrl" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← @(Model.IsEdit ? "Gruba Dön" : "Sözleşmeler")</a>
-        <div class="page-title">@(Model.IsEdit ? "Paylaşımlı Grubu Düzenle" : "Paylaşımlı Sözleşme Grubu")</div>
+        <div class="page-title">@(Model.IsEdit ? "Paylaşımlı Grubu Düzenle" : "Yeni Sözleşme Başvurusu")</div>
         <div class="page-subtitle">Aynı birimi paylaşan kiracılar için ortak tarihli sözleşmeler tek taslakta açılır; onaylanana kadar sözleşmeler aktifleşmez.</div>
     </div>
+
+    @if (!Model.IsEdit)
+    {
+        @await Html.PartialAsync("_LeaseCreateTypeSwitch")
+    }
 
     <div x-data="leaseGroupForm()" x-init="init()" x-cloak @@datechanged="onPickerChanged($event)">
         <form asp-action="@(Model.IsEdit ? "UpdateGroup" : "CreateGroup")" method="post" id="leaseGroupForm"

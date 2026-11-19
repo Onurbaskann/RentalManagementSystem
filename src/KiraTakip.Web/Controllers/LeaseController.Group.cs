@@ -18,10 +18,21 @@ public partial class LeaseController
 
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.Lease.Module)]
-    public async Task<IActionResult> CreateGroup()
+    public IActionResult CreateGroup()
+        => RedirectToAction(nameof(Create), new { tur = LeaseCreateTypeSwitchViewModel.SharedType });
+
+    private async Task<IActionResult> CreateGroupFormAsync(int? unitId, int? tenantId)
     {
         var viewModel = new LeaseGroupFormViewModel();
         await PopulateGroupCreateOptionsAsync(viewModel);
+        if (unitId.HasValue && viewModel.AvailableUnits.Any(unit => unit.Id == unitId.Value))
+            viewModel.UnitId = unitId;
+        if (tenantId.HasValue)
+        {
+            if (viewModel.Tenants.All(tenant => tenant.Id != tenantId.Value)) return NotFound();
+            viewModel.Members[0].TenantId = tenantId.Value;
+        }
+        await SetCreateTypeSwitchAsync(true, viewModel.UnitId, tenantId);
         return View(GroupFormView, viewModel);
     }
 
@@ -353,6 +364,7 @@ public partial class LeaseController
             new GetTenantsInput(accessScope.PropertyIds, accessScope.UnitIds));
         ViewBag.UnitAreas = System.Text.Json.JsonSerializer.Serialize(
             viewModel.AvailableUnits.ToDictionary(unit => unit.Id, unit => (double)unit.Area));
+        await SetCreateTypeSwitchAsync(true, viewModel.UnitId, null);
     }
 
     private async Task PopulateGroupEditOptionsAsync(LeaseGroupFormViewModel viewModel)

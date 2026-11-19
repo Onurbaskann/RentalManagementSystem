@@ -7,12 +7,12 @@
                 </div>
                 <div class="mb-4 rounded-lg border p-3 text-[13px]"
                      :class="Math.abs(remaining()) < 0.005 ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'">
-                    <span>Birim alanı (P): <strong x-text="`${fmt(unitArea())} m²`"></strong></span>
+                    <span>Birim alanı: <strong x-text="`${fmt(unitArea())} m²`"></strong></span>
                     <span class="mx-2">•</span>
-                    <span>Σ m²: <strong x-text="`${fmt(totalArea())} m²`"></strong></span>
+                    <span>Kiracılara dağıtılan: <strong x-text="`${fmt(totalArea())} m²`"></strong></span>
                     <span class="mx-2">•</span>
-                    <span>Fark: <strong x-text="`${fmt(remaining())} m²`"></strong></span>
-                    <div class="text-xs mt-1 opacity-80">Bilgi amaçlıdır; Σ m² = P kuralı kayıtta doğrulanır. En az 2 farklı kiracı gerekir.</div>
+                    <span>Kalan: <strong x-text="`${fmt(remaining())} m²`"></strong></span>
+                    <div class="text-xs mt-1 opacity-80">Kiracıların m² toplamı birim alanına eşit olmalı (kalan 0 m²). En az 2 farklı kiracı ekleyin.</div>
                 </div>
 
                 <template x-for="(m, mi) in members" :key="m.key">

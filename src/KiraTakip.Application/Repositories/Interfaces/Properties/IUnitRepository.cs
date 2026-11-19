@@ -36,6 +36,8 @@ public interface IUnitRepository : IRepositoryBase<Unit>
     void AddCapacityHistory(Unit unit, int capacity, DateTime effectiveFrom);
     Task AcquireCapacityLocksAsync(int unitId);
     Task AcquireGlobalCapacityLockExclusiveAsync();
+    Task AcquireGlobalCapacityLockSharedAsync();
+    Task ReloadAsync(Unit unit);
     Task<List<CapacityUnitMinimumRow>> GetCapacityUnitsWithOpenLeasesAsync(DateTime fromDate);
     Task<HashSet<int>> GetOpenLeaseUnitIdsAsync(IReadOnlyCollection<int> unitIds);
 }

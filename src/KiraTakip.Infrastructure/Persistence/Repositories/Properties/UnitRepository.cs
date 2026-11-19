@@ -411,15 +411,21 @@ public class UnitRepository(ApplicationDbContext ctx) : RepositoryBase<Unit>(ctx
         var unitRates = await _ctx.UnitRates.IgnoreQueryFilters().Where(rate => unitIds.Contains(rate.UnitId)).ToListAsync();
         var reservationRates = await _ctx.RezervasyonTarifeler.IgnoreQueryFilters()
             .Where(rate => rate.UnitId.HasValue && unitIds.Contains(rate.UnitId.Value)).ToListAsync();
+        var capacityHistories = await _ctx.UnitCapacityHistories.IgnoreQueryFilters()
+            .Where(history => unitIds.Contains(history.UnitId)).ToListAsync();
         _ctx.UnitRates.RemoveRange(unitRates);
         _ctx.RezervasyonTarifeler.RemoveRange(reservationRates);
+        _ctx.UnitCapacityHistories.RemoveRange(capacityHistories);
         _dbSet.RemoveRange(units);
     }
 
     public async Task RemoveWithRatesAsync(Unit unit)
     {
         var rates = await _ctx.UnitRates.Where(rate => rate.UnitId == unit.Id).ToListAsync();
+        var capacityHistories = await _ctx.UnitCapacityHistories.IgnoreQueryFilters()
+            .Where(history => history.UnitId == unit.Id).ToListAsync();
         _ctx.UnitRates.RemoveRange(rates);
+        _ctx.UnitCapacityHistories.RemoveRange(capacityHistories);
         _dbSet.Remove(unit);
     }
 
@@ -493,6 +499,15 @@ public class UnitRepository(ApplicationDbContext ctx) : RepositoryBase<Unit>(ctx
 
     public Task AcquireGlobalCapacityLockExclusiveAsync()
         => AcquireCapacityLocksCoreAsync(null);
+
+    public Task ReloadAsync(Unit unit) => _ctx.Entry(unit).ReloadAsync();
+
+    public Task AcquireGlobalCapacityLockSharedAsync()
+    {
+        if (_ctx.Database.CurrentTransaction == null)
+            throw new InvalidOperationException("Kontenjan kilidi aktif transaction gerektirir.");
+        return AcquireAppLockAsync("KiraTakip.Capacity.Global", "Shared");
+    }
 
     private async Task AcquireCapacityLocksCoreAsync(int? unitId)
     {

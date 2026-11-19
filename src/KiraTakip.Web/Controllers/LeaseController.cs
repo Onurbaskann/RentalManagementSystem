@@ -143,9 +143,16 @@ public partial class LeaseController(
     }
 
     [HttpGet]
-    [Authorize(Policy = PermissionCatalog.Lease.Create)]
-    public async Task<IActionResult> Create(int? unitId, int? tenantId)
+    [Authorize(Policy = PermissionCatalog.Lease.Module)]
+    public async Task<IActionResult> Create(int? unitId, int? tenantId, string? tur)
     {
+        var canCreate = await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Create);
+        var canCreateGroup = await permissionService.HasPermissionAsync(PermissionCatalog.Lease.CreateGroup);
+        if (!canCreate && !canCreateGroup) return Forbid();
+
+        if (canCreateGroup && (!canCreate || tur == LeaseCreateTypeSwitchViewModel.SharedType))
+            return await CreateGroupFormAsync(unitId, tenantId);
+
         var viewModel = new CreateLeaseViewModel
         {
             UnitId = unitId,
@@ -616,6 +623,17 @@ public partial class LeaseController(
         ViewBag.UnitAreas = System.Text.Json.JsonSerializer.Serialize(
             viewModel.AvailableUnits.ToDictionary(unit => unit.Id, unit => (double)unit.Area));
         ViewBag.LeaseMinimumUsageArea = operationalPolicyProvider.Current.LeaseMinimumUsageArea;
+        await SetCreateTypeSwitchAsync(false, viewModel.UnitId, viewModel.SourceTenantId);
+    }
+
+    private async Task SetCreateTypeSwitchAsync(bool isShared, int? unitId, int? tenantId)
+    {
+        ViewData[LeaseCreateTypeSwitchViewModel.ViewDataKey] = new LeaseCreateTypeSwitchViewModel(
+            await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Create),
+            await permissionService.HasPermissionAsync(PermissionCatalog.Lease.CreateGroup),
+            isShared,
+            unitId,
+            tenantId);
     }
 
 

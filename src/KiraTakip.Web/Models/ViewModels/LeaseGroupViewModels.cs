@@ -5,6 +5,18 @@ using KiraTakip.Models.Enums;
 
 namespace KiraTakip.Web.Models.ViewModels;
 
+public sealed record LeaseCreateTypeSwitchViewModel(
+    bool CanCreate,
+    bool CanCreateGroup,
+    bool IsShared,
+    int? UnitId,
+    int? TenantId)
+{
+    public const string ViewDataKey = "LeaseCreateTypeSwitch";
+    public const string SharedType = "paylasimli";
+    public bool IsVisible => CanCreate && CanCreateGroup;
+}
+
 public sealed class LeaseGroupMemberFormModel
 {
     public int? LeaseId { get; set; }

@@ -45,10 +45,10 @@ public class PropertyService(
         var details = await propertyRepository.GetDetailsAsync(input.PropertyId);
         if (details == null) return null;
 
-        // Units + LeaseHistory'deki tüm sözleşmeler tek seferde toplu (bulk) hesaplanır (N+1 sorgu
-        // önlenir, bkz. IStatisticsService.GetMonthlyAmountsAsync). LeaseId'ye göre dedupe edilir —
-        // bir birimin aktif sözleşmesi aynı zamanda LeaseHistory'de de göründüğü için aynı hesap
-        // tekrar yapılmaz.
+        // Units + LeaseHistory'deki tÃ¼m sÃ¶zleÅŸmeler tek seferde toplu (bulk) hesaplanÄ±r (N+1 sorgu
+        // Ã¶nlenir, bkz. IStatisticsService.GetMonthlyAmountsAsync). LeaseId'ye gÃ¶re dedupe edilir â€”
+        // bir birimin aktif sÃ¶zleÅŸmesi aynÄ± zamanda LeaseHistory'de de gÃ¶rÃ¼ndÃ¼ÄŸÃ¼ iÃ§in aynÄ± hesap
+        // tekrar yapÄ±lmaz.
         var leasesById = new Dictionary<int, Lease>();
 
         foreach (var unit in details.Units)
@@ -102,6 +102,7 @@ public class PropertyService(
     public async Task<CreatedPropertyDto> CreateAsync(CreatePropertyInput input)
     {
         var rentalModes = await ValidateDatabaseRulesAsync(input);
+        await AcquireCapacityLocksForCreateAsync(input, rentalModes);
         if (input.UnitStructure == UnitStructure.MultipleUnits)
         {
             for (var i = 0; i < input.Units.Count; i++)
@@ -139,7 +140,7 @@ public class PropertyService(
 
         if (property.UnitStructure == UnitStructure.SingleUnit)
         {
-            Guard.Against(!input.SingleUnitTypeId.HasValue, "Tek birim yapısı için birim türü zorunludur.");
+            Guard.Against(!input.SingleUnitTypeId.HasValue, "Tek birim yapÄ±sÄ± iÃ§in birim tÃ¼rÃ¼ zorunludur.");
 
             var singleCapacity = EffectiveSingleCapacity(input, rentalModes, null);
             var singleUnit = new Unit
@@ -181,7 +182,7 @@ public class PropertyService(
                 {
                     UnitNo = reservationInput.UnitNo,
                     Name = string.IsNullOrWhiteSpace(reservationInput.Name)
-                        ? "Rezervasyon Alanı"
+                        ? "Rezervasyon AlanÄ±"
                         : reservationInput.Name,
                     Area = reservationInput.Area,
                     Description = reservationInput.Description,
@@ -280,18 +281,18 @@ public class PropertyService(
     {
         var property = Guard.NotFound(
             await propertyRepository.GetWithUnitsTrackedAsync(input.PropertyId),
-            "Taşınmaz bulunamadı.",
+            "TaÅŸÄ±nmaz bulunamadÄ±.",
             "Property.NotFound");
         Guard.Forbidden(
             input.AccessiblePropertyIds != null && !input.AccessiblePropertyIds.Contains(property.Id),
-            "Bu taşınmaz üzerinde işlem yapma yetkiniz bulunmuyor.",
+            "Bu taÅŸÄ±nmaz Ã¼zerinde iÅŸlem yapma yetkiniz bulunmuyor.",
             "Property.OutOfScope");
 
         var structureChanged = property.UnitStructure != input.UnitStructure;
         Guard.InvalidField(
             structureChanged && !await propertyRepository.CanChangeUnitStructureAsync(property.Id),
             nameof(input.UnitStructure),
-            "Sözleşme, rezervasyon veya tahakkuk geçmişi bulunan taşınmazın birim yapısı değiştirilemez.",
+            "SÃ¶zleÅŸme, rezervasyon veya tahakkuk geÃ§miÅŸi bulunan taÅŸÄ±nmazÄ±n birim yapÄ±sÄ± deÄŸiÅŸtirilemez.",
             "Property.UnitStructureHasHistory");
 
         var rentalModes = await ValidateDatabaseRulesAsync(
@@ -321,7 +322,7 @@ public class PropertyService(
 
         if (property.UnitStructure == UnitStructure.SingleUnit)
         {
-            Guard.Against(!input.SingleUnitTypeId.HasValue, "Tek birim yapısı için birim türü zorunludur.");
+            Guard.Against(!input.SingleUnitTypeId.HasValue, "Tek birim yapÄ±sÄ± iÃ§in birim tÃ¼rÃ¼ zorunludur.");
 
             var unit = property.Units.SingleOrDefault();
             var isNew = unit == null;
@@ -389,7 +390,7 @@ public class PropertyService(
                 : null;
             Guard.Forbidden(
                 unitInput.Id.HasValue && unit == null,
-                "Gönderilen birim bu taşınmaza ait değil.",
+                "GÃ¶nderilen birim bu taÅŸÄ±nmaza ait deÄŸil.",
                 "Property.ForeignUnit");
             var isNew = unit == null;
             if (unit == null)
@@ -428,7 +429,7 @@ public class PropertyService(
                 : null;
             Guard.Forbidden(
                 reservationInput.Id.HasValue && unit == null,
-                "Gönderilen rezervasyon birimi bu taşınmaza ait değil.",
+                "GÃ¶nderilen rezervasyon birimi bu taÅŸÄ±nmaza ait deÄŸil.",
                 "Property.ForeignReservationUnit");
             if (unit == null)
             {
@@ -438,7 +439,7 @@ public class PropertyService(
 
             unit.UnitNo = reservationInput.UnitNo;
             unit.FloorNo = null;
-            unit.Name = reservationInput.Name ?? "Rezervasyon Alanı";
+            unit.Name = reservationInput.Name ?? "Rezervasyon AlanÄ±";
             unit.Area = reservationInput.Area;
             unit.Description = reservationInput.Description;
             unit.UnitTypeId = reservationInput.UnitTypeId!.Value;
@@ -452,13 +453,13 @@ public class PropertyService(
         Guard.InvalidField(
             input.PropertyTypeId is null or <= 0,
             nameof(input.PropertyTypeId),
-            "Taşınmaz tipi zorunludur.");
+            "TaÅŸÄ±nmaz tipi zorunludur.");
 
         var support = await propertyTypeRepository.GetStructureSupportAsync(input.PropertyTypeId!.Value);
         Guard.InvalidField(
             support == null,
             nameof(input.PropertyTypeId),
-            "Seçilen taşınmaz tipi aktif değil veya bulunamadı.",
+            "SeÃ§ilen taÅŸÄ±nmaz tipi aktif deÄŸil veya bulunamadÄ±.",
             "Property.PropertyTypeUnavailable");
         Guard.InvalidField(
             !PropertyStructurePolicy.SupportsUnitStructure(
@@ -466,7 +467,7 @@ public class PropertyService(
                 support!.SupportsSingleUnit,
                 support!.SupportsMultipleUnits),
             nameof(input.UnitStructure),
-            "Seçilen taşınmaz tipi bu birim yapısına izin vermiyor.",
+            "SeÃ§ilen taÅŸÄ±nmaz tipi bu birim yapÄ±sÄ±na izin vermiyor.",
             "Property.UnsupportedUnitStructure");
 
         var normalIds = input.Units.Where(unit => unit.UnitTypeId.HasValue)
@@ -485,14 +486,14 @@ public class PropertyService(
             Guard.InvalidField(
                 !input.SingleUnitTypeId.HasValue || !usageMap.ContainsKey(input.SingleUnitTypeId.Value),
                 nameof(input.SingleUnitTypeId),
-                "Seçilen birim türü aktif değil veya bulunamadı.",
+                "SeÃ§ilen birim tÃ¼rÃ¼ aktif deÄŸil veya bulunamadÄ±.",
                 "Property.UnitTypeUnavailable");
             Guard.InvalidField(
                 rentalModes[input.SingleUnitTypeId!.Value] == UnitRentalMode.CapacityBased
                     && input.SingleUnitCapacity is null or <= 0
                     && existingUnits?.Values.SingleOrDefault()?.Capacity is null,
                 nameof(input.SingleUnitCapacity),
-                "Kontenjan bazlı birim türünde kontenjan (K) girilmeli ve 0'dan büyük olmalıdır.",
+                "Kontenjan bazlÄ± birim tÃ¼rÃ¼nde kontenjan (K) girilmeli ve 0'dan bÃ¼yÃ¼k olmalÄ±dÄ±r.",
                 "Property.CapacityRequired");
             return rentalModes;
         }
@@ -500,12 +501,12 @@ public class PropertyService(
         Guard.InvalidField(
             normalIds.Any(id => !usageMap.TryGetValue(id, out var usage) || !PropertyStructurePolicy.IsValidNormalUnitUsage(usage)),
             nameof(input.Units),
-            "Birimler için aktif ve rezervasyon dışı bir birim türü seçilmelidir.",
+            "Birimler iÃ§in aktif ve rezervasyon dÄ±ÅŸÄ± bir birim tÃ¼rÃ¼ seÃ§ilmelidir.",
             "Property.InvalidNormalUnitType");
         Guard.InvalidField(
             reservationIds.Any(id => !usageMap.TryGetValue(id, out var usage) || !PropertyStructurePolicy.IsValidReservationUnitUsage(usage)),
             nameof(input.ReservationAreas),
-            "Rezervasyon alanları için aktif bir rezervasyon birim türü seçilmelidir.",
+            "Rezervasyon alanlarÄ± iÃ§in aktif bir rezervasyon birim tÃ¼rÃ¼ seÃ§ilmelidir.",
             "Property.InvalidReservationUnitType");
 
         for (var i = 0; i < input.Units.Count; i++)
@@ -515,12 +516,74 @@ public class PropertyService(
                 rentalModes[unit.UnitTypeId!.Value] == UnitRentalMode.CapacityBased && unit.Capacity is null or <= 0
                     && !HasExistingCapacity(existingUnits, unit.Id),
                 $"Units[{i}].{nameof(unit.Capacity)}",
-                "Kontenjan bazlı birim türünde kontenjan (K) girilmeli ve 0'dan büyük olmalıdır.",
+                "Kontenjan bazlÄ± birim tÃ¼rÃ¼nde kontenjan (K) girilmeli ve 0'dan bÃ¼yÃ¼k olmalÄ±dÄ±r.",
                 "Property.CapacityRequired");
         }
 
         return rentalModes;
     }
+
+    private static bool IsCapacityType(int? unitTypeId, IReadOnlyDictionary<int, UnitRentalMode> rentalModes)
+        => unitTypeId.HasValue
+            && rentalModes.TryGetValue(unitTypeId.Value, out var mode)
+            && mode == UnitRentalMode.CapacityBased;
+
+    private async Task AcquireCapacityLocksForCreateAsync(
+        CreatePropertyInput input,
+        IReadOnlyDictionary<int, UnitRentalMode> rentalModes)
+    {
+        var usesCapacity = input.UnitStructure == UnitStructure.MultipleUnits
+            ? input.Units.Any(unit => IsCapacityType(unit.UnitTypeId, rentalModes))
+            : IsCapacityType(input.SingleUnitTypeId, rentalModes);
+        if (usesCapacity)
+            await unitRepository.AcquireGlobalCapacityLockSharedAsync();
+    }
+
+    private async Task AcquireCapacityLocksForUpdateAsync(
+        UpdatePropertyInput input,
+        IReadOnlyDictionary<int, Unit> existing,
+        IReadOnlyDictionary<int, UnitRentalMode> rentalModes)
+    {
+        var usesCapacity = existing.Values.Any(unit => unit.Capacity.HasValue);
+        var changedCapacityUnitIds = new List<int>();
+
+        if (input.UnitStructure == UnitStructure.SingleUnit)
+        {
+            usesCapacity |= IsCapacityType(input.SingleUnitTypeId, rentalModes);
+            var single = existing.Values.SingleOrDefault();
+            var singleArea = PropertyStructurePolicy.CalculateSingleUnitArea(input.ClosedArea, input.OpenArea);
+            if (single != null && TouchesCapacity(single, singleArea, input.SingleUnitTypeId, rentalModes))
+                changedCapacityUnitIds.Add(single.Id);
+        }
+        else
+        {
+            foreach (var unitInput in input.Units)
+            {
+                usesCapacity |= IsCapacityType(unitInput.UnitTypeId, rentalModes);
+                if (unitInput.Id is { } id
+                    && existing.TryGetValue(id, out var entity)
+                    && TouchesCapacity(entity, unitInput.Area, unitInput.UnitTypeId, rentalModes))
+                    changedCapacityUnitIds.Add(id);
+            }
+        }
+
+        if (!usesCapacity) return;
+        await unitRepository.AcquireGlobalCapacityLockSharedAsync();
+        foreach (var unitId in changedCapacityUnitIds.Distinct().Order())
+        {
+            await unitRepository.AcquireCapacityLocksAsync(unitId);
+            await unitRepository.ReloadAsync(existing[unitId]);
+        }
+    }
+
+    private static bool TouchesCapacity(
+        Unit unit,
+        decimal newArea,
+        int? newUnitTypeId,
+        IReadOnlyDictionary<int, UnitRentalMode> rentalModes)
+        => unit.Capacity != null
+            ? unit.Area != newArea || unit.UnitTypeId != newUnitTypeId
+            : unit.UnitTypeId != newUnitTypeId && IsCapacityType(newUnitTypeId, rentalModes);
 
     private static bool HasExistingCapacity(IReadOnlyDictionary<int, Unit>? existingUnits, int? unitId)
         => unitId.HasValue
@@ -556,7 +619,7 @@ public class PropertyService(
         Guard.InvalidField(
             submitted.HasValue && submitted.Value != current,
             field,
-            "Kontenjan, Kontenjanı değiştir ekranından güncellenir.",
+            "Kontenjan, KontenjanÄ± deÄŸiÅŸtir ekranÄ±ndan gÃ¼ncellenir.",
             "Property.CapacityChangeNotAllowed");
         return current;
     }
@@ -575,6 +638,7 @@ public class PropertyService(
         var existing = structureChanged
             ? new Dictionary<int, Unit>()
             : property.Units.ToDictionary(unit => unit.Id);
+        await AcquireCapacityLocksForUpdateAsync(input, existing, rentalModes);
         var openLeaseUnitIds = await unitRepository.GetOpenLeaseUnitIdsAsync(existing.Keys.ToList());
 
         if (input.UnitStructure == UnitStructure.SingleUnit)
@@ -585,17 +649,17 @@ public class PropertyService(
                 Guard.InvalidField(
                     property.ClosedArea != input.ClosedArea,
                     nameof(input.ClosedArea),
-                    "Açık sözleşmesi bulunan birimin alanı değiştirilemez.",
+                    "AÃ§Ä±k sÃ¶zleÅŸmesi bulunan birimin alanÄ± deÄŸiÅŸtirilemez.",
                     "Property.UnitAreaLocked");
                 Guard.InvalidField(
                     property.OpenArea != input.OpenArea,
                     nameof(input.OpenArea),
-                    "Açık sözleşmesi bulunan birimin alanı değiştirilemez.",
+                    "AÃ§Ä±k sÃ¶zleÅŸmesi bulunan birimin alanÄ± deÄŸiÅŸtirilemez.",
                     "Property.UnitAreaLocked");
                 Guard.InvalidField(
                     single.UnitTypeId != input.SingleUnitTypeId,
                     nameof(input.SingleUnitTypeId),
-                    "Açık sözleşmesi bulunan birimin türü değiştirilemez.",
+                    "AÃ§Ä±k sÃ¶zleÅŸmesi bulunan birimin tÃ¼rÃ¼ deÄŸiÅŸtirilemez.",
                     "Property.UnitTypeLocked");
             }
 
@@ -626,12 +690,12 @@ public class PropertyService(
                 Guard.InvalidField(
                     entity.Area != unitInput.Area,
                     $"Units[{i}].{nameof(unitInput.Area)}",
-                    "Açık sözleşmesi bulunan birimin alanı değiştirilemez.",
+                    "AÃ§Ä±k sÃ¶zleÅŸmesi bulunan birimin alanÄ± deÄŸiÅŸtirilemez.",
                     "Property.UnitAreaLocked");
                 Guard.InvalidField(
                     entity.UnitTypeId != unitInput.UnitTypeId,
                     $"Units[{i}].{nameof(unitInput.UnitTypeId)}",
-                    "Açık sözleşmesi bulunan birimin türü değiştirilemez.",
+                    "AÃ§Ä±k sÃ¶zleÅŸmesi bulunan birimin tÃ¼rÃ¼ deÄŸiÅŸtirilemez.",
                     "Property.UnitTypeLocked");
             }
 
@@ -656,7 +720,7 @@ public class PropertyService(
         Guard.InvalidField(
             capacity > maximum,
             field,
-            $"Kontenjan çok yüksek. İzin verilen en yüksek kontenjan: {maximum}.",
+            $"Kontenjan Ã§ok yÃ¼ksek. Ä°zin verilen en yÃ¼ksek kontenjan: {maximum}.",
             "Property.CapacityAboveMaximum");
     }
 
@@ -678,7 +742,7 @@ public class PropertyService(
             UnitCapacityPolicy.GetHardViolations(capacity, newArea, occupants, today, rangeEnd)
                 .Contains(CapacityHardViolation.AreaExceeded),
             areaField,
-            "Birim alanı, açık sözleşmelerin fiziksel alanları toplamının altına düşürülemez.",
+            "Birim alanÄ±, aÃ§Ä±k sÃ¶zleÅŸmelerin fiziksel alanlarÄ± toplamÄ±nÄ±n altÄ±na dÃ¼ÅŸÃ¼rÃ¼lemez.",
             "Property.CapacityAreaExceeded");
     }
 
@@ -690,7 +754,7 @@ public class PropertyService(
             Guard.Forbidden(
                 !existing.TryGetValue(unit.Id!.Value, out var entity)
                     || entity.UnitType.Usage == UnitTypeUsage.Reservable,
-                "Gönderilen birim kaydı bu taşınmaza veya bölüme ait değil.",
+                "GÃ¶nderilen birim kaydÄ± bu taÅŸÄ±nmaza veya bÃ¶lÃ¼me ait deÄŸil.",
                 "Property.InvalidUnitOwnership");
         }
 
@@ -699,7 +763,7 @@ public class PropertyService(
             Guard.Forbidden(
                 !existing.TryGetValue(area.Id!.Value, out var entity)
                     || entity.UnitType.Usage != UnitTypeUsage.Reservable,
-                "Gönderilen rezervasyon kaydı bu taşınmaza veya bölüme ait değil.",
+                "GÃ¶nderilen rezervasyon kaydÄ± bu taÅŸÄ±nmaza veya bÃ¶lÃ¼me ait deÄŸil.",
                 "Property.InvalidReservationOwnership");
         }
 
@@ -719,7 +783,7 @@ public class PropertyService(
             Guard.InvalidField(
                 await unitRepository.HasHistoricalDependencyAsync(unit.Id),
                 isReservationUnit ? nameof(input.ReservationAreas) : nameof(input.Units),
-                $"'{unit.Name}' biriminin işlem geçmişi bulunduğu için silinemez.",
+                $"'{unit.Name}' biriminin iÅŸlem geÃ§miÅŸi bulunduÄŸu iÃ§in silinemez.",
                 isReservationUnit
                     ? "Property.ReservationUnitHasHistory"
                     : "Property.UnitHasHistory");
