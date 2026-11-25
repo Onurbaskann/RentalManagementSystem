@@ -134,4 +134,37 @@ public sealed class ChargeTypeDefaultRoutingTests : IDisposable
         _context.ChangeTracker.Clear();
         Assert.True((await _context.ChargeTypes.SingleAsync(type => type.Id == systemChargeType.Id)).IsActive);
     }
+
+    [Fact]
+    public async Task Update_ShouldKeepSystemChargeTypeCodeWhenRenamed()
+    {
+        var originalCode = $"SYS_{Guid.NewGuid():N}";
+        var systemChargeType = new ChargeType
+        {
+            Name = $"Sistem Borç Tipi {Guid.NewGuid():N}",
+            Code = originalCode,
+            Behavior = ChargeTypeBehavior.MonthlyFixed,
+            SortOrder = 996,
+            IsSystem = true,
+            IsActive = true
+        };
+        _context.ChargeTypes.Add(systemChargeType);
+        await _context.SaveChangesAsync();
+
+        var service = new ChargeTypeService(
+            new ChargeTypeRepository(_context),
+            new UnitTypeRepository(_context),
+            new PaymentStoreRoutingRepository(_context),
+            new UnitOfWork(_context));
+        var newName = $"Yeni Ad {Guid.NewGuid():N}";
+
+        await service.UpdateAsync(
+            systemChargeType.Id,
+            new EditInput(newName, systemChargeType.Behavior, systemChargeType.SortOrder, true));
+
+        _context.ChangeTracker.Clear();
+        var updated = await _context.ChargeTypes.SingleAsync(type => type.Id == systemChargeType.Id);
+        Assert.Equal(newName, updated.Name);
+        Assert.Equal(originalCode, updated.Code);
+    }
 }

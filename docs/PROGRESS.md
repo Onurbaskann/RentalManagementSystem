@@ -4,6 +4,8 @@
 > ilgili phase/refactor dosyalarında bulunur. Tarihsel bir karar gerektiğinde
 > [`PROGRESS-HISTORY.md`](PROGRESS-HISTORY.md) yalnız ilgili bölüm için okunur; dosya artık güncellenmez.
 
+> **Yeni çekirdek iş (2026-11-24) — Alan hiyerarşisi:** Taşınmaz/birim ve kontenjan yapısı serbest derinlikli alan ağacına (parent-child) taşınacak. **F0 (spec) sürüyor**, açık noktalar A1–A9 kullanıcıyla kapatılacak; kod yok. Doküman: [`refactor-alan-hiyerarsisi.md`](refactor-alan-hiyerarsisi.md).
+
 > **Sıradaki oturumun işi (2026-11-17):** Paylaşımlı ve açık birim [uygulama planı](refactor-paylasimli-acik-birim-uygulama-plani.md) onaylandı; A1–A6 yazıldığı gibi geçerli. **F1 tamamlandı** (domain politikaları + ondalık ayar altyapısı; commit `d787d45`). **F2 tamamlandı** (şema + `AddSharedAndCapacityUnits`; commit `cae168a`; migration production'a henüz uygulanmadı, F3 ile birlikte uygulanmalı). **F3 tamamlandı** (birim anlık bilgisi, taslak çakışması, görev ayrılığı kaldırıldı; commit `7f7fb5e`). **F4 tamamlandı** (birim türü alt kırılımı ve özellik kilidi, kontenjan girişi/kuralları/tarihçe, alan ve tür kilidi; tek birimli taşınmaz da kontenjan bazlı olabiliyor; commit `81b527d`). **F5 tamamlandı** (tahakkuk/istatistik kiralanan m²'yi kullanıyor; commit `246fffe`). **Unique index kaldırıldı:**
 - migration `RemoveLeaseOpenApplicationUniqueIndex`; test DB'ye uygulandı, production'a uygulanmadı
 - normal birimde tek açık başvuru kuralı serviste duruyor

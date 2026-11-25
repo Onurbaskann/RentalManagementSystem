@@ -71,7 +71,8 @@ public class ChargeTypeService(
         }
 
         entity.Name = input.Name;
-        entity.Code = code;
+        if (!entity.IsSystem)
+            entity.Code = code;
         entity.Behavior = input.Behavior;
         entity.SortOrder = input.SortOrder;
         entity.IsActive = input.IsActive;
