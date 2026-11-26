@@ -28,7 +28,7 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
         var suffix = Guid.NewGuid().ToString("N")[..8];
         // Bu değişkenler ve aşağıdaki seed bloğu try içinde: seed sırasında bir hata olursa (ör. bir
         // unique index çakışması) o ana kadar commit edilmiş kayıtlar yine de finally'de temizlenir —
-        // seed try'ın DIŞINDAyken bu blok gerçek KiraTakipDb_Test'te kalıcı çöp bırakmıştı.
+        // seed try'ın DIŞINDAyken bu blok gerçek DBTeknoPark_Test'te kalıcı çöp bırakmıştı.
         int chargeId = 0;
         int lineItemId = 0;
         int firstPaymentId = 0;

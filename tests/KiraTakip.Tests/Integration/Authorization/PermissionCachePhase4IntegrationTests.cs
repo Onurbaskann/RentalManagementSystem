@@ -84,7 +84,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
 
     public void Dispose()
     {
-        // Cleanup test data from KiraTakipDb_Test
+        // Cleanup test data from DBTeknoPark_Test
         try
         {
             using var context = _fixture.CreateContext();

@@ -25,10 +25,10 @@ public class DatabaseFixture : IDisposable
         var configuredConnectionString = config.GetConnectionString("DefaultConnection")!;
         var connectionBuilder = new SqlConnectionStringBuilder(configuredConnectionString);
         var databaseName = connectionBuilder.InitialCatalog;
-        if (!string.Equals(databaseName, "KiraTakipDb_Test", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(databaseName, "DBTeknoPark_Test", StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
-                $"Entegrasyon testleri yalnızca KiraTakipDb_Test veritabanında çalıştırılabilir. Yapılandırılan veritabanı: {databaseName}");
+                $"Entegrasyon testleri yalnızca DBTeknoPark_Test veritabanında çalıştırılabilir. Yapılandırılan veritabanı: {databaseName}");
         }
 
         // Uzak test SQL Server'ın eski TLS yapılandırması yalnız test çalıştırıcısında
@@ -52,7 +52,7 @@ public class DatabaseFixture : IDisposable
         if (pendingMigrations.Count > 0)
         {
             throw new InvalidOperationException(
-                $"Test veritabanı (KiraTakipDb_Test) güncel değil — bekleyen migration(lar): " +
+                $"Test veritabanı (DBTeknoPark_Test) güncel değil — bekleyen migration(lar): " +
                 $"{string.Join(", ", pendingMigrations)}. Testleri çalıştırmadan önce şu komutla güncelleyin: " +
                 "dotnet ef database update --project src/KiraTakip.Infrastructure/KiraTakip.Infrastructure.csproj " +
                 "--startup-project src/KiraTakip.Web/KiraTakip.Web.csproj");

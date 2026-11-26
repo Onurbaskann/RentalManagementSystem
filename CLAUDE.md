@@ -3,6 +3,11 @@
 > Bu dosya her session başında **otomatik** yüklenir. Token tasarrufu için
 > kısa tutulmuştur. Detaylar `docs/` altındadır.
 
+> **alan-hiyerarsisi dalı — veritabanı kuralı (Onur, 2026-11-26):** Bu klasörün (`KiraTakip-alan`, worktree) tek veritabanı `DBTeknoPark_Test`.
+> Migration, `dotnet ef database update`, uygulama ve testler yalnız bu DB ile çalışır. Ana klasörün (`KiraTakip`, `main`) test DB'si
+> Onur'un sunum/günlük kullanımı içindir; bu klasörden ona hiçbir şekilde bağlanılmaz, connection string elle değiştirilmez.
+> Kilit: `DatabaseFixture.cs` ve `SeedingExtensions.cs` başka DB adında hata verir. Dal main'e birleşirken bu not ve kilit geri alınır.
+
 ## Proje Özeti
 
 KiraTakip — taşınmaz/birim kira ve rezervasyon takip uygulaması.
@@ -67,7 +72,7 @@ dotnet run --project src/KiraTakip.Web/KiraTakip.Web.csproj
 
 # Testler
 dotnet test tests\KiraTakip.Tests\KiraTakip.Tests.csproj
-# Not: Testler artık KiraTakipDb_Test şemasını KENDİLİĞİNDEN migrate ETMEZ (tests/KiraTakip.Tests/Infrastructure/DatabaseFixture.cs).
+# Not: Testler artık DBTeknoPark_Test şemasını KENDİLİĞİNDEN migrate ETMEZ (tests/KiraTakip.Tests/Infrastructure/DatabaseFixture.cs).
 # Yeni migration eklediyse çalıştırmadan önce "DB güncelle" komutunu elle koş; entity model'de migration'a
 # dökülmemiş bir değişiklik varsa testler net bir InvalidOperationException ile erken durur.
 

@@ -111,7 +111,7 @@ public class ChargeLineItemPaymentSchemaTests : IDisposable
         // try/finally İÇİNDE: seed sırasında bir hata olursa (ör. o ana kadar oluşan kayıtlar)
         // yine de temizlenir — daha önce seed try'ın DIŞINDAydı ve tam bu yüzden bir seferinde
         // (ChargeNo henüz zorunlu değilken ekli test verisiyle çakışınca) taşınmaz/birim/kiracı
-        // kayıtları gerçek KiraTakipDb_Test'te kalıcı çöp olarak kalmıştı.
+        // kayıtları gerçek DBTeknoPark_Test'te kalıcı çöp olarak kalmıştı.
         var suffix = Guid.NewGuid().ToString("N")[..8];
         int firstTenantId = 0, secondTenantId = 0, firstLineItemId = 0, secondLineItemId = 0;
         int firstChargeId = 0, secondChargeId = 0, propertyId = 0, unitTypeId = 0, unitId = 0, chargeTypeId = 0;

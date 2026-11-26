@@ -40,9 +40,9 @@ namespace KiraTakip.Web.Hosting
                         {
                             var builder = new SqlConnectionStringBuilder(connectionString);
                             var databaseName = builder.InitialCatalog;
-                            if (string.Equals(databaseName, "KiraTakipDb", StringComparison.OrdinalIgnoreCase))
+                            if (!string.Equals(databaseName, "DBTeknoPark_Test", StringComparison.OrdinalIgnoreCase))
                             {
-                                throw new InvalidOperationException("Kritik Güvenlik Uyarısı: Üretim (Production) veritabanı ('KiraTakipDb') üzerinde veri temizleme ve seed işlemi gerçekleştirilemez!");
+                                throw new InvalidOperationException($"alan-hiyerarsisi dalında seed yalnız DBTeknoPark_Test veritabanında çalışır. Yapılandırılan veritabanı: {databaseName}");
                             }
                         }
                         catch (ArgumentException)
