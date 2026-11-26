@@ -1108,7 +1108,7 @@ public class UserPermissionCacheTransactionIntegrationTests : IDisposable
     public async Task TenantUserService_EditTenantUserAsync_WhenRoleChanges_InvalidatesCache_AfterCommit()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -1199,8 +1199,10 @@ public class UserPermissionCacheTransactionIntegrationTests : IDisposable
             _context.UserRoller.RemoveRange(_context.UserRoller.Where(ur => ur.UserId == targetUser.Id));
             _context.Users.RemoveRange(actor, targetUser);
             _context.Roller.RemoveRange(role1, role2);
+            var tenantCategoryIds = new List<int> { tenant.TenantCategoryId };
             _context.Tenants.Remove(tenant);
             await _context.SaveChangesAsync();
+            await TestTenantCategory.DeleteAsync(_context, tenantCategoryIds);
         }
     }
 
@@ -1208,7 +1210,7 @@ public class UserPermissionCacheTransactionIntegrationTests : IDisposable
     public async Task TenantUserService_EditTenantUserAsync_WhenRoleUnchanged_DoesNotInvalidateCache()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -1289,8 +1291,10 @@ public class UserPermissionCacheTransactionIntegrationTests : IDisposable
             _context.UserRoller.RemoveRange(_context.UserRoller.Where(ur => ur.UserId == targetUser.Id));
             _context.Users.RemoveRange(actor, targetUser);
             _context.Roller.Remove(role1);
+            var tenantCategoryIds = new List<int> { tenant.TenantCategoryId };
             _context.Tenants.Remove(tenant);
             await _context.SaveChangesAsync();
+            await TestTenantCategory.DeleteAsync(_context, tenantCategoryIds);
         }
     }
 }

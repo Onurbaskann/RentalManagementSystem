@@ -90,11 +90,13 @@ public class TenantProfileArchitectureTests : IDisposable
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var firstTenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"TPR1-{suffix}",
             Name = $"Birinci Profil Kiracısı {suffix}"
         };
         var secondTenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"TPR2-{suffix}",
             Name = $"İkinci Profil Kiracısı {suffix}"
         };

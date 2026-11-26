@@ -109,7 +109,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task TenantUser_CannotBeAssignedInternalRole_ThrowsValidationException()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -144,8 +144,8 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task TenantUser_CannotBeAssignedOtherTenantRole_ThrowsValidationException()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenantA = new Tenant { TenantNo = $"TA-{suffix}", Name = $"TenantA-{suffix}" };
-        var tenantB = new Tenant { TenantNo = $"TB-{suffix}", Name = $"TenantB-{suffix}" };
+        var tenantA = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"TA-{suffix}", Name = $"TenantA-{suffix}" };
+        var tenantB = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"TB-{suffix}", Name = $"TenantB-{suffix}" };
         _context.Tenants.AddRange(tenantA, tenantB);
         await _context.SaveChangesAsync();
 
@@ -181,7 +181,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task TenantUser_CannotAssignKiraciYoneticisiRole_ThrowsForbiddenException()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -227,7 +227,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task InternalUser_CanAssignKiraciYoneticisiRole_Succeeds()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -288,7 +288,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task InternalUser_WithInvitationPermission_CanAssignKiraciYoneticisiForInvitation()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
         var internalActor = new ApplicationUser
@@ -378,7 +378,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task RoleService_TenantRole_WithInternalPermissions_ThrowsWithoutModifyingDatabase()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -427,7 +427,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task TenantUserService_GetInviteDataAsync_ForTenantSuperAdmin_HidesKiraciYoneticisi()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -516,7 +516,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task TenantUserService_SendInvitationAsync_TenantActor_InvitingKiraciYoneticisi_ThrowsForbidden()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -574,7 +574,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task TenantUserService_EditTenantUserAsync_WithoutRoleChange_PreservesExistingRole()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -660,7 +660,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task InternalUser_WithoutEditPermission_CannotAssignKiraciYoneticisiRole_ThrowsForbidden()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -708,7 +708,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task ActorValidation_NullOrWhitespaceActor_ThrowsValidationException(string? actorId)
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -746,7 +746,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task ActorValidation_NotFoundActor_ThrowsNotFoundException(string actorId)
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -782,7 +782,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task TenantUserService_GetEditRoleOptionsAsync_AuthorizedInternalGetsKiraciYoneticisi()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -868,7 +868,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task TenantUserService_TenantActor_CannotSeeOrChangeExistingKiraciYoneticisiRole()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -964,7 +964,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task TenantUserService_EditTenantUserAsync_AuthorizedInternalCanPromoteToKiraciYoneticisi()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -1062,7 +1062,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task TenantUserService_EditTenantUserAsync_UnauthorizedInternalCannotPromoteToKiraciYoneticisi()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -1143,7 +1143,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task TenantUserService_EditTenantUserAsync_InvalidRole_ThrowsBusinessValidationException_AndDoesNotMutate()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -1239,9 +1239,11 @@ public class RoleAssignmentSecurityTests : IDisposable
             _context.Users.RemoveRange(uList);
             var rList = await _context.Roller.Where(r => r.Id == initialRole.Id).ToListAsync();
             _context.Roller.RemoveRange(rList);
+            var tenantCategoryIds = await TestTenantCategory.IdsOfAsync(_context, new[] { tenant.Id });
             var tList = await _context.Tenants.Where(t => t.Id == tenant.Id).ToListAsync();
             _context.Tenants.RemoveRange(tList);
             await _context.SaveChangesAsync();
+            await TestTenantCategory.DeleteAsync(_context, tenantCategoryIds);
         }
     }
 
@@ -1249,7 +1251,7 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task TenantUserService_SendInvitationAsync_UnauthorizedInternalCannotInviteKiraciYoneticisi()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync();
 
@@ -1306,8 +1308,8 @@ public class RoleAssignmentSecurityTests : IDisposable
     public async Task InvitationService_AcceptAsync_WithInactiveOrDeletedOrMismatchedRole_DoesNotCreateUser()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenantA = new Tenant { TenantNo = $"TA-{suffix}", Name = $"TenantA-{suffix}" };
-        var tenantB = new Tenant { TenantNo = $"TB-{suffix}", Name = $"TenantB-{suffix}" };
+        var tenantA = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"TA-{suffix}", Name = $"TenantA-{suffix}" };
+        var tenantB = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"TB-{suffix}", Name = $"TenantB-{suffix}" };
         _context.Tenants.AddRange(tenantA, tenantB);
         await _context.SaveChangesAsync();
 
@@ -1429,7 +1431,7 @@ public class InvitationTransactionTests
     {
         await using var context = _fixture.CreateContext();
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"T-{suffix}", Name = $"Tenant-{suffix}" };
         context.Tenants.Add(tenant);
         await context.SaveChangesAsync();
         var tenantInviter = new ApplicationUser
@@ -1517,8 +1519,10 @@ public class InvitationTransactionTests
                 .SingleAsync(item => item.Id == tenant.Id);
             context.Roller.Remove(storedRole);
             context.Users.Remove(storedInviter);
+            var tenantCategoryIds = new List<int> { storedTenant.TenantCategoryId };
             context.Tenants.Remove(storedTenant);
             await context.SaveChangesAsync();
+            await TestTenantCategory.DeleteAsync(context, tenantCategoryIds);
         }
     }
 }

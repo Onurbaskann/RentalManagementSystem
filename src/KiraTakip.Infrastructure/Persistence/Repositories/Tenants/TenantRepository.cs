@@ -194,7 +194,7 @@ public class TenantRepository(ApplicationDbContext context)
     public Task<int?> GetCategoryIdAsync(int tenantId)
         => _dbSet.AsNoTracking()
             .Where(tenant => tenant.Id == tenantId)
-            .Select(tenant => tenant.TenantCategoryId)
+            .Select(tenant => (int?)tenant.TenantCategoryId)
             .FirstOrDefaultAsync();
 
     public async Task<bool> IsInactiveAsync(int tenantId, CancellationToken ct = default)

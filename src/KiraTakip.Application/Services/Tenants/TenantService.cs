@@ -203,11 +203,9 @@ public class TenantService(
     public Task<bool> IsInactiveAsync(CheckTenantInactiveInput input, CancellationToken ct = default)
         => tenantRepository.IsInactiveAsync(input.TenantId, ct);
 
-    private async Task EnsureClassificationAsync(int? tenantCategoryId, int? sectorId)
+    private async Task EnsureClassificationAsync(int tenantCategoryId, int? sectorId)
     {
-        var tenantCategory = tenantCategoryId.HasValue
-            ? await categoryRepository.GetByIdAndTipiAsync(tenantCategoryId.Value, CategoryType.Tenant)
-            : null;
+        var tenantCategory = await categoryRepository.GetByIdAndTipiAsync(tenantCategoryId, CategoryType.Tenant);
         Guard.InvalidField(
             tenantCategory == null || !tenantCategory.IsActive,
             nameof(CreateTenantInput.TenantCategoryId),

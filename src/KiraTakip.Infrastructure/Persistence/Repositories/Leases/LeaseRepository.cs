@@ -460,7 +460,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             .Select(s => new { s.Id, s.Unit.PropertyId, s.Tenant.TenantCategoryId })
             .ToListAsync();
 
-        return rows.ToDictionary(r => r.Id, r => (r.PropertyId, r.TenantCategoryId));
+        return rows.ToDictionary(r => r.Id, r => (r.PropertyId, (int?)r.TenantCategoryId));
     }
 
     public async Task<List<LeaseDropdownDto>> GetActiveDropdownAsync(

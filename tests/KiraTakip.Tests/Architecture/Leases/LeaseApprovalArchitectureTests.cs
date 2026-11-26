@@ -128,7 +128,7 @@ public class LeaseApprovalDatabaseTests : IDisposable
             Code = $"ONAY_{suffix}",
             Usage = UnitTypeUsage.Rentable
         };
-        var tenant = new Tenant { Name = $"Onay Kiracı {suffix}", TenantNo = $"ON{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), Name = $"Onay Kiracı {suffix}", TenantNo = $"ON{suffix}" };
         var actor = new ApplicationUser
         {
             Id = Guid.NewGuid().ToString(),

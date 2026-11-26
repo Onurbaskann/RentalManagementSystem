@@ -51,8 +51,8 @@ public class TenantChargeAuthorizationTests : IDisposable
             Code = $"AUTH_{suffix}",
             Usage = UnitTypeUsage.Rentable
         };
-        var tenant = new Tenant { Name = $"Yetki Testi Kiracı {suffix}", TenantNo = $"AUTH-{suffix}" };
-        var otherTenant = new Tenant { Name = $"Diğer Kiracı {suffix}", TenantNo = $"AUTHB-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), Name = $"Yetki Testi Kiracı {suffix}", TenantNo = $"AUTH-{suffix}" };
+        var otherTenant = new Tenant { TenantCategory = TestTenantCategory.New(), Name = $"Diğer Kiracı {suffix}", TenantNo = $"AUTHB-{suffix}" };
 
         _context.Properties.Add(property);
         _context.UnitTypes.Add(unitType);

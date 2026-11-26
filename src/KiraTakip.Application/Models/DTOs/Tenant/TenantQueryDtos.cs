@@ -31,7 +31,7 @@ public record CreateTenantInput(
     string Phone,
     string Email,
     string? Address,
-    int? TenantCategoryId,
+    int TenantCategoryId,
     int? SectorId,
     IReadOnlyList<TenantDocumentUploadInput> Documents,
     TenantAccessScopeInput AccessScope);
@@ -53,7 +53,7 @@ public record UpdateTenantInput(
     string Phone,
     string Email,
     string? Address,
-    int? TenantCategoryId,
+    int TenantCategoryId,
     int? SectorId,
     TenantAccessScopeInput AccessScope);
 

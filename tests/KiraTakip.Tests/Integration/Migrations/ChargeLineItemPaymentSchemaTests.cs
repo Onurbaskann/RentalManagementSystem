@@ -127,8 +127,8 @@ public class ChargeLineItemPaymentSchemaTests : IDisposable
                     Code = $"ISO_{suffix}",
                     Usage = UnitTypeUsage.Rentable
                 };
-                var firstTenant = new Tenant { TenantNo = $"ISO-A-{suffix}", Name = $"İzolasyon Kiracı A {suffix}" };
-                var secondTenant = new Tenant { TenantNo = $"ISO-B-{suffix}", Name = $"İzolasyon Kiracı B {suffix}" };
+                var firstTenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"ISO-A-{suffix}", Name = $"İzolasyon Kiracı A {suffix}" };
+                var secondTenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"ISO-B-{suffix}", Name = $"İzolasyon Kiracı B {suffix}" };
                 var chargeType = new ChargeType
                 {
                     Name = $"İzolasyon Borç Tipi {suffix}",
@@ -229,11 +229,13 @@ public class ChargeLineItemPaymentSchemaTests : IDisposable
             cleanup.ChargeTypes.RemoveRange(cleanup.ChargeTypes.Where(ct => ct.Id == chargeTypeId));
             cleanup.Units.RemoveRange(cleanup.Units.Where(u => u.Id == unitId));
             await cleanup.SaveChangesAsync();
+            var tenantCategoryIds = await TestTenantCategory.IdsOfAsync(cleanup, new[] { firstTenantId, secondTenantId });
             cleanup.Tenants.RemoveRange(
                 cleanup.Tenants.Where(t => t.Id == firstTenantId || t.Id == secondTenantId));
             cleanup.UnitTypes.RemoveRange(cleanup.UnitTypes.Where(ut => ut.Id == unitTypeId));
             cleanup.Properties.RemoveRange(cleanup.Properties.Where(p => p.Id == propertyId));
             await cleanup.SaveChangesAsync();
+            await TestTenantCategory.DeleteAsync(cleanup, tenantCategoryIds);
         }
     }
 
@@ -253,7 +255,7 @@ public class ChargeLineItemPaymentSchemaTests : IDisposable
             Code = $"SCHEMA_{suffix}",
             Usage = UnitTypeUsage.Rentable
         };
-        var tenant = new Tenant { TenantNo = $"SCHEMA-{suffix}", Name = $"Şema Test Kiracı {suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"SCHEMA-{suffix}", Name = $"Şema Test Kiracı {suffix}" };
         var chargeType = new ChargeType
         {
             Name = $"Şema Test Borç Tipi {suffix}",

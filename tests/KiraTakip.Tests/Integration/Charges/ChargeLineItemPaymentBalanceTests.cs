@@ -84,7 +84,7 @@ public class ChargeLineItemPaymentBalanceTests : IDisposable
             Code = $"BAL_{suffix}",
             Usage = UnitTypeUsage.Rentable
         };
-        var tenant = new Tenant { TenantNo = $"BAL-{suffix}", Name = $"Bakiye Kiracı {suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"BAL-{suffix}", Name = $"Bakiye Kiracı {suffix}" };
         var user = new ApplicationUser
         {
             Id = Guid.NewGuid().ToString(),

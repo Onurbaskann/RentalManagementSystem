@@ -181,11 +181,13 @@ public class TenantLeaseArchitectureTests : IDisposable
         };
         var firstTenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"TLS1-{suffix}",
             Name = $"Birinci Kiracı {suffix}"
         };
         var secondTenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"TLS2-{suffix}",
             Name = $"İkinci Kiracı {suffix}"
         };

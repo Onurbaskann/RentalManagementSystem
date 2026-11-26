@@ -268,7 +268,7 @@ public class TenantController(
             viewModel.Phone,
             viewModel.Email,
             viewModel.Address,
-            viewModel.TenantCategoryId,
+            viewModel.TenantCategoryId!.Value,
             viewModel.SectorId,
             documents,
             accessScope);
@@ -288,7 +288,7 @@ public class TenantController(
             viewModel.Phone,
             viewModel.Email,
             viewModel.Address,
-            viewModel.TenantCategoryId,
+            viewModel.TenantCategoryId!.Value,
             viewModel.SectorId,
             accessScope);
 

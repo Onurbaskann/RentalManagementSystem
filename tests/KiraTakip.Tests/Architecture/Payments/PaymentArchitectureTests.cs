@@ -97,6 +97,7 @@ public class PaymentArchitectureTests : IDisposable
         };
         var tenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             Name = $"Ödeme Kiracı {suffix}",
             TenantNo = $"PAY-{suffix}"
         };

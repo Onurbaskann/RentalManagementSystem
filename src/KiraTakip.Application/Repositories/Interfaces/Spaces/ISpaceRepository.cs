@@ -13,6 +13,7 @@ public interface ISpaceRepository : IRepositoryBase<Space>
     Task<List<Space>> GetSubtreeForUpdateAsync(string path);
     Task<List<Space>> GetChildrenAsync(int parentId);
     Task<bool> CodeExistsAsync(int? parentId, string code, int? excludeId = null);
+    Task<IReadOnlyList<string>> GetPathsAsync(IReadOnlyCollection<int> ids, CancellationToken ct = default);
     Task<bool> HasChildrenAsync(int spaceId);
     Task<bool> AnyReservableAsync(IEnumerable<int> spaceIds);
     Task<bool> HasReservableDescendantAsync(string path);

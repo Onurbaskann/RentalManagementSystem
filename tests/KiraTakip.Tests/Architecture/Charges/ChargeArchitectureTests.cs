@@ -100,7 +100,7 @@ public class ChargeArchitectureTests : IDisposable
         var unit = new Unit { PropertyId = property.Id, Name = $"Ofis_{uid}", Area = 50, UnitTypeId = unitType.Id };
         _ctx.Units.Add(unit);
 
-        var tenant = new Tenant { Name = $"Kiraci_{uid}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), Name = $"Kiraci_{uid}" };
         _ctx.Tenants.Add(tenant);
 
         await _ctx.SaveChangesAsync();
@@ -199,7 +199,7 @@ public class ChargeArchitectureTests : IDisposable
         var (_, unit, kiraci1, _) = await SeedTemelAsync();
         var uid = Guid.NewGuid().ToString("N")[..8];
 
-        var kiraci2 = new Tenant { Name = $"Kiraci2_{uid}", TenantNo = uid };
+        var kiraci2 = new Tenant { TenantCategory = TestTenantCategory.New(), Name = $"Kiraci2_{uid}", TenantNo = uid };
         _ctx.Tenants.Add(kiraci2);
 
         var manuelBorcTipi = new ChargeType
@@ -366,7 +366,7 @@ public class ChargeArchitectureTests : IDisposable
         var unit = new Unit { PropertyId = property.Id, Name = $"Salon101_{uid}", Area = 80, UnitTypeId = birimTuru.Id };
         _ctx.Units.Add(unit);
 
-        var tenant = new Tenant { Name = $"KiraciRez_{uid}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), Name = $"KiraciRez_{uid}" };
         _ctx.Tenants.Add(tenant);
         await _ctx.SaveChangesAsync();
 
@@ -413,7 +413,7 @@ public class ChargeArchitectureTests : IDisposable
         var property = new Property { Name = $"Scope_Plaza_{uid}", City = "İzmir", District = "Konak" };
         _ctx.Properties.Add(property);
 
-        var tenant = new Tenant { Name = $"ScopeKiraci_{uid}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), Name = $"ScopeKiraci_{uid}" };
         _ctx.Tenants.Add(tenant);
 
         var borcTipi = new ChargeType { Name = $"ScopeBT_{uid}", Code = $"SC_{uid}", Behavior = ChargeTypeBehavior.MonthlyFixed };

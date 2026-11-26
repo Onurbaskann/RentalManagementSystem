@@ -92,7 +92,7 @@ public class ReservationCompletionTests : IDisposable
             Code = $"TS-{suffix}",
             Usage = UnitTypeUsage.Reservable
         };
-        var tenant = new Tenant { TenantNo = $"TC-{suffix}", Name = $"Tamamlama Kiracısı {suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"TC-{suffix}", Name = $"Tamamlama Kiracısı {suffix}" };
         _context.AddRange(property, unitType, tenant);
         await _context.SaveChangesAsync();
         var unit = new Unit
@@ -153,7 +153,7 @@ public class ReservationCompletionConcurrencyTests(DatabaseFixture fixture)
                 Code = $"CS-{suffix}",
                 Usage = UnitTypeUsage.Reservable
             };
-            var tenant = new Tenant { TenantNo = $"CT-{suffix}", Name = $"Çoklu Kiracı {suffix}" };
+            var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"CT-{suffix}", Name = $"Çoklu Kiracı {suffix}" };
             setup.AddRange(property, unitType, tenant);
             await setup.SaveChangesAsync();
             var unit = new Unit
@@ -203,10 +203,12 @@ public class ReservationCompletionConcurrencyTests(DatabaseFixture fixture)
             await cleanup.SaveChangesAsync();
             cleanup.Units.Remove(await cleanup.Units.SingleAsync(item => item.Id == unitId));
             await cleanup.SaveChangesAsync();
+            var tenantCategoryIds = await TestTenantCategory.IdsOfAsync(cleanup, new[] { tenantId });
             cleanup.Tenants.Remove(await cleanup.Tenants.SingleAsync(item => item.Id == tenantId));
             cleanup.UnitTypes.Remove(await cleanup.UnitTypes.SingleAsync(item => item.Id == unitTypeId));
             cleanup.Properties.Remove(await cleanup.Properties.SingleAsync(item => item.Id == propertyId));
             await cleanup.SaveChangesAsync();
+            await TestTenantCategory.DeleteAsync(cleanup, tenantCategoryIds);
         }
 
         async Task<bool> CompleteAsync(Task start)

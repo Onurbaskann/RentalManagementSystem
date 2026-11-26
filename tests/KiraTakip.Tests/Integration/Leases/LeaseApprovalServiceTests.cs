@@ -794,7 +794,7 @@ public class LeaseApprovalServiceTests : IDisposable
             Code = $"SRV_{suffix}",
             Usage = UnitTypeUsage.Rentable
         };
-        var tenant = new Tenant { TenantNo = $"SRV-{suffix}", Name = $"Servis Kiracısı {suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"SRV-{suffix}", Name = $"Servis Kiracısı {suffix}" };
         var applicant = CreateUser($"app-{suffix}", $"Başvuran {suffix}");
         var reviewer = CreateUser($"rev-{suffix}", $"Onaylayan {suffix}");
         var chargeType = new ChargeType

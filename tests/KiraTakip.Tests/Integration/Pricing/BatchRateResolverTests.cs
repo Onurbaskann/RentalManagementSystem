@@ -76,9 +76,7 @@ public class BatchRateResolverTests : IDisposable
                 TenantCategoryId = i == 4 ? scheduleOnlyCategory.Id : category.Id
             })
             .ToList();
-        var tenantWithoutCategory = new Tenant { TenantNo = $"BR5-{suffix}", Name = $"Batch Rate Kiracı 5 {suffix}", TenantCategoryId = null };
         _context.Tenants.AddRange(tenantsWithCategory);
-        _context.Tenants.Add(tenantWithoutCategory);
         await _context.SaveChangesAsync();
 
         var leases = new List<Lease>
@@ -86,8 +84,7 @@ public class BatchRateResolverTests : IDisposable
             CreateLease(units[0].Id, tenantsWithCategory[0].Id, suffix), // L1 — sözleşme override
             CreateLease(units[1].Id, tenantsWithCategory[1].Id, suffix), // L2 — birim rate
             CreateLease(units[2].Id, tenantsWithCategory[2].Id, suffix), // L3 — taşınmaz rate
-            CreateLease(units[3].Id, tenantsWithCategory[3].Id, suffix), // L4 — genel tarife (yıl fallback)
-            CreateLease(units[4].Id, tenantWithoutCategory.Id, suffix)   // L5 — kategori yok → null
+            CreateLease(units[3].Id, tenantsWithCategory[3].Id, suffix)  // L4 — genel tarife (yıl fallback)
         };
         _context.Leases.AddRange(leases);
         await _context.SaveChangesAsync();
@@ -166,7 +163,6 @@ public class BatchRateResolverTests : IDisposable
         Assert.Equal(400m, batchResults[(leases[3].Id, chargeType.Id)]!.UnitValue);
         Assert.Equal(LineItemSourceType.RateSchedule, batchResults[(leases[3].Id, chargeType.Id)]!.SourceType);
 
-        Assert.Null(batchResults[(leases[4].Id, chargeType.Id)]);
     }
 
     private static Lease CreateLease(int unitId, int tenantId, string suffix)

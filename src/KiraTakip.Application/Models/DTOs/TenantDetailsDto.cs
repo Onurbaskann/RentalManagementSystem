@@ -3,7 +3,7 @@ namespace KiraTakip.Models.Dtos;
 public class TenantDetailsDto
 {
     public int Id { get; set; }
-    public int? TenantCategoryId { get; set; }
+    public int TenantCategoryId { get; set; }
     public string? TenantCategoryName { get; set; }
     public int? SectorId { get; set; }
     public string? SectorName { get; set; }

@@ -128,11 +128,13 @@ public class TenantReservationArchitectureTests : IDisposable
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var firstTenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"TR1-{suffix}",
             Name = $"Birinci Rezervasyon Kiracısı {suffix}"
         };
         var secondTenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"TR2-{suffix}",
             Name = $"İkinci Rezervasyon Kiracısı {suffix}"
         };

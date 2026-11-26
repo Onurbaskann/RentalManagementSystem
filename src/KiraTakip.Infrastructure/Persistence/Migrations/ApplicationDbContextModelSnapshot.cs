@@ -3627,7 +3627,7 @@ namespace KiraTakip.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("VergiDairesi");
 
-                    b.Property<int?>("TenantCategoryId")
+                    b.Property<int>("TenantCategoryId")
                         .HasColumnType("int")
                         .HasColumnName("KiraciKategoriId");
 
@@ -4799,7 +4799,8 @@ namespace KiraTakip.Migrations
                     b.HasOne("KiraTakip.Models.Entities.Category", "TenantCategory")
                         .WithMany()
                         .HasForeignKey("TenantCategoryId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Sector");
 

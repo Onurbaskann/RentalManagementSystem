@@ -75,7 +75,7 @@ public class BankTransactionMatchingTests : IDisposable
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var property = new Property { Name = $"BTM Plaza {suffix}", City = "İstanbul", District = "Kadıköy" };
         var unitType = new UnitType { Name = $"BTM Ofis {suffix}", Code = $"BTM_{suffix}", Usage = UnitTypeUsage.Rentable };
-        var tenant = new Tenant { Name = $"BTM Kiracı {suffix}", TenantNo = $"BTM-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), Name = $"BTM Kiracı {suffix}", TenantNo = $"BTM-{suffix}" };
         var chargeType = new ChargeType
         {
             Name = $"BTM Borç Tipi {suffix}",

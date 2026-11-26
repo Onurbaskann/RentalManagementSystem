@@ -38,6 +38,12 @@ public class SpaceRepository(ApplicationDbContext ctx) : RepositoryBase<Space>(c
     public Task<bool> HasChildrenAsync(int spaceId)
         => _dbSet.AsNoTracking().AnyAsync(s => s.ParentId == spaceId);
 
+    public async Task<IReadOnlyList<string>> GetPathsAsync(IReadOnlyCollection<int> ids, CancellationToken ct = default)
+        => await _dbSet.AsNoTracking()
+            .Where(s => !s.IsDeleted && ids.Contains(s.Id))
+            .Select(s => s.Path)
+            .ToListAsync(ct);
+
     public Task<bool> AnyReservableAsync(IEnumerable<int> spaceIds)
     {
         var ids = spaceIds.ToList();

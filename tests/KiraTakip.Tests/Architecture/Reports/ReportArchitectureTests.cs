@@ -270,6 +270,7 @@ public class ReportArchitectureTests : IDisposable
         };
         var tenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"RPR-{suffix}",
             Name = $"Rapor Kiracı {suffix}"
         };
@@ -408,6 +409,7 @@ public class ReportArchitectureTests : IDisposable
         };
         var tenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"RPRMLI-{suffix}",
             Name = $"Rapor Çoklu Kalem Kiracı {suffix}"
         };
@@ -479,6 +481,7 @@ public class ReportArchitectureTests : IDisposable
         };
         var tenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"RPRCY-{suffix}",
             Name = $"Rapor Çapraz Yıl Kiracı {suffix}"
         };
@@ -579,6 +582,7 @@ public class ReportArchitectureTests : IDisposable
         };
         var tenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"RPRMYP-{suffix}",
             Name = $"Rapor Çok Yıllı Ödeme Kiracı {suffix}"
         };
@@ -668,6 +672,7 @@ public class ReportArchitectureTests : IDisposable
         };
         var tenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"RPRPYO-{suffix}",
             Name = $"Rapor Geçmiş Yıl Gecikme Kiracı {suffix}"
         };

@@ -235,11 +235,13 @@ public class LeaseApprovalRepositoryTests : IDisposable
         };
         var firstTenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"BAR1-{suffix}",
             Name = $"Başvuru Kiracısı {suffix}"
         };
         var secondTenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"BAR2-{suffix}",
             Name = $"Diğer Kiracı {suffix}"
         };

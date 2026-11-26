@@ -42,7 +42,7 @@ public class ChargeLineItemPaymentMigrationTests : IDisposable
             Code = $"PRE_{suffix}",
             Usage = UnitTypeUsage.Rentable
         };
-        var tenant = new Tenant { TenantNo = $"PRE-{suffix}", Name = $"Preflight Kiracı {suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"PRE-{suffix}", Name = $"Preflight Kiracı {suffix}" };
         var chargeType = new ChargeType
         {
             Name = $"Preflight Borç Tipi {suffix}",

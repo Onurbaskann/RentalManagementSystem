@@ -42,7 +42,7 @@ public class ReservationConcurrentDecisionTests(DatabaseFixture fixture)
                 Code = $"PK-{suffix}",
                 Usage = UnitTypeUsage.Reservable
             };
-            var tenant = new Tenant { TenantNo = $"PK-{suffix}", Name = $"Paralel Kiracı {suffix}" };
+            var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"PK-{suffix}", Name = $"Paralel Kiracı {suffix}" };
             setup.AddRange(property, unitType, tenant);
             await setup.SaveChangesAsync();
             var unit = new Unit
@@ -93,10 +93,12 @@ public class ReservationConcurrentDecisionTests(DatabaseFixture fixture)
             await cleanup.SaveChangesAsync();
             cleanup.Units.RemoveRange(cleanup.Units.Where(unit => unit.Id == unitId));
             await cleanup.SaveChangesAsync();
+            var tenantCategoryIds = await TestTenantCategory.IdsOfAsync(cleanup, new[] { tenantId });
             cleanup.Tenants.RemoveRange(cleanup.Tenants.Where(tenant => tenant.Id == tenantId));
             cleanup.UnitTypes.RemoveRange(cleanup.UnitTypes.Where(unitType => unitType.Id == unitTypeId));
             cleanup.Properties.RemoveRange(cleanup.Properties.Where(property => property.Id == propertyId));
             await cleanup.SaveChangesAsync();
+            await TestTenantCategory.DeleteAsync(cleanup, tenantCategoryIds);
         }
 
         async Task<string> ApproveAsync(int reservationId, byte[] rowVersion, Task start)

@@ -65,6 +65,7 @@ public static class ApplicationModule
 
         // Spaces
         services.AddScoped<ISpaceService, SpaceService>();
+        services.AddScoped<ISpaceScopeService, SpaceScopeService>();
         services.AddScoped<ISpaceTypeService, SpaceTypeService>();
         services.AddScoped<ISpaceAttributeService, SpaceAttributeService>();
         services.AddScoped<ISpaceRateService, SpaceRateService>();
@@ -96,6 +97,7 @@ public static class ApplicationModule
         // Pricing
         services.AddScoped<IRateResolverService, RateResolverService>();
         services.AddScoped<IBatchRateResolver, BatchRateResolver>();
+        services.AddScoped<ISpaceRateResolver, SpaceRateResolver>();
         services.AddScoped<IPropertyPricingService, PropertyPricingService>();
         services.AddScoped<IUnitPricingService, UnitPricingService>();
         services.AddScoped<IRateHierarchyService, RateHierarchyService>();

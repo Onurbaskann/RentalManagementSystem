@@ -24,7 +24,8 @@ internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
               .HasFilter("[VergiNo] IS NOT NULL AND [VergiNo] <> '' AND [IsDeleted] = 0");
         entity.HasOne(k => k.TenantCategory)
               .WithMany()
-              .OnDelete(DeleteBehavior.SetNull);
+              .IsRequired()
+              .OnDelete(DeleteBehavior.Restrict);
         entity.HasOne(k => k.Sector)
               .WithMany()
               .OnDelete(DeleteBehavior.ClientSetNull);

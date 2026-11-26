@@ -148,11 +148,13 @@ public class TenantRoleArchitectureTests : IDisposable
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var firstTenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"TR1-{suffix}",
             Name = $"Birinci Rol Kiracısı {suffix}"
         };
         var secondTenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"TR2-{suffix}",
             Name = $"İkinci Rol Kiracısı {suffix}"
         };
@@ -239,6 +241,7 @@ public class TenantRoleTransactionTests
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var tenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"RB-{suffix}",
             Name = $"Rol Rollback Kiracısı {suffix}"
         };
@@ -281,8 +284,10 @@ public class TenantRoleTransactionTests
             context.ChangeTracker.Clear();
             var storedTenant = await context.Tenants.IgnoreQueryFilters()
                 .SingleAsync(item => item.Id == tenant.Id);
+            var tenantCategoryIds = new List<int> { storedTenant.TenantCategoryId };
             context.Tenants.Remove(storedTenant);
             await context.SaveChangesAsync();
+            await TestTenantCategory.DeleteAsync(context, tenantCategoryIds);
         }
     }
 }

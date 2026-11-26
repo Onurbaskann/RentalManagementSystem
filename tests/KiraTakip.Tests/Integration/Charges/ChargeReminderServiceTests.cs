@@ -99,6 +99,7 @@ public class ChargeReminderServiceTests : IDisposable
         };
         var tenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             Name = $"Hatırlatma Kiracı {suffix}",
             TenantNo = $"REM-{suffix}",
             Email = $"reminder-{suffix}@test.local"

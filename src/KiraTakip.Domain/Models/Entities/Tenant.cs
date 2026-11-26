@@ -7,7 +7,7 @@ namespace KiraTakip.Models.Entities;
 public class Tenant : BaseEntity
 {
     [Column("KiraciKategoriId")]
-    public int? TenantCategoryId { get; set; }
+    public int TenantCategoryId { get; set; }
 
     [Column("SektorId")]
     public int? SectorId { get; set; }
@@ -47,6 +47,6 @@ public class Tenant : BaseEntity
 
     public string DisplayName => Name;
 
-    public Category? TenantCategory { get; set; }
+    public Category TenantCategory { get; set; } = null!;
     public Category? Sector { get; set; }
 }

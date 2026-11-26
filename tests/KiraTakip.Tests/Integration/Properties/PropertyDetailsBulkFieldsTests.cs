@@ -51,8 +51,8 @@ public class PropertyDetailsBulkFieldsTests : IDisposable
         _context.Units.AddRange(vacantUnit, leasedUnit, expiringUnit, reservationRateUnit);
         await _context.SaveChangesAsync();
 
-        var leasedTenant = new Tenant { TenantNo = $"BDT1-{suffix}", Name = $"Kiracı 1 {suffix}" };
-        var expiringTenant = new Tenant { TenantNo = $"BDT2-{suffix}", Name = $"Kiracı 2 {suffix}" };
+        var leasedTenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"BDT1-{suffix}", Name = $"Kiracı 1 {suffix}" };
+        var expiringTenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"BDT2-{suffix}", Name = $"Kiracı 2 {suffix}" };
         _context.Tenants.AddRange(leasedTenant, expiringTenant);
         await _context.SaveChangesAsync();
 

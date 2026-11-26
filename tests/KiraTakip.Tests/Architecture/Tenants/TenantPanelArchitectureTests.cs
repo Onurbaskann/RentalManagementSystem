@@ -195,11 +195,13 @@ public class TenantPanelArchitectureTests : IDisposable
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var tenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"TP-{suffix}",
             Name = $"Panel Kiracısı {suffix}"
         };
         var otherTenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"TPX-{suffix}",
             Name = $"Diğer Kiracı {suffix}"
         };

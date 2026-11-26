@@ -135,7 +135,7 @@ public abstract class PropertyUnitTestBase : IDisposable
         DateTime? end = null)
     {
         var index = Guid.NewGuid().ToString("N")[..8];
-        var tenant = new Tenant { TenantNo = $"KT-{index}", Name = $"Kiracı {index}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"KT-{index}", Name = $"Kiracı {index}" };
         Ctx.Tenants.Add(tenant);
         await Ctx.SaveChangesAsync();
 

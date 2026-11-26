@@ -97,7 +97,7 @@ public class LeaseExpirationServiceTests : IDisposable
             Code = $"SE_{suffix}",
             Usage = UnitTypeUsage.Rentable
         };
-        var tenant = new Tenant { TenantNo = $"SE-{suffix}", Name = $"Sona Erme Kiracı {suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"SE-{suffix}", Name = $"Sona Erme Kiracı {suffix}" };
         _context.AddRange(property, unitType, tenant);
         await _context.SaveChangesAsync();
         var unit = new Unit

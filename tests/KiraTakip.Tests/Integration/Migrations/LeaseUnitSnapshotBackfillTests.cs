@@ -40,7 +40,7 @@ public class LeaseUnitSnapshotBackfillTests : IDisposable
             Usage = UnitTypeUsage.Reservable
         };
         var property = new Property { Name = $"Snapshot property {suffix}" };
-        var tenant = new Tenant { Name = $"Snapshot tenant {suffix}", TenantNo = $"SNAP-{suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), Name = $"Snapshot tenant {suffix}", TenantNo = $"SNAP-{suffix}" };
         var unit = new Unit
         {
             Name = $"Snapshot unit {suffix}",

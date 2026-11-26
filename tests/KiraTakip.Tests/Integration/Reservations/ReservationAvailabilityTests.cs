@@ -199,8 +199,8 @@ public class ReservationAvailabilityTests : IDisposable
             Code = $"SAL-{suffix}",
             Usage = UnitTypeUsage.Reservable
         };
-        var firstTenant = new Tenant { TenantNo = $"TA-{suffix}", Name = $"Kiracı A {suffix}" };
-        var secondTenant = new Tenant { TenantNo = $"TB-{suffix}", Name = $"Kiracı B {suffix}" };
+        var firstTenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"TA-{suffix}", Name = $"Kiracı A {suffix}" };
+        var secondTenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"TB-{suffix}", Name = $"Kiracı B {suffix}" };
         _context.AddRange(firstProperty, secondProperty, unitType, firstTenant, secondTenant);
         await _context.SaveChangesAsync();
 

@@ -783,11 +783,13 @@ public class ReservationArchitectureTests : IDisposable
         };
         var activeTenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"REZ-A-{suffix}",
             Name = $"Aktif Rezervasyon Kiracısı {suffix}"
         };
         var inactiveTenant = new Tenant
         {
+            TenantCategory = TestTenantCategory.New(),
             TenantNo = $"REZ-P-{suffix}",
             Name = $"Pasif Rezervasyon Kiracısı {suffix}",
             IsActive = false

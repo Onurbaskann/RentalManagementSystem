@@ -130,7 +130,7 @@ public class UnitTypeServiceTests : IDisposable
         var typeId = await _ctx.UnitTypes.Where(x => x.Name == $"Tur {uid}").Select(x => x.Id).SingleAsync();
 
         var property = new Property { Name = $"Plaza {uid}", City = "İstanbul", District = "Kadıköy" };
-        var tenant = new Tenant { Name = $"Kiracı {uid}", TenantNo = $"UT-{uid}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), Name = $"Kiracı {uid}", TenantNo = $"UT-{uid}" };
         _ctx.Properties.Add(property);
         _ctx.Tenants.Add(tenant);
         await _ctx.SaveChangesAsync();

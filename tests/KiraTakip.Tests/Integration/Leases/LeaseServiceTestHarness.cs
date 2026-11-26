@@ -53,7 +53,7 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
             Code = $"SNP_{suffix}",
             Usage = UnitTypeUsage.Rentable
         };
-        var tenant = new Tenant { TenantNo = $"SNP-{suffix}", Name = $"Anlık Kiracı {suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"SNP-{suffix}", Name = $"Anlık Kiracı {suffix}" };
         var applicant = CreateUser($"snp-app-{suffix}", $"Başvuran {suffix}");
         var reviewer = CreateUser($"snp-rev-{suffix}", $"Onaylayan {suffix}");
         context.AddRange(property, unitType, tenant, applicant, reviewer);
@@ -108,7 +108,7 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
 
     public async Task<int> AddTenantAsync(string suffix)
     {
-        var tenant = new Tenant { TenantNo = $"SNP2-{suffix}", Name = $"Anlık Kiracı 2 {suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"SNP2-{suffix}", Name = $"Anlık Kiracı 2 {suffix}" };
         context.Tenants.Add(tenant);
         await context.SaveChangesAsync();
         return tenant.Id;

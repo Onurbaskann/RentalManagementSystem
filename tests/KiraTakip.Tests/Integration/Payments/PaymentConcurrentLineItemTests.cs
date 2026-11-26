@@ -52,7 +52,7 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
                 Code = $"CONC-A-{suffix}",
                 Usage = UnitTypeUsage.Rentable
             };
-            var tenant = new Tenant { TenantNo = $"CONC-A-{suffix}", Name = $"Eşzamanlı Onay Kiracı {suffix}" };
+            var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"CONC-A-{suffix}", Name = $"Eşzamanlı Onay Kiracı {suffix}" };
             var chargeType = new ChargeType
             {
                 Name = $"Eşzamanlı Onay Borç Tipi {suffix}",
@@ -199,10 +199,12 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
             cleanup.ChargeTypes.RemoveRange(cleanup.ChargeTypes.Where(ct => ct.Id == chargeTypeId));
             cleanup.Units.RemoveRange(cleanup.Units.Where(u => u.Id == unitId));
             await cleanup.SaveChangesAsync();
+            var tenantCategoryIds = await TestTenantCategory.IdsOfAsync(cleanup, new[] { tenantId });
             cleanup.Tenants.RemoveRange(cleanup.Tenants.Where(t => t.Id == tenantId));
             cleanup.UnitTypes.RemoveRange(cleanup.UnitTypes.Where(ut => ut.Id == unitTypeId));
             cleanup.Properties.RemoveRange(cleanup.Properties.Where(p => p.Id == propertyId));
             await cleanup.SaveChangesAsync();
+            await TestTenantCategory.DeleteAsync(cleanup, tenantCategoryIds);
         }
 
         async Task<string> ApproveAsync(int paymentId, Task start)
@@ -254,7 +256,7 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
                 Code = $"CONC-B-{suffix}",
                 Usage = UnitTypeUsage.Rentable
             };
-            var tenant = new Tenant { TenantNo = $"CONC-B-{suffix}", Name = $"Eşzamanlı Oluşturma Kiracı {suffix}" };
+            var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"CONC-B-{suffix}", Name = $"Eşzamanlı Oluşturma Kiracı {suffix}" };
             var chargeType = new ChargeType
             {
                 Name = $"Eşzamanlı Oluşturma Borç Tipi {suffix}",
@@ -369,10 +371,12 @@ public class PaymentConcurrentLineItemTests(DatabaseFixture fixture)
             cleanup.ChargeTypes.RemoveRange(cleanup.ChargeTypes.Where(ct => ct.Id == chargeTypeId));
             cleanup.Units.RemoveRange(cleanup.Units.Where(u => u.Id == unitId));
             await cleanup.SaveChangesAsync();
+            var tenantCategoryIds = await TestTenantCategory.IdsOfAsync(cleanup, new[] { tenantId });
             cleanup.Tenants.RemoveRange(cleanup.Tenants.Where(t => t.Id == tenantId));
             cleanup.UnitTypes.RemoveRange(cleanup.UnitTypes.Where(ut => ut.Id == unitTypeId));
             cleanup.Properties.RemoveRange(cleanup.Properties.Where(p => p.Id == propertyId));
             await cleanup.SaveChangesAsync();
+            await TestTenantCategory.DeleteAsync(cleanup, tenantCategoryIds);
         }
 
         async Task<string> CreateAsync(Task start)

@@ -386,7 +386,7 @@ public class OnlinePaymentServiceTests : IDisposable
             Code = $"OPT-{suffix}",
             Usage = UnitTypeUsage.Rentable
         };
-        var tenant = new Tenant { TenantNo = $"OPT-{suffix}", Name = $"Sanal POS Kiracı {suffix}" };
+        var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"OPT-{suffix}", Name = $"Sanal POS Kiracı {suffix}" };
         var chargeType = new ChargeType
         {
             Name = $"Sanal POS Borç Tipi {suffix}",
@@ -484,7 +484,7 @@ public class OnlinePaymentServiceConcurrencyTests(DatabaseFixture fixture)
                 Code = $"OPTC-{suffix}",
                 Usage = UnitTypeUsage.Rentable
             };
-            var tenant = new Tenant { TenantNo = $"OPTC-{suffix}", Name = $"Eşzamanlı Sanal POS Kiracı {suffix}" };
+            var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"OPTC-{suffix}", Name = $"Eşzamanlı Sanal POS Kiracı {suffix}" };
             var chargeType = new ChargeType
             {
                 Name = $"Eşzamanlı Sanal POS Borç Tipi {suffix}",
@@ -599,10 +599,12 @@ public class OnlinePaymentServiceConcurrencyTests(DatabaseFixture fixture)
             cleanup.ChargeTypes.Remove(await cleanup.ChargeTypes.SingleAsync(ct => ct.Id == chargeTypeId));
             cleanup.Units.Remove(await cleanup.Units.SingleAsync(u => u.Id == unitId));
             await cleanup.SaveChangesAsync();
+            var tenantCategoryIds = await TestTenantCategory.IdsOfAsync(cleanup, new[] { tenantId });
             cleanup.Tenants.Remove(await cleanup.Tenants.SingleAsync(t => t.Id == tenantId));
             cleanup.UnitTypes.Remove(await cleanup.UnitTypes.SingleAsync(ut => ut.Id == unitTypeId));
             cleanup.Properties.Remove(await cleanup.Properties.SingleAsync(p => p.Id == propertyId));
             await cleanup.SaveChangesAsync();
+            await TestTenantCategory.DeleteAsync(cleanup, tenantCategoryIds);
         }
 
         async Task<string> InitiateAsync(Task start)
