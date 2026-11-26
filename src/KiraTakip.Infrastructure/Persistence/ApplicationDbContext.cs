@@ -126,6 +126,15 @@ public class ApplicationDbContext(
     public DbSet<ChargeType> ChargeTypes { get; set; }
     public DbSet<RateSchedule> GenelTarifeler { get; set; }
     public DbSet<UnitRate> UnitRates { get; set; }
+
+    public DbSet<Space> Spaces { get; set; }
+    public DbSet<SpaceType> SpaceTypes { get; set; }
+    public DbSet<SpaceAddress> SpaceAddresses { get; set; }
+    public DbSet<SpaceHistory> SpaceHistories { get; set; }
+    public DbSet<SpaceAttributeDefinition> SpaceAttributeDefinitions { get; set; }
+    public DbSet<SpaceAttributeValue> SpaceAttributeValues { get; set; }
+    public DbSet<SpaceTypeDefaultAttribute> SpaceTypeDefaultAttributes { get; set; }
+    public DbSet<SpaceRate> SpaceRates { get; set; }
     public DbSet<LeaseRateOverride> SozlesmeTarifeler { get; set; }
 
     public DbSet<Charge> Charges { get; set; }

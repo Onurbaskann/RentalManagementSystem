@@ -1,0 +1,64 @@
+@model SpaceIndexViewModel
+@{
+    ViewData["Title"] = "Alanlar";
+    ViewData["UseCentralFeedback"] = true;
+    var canCreate = await PermissionService.HasPermissionAsync(PermissionCatalog.Space.Create);
+}
+
+<div class="page-header flex items-center justify-between">
+    <div>
+        <div class="page-title">Alanlar</div>
+        <div class="page-subtitle">@Model.Roots.Count kök alan</div>
+    </div>
+</div>
+
+<div class="card p-0 overflow-hidden mb-4">
+    <div class="table-wrapper">
+        <table class="w-full">
+            <thead>
+                <tr>
+                    <th>Kod</th>
+                    <th>Ad</th>
+                    <th>Tür</th>
+                    <th>Kullanım</th>
+                    <th class="text-right">m²</th>
+                    <th class="w-24">Durum</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var root in Model.Roots)
+                {
+                    <tr>
+                        <td class="text-muted text-xs">@root.Code</td>
+                        <td class="font-medium text-slate-700"><a href="/Space/@root.Id.ToHashId()" class="cell-link">@root.Name</a></td>
+                        <td>@root.SpaceTypeName</td>
+                        <td><span class="badge @SpaceDisplay.UsageBadge(root.Usage)">@SpaceDisplay.Usage(root.Usage)</span></td>
+                        <td class="text-right">@root.Area.ToString("N2")</td>
+                        <td>
+                            @if (root.IsActive)
+                            { <span class="badge badge-kirali">Aktif</span> }
+                            else
+                            { <span class="badge badge-gecmis">Pasif</span> }
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Roots.Any())
+                {
+                    <tr><td colspan="6" class="text-center py-8 text-muted">Henüz kök alan tanımlanmamış.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (canCreate)
+{
+    <div class="card max-w-[760px]">
+        <div class="card-title">Yeni Kök Alan</div>
+        <form method="post" action="/Space/Create" asp-form-write-permission="@PermissionCatalog.Space.Create">
+            @Html.AntiForgeryToken()
+            @await Html.PartialAsync("_SpaceFields", new SpaceFieldsModel(Model.Form, Model.Types, true, false))
+            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Space.Create">Kök Alan Ekle</button>
+        </form>
+    </div>
+}

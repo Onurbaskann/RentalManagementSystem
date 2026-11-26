@@ -35,6 +35,38 @@ public static class PermissionCatalog
         public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(OverrideRate, "Elle Müdahale"), new(UpdateCapacity, "Kontenjanı Değiştir")];
     }
 
+    public static class Space
+    {
+        public const string Module         = "Internal.Space";
+        public const string Create         = "Internal.Space.Create";
+        public const string Edit           = "Internal.Space.Edit";
+        public const string Deactivate     = "Internal.Space.Deactivate";
+        public const string Activate       = "Internal.Space.Activate";
+        public const string Delete         = "Internal.Space.Delete";
+        public const string EditRate       = "Internal.Space.EditRate";
+        public const string EditAddress    = "Internal.Space.EditAddress";
+        public const string EditAttributes = "Internal.Space.EditAttributes";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(Deactivate, "Pasifleştir"), new(Activate, "Etkinleştir"), new(Delete, "Sil"), new(EditRate, "Tarife Düzenle"), new(EditAddress, "Adres Düzenle"), new(EditAttributes, "Özellik Düzenle")];
+    }
+
+    public static class SpaceType
+    {
+        public const string Module       = "Internal.SpaceType";
+        public const string Create       = "Internal.SpaceType.Create";
+        public const string Edit         = "Internal.SpaceType.Edit";
+        public const string ToggleStatus = "Internal.SpaceType.ToggleStatus";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(ToggleStatus, "Aktif/Pasif")];
+    }
+
+    public static class SpaceAttribute
+    {
+        public const string Module       = "Internal.SpaceAttribute";
+        public const string Create       = "Internal.SpaceAttribute.Create";
+        public const string Edit         = "Internal.SpaceAttribute.Edit";
+        public const string ToggleStatus = "Internal.SpaceAttribute.ToggleStatus";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(ToggleStatus, "Aktif/Pasif")];
+    }
+
     public static class Tenant
     {
         public const string Module = "Internal.Tenant";
@@ -327,6 +359,7 @@ public static class PermissionCatalog
         // Internal
         new(Property.Module,               "Taşınmaz",                   Property.ActionDefinitions),
         new(Unit.Module,                  "Birim",                      Unit.ActionDefinitions),
+        new(Space.Module,                  "Alan",                       Space.ActionDefinitions),
         new(Tenant.Module,                 "Kiracı",                     Tenant.ActionDefinitions),
         new(Lease.Module,               "Sözleşme",                   Lease.ActionDefinitions),
         new(Payment.Module,                  "Ödeme",                      Payment.ActionDefinitions),
@@ -339,6 +372,8 @@ public static class PermissionCatalog
         new(Parameter.Module,              "Sistem Ayarları",                  Parameter.ActionDefinitions, "Parametreler"),
         new(PropertyType.Module,           "Taşınmaz Tipi",              PropertyType.ActionDefinitions, "Parametreler"),
         new(UnitType.Module,              "Birim Tipi",                 UnitType.ActionDefinitions, "Parametreler"),
+        new(SpaceType.Module,              "Alan Türü",                  SpaceType.ActionDefinitions, "Parametreler"),
+        new(SpaceAttribute.Module,         "Alan Özelliği",              SpaceAttribute.ActionDefinitions, "Parametreler"),
         new(TenantCategory.Module,         "Kiracı Kategorisi",          TenantCategory.ActionDefinitions, "Parametreler"),
         new(Sector.Module,                 "Sektör",                     Sector.ActionDefinitions, "Parametreler"),
         new(DocumentType.Module,              "Belge Türü",              DocumentType.ActionDefinitions),
@@ -400,6 +435,8 @@ public static class PermissionCatalog
         // Internal.*
         Property.Module, Property.Create, Property.Edit,
         Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate, Unit.UpdateCapacity,
+        Space.Module, Space.Create, Space.Edit, Space.Deactivate, Space.Activate, Space.Delete,
+        Space.EditRate, Space.EditAddress, Space.EditAttributes,
         Tenant.Module, Tenant.Create, Tenant.Edit, Tenant.Delete,
         Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
         Lease.Approve, Lease.RequestRevision, Lease.DeleteDraft,
@@ -413,6 +450,8 @@ public static class PermissionCatalog
         Parameter.Module, Parameter.Edit,
         PropertyType.Module, PropertyType.Create, PropertyType.Edit,
         UnitType.Module, UnitType.Create, UnitType.Edit,
+        SpaceType.Module, SpaceType.Create, SpaceType.Edit, SpaceType.ToggleStatus,
+        SpaceAttribute.Module, SpaceAttribute.Create, SpaceAttribute.Edit, SpaceAttribute.ToggleStatus,
         TenantCategory.Module, TenantCategory.Create, TenantCategory.Edit,
         Sector.Module, Sector.Create, Sector.Edit,
         DocumentType.Module, DocumentType.Create, DocumentType.Edit, DocumentType.Delete,

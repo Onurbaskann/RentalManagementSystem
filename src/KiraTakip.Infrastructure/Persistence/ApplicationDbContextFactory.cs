@@ -40,6 +40,7 @@ public sealed class ApplicationDbContextFactory : IDesignTimeDbContextFactory<Ap
 
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("DefaultConnection bulunamadı.");
+        BranchDatabaseGuard.EnsureAllowed(connectionString);
 
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseSqlServer(connectionString)

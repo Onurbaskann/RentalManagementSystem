@@ -19,6 +19,8 @@ using KiraTakip.Services.Interfaces.Reporting;
 using KiraTakip.Services.Interfaces.Reservations;
 using KiraTakip.Services.Interfaces.Security;
 using KiraTakip.Services.Interfaces.Settings;
+using KiraTakip.Services.Interfaces.Spaces;
+using KiraTakip.Services.Spaces;
 using KiraTakip.Services.Interfaces.Tenants;
 using KiraTakip.Services.Leases;
 using KiraTakip.Services.Payments;
@@ -60,6 +62,12 @@ public static class ApplicationModule
             AllocationStrategyKeys.ProportionalReduction);
         services.AddScoped<IPropertyTypeService, PropertyTypeService>();
         services.AddScoped<IUnitTypeService, UnitTypeService>();
+
+        // Spaces
+        services.AddScoped<ISpaceService, SpaceService>();
+        services.AddScoped<ISpaceTypeService, SpaceTypeService>();
+        services.AddScoped<ISpaceAttributeService, SpaceAttributeService>();
+        services.AddScoped<ISpaceRateService, SpaceRateService>();
 
         // Tenants
         services.AddScoped<ITenantService, TenantService>();

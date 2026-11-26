@@ -1,0 +1,28 @@
+@model SpaceTreeNodeView
+@{
+    var node = Model.Node;
+    var isSelected = node.Id == Model.SelectedId;
+}
+<li>
+    <a href="/Space/@Model.RootId.ToHashId()?node=@node.Id.ToHashId()"
+       class="flex flex-wrap items-center gap-2 px-2 py-1.5 rounded no-underline text-slate-700 hover:bg-slate-50 @(isSelected ? "bg-slate-100 font-semibold" : "") @(node.IsActive ? "" : "opacity-60")">
+        <span class="text-sm">@node.Name</span>
+        <span class="text-[11px] text-muted">@node.Code</span>
+        <span class="badge badge-bireysel">@node.SpaceTypeName</span>
+        <span class="badge @SpaceDisplay.UsageBadge(node.Usage)">@SpaceDisplay.Usage(node.Usage)</span>
+        <span class="text-xs text-muted">@node.Area.ToString("N2") m²</span>
+        @if (!node.IsActive)
+        {
+            <span class="badge badge-gecmis">Pasif</span>
+        }
+    </a>
+    @if (node.Children.Count > 0)
+    {
+        <ul class="ml-5 border-l border-slate-200 pl-2">
+            @foreach (var child in node.Children)
+            {
+                @await Html.PartialAsync("_TreeNode", new SpaceTreeNodeView(child, Model.SelectedId, Model.RootId))
+            }
+        </ul>
+    }
+</li>

@@ -2830,6 +2830,549 @@ namespace KiraTakip.Migrations
                     b.ToTable("RolYetkileri");
                 });
 
+            modelBuilder.Entity("KiraTakip.Models.Entities.Space", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Area")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("Yuzolcumu");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("Kod");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Depth")
+                        .HasColumnType("int")
+                        .HasColumnName("Derinlik");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("Aciklama");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("Aktif");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPreAllocatable")
+                        .HasColumnType("bit")
+                        .HasColumnName("OnTahsiseAcik");
+
+                    b.Property<bool>("IsShared")
+                        .HasColumnType("bit")
+                        .HasColumnName("Paylasimli");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("Ad");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("int")
+                        .HasColumnName("UstAlanId");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(450)")
+                        .HasColumnName("Yol")
+                        .UseCollation("Latin1_General_BIN2");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("Sira");
+
+                    b.Property<int>("SpaceTypeId")
+                        .HasColumnType("int")
+                        .HasColumnName("AlanTuruId");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Usage")
+                        .HasColumnType("int")
+                        .HasColumnName("Kullanim")
+                        .HasComment("Rentable=1, Reservable=2, NotRentable=3");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Alanlar_Kok_Kod")
+                        .HasFilter("[UstAlanId] IS NULL AND [IsDeleted] = 0");
+
+                    b.HasIndex("Path")
+                        .HasDatabaseName("IX_Alanlar_Yol");
+
+                    b.HasIndex("SpaceTypeId");
+
+                    b.HasIndex("ParentId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Alanlar_UstAlan_Kod")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("Alanlar", t =>
+                        {
+                            t.HasCheckConstraint("CK_Alanlar_Bayraklar", "(([OnTahsiseAcik] = 0 AND [Paylasimli] = 0) OR [Kullanim] = 1) AND NOT ([OnTahsiseAcik] = 1 AND [Paylasimli] = 1)");
+
+                            t.HasCheckConstraint("CK_Alanlar_Derinlik", "[Derinlik] BETWEEN 0 AND 19");
+
+                            t.HasCheckConstraint("CK_Alanlar_UstAlan", "[UstAlanId] IS NULL OR [UstAlanId] <> [Id]");
+
+                            t.HasCheckConstraint("CK_Alanlar_Yuzolcumu", "[Yuzolcumu] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.SpaceAddress", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("AcikAdres");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("Il");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("District")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("Ilce");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("Aktif");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Neighborhood")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("Mahalle");
+
+                    b.Property<int>("SpaceId")
+                        .HasColumnType("int")
+                        .HasColumnName("AlanId");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SpaceId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AlanAdresleri_AlanId")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("AlanAdresleri");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.SpaceAttributeDefinition", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("Kod");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DataType")
+                        .HasColumnType("int")
+                        .HasColumnName("VeriTipi")
+                        .HasComment("Text=1, Number=2, Boolean=3, List=4");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("Aktif");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("Ad");
+
+                    b.Property<string>("Options")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("Secenekler");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AlanOzellikTanimlari_Kod")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("AlanOzellikTanimlari");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.SpaceAttributeValue", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AttributeDefinitionId")
+                        .HasColumnType("int")
+                        .HasColumnName("OzellikTanimId");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("Aktif");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SpaceId")
+                        .HasColumnType("int")
+                        .HasColumnName("AlanId");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("Deger");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttributeDefinitionId");
+
+                    b.HasIndex("SpaceId", "AttributeDefinitionId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AlanOzellikDegerleri_AlanOzellik")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("AlanOzellikDegerleri");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.SpaceHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("Tarih");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Field")
+                        .HasColumnType("int")
+                        .HasColumnName("Alan")
+                        .HasComment("Created=1, Type=2, Name=3, Parent=4, Area=5, Usage=6, PreAllocatable=7, Shared=8, Active=9");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("Aktif");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NewValue")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("YeniDeger");
+
+                    b.Property<string>("OldValue")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("EskiDeger");
+
+                    b.Property<int>("SpaceId")
+                        .HasColumnType("int")
+                        .HasColumnName("AlanId");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("KullaniciId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SpaceId", "ChangedAt")
+                        .HasDatabaseName("IX_AlanTarihcesi_Alan_Tarih");
+
+                    b.ToTable("AlanTarihcesi");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.SpaceRate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CalculationMethod")
+                        .HasColumnType("int")
+                        .HasColumnName("HesaplamaYontemi")
+                        .HasComment("Fixed=1, M2=2");
+
+                    b.Property<int>("ChargeTypeId")
+                        .HasColumnType("int")
+                        .HasColumnName("BorcTipiId");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("Aktif");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("KdvRate")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)")
+                        .HasColumnName("KdvOrani");
+
+                    b.Property<int>("SpaceId")
+                        .HasColumnType("int")
+                        .HasColumnName("AlanId");
+
+                    b.Property<int>("TenantCategoryId")
+                        .HasColumnType("int")
+                        .HasColumnName("KiraciKategoriId");
+
+                    b.Property<decimal>("UnitValue")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
+                        .HasColumnName("BirimDeger");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChargeTypeId");
+
+                    b.HasIndex("TenantCategoryId");
+
+                    b.HasIndex("SpaceId", "TenantCategoryId", "ChargeTypeId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AlanTarifeleri_AlanKategoriBorc")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("AlanTarifeleri", t =>
+                        {
+                            t.HasCheckConstraint("CK_AlanTarifeleri_Degerler", "[BirimDeger] >= 0 AND [KdvOrani] BETWEEN 0 AND 100");
+                        });
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.SpaceType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("Kod");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("DefaultIsPreAllocatable")
+                        .HasColumnType("bit")
+                        .HasColumnName("VarsayilanOnTahsis");
+
+                    b.Property<int>("DefaultUsage")
+                        .HasColumnType("int")
+                        .HasColumnName("VarsayilanKullanim")
+                        .HasComment("Rentable=1, Reservable=2, NotRentable=3");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("Aktif");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("Ad");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("Sira");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AlanTurleri_Kod")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("AlanTurleri");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.SpaceTypeDefaultAttribute", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AttributeDefinitionId")
+                        .HasColumnType("int")
+                        .HasColumnName("OzellikTanimId");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("Aktif");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SpaceTypeId")
+                        .HasColumnType("int")
+                        .HasColumnName("AlanTuruId");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttributeDefinitionId");
+
+                    b.HasIndex("SpaceTypeId", "AttributeDefinitionId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AlanTuruVarsayilanOzellikleri_TurOzellik")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("AlanTuruVarsayilanOzellikleri");
+                });
+
             modelBuilder.Entity("KiraTakip.Models.Entities.Store", b =>
                 {
                     b.Property<int>("Id")
@@ -4131,6 +4674,111 @@ namespace KiraTakip.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("KiraTakip.Models.Entities.Space", b =>
+                {
+                    b.HasOne("KiraTakip.Models.Entities.Space", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("KiraTakip.Models.Entities.SpaceType", "SpaceType")
+                        .WithMany()
+                        .HasForeignKey("SpaceTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Parent");
+
+                    b.Navigation("SpaceType");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.SpaceAddress", b =>
+                {
+                    b.HasOne("KiraTakip.Models.Entities.Space", "Space")
+                        .WithOne("Address")
+                        .HasForeignKey("KiraTakip.Models.Entities.SpaceAddress", "SpaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Space");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.SpaceAttributeValue", b =>
+                {
+                    b.HasOne("KiraTakip.Models.Entities.SpaceAttributeDefinition", "AttributeDefinition")
+                        .WithMany()
+                        .HasForeignKey("AttributeDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("KiraTakip.Models.Entities.Space", "Space")
+                        .WithMany("AttributeValues")
+                        .HasForeignKey("SpaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AttributeDefinition");
+
+                    b.Navigation("Space");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.SpaceHistory", b =>
+                {
+                    b.HasOne("KiraTakip.Models.Entities.Space", "Space")
+                        .WithMany("History")
+                        .HasForeignKey("SpaceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Space");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.SpaceRate", b =>
+                {
+                    b.HasOne("KiraTakip.Models.Entities.ChargeType", "ChargeType")
+                        .WithMany()
+                        .HasForeignKey("ChargeTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("KiraTakip.Models.Entities.Space", "Space")
+                        .WithMany()
+                        .HasForeignKey("SpaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("KiraTakip.Models.Entities.Category", "TenantCategory")
+                        .WithMany()
+                        .HasForeignKey("TenantCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ChargeType");
+
+                    b.Navigation("Space");
+
+                    b.Navigation("TenantCategory");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.SpaceTypeDefaultAttribute", b =>
+                {
+                    b.HasOne("KiraTakip.Models.Entities.SpaceAttributeDefinition", "AttributeDefinition")
+                        .WithMany()
+                        .HasForeignKey("AttributeDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("KiraTakip.Models.Entities.SpaceType", "SpaceType")
+                        .WithMany("DefaultAttributes")
+                        .HasForeignKey("SpaceTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AttributeDefinition");
+
+                    b.Navigation("SpaceType");
+                });
+
             modelBuilder.Entity("KiraTakip.Models.Entities.StoreAccount", b =>
                 {
                     b.HasOne("KiraTakip.Models.Entities.Store", "Store")
@@ -4326,6 +4974,22 @@ namespace KiraTakip.Migrations
                     b.Navigation("RolePermissions");
 
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.Space", b =>
+                {
+                    b.Navigation("Address");
+
+                    b.Navigation("AttributeValues");
+
+                    b.Navigation("Children");
+
+                    b.Navigation("History");
+                });
+
+            modelBuilder.Entity("KiraTakip.Models.Entities.SpaceType", b =>
+                {
+                    b.Navigation("DefaultAttributes");
                 });
 
             modelBuilder.Entity("KiraTakip.Models.Entities.Store", b =>

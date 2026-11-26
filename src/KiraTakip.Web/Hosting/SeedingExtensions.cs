@@ -10,13 +10,36 @@ using Microsoft.EntityFrameworkCore;
 using KiraTakip.Data;
 using KiraTakip.Infrastructure.Identity;
 using KiraTakip.Infrastructure.Seeding;
+using KiraTakip.Models.Entities;
+using KiraTakip.Models.Settings;
 
 namespace KiraTakip.Web.Hosting
 {
     public static class SeedingExtensions
     {
+        private static async Task EnsureMissingSystemSettingsAsync(ApplicationDbContext dbContext)
+        {
+            var existingKeys = await dbContext.SystemSettings.IgnoreQueryFilters()
+                .Where(setting => !setting.IsDeleted)
+                .Select(setting => setting.Key)
+                .ToListAsync();
+
+            var missing = SystemSettingDefinitions.All
+                .Where(definition => !existingKeys.Contains(definition.Key))
+                .Select(definition => new SystemSetting { Key = definition.Key, Value = definition.DefaultValue })
+                .ToList();
+
+            if (missing.Count == 0)
+                return;
+
+            dbContext.SystemSettings.AddRange(missing);
+            await dbContext.SaveChangesAsync();
+        }
+
         public static async Task SeedAsync(this WebApplication app)
         {
+            BranchDatabaseGuard.EnsureAllowed(app.Configuration.GetConnectionString("DefaultConnection"));
+
             using (var scope = app.Services.CreateScope())
             {
                 var seedService = scope.ServiceProvider.GetRequiredService<IdentitySeedService>();
@@ -25,7 +48,11 @@ namespace KiraTakip.Web.Hosting
                 var runSeed = app.Configuration.GetValue<bool>("SeedData:RunSeed");
 
                 var domainSeed = scope.ServiceProvider.GetRequiredService<SeedDataService>();
+                var spaceSeed = scope.ServiceProvider.GetRequiredService<SpaceSeedData>();
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+                if (app.Environment.IsDevelopment())
+                    await EnsureMissingSystemSettingsAsync(dbContext);
 
                 // Veritabanının boş olup olmadığını kontrol et (örneğin hiç Taşınmaz/Property tanımı yoksa boş kabul edelim)
                 var isDbEmpty = !await dbContext.Properties.AnyAsync();
@@ -66,6 +93,7 @@ namespace KiraTakip.Web.Hosting
                     await domainSeed.SeedKiraciKategorileriAsync();
                     await domainSeed.SeedSektorlerAsync();
                     await domainSeed.SeedTarifelerAsync(); // Tarife.Yil oluşur
+                    await spaceSeed.SeedAsync();
                     await domainSeed.EnsureVarsayilanReservationRateOverrideAsync();
 
                     await domainSeed.SeedTasinmazFiyatlarAsync();

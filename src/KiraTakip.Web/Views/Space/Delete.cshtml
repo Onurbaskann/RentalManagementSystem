@@ -1,0 +1,61 @@
+@model SpaceDeleteViewModel
+@{
+    ViewData["Title"] = "Alan Sil";
+    ViewData["UseCentralFeedback"] = true;
+    var preview = Model.Preview;
+    var backUrl = $"/Space/{Model.RootId.ToHashId()}?node={Model.Detail.Id.ToHashId()}";
+}
+
+<div class="max-w-[640px] mx-auto">
+    <div class="page-header">
+        <div class="page-title">Alan Sil</div>
+        <div class="page-subtitle">@Model.Detail.Name (@Model.Detail.Code)</div>
+    </div>
+
+    <div class="card">
+        @if (!preview.CanDelete)
+        {
+            <div class="bg-red-50 border border-red-200 text-red-800 p-3 px-4 rounded-lg mb-4 text-[13.5px]">
+                Bu alan silinemez.
+                <ul class="list-disc ml-5 mt-1">
+                    @foreach (var violation in preview.Violations)
+                    {
+                        <li>@SpaceDisplay.Violation(violation)</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="text-sm text-slate-700 mb-2">Silme ile birlikte şu bağlı tanımlar da silinir:</div>
+        <ul class="list-disc ml-5 text-sm text-slate-700 mb-4">
+            @if (preview.HasAddress)
+            {
+                <li>Adres</li>
+            }
+            @foreach (var name in preview.AttributeNames)
+            {
+                <li>Özellik değeri: @name</li>
+            }
+            @foreach (var rate in preview.RateDescriptions)
+            {
+                <li>Tarife: @rate</li>
+            }
+            @if (!preview.HasAddress && !preview.AttributeNames.Any() && !preview.RateDescriptions.Any())
+            {
+                <li class="text-muted list-none">Bağlı tanım yok.</li>
+            }
+        </ul>
+
+        <div class="flex gap-2">
+            @if (preview.CanDelete)
+            {
+                <form method="post" action="/Space/Delete/@Model.Detail.Id.ToHashId()" asp-form-write-permission="@PermissionCatalog.Space.Delete">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="RootId" value="@Model.RootId.ToHashId()" />
+                    <button type="submit" class="btn btn-danger" asp-permission="@PermissionCatalog.Space.Delete">Sil</button>
+                </form>
+            }
+            <a href="@backUrl" class="btn btn-secondary">Vazgeç</a>
+        </div>
+    </div>
+</div>

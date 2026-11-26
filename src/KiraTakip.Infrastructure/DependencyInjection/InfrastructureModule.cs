@@ -53,6 +53,7 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             // Infrastructure Services
             services.AddScoped<IdentitySeedService>();
             services.AddScoped<SeedDataService>();
+            services.AddScoped<SpaceSeedData>();
             services.AddScoped<IUserSecurityService, UserSecurityService>();
             services.AddScoped<IStoreAccountCredentialProtector, StoreAccountCredentialProtector>();
             services.AddSingleton<IReservationPolicyProvider, ReservationPolicyProvider>();

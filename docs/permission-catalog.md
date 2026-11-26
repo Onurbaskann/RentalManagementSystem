@@ -24,6 +24,38 @@
 | `Birim.ManageRate` | Birim özel fiyat (BirimRate) yönet |
 | `Internal.Unit.UpdateCapacity` | Kontenjanı değiştir — endpoint `POST UnitCapacity/Apply`; önizleme `POST UnitCapacity/Preview` modül izni `Internal.Unit` ile |
 
+## Alan (Alan Hiyerarşisi, F1)
+
+| Permission | Açıklama |
+|------------|----------|
+| `Internal.Space` | Alan modülü; GET `Space`, `Space/{id}`, `Space/Delete/{id}` (silme önizlemesi) |
+| `Internal.Space.Create` | `POST Space/Create` — kök veya alt alan ekle |
+| `Internal.Space.Edit` | `POST Space/Edit` — alan düzenle |
+| `Internal.Space.Deactivate` | `POST Space/Deactivate` — alanı alt ağacıyla pasifleştir |
+| `Internal.Space.Activate` | `POST Space/Activate` — alanı etkinleştir |
+| `Internal.Space.Delete` | `POST Space/Delete` — alanı sil (onay) |
+| `Internal.Space.EditRate` | `POST Space/EditRate` — alan tarifesi ekle/güncelle/sil |
+| `Internal.Space.EditAddress` | `POST Space/EditAddress` — kök alan adresi |
+| `Internal.Space.EditAttributes` | `POST Space/EditAttributes` — alan özellik değerleri |
+
+## Alan Türü (Parametre)
+
+| Permission | Açıklama |
+|------------|----------|
+| `Internal.SpaceType` | Alan türleri listesi/formu (`/Admin/SpaceType`) |
+| `Internal.SpaceType.Create` | `POST Admin/SpaceType/Create` |
+| `Internal.SpaceType.Edit` | `POST Admin/SpaceType/Edit` |
+| `Internal.SpaceType.ToggleStatus` | `POST Admin/SpaceType/ToggleStatus` — aktif/pasif |
+
+## Alan Özelliği (Parametre)
+
+| Permission | Açıklama |
+|------------|----------|
+| `Internal.SpaceAttribute` | Alan özellik kataloğu (`/Admin/SpaceAttribute`) |
+| `Internal.SpaceAttribute.Create` | `POST Admin/SpaceAttribute/Create` |
+| `Internal.SpaceAttribute.Edit` | `POST Admin/SpaceAttribute/Edit` |
+| `Internal.SpaceAttribute.ToggleStatus` | `POST Admin/SpaceAttribute/ToggleStatus` — aktif/pasif |
+
 ## Kiracı
 
 | Permission | Açıklama |

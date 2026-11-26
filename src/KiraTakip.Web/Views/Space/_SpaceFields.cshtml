@@ -1,0 +1,80 @@
+@using System.Globalization
+@model SpaceFieldsModel
+@{
+    var f = Model.Form;
+}
+
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+    @if (!Model.IsEdit)
+    {
+        <div class="form-group">
+            <label class="form-label">Kod <span class="text-red-500">*</span></label>
+            <input name="Code" value="@f.Code" class="form-control" maxlength="50" />
+        </div>
+    }
+    <div class="form-group">
+        <label class="form-label">Ad <span class="text-red-500">*</span></label>
+        <input name="Name" value="@f.Name" class="form-control" maxlength="200" />
+    </div>
+    <div class="form-group">
+        <label class="form-label">Alan Türü <span class="text-red-500">*</span></label>
+        <select name="SpaceTypeId" class="form-control">
+            @foreach (var type in Model.Types)
+            {
+                <option value="@type.Id.ToHashId()" selected="@(type.Id == f.SpaceTypeId)">@type.Name@(type.IsActive ? "" : " (pasif)")</option>
+            }
+        </select>
+    </div>
+    <div class="form-group">
+        <label class="form-label">Kullanım <span class="text-red-500">*</span></label>
+        <select name="Usage" class="form-control">
+            @foreach (var usage in new[] { SpaceUsage.Rentable, SpaceUsage.Reservable, SpaceUsage.NotRentable })
+            {
+                <option value="@usage" selected="@(usage == f.Usage)">@SpaceDisplay.Usage(usage)</option>
+            }
+        </select>
+    </div>
+    <div class="form-group">
+        <label class="form-label">Yüzölçümü (m²) <span class="text-red-500">*</span></label>
+        <input name="Area" type="number" step="0.01" min="0" value="@f.Area.ToString(CultureInfo.InvariantCulture)" class="form-control" />
+    </div>
+    <div class="form-group">
+        <label class="form-label">Sıra</label>
+        <input name="SortOrder" type="number" value="@f.SortOrder" class="form-control w-24" />
+    </div>
+</div>
+<div class="form-group">
+    <label class="form-label">Açıklama</label>
+    <textarea name="Description" rows="2" class="form-control">@f.Description</textarea>
+</div>
+<div class="flex flex-wrap gap-x-6 gap-y-2 mb-4">
+    <label class="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" name="IsPreAllocatable" value="true" checked="@f.IsPreAllocatable" class="w-4 h-4 accent-primary cursor-pointer" />
+        <span class="text-sm">Ön tahsise açık</span>
+    </label>
+    <label class="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" name="IsShared" value="true" checked="@f.IsShared" class="w-4 h-4 accent-primary cursor-pointer" />
+        <span class="text-sm">Paylaşımlı</span>
+    </label>
+</div>
+@if (Model.ShowAddress)
+{
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+        <div class="form-group">
+            <label class="form-label">İl <span class="text-red-500">*</span></label>
+            <input name="City" value="@f.City" class="form-control" />
+        </div>
+        <div class="form-group">
+            <label class="form-label">İlçe <span class="text-red-500">*</span></label>
+            <input name="District" value="@f.District" class="form-control" />
+        </div>
+        <div class="form-group">
+            <label class="form-label">Mahalle <span class="text-red-500">*</span></label>
+            <input name="Neighborhood" value="@f.Neighborhood" class="form-control" />
+        </div>
+        <div class="form-group">
+            <label class="form-label">Açık Adres <span class="text-red-500">*</span></label>
+            <input name="Address" value="@f.Address" class="form-control" />
+        </div>
+    </div>
+}

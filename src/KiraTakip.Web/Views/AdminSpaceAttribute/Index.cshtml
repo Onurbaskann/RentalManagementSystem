@@ -1,0 +1,67 @@
+@model List<KiraTakip.Models.Dtos.Space.SpaceAttributeDto>
+@{
+    ViewData["Title"] = "Alan Özellikleri";
+    ViewData["UseCentralFeedback"] = true;
+}
+
+<div class="page-header flex items-center justify-between">
+    <div>
+        <div class="page-title">Alan Özellikleri</div>
+        <div class="page-subtitle">@Model.Count kayıt</div>
+    </div>
+    <a href="/Admin/SpaceAttribute/Create" class="btn btn-primary flex items-center gap-2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Yeni Özellik
+    </a>
+</div>
+
+<div class="card p-0 overflow-hidden">
+    <div class="table-wrapper">
+        <table class="w-full">
+            <thead>
+                <tr>
+                    <th>Kod</th>
+                    <th>Ad</th>
+                    <th>Veri Tipi</th>
+                    <th>Seçenekler</th>
+                    <th class="w-24">Durum</th>
+                    <th class="w-40"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var attr in Model)
+                {
+                    <tr>
+                        <td class="text-muted text-xs">@attr.Code</td>
+                        <td class="font-medium text-slate-700">@attr.Name</td>
+                        <td>@SpaceDisplay.DataType(attr.DataType)</td>
+                        <td class="text-xs text-muted">@string.Join(", ", attr.Options)</td>
+                        <td>
+                            @if (attr.IsActive)
+                            { <span class="badge badge-kirali">Aktif</span> }
+                            else
+                            { <span class="badge badge-gecmis">Pasif</span> }
+                        </td>
+                        <td class="flex gap-1.5 justify-end">
+                            <a href="/Admin/SpaceAttribute/Edit/@attr.Id.ToHashId()" class="icon-btn" data-tip="Düzenle" aria-label="Düzenle">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                            </a>
+                            <form method="post" action="/Admin/SpaceAttribute/ToggleStatus/@attr.Id.ToHashId()"
+                                  data-confirm="@(attr.IsActive ? $"'{attr.Name}' pasif yapılsın mı?" : $"'{attr.Name}' aktif yapılsın mı?")"
+                                  class="inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm @(attr.IsActive ? "btn-danger" : "btn-amber")">
+                                    @(attr.IsActive ? "Pasif Yap" : "Aktif Yap")
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="6" class="text-center py-8 text-muted">Henüz alan özelliği tanımlanmamış.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

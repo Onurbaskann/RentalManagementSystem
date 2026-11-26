@@ -1,0 +1,6 @@
+@model SpaceAttributeFormViewModel
+@{
+    ViewData["Title"] = "Alan Özelliğini Düzenle";
+    ViewData["UseCentralFeedback"] = true;
+}
+@await Html.PartialAsync("_Form", Model)

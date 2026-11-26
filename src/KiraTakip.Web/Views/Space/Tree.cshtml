@@ -1,0 +1,335 @@
+@using System.Globalization
+@model SpaceTreeViewModel
+@{
+    var selected = Model.Selected;
+    ViewData["Title"] = selected.Name;
+    ViewData["UseCentralFeedback"] = true;
+    var rootHash = Model.RootId.ToHashId();
+    var selectedHash = selected.Id.ToHashId();
+    var typeName = Model.Types.FirstOrDefault(t => t.Id == selected.SpaceTypeId)?.Name ?? string.Empty;
+    var canEdit = await PermissionService.HasPermissionAsync(PermissionCatalog.Space.Edit);
+    var canCreate = await PermissionService.HasPermissionAsync(PermissionCatalog.Space.Create);
+    var canDeactivate = await PermissionService.HasPermissionAsync(PermissionCatalog.Space.Deactivate);
+    var canActivate = await PermissionService.HasPermissionAsync(PermissionCatalog.Space.Activate);
+    var canDelete = await PermissionService.HasPermissionAsync(PermissionCatalog.Space.Delete);
+    var canEditRate = await PermissionService.HasPermissionAsync(PermissionCatalog.Space.EditRate);
+    var canEditAddress = await PermissionService.HasPermissionAsync(PermissionCatalog.Space.EditAddress);
+    var canEditAttributes = await PermissionService.HasPermissionAsync(PermissionCatalog.Space.EditAttributes);
+    var editForm = new SpaceFormViewModel
+    {
+        RootId = Model.RootId,
+        ParentId = selected.ParentId,
+        SpaceTypeId = selected.SpaceTypeId,
+        Code = selected.Code,
+        Name = selected.Name,
+        SortOrder = selected.SortOrder,
+        Description = selected.Description,
+        Area = selected.Area,
+        Usage = selected.Usage,
+        IsPreAllocatable = selected.IsPreAllocatable,
+        IsShared = selected.IsShared
+    };
+    var activeTypes = Model.Types.Where(t => t.IsActive).ToList();
+}
+
+<div class="page-header flex items-start justify-between">
+    <div>
+        <a href="/Space" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">← Alanlar</a>
+        <div class="page-title">@Model.Tree.Name</div>
+        <div class="page-subtitle">@Model.Tree.Code</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
+    <div class="card lg:col-span-2">
+        <div class="card-title">Alan Ağacı</div>
+        <ul>
+            @await Html.PartialAsync("_TreeNode", new SpaceTreeNodeView(Model.Tree, selected.Id, Model.RootId))
+        </ul>
+    </div>
+
+    <div class="lg:col-span-3 flex flex-col gap-4">
+        <div class="card">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <div class="text-lg font-semibold text-slate-700">@selected.Name</div>
+                    <div class="flex flex-wrap items-center gap-2 mt-1">
+                        <span class="text-xs text-muted">@selected.Code</span>
+                        <span class="badge badge-bireysel">@typeName</span>
+                        <span class="badge @SpaceDisplay.UsageBadge(selected.Usage)">@SpaceDisplay.Usage(selected.Usage)</span>
+                        <span class="text-xs text-muted">@selected.Area.ToString("N2") m²</span>
+                        @if (selected.IsActive)
+                        { <span class="badge badge-kirali">Aktif</span> }
+                        else
+                        { <span class="badge badge-gecmis">Pasif</span> }
+                    </div>
+                </div>
+                <div class="flex gap-1.5">
+                    @if (selected.IsActive && canDeactivate)
+                    {
+                        <form method="post" action="/Space/Deactivate/@selectedHash" data-confirm="@($"'{selected.Name}' ve tüm alt alanları pasifleştirilsin mi?")" class="inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="RootId" value="@rootHash" />
+                            <button type="submit" class="btn btn-sm btn-amber">Pasifleştir</button>
+                        </form>
+                    }
+                    @if (!selected.IsActive && canActivate)
+                    {
+                        <form method="post" action="/Space/Activate/@selectedHash" data-confirm="@($"'{selected.Name}' etkinleştirilsin mi? Alt alanlar tek tek açılmalıdır.")" class="inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="RootId" value="@rootHash" />
+                            <button type="submit" class="btn btn-sm btn-amber">Etkinleştir</button>
+                        </form>
+                    }
+                    @if (canDelete)
+                    {
+                        <a href="/Space/Delete/@selectedHash?rootId=@rootHash" class="btn btn-sm btn-danger">Sil</a>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (canEdit)
+        {
+            <div class="card">
+                <div class="card-title">Düzenle</div>
+                <form method="post" action="/Space/Edit/@selectedHash" asp-form-write-permission="@PermissionCatalog.Space.Edit">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="RootId" value="@rootHash" />
+                    <input type="hidden" name="ParentId" value="@selected.ParentId.ToHashId()" />
+                    @await Html.PartialAsync("_SpaceFields", new SpaceFieldsModel(editForm, Model.Types, false, true))
+                    <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Space.Edit">Kaydet</button>
+                </form>
+            </div>
+        }
+
+        @if (canCreate)
+        {
+            <div class="card">
+                <div class="card-title">Alt Alan Ekle</div>
+                <form method="post" action="/Space/Create" asp-form-write-permission="@PermissionCatalog.Space.Create">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="RootId" value="@rootHash" />
+                    <input type="hidden" name="ParentId" value="@selectedHash" />
+                    @await Html.PartialAsync("_SpaceFields", new SpaceFieldsModel(Model.ChildForm, activeTypes, false, false))
+                    <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Space.Create">Alt Alan Ekle</button>
+                </form>
+            </div>
+        }
+
+        @if (Model.IsRoot)
+        {
+            <div class="card">
+                <div class="card-title">Adres</div>
+                @if (canEditAddress && Model.Address != null)
+                {
+                    <form method="post" action="/Space/EditAddress/@selectedHash" asp-form-write-permission="@PermissionCatalog.Space.EditAddress">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="RootId" value="@rootHash" />
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                            <div class="form-group">
+                                <label class="form-label">İl</label>
+                                <input name="City" value="@Model.Address.City" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">İlçe</label>
+                                <input name="District" value="@Model.Address.District" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Mahalle</label>
+                                <input name="Neighborhood" value="@Model.Address.Neighborhood" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Açık Adres</label>
+                                <input name="Address" value="@Model.Address.Address" class="form-control" />
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Space.EditAddress">Adresi Kaydet</button>
+                    </form>
+                }
+                else if (Model.Address != null)
+                {
+                    <div class="text-sm text-slate-700">@Model.Address.Address, @Model.Address.Neighborhood, @Model.Address.District / @Model.Address.City</div>
+                }
+                else
+                {
+                    <div class="text-sm text-muted">Adres tanımlı değil.</div>
+                }
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-title">Özellikler</div>
+            @if (!Model.Attributes.Any())
+            {
+                <div class="text-sm text-muted">Tanımlı özellik yok.</div>
+            }
+            else
+            {
+                <form method="post" action="/Space/EditAttributes/@selectedHash" asp-form-write-permission="@PermissionCatalog.Space.EditAttributes">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="RootId" value="@rootHash" />
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                        @for (var i = 0; i < Model.Attributes.Count; i++)
+                        {
+                            var attr = Model.Attributes[i];
+                            var current = Model.AttributeValues.GetValueOrDefault(attr.Id) ?? string.Empty;
+                            <div class="form-group">
+                                <label class="form-label">@attr.Name</label>
+                                <input type="hidden" name="Values[@i].AttributeDefinitionId" value="@attr.Id.ToHashId()" />
+                                @if (attr.DataType == AttributeDataType.Boolean)
+                                {
+                                    <select name="Values[@i].Value" class="form-control">
+                                        <option value="">-</option>
+                                        <option value="True" selected="@(current == bool.TrueString)">Evet</option>
+                                        <option value="False" selected="@(current == bool.FalseString)">Hayır</option>
+                                    </select>
+                                }
+                                else if (attr.DataType == AttributeDataType.List)
+                                {
+                                    <select name="Values[@i].Value" class="form-control">
+                                        <option value="">-</option>
+                                        @foreach (var option in attr.Options)
+                                        {
+                                            <option value="@option" selected="@(current == option)">@option</option>
+                                        }
+                                    </select>
+                                }
+                                else
+                                {
+                                    <input name="Values[@i].Value" value="@current" class="form-control" inputmode="@(attr.DataType == AttributeDataType.Number ? "decimal" : "text")" />
+                                }
+                            </div>
+                        }
+                    </div>
+                    @if (canEditAttributes)
+                    {
+                        <button type="submit" class="btn btn-primary">Özellikleri Kaydet</button>
+                    }
+                </form>
+            }
+        </div>
+
+        <div class="card">
+            <div class="card-title">Alan Tarifeleri</div>
+            <div class="table-wrapper mb-4">
+                <table class="w-full">
+                    <thead>
+                        <tr>
+                            <th>Kiracı Kategorisi</th>
+                            <th>Borç Tipi</th>
+                            <th>Hesaplama</th>
+                            <th class="text-right">Birim Değer</th>
+                            <th class="text-right">KDV %</th>
+                            <th class="w-16"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var rate in Model.Rates)
+                        {
+                            <tr>
+                                <td>@(Model.TenantCategoryNames.GetValueOrDefault(rate.TenantCategoryId))</td>
+                                <td>@(Model.ChargeTypeNames.GetValueOrDefault(rate.ChargeTypeId))</td>
+                                <td>@SpaceDisplay.Method(rate.CalculationMethod)</td>
+                                <td class="text-right">@rate.UnitValue.ToString("N2")</td>
+                                <td class="text-right">@rate.KdvRate.ToString("N2")</td>
+                                <td class="text-right">
+                                    @if (canEditRate)
+                                    {
+                                        <form method="post" action="/Space/EditRate/@selectedHash" data-confirm="Tarife silinsin mi?" class="inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="RootId" value="@rootHash" />
+                                            <input type="hidden" name="Operation" value="@SpaceRateOperations.Delete" />
+                                            <input type="hidden" name="RateId" value="@rate.Id.ToHashId()" />
+                                            <button type="submit" class="btn btn-sm btn-danger">Sil</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        @if (!Model.Rates.Any())
+                        {
+                            <tr><td colspan="6" class="text-center py-4 text-muted">Bu alan için tarife tanımlı değil.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (canEditRate)
+            {
+                <form method="post" action="/Space/EditRate/@selectedHash" asp-form-write-permission="@PermissionCatalog.Space.EditRate">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="RootId" value="@rootHash" />
+                    <input type="hidden" name="Operation" value="@SpaceRateOperations.Save" />
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                        <div class="form-group">
+                            <label class="form-label">Kiracı Kategorisi</label>
+                            <select name="TenantCategoryId" class="form-control">
+                                @foreach (var category in Model.TenantCategoryNames)
+                                {
+                                    <option value="@category.Key.ToHashId()">@category.Value</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Borç Tipi</label>
+                            <select name="ChargeTypeId" class="form-control">
+                                @foreach (var chargeType in Model.ChargeTypeNames)
+                                {
+                                    <option value="@chargeType.Key.ToHashId()">@chargeType.Value</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Hesaplama</label>
+                            <select name="CalculationMethod" class="form-control">
+                                <option value="@CalculationMethod.Fixed">@SpaceDisplay.Method(CalculationMethod.Fixed)</option>
+                                <option value="@CalculationMethod.M2">@SpaceDisplay.Method(CalculationMethod.M2)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Birim Değer</label>
+                            <input name="UnitValue" type="number" step="0.01" min="0" value="0" class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">KDV Oranı (%)</label>
+                            <input name="KdvRate" type="number" step="0.01" min="0" value="0" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="text-xs text-muted mb-3">Aynı kategori ve borç tipi için kayıt varsa güncellenir.</div>
+                    <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Space.EditRate">Tarife Kaydet</button>
+                </form>
+            }
+        </div>
+
+        <div class="card p-0 overflow-hidden">
+            <div class="card-title px-5 pt-4">Tarihçe</div>
+            <div class="table-wrapper">
+                <table class="w-full">
+                    <thead>
+                        <tr>
+                            <th>Tarih</th>
+                            <th>Alan</th>
+                            <th>Eski</th>
+                            <th>Yeni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.History)
+                        {
+                            <tr>
+                                <td class="text-xs text-muted">@item.ChangedAt.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture)</td>
+                                <td>@SpaceDisplay.HistoryField(item.Field)</td>
+                                <td>@item.OldValue</td>
+                                <td>@item.NewValue</td>
+                            </tr>
+                        }
+                        @if (!Model.History.Any())
+                        {
+                            <tr><td colspan="4" class="text-center py-4 text-muted">Tarihçe kaydı yok.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

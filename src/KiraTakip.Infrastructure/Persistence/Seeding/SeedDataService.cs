@@ -3221,6 +3221,27 @@ public class SeedDataService(
         return [0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34];
     }
 
+    private async Task ClearSpaceDataAsync()
+    {
+        ctx.SpaceRates.RemoveRange(ctx.SpaceRates.IgnoreQueryFilters());
+        ctx.SpaceAttributeValues.RemoveRange(ctx.SpaceAttributeValues.IgnoreQueryFilters());
+        ctx.SpaceTypeDefaultAttributes.RemoveRange(ctx.SpaceTypeDefaultAttributes.IgnoreQueryFilters());
+        ctx.SpaceAddresses.RemoveRange(ctx.SpaceAddresses.IgnoreQueryFilters());
+        ctx.SpaceHistories.RemoveRange(ctx.SpaceHistories.IgnoreQueryFilters());
+        await ctx.SaveChangesAsync();
+
+        var spaces = await ctx.Spaces.IgnoreQueryFilters().OrderByDescending(x => x.Depth).ToListAsync();
+        foreach (var space in spaces)
+        {
+            ctx.Spaces.Remove(space);
+            await ctx.SaveChangesAsync();
+        }
+
+        ctx.SpaceAttributeDefinitions.RemoveRange(ctx.SpaceAttributeDefinitions.IgnoreQueryFilters());
+        ctx.SpaceTypes.RemoveRange(ctx.SpaceTypes.IgnoreQueryFilters());
+        await ctx.SaveChangesAsync();
+    }
+
     public async Task ClearDomainDataAsync()
     {
         // Yetki kapsamlarını ve logları temizle (FK kısıtlaması nedeniyle)
@@ -3254,6 +3275,8 @@ public class SeedDataService(
         ctx.PaymentStoreRoutings.RemoveRange(ctx.PaymentStoreRoutings.IgnoreQueryFilters());
         ctx.StoreAccounts.RemoveRange(ctx.StoreAccounts.IgnoreQueryFilters());
         ctx.Stores.RemoveRange(ctx.Stores.IgnoreQueryFilters());
+
+        await ClearSpaceDataAsync();
 
         ctx.UnitRates.RemoveRange(ctx.UnitRates.IgnoreQueryFilters());
         ctx.Units.RemoveRange(ctx.Units.IgnoreQueryFilters());
@@ -3440,6 +3463,7 @@ public class SeedDataService(
             PermissionCatalog.RateSchedule.Module,
             PermissionCatalog.Property.Module,
             PermissionCatalog.Unit.Module,
+            PermissionCatalog.Space.Module,
             PermissionCatalog.Tenant.Module,
             PermissionCatalog.Lease.Module
         };
@@ -3462,6 +3486,12 @@ public class SeedDataService(
             PermissionCatalog.Unit.Edit,
             PermissionCatalog.Unit.OverrideRate,
             PermissionCatalog.Unit.UpdateCapacity,
+            PermissionCatalog.Space.Module,
+            PermissionCatalog.Space.Create,
+            PermissionCatalog.Space.Edit,
+            PermissionCatalog.Space.EditRate,
+            PermissionCatalog.Space.EditAddress,
+            PermissionCatalog.Space.EditAttributes,
             PermissionCatalog.Tenant.Module,
             PermissionCatalog.Tenant.Create,
             PermissionCatalog.Tenant.Edit,
