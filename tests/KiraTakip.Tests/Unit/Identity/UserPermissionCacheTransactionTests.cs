@@ -12,7 +12,7 @@ using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Identity;
 using KiraTakip.Repositories.Interfaces.Identity;
 using KiraTakip.Repositories.Leases;
-using KiraTakip.Repositories.Properties;
+using KiraTakip.Repositories.Reservations;
 using KiraTakip.Repositories.Tenants;
 using KiraTakip.Services.Identity;
 using KiraTakip.Services.Interfaces.Auditing;
@@ -733,8 +733,8 @@ public class UserPermissionCacheTransactionIntegrationTests : IDisposable
         ctx.Roller.AddRange(role1, role2);
         await ctx.SaveChangesAsync();
 
-        ctx.RolPermissions.Add(new RolePermission { RoleId = role1.Id, Permission = PermissionCatalog.Property.Module });
-        ctx.RolPermissions.Add(new RolePermission { RoleId = role2.Id, Permission = PermissionCatalog.Property.Create });
+        ctx.RolPermissions.Add(new RolePermission { RoleId = role1.Id, Permission = PermissionCatalog.Space.Module });
+        ctx.RolPermissions.Add(new RolePermission { RoleId = role2.Id, Permission = PermissionCatalog.Space.Create });
         ctx.UserRoller.Add(new UserRole { UserId = user.Id, RoleId = role1.Id });
         await ctx.SaveChangesAsync();
 
@@ -742,8 +742,8 @@ public class UserPermissionCacheTransactionIntegrationTests : IDisposable
         {
             // 1. Initial read populates cache with Property.Module
             var perms1 = await realCache.GetAsync(user.Id);
-            Assert.Contains(PermissionCatalog.Property.Module, perms1);
-            Assert.DoesNotContain(PermissionCatalog.Property.Create, perms1);
+            Assert.Contains(PermissionCatalog.Space.Module, perms1);
+            Assert.DoesNotContain(PermissionCatalog.Space.Create, perms1);
 
             // 2. Begin transaction, add role2
             using (var tx = await ctx.Database.BeginTransactionAsync())
@@ -752,16 +752,16 @@ public class UserPermissionCacheTransactionIntegrationTests : IDisposable
 
                 // Mid-transaction before commit: cache still returns cached old permissions
                 var permsMidTx = await realCache.GetAsync(user.Id);
-                Assert.Contains(PermissionCatalog.Property.Module, permsMidTx);
-                Assert.DoesNotContain(PermissionCatalog.Property.Create, permsMidTx);
+                Assert.Contains(PermissionCatalog.Space.Module, permsMidTx);
+                Assert.DoesNotContain(PermissionCatalog.Space.Create, permsMidTx);
 
                 await tx.CommitAsync();
             }
 
             // 3. After commit, cache was invalidated, next GetAsync reloads updated permissions from DB
             var permsAfterCommit = await realCache.GetAsync(user.Id);
-            Assert.Contains(PermissionCatalog.Property.Module, permsAfterCommit);
-            Assert.Contains(PermissionCatalog.Property.Create, permsAfterCommit);
+            Assert.Contains(PermissionCatalog.Space.Module, permsAfterCommit);
+            Assert.Contains(PermissionCatalog.Space.Create, permsAfterCommit);
         }
         finally
         {
@@ -831,8 +831,8 @@ public class UserPermissionCacheTransactionIntegrationTests : IDisposable
         ctx.Roller.AddRange(role1, role2);
         await ctx.SaveChangesAsync();
 
-        ctx.RolPermissions.Add(new RolePermission { RoleId = role1.Id, Permission = PermissionCatalog.Property.Module });
-        ctx.RolPermissions.Add(new RolePermission { RoleId = role2.Id, Permission = PermissionCatalog.Property.Create });
+        ctx.RolPermissions.Add(new RolePermission { RoleId = role1.Id, Permission = PermissionCatalog.Space.Module });
+        ctx.RolPermissions.Add(new RolePermission { RoleId = role2.Id, Permission = PermissionCatalog.Space.Create });
         ctx.UserRoller.Add(new UserRole { UserId = user.Id, RoleId = role1.Id });
         await ctx.SaveChangesAsync();
 
@@ -840,7 +840,7 @@ public class UserPermissionCacheTransactionIntegrationTests : IDisposable
         {
             // Populate cache
             var perms = await realCache.GetAsync(user.Id);
-            Assert.Single(perms, PermissionCatalog.Property.Module);
+            Assert.Single(perms, PermissionCatalog.Space.Module);
 
             using (var tx = await ctx.Database.BeginTransactionAsync())
             {
@@ -850,7 +850,7 @@ public class UserPermissionCacheTransactionIntegrationTests : IDisposable
 
             // Cache must still hold the existing cached permissions without change
             var permsAfterRollback = await realCache.GetAsync(user.Id);
-            Assert.Single(permsAfterRollback, PermissionCatalog.Property.Module);
+            Assert.Single(permsAfterRollback, PermissionCatalog.Space.Module);
         }
         finally
         {
@@ -969,7 +969,7 @@ public class UserPermissionCacheTransactionIntegrationTests : IDisposable
 
             await roleService.SetRolePermissionsAsync(new SetRolePermissionsInput(
                 role.Id,
-                [PermissionCatalog.Property.Module, PermissionCatalog.Property.Create],
+                [PermissionCatalog.Space.Module, PermissionCatalog.Space.Create],
                 u1.Id));
 
             // Before commit: Cache not invalidated
@@ -1145,7 +1145,7 @@ public class UserPermissionCacheTransactionIntegrationTests : IDisposable
             AdSoyad = "Target User",
             UserType = UserType.Tenant,
             TenantId = tenant.Id,
-            TumTasinmazlaraErisim = true,
+            HasAccessToAllSpaces = true,
             SecurityStamp = Guid.NewGuid().ToString()
         };
         _context.Users.AddRange(actor, targetUser);
@@ -1161,7 +1161,7 @@ public class UserPermissionCacheTransactionIntegrationTests : IDisposable
             new RoleRepository(_context),
             new UserRoleRepository(_context),
             new LeaseRepository(_context),
-            new UnitRepository(_context),
+            new ReservationRepository(_context),
             new UserPermissionScopeRepository(_context),
             new NoOpApplicationUserManager(),
             null!,
@@ -1240,7 +1240,7 @@ public class UserPermissionCacheTransactionIntegrationTests : IDisposable
             AdSoyad = "Target User",
             UserType = UserType.Tenant,
             TenantId = tenant.Id,
-            TumTasinmazlaraErisim = true,
+            HasAccessToAllSpaces = true,
             SecurityStamp = Guid.NewGuid().ToString()
         };
         _context.Users.AddRange(actor, targetUser);
@@ -1256,7 +1256,7 @@ public class UserPermissionCacheTransactionIntegrationTests : IDisposable
             new RoleRepository(_context),
             new UserRoleRepository(_context),
             new LeaseRepository(_context),
-            new UnitRepository(_context),
+            new ReservationRepository(_context),
             new UserPermissionScopeRepository(_context),
             new NoOpApplicationUserManager(),
             null!,

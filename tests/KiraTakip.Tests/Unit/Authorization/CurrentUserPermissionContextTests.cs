@@ -75,7 +75,7 @@ public class CurrentUserPermissionContextTests
     public async Task GetPermissionsAsync_MultipleCalls_ExecutesOnlySingleTaskPerRequest()
     {
         var cache = new TrackingPermissionCache();
-        cache.SetUserPermissions("user-42", PermissionCatalog.Property.Module, PermissionCatalog.Property.Edit);
+        cache.SetUserPermissions("user-42", PermissionCatalog.Space.Module, PermissionCatalog.Space.Edit);
 
         var httpContext = new DefaultHttpContext
         {
@@ -97,14 +97,14 @@ public class CurrentUserPermissionContextTests
         Assert.Equal(1, cache.GetAsyncCallCount);
         Assert.Same(results[0], results[1]);
         Assert.Same(results[1], results[2]);
-        Assert.Contains(PermissionCatalog.Property.Edit, results[0]);
+        Assert.Contains(PermissionCatalog.Space.Edit, results[0]);
     }
 
     [Fact]
     public async Task GetPermissionsForUserAsync_DifferentUserIds_MaintainsIsolationAndFetchesForRequestedUser()
     {
         var cache = new TrackingPermissionCache();
-        cache.SetUserPermissions("user-A", PermissionCatalog.Property.Module);
+        cache.SetUserPermissions("user-A", PermissionCatalog.Space.Module);
         cache.SetUserPermissions("user-B", PermissionCatalog.Tenant.Module, PermissionCatalog.Tenant.Edit);
 
         var httpContext = new DefaultHttpContext
@@ -120,11 +120,11 @@ public class CurrentUserPermissionContextTests
         var permsA = await context.GetPermissionsAsync();
         var permsB = await context.GetPermissionsForUserAsync("user-B");
 
-        Assert.Contains(PermissionCatalog.Property.Module, permsA);
+        Assert.Contains(PermissionCatalog.Space.Module, permsA);
         Assert.DoesNotContain(PermissionCatalog.Tenant.Module, permsA);
 
         Assert.Contains(PermissionCatalog.Tenant.Module, permsB);
-        Assert.DoesNotContain(PermissionCatalog.Property.Module, permsB);
+        Assert.DoesNotContain(PermissionCatalog.Space.Module, permsB);
 
         Assert.Equal(2, cache.GetAsyncCallCount);
         Assert.Equal(new[] { "user-A", "user-B" }, cache.RequestedUserIds);
@@ -150,7 +150,7 @@ public class CurrentUserPermissionContextTests
             .ToArray();
 
         // Release the task
-        var expectedPerms = new HashSet<string> { PermissionCatalog.Property.Edit };
+        var expectedPerms = new HashSet<string> { PermissionCatalog.Space.Edit };
         tcs.SetResult(expectedPerms);
 
         var results = await Task.WhenAll(tasks);
@@ -166,7 +166,7 @@ public class CurrentUserPermissionContextTests
     public async Task GetPermissionsForUserAsync_Sequence_A_B_A_OnlyLoadsEachUserOnce()
     {
         var cache = new TrackingPermissionCache();
-        cache.SetUserPermissions("user-A", PermissionCatalog.Property.Module);
+        cache.SetUserPermissions("user-A", PermissionCatalog.Space.Module);
         cache.SetUserPermissions("user-B", PermissionCatalog.Tenant.Module);
 
         var context = new CurrentUserPermissionContext(cache, new HttpContextAccessor());
@@ -178,7 +178,7 @@ public class CurrentUserPermissionContextTests
         Assert.Equal(2, cache.GetAsyncCallCount);
         Assert.Equal(new[] { "user-A", "user-B" }, cache.RequestedUserIds);
         Assert.Same(permsA1, permsA2);
-        Assert.Contains(PermissionCatalog.Property.Module, permsA1);
+        Assert.Contains(PermissionCatalog.Space.Module, permsA1);
         Assert.Contains(PermissionCatalog.Tenant.Module, permsB);
     }
 
@@ -186,7 +186,7 @@ public class CurrentUserPermissionContextTests
     public async Task GetPermissionsForUserAsync_DifferentScopes_CreateSeparateContexts()
     {
         var cache = new TrackingPermissionCache();
-        cache.SetUserPermissions("user-1", PermissionCatalog.Property.Module);
+        cache.SetUserPermissions("user-1", PermissionCatalog.Space.Module);
 
         var contextScope1 = new CurrentUserPermissionContext(cache, new HttpContextAccessor());
         var contextScope2 = new CurrentUserPermissionContext(cache, new HttpContextAccessor());
@@ -195,8 +195,8 @@ public class CurrentUserPermissionContextTests
         var perms2 = await contextScope2.GetPermissionsForUserAsync("user-1");
 
         Assert.Equal(2, cache.GetAsyncCallCount);
-        Assert.Contains(PermissionCatalog.Property.Module, perms1);
-        Assert.Contains(PermissionCatalog.Property.Module, perms2);
+        Assert.Contains(PermissionCatalog.Space.Module, perms1);
+        Assert.Contains(PermissionCatalog.Space.Module, perms2);
     }
 
     [Fact]
@@ -219,14 +219,14 @@ public class CurrentUserPermissionContextTests
         }, "TestAuth"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.HasPermissionAsync(user, PermissionCatalog.Property.Edit));
+            service.HasPermissionAsync(user, PermissionCatalog.Space.Edit));
     }
 
     [Fact]
     public async Task GetPermissionsForUserAsync_DifferentTargetPrincipal_DoesNotUseCurrentRequestUserPermissions()
     {
         var cache = new TrackingPermissionCache();
-        cache.SetUserPermissions("request-user", PermissionCatalog.Property.Module, PermissionCatalog.Property.Edit);
+        cache.SetUserPermissions("request-user", PermissionCatalog.Space.Module, PermissionCatalog.Space.Edit);
         cache.SetUserPermissions("target-user", PermissionCatalog.Tenant.Module, PermissionCatalog.Tenant.Edit);
 
         var requestUser = new ClaimsPrincipal(new ClaimsIdentity(new[]
@@ -247,7 +247,7 @@ public class CurrentUserPermissionContextTests
         var service = new CurrentUserPermissionService(context, accessor);
 
         // Request user has Property.Edit, target user does NOT
-        var targetHasPropertyEdit = await service.HasPermissionAsync(targetUser, PermissionCatalog.Property.Edit);
+        var targetHasPropertyEdit = await service.HasPermissionAsync(targetUser, PermissionCatalog.Space.Edit);
         Assert.False(targetHasPropertyEdit);
 
         // Target user has Tenant.Edit, request user does NOT

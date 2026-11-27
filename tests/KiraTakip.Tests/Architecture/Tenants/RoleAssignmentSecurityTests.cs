@@ -13,7 +13,7 @@ using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Identity;
 using KiraTakip.Repositories.Interfaces.Identity;
 using KiraTakip.Repositories.Interfaces.Leases;
-using KiraTakip.Repositories.Interfaces.Properties;
+using KiraTakip.Repositories.Interfaces.Spaces;
 using KiraTakip.Repositories.Interfaces.Reservations;
 using KiraTakip.Repositories.Interfaces.Tenants;
 using KiraTakip.Repositories.Tenants;
@@ -354,7 +354,7 @@ public class RoleAssignmentSecurityTests : IDisposable
         _context.Roller.Add(role);
         await _context.SaveChangesAsync();
 
-        var initialPermission = PermissionCatalog.Property.Module;
+        var initialPermission = PermissionCatalog.Space.Module;
         _context.RolPermissions.Add(new RolePermission { RoleId = role.Id, Permission = initialPermission });
         await _context.SaveChangesAsync();
 
@@ -363,7 +363,7 @@ public class RoleAssignmentSecurityTests : IDisposable
         var ex = await Assert.ThrowsAsync<BusinessValidationException>(() =>
             service.SetRolePermissionsAsync(new SetRolePermissionsInput(
                 role.Id,
-                [PermissionCatalog.TenantPortal.Lease.Module, PermissionCatalog.Property.Edit],
+                [PermissionCatalog.TenantPortal.Lease.Module, PermissionCatalog.Space.Edit],
                 "test-user")));
 
         Assert.Equal("Geçersiz izin seçimi.", ex.Message);
@@ -595,7 +595,7 @@ public class RoleAssignmentSecurityTests : IDisposable
             UserType = UserType.Tenant,
             TenantId = tenant.Id,
             AdSoyad = "Eski Isim",
-            TumTasinmazlaraErisim = true,
+            HasAccessToAllSpaces = true,
             IsActive = true,
             SecurityStamp = Guid.NewGuid().ToString()
         };
@@ -889,7 +889,7 @@ public class RoleAssignmentSecurityTests : IDisposable
             AdSoyad = "Target User",
             UserType = UserType.Tenant,
             TenantId = tenant.Id,
-            TumTasinmazlaraErisim = true,
+            HasAccessToAllSpaces = true,
             SecurityStamp = Guid.NewGuid().ToString()
         };
         var kiraciYoneticisiRole = new Role
@@ -999,7 +999,7 @@ public class RoleAssignmentSecurityTests : IDisposable
             AdSoyad = "Target User",
             UserType = UserType.Tenant,
             TenantId = tenant.Id,
-            TumTasinmazlaraErisim = true,
+            HasAccessToAllSpaces = true,
             SecurityStamp = Guid.NewGuid().ToString()
         };
         var customRole = new Role
@@ -1082,7 +1082,7 @@ public class RoleAssignmentSecurityTests : IDisposable
             AdSoyad = "Target User",
             UserType = UserType.Tenant,
             TenantId = tenant.Id,
-            TumTasinmazlaraErisim = true,
+            HasAccessToAllSpaces = true,
             SecurityStamp = Guid.NewGuid().ToString()
         };
         var customRole = new Role
@@ -1164,7 +1164,7 @@ public class RoleAssignmentSecurityTests : IDisposable
             AdSoyad = "Original Name",
             UserType = UserType.Tenant,
             TenantId = tenant.Id,
-            TumTasinmazlaraErisim = true,
+            HasAccessToAllSpaces = true,
             SecurityStamp = Guid.NewGuid().ToString()
         };
         var initialRole = new Role
@@ -1544,6 +1544,7 @@ internal sealed class NoOpPermissionScopeCache : IPermissionScopeCache
     public Task<UserScopeDto> GetAsync(string userId) => Task.FromResult(new UserScopeDto());
     public void Invalidate(string userId) { }
     public void InvalidateMany(IEnumerable<string> userIds) { }
+    public void InvalidateAll() { }
 }
 
 internal sealed class NoOpUserPermissionCacheInvalidator : IUserPermissionCacheInvalidator

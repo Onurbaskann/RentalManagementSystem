@@ -263,8 +263,8 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
         // Assign initial permissions:
         // Role 1 has Property.Module + Property.Edit
         context.RolPermissions.AddRange(
-            new RolePermission { RoleId = role1.Id, Permission = PermissionCatalog.Property.Module },
-            new RolePermission { RoleId = role1.Id, Permission = PermissionCatalog.Property.Edit },
+            new RolePermission { RoleId = role1.Id, Permission = PermissionCatalog.Space.Module },
+            new RolePermission { RoleId = role1.Id, Permission = PermissionCatalog.Space.Edit },
             // Role 2 has Tenant.Module
             new RolePermission { RoleId = role2.Id, Permission = PermissionCatalog.Tenant.Module });
 
@@ -312,7 +312,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
                 new DefaultHttpContext { User = p1 };
             var auth = scope1.ServiceProvider.GetRequiredService<IAuthorizationService>();
 
-            var canEdit = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Edit);
+            var canEdit = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Edit);
             Assert.True(canEdit.Succeeded, "Scope 1: User 1 must initially have Property.Edit permission");
 
             // â”€â”€ SCOPE 2: Admin removes Property.Edit from Role 1 and commits â”€â”€
@@ -322,12 +322,12 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
                 // Keep only Property.Module, remove Property.Edit
                 await roleService.SetRolePermissionsAsync(new SetRolePermissionsInput(
                     role1.Id,
-                    [PermissionCatalog.Property.Module],
+                    [PermissionCatalog.Space.Module],
                     "admin-changer"));
             }
 
             // â”€â”€ VERIFY SNAPSHOT IN SCOPE 1: Same request snapshot must be preserved! â”€â”€
-            var stillCanEditInScope1 = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Edit);
+            var stillCanEditInScope1 = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Edit);
             Assert.True(stillCanEditInScope1.Succeeded, "Scope 1: In-flight request snapshot must NOT be mutated mid-request");
         }
 
@@ -338,10 +338,10 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
                 new DefaultHttpContext { User = p1 };
             var auth = scope3.ServiceProvider.GetRequiredService<IAuthorizationService>();
 
-            var canEdit = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Edit);
+            var canEdit = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Edit);
             Assert.False(canEdit.Succeeded, "Scope 3: User 1 must now be DENIED Property.Edit");
 
-            var canViewModule = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Module);
+            var canViewModule = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Module);
             Assert.True(canViewModule.Succeeded, "Scope 3: User 1 still retains Property.Module");
         }
 
@@ -351,7 +351,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
             var roleService = scope4.ServiceProvider.GetRequiredService<IRoleService>();
             await roleService.SetRolePermissionsAsync(new SetRolePermissionsInput(
                 role1.Id,
-                [PermissionCatalog.Property.Module, PermissionCatalog.Property.Edit],
+                [PermissionCatalog.Space.Module, PermissionCatalog.Space.Edit],
                 "admin-restorer"));
         }
 
@@ -362,7 +362,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
                 new DefaultHttpContext { User = p1 };
             var auth = scope5.ServiceProvider.GetRequiredService<IAuthorizationService>();
 
-            var canEdit = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Edit);
+            var canEdit = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Edit);
             Assert.True(canEdit.Succeeded, "Scope 5: User 1 must have Property.Edit restored");
         }
 
@@ -380,7 +380,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
                 new DefaultHttpContext { User = p1 };
             var auth = scope7.ServiceProvider.GetRequiredService<IAuthorizationService>();
 
-            var canView = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Module);
+            var canView = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Module);
             Assert.False(canView.Succeeded, "Scope 7: User 1 with role removed must have no access");
         }
 
@@ -398,7 +398,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
                 new DefaultHttpContext { User = p1 };
             var auth = scope9.ServiceProvider.GetRequiredService<IAuthorizationService>();
 
-            var canEdit = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Edit);
+            var canEdit = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Edit);
             Assert.True(canEdit.Succeeded, "Scope 9: User 1 with role re-assigned must have access restored");
         }
 
@@ -412,7 +412,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
             var u2HasTenant = await auth.AuthorizeAsync(p2, PermissionCatalog.Tenant.Module);
             Assert.True(u2HasTenant.Succeeded, "Scope 10: Unrelated User 2 must retain Tenant.Module throughout");
 
-            var u2HasProperty = await auth.AuthorizeAsync(p2, PermissionCatalog.Property.Module);
+            var u2HasProperty = await auth.AuthorizeAsync(p2, PermissionCatalog.Space.Module);
             Assert.False(u2HasProperty.Succeeded, "Scope 10: User 2 never had Property access");
         }
     }
@@ -434,7 +434,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
             scope1.ServiceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext =
                 new DefaultHttpContext { User = p1 };
             var auth = scope1.ServiceProvider.GetRequiredService<IAuthorizationService>();
-            var res = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Edit);
+            var res = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Edit);
             Assert.True(res.Succeeded);
         }
 
@@ -464,14 +464,14 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
             // 1. Verify DB mutation was completely rolled back
             var db = scope3.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var perms = await db.RolPermissions.Where(rp => rp.RoleId == role1.Id).Select(rp => rp.Permission).ToListAsync();
-            Assert.Contains(PermissionCatalog.Property.Edit, perms);
+            Assert.Contains(PermissionCatalog.Space.Edit, perms);
             Assert.DoesNotContain(PermissionCatalog.Tenant.Module, perms);
 
             // 2. Verify authorization: old permission retained, new permission not granted
             scope3.ServiceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext =
                 new DefaultHttpContext { User = p1 };
             var auth = scope3.ServiceProvider.GetRequiredService<IAuthorizationService>();
-            var resOld = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Edit);
+            var resOld = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Edit);
             Assert.True(resOld.Succeeded, "Old permission must be retained after rollback");
             var resNew = await auth.AuthorizeAsync(p1, PermissionCatalog.Tenant.Module);
             Assert.False(resNew.Succeeded, "Rolled back permission must NOT be granted");
@@ -502,14 +502,14 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
             // 1. Verify DB mutation committed
             var db = scope5.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var perms = await db.RolPermissions.Where(rp => rp.RoleId == role1.Id).Select(rp => rp.Permission).ToListAsync();
-            Assert.DoesNotContain(PermissionCatalog.Property.Edit, perms);
+            Assert.DoesNotContain(PermissionCatalog.Space.Edit, perms);
             Assert.Contains(PermissionCatalog.Tenant.Module, perms);
 
             // 2. Verify authorization: old permission revoked, new permission granted
             scope5.ServiceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext =
                 new DefaultHttpContext { User = p1 };
             var auth = scope5.ServiceProvider.GetRequiredService<IAuthorizationService>();
-            var resOld = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Edit);
+            var resOld = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Edit);
             Assert.False(resOld.Succeeded, "Old permission must be revoked after commit");
             var resNew = await auth.AuthorizeAsync(p1, PermissionCatalog.Tenant.Module);
             Assert.True(resNew.Succeeded, "Committed permission must be granted");
@@ -538,7 +538,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
                 new DefaultHttpContext { User = p1 };
             var authA = scopeA.ServiceProvider.GetRequiredService<IAuthorizationService>();
 
-            var resA = await authA.AuthorizeAsync(p1, PermissionCatalog.Property.Edit);
+            var resA = await authA.AuthorizeAsync(p1, PermissionCatalog.Space.Edit);
             Assert.True(resA.Succeeded);
         }
 
@@ -552,7 +552,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
             var authB = scopeB.ServiceProvider.GetRequiredService<IAuthorizationService>();
 
             // Must reload seamlessly from database
-            var resB = await authB.AuthorizeAsync(p1, PermissionCatalog.Property.Edit);
+            var resB = await authB.AuthorizeAsync(p1, PermissionCatalog.Space.Edit);
             Assert.True(resB.Succeeded, "Instance restart simulation must reload permissions from database");
         }
     }
@@ -576,7 +576,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
 
         // Authorize with cold cache
         var auth = scope.ServiceProvider.GetRequiredService<IAuthorizationService>();
-        var result = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Module);
+        var result = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Module);
 
         Assert.True(result.Succeeded);
         Assert.True(p1.Identity.IsAuthenticated, "Cold cache must not invalidate principal authentication");
@@ -597,7 +597,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
             scope0.ServiceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext =
                 new DefaultHttpContext { User = p1 };
             var auth = scope0.ServiceProvider.GetRequiredService<IAuthorizationService>();
-            var initialCheck = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Edit);
+            var initialCheck = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Edit);
             Assert.True(initialCheck.Succeeded);
         }
 
@@ -625,7 +625,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
             scope2.ServiceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext =
                 new DefaultHttpContext { User = p1 };
             var auth = scope2.ServiceProvider.GetRequiredService<IAuthorizationService>();
-            var res = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Edit);
+            var res = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Edit);
             Assert.False(res.Succeeded, "Permission must be revoked after role removal");
         }
 
@@ -656,7 +656,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
             scope4.ServiceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext =
                 new DefaultHttpContext { User = p1 };
             var auth = scope4.ServiceProvider.GetRequiredService<IAuthorizationService>();
-            var res = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Edit);
+            var res = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Edit);
             Assert.True(res.Succeeded, "Permissions must be restored in subsequent request scope after AddRoleByRolIdAsync");
         }
     }
@@ -676,7 +676,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
             scope0.ServiceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext =
                 new DefaultHttpContext { User = p1 };
             var auth = scope0.ServiceProvider.GetRequiredService<IAuthorizationService>();
-            var initialCheck = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Edit);
+            var initialCheck = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Edit);
             Assert.True(initialCheck.Succeeded);
         }
 
@@ -704,7 +704,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
             scope2.ServiceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext =
                 new DefaultHttpContext { User = p1 };
             var auth = scope2.ServiceProvider.GetRequiredService<IAuthorizationService>();
-            var res = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Edit);
+            var res = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Edit);
             Assert.False(res.Succeeded, "Permission must be revoked after role removal");
         }
 
@@ -735,7 +735,7 @@ public class PermissionCachePhase4IntegrationTests : IDisposable
             scope4.ServiceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext =
                 new DefaultHttpContext { User = p1 };
             var auth = scope4.ServiceProvider.GetRequiredService<IAuthorizationService>();
-            var res = await auth.AuthorizeAsync(p1, PermissionCatalog.Property.Edit);
+            var res = await auth.AuthorizeAsync(p1, PermissionCatalog.Space.Edit);
             Assert.True(res.Succeeded, "Permissions must be restored in subsequent request scope after AddRoleByNameAsync");
         }
     }

@@ -172,18 +172,78 @@ Her kart: 1 yazıcı (sonnet) + 1 denetçi (opus). Paralel kartların dosyaları
 
 - **P1c notu:** `SpaceTestSeed` her çağrıda `SaveChanges` yapar; **yalnız transaction/rollback içinde** kullanılır. Rollback'siz testte alan, alan türü, tarife ve `TestTenantCategory` temizliği elle yapılır (P7b–P7d hepsi için geçerli).
 
+- **P7b tamam (2026-11-27).** Harness API: `Seed(Suffix, SpaceId, TenantId, ApplicantId, ReviewerId, RentChargeTypeId)`, `SeedAsync(area=50, isShared=false)`, `AddSpaceAsync(seed, area)` (yeni **kök** alan açar), `Scope()` global, `CreateDraftAsync(seed, start, end, spaceId?, tenantId?)`; `MinimumUsageArea` kalktı.
+- **P7b sonrası P7c/P7d'ye notlar (son denetim):**
+  1. Grup testleri (`LeaseGroupLifecycleTests:299`, `LeaseGroupServiceTests`) `SeedAsync(area: 60, isShared: true)` kullanır; yoksa `Lease.GroupSpaceNotShared` ile yanlış nedenle düşer.
+  2. `LeaseGroupServiceTests:83` `seed.PropertyId` → kök `seed.SpaceId`; aynı kök altında ikinci alan gerekiyorsa `SpaceTestSeed.AddChildAsync` (AddSpaceAsync yeni kök açar, kapsam testlerinde sonucu değiştirir).
+  3. `LeaseGroupLifecycleTests:85` `_context.Units` → `_context.Spaces`; hata kodu `Lease.UnitAreaChanged` src'deki güncel adla karşılaştırılır. "Diğer Tip" birim yerine `AddSpaceAsync(seed, 40)`.
+  4. `ReservationSeedData`/`AvailabilitySeed`: `FirstPropertyId` artık kök alan Id'si, `*UnitId` alt alan Id'si. `SpaceAccessScope(false, [path])` Path ister: seed'e Path ekle ya da DB'den oku; Id'yi path listesine koymak derlenir ama yanlış kapsam kurar. Mümkünse Root/Space olarak yeniden adlandır.
+  5. `ReservationArchitectureTests.cs:245` ve `ReservationAvailabilityTests.cs:108-109`: "kök altı her şey + tek alan" anlamı korunur; `OutsideUnit` için `DoesNotContain` kalır.
+  6. `LeaseApprovalServiceTests`, `LeaseExpirationServiceTests` harness değil kendi seed'lerini kullanır; ayrıca çevrilir.
+- **Codex denetimi 5 (P7b, 2026-11-27):** B01 düşük — `SpaceReservationRuleTests` "yabancı kural" testi aslında hedef alanda kural var (duplicate) doğrulamasını sınıyordu; kural düzenleme formunda alan seçilebildiği için kuralın başka alana taşınması tasarım gereği → test `SaveRateRule_ShouldRejectTargetSpaceWithExistingRule_AndToggleOutsideScope` oldu, mesaj ve kuralın yerinde kaldığı assert edildi. B02 → P7c, B03 → P7d kartlarına yazıldı.
+- **P7b sonrası açık (karar/F2b):** `UnitPricingArchitectureTests`'ten karşılıksız giden niyetler: alan tarifesi kaydında kapsam kontrolü ve kiralanamaz alan koruması (`SpaceRateService`'te yok — src tasarımı, karar bekliyor); `SpaceController.EditRate` rota bağlama testi yok. src'de kullanılmayan `LeaseOccupancyPolicy.DetermineCapacityStatus` (D3'e göre silinmeli).
+
+## P7f — Kapsam servis içinde, provider fail-closed (P7c/P7d'den önce; PLAN — uygulanmadı)
+
+**Neden (Onur, 2026-11-27):** Tüm kapsam kontrolleri servis içinde olmalı; kapsam servise parametreyle taşınmamalı. Bugün controller `IPermissionScopeProvider.SpaceScope`'u okuyup servise parametre/DTO alanı olarak veriyor; bazı kontroller controller'da kalmış; provider yalnız `ScopeAware` policy'lerde ve kiracıda dolduruluyor, doldurulmazsa **global** (fail-open). P7b sonrası açıkları (alan tarifesi kapsam/kiralanamaz kontrolü, `EditRate` rota testi, ölü `DetermineCapacityStatus`) bu karta katıldı.
+
+**Faz 0 envanteri (4 okuma ajanı, 2026-11-27):**
+- Provider Scoped (`ApplicationModule.cs:43`), varsayılanı `GlobalAccess=true`, `SpaceScope=new(true,[])` (`PermissionScopeProvider.cs:8-9`); "doldurulmadı" ayırt edilemiyor. Tek dolduran `YetkiKapsamiActionFilter.cs:27-41` (global filter, `WebModule.cs:52`); `ScopeAware`'in production'daki tek tüketicisi bu filter.
+- Provider'ı enjekte eden yalnız 16 controller + filter; hiçbir servis. Kapsam ~80 DTO/record alanında (`Scope`/`AccessScope`) ve metot parametrelerinde (ISpaceService 13 metot, `ILeaseApplicationRules`, `ITenantService.DeleteAsync`, `ILeaseService.GetSelectableSpacesAsync`, `IReservationService.GetRateRuleSpaceOptionsAsync/GetRateRulesPagedAsync`). 28 alan `SpaceAccessScope?`; **null = filtresiz** (repo `ApplyScope`, `ChargeGenerationService:211`, `DocumentService`, `BankTransactionService.IsOutsideScopeAsync:161`).
+- Controller'da kalan kontroller: `ChargeController.cs:53` (Details), `LeaseController.cs:66,91,618` (Details, IsInScope), `TenantController.cs:92,107` (`GlobalAccess` Forbid), `:62,:175` (NotFound/Forbid seçimi), `:48` (`CanCreate`), `SpaceController.cs:151,183` (EditRate/EditAttributes — servisler kapsama hiç bakmıyor; tarife silmede tarifenin alana aitliği yalnız controller'da `:154-155`).
+- Provider dışı kapsam kuranlar: `HomeController.cs:55-59` ve `DocumentController.cs:73-111` cache'i doğrudan okuyor; `AdminTenantUserController.cs:93,124,230` sabit `new SpaceAccessScope(true, [])`.
+- HTTP dışı: `LeaseExpirationBackgroundService` ve `ReservationCompletionBackgroundService` kapsamlı servis çağırmıyor; `SeedDataService:1285,1378` `ChargeGenerationService`'i çağırıyor.
+- Kapsamsız okuma/yazma: `SpaceRateService.Save/Delete/GetList`, `SpaceAttributeService.SaveValues/GetValues`, `LeaseService.GetBySpaceAsync/GetDepositsAsync/GetReviewHistoryAsync`, `LeaseGroupService.GetLinkByLeaseIdAsync`, `ChargeService.GetCurrentLeaseChargeAsync/GetManualLeaseChargeSummaryAsync/GetListAsync(LeaseId)`, `LeaseRepository/ChargeRepository.GetDetailsAsync`, `PaymentService.GetPayableLineItemsAsync`, `TenantLeaseController.cs:64` (`GetTenantLeaseChargeDataInput` kapsamsız), `ManualChargeService.CreateAsync` (sözleşme kapsamına bakmıyor), `BankTransactionService` liste/detay/aday/import, `TenantUserService.GetInviteDataAsync:150/SendInvitationAsync:199` (atanan alanlar davet edenin kapsamıyla sınırlı değil), `AdminUserService:195-197` (aynı soru).
+- Cache (`PermissionScopeCacheService`, singleton, 30 dk): `Invalidate` commit'ten önce çağrılıyor (`AdminUserService:252`, `InvitationService:180`, `TenantUserService:109,383`, `SpaceService:337`) → araya giren istek eski kapsamı yeniden cache'leyebilir.
+- Kiracı kısıtı (`TenantId`) ayrı mekanizma: claim → `ICurrentUserContext` → input; bu kartta değişmez.
+- `RootPaths` her zaman `/` ile biter (`SpaceTreePolicy.BuildPath`, `SpaceScopeService.BuildAsync`) → repo `StartsWith(root)` ile `Includes` tutarlı.
+
+**Tasarım kararları (öneri):**
+- **T1 Provider fail-closed.** `IsInitialized`; `SpaceScope`/`GlobalAccess` doldurulmadıysa `InvalidOperationException`. `Initialize(UserScopeDto)` + `InitializeSystem()` (global, açıkça işaretli). Varsayılan global kalkar.
+- **T2 Filter her oturum açmış istekte doldurur.** `ScopeAware` listesi, `IsScopeAware` ve ilgili testler/doküman silinir. Oturumsuz istekte doldurulmaz; kapsamlı servis çağrısı hata verir (anonim uçlar kapsamlı servis çağırmıyor — fazda doğrulanır). Maliyet: cache hit bellek okuması.
+- **T3 Servisler kapsamı provider'dan okur.** Servis/rules kurucusuna `IPermissionScopeProvider`; tüm `Scope`/`AccessScope` DTO alanları ve kapsam parametreleri kalkar. Statik `EnsureLeaseInScope/EnsureSpaceInScope` kapsamı provider'dan alan örnek metoduna döner.
+- **T4 Repository kapsamı parametre olarak almaya devam eder** (sorgu süzgeci orada), ama **non-nullable** `SpaceAccessScope`; "null = filtresiz" kalkar, global = `HasGlobalAccess=true`. Repository provider almaz.
+- **T5 Controller'da kapsam kontrolü kalmaz.** Yukarıdaki controller kontrolleri servise taşınır; UI bayrakları (`CanCreate`) servis metodundan gelir; NotFound/Forbid seçimi serviste (Guard). Controller provider enjekte etmez (filter hariç). Mimari test: Web'de `IPermissionScopeProvider` yalnız filter'da.
+- **T6 Home ve Document** cache'i doğrudan okumayı bırakır, servisler provider'dan okur. `AdminTenantUserController`'daki sabit global kapsam servise taşınır (gerekçesi fazda doğrulanır).
+- **T7 HTTP dışı:** iki arka plan servisi her `CreateScope()`'ta `InitializeSystem()`; seed de aynı.
+- **T8 Kapsam cache invalidation commit sonrası** (`UserPermissionCacheInvalidator.InvalidateManyAfterCommit` deseni).
+- **T9 Kapsamsız okuma/yazmalar kapsanır** (yukarıdaki liste). Sözleşme detay kapsamı "alanlardan herhangi biri kapsamda" (repo `ApplyScope` ve `EnsureLeaseInScope` ile aynı).
+- **T10 Alan tarifesi:** `SpaceRateService.Save/Delete` kapsam + tarifenin alana aitliği serviste; `NotRentable` alana tarife `SPACE_RATE_NOT_RENTABLE`. `SpaceAttributeService.SaveValues` kapsam. `LeaseOccupancyPolicy.DetermineCapacityStatus` silinir.
+- **T11 Kural CLAUDE.md'ye:** "Kapsam kontrolü yalnız serviste; kapsam provider'dan okunur, parametreyle taşınmaz; repository kapsamı parametre alır."
+
+**Onur'a sorular (plan onayından önce):**
+- **S1 Banka ekstresi:** içe aktarma ve eşleşmemiş hareket listesi global mi kalsın (ekstre bir alana ait değil), yoksa kapsamlı kullanıcı yalnız kendi kapsamındaki ödemelerle eşleşmiş hareketleri mi görsün? Öneri: içe aktarma ve eşleşmemiş liste global; eşleşmiş hareketin detayı/eşleştirme kapsamlı (bugünkü gibi).
+- **S2 Davet ve kullanıcı alan ataması:** atanan alanlar davet edenin kapsamıyla sınırlansın mı (personel → personel, kiracı yöneticisi → kiracı kullanıcısı)? Öneri: evet.
+- **S3 Kiracı kullanıcı belgeleri:** bugün yalnız `TenantId` ile; alan kapsamı da uygulansın mı? Öneri: evet (kiracı kullanıcının alan kapsamı varsa).
+- **S4 Alan türü/özellik tanımları** kapsamlı kullanıcıya açık global katalog olarak kalsın mı? Öneri: evet (izinle korunuyor).
+- **S5 Rezerve edilebilir alanlara** alan tarifesi (`SpaceRate`) engellensin mi? Öneri: hayır (yalnız Kiralanamaz).
+
+**Fazlar (yazıcı en fazla 4, her yazıcıya 1 opus denetçi; aynı fazda iki yazıcı aynı dosyaya dokunmaz):**
+1. **F1 Altyapı (tek yazıcı, tek başına):** T1, T2, T7, T8; `ScopeAware` kaldırma; test desteği `tests/KiraTakip.Tests/Support/TestPermissionScopeProvider` (global/kapsamlı kurulum). Kabul: src build 0 hata.
+2. **F2 Servisler, yaprak modüller (2 yazıcı):** (a) Alan + Rezervasyon + Rezervasyon kuralı (T10 dahil, mapper/VM'ler); (b) Belge + Tahakkuk + Tahakkuk üretimi + Manuel borç + Borç hatırlatma. İmzası değişen servisi çağıran tüm yerleri o yazıcı günceller; iki yazıcıya düşen ortak dosya sonraki faza bırakılır (faz başında ana oturum grep ile dosya listesini ayırır).
+3. **F3 Servisler, üst modüller (2 yazıcı):** (a) Sözleşme + Sözleşme grubu + `LeaseApplicationRules`; (b) Ödeme + Online ödeme + Banka + Rapor.
+4. **F4 Kiracı ve ekranlar (2 yazıcı):** (a) Kiracı + Kiracı kullanıcı + Admin kullanıcı/davet (S2); (b) Home, TenantPanel, Document controller'ları, T5 mimari kontrolü, kalan controller düzeltmeleri.
+5. **Her faz sonu:** src build 0 hata + faz denetimi. F4 sonunda DB drop+update+seed ve uygulama açılışı; grep ile src'de `Scope`/`AccessScope` DTO alanı ve controller'da provider kullanımı kalmadığı doğrulanır.
+6. **Son denetim** (birleşik değişiklik, 1 opus) → Codex denetimi (Onur) → P7c/P7d.
+
+**P7c/P7d'ye etkisi:** testler kapsamı `TestPermissionScopeProvider` ile kurar; servis kurucularına provider eklenir (~40 `new XService(...)`); eski `*AccessScopeInput` kullanımları (~88) provider kurulumuna döner. Yeni testler: her modülde kapsam dışı reddi korunur; T5 mimari testi; T10 (tarife kapsam/aitlik/kiralanamaz); `EditRate` rota bağlama; doldurulmamış provider hata verir; arka plan sistem kapsamı; commit sonrası invalidation.
+
+**Canlı:** şema değişmez. S1–S3 kararları kapsamlı kullanıcının gördüğünü daraltabilir — canlıya geçişte kullanıcılara duyurulmalı.
+
 ## P7c — Integration testleri (P7d ile paralel)
 
 - **Dosyalar:** `Integration/{Banking/BankTransactionMatchingTests, Charges/*(4), Leases/*(6, harness hariç), Migrations/{ChargeLineItemPaymentMigrationTests,ChargeLineItemPaymentSchemaTests}, Payments/*(4), Persistence/ServerSidePaginationTests, Pricing/BatchRateResolverTests, Reservations/*(3), Tenants/TenantChargeAuthorizationTests, Settings/SystemSettingTests}`.
 - **Kural:** test niyeti korunur (aynı senaryo, birim yerine alan); assert gevşetilmez; silinen özelliğe ait assert varsa silinir ve raporlanır.
 - **Codex düzeltmesi sonrası:** `ServerSidePaginationTests` `GetRateRulesPagedAsync(query, scope)` (scope zorunlu). `BatchRateResolverTests` eşdeğerlik testine "LeaseId dolu + farklı SpaceId" girdisi eklenir (iki çözücü de sözleşmenin alanını esas alır). Kapsam testleri: kiracı tahakkuk özeti, rezervasyon kuralı yönetimi ve alan yönetimi kapsam dışı alanı reddeder.
 - **Kabul:** bu dosyalar yeşil.
+- **Codex denetimi 5 (P7b) B02:** yeni integration testi — gerçek `LeaseArea` ile Taslak / Revizyon İstendi / Aktif / feshi ileri tarihli Feshedildi sözleşmeli alanda `SpaceService.UpdateAsync` m² değişikliğini reddeder ve alan değişmez; sözleşme kapanınca kabul eder; sözleşme yalnız çocuk alandaysa atanın m² değişikliği engellenmez (K67, S-16; eski `PropertyUnitLockTests:208,226` niyeti). Tek açık başvuru kuralı (`CreateDraft_ShouldRejectSecondOpenApplicationForSameUnit`) alana çevrilirken korunur.
 - **Codex denetimi 2 sonrası:** `SpaceServiceTests` `SpaceDeletePreviewDto`/`SpaceLinkedDefinitions` yeni alanları (rezervasyon kuralı, ödeme yönlendirmesi); test: kuralı ve alana özel yönlendirmesi olan yaprak alan silinince ikisi de soft delete + pasif, genel yönlendirme dokunulmaz (N02). Kontrol testi: `ReservationRateRule.Edit` izinli, `Create` izinsiz kullanıcı `Edit/0` POST ile kural oluşturamaz (N01, NotFound).
 
 ## P7d — Architecture + Unit testleri (P7c ile paralel)
 
 - **Dosyalar:** `Architecture/{Charges/ChargeArchitectureTests, Leases/LeaseApprovalArchitectureTests, Payments/*(2), Pricing/PricingArchitectureTests, Reports/ReportArchitectureTests, Reservations/ReservationArchitectureTests, Tenants/*(4)}`, `Unit/{Charges/ManualChargePolicyTests, Payments/*(2), Tenants/*(2)}`.
 - **Kural:** P7c ile aynı. Yalnız EF `entity.Property(...)` için eşleşen dosyalar değişmeden bırakılır.
+- **Codex denetimi 5 (P7b) B03:** `DependencyInjectionArchitectureTests`'e üretim modülleri + `AddTransactionalProxies` ile gerçek DI'dan `ILeaseService` çözümlenir ve `ProxyUtil.IsProxy` true beklenir (silinen `CapacityConcurrencyTests:214-232` niyeti; CapacityPlanService kısmı hariç).
 - **Kabul:** bu dosyalar yeşil; ardından ana oturum **tam paket**.
 
 ## Son denetim

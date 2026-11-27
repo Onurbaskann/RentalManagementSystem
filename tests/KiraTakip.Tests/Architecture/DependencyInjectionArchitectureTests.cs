@@ -25,7 +25,7 @@ using KiraTakip.Services.Interfaces.Leases;
 using KiraTakip.Services.Interfaces.Notifications;
 using KiraTakip.Services.Interfaces.Payments;
 using KiraTakip.Services.Interfaces.Pricing;
-using KiraTakip.Services.Interfaces.Properties;
+using KiraTakip.Services.Interfaces.Spaces;
 using KiraTakip.Services.Interfaces.Reporting;
 using KiraTakip.Services.Interfaces.Reservations;
 using KiraTakip.Services.Interfaces.Security;
@@ -35,7 +35,7 @@ using KiraTakip.Services.Leases;
 using KiraTakip.Services.Notifications;
 using KiraTakip.Services.Payments;
 using KiraTakip.Services.Pricing;
-using KiraTakip.Services.Properties;
+using KiraTakip.Services.Spaces;
 using KiraTakip.Services.Reporting;
 using KiraTakip.Services.Reservations;
 using KiraTakip.Services.Security;
@@ -60,10 +60,12 @@ public class DependencyInjectionArchitectureTests
     [InlineData(typeof(IInvitationService), typeof(InvitationService), ServiceLifetime.Scoped)]
     [InlineData(typeof(IPasswordResetService), typeof(PasswordResetService), ServiceLifetime.Scoped)]
     [InlineData(typeof(IAuditService), typeof(AuditService), ServiceLifetime.Scoped)]
-    [InlineData(typeof(IPropertyService), typeof(PropertyService), ServiceLifetime.Scoped)]
-    [InlineData(typeof(IUnitService), typeof(UnitService), ServiceLifetime.Scoped)]
-    [InlineData(typeof(IPropertyTypeService), typeof(PropertyTypeService), ServiceLifetime.Scoped)]
-    [InlineData(typeof(IUnitTypeService), typeof(UnitTypeService), ServiceLifetime.Scoped)]
+    [InlineData(typeof(ISpaceService), typeof(SpaceService), ServiceLifetime.Scoped)]
+    [InlineData(typeof(ISpaceScopeService), typeof(SpaceScopeService), ServiceLifetime.Scoped)]
+    [InlineData(typeof(ISpaceTypeService), typeof(SpaceTypeService), ServiceLifetime.Scoped)]
+    [InlineData(typeof(ISpaceAttributeService), typeof(SpaceAttributeService), ServiceLifetime.Scoped)]
+    [InlineData(typeof(ISpaceRateService), typeof(SpaceRateService), ServiceLifetime.Scoped)]
+    [InlineData(typeof(ISpaceRateResolver), typeof(SpaceRateResolver), ServiceLifetime.Scoped)]
     [InlineData(typeof(ITenantService), typeof(TenantService), ServiceLifetime.Scoped)]
     [InlineData(typeof(ISectorService), typeof(SectorService), ServiceLifetime.Scoped)]
     [InlineData(typeof(ITenantCategoryService), typeof(TenantCategoryService), ServiceLifetime.Scoped)]
@@ -80,8 +82,6 @@ public class DependencyInjectionArchitectureTests
     [InlineData(typeof(IChargeTypeService), typeof(ChargeTypeService), ServiceLifetime.Scoped)]
     [InlineData(typeof(IChargeReminderService), typeof(ChargeReminderService), ServiceLifetime.Scoped)]
     [InlineData(typeof(IRateResolverService), typeof(RateResolverService), ServiceLifetime.Scoped)]
-    [InlineData(typeof(IPropertyPricingService), typeof(PropertyPricingService), ServiceLifetime.Scoped)]
-    [InlineData(typeof(IUnitPricingService), typeof(UnitPricingService), ServiceLifetime.Scoped)]
     [InlineData(typeof(IRateHierarchyService), typeof(RateHierarchyService), ServiceLifetime.Scoped)]
     [InlineData(typeof(IRateScheduleService), typeof(RateScheduleService), ServiceLifetime.Scoped)]
     [InlineData(typeof(IPaymentService), typeof(PaymentService), ServiceLifetime.Scoped)]

@@ -1,5 +1,6 @@
 using KiraTakip.Data;
 using KiraTakip.Models.Constants;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.Enums;
@@ -9,7 +10,7 @@ using KiraTakip.Repositories.Documents;
 using KiraTakip.Repositories.Identity;
 using KiraTakip.Repositories.Leases;
 using KiraTakip.Repositories.Pricing;
-using KiraTakip.Repositories.Properties;
+using KiraTakip.Repositories.Spaces;
 using KiraTakip.Repositories.Tenants;
 using KiraTakip.Services.Charges;
 using KiraTakip.Services.Interfaces.Identity;
@@ -25,86 +26,45 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
 {
     public sealed record Seed(
         string Suffix,
-        int PropertyId,
-        int UnitTypeId,
-        int UnitId,
+        int SpaceId,
         int TenantId,
         string ApplicantId,
         string ReviewerId,
         int RentChargeTypeId);
 
-    public decimal MinimumUsageArea { get; set; } = 5m;
-
-    private TestOperationalPolicyProvider CreatePolicy()
-        => new(new OperationalPolicySettings { LeaseMinimumUsageArea = MinimumUsageArea });
-
-    public static LeaseAccessScopeInput Scope() => new();
+    public static SpaceAccessScope Scope() => new(true, []);
 
     public IReadOnlyCollection<LeaseRateOverrideInput> Rates(Seed seed)
         => [new LeaseRateOverrideInput(seed.RentChargeTypeId, 1000, CalculationMethod.Fixed, 20)];
 
-    public async Task<Seed> SeedAsync(decimal area = 50, string? unitTypeName = null)
+    public async Task<Seed> SeedAsync(decimal area = 50, bool isShared = false)
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var property = new Property { Name = $"Anlık Taşınmaz {suffix}" };
-        var unitType = new UnitType
-        {
-            Name = unitTypeName ?? $"Anlık Tip {suffix}",
-            Code = $"SNP_{suffix}",
-            Usage = UnitTypeUsage.Rentable
-        };
         var tenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"SNP-{suffix}", Name = $"Anlık Kiracı {suffix}" };
         var applicant = CreateUser($"snp-app-{suffix}", $"Başvuran {suffix}");
         var reviewer = CreateUser($"snp-rev-{suffix}", $"Onaylayan {suffix}");
-        context.AddRange(property, unitType, tenant, applicant, reviewer);
+        context.AddRange(tenant, applicant, reviewer);
         await context.SaveChangesAsync();
         var rentChargeType = await context.ChargeTypes.SingleAsync(type =>
             type.Code == BorcTipiConsts.Kira);
         rentChargeType.IsActive = true;
-        var unit = new Unit
+        var space = await SpaceTestSeed.AddRootAsync(context, $"Anlık Alan {suffix}", area);
+        if (isShared)
         {
-            PropertyId = property.Id,
-            UnitTypeId = unitType.Id,
-            Name = $"Anlık Birim {suffix}",
-            Area = area
-        };
-        context.Units.Add(unit);
-        await context.SaveChangesAsync();
+            space.IsShared = true;
+            await context.SaveChangesAsync();
+        }
         return new Seed(
             suffix,
-            property.Id,
-            unitType.Id,
-            unit.Id,
+            space.Id,
             tenant.Id,
             applicant.Id,
             reviewer.Id,
             rentChargeType.Id);
     }
 
-    public async Task<(UnitType UnitType, Unit Unit)> AddUnitAsync(
-        Seed seed,
-        decimal area,
-        string unitTypeName)
-    {
-        var unitType = new UnitType
-        {
-            Name = unitTypeName,
-            Code = $"SNP2_{Guid.NewGuid():N}"[..20],
-            Usage = UnitTypeUsage.Rentable
-        };
-        context.UnitTypes.Add(unitType);
-        await context.SaveChangesAsync();
-        var unit = new Unit
-        {
-            PropertyId = seed.PropertyId,
-            UnitTypeId = unitType.Id,
-            Name = $"Anlık Birim 2 {seed.Suffix}",
-            Area = area
-        };
-        context.Units.Add(unit);
-        await context.SaveChangesAsync();
-        return (unitType, unit);
-    }
+    public Task<Space> AddSpaceAsync(Seed seed, decimal area)
+        => SpaceTestSeed.AddRootAsync(context, $"Anlık Alan 2 {seed.Suffix}", area);
 
     public async Task<int> AddTenantAsync(string suffix)
     {
@@ -118,11 +78,11 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
         Seed seed,
         DateTime startDate,
         DateTime endDate,
-        int? unitId = null,
+        int? spaceId = null,
         int? tenantId = null)
     {
         var lease = await CreateService(seed.ApplicantId).CreateDraftAsync(new CreateLeaseDraftInput(
-            unitId ?? seed.UnitId,
+            spaceId ?? seed.SpaceId,
             tenantId ?? seed.TenantId,
             startDate,
             endDate,
@@ -164,16 +124,16 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
         var chargeTypeRepository = new ChargeTypeRepository(context);
         var rateResolver = new RateResolverService(
             rateRepository,
-            new UnitRateRepository(context),
-            new PropertyRateOverrideRepository(context),
-            new RateScheduleRepository(context),
+            new SpaceRateResolver(
+                new SpaceRepository(context),
+                new SpaceRateRepository(context),
+                new RateScheduleRepository(context)),
             leaseRepository,
-            new UnitRepository(context),
             new TenantRepository(context));
         var batchRateResolver = new BatchRateResolver(
             rateRepository,
-            new UnitRateRepository(context),
-            new PropertyRateOverrideRepository(context),
+            new SpaceRepository(context),
+            new SpaceRateRepository(context),
             new RateScheduleRepository(context),
             leaseRepository);
         var chargeGeneration = new ChargeGenerationService(
@@ -182,14 +142,13 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
             new UnitOfWork(context),
             rateResolver,
             leaseRepository,
-            new UnitRepository(context),
+            new SpaceRepository(context),
             new TenantRepository(context));
         return new LeaseService(
             leaseRepository,
             rateRepository,
             new ChargeLineItemRepository(context),
             chargeTypeRepository,
-            new UnitRepository(context),
             new TenantRepository(context),
             chargeGeneration,
             new UnitOfWork(context),
@@ -204,7 +163,6 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
             new DocumentTypeRepository(context),
             new ApplicationUserRepository(context),
             new TestUserContext(actorUserId),
-            CreatePolicy(),
             CreateRules(leaseRepository, rateRepository, chargeTypeRepository, chargeGeneration));
     }
 
@@ -217,13 +175,11 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
             leaseRepository,
             rateRepository,
             chargeTypeRepository,
-            new UnitRepository(context),
             new TenantRepository(context),
             chargeGeneration,
             new DocumentRepository(context),
             new DocumentTypeRepository(context),
-            new LeaseReviewHistoryRepository(context),
-            CreatePolicy());
+            new LeaseReviewHistoryRepository(context));
 
     public LeaseGroupService CreateGroupService(
         string actorUserId,
@@ -234,11 +190,11 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
         var chargeTypeRepository = new ChargeTypeRepository(context);
         var rateResolver = new RateResolverService(
             rateRepository,
-            new UnitRateRepository(context),
-            new PropertyRateOverrideRepository(context),
-            new RateScheduleRepository(context),
+            new SpaceRateResolver(
+                new SpaceRepository(context),
+                new SpaceRateRepository(context),
+                new RateScheduleRepository(context)),
             leaseRepository,
-            new UnitRepository(context),
             new TenantRepository(context));
         var chargeGeneration = new ChargeGenerationService(
             new ChargeRepository(context),
@@ -246,19 +202,18 @@ internal sealed class LeaseServiceTestHarness(ApplicationDbContext context)
             new UnitOfWork(context),
             rateResolver,
             leaseRepository,
-            new UnitRepository(context),
+            new SpaceRepository(context),
             new TenantRepository(context));
         var batchRateResolver = new BatchRateResolver(
             rateRepository,
-            new UnitRateRepository(context),
-            new PropertyRateOverrideRepository(context),
+            new SpaceRepository(context),
+            new SpaceRateRepository(context),
             new RateScheduleRepository(context),
             leaseRepository);
         return new LeaseGroupService(
             new LeaseGroupRepository(context),
             leaseRepository,
             rateRepository,
-            new UnitRepository(context),
             new DocumentRepository(context),
             new ApplicationUserRepository(context),
             chargeGeneration,

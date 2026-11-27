@@ -75,7 +75,7 @@ public class PermissionAuthorizationHandlerTests
         }, "Cookies"));
 
         var (auth, _, _) = CreateAuthorizationChain(superAdmin);
-        var result = await auth.AuthorizeAsync(superAdmin, PermissionCatalog.Property.Edit);
+        var result = await auth.AuthorizeAsync(superAdmin, PermissionCatalog.Space.Edit);
 
         Assert.True(result.Succeeded);
     }
@@ -91,7 +91,7 @@ public class PermissionAuthorizationHandlerTests
         }, "Cookies"));
 
         var (auth, _, _) = CreateAuthorizationChain(tenantUser);
-        var result = await auth.AuthorizeAsync(tenantUser, PermissionCatalog.Property.Edit);
+        var result = await auth.AuthorizeAsync(tenantUser, PermissionCatalog.Space.Edit);
 
         Assert.False(result.Succeeded);
     }
@@ -106,7 +106,7 @@ public class PermissionAuthorizationHandlerTests
         }, "Cookies"));
 
         var (auth1, _, _) = CreateAuthorizationChain(missingUserType);
-        var res1 = await auth1.AuthorizeAsync(missingUserType, PermissionCatalog.Property.Edit);
+        var res1 = await auth1.AuthorizeAsync(missingUserType, PermissionCatalog.Space.Edit);
         Assert.False(res1.Succeeded);
 
         var invalidUserType = new ClaimsPrincipal(new ClaimsIdentity(new[]
@@ -117,7 +117,7 @@ public class PermissionAuthorizationHandlerTests
         }, "Cookies"));
 
         var (auth2, _, _) = CreateAuthorizationChain(invalidUserType);
-        var res2 = await auth2.AuthorizeAsync(invalidUserType, PermissionCatalog.Property.Edit);
+        var res2 = await auth2.AuthorizeAsync(invalidUserType, PermissionCatalog.Space.Edit);
         Assert.False(res2.Succeeded);
     }
 
@@ -131,7 +131,7 @@ public class PermissionAuthorizationHandlerTests
         }, "Cookies"));
 
         var (auth1, _, _) = CreateAuthorizationChain(noIdUser);
-        var res1 = await auth1.AuthorizeAsync(noIdUser, PermissionCatalog.Property.Edit);
+        var res1 = await auth1.AuthorizeAsync(noIdUser, PermissionCatalog.Space.Edit);
         Assert.False(res1.Succeeded);
 
         var emptyIdUser = new ClaimsPrincipal(new ClaimsIdentity(new[]
@@ -142,7 +142,7 @@ public class PermissionAuthorizationHandlerTests
         }, "Cookies"));
 
         var (auth2, _, _) = CreateAuthorizationChain(emptyIdUser);
-        var res2 = await auth2.AuthorizeAsync(emptyIdUser, PermissionCatalog.Property.Edit);
+        var res2 = await auth2.AuthorizeAsync(emptyIdUser, PermissionCatalog.Space.Edit);
         Assert.False(res2.Succeeded);
     }
 
@@ -152,7 +152,7 @@ public class PermissionAuthorizationHandlerTests
         var anonymous = new ClaimsPrincipal(new ClaimsIdentity());
 
         var (auth, _, _) = CreateAuthorizationChain(anonymous);
-        var result = await auth.AuthorizeAsync(anonymous, PermissionCatalog.Property.Edit);
+        var result = await auth.AuthorizeAsync(anonymous, PermissionCatalog.Space.Edit);
 
         Assert.False(result.Succeeded);
     }
@@ -164,13 +164,13 @@ public class PermissionAuthorizationHandlerTests
         {
             new Claim(ClaimTypes.NameIdentifier, "cookie-user"),
             new Claim(AppClaimTypes.UserType, ((int)UserType.Internal).ToString()),
-            new Claim(AppClaimTypes.Permission, PermissionCatalog.Property.Module),
-            new Claim(AppClaimTypes.Permission, PermissionCatalog.Property.Edit)
+            new Claim(AppClaimTypes.Permission, PermissionCatalog.Space.Module),
+            new Claim(AppClaimTypes.Permission, PermissionCatalog.Space.Edit)
         }, "Cookies"));
 
         var (auth, _, _) = CreateAuthorizationChain(user);
         // Cache is completely empty for cookie-user
-        var result = await auth.AuthorizeAsync(user, PermissionCatalog.Property.Edit);
+        var result = await auth.AuthorizeAsync(user, PermissionCatalog.Space.Edit);
 
         Assert.False(result.Succeeded);
     }
@@ -185,9 +185,9 @@ public class PermissionAuthorizationHandlerTests
         }, "Cookies"));
 
         var (auth, cache, _) = CreateAuthorizationChain(user);
-        cache.SetUserPermissions("clean-cookie-user", PermissionCatalog.Property.Module, PermissionCatalog.Property.Edit);
+        cache.SetUserPermissions("clean-cookie-user", PermissionCatalog.Space.Module, PermissionCatalog.Space.Edit);
 
-        var result = await auth.AuthorizeAsync(user, PermissionCatalog.Property.Edit);
+        var result = await auth.AuthorizeAsync(user, PermissionCatalog.Space.Edit);
 
         Assert.True(result.Succeeded);
     }
@@ -202,9 +202,9 @@ public class PermissionAuthorizationHandlerTests
         }, "Cookies"));
 
         var (auth, cache, _) = CreateAuthorizationChain(user);
-        cache.SetUserPermissions("action-only-user", PermissionCatalog.Property.Edit);
+        cache.SetUserPermissions("action-only-user", PermissionCatalog.Space.Edit);
 
-        var result = await auth.AuthorizeAsync(user, PermissionCatalog.Property.Edit);
+        var result = await auth.AuthorizeAsync(user, PermissionCatalog.Space.Edit);
 
         Assert.False(result.Succeeded);
     }
@@ -243,14 +243,14 @@ public class PermissionAuthorizationHandlerTests
         }, "Cookies"));
 
         var (auth, cache, _) = CreateAuthorizationChain(requestUser);
-        cache.SetUserPermissions("target-user-B", PermissionCatalog.Property.Module, PermissionCatalog.Property.Edit);
+        cache.SetUserPermissions("target-user-B", PermissionCatalog.Space.Module, PermissionCatalog.Space.Edit);
 
         // When target is UserB (even though request is UserA)
-        var resultB = await auth.AuthorizeAsync(targetUserB, PermissionCatalog.Property.Edit);
+        var resultB = await auth.AuthorizeAsync(targetUserB, PermissionCatalog.Space.Edit);
         Assert.True(resultB.Succeeded);
 
         // When target is UserA (request user who has no permissions in cache)
-        var resultA = await auth.AuthorizeAsync(requestUser, PermissionCatalog.Property.Edit);
+        var resultA = await auth.AuthorizeAsync(requestUser, PermissionCatalog.Space.Edit);
         Assert.False(resultA.Succeeded);
     }
 }

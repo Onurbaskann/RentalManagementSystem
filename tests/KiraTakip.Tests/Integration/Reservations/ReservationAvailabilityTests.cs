@@ -191,23 +191,18 @@ public class ReservationAvailabilityTests : IDisposable
     private async Task<AvailabilitySeed> SeedAsync()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var firstProperty = new Property { Name = $"Takvim A {suffix}" };
-        var secondProperty = new Property { Name = $"Takvim B {suffix}" };
-        var unitType = new UnitType
-        {
-            Name = $"Salon {suffix}",
-            Code = $"SAL-{suffix}",
-            Usage = UnitTypeUsage.Reservable
-        };
         var firstTenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"TA-{suffix}", Name = $"Kiracı A {suffix}" };
         var secondTenant = new Tenant { TenantCategory = TestTenantCategory.New(), TenantNo = $"TB-{suffix}", Name = $"Kiracı B {suffix}" };
-        _context.AddRange(firstProperty, secondProperty, unitType, firstTenant, secondTenant);
+        _context.AddRange(firstTenant, secondTenant);
         await _context.SaveChangesAsync();
 
-        var firstUnit = CreateUnit(firstProperty.Id, unitType.Id, $"A1 {suffix}");
-        var secondUnit = CreateUnit(secondProperty.Id, unitType.Id, $"B1 {suffix}");
-        var outsideUnit = CreateUnit(secondProperty.Id, unitType.Id, $"B2 {suffix}");
-        _context.AddRange(firstUnit, secondUnit, outsideUnit);
+        var firstProperty = await SpaceTestSeed.AddRootAsync(_context, $"Takvim A {suffix}");
+        var secondProperty = await SpaceTestSeed.AddRootAsync(_context, $"Takvim B {suffix}");
+        var firstUnit = await SpaceTestSeed.AddChildAsync(_context, firstProperty, $"A1 {suffix}", 20m);
+        var secondUnit = await SpaceTestSeed.AddChildAsync(_context, secondProperty, $"B1 {suffix}", 20m);
+        var outsideUnit = await SpaceTestSeed.AddChildAsync(_context, secondProperty, $"B2 {suffix}", 20m);
+        foreach (var space in new[] { firstUnit, secondUnit, outsideUnit })
+            space.Usage = SpaceUsage.Reservable;
         await _context.SaveChangesAsync();
 
         return new AvailabilitySeed(
@@ -242,15 +237,6 @@ public class ReservationAvailabilityTests : IDisposable
         await _context.SaveChangesAsync();
         return reservation;
     }
-
-    private static Unit CreateUnit(int propertyId, int unitTypeId, string name)
-        => new()
-        {
-            PropertyId = propertyId,
-            UnitTypeId = unitTypeId,
-            Name = name,
-            Area = 20m
-        };
 
     private sealed record AvailabilitySeed(
         int FirstPropertyId,

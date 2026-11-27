@@ -365,10 +365,10 @@ public class PermissionTests
         var superAdmin = CreateSuperAdmin();
         Assert.True(PermissionEvaluator.IsSuperAdmin(superAdmin));
 
-        Assert.True(PermissionEvaluator.EvaluatePermission(null, PermissionCatalog.Property.Module, isSuperAdmin: true));
-        Assert.True(PermissionEvaluator.EvaluatePermission(null, PermissionCatalog.Property.Edit, isSuperAdmin: true));
+        Assert.True(PermissionEvaluator.EvaluatePermission(null, PermissionCatalog.Space.Module, isSuperAdmin: true));
+        Assert.True(PermissionEvaluator.EvaluatePermission(null, PermissionCatalog.Space.Edit, isSuperAdmin: true));
         Assert.False(PermissionEvaluator.EvaluatePermission(null, "NonExistent.Permission", isSuperAdmin: true));
-        Assert.True(PermissionEvaluator.EvaluateModuleAccess(null, PermissionCatalog.Property.Module, isSuperAdmin: true));
+        Assert.True(PermissionEvaluator.EvaluateModuleAccess(null, PermissionCatalog.Space.Module, isSuperAdmin: true));
         Assert.False(PermissionEvaluator.EvaluateModuleAccess(null, "NonExistent.Module", isSuperAdmin: true));
         Assert.True(PermissionEvaluator.EvaluateModuleAccess(null, PermissionCatalog.Lease.Module, isSuperAdmin: true));
         Assert.True(PermissionEvaluator.EvaluatePermission(null, PermissionCatalog.Lease.Create, isSuperAdmin: true));
@@ -378,19 +378,19 @@ public class PermissionTests
     public void PermissionEvaluator_ModuleAccess_RequiresExactOrdinalMatch()
     {
         // 1. Exact module grants module access
-        var setWithProperty = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.Property.Module };
-        Assert.True(PermissionEvaluator.EvaluateModuleAccess(setWithProperty, PermissionCatalog.Property.Module, false));
-        Assert.True(PermissionEvaluator.EvaluatePermission(setWithProperty, PermissionCatalog.Property.Module, false));
+        var setWithProperty = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.Space.Module };
+        Assert.True(PermissionEvaluator.EvaluateModuleAccess(setWithProperty, PermissionCatalog.Space.Module, false));
+        Assert.True(PermissionEvaluator.EvaluatePermission(setWithProperty, PermissionCatalog.Space.Module, false));
 
         // 2. Action claim ALONE does NOT grant module access
-        var setWithActionOnly = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.Property.Create };
-        Assert.False(PermissionEvaluator.EvaluateModuleAccess(setWithActionOnly, PermissionCatalog.Property.Module, false));
-        Assert.False(PermissionEvaluator.EvaluatePermission(setWithActionOnly, PermissionCatalog.Property.Module, false));
+        var setWithActionOnly = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.Space.Create };
+        Assert.False(PermissionEvaluator.EvaluateModuleAccess(setWithActionOnly, PermissionCatalog.Space.Module, false));
+        Assert.False(PermissionEvaluator.EvaluatePermission(setWithActionOnly, PermissionCatalog.Space.Module, false));
 
-        // 3. Prefix collision: Internal.PropertyType MUST NOT match Internal.Property
-        var setWithPropertyType = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.PropertyType.Module };
-        Assert.False(PermissionEvaluator.EvaluateModuleAccess(setWithPropertyType, PermissionCatalog.Property.Module, false));
-        Assert.False(PermissionEvaluator.EvaluatePermission(setWithPropertyType, PermissionCatalog.Property.Module, false));
+        // 3. Prefix collision: Internal.SpaceType MUST NOT match Internal.Space
+        var setWithPropertyType = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.SpaceType.Module };
+        Assert.False(PermissionEvaluator.EvaluateModuleAccess(setWithPropertyType, PermissionCatalog.Space.Module, false));
+        Assert.False(PermissionEvaluator.EvaluatePermission(setWithPropertyType, PermissionCatalog.Space.Module, false));
 
         // 4. Prefix collision: System must not match System.User, System.User must not match System
         var setWithSystemUser = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.User.Module };
@@ -405,33 +405,33 @@ public class PermissionTests
     public void PermissionEvaluator_ActionPermission_RequiresBothModuleAndAction()
     {
         // 1. Both module AND action present -> SUCCESS
-        var fullyAuthorized = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.Property.Module, PermissionCatalog.Property.Edit };
-        Assert.True(PermissionEvaluator.EvaluatePermission(fullyAuthorized, PermissionCatalog.Property.Edit, false));
+        var fullyAuthorized = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.Space.Module, PermissionCatalog.Space.Edit };
+        Assert.True(PermissionEvaluator.EvaluatePermission(fullyAuthorized, PermissionCatalog.Space.Edit, false));
 
         // 2. Module only -> FAIL for action
-        var moduleOnly = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.Property.Module };
-        Assert.False(PermissionEvaluator.EvaluatePermission(moduleOnly, PermissionCatalog.Property.Edit, false));
+        var moduleOnly = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.Space.Module };
+        Assert.False(PermissionEvaluator.EvaluatePermission(moduleOnly, PermissionCatalog.Space.Edit, false));
 
         // 3. Action only -> FAIL because parent module claim is missing
-        var actionOnly = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.Property.Edit };
-        Assert.False(PermissionEvaluator.EvaluatePermission(actionOnly, PermissionCatalog.Property.Edit, false));
+        var actionOnly = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.Space.Edit };
+        Assert.False(PermissionEvaluator.EvaluatePermission(actionOnly, PermissionCatalog.Space.Edit, false));
 
         // 4. Different action under same module -> FAIL
-        var otherAction = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.Property.Module, PermissionCatalog.Property.Create };
-        Assert.False(PermissionEvaluator.EvaluatePermission(otherAction, PermissionCatalog.Property.Edit, false));
+        var otherAction = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.Space.Module, PermissionCatalog.Space.Create };
+        Assert.False(PermissionEvaluator.EvaluatePermission(otherAction, PermissionCatalog.Space.Edit, false));
     }
 
     [Fact]
     public void PermissionEvaluator_UnknownPermission_SafelyDenied()
     {
-        var set = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.Property.Module, PermissionCatalog.Property.Edit };
+        var set = new HashSet<string>(StringComparer.Ordinal) { PermissionCatalog.Space.Module, PermissionCatalog.Space.Edit };
 
         Assert.False(PermissionEvaluator.EvaluatePermission(set, "Unknown.Permission.Name", false));
         Assert.False(PermissionEvaluator.EvaluatePermission(set, "Unknown.Permission.Name", isSuperAdmin: true));
         Assert.False(PermissionEvaluator.EvaluatePermission(set, "", false));
         Assert.False(PermissionEvaluator.EvaluatePermission(set, null, false));
-        Assert.False(PermissionEvaluator.EvaluatePermission(null, PermissionCatalog.Property.Module, false));
-        Assert.False(PermissionEvaluator.EvaluateModuleAccess(null, PermissionCatalog.Property.Module, false));
+        Assert.False(PermissionEvaluator.EvaluatePermission(null, PermissionCatalog.Space.Module, false));
+        Assert.False(PermissionEvaluator.EvaluateModuleAccess(null, PermissionCatalog.Space.Module, false));
         Assert.False(PermissionEvaluator.EvaluateModuleAccess(set, "Unknown.Module", false));
         Assert.False(PermissionEvaluator.EvaluateModuleAccess(set, "Unknown.Module", isSuperAdmin: true));
     }
@@ -531,19 +531,19 @@ public class PermissionTests
     public void PermissionEvaluator_CaseSensitivityAndWildcards_AreRejected()
     {
         // Lowercase / wrong case
-        var wrongCaseSet = new HashSet<string>(StringComparer.Ordinal) { "internal.property", "internal.property.edit" };
-        Assert.False(PermissionEvaluator.EvaluateModuleAccess(wrongCaseSet, PermissionCatalog.Property.Module, false));
-        Assert.False(PermissionEvaluator.EvaluatePermission(wrongCaseSet, PermissionCatalog.Property.Edit, false));
+        var wrongCaseSet = new HashSet<string>(StringComparer.Ordinal) { "internal.space", "internal.space.edit" };
+        Assert.False(PermissionEvaluator.EvaluateModuleAccess(wrongCaseSet, PermissionCatalog.Space.Module, false));
+        Assert.False(PermissionEvaluator.EvaluatePermission(wrongCaseSet, PermissionCatalog.Space.Edit, false));
 
         // Wildcard claim
-        var wildcardSet = new HashSet<string>(StringComparer.Ordinal) { "Internal.Property.*" };
-        Assert.False(PermissionEvaluator.EvaluateModuleAccess(wildcardSet, PermissionCatalog.Property.Module, false));
-        Assert.False(PermissionEvaluator.EvaluatePermission(wildcardSet, PermissionCatalog.Property.Edit, false));
+        var wildcardSet = new HashSet<string>(StringComparer.Ordinal) { "Internal.Space.*" };
+        Assert.False(PermissionEvaluator.EvaluateModuleAccess(wildcardSet, PermissionCatalog.Space.Module, false));
+        Assert.False(PermissionEvaluator.EvaluatePermission(wildcardSet, PermissionCatalog.Space.Edit, false));
 
         // Global wildcard
         var starSet = new HashSet<string>(StringComparer.Ordinal) { "*" };
-        Assert.False(PermissionEvaluator.EvaluateModuleAccess(starSet, PermissionCatalog.Property.Module, false));
-        Assert.False(PermissionEvaluator.EvaluatePermission(starSet, PermissionCatalog.Property.Edit, false));
+        Assert.False(PermissionEvaluator.EvaluateModuleAccess(starSet, PermissionCatalog.Space.Module, false));
+        Assert.False(PermissionEvaluator.EvaluatePermission(starSet, PermissionCatalog.Space.Edit, false));
     }
 
     [Fact]
@@ -564,8 +564,8 @@ public class PermissionTests
         var handlers = sp.GetServices<IAuthorizationHandler>();
         Assert.Contains(handlers, h => h is AdminBypassHandler);
 
-        var actionPolicy = PermissionCatalog.Property.Edit;
-        var modulePolicy = PermissionCatalog.Property.Module;
+        var actionPolicy = PermissionCatalog.Space.Edit;
+        var modulePolicy = PermissionCatalog.Space.Module;
 
         // 1. Unauthenticated superadmin -> FAILS
         var unauthSuper = CreateUnauthenticatedSuperAdmin();
@@ -603,14 +603,14 @@ public class PermissionTests
         Assert.True(res6Module.Succeeded);
 
         // 7. Case sensitivity -> FAILS
-        var wrongCase = CreateUserWithId("user-wrong-case", "internal.property", "internal.property.edit");
-        dynamicCache.SetUserPermissions("user-wrong-case", "internal.property", "internal.property.edit");
+        var wrongCase = CreateUserWithId("user-wrong-case", "internal.space", "internal.space.edit");
+        dynamicCache.SetUserPermissions("user-wrong-case", "internal.space", "internal.space.edit");
         var res7 = await authService.AuthorizeAsync(wrongCase, actionPolicy);
         Assert.False(res7.Succeeded);
 
         // 8. Wildcard module claim -> FAILS
-        var wildcardModule = CreateUserWithId("user-wildcard-module", "Internal.Property.*");
-        dynamicCache.SetUserPermissions("user-wildcard-module", "Internal.Property.*");
+        var wildcardModule = CreateUserWithId("user-wildcard-module", "Internal.Space.*");
+        dynamicCache.SetUserPermissions("user-wildcard-module", "Internal.Space.*");
         var res8Action = await authService.AuthorizeAsync(wildcardModule, actionPolicy);
         var res8Module = await authService.AuthorizeAsync(wildcardModule, modulePolicy);
         Assert.False(res8Action.Succeeded);
@@ -625,7 +625,7 @@ public class PermissionTests
         Assert.False(res9Module.Succeeded);
     }
 
-    private static (TagHelperContext Context, TagHelperOutput Output) CreateTagHelperContextAndOutput(string tagName = "button", string permission = "Internal.Property.Edit")
+    private static (TagHelperContext Context, TagHelperOutput Output) CreateTagHelperContextAndOutput(string tagName = "button", string permission = "Internal.Space.Edit")
     {
         var context = new TagHelperContext(
             new TagHelperAttributeList(),
@@ -645,33 +645,33 @@ public class PermissionTests
     {
         // 1. Unauthenticated user -> suppressed (TagName becomes null)
         var (context1, output1) = CreateTagHelperContextAndOutput();
-        var user1 = CreateUnauthenticatedUser(PermissionCatalog.Property.Module, PermissionCatalog.Property.Edit);
-        var svc1 = CreatePermissionService(user1, PermissionCatalog.Property.Module, PermissionCatalog.Property.Edit);
+        var user1 = CreateUnauthenticatedUser(PermissionCatalog.Space.Module, PermissionCatalog.Space.Edit);
+        var svc1 = CreatePermissionService(user1, PermissionCatalog.Space.Module, PermissionCatalog.Space.Edit);
         var helper1 = new PermissionTagHelper(svc1)
         {
-            Permission = PermissionCatalog.Property.Edit
+            Permission = PermissionCatalog.Space.Edit
         };
         await helper1.ProcessAsync(context1, output1);
         Assert.Null(output1.TagName);
 
         // 2. Action only (missing module in cache) -> suppressed
         var (context2, output2) = CreateTagHelperContextAndOutput();
-        var user2 = CreateUser(PermissionCatalog.Property.Edit);
-        var svc2 = CreatePermissionService(user2, PermissionCatalog.Property.Edit);
+        var user2 = CreateUser(PermissionCatalog.Space.Edit);
+        var svc2 = CreatePermissionService(user2, PermissionCatalog.Space.Edit);
         var helper2 = new PermissionTagHelper(svc2)
         {
-            Permission = PermissionCatalog.Property.Edit
+            Permission = PermissionCatalog.Space.Edit
         };
         await helper2.ProcessAsync(context2, output2);
         Assert.Null(output2.TagName);
 
         // 3. Module + Action -> NOT suppressed, attribute removed
         var (context3, output3) = CreateTagHelperContextAndOutput();
-        var user3 = CreateUser(PermissionCatalog.Property.Module, PermissionCatalog.Property.Edit);
-        var svc3 = CreatePermissionService(user3, PermissionCatalog.Property.Module, PermissionCatalog.Property.Edit);
+        var user3 = CreateUser(PermissionCatalog.Space.Module, PermissionCatalog.Space.Edit);
+        var svc3 = CreatePermissionService(user3, PermissionCatalog.Space.Module, PermissionCatalog.Space.Edit);
         var helper3 = new PermissionTagHelper(svc3)
         {
-            Permission = PermissionCatalog.Property.Edit
+            Permission = PermissionCatalog.Space.Edit
         };
         await helper3.ProcessAsync(context3, output3);
         Assert.Equal("button", output3.TagName);
@@ -683,7 +683,7 @@ public class PermissionTests
         var svc4 = CreatePermissionService(user4);
         var helper4 = new PermissionTagHelper(svc4)
         {
-            Permission = PermissionCatalog.Property.Edit
+            Permission = PermissionCatalog.Space.Edit
         };
         await helper4.ProcessAsync(context4, output4);
         Assert.Equal("button", output4.TagName);
@@ -701,12 +701,12 @@ public class PermissionTests
         // 1. Null user -> disabled fieldset and banner
         var output = new TagHelperOutput(
             "form",
-            new TagHelperAttributeList { new TagHelperAttribute("asp-form-write-permission", PermissionCatalog.Property.Edit) },
+            new TagHelperAttributeList { new TagHelperAttribute("asp-form-write-permission", PermissionCatalog.Space.Edit) },
             (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
         var svcNull = CreatePermissionService(null);
         var helper = new FormWritePermissionTagHelper(svcNull)
         {
-            Permission = PermissionCatalog.Property.Edit
+            Permission = PermissionCatalog.Space.Edit
         };
         await helper.ProcessAsync(context, output);
         Assert.Contains("<fieldset disabled", output.PreContent.GetContent());
@@ -716,13 +716,13 @@ public class PermissionTests
         // 2. Unauthenticated user with permission in cache -> disabled
         output = new TagHelperOutput(
             "form",
-            new TagHelperAttributeList { new TagHelperAttribute("asp-form-write-permission", PermissionCatalog.Property.Edit) },
+            new TagHelperAttributeList { new TagHelperAttribute("asp-form-write-permission", PermissionCatalog.Space.Edit) },
             (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
-        var userUnauth = CreateUnauthenticatedUser(PermissionCatalog.Property.Module, PermissionCatalog.Property.Edit);
-        var svcUnauth = CreatePermissionService(userUnauth, PermissionCatalog.Property.Module, PermissionCatalog.Property.Edit);
+        var userUnauth = CreateUnauthenticatedUser(PermissionCatalog.Space.Module, PermissionCatalog.Space.Edit);
+        var svcUnauth = CreatePermissionService(userUnauth, PermissionCatalog.Space.Module, PermissionCatalog.Space.Edit);
         helper = new FormWritePermissionTagHelper(svcUnauth)
         {
-            Permission = PermissionCatalog.Property.Edit
+            Permission = PermissionCatalog.Space.Edit
         };
         await helper.ProcessAsync(context, output);
         Assert.Contains("<fieldset disabled", output.PreContent.GetContent());
@@ -730,13 +730,13 @@ public class PermissionTests
         // 3. Authenticated user without write permission (module only) -> disabled
         output = new TagHelperOutput(
             "form",
-            new TagHelperAttributeList { new TagHelperAttribute("asp-form-write-permission", PermissionCatalog.Property.Edit) },
+            new TagHelperAttributeList { new TagHelperAttribute("asp-form-write-permission", PermissionCatalog.Space.Edit) },
             (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
-        var userModOnly = CreateUser(PermissionCatalog.Property.Module);
-        var svcModOnly = CreatePermissionService(userModOnly, PermissionCatalog.Property.Module);
+        var userModOnly = CreateUser(PermissionCatalog.Space.Module);
+        var svcModOnly = CreatePermissionService(userModOnly, PermissionCatalog.Space.Module);
         helper = new FormWritePermissionTagHelper(svcModOnly)
         {
-            Permission = PermissionCatalog.Property.Edit
+            Permission = PermissionCatalog.Space.Edit
         };
         await helper.ProcessAsync(context, output);
         Assert.Contains("<fieldset disabled", output.PreContent.GetContent());
@@ -744,13 +744,13 @@ public class PermissionTests
         // 4. Authenticated user WITH write permission (module + action) -> NOT disabled
         output = new TagHelperOutput(
             "form",
-            new TagHelperAttributeList { new TagHelperAttribute("asp-form-write-permission", PermissionCatalog.Property.Edit) },
+            new TagHelperAttributeList { new TagHelperAttribute("asp-form-write-permission", PermissionCatalog.Space.Edit) },
             (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
-        var userFull = CreateUser(PermissionCatalog.Property.Module, PermissionCatalog.Property.Edit);
-        var svcFull = CreatePermissionService(userFull, PermissionCatalog.Property.Module, PermissionCatalog.Property.Edit);
+        var userFull = CreateUser(PermissionCatalog.Space.Module, PermissionCatalog.Space.Edit);
+        var svcFull = CreatePermissionService(userFull, PermissionCatalog.Space.Module, PermissionCatalog.Space.Edit);
         helper = new FormWritePermissionTagHelper(svcFull)
         {
-            Permission = PermissionCatalog.Property.Edit
+            Permission = PermissionCatalog.Space.Edit
         };
         await helper.ProcessAsync(context, output);
         Assert.Empty(output.PreContent.GetContent());
@@ -759,13 +759,13 @@ public class PermissionTests
         // 5. Authenticated superadmin -> NOT disabled
         output = new TagHelperOutput(
             "form",
-            new TagHelperAttributeList { new TagHelperAttribute("asp-form-write-permission", PermissionCatalog.Property.Edit) },
+            new TagHelperAttributeList { new TagHelperAttribute("asp-form-write-permission", PermissionCatalog.Space.Edit) },
             (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
         var userAdmin = CreateSuperAdmin();
         var svcAdmin = CreatePermissionService(userAdmin);
         helper = new FormWritePermissionTagHelper(svcAdmin)
         {
-            Permission = PermissionCatalog.Property.Edit
+            Permission = PermissionCatalog.Space.Edit
         };
         await helper.ProcessAsync(context, output);
         Assert.Empty(output.PreContent.GetContent());

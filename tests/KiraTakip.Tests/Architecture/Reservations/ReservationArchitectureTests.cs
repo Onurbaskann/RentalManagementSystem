@@ -759,27 +759,11 @@ public class ReservationArchitectureTests : IDisposable
     private async Task<ReservationSeedData> SeedAsync()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var firstProperty = new Property { Name = $"Rezervasyon Taşınmaz 1 {suffix}" };
-        var secondProperty = new Property { Name = $"Rezervasyon Taşınmaz 2 {suffix}" };
         var chargeType = new ChargeType
         {
             Name = $"Rezervasyon Borç Tipi {suffix}",
             Code = $"REZ_{suffix}",
             Behavior = ChargeTypeBehavior.ReservationSpecific
-        };
-        var ratedUnitType = new UnitType
-        {
-            Name = $"Rezervasyon Birim Türü {suffix}",
-            Code = $"RBT_{suffix}",
-            Usage = UnitTypeUsage.Reservable,
-            ChargeType = chargeType
-        };
-        var noRateUnitType = new UnitType
-        {
-            Name = $"Tarifesiz Birim Türü {suffix}",
-            Code = $"TBT_{suffix}",
-            Usage = UnitTypeUsage.Reservable,
-            ChargeType = chargeType
         };
         var activeTenant = new Tenant
         {
@@ -795,35 +779,33 @@ public class ReservationArchitectureTests : IDisposable
             IsActive = false
         };
 
-        _context.AddRange(
-            firstProperty,
-            secondProperty,
-            ratedUnitType,
-            noRateUnitType,
-            activeTenant,
-            inactiveTenant);
+        _context.AddRange(chargeType, activeTenant, inactiveTenant);
         await _context.SaveChangesAsync();
 
-        var firstUnit = CreateUnit(firstProperty.Id, ratedUnitType.Id, $"Salon 1 {suffix}");
-        var secondUnit = CreateUnit(secondProperty.Id, ratedUnitType.Id, $"Salon 2 {suffix}");
-        var outsideUnit = CreateUnit(secondProperty.Id, ratedUnitType.Id, $"Salon 3 {suffix}");
-        var noRateUnit = CreateUnit(firstProperty.Id, noRateUnitType.Id, $"Tarifesiz Salon {suffix}");
-        _context.Units.AddRange(firstUnit, secondUnit, outsideUnit, noRateUnit);
+        var firstRoot = await SpaceTestSeed.AddRootAsync(_context, $"Rezervasyon Kök 1 {suffix}");
+        var secondRoot = await SpaceTestSeed.AddRootAsync(_context, $"Rezervasyon Kök 2 {suffix}");
+        var firstUnit = await SpaceTestSeed.AddChildAsync(_context, firstRoot, $"Salon 1 {suffix}", 20m);
+        var secondUnit = await SpaceTestSeed.AddChildAsync(_context, secondRoot, $"Salon 2 {suffix}", 20m);
+        var outsideUnit = await SpaceTestSeed.AddChildAsync(_context, secondRoot, $"Salon 3 {suffix}", 20m);
+        var noRateUnit = await SpaceTestSeed.AddChildAsync(_context, firstRoot, $"Tarifesiz Salon {suffix}", 20m);
+        foreach (var space in new[] { firstUnit, secondUnit, outsideUnit, noRateUnit })
+            space.Usage = SpaceUsage.Reservable;
         await _context.SaveChangesAsync();
 
-        _context.Set<ReservationRateOverride>().Add(new ReservationRateOverride
-        {
-            UnitTypeId = ratedUnitType.Id,
-            Year = 2026,
-            FreeDurationMinutes = 0,
-            BillingPeriodMinutes = 60,
-            PeriodRate = 100m,
-            KdvRate = 20m
-        });
+        _context.Set<ReservationRateOverride>().AddRange(
+            new[] { firstUnit, secondUnit, outsideUnit }.Select(space => new ReservationRateOverride
+            {
+                SpaceId = space.Id,
+                ChargeTypeId = chargeType.Id,
+                FreeDurationMinutes = 0,
+                BillingPeriodMinutes = 60,
+                PeriodRate = 100m,
+                KdvRate = 20m
+            }));
         await _context.SaveChangesAsync();
 
         return new ReservationSeedData(
-            firstProperty.Id,
+            firstRoot.Id,
             firstUnit.Id,
             secondUnit.Id,
             outsideUnit.Id,
@@ -890,15 +872,6 @@ public class ReservationArchitectureTests : IDisposable
             "Talep Sahibi",
             email,
             accessScope);
-
-    private static Unit CreateUnit(int propertyId, int unitTypeId, string name)
-        => new()
-        {
-            PropertyId = propertyId,
-            UnitTypeId = unitTypeId,
-            Name = name,
-            Area = 20m
-        };
 
     private sealed record ReservationSeedData(
         int FirstPropertyId,

@@ -53,7 +53,7 @@ public class PermissionClaimsTransformerTests
         public Task<IList<string>> GetUserPermissionsFromRolesAsync(string userId)
         {
             GetUserPermissionsFromRolesCalled = true;
-            return Task.FromResult<IList<string>>(new List<string> { PermissionCatalog.Property.Edit, PermissionCatalog.Property.Module });
+            return Task.FromResult<IList<string>>(new List<string> { PermissionCatalog.Space.Edit, PermissionCatalog.Space.Module });
         }
         public Task AddRoleByRolIdAsync(string userId, int rolId, string? atayanUserId = null, RoleAssignmentOperation operation = RoleAssignmentOperation.UserEdit) => Task.CompletedTask;
     }
@@ -129,8 +129,8 @@ public class PermissionClaimsTransformerTests
             new Claim(AppClaimTypes.DisplayName, "Test Legacy User"),
             new Claim(AppClaimTypes.UserType, ((int)UserType.Internal).ToString()),
             new Claim(ClaimTypes.Role, "Admin"),
-            new Claim(AppClaimTypes.Permission, PermissionCatalog.Property.Module),
-            new Claim(AppClaimTypes.Permission, PermissionCatalog.Property.Edit)
+            new Claim(AppClaimTypes.Permission, PermissionCatalog.Space.Module),
+            new Claim(AppClaimTypes.Permission, PermissionCatalog.Space.Edit)
         }, IdentityConstants.ApplicationScheme);
 
         var principal = new ClaimsPrincipal(identity);
@@ -164,13 +164,13 @@ public class PermissionClaimsTransformerTests
         var id1 = new ClaimsIdentity(new[]
         {
             new Claim(ClaimTypes.NameIdentifier, "user-multi"),
-            new Claim(AppClaimTypes.Permission, PermissionCatalog.Property.Module)
+            new Claim(AppClaimTypes.Permission, PermissionCatalog.Space.Module)
         }, "Identity1");
 
         var id2 = new ClaimsIdentity(new[]
         {
             new Claim(ClaimTypes.Role, "Editor"),
-            new Claim(AppClaimTypes.Permission, PermissionCatalog.Property.Edit)
+            new Claim(AppClaimTypes.Permission, PermissionCatalog.Space.Edit)
         }, "Identity2");
 
         var principal = new ClaimsPrincipal(new[] { id1, id2 });
@@ -225,7 +225,7 @@ public class PermissionClaimsTransformerTests
         var identity = new ClaimsIdentity(new[]
         {
             new Claim(ClaimTypes.NameIdentifier, "user-reject"),
-            new Claim(AppClaimTypes.Permission, PermissionCatalog.Property.Module)
+            new Claim(AppClaimTypes.Permission, PermissionCatalog.Space.Module)
         }, IdentityConstants.ApplicationScheme);
 
         var principal = new ClaimsPrincipal(identity);
@@ -247,7 +247,7 @@ public class PermissionClaimsTransformerTests
         var replacedIdentity = new ClaimsIdentity(new[]
         {
             new Claim(ClaimTypes.NameIdentifier, "user-replaced"),
-            new Claim(AppClaimTypes.Permission, PermissionCatalog.Property.Edit)
+            new Claim(AppClaimTypes.Permission, PermissionCatalog.Space.Edit)
         }, IdentityConstants.ApplicationScheme);
 
         var validator = new TestSecurityStampValidator

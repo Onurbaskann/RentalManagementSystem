@@ -92,22 +92,22 @@ public class PermissionCachePhase4ComponentTests
     [Fact]
     public void ControllerActions_HaveExpectedAuthorizePolicies_ViaReflection()
     {
-        // 1. Internal Module: PropertyController
-        var propType = typeof(PropertyController);
+        // 1. Internal Module: SpaceController
+        var propType = typeof(SpaceController);
         var propClassAuth = propType.GetCustomAttribute<AuthorizeAttribute>();
         Assert.NotNull(propClassAuth);
 
-        var propIndexMethod = propType.GetMethod(nameof(PropertyController.Index));
+        var propIndexMethod = propType.GetMethod(nameof(SpaceController.Index));
         Assert.NotNull(propIndexMethod);
         var propIndexAuth = propIndexMethod.GetCustomAttribute<AuthorizeAttribute>();
         Assert.NotNull(propIndexAuth);
-        Assert.Equal(PermissionCatalog.Property.Module, propIndexAuth.Policy);
+        Assert.Equal(PermissionCatalog.Space.Module, propIndexAuth.Policy);
 
-        var propEditMethod = propType.GetMethod(nameof(PropertyController.Edit), [typeof(Web.Models.ViewModels.EditPropertyViewModel)]);
+        var propEditMethod = propType.GetMethod(nameof(SpaceController.Edit), [typeof(int), typeof(Web.Models.ViewModels.SpaceFormViewModel)]);
         Assert.NotNull(propEditMethod);
         var propEditAuth = propEditMethod.GetCustomAttribute<AuthorizeAttribute>();
         Assert.NotNull(propEditAuth);
-        Assert.Equal(PermissionCatalog.Property.Edit, propEditAuth.Policy);
+        Assert.Equal(PermissionCatalog.Space.Edit, propEditAuth.Policy);
 
         // 2. Tenant Module: TenantRoleController
         var tenantRoleType = typeof(TenantRoleController);
@@ -138,18 +138,18 @@ public class PermissionCachePhase4ComponentTests
         ], "Cookies"));
 
         var (authService, cache, _, permService) = CreateComponentContext(user);
-        cache.Set("user-module-only", PermissionCatalog.Property.Module);
+        cache.Set("user-module-only", PermissionCatalog.Space.Module);
 
         // 1. Endpoint policy checks
-        var viewAuth = await authService.AuthorizeAsync(user, PermissionCatalog.Property.Module);
-        var writeAuth = await authService.AuthorizeAsync(user, PermissionCatalog.Property.Edit);
+        var viewAuth = await authService.AuthorizeAsync(user, PermissionCatalog.Space.Module);
+        var writeAuth = await authService.AuthorizeAsync(user, PermissionCatalog.Space.Edit);
         Assert.True(viewAuth.Succeeded);
         Assert.False(writeAuth.Succeeded);
 
         // 2. UI PermissionTagHelper check: button must be suppressed
         var tagHelper = new PermissionTagHelper(permService)
         {
-            Permission = PermissionCatalog.Property.Edit
+            Permission = PermissionCatalog.Space.Edit
         };
         var context = new TagHelperContext(
             new TagHelperAttributeList(),
@@ -157,7 +157,7 @@ public class PermissionCachePhase4ComponentTests
             Guid.NewGuid().ToString("N"));
         var output = new TagHelperOutput(
             "button",
-            new TagHelperAttributeList { new("asp-permission", PermissionCatalog.Property.Edit) },
+            new TagHelperAttributeList { new("asp-permission", PermissionCatalog.Space.Edit) },
             (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent().SetContent("DÃ¼zenle")));
 
         await tagHelper.ProcessAsync(context, output);
@@ -166,11 +166,11 @@ public class PermissionCachePhase4ComponentTests
         // 3. UI FormWritePermissionTagHelper check: form wrapped in disabled fieldset with warning banner
         var formTagHelper = new FormWritePermissionTagHelper(permService)
         {
-            Permission = PermissionCatalog.Property.Edit
+            Permission = PermissionCatalog.Space.Edit
         };
         var formOutput = new TagHelperOutput(
             "form",
-            new TagHelperAttributeList { new("asp-form-write-permission", PermissionCatalog.Property.Edit) },
+            new TagHelperAttributeList { new("asp-form-write-permission", PermissionCatalog.Space.Edit) },
             (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent().SetContent("<input type='text'/>")));
 
         await formTagHelper.ProcessAsync(context, formOutput);
@@ -191,18 +191,18 @@ public class PermissionCachePhase4ComponentTests
         ], "Cookies"));
 
         var (authService, cache, _, permService) = CreateComponentContext(user);
-        cache.Set("user-full", PermissionCatalog.Property.Module, PermissionCatalog.Property.Edit);
+        cache.Set("user-full", PermissionCatalog.Space.Module, PermissionCatalog.Space.Edit);
 
         // 1. Endpoint policy checks
-        var viewAuth = await authService.AuthorizeAsync(user, PermissionCatalog.Property.Module);
-        var writeAuth = await authService.AuthorizeAsync(user, PermissionCatalog.Property.Edit);
+        var viewAuth = await authService.AuthorizeAsync(user, PermissionCatalog.Space.Module);
+        var writeAuth = await authService.AuthorizeAsync(user, PermissionCatalog.Space.Edit);
         Assert.True(viewAuth.Succeeded);
         Assert.True(writeAuth.Succeeded);
 
         // 2. UI PermissionTagHelper check: button must NOT be suppressed
         var tagHelper = new PermissionTagHelper(permService)
         {
-            Permission = PermissionCatalog.Property.Edit
+            Permission = PermissionCatalog.Space.Edit
         };
         var context = new TagHelperContext(
             new TagHelperAttributeList(),
@@ -210,7 +210,7 @@ public class PermissionCachePhase4ComponentTests
             Guid.NewGuid().ToString("N"));
         var output = new TagHelperOutput(
             "button",
-            new TagHelperAttributeList { new("asp-permission", PermissionCatalog.Property.Edit) },
+            new TagHelperAttributeList { new("asp-permission", PermissionCatalog.Space.Edit) },
             (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent().SetContent("DÃ¼zenle")));
 
         await tagHelper.ProcessAsync(context, output);
@@ -220,11 +220,11 @@ public class PermissionCachePhase4ComponentTests
         // 3. UI FormWritePermissionTagHelper check: form not disabled
         var formTagHelper = new FormWritePermissionTagHelper(permService)
         {
-            Permission = PermissionCatalog.Property.Edit
+            Permission = PermissionCatalog.Space.Edit
         };
         var formOutput = new TagHelperOutput(
             "form",
-            new TagHelperAttributeList { new("asp-form-write-permission", PermissionCatalog.Property.Edit) },
+            new TagHelperAttributeList { new("asp-form-write-permission", PermissionCatalog.Space.Edit) },
             (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent().SetContent("<input type='text'/>")));
 
         await formTagHelper.ProcessAsync(context, formOutput);
@@ -242,12 +242,12 @@ public class PermissionCachePhase4ComponentTests
         ], "Cookies"));
 
         var (authService, cache, _, permService) = CreateComponentContext(user);
-        cache.Set("user-action-only", PermissionCatalog.Property.Edit); // Action present, Module absent!
+        cache.Set("user-action-only", PermissionCatalog.Space.Edit); // Action present, Module absent!
 
-        var writeAuth = await authService.AuthorizeAsync(user, PermissionCatalog.Property.Edit);
+        var writeAuth = await authService.AuthorizeAsync(user, PermissionCatalog.Space.Edit);
         Assert.False(writeAuth.Succeeded);
 
-        var hasPerm = await permService.HasPermissionAsync(user, PermissionCatalog.Property.Edit);
+        var hasPerm = await permService.HasPermissionAsync(user, PermissionCatalog.Space.Edit);
         Assert.False(hasPerm);
     }
 
@@ -264,10 +264,10 @@ public class PermissionCachePhase4ComponentTests
         var (authService, _, _, permService) = CreateComponentContext(tenantAdmin);
 
         // Attempting internal property access
-        var authResult = await authService.AuthorizeAsync(tenantAdmin, PermissionCatalog.Property.Edit);
+        var authResult = await authService.AuthorizeAsync(tenantAdmin, PermissionCatalog.Space.Edit);
         Assert.False(authResult.Succeeded);
 
-        var permResult = await permService.HasPermissionAsync(tenantAdmin, PermissionCatalog.Property.Edit);
+        var permResult = await permService.HasPermissionAsync(tenantAdmin, PermissionCatalog.Space.Edit);
         Assert.False(permResult);
     }
 
@@ -459,7 +459,7 @@ public class PermissionCachePhase4ComponentTests
                 cookieOptions, claimsFactory,
                 "Normal İç Kullanıcı (3 İzin)",
                 user1,
-                [PermissionCatalog.Property.Module, PermissionCatalog.Property.Create, PermissionCatalog.Property.Edit]);
+                [PermissionCatalog.Space.Module, PermissionCatalog.Space.Create, PermissionCatalog.Space.Edit]);
 
             // Scenario 2: Comprehensive Internal User (PermissionCatalog.InternalAll: dynamic count)
             var user2 = new ApplicationUser
@@ -575,8 +575,8 @@ public class PermissionCachePhase4ComponentTests
             new Claim(AppClaimTypes.DisplayName, "GeÃ§iÅŸ KullanÄ±cÄ±sÄ±"),
             new Claim(AppClaimTypes.UserType, ((int)UserType.Internal).ToString()),
             new Claim(ClaimTypes.Role, "Admin"),
-            new Claim(AppClaimTypes.Permission, PermissionCatalog.Property.Module),
-            new Claim(AppClaimTypes.Permission, PermissionCatalog.Property.Edit)
+            new Claim(AppClaimTypes.Permission, PermissionCatalog.Space.Module),
+            new Claim(AppClaimTypes.Permission, PermissionCatalog.Space.Edit)
         ], IdentityConstants.ApplicationScheme);
 
         var principal = new ClaimsPrincipal(identity);

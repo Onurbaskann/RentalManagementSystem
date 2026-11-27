@@ -29,7 +29,9 @@ public class StoreArchitectureTests
         {
             PermissionCatalog.Store.Create,
             PermissionCatalog.Store.Edit,
-            PermissionCatalog.Store.Account
+            PermissionCatalog.Store.ToggleStatus,
+            PermissionCatalog.Store.ReplaceAccount,
+            PermissionCatalog.Store.DeactivateAccount
         };
 
         Assert.All(expected, permission => Assert.Contains(permission, module.Actions));
@@ -45,9 +47,9 @@ public class StoreArchitectureTests
     {
         AssertPostAction(nameof(AdminStoreController.Create), PermissionCatalog.Store.Create, typeof(StoreFormViewModel));
         AssertPostAction(nameof(AdminStoreController.Edit), PermissionCatalog.Store.Edit, typeof(int), typeof(StoreFormViewModel));
-        AssertPostAction(nameof(AdminStoreController.ToggleStatus), PermissionCatalog.Store.Edit, typeof(int));
-        AssertPostAction(nameof(AdminStoreController.ReplaceAccount), PermissionCatalog.Store.Account, typeof(int), typeof(StoreAccountFormViewModel));
-        AssertPostAction(nameof(AdminStoreController.DeactivateAccount), PermissionCatalog.Store.Account, typeof(int), typeof(int));
+        AssertPostAction(nameof(AdminStoreController.ToggleStatus), PermissionCatalog.Store.ToggleStatus, typeof(int));
+        AssertPostAction(nameof(AdminStoreController.ReplaceAccount), PermissionCatalog.Store.ReplaceAccount, typeof(int), typeof(StoreAccountFormViewModel));
+        AssertPostAction(nameof(AdminStoreController.DeactivateAccount), PermissionCatalog.Store.DeactivateAccount, typeof(int), typeof(int));
     }
 
     [Fact]
