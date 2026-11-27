@@ -8,9 +8,9 @@
     var leasesJson = JsonSerializer.Serialize(Model.ActiveLeases.Select(lease => new {
         id = lease.Id,
         tenantId = lease.TenantId,
-        unitId = lease.UnitId,
+        spaceId = lease.SpaceId,
         tenantName = lease.TenantDisplayName,
-        unitName = lease.PropertyName + " / " + lease.UnitName
+        spaceName = lease.SpacePath
     }));
 }
 
@@ -54,7 +54,7 @@
                     <select class="form-control" x-model.number="leaseId" @@change="sozlesmeDegisti()">
                         <option value="0">— Sözleşme seçmeyin —</option>
                         <template x-for="s in filtreliSozlesmeler" :key="s.id">
-                            <option :value="s.id" x-text="s.unitName"></option>
+                            <option :value="s.id" x-text="s.spaceName"></option>
                         </template>
                     </select>
                     <div class="form-hint">Sözleşme seçilirse birim otomatik dolar.</div>
@@ -69,19 +69,19 @@
         <div class="card mb-4">
             <div class="text-lg font-bold mb-5 flex items-center gap-2">
                 <span class="w-1.5 h-4 bg-primary rounded-full"></span>
-                <span>Birim</span>
+                <span>Alan</span>
             </div>
 
             <div class="form-group mb-0">
-                <label class="form-label">Birim <span class="text-red-500">*</span></label>
-                <select class="form-control" name="UnitId" x-model.number="unitId">
-                    <option value="0">— Birim seçin —</option>
-                    @foreach (var unit in Model.Units)
+                <label class="form-label">Alan <span class="text-red-500">*</span></label>
+                <select class="form-control" name="SpaceId" x-model.number="spaceId">
+                    <option value="0">— Alan seçin —</option>
+                    @foreach (var space in Model.Spaces)
                     {
-                        <option value="@unit.Id">@unit.PropertyName — @unit.Name@(unit.UnitNo != null ? " (" + unit.UnitNo + ")" : "")</option>
+                        <option value="@space.Id">@space.NamePath</option>
                     }
                 </select>
-                <span asp-validation-for="UnitId" class="form-error"></span>
+                <span asp-validation-for="SpaceId" class="form-error"></span>
             </div>
         </div>
 
@@ -192,7 +192,7 @@
         return {
             tenantId: @Model.TenantId,
             leaseId: @(Model.LeaseId.HasValue ? Model.LeaseId.Value.ToString() : "0"),
-            unitId: @Model.UnitId,
+            spaceId: @Model.SpaceId,
             tutar: @(Model.Amount > 0 ? Model.Amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "0"),
             kdvAktif: @(Model.IsVatApplied ? "true" : "false"),
             kdvOrani: @Model.VatRate.ToString("F0", System.Globalization.CultureInfo.InvariantCulture),
@@ -226,7 +226,7 @@
                     const s = sozlesmeler.find(x => x.id == this.leaseId);
                     if (s) {
                         this.tenantId = s.tenantId;
-                        this.unitId = s.unitId;
+                        this.spaceId = s.spaceId;
                     }
                 }
             },

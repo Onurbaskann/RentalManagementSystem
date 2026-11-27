@@ -97,6 +97,11 @@ public class ChargeTypeRepository(ApplicationDbContext ctx) : RepositoryBase<Cha
             type.IsActive &&
             type.Behavior == ChargeTypeBehavior.ReservationSpecific);
 
+    public async Task<bool> IsChargeTypeUsedAsync(int chargeTypeId, CancellationToken ct = default)
+        => await _ctx.RezervasyonTarifeler.AsNoTracking().AnyAsync(rate => rate.ChargeTypeId == chargeTypeId, ct)
+            || await _ctx.Reservations.AsNoTracking().AnyAsync(reservation => reservation.ChargeTypeId == chargeTypeId, ct)
+            || await _ctx.ChargeLineItems.AsNoTracking().AnyAsync(item => item.ChargeTypeId == chargeTypeId, ct);
+
     public Task<List<ChargeType>> GetActiveGenerationTypesAsync()
         => _dbSet.AsNoTracking()
             .Where(type => type.IsActive && (type.Behavior == ChargeTypeBehavior.MonthlyFixed || type.Behavior == ChargeTypeBehavior.FirstMonthOneTime))
@@ -108,15 +113,4 @@ public class ChargeTypeRepository(ApplicationDbContext ctx) : RepositoryBase<Cha
             .Where(type => type.Behavior != ChargeTypeBehavior.UserManual && type.Behavior != ChargeTypeBehavior.ReservationSpecific)
             .OrderBy(type => type.SortOrder)
             .ToListAsync();
-
-    public async Task<ChargeType?> ResolveReservationTypeAsync(int? preferredChargeTypeId)
-    {
-        if (preferredChargeTypeId.HasValue)
-        {
-            var preferred = await _dbSet.FirstOrDefaultAsync(type => type.Id == preferredChargeTypeId.Value && type.IsActive);
-            if (preferred != null) return preferred;
-        }
-
-        return await _dbSet.FirstOrDefaultAsync(type => type.Behavior == ChargeTypeBehavior.ReservationSpecific && type.IsActive);
-    }
 }

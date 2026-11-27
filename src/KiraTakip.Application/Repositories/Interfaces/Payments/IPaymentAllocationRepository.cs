@@ -11,24 +11,20 @@ public interface IPaymentAllocationRepository : IRepositoryBase<PaymentAllocatio
 {
     Task<List<PaymentListItemDto>> GetListAsync(
         int? chargeId,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null);
+        SpaceAccessScope? scope);
     Task<PagedResult<PaymentListItemDto>> GetPagedListAsync(
         TableQuery query,
         int? chargeId,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null);
+        SpaceAccessScope? scope);
     Task<PaymentDetailDto?> GetDetailsAsync(
         int id,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null);
+        SpaceAccessScope? scope);
     Task<PaymentAllocation?> GetForDecisionAsync(
         int id,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null);
+        SpaceAccessScope? scope);
     Task<decimal> GetPaidAmountAsync(int chargeId);
     Task<int?> GetChargeLineItemIdAsync(int paymentId);
-    Task<decimal> GetTenantApprovedTotalAsync(int tenantId, List<int>? authorizedPropertyIds = null, List<int>? authorizedUnitIds = null);
+    Task<decimal> GetTenantApprovedTotalAsync(int tenantId, SpaceAccessScope? scope = null);
     Task<decimal> GetPendingAmountAsync(int chargeId, int tenantId);
     Task<TenantPanelPaymentDataDto> GetTenantPanelDataAsync(GetTenantPanelPaymentDataInput input);
     Task<PaymentMatchingContextDto?> GetMatchingContextAsync(int paymentId);
@@ -36,8 +32,7 @@ public interface IPaymentAllocationRepository : IRepositoryBase<PaymentAllocatio
     Task<List<PaymentCandidateDto>> GetCandidatesAsync(
         PaymentMatchingBasisDto basis,
         PaymentMatchingPolicyDto policy,
-        IReadOnlyList<int>? propertyIds,
-        IReadOnlyList<int>? unitIds = null);
+        SpaceAccessScope? scope);
     Task<DocumentOwnerContextDto?> GetDocumentOwnerContextAsync(int paymentId);
     Task<List<string>> GetExistingPaymentNosAsync();
     Task<List<MonthlyCollectionReportRowDto>> GetCollectedByMonthAsync(GetMonthlyCollectionReportInput input);

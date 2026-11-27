@@ -5,8 +5,7 @@ public record GetMonthlyCollectionReportInput(
     DateTime Today,
     int? StoreId = null,
     int? ChargeTypeId = null,
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    SpaceAccessScope? Scope = null);
 
 public class MonthlyCollectionReportRowDto
 {

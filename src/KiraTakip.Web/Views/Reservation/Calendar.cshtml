@@ -6,10 +6,10 @@
     var days = Enumerable.Range(0, 7).Select(offset => Model.FromDate.AddDays(offset)).ToList();
     var previousDate = Model.FromDate.AddDays(-7).ToString("yyyy-MM-dd");
     var nextDate = Model.FromDate.AddDays(7).ToString("yyyy-MM-dd");
-    var selectedUnitQuery = Model.SelectedUnitId.HasValue ? $"&unitId={Model.SelectedUnitId}" : string.Empty;
-    var calendarUnits = Model.SelectedUnitId.HasValue
-        ? Model.Units.Where(unit => unit.Id == Model.SelectedUnitId.Value).ToList()
-        : Model.Units;
+    var selectedSpaceQuery = Model.SelectedSpaceId.HasValue ? $"&spaceId={Model.SelectedSpaceId}" : string.Empty;
+    var calendarUnits = Model.SelectedSpaceId.HasValue
+        ? Model.Spaces.Where(unit => unit.Id == Model.SelectedSpaceId.Value).ToList()
+        : Model.Spaces;
 }
 
 <div class="page-header">
@@ -21,12 +21,12 @@
 <div class="card mb-4">
     <form method="get" asp-controller="Reservation" asp-action="Calendar" class="flex items-end gap-3 flex-wrap">
         <div class="form-group mb-0 min-w-[260px]">
-            <label for="unitId">Birim</label>
-            <select id="unitId" name="unitId" class="form-control">
+            <label for="spaceId">Alan</label>
+            <select id="spaceId" name="spaceId" class="form-control">
                 <option value="">Tüm rezervasyon birimleri</option>
                 @foreach (var unit in calendarUnits)
                 {
-                    <option value="@unit.Id" selected="@(Model.SelectedUnitId == unit.Id)">@unit.PropertyName — @unit.Name</option>
+                    <option value="@unit.Id" selected="@(Model.SelectedSpaceId == unit.Id)">@unit.Name</option>
                 }
             </select>
         </div>
@@ -36,8 +36,8 @@
         </div>
         <button type="submit" class="btn btn-primary">Göster</button>
         <div class="flex gap-2 ml-auto">
-            <a href="/Reservation/Calendar?date=@previousDate@selectedUnitQuery" class="btn btn-secondary" aria-label="Önceki hafta">← Önceki</a>
-            <a href="/Reservation/Calendar?date=@nextDate@selectedUnitQuery" class="btn btn-secondary" aria-label="Sonraki hafta">Sonraki →</a>
+            <a href="/Reservation/Calendar?date=@previousDate@selectedSpaceQuery" class="btn btn-secondary" aria-label="Önceki hafta">← Önceki</a>
+            <a href="/Reservation/Calendar?date=@nextDate@selectedSpaceQuery" class="btn btn-secondary" aria-label="Sonraki hafta">Sonraki →</a>
         </div>
     </form>
 </div>
@@ -54,7 +54,7 @@
         <table class="w-full min-w-[1200px]">
             <thead class="sticky top-0 z-10">
                 <tr>
-                    <th class="w-56">Birim</th>
+                    <th class="w-56">Alan</th>
                     @foreach (var day in days)
                     {
                         <th class="min-w-[135px]">@day.ToString("dddd")<span class="cell-sub">@day.ToString("dd.MM")</span></th>
@@ -62,15 +62,15 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var unit in Model.Units)
+                @foreach (var unit in Model.Spaces)
                 {
                     <tr>
-                        <td class="align-top"><span class="font-semibold">@unit.Name</span><span class="cell-sub">@unit.PropertyName</span></td>
+                        <td class="align-top"><span class="font-semibold">@unit.Name</span></td>
                         @foreach (var day in days)
                         {
                             var dayEnd = day.AddDays(1);
                             var entries = Model.Items
-                                .Where(item => item.UnitId == unit.Id && item.StartDate < dayEnd && item.EndDate > day)
+                                .Where(item => item.SpaceId == unit.Id && item.StartDate < dayEnd && item.EndDate > day)
                                 .ToList();
                             <td class="align-top p-2">
                                 @foreach (var entry in entries)

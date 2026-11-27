@@ -1,0 +1,46 @@
+@model IEnumerable<KiraTakip.Models.Dtos.Lease.LeaseSpaceOptionDto>
+@using System.Text.Json
+@{
+    var kind = ViewData[LeaseKindChoiceViewModel.ViewDataKey] as LeaseKindChoiceViewModel;
+    var catalog = Model.Select(space => new
+    {
+        id = space.Id,
+        name = space.Name,
+        namePath = space.NamePath,
+        area = space.Area,
+        areaText = space.Area.M2(),
+        isShared = space.IsShared
+    }).ToList();
+    var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+}
+<script>
+    window.leaseSpaceSelect = () => ({
+        spaceList: @Html.Raw(JsonSerializer.Serialize(catalog, jsonOptions)),
+        spaceQuery: '',
+        changingSpace: false,
+        hasKindChoice: @(kind is { IsVisible: true } ? "true" : "false"),
+        sharedPage: @(kind?.IsShared == true ? "true" : "false"),
+        normalUrl: @Html.Raw(JsonSerializer.Serialize(kind?.NormalUrl ?? string.Empty)),
+        sharedUrl: @Html.Raw(JsonSerializer.Serialize(kind?.SharedUrl ?? string.Empty)),
+        get spaces() { return Object.fromEntries(this.spaceList.map(s => [s.id, s])); },
+        spaceInfo() { return this.spaceId ? (this.spaces[this.spaceId] ?? null) : null; },
+        showSpaceList() { return !this.spaceId || this.changingSpace; },
+        filteredSpaces() {
+            const q = this.spaceQuery.trim().toLocaleLowerCase('tr-TR');
+            return this.spaceList.filter(s => !q || s.namePath.toLocaleLowerCase('tr-TR').includes(q));
+        },
+        selectSpace(id) {
+            if (!this.spaces[id]) return;
+            this.spaceId = id;
+            this.changingSpace = false;
+            this.spaceQuery = '';
+        },
+        clearSpace() { this.changingSpace = true; },
+        cancelChangeSpace() { this.changingSpace = false; this.spaceQuery = ''; },
+        stepNo(n) { return this.hasKindChoice ? n : n - 1; },
+        chooseKind(shared) {
+            if (shared === this.sharedPage) return;
+            window.location.href = shared ? this.sharedUrl : this.normalUrl;
+        }
+    });
+</script>

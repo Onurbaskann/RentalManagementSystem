@@ -8,25 +8,20 @@ namespace KiraTakip.Repositories.Interfaces.Tenants;
 public interface ITenantRepository : IRepositoryBase<Tenant>
 {
     Task<List<TenantListItemDto>> GetListAsync(
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null);
+        SpaceAccessScope? scope);
     Task<PagedResult<TenantListItemDto>> GetPagedListAsync(
         TableQuery query,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null);
+        SpaceAccessScope? scope);
     Task<bool> IsInScopeAsync(
         int tenantId,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null);
+        SpaceAccessScope? scope);
     Task<List<ReservationTenantOptionDto>> GetReservationOptionsAsync();
     Task<TenantDetailsDto?> GetDetailsAsync(
         int id,
-        List<int>? authorizedPropertyIds = null,
-        List<int>? authorizedUnitIds = null);
+        SpaceAccessScope? scope = null);
     Task<Tenant?> GetForUpdateAsync(
         int id,
-        List<int>? authorizedPropertyIds = null,
-        List<int>? authorizedUnitIds = null);
+        SpaceAccessScope? scope = null);
     Task<bool> TenantNoExistsAsync(string tenantNo, int? excludeTenantId = null);
     Task<bool> TaxNoExistsAsync(string taxNo, int? excludeTenantId = null);
     Task<List<string>> GetExistingTenantNosAsync();

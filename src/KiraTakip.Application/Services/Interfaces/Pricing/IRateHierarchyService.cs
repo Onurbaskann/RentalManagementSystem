@@ -6,6 +6,5 @@ namespace KiraTakip.Services.Interfaces.Pricing;
 public interface IRateHierarchyService
 {
     Task<ParentRateCardDto?> GetParentForAsync(GetParentRateInput input);
-    Task<ParentReservationRateOverrideCardDto?> GetReservationParentAsync(
-        GetParentReservationRateInput input);
+    Task<ParentReservationRateOverrideCardDto?> GetReservationParentAsync(int spaceId);
 }

@@ -10,15 +10,14 @@ public interface IPaymentStoreRoutingRepository : IRepositoryBase<PaymentStoreRo
     Task<List<MissingDefaultRoutingDto>> GetMissingDefaultsAsync();
     Task<PaymentStoreRouting?> FindActiveAsync(
         int chargeTypeId,
-        int? propertyId,
-        int? unitId,
+        int? spaceId,
         bool tracking = true);
     Task<PaymentStoreRouting?> GetTrackedByIdAsync(int id);
     Task<int?> GetDefaultStoreIdAsync(int chargeTypeId);
     Task<bool> HasUsableDefaultAsync(int chargeTypeId);
     Task<PaymentRoutingResolutionCandidateDto?> GetResolutionCandidateAsync(
         int chargeTypeId,
-        int unitId,
+        int? spaceId,
         CancellationToken cancellationToken = default);
     Task<bool> HasActiveRoutingForStoreAsync(int storeId);
 }

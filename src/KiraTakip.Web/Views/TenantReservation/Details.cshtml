@@ -13,7 +13,7 @@
         <div>
             <a asp-controller="TenantReservation" asp-action="Index" class="text-[12.5px] text-muted no-underline inline-block mb-2">← Rezervasyonlarım</a>
             <div class="page-title">@(string.IsNullOrWhiteSpace(Model.Title) ? "Rezervasyon Detayı" : Model.Title)</div>
-            <div class="page-subtitle">@Model.PropertyName — @Model.UnitName</div>
+            <div class="page-subtitle">@Model.SpaceName</div>
         </div>
         <span class="badge @Model.Status.GetBadgeCssClass()">@Model.Status.GetDisplayLabel()</span>
     </div>

@@ -6,6 +6,5 @@ public record SendInvitationInput(
     int RoleId,
     string InvitedByUserId,
     int? TenantId = null,
-    bool HasAccessToAllProperties = false,
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    bool HasAccessToAllSpaces = false,
+    IReadOnlyList<int>? SpaceIds = null);

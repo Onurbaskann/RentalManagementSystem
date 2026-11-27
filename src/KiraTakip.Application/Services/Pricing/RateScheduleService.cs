@@ -5,10 +5,7 @@ using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Interfaces.Catalog;
 using KiraTakip.Repositories.Interfaces.Charges;
 using KiraTakip.Repositories.Interfaces.Pricing;
-using KiraTakip.Repositories.Interfaces.Properties;
 using KiraTakip.Domain.Pricing;
-using KiraTakip.Domain.Reservations;
-using KiraTakip.Repositories.Interfaces.Reservations;
 using KiraTakip.Services.Interfaces.Pricing;
 
 namespace KiraTakip.Services.Pricing;
@@ -17,8 +14,6 @@ public class RateScheduleService(
     IRateScheduleRepository rateScheduleRepository,
     ICategoryRepository categoryRepository,
     IChargeTypeRepository chargeTypeRepository,
-    IUnitTypeRepository unitTypeRepository,
-    IReservationRateOverrideRepository reservationRateOverrideRepository,
     IUnitOfWork uow
 ) : IRateScheduleService
 {
@@ -75,27 +70,7 @@ public class RateScheduleService(
             }).ToList()
         )).ToList();
 
-        var rezervasyonBirimTurleri = await unitTypeRepository.GetAllAsync(t =>
-            t.IsActive && t.Usage == UnitTypeUsage.Reservable);
-        rezervasyonBirimTurleri = rezervasyonBirimTurleri.OrderBy(t => t.SortOrder).ToList();
-
-        var mevcutRezervasyonlar = await reservationRateOverrideRepository.GetAllAsync(r => r.UnitId == null && r.Year == year);
-
-        var reservationRows = rezervasyonBirimTurleri.Select(bt =>
-        {
-            var mevcut = mevcutRezervasyonlar.FirstOrDefault(r => r.UnitTypeId == bt.Id);
-            return new RateMatrixReservationRowDto(
-                mevcut?.Id ?? 0,
-                bt.Id,
-                bt.Name,
-                mevcut?.FreeDurationMinutes ?? 0,
-                mevcut?.BillingPeriodMinutes ?? 60,
-                mevcut?.PeriodRate ?? 0,
-                mevcut?.KdvRate ?? 20
-            );
-        }).ToList();
-
-        return new RateMatrixDto(year, kalemler.Any(k => k.IsActive), columns, rows, reservationRows);
+        return new RateMatrixDto(year, kalemler.Any(k => k.IsActive), columns, rows);
     }
 
     public async Task SaveMatrixAsync(int year, SaveRateMatrixInput input)
@@ -123,23 +98,6 @@ public class RateScheduleService(
                 !RateValuePolicy.IsValid(cell.UnitValue, cell.KdvRate, cell.CalculationMethod)),
             "Tarife değerlerinden biri geçersiz.");
 
-        var gecerliRezervasyonBirimTuruIdleri = (await unitTypeRepository.GetAllAsync(
-                t => t.IsActive && t.Usage == UnitTypeUsage.Reservable))
-            .Select(t => t.Id)
-            .ToHashSet();
-        Guard.Against(
-            input.ReservationCells.Any(cell =>
-                !gecerliRezervasyonBirimTuruIdleri.Contains(cell.UnitTypeId)),
-            "Geçersiz rezervasyon tarife kalemi gönderildi.");
-        Guard.Against(
-            input.ReservationCells.Any(cell =>
-                !ReservationRatePolicy.IsValid(
-                    cell.FreeDurationMinutes,
-                    cell.BillingPeriodMinutes,
-                    cell.PeriodRate,
-                    cell.KdvRate)),
-            "Rezervasyon tarife değerlerinden biri geçersiz.");
-
         foreach (var cell in input.Cells)
         {
             var mevcut = mevcutKalemler.FirstOrDefault(k =>
@@ -164,40 +122,12 @@ public class RateScheduleService(
             }
         }
 
-        var mevcutRezervasyonlar = await reservationRateOverrideRepository.GetAllAsync(r => r.UnitId == null && r.Year == year);
-
-        foreach (var rez in input.ReservationCells)
-        {
-            var mevcut = mevcutRezervasyonlar.FirstOrDefault(r => r.UnitTypeId == rez.UnitTypeId);
-            if (mevcut == null)
-            {
-                await reservationRateOverrideRepository.AddAsync(new ReservationRateOverride
-                {
-                    Year = year,
-                    UnitTypeId = rez.UnitTypeId,
-                    FreeDurationMinutes = rez.FreeDurationMinutes,
-                    BillingPeriodMinutes = rez.BillingPeriodMinutes,
-                    PeriodRate = rez.PeriodRate,
-                    KdvRate = rez.KdvRate
-                });
-            }
-            else
-            {
-                mevcut.FreeDurationMinutes = rez.FreeDurationMinutes;
-                mevcut.BillingPeriodMinutes = rez.BillingPeriodMinutes;
-                mevcut.PeriodRate = rez.PeriodRate;
-                mevcut.KdvRate = rez.KdvRate;
-            }
-        }
-
         await uow.SaveChangesAsync();
     }
 
     public async Task CreateYearAsync(CreateRateYearInput input)
     {
-        var yearExists = await rateScheduleRepository.AnyAsync(k => k.Year == input.Year)
-            || await reservationRateOverrideRepository.AnyAsync(r =>
-                r.UnitId == null && r.Year == input.Year);
+        var yearExists = await rateScheduleRepository.AnyAsync(k => k.Year == input.Year);
         Guard.InvalidField(
             yearExists,
             nameof(input.Year),
@@ -221,20 +151,6 @@ public class RateScheduleService(
                     CalculationMethod = kalem.CalculationMethod,
                     UnitValue = kalem.UnitValue,
                     KdvRate = kalem.KdvRate
-                });
-            }
-
-            var kaynakRezervasyonlar = await reservationRateOverrideRepository.GetAllAsync(r => r.UnitId == null && r.Year == input.CopyFromYear.Value);
-            foreach (var rez in kaynakRezervasyonlar)
-            {
-                await reservationRateOverrideRepository.AddAsync(new ReservationRateOverride
-                {
-                    Year = input.Year,
-                    UnitTypeId = rez.UnitTypeId,
-                    FreeDurationMinutes = rez.FreeDurationMinutes,
-                    BillingPeriodMinutes = rez.BillingPeriodMinutes,
-                    PeriodRate = rez.PeriodRate,
-                    KdvRate = rez.KdvRate
                 });
             }
         }
@@ -266,20 +182,6 @@ public class RateScheduleService(
                     });
                 }
             }
-
-            var rezBirimTurleri = await unitTypeRepository.GetAllAsync(t => t.IsActive && t.Usage == UnitTypeUsage.Reservable);
-            foreach (var bt in rezBirimTurleri)
-            {
-                await reservationRateOverrideRepository.AddAsync(new ReservationRateOverride
-                {
-                    Year = input.Year,
-                    UnitTypeId = bt.Id,
-                    FreeDurationMinutes = 0,
-                    BillingPeriodMinutes = 60,
-                    PeriodRate = 0,
-                    KdvRate = 0
-                });
-            }
         }
 
         await uow.SaveChangesAsync();
@@ -295,12 +197,6 @@ public class RateScheduleService(
         foreach (var k in kalemler)
         {
             k.IsActive = yeniDeger;
-        }
-
-        var rezler = await reservationRateOverrideRepository.GetAllAsync(r => r.UnitId == null && r.Year == year);
-        foreach (var r in rezler)
-        {
-            r.IsActive = yeniDeger;
         }
 
         await uow.SaveChangesAsync();

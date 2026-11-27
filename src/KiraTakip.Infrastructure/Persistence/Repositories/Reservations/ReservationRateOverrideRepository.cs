@@ -1,7 +1,7 @@
 using KiraTakip.Models.Common;
 using KiraTakip.Data;
+using KiraTakip.Domain.Spaces;
 using KiraTakip.Models.Dtos;
-using KiraTakip.Models.Dtos.RateHierarchy;
 using KiraTakip.Repositories.Common;
 using KiraTakip.Repositories.Interfaces.Reservations;
 using Microsoft.EntityFrameworkCore;
@@ -10,61 +10,31 @@ namespace KiraTakip.Repositories.Reservations;
 
 public class ReservationRateOverrideRepository(ApplicationDbContext ctx) : RepositoryBase<ReservationRateOverride>(ctx), IReservationRateOverrideRepository
 {
-    public async Task<List<ParentReservationRateOverrideRowDto>> GetGeneralRowsAsync(int year)
-        => await _dbSet.AsNoTracking()
-            .Where(r => r.UnitId == null
-                     && r.UnitTypeId != null
-                     && r.Year == year
-                     && r.IsActive
-                     && r.UnitType!.IsActive)
-            .OrderBy(r => r.UnitType!.SortOrder)
-            .Select(r => new ParentReservationRateOverrideRowDto(
-                r.UnitType!.Name,
-                r.FreeDurationMinutes,
-                r.BillingPeriodMinutes,
-                r.PeriodRate,
-                r.KdvRate))
-            .ToListAsync();
-
-    public async Task<List<ReservationRateOverrideListItemDto>> GetUcretKurallariListAsync()
-        => await _dbSet.AsNoTracking()
-            .Where(r => r.UnitId != null)
-            .OrderBy(r => r.Unit != null ? r.Unit.Property.Name : string.Empty)
-            .ThenBy(r => r.Unit != null ? r.Unit.Name : string.Empty)
-            .Select(r => new ReservationRateOverrideListItemDto
-            {
-                Id = r.Id,
-                UnitId = r.UnitId,
-                UnitName = r.Unit != null ? r.Unit.Name : null,
-                PropertyName = r.Unit != null ? r.Unit.Property.Name : null,
-                FreeDurationMinutes = r.FreeDurationMinutes,
-                BillingPeriodMinutes = r.BillingPeriodMinutes,
-                PeriodRate = r.PeriodRate,
-                KdvRate = r.KdvRate,
-                IsActive = r.IsActive,
-                Description = r.Description
-            })
-            .ToListAsync();
-
-    public Task<PagedResult<ReservationRateOverrideListItemDto>> GetRateRulesPagedAsync(TableQuery tableQuery)
+    public Task<PagedResult<ReservationRateOverrideListItemDto>> GetRateRulesPagedAsync(TableQuery tableQuery, SpaceAccessScope scope)
     {
-        var query = _dbSet.AsNoTracking().Where(rate => rate.UnitId != null);
+        var query = _dbSet.AsNoTracking();
+        if (!scope.HasGlobalAccess)
+        {
+            var roots = scope.RootPaths.ToList();
+            query = query.Where(rate => roots.Any(path => rate.Space.Path.StartsWith(path)));
+        }
         if (!string.IsNullOrWhiteSpace(tableQuery.Q))
         {
             var search = tableQuery.Q.Trim();
-            query = query.Where(rate => rate.Unit != null
-                && (rate.Unit.Name.Contains(search) || rate.Unit.Property.Name.Contains(search)));
+            query = query.Where(rate => rate.Space.Name.Contains(search)
+                || rate.ChargeType.Name.Contains(search));
         }
         var items = query
-            .OrderBy(rate => rate.Unit != null ? rate.Unit.Property.Name : string.Empty)
-            .ThenBy(rate => rate.Unit != null ? rate.Unit.Name : string.Empty)
+            .OrderBy(rate => rate.Space.Path)
             .ThenBy(rate => rate.Id)
             .Select(rate => new ReservationRateOverrideListItemDto
             {
                 Id = rate.Id,
-                UnitId = rate.UnitId,
-                UnitName = rate.Unit != null ? rate.Unit.Name : null,
-                PropertyName = rate.Unit != null ? rate.Unit.Property.Name : null,
+                SpaceId = rate.SpaceId,
+                SpaceName = rate.Space.Name,
+                SpacePath = rate.Space.Path,
+                ChargeTypeId = rate.ChargeTypeId,
+                ChargeTypeName = rate.ChargeType.Name,
                 FreeDurationMinutes = rate.FreeDurationMinutes,
                 BillingPeriodMinutes = rate.BillingPeriodMinutes,
                 PeriodRate = rate.PeriodRate,
@@ -75,25 +45,49 @@ public class ReservationRateOverrideRepository(ApplicationDbContext ctx) : Repos
         return GetPagedResultAsync(query, items, tableQuery);
     }
 
-    public Task<ReservationRateOverride?> GetActiveForUnitAsync(int unitId)
-        => _dbSet.FirstOrDefaultAsync(rate => rate.IsActive && rate.UnitId == unitId);
-
-    public Task<ReservationRateOverride?> GetForUnitAsync(int unitId)
-        => _dbSet.FirstOrDefaultAsync(rate => rate.UnitId == unitId);
-
-    public Task<ReservationRateOverride?> GetGeneralAsync(int unitTypeId, int year)
-        => _dbSet.FirstOrDefaultAsync(rate => rate.UnitId == null && rate.UnitTypeId == unitTypeId && rate.IsActive && rate.Year == year);
-
-    public Task<ReservationRateOverride?> GetWithUnitAsync(int id)
-        => _dbSet.Include(rate => rate.Unit)
-            .FirstOrDefaultAsync(rate => rate.Id == id && rate.UnitId != null);
-
-    public async Task<Dictionary<int, ReservationRateOverride>> GetByUnitIdsAsync(IReadOnlyCollection<int> unitIds, bool activeOnly)
+    public async Task<ReservationRateOverride?> GetActiveForSpaceAsync(
+        int spaceId,
+        string spacePath,
+        bool includeSelf = true)
     {
-        var query = _dbSet.Where(rate => rate.UnitId.HasValue && unitIds.Contains(rate.UnitId.Value));
-        if (activeOnly) query = query.Where(rate => rate.IsActive);
-        return await query.ToDictionaryAsync(rate => rate.UnitId!.Value);
+        var ids = SpaceTreePolicy.GetAncestorIds(spacePath).ToList();
+        if (includeSelf)
+            ids.Add(spaceId);
+        if (ids.Count == 0)
+            return null;
+
+        var rules = await _dbSet
+            .Include(rate => rate.Space)
+            .Where(rate => rate.IsActive && ids.Contains(rate.SpaceId))
+            .ToListAsync();
+
+        for (var i = ids.Count - 1; i >= 0; i--)
+        {
+            var rule = rules.FirstOrDefault(rate => rate.SpaceId == ids[i]);
+            if (rule != null)
+                return rule;
+        }
+        return null;
     }
+
+    public async Task<ReservationRateOverride?> GetInheritedForSpaceAsync(int spaceId)
+    {
+        var path = await _ctx.Spaces.AsNoTracking()
+            .Where(space => space.Id == spaceId)
+            .Select(space => space.Path)
+            .FirstOrDefaultAsync();
+        return path == null ? null : await GetActiveForSpaceAsync(spaceId, path, includeSelf: false);
+    }
+
+    public Task<ReservationRateOverride?> GetForSpaceAsync(int spaceId)
+        => _dbSet.FirstOrDefaultAsync(rate => rate.SpaceId == spaceId);
+
+    public Task<ReservationRateOverride?> GetWithSpaceAsync(int id)
+        => _dbSet.Include(rate => rate.Space)
+            .FirstOrDefaultAsync(rate => rate.Id == id);
+
+    public Task<bool> AnyActiveByChargeTypeAsync(int chargeTypeId)
+        => _dbSet.AsNoTracking().AnyAsync(rate => rate.IsActive && rate.ChargeTypeId == chargeTypeId);
 
     public void Remove(ReservationRateOverride rate) => _dbSet.Remove(rate);
 }

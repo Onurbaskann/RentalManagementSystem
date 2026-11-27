@@ -7,7 +7,7 @@ internal sealed class LeaseGroupConfiguration : IEntityTypeConfiguration<LeaseGr
 {
     public void Configure(EntityTypeBuilder<LeaseGroup> entity)
     {
-        entity.HasOne(g => g.Unit).WithMany().HasForeignKey(g => g.UnitId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne(g => g.Space).WithMany().HasForeignKey(g => g.SpaceId).OnDelete(DeleteBehavior.Restrict);
         entity.HasOne(g => g.PreviousGroup).WithMany().HasForeignKey(g => g.PreviousGroupId).OnDelete(DeleteBehavior.Restrict);
     }
 }

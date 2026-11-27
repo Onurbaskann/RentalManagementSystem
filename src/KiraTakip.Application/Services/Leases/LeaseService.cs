@@ -17,7 +17,6 @@ using KiraTakip.Repositories.Interfaces.Documents;
 using KiraTakip.Repositories.Interfaces.Identity;
 using KiraTakip.Repositories.Interfaces.Leases;
 using KiraTakip.Repositories.Interfaces.Pricing;
-using KiraTakip.Repositories.Interfaces.Properties;
 using KiraTakip.Repositories.Interfaces.Tenants;
 using KiraTakip.Services.Interfaces;
 using KiraTakip.Services.Interfaces.Charges;
@@ -35,7 +34,6 @@ public class LeaseService(
     ILeaseRateOverrideRepository leaseRateOverrideRepository,
     IChargeLineItemRepository chargeLineItemRepository,
     IChargeTypeRepository chargeTypeRepository,
-    IUnitRepository unitRepository,
     ITenantRepository tenantRepository,
     IChargeGenerationService chargeGenerationService,
     IUnitOfWork uow,
@@ -45,15 +43,11 @@ public class LeaseService(
     IDocumentTypeRepository documentTypeRepository,
     IApplicationUserRepository applicationUserRepository,
     ICurrentUserContext currentUserContext,
-    IOperationalPolicyProvider operationalPolicyProvider,
     ILeaseApplicationRules rules) : ILeaseService, ITransactionalService
 {
     public async Task<List<LeaseListItemDto>> GetAllAsync(GetLeasesInput input)
     {
-        var list = await leaseRepository.GetListAsync(
-            input.Filter,
-            input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
+        var list = await leaseRepository.GetListAsync(input.Filter, input.Scope);
         await PopulateMonthlyAmountsAsync(list);
 
         return list;
@@ -67,36 +61,15 @@ public class LeaseService(
             await leaseRepository.GetTenantDetailsAsync(
                 input.LeaseId,
                 input.TenantId,
-                input.AccessScope.PropertyIds?.ToList(),
-                input.AccessScope.UnitIds?.ToList()),
+                input.AccessScope),
             "Sözleşme bulunamadı.",
             "TENANT_LEASE_NOT_FOUND");
 
-    public async Task<LeaseCapacityWarningDto?> GetCapacityWarningAsync(int leaseId)
-    {
-        var details = await leaseRepository.GetDetailsAsync(leaseId);
-        if (details == null) return null;
-        var unit = await unitRepository.GetLeaseContextAsync(details.UnitId);
-        if (unit is not { RentalMode: UnitRentalMode.CapacityBased, Capacity: > 0 }) return null;
-
-        var today = DateTime.Today;
-        var occupants = await leaseRepository.GetOpenLeaseAreasForUnitAsync(unit.UnitId, today, today, null);
-        var snapshot = UnitCapacityPolicy.GetSnapshot(
-            unit.Capacity.Value,
-            unit.Area,
-            operationalPolicyProvider.Current.LeaseMinimumUsageArea,
-            occupants,
-            today);
-        return snapshot is { NormTargetShort: false, MinimumTargetShort: false }
-            ? null
-            : new LeaseCapacityWarningDto(
-                snapshot.FreeSlots,
-                snapshot.RemainingArea,
-                snapshot.NormTarget,
-                snapshot.MinimumTarget,
-                snapshot.NormTargetShort,
-                snapshot.MinimumTargetShort);
-    }
+    public Task<List<LeaseSpaceOptionDto>> GetSelectableSpacesAsync(
+        bool sharedOnly,
+        SpaceAccessScope? scope,
+        int? includeSpaceId = null)
+        => leaseRepository.GetSelectableSpacesAsync(sharedOnly, scope, includeSpaceId);
 
     public async Task<Lease> CreateAsync(CreateLeaseInput input)
     {
@@ -105,7 +78,7 @@ public class LeaseService(
             "Oturum kullanıcısı bulunamadı.",
             "Lease.ActorNotFound");
         return await CreateDraftAsync(new CreateLeaseDraftInput(
-            input.UnitId,
+            input.SpaceId,
             input.TenantId,
             input.StartDate,
             input.EndDate,
@@ -116,16 +89,14 @@ public class LeaseService(
             actorUserId,
             input.AccessScope,
             input.IsRentFree,
-            input.RentedArea,
-            input.AllocatedArea,
-            input.AllocationMode));
+            input.RentedArea));
     }
 
     public async Task<Lease> CreateDraftAsync(CreateLeaseDraftInput input)
     {
         await EnsureActorAsync(input.ActorUserId);
         var validated = await rules.ValidateApplicationDataAsync(
-            input.UnitId,
+            input.SpaceId,
             input.TenantId,
             input.StartDate,
             input.EndDate,
@@ -133,21 +104,16 @@ public class LeaseService(
             input.RateOverrides,
             input.AccessScope,
             input.IsRentFree,
-            input.RentedArea,
-            input.AllocatedArea,
-            input.AllocationMode);
-        var unit = validated.Unit;
-        if (unit.RentalMode != UnitRentalMode.CapacityBased)
-            Guard.InvalidField(
-                await leaseRepository.HasOpenApplicationForUnitAsync(input.UnitId),
-                nameof(input.UnitId),
-                "Seçilen birim için açık bir sözleşme başvurusu bulunmaktadır.",
-                "Lease.OpenApplicationConflict");
+            input.RentedArea);
+        Guard.InvalidField(
+            await leaseRepository.HasOpenApplicationForSpaceAsync(input.SpaceId),
+            nameof(input.SpaceId),
+            "Seçilen alan için açık bir sözleşme başvurusu bulunmaktadır.",
+            "Lease.OpenApplicationConflict");
 
         var lease = new Lease
         {
             LeaseNo = await GenerateLeaseNoAsync(),
-            UnitId = input.UnitId,
             TenantId = input.TenantId,
             StartDate = input.StartDate,
             EndDate = input.EndDate,
@@ -156,17 +122,14 @@ public class LeaseService(
             DueDateRuleType = input.DueDateRuleType,
             DueDay = input.DueDay,
             IsRentFree = input.IsRentFree,
-            UnitTypeNameSnapshot = unit.UnitTypeName,
-            UnitTypeUsageSnapshot = unit.UnitTypeUsage,
-            RentalModeSnapshot = unit.RentalMode,
-            UnitAreaSnapshot = unit.Area,
             CreatedBy = input.ActorUserId
         };
         await leaseRepository.AddAsync(lease);
         await uow.SaveChangesAsync();
 
-        if (validated.Area is { } leaseArea)
-            await leaseRepository.UpsertLeaseAreaAsync(lease.Id, leaseArea.Rented, leaseArea.Allocated, leaseArea.Mode);
+        await leaseRepository.ReplaceLeaseAreasAsync(
+            lease.Id,
+            [(validated.Space, validated.RentedArea)]);
         await leaseRateOverrideRepository.ReplaceAsync(
             lease.Id,
             BuildRateOverrides(lease.Id, input.RateOverrides));
@@ -184,10 +147,7 @@ public class LeaseService(
     }
 
     public Task<LeaseDraftEditDto?> GetDraftForEditAsync(GetLeaseDraftInput input)
-        => leaseRepository.GetDraftForEditAsync(
-            input.LeaseId,
-            input.AccessScope.PropertyIds?.ToList(),
-            input.AccessScope.UnitIds?.ToList());
+        => leaseRepository.GetDraftForEditAsync(input.LeaseId, input.AccessScope);
 
     public async Task<IReadOnlyList<LeaseReviewHistoryDto>> GetReviewHistoryAsync(int leaseId)
         => await reviewHistoryRepository.GetByLeaseIdAsync(leaseId);
@@ -204,7 +164,7 @@ public class LeaseService(
         EnsureNotGrouped(lease);
         await ApplyApplicationChangesAsync(
             lease,
-            input.UnitId,
+            input.SpaceId,
             input.TenantId,
             input.StartDate,
             input.EndDate,
@@ -214,9 +174,7 @@ public class LeaseService(
             input.RateOverrides,
             input.AccessScope,
             input.IsRentFree,
-            input.RentedArea,
-            input.AllocatedArea,
-            input.AllocationMode);
+            input.RentedArea);
         await AddReviewAsync(
             lease,
             LeaseReviewActionType.DraftUpdated,
@@ -238,7 +196,7 @@ public class LeaseService(
         EnsureNotGrouped(lease);
         await ApplyApplicationChangesAsync(
             lease,
-            input.UnitId,
+            input.SpaceId,
             input.TenantId,
             input.StartDate,
             input.EndDate,
@@ -248,9 +206,7 @@ public class LeaseService(
             input.RateOverrides,
             input.AccessScope,
             input.IsRentFree,
-            input.RentedArea,
-            input.AllocatedArea,
-            input.AllocationMode);
+            input.RentedArea);
         lease.Status = LeaseStatus.Draft;
         await AddReviewAsync(
             lease,
@@ -339,7 +295,7 @@ public class LeaseService(
             $"Sözleşme {input.LeaseId} bulunamadı.",
             "Lease.NotFound");
 
-        EnsureScope(lease.Unit.PropertyId, lease.UnitId, input.AccessScope);
+        EnsureLeaseInScope(lease, input.AccessScope);
         EnsureNotGrouped(lease);
         await rules.EnsureExtensionAllowedAsync(
             lease,
@@ -397,7 +353,7 @@ public class LeaseService(
             $"Sözleşme {input.LeaseId} bulunamadı.",
             "Lease.NotFound");
 
-        EnsureScope(lease.Unit.PropertyId, lease.UnitId, input.AccessScope);
+        EnsureLeaseInScope(lease, input.AccessScope);
         EnsureNotGrouped(lease);
         Guard.Conflict(
             !LeaseLifecycle.CanTerminate(lease.Status),
@@ -432,7 +388,7 @@ public class LeaseService(
             $"Sözleşme {input.LeaseId} bulunamadı.",
             "Lease.NotFound");
 
-        EnsureScope(lease.Unit.PropertyId, lease.UnitId, input.AccessScope);
+        EnsureLeaseInScope(lease, input.AccessScope);
         Guard.Conflict(
             !LeaseLifecycle.CanUpdateDueDate(lease.Status),
             "Yalnız aktif sözleşmenin vadesi güncellenebilir.",
@@ -465,7 +421,7 @@ public class LeaseService(
             $"Sözleşme {input.LeaseId} bulunamadı.",
             "Lease.NotFound");
 
-        EnsureScope(lease.Unit.PropertyId, lease.UnitId, input.AccessScope);
+        EnsureLeaseInScope(lease, input.AccessScope);
         Guard.Conflict(
             !LeaseLifecycle.CanRegenerateCharges(lease.Status),
             "Yalnız aktif sözleşmenin tahakkukları yeniden üretilebilir.",
@@ -473,7 +429,7 @@ public class LeaseService(
         EnsureOverridePermission(input.UpdateRate, input.CanOverrideRate);
         await rules.EnsureRateOverridesAsync(
             input.RateOverrides,
-            await leaseRepository.GetRentedAreaAsync(lease.Id) ?? lease.Unit.Area,
+            lease.Areas.OrderBy(area => area.Id).Select(area => area.RentedArea).FirstOrDefault(),
             lease.IsRentFree);
 
         if (input.UpdateRate && input.RateOverrides.Count > 0)
@@ -503,10 +459,7 @@ public class LeaseService(
 
     public async Task<List<LeaseListItemDto>> GetByTenantAsync(GetLeasesByTenantInput input)
     {
-        var list = await leaseRepository.GetByTenantIdAsync(
-            input.TenantId,
-            input.AccessScope?.PropertyIds?.ToList(),
-            input.AccessScope?.UnitIds?.ToList());
+        var list = await leaseRepository.GetByTenantIdAsync(input.TenantId, input.AccessScope);
         await PopulateMonthlyAmountsAsync(list);
 
         return list;
@@ -514,27 +467,18 @@ public class LeaseService(
 
     public async Task<PagedResult<LeaseListItemDto>> GetPagedAsync(GetPagedLeasesInput input)
     {
-        var result = await leaseRepository.GetPagedListAsync(
-            input.Query,
-            input.Filter,
-            input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
+        var result = await leaseRepository.GetPagedListAsync(input.Query, input.Filter, input.Scope);
         await PopulateMonthlyAmountsAsync(result.Items);
         return result;
     }
 
     public Task<int> GetTerminatedCountAsync(GetTerminatedLeaseCountInput input)
-        => leaseRepository.GetTerminatedCountAsync(
-            input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
+        => leaseRepository.GetTerminatedCountAsync(input.Scope);
 
     public async Task<List<LeaseListItemDto>> GetTenantPortalLeasesAsync(
         GetTenantPortalLeasesInput input)
     {
-        var list = await leaseRepository.GetTenantPortalListAsync(
-            input.TenantId,
-            input.AccessScope.PropertyIds?.ToList(),
-            input.AccessScope.UnitIds?.ToList());
+        var list = await leaseRepository.GetTenantPortalListAsync(input.TenantId, input.AccessScope);
         await PopulateMonthlyAmountsAsync(list);
 
         return list;
@@ -546,15 +490,14 @@ public class LeaseService(
         var result = await leaseRepository.GetTenantPortalPagedListAsync(
             input.TenantId,
             input.Query,
-            input.AccessScope.PropertyIds?.ToList(),
-            input.AccessScope.UnitIds?.ToList());
+            input.AccessScope);
         await PopulateMonthlyAmountsAsync(result.Items);
         return result;
     }
 
-    public async Task<List<LeaseListItemDto>> GetByUnitAsync(GetLeasesByUnitInput input)
+    public async Task<List<LeaseListItemDto>> GetBySpaceAsync(GetLeasesBySpaceInput input)
     {
-        var list = await leaseRepository.GetByUnitIdAsync(input.UnitId);
+        var list = await leaseRepository.GetBySpaceIdAsync(input.SpaceId);
         await PopulateMonthlyAmountsAsync(list);
 
         return list;
@@ -567,7 +510,7 @@ public class LeaseService(
 
     private async Task ApplyApplicationChangesAsync(
         Lease lease,
-        int unitId,
+        int spaceId,
         int tenantId,
         DateTime startDate,
         DateTime endDate,
@@ -575,14 +518,12 @@ public class LeaseService(
         int dueDay,
         string? description,
         IReadOnlyCollection<LeaseRateOverrideInput> rateOverrides,
-        LeaseAccessScopeInput accessScope,
+        SpaceAccessScope accessScope,
         bool isRentFree,
-        decimal? rentedArea,
-        decimal? allocatedArea,
-        LeaseAreaMode? allocationMode)
+        decimal? rentedArea)
     {
         var validated = await rules.ValidateApplicationDataAsync(
-            unitId,
+            spaceId,
             tenantId,
             startDate,
             endDate,
@@ -591,20 +532,13 @@ public class LeaseService(
             accessScope,
             isRentFree,
             rentedArea,
-            allocatedArea,
-            allocationMode,
-            lease.Id);
-        var unit = validated.Unit;
-        if (unit.RentalMode != UnitRentalMode.CapacityBased)
-            Guard.InvalidField(
-                await leaseRepository.HasOpenApplicationForUnitAsync(unitId, lease.Id),
-                nameof(unitId),
-                "Seçilen birim için başka bir açık başvuru bulunmaktadır.",
-                "Lease.OpenApplicationConflict");
+            excludeLeaseId: lease.Id);
+        Guard.InvalidField(
+            await leaseRepository.HasOpenApplicationForSpaceAsync(spaceId, lease.Id),
+            nameof(spaceId),
+            "Seçilen alan için başka bir açık başvuru bulunmaktadır.",
+            "Lease.OpenApplicationConflict");
 
-        var previousMode = lease.RentalModeSnapshot;
-
-        lease.UnitId = unitId;
         lease.TenantId = tenantId;
         lease.StartDate = startDate;
         lease.EndDate = endDate;
@@ -612,14 +546,9 @@ public class LeaseService(
         lease.DueDay = dueDay;
         lease.Description = description;
         lease.IsRentFree = isRentFree;
-        lease.UnitTypeNameSnapshot = unit.UnitTypeName;
-        lease.UnitTypeUsageSnapshot = unit.UnitTypeUsage;
-        lease.RentalModeSnapshot = unit.RentalMode;
-        lease.UnitAreaSnapshot = unit.Area;
-        if (validated.Area is { } leaseArea)
-            await leaseRepository.UpsertLeaseAreaAsync(lease.Id, leaseArea.Rented, leaseArea.Allocated, leaseArea.Mode);
-        else if (previousMode == UnitRentalMode.CapacityBased)
-            await leaseRepository.RemoveLeaseAreaAsync(lease.Id);
+        await leaseRepository.ReplaceLeaseAreasAsync(
+            lease.Id,
+            [(validated.Space, validated.RentedArea)]);
         await leaseRateOverrideRepository.ReplaceAsync(
             lease.Id,
             BuildRateOverrides(lease.Id, rateOverrides));
@@ -635,16 +564,13 @@ public class LeaseService(
         int leaseId,
         string actorUserId,
         byte[] expectedRowVersion,
-        LeaseAccessScopeInput accessScope,
+        SpaceAccessScope accessScope,
         Func<LeaseStatus, bool> canProceed,
         bool requireOwner)
     {
         await EnsureActorAsync(actorUserId);
         var lease = Guard.NotFound(
-            await leaseRepository.GetForDecisionAsync(
-                leaseId,
-                accessScope.PropertyIds?.ToList(),
-                accessScope.UnitIds?.ToList()),
+            await leaseRepository.GetForDecisionAsync(leaseId, accessScope),
             "Sözleşme başvurusu bulunamadı veya yetki kapsamınızın dışında.",
             "Lease.DraftNotFound");
         Guard.Conflict(
@@ -713,9 +639,17 @@ public class LeaseService(
         {
             Id = item.Id,
             TenantId = item.TenantId,
-            UnitId = item.UnitId,
             IsRentFree = item.IsRentFree,
-            Unit = new Unit { Id = item.UnitId, Area = item.UnitArea }
+            Areas =
+            [
+                new LeaseArea
+                {
+                    LeaseId = item.Id,
+                    SpaceId = item.SpaceId,
+                    RentedArea = item.RentedArea,
+                    Space = new Space { Id = item.SpaceId, Area = item.SpaceArea }
+                }
+            ]
         }).ToList();
 
         var amounts = await statisticsService.GetMonthlyAmountsAsync(leases);

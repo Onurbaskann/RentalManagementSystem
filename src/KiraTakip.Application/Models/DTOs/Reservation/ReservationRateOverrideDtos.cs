@@ -2,30 +2,18 @@ namespace KiraTakip.Models.Dtos.Reservation;
 
 public record SaveReservationRateRuleInput(
     int Id,
-    int? UnitId,
-    int FreeDurationMinutes,
-    int BillingPeriodMinutes,
-    decimal PeriodRate,
-    decimal KdvRate,
-    string? Description,
-    bool IsActive
-);
-
-public record GetRateRuleByIdInput(int Id);
-
-public record ToggleRateRuleStatusInput(int Id);
-
-public record SaveUnitReservationRateRuleInput(
-    int Id,
-    int UnitId,
+    int SpaceId,
+    int ChargeTypeId,
     int FreeDurationMinutes,
     int BillingPeriodMinutes,
     decimal PeriodRate,
     decimal KdvRate,
     string? Description,
     bool IsActive,
-    ReservationAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope
+);
 
-public record ClearUnitReservationRateRuleInput(
-    int UnitId,
-    ReservationAccessScopeInput AccessScope);
+public record GetRateRuleByIdInput(int Id, SpaceAccessScope AccessScope);
+
+public record ToggleRateRuleStatusInput(int Id, SpaceAccessScope AccessScope);
+

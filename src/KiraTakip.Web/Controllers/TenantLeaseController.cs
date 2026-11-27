@@ -52,8 +52,8 @@ public class TenantLeaseController(
             new GetLeaseSummaryInput(
                 leaseDetails.Id,
                 leaseDetails.TenantId,
-                leaseDetails.UnitId,
-                leaseDetails.UnitArea,
+                leaseDetails.SpaceId,
+                leaseDetails.SpaceArea,
                 leaseDetails.StartDate,
                 leaseDetails.EndDate,
                 leaseDetails.Status,
@@ -102,10 +102,5 @@ public class TenantLeaseController(
         return View(viewModel);
     }
 
-    private LeaseAccessScopeInput BuildAccessScope()
-        => permissionScopeProvider.GlobalAccess
-            ? new LeaseAccessScopeInput()
-            : new LeaseAccessScopeInput(
-                permissionScopeProvider.AccessiblePropertyIds,
-                permissionScopeProvider.AccessibleUnitIds);
+    private SpaceAccessScope BuildAccessScope() => permissionScopeProvider.SpaceScope;
 }

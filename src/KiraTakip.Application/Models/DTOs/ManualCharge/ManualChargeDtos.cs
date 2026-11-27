@@ -3,33 +3,25 @@ using KiraTakip.Models.Common;
 namespace KiraTakip.Models.Dtos.ManualCharge;
 
 public record GetManualChargesInput(
-    IReadOnlyList<int>? PropertyIds = null,
+    SpaceAccessScope? Scope = null,
     string? Status = null,
     string? Relation = null,
-    int? LeaseId = null,
-    IReadOnlyList<int>? UnitIds = null);
+    int? LeaseId = null);
 
 public record GetManualChargesPageInput(
     TableQuery Query,
-    IReadOnlyList<int>? PropertyIds = null,
+    SpaceAccessScope? Scope = null,
     string? Relation = null,
-    int? LeaseId = null,
-    IReadOnlyList<int>? UnitIds = null);
+    int? LeaseId = null);
 
-public record GetCancelledManualChargeCountInput(
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+public record GetCancelledManualChargeCountInput(SpaceAccessScope? Scope = null);
 
-public record ManualChargeAccessScopeInput(
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
-
-public record GetActiveManualChargeLeasesInput(ManualChargeAccessScopeInput AccessScope);
+public record GetActiveManualChargeLeasesInput(SpaceAccessScope AccessScope);
 
 public record CreateManualChargeInput(
     int TenantId,
     int? LeaseId,
-    int UnitId,
+    int SpaceId,
     int ChargeTypeId,
     string Description,
     decimal Amount,
@@ -37,13 +29,11 @@ public record CreateManualChargeInput(
     decimal VatRate,
     DateTime DueDate,
     string? Note,
-    ManualChargeAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record CancelManualChargeInput(
     int ChargeId,
     string Reason,
-    ManualChargeAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
-public record GetManualChargeUnitsInput(
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+public record GetManualChargeSpacesInput(SpaceAccessScope? Scope = null);

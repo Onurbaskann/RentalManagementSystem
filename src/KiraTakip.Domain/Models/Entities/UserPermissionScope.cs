@@ -13,4 +13,6 @@ public class UserPermissionScope : BaseEntity
 
     [Column("KapsamId")]
     public int ScopeId { get; set; }
+
+    public Space Space { get; set; } = null!;
 }

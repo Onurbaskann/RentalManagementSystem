@@ -22,9 +22,9 @@ public class TenantInvitationFormViewModelValidator : IValidator<TenantInvitatio
         if (input.RoleId < 1)
             errors.Add(new ValidationError("Rol seçilmelidir.", nameof(input.RoleId)));
 
-        if (input.UnitIds.Any(unitId => unitId < 1)
-            || input.UnitIds.Count != input.UnitIds.Distinct().Count())
-            errors.Add(new ValidationError("Birim seçimi geçersizdir.", nameof(input.UnitIds)));
+        if (input.SpaceIds.Any(spaceId => spaceId < 1)
+            || input.SpaceIds.Count != input.SpaceIds.Distinct().Count())
+            errors.Add(new ValidationError("Alan seçimi geçersizdir.", nameof(input.SpaceIds)));
 
         return errors.Count == 0
             ? ValidationResult.Valid()

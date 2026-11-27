@@ -1,11 +1,12 @@
 ﻿using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Enums;
 
 namespace KiraTakip.Web.Models.ViewModels;
 
 public class CreateLeaseViewModel : ILeaseFormViewModel
 {
-    public int? UnitId { get; set; }
+    public int? SpaceId { get; set; }
     public int TenantId { get; set; }
     public int? SourceTenantId { get; set; }
     public DateTime StartDate { get; set; } = DateTime.Today;
@@ -15,9 +16,7 @@ public class CreateLeaseViewModel : ILeaseFormViewModel
     public string? Description { get; set; }
     public bool IsRentFree { get; set; }
     public decimal? RentedArea { get; set; }
-    public decimal? AllocatedArea { get; set; }
-    public LeaseAreaMode? AllocationMode { get; set; }
-    public List<UnitLookupDto> AvailableUnits { get; set; } = [];
+    public List<LeaseSpaceOptionDto> AvailableSpaces { get; set; } = [];
     public List<TenantListItemDto> Tenants { get; set; } = [];
     public List<LeaseLineItemInputDto> LeaseLineItems { get; set; } = [];
     public List<DocumentType> DocumentTypes { get; set; } = [];

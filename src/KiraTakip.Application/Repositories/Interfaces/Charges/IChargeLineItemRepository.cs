@@ -10,7 +10,7 @@ public interface IChargeLineItemRepository : IRepositoryBase<ChargeLineItem>
     Task<Dictionary<int, decimal?>> GetDepositAmountsByLeaseIdsAsync(
         IEnumerable<int> leaseIds,
         int? tenantId = null);
-    Task<List<TenantPanelDebtSliceDto>> GetTenantDebtDistributionAsync(int tenantId, List<int>? authorizedPropertyIds = null, List<int>? authorizedUnitIds = null);
+    Task<List<TenantPanelDebtSliceDto>> GetTenantDebtDistributionAsync(int tenantId, SpaceAccessScope? scope = null);
     Task<ChargeLineItemPaymentBalanceDto?> GetPaymentBalanceAsync(int chargeLineItemId, CancellationToken cancellationToken = default);
     Task<List<ChargeLineItemPaymentBalanceDto>> GetPaymentBalancesByChargeAsync(int chargeId, CancellationToken cancellationToken = default);
     Task<ChargeLineItem?> GetForPaymentUpdateAsync(int chargeLineItemId);

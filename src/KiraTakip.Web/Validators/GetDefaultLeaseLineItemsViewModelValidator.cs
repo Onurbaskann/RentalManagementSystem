@@ -9,8 +9,8 @@ public class GetDefaultLeaseLineItemsViewModelValidator : IValidator<GetDefaultL
     {
         var errors = new List<ValidationError>();
 
-        if (input.UnitId <= 0)
-            errors.Add(new ValidationError("Geçerli bir birim seçilmelidir.", nameof(input.UnitId)));
+        if (input.SpaceId <= 0)
+            errors.Add(new ValidationError("Geçerli bir alan seçilmelidir.", nameof(input.SpaceId)));
         if (input.TenantId <= 0)
             errors.Add(new ValidationError("Geçerli bir kiracı seçilmelidir.", nameof(input.TenantId)));
         if (input.StartDate == default)

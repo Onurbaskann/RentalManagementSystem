@@ -8,15 +8,14 @@ namespace KiraTakip.Web.Models.ViewModels;
 public static class LeaseCreateRoutes
 {
     public const string SharedType = "paylasimli";
-    public const string UnitIdPlaceholder = "__UNIT__";
 }
 
 public sealed record LeaseKindChoiceViewModel(
     bool CanCreate,
     bool CanCreateGroup,
     bool IsShared,
-    string NormalUrlTemplate,
-    string SharedUrlTemplate)
+    string NormalUrl,
+    string SharedUrl)
 {
     public const string ViewDataKey = "LeaseKindChoice";
     public bool IsVisible => CanCreate && CanCreateGroup;
@@ -34,7 +33,7 @@ public sealed class LeaseGroupMemberFormModel
 public sealed class LeaseGroupFormViewModel
 {
     public int GroupId { get; set; }
-    public int? UnitId { get; set; }
+    public int? SpaceId { get; set; }
     public DateTime StartDate { get; set; } = DateTime.Today;
     public DateTime EndDate { get; set; } = DateTime.Today.AddYears(1).AddDays(-1);
     public DueDateRuleType DueDateRuleType { get; set; } = DueDateRuleType.FixedDayOfMonth;
@@ -43,10 +42,9 @@ public sealed class LeaseGroupFormViewModel
     public bool IsRentFree { get; set; }
     public List<LeaseGroupMemberFormModel> Members { get; set; } = [new(), new()];
 
-    public string UnitName { get; set; } = string.Empty;
-    public decimal UnitArea { get; set; }
-    public List<UnitLookupDto> AvailableUnits { get; set; } = [];
-    public List<UnitLookupDto> PickerUnits { get; set; } = [];
+    public string SpacePath { get; set; } = string.Empty;
+    public decimal SpaceArea { get; set; }
+    public List<LeaseSpaceOptionDto> AvailableSpaces { get; set; } = [];
     public List<TenantListItemDto> Tenants { get; set; } = [];
 
     public bool IsEdit => GroupId > 0;
@@ -131,18 +129,18 @@ public sealed class LeaseGroupRestructureViewModel
     public bool IsRentFree { get; set; }
     public List<LeaseGroupMemberFormModel> Members { get; set; } = [new(), new()];
 
-    public int? UnitId { get; set; }
-    public string UnitName { get; set; } = string.Empty;
-    public decimal UnitArea { get; set; }
+    public int? SpaceId { get; set; }
+    public string SpacePath { get; set; } = string.Empty;
+    public decimal SpaceArea { get; set; }
     public List<TenantListItemDto> Tenants { get; set; } = [];
 
     /// <summary>Üye/m² toplamı betiği (_LeaseGroupFormScripts) için ortak form modeline çevirir.</summary>
     public LeaseGroupFormViewModel ToFormModel() => new()
     {
         GroupId = GroupId,
-        UnitId = UnitId,
-        UnitName = UnitName,
-        UnitArea = UnitArea,
+        SpaceId = SpaceId,
+        SpacePath = SpacePath,
+        SpaceArea = SpaceArea,
         StartDate = StartDate,
         EndDate = EndDate,
         DueDateRuleType = DueDateRuleType,

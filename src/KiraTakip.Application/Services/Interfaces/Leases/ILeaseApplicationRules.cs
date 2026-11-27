@@ -1,46 +1,39 @@
-using KiraTakip.Domain.Leases;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Entities;
 using KiraTakip.Models.Enums;
 
 namespace KiraTakip.Services.Interfaces.Leases;
 
-public sealed record ValidatedLeaseApplication(
-    LeaseUnitContextDto Unit,
-    (decimal Rented, decimal Allocated, LeaseAreaMode Mode)? Area);
+public sealed record ValidatedLeaseApplication(LeaseSpaceContextDto Space, decimal RentedArea);
 
 /// <summary>
 /// Tekil sözleşme ve paylaşımlı grup akışlarının ortak başvuru/onay kuralları.
 /// </summary>
 public interface ILeaseApplicationRules
 {
+    /// <summary>
+    /// Alan (aktif, kiralanabilir, kapsamda), kiracı, tarih ve tarife doğrulaması; çakışma yalnız aynı alan için.
+    /// isGroupFlow: true = alan paylaşımlı olmalı, false = paylaşımlı alan reddedilir (K27).
+    /// rentedArea boşsa alanın m²'si kullanılır.
+    /// </summary>
     Task<ValidatedLeaseApplication> ValidateApplicationDataAsync(
-        int unitId,
+        int spaceId,
         int tenantId,
         DateTime startDate,
         DateTime endDate,
         int dueDay,
         IReadOnlyCollection<LeaseRateOverrideInput> rateOverrides,
-        LeaseAccessScopeInput accessScope,
+        SpaceAccessScope accessScope,
         bool isRentFree,
         decimal? rentedArea,
-        decimal? allocatedArea,
-        LeaseAreaMode? allocationMode,
+        bool isGroupFlow = false,
         int? excludeLeaseId = null,
-        int? excludeLeaseGroupId = null,
-        decimal? rateArea = null);
-
-    void EnsureCapacityAvailable(
-        int capacity,
-        decimal unitArea,
-        IReadOnlyCollection<CapacityOccupant> occupants,
-        DateTime rangeStart,
-        DateTime rangeEnd,
-        string field);
+        int? excludeLeaseGroupId = null);
 
     /// <summary>
-    /// Uzatma doğrulamaları (durum, tarih, çakışma/kontenjan, tarife, KDV). Lease.Unit yüklü olmalıdır.
-    /// Kapsam ve gruplu sözleşme kontrolü çağırana aittir.
+    /// Uzatma doğrulamaları (durum, tarih, alan hâlâ aktif/kiralanabilir, çakışma, tarife, KDV).
+    /// Lease.Areas (Space yüklü) dolu olmalıdır. Kapsam ve gruplu sözleşme kontrolü çağırana aittir.
     /// </summary>
     Task EnsureExtensionAllowedAsync(
         Lease lease,
@@ -54,18 +47,19 @@ public interface ILeaseApplicationRules
 
     Task EnsureRateOverridesAsync(
         IReadOnlyCollection<LeaseRateOverrideInput> rateOverrides,
-        decimal unitArea,
+        decimal area,
         bool isRentFree = false);
 
     /// <summary>
-    /// Onay doğrulamalarını çalıştırır ve sözleşmeyi Active yapar; inceleme geçmişi ve
-    /// işlem günlüğünü ekler. Kaydetme ve tahakkuk üretimi çağırana aittir.
+    /// Onay doğrulamalarını çalıştırır, alan satırının anlık alanlarını alanın o anki değerlerinden yeniden yazar
+    /// ve sözleşmeyi Active yapar; inceleme geçmişi ve işlem günlüğünü ekler. Lease.Areas dolu olmalıdır.
+    /// Kaydetme ve tahakkuk üretimi çağırana aittir.
     /// </summary>
     Task ActivateAsync(
         Lease lease,
         string actorUserId,
         string? explanation,
-        LeaseAccessScopeInput accessScope);
+        SpaceAccessScope accessScope);
 
     Task AddReviewAsync(
         Lease lease,

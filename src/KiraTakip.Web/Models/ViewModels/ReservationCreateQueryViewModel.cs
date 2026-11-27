@@ -2,5 +2,5 @@
 
 public class ReservationCreateQueryViewModel
 {
-    public int? UnitId { get; set; }
+    public int? SpaceId { get; set; }
 }

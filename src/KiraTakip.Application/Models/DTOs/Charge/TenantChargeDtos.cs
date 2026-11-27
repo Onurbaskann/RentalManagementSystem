@@ -1,3 +1,5 @@
+using KiraTakip.Models.Dtos.Lease;
+
 namespace KiraTakip.Models.Dtos.Charge;
 
 public record TenantChargeQueryInput(
@@ -5,7 +7,7 @@ public record TenantChargeQueryInput(
     int Size,
     string? Search,
     string? Status,
-    int? UnitId,
+    int? SpaceId,
     string? Source,
     int? Year)
 {
@@ -16,14 +18,12 @@ public record GetTenantChargeIndexInput(
     int TenantId,
     DateTime Today,
     TenantChargeQueryInput Query,
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    SpaceAccessScope Scope);
 
 public record GetTenantChargeDetailsInput(
     int ChargeId,
     int TenantId,
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    SpaceAccessScope Scope);
 
 public record TenantChargeOverviewDto(
     decimal TotalChargeAmount,
@@ -31,13 +31,11 @@ public record TenantChargeOverviewDto(
     decimal OverdueRemainingAmount,
     List<int> AvailableYears);
 
-public record TenantChargeUnitOptionDto(int Id, string Name);
-
 public record TenantChargeIndexDataDto(
     PagedResult<ChargeListItemDto> Charges,
     decimal TotalChargeAmount,
     decimal CollectedAmount,
     decimal RemainingDebtAmount,
     decimal OverdueRemainingAmount,
-    List<TenantChargeUnitOptionDto> Units,
+    List<LeaseSpaceOptionDto> Spaces,
     List<int> AvailableYears);

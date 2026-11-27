@@ -2,7 +2,9 @@ using KiraTakip.Authorization;
 using KiraTakip.Domain.Spaces;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos.Space;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Services.Interfaces.Charges;
+using KiraTakip.Services.Interfaces.Identity;
 using KiraTakip.Services.Interfaces.Spaces;
 using KiraTakip.Services.Interfaces.Tenants;
 using KiraTakip.Web.Feedback;
@@ -20,8 +22,11 @@ public class SpaceController(
     ISpaceAttributeService spaceAttributeService,
     ISpaceRateService spaceRateService,
     ITenantCategoryService tenantCategoryService,
-    IChargeTypeService chargeTypeService) : Controller
+    IChargeTypeService chargeTypeService,
+    IPermissionScopeProvider permissionScopeProvider) : Controller
 {
+    private SpaceAccessScope Scope => permissionScopeProvider.SpaceScope;
+
     private const string NodeQuery = "node";
 
     [HttpGet("")]
@@ -33,11 +38,11 @@ public class SpaceController(
     [Authorize(Policy = PermissionCatalog.Space.Module)]
     public async Task<IActionResult> Tree(int id, [FromQuery(Name = NodeQuery)] int? nodeId)
     {
-        var tree = await spaceService.GetTreeAsync(id);
+        var tree = await spaceService.GetTreeAsync(id, Scope);
         var selectedId = nodeId ?? id;
         if (!Contains(tree, selectedId)) return NotFound();
 
-        var selected = await spaceService.GetDetailAsync(selectedId);
+        var selected = await spaceService.GetDetailAsync(selectedId, Scope);
         var attributes = await spaceAttributeService.GetListAsync();
         var values = await spaceAttributeService.GetValuesAsync(selectedId);
         var categories = await tenantCategoryService.GetTenantCategoriesAsync();
@@ -48,8 +53,8 @@ public class SpaceController(
             Tree = tree,
             Selected = selected,
             Types = (await spaceTypeService.GetListAsync()).Where(t => t.IsActive || t.Id == selected.SpaceTypeId).ToList(),
-            History = await spaceService.GetHistoryAsync(selectedId),
-            Address = selected.ParentId == null ? await spaceService.GetAddressAsync(selectedId) : null,
+            History = await spaceService.GetHistoryAsync(selectedId, Scope),
+            Address = selected.ParentId == null ? await spaceService.GetAddressAsync(selectedId, Scope) : null,
             Attributes = attributes.Where(a => a.IsActive || values.Any(v => v.AttributeDefinitionId == a.Id)).ToList(),
             AttributeValues = values.ToDictionary(v => v.AttributeDefinitionId, v => v.Value),
             Rates = await spaceRateService.GetListAsync(selectedId),
@@ -72,7 +77,7 @@ public class SpaceController(
                 : null;
             var result = await spaceService.CreateAsync(new CreateSpaceInput(
                 model.ParentId, model.SpaceTypeId, model.Code, model.Name, model.SortOrder, model.Description,
-                model.Area, model.Usage, model.IsPreAllocatable, model.IsShared, address));
+                model.Area, model.Usage, model.IsPreAllocatable, model.IsShared, address), Scope);
             SetSuccess("Alan eklendi.", result.Warnings);
             var rootId = model.ParentId == null ? result.Id : model.RootId;
             return RedirectToTree(rootId, result.Id);
@@ -91,7 +96,7 @@ public class SpaceController(
     {
         var result = await spaceService.UpdateAsync(new UpdateSpaceInput(
             id, model.ParentId, model.SpaceTypeId, model.Name, model.SortOrder, model.Description,
-            model.Area, model.Usage, model.IsPreAllocatable, model.IsShared));
+            model.Area, model.Usage, model.IsPreAllocatable, model.IsShared), Scope);
         SetSuccess("Alan güncellendi.", result.Warnings);
         return RedirectToTree(model.RootId, id);
     }
@@ -101,7 +106,7 @@ public class SpaceController(
     [Authorize(Policy = PermissionCatalog.Space.Deactivate)]
     public async Task<IActionResult> Deactivate(int id, int rootId)
     {
-        await spaceService.DeactivateAsync(id);
+        await spaceService.DeactivateAsync(id, Scope);
         SetSuccess("Alan ve alt alanları pasifleştirildi.");
         return RedirectToTree(rootId, id);
     }
@@ -111,7 +116,7 @@ public class SpaceController(
     [Authorize(Policy = PermissionCatalog.Space.Activate)]
     public async Task<IActionResult> Activate(int id, int rootId)
     {
-        await spaceService.ActivateAsync(id);
+        await spaceService.ActivateAsync(id, Scope);
         SetSuccess("Alan etkinleştirildi. Alt alanlar tek tek etkinleştirilmelidir.");
         return RedirectToTree(rootId, id);
     }
@@ -122,8 +127,8 @@ public class SpaceController(
         => View("Delete", new SpaceDeleteViewModel
         {
             RootId = rootId,
-            Detail = await spaceService.GetDetailAsync(id),
-            Preview = await spaceService.GetDeletePreviewAsync(id)
+            Detail = await spaceService.GetDetailAsync(id, Scope),
+            Preview = await spaceService.GetDeletePreviewAsync(id, Scope)
         });
 
     [HttpPost("Delete/{id}")]
@@ -131,7 +136,7 @@ public class SpaceController(
     [Authorize(Policy = PermissionCatalog.Space.Delete)]
     public async Task<IActionResult> Delete(int id, int rootId)
     {
-        await spaceService.DeleteAsync(id);
+        await spaceService.DeleteAsync(id, Scope);
         SetSuccess("Alan silindi.");
         return id == rootId
             ? RedirectToAction(nameof(Index))
@@ -143,6 +148,7 @@ public class SpaceController(
     [Authorize(Policy = PermissionCatalog.Space.EditRate)]
     public async Task<IActionResult> EditRate(int id, SpaceRateFormViewModel model)
     {
+        await spaceService.EnsureInScopeAsync(id, Scope);
         if (model.Operation == SpaceRateOperations.Delete)
         {
             var rates = await spaceRateService.GetListAsync(id);
@@ -164,7 +170,7 @@ public class SpaceController(
     [Authorize(Policy = PermissionCatalog.Space.EditAddress)]
     public async Task<IActionResult> EditAddress(int id, SpaceAddressFormViewModel model)
     {
-        await spaceService.UpdateAddressAsync(id, new SpaceAddressInput(model.City, model.District, model.Neighborhood, model.Address));
+        await spaceService.UpdateAddressAsync(id, new SpaceAddressInput(model.City, model.District, model.Neighborhood, model.Address), Scope);
         SetSuccess("Adres güncellendi.");
         return RedirectToTree(model.RootId, id);
     }
@@ -174,6 +180,7 @@ public class SpaceController(
     [Authorize(Policy = PermissionCatalog.Space.EditAttributes)]
     public async Task<IActionResult> EditAttributes(int id, SpaceAttributesFormViewModel model)
     {
+        await spaceService.EnsureInScopeAsync(id, Scope);
         await spaceAttributeService.SaveValuesAsync(
             id, model.Values.Select(v => new SpaceAttributeValueInput(v.AttributeDefinitionId, v.Value)).ToList());
         SetSuccess("Özellikler kaydedildi.");
@@ -183,7 +190,7 @@ public class SpaceController(
     private async Task<SpaceIndexViewModel> BuildIndexAsync(SpaceFormViewModel form)
         => new()
         {
-            Roots = await spaceService.GetRootsAsync(),
+            Roots = await spaceService.GetRootsAsync(Scope),
             Types = (await spaceTypeService.GetListAsync()).Where(t => t.IsActive).ToList(),
             Form = form
         };

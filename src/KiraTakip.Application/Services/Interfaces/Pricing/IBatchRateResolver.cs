@@ -3,7 +3,7 @@ namespace KiraTakip.Services.Interfaces.Pricing;
 public record RateResolutionRequest(
     int LeaseId,
     int TenantId,
-    int UnitId,
+    int SpaceId,
     int ChargeTypeId,
     DateTime Period);
 

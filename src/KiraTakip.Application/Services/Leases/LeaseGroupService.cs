@@ -28,7 +28,6 @@ public class LeaseGroupService(
     ILeaseGroupRepository groupRepository,
     ILeaseRepository leaseRepository,
     ILeaseRateOverrideRepository leaseRateOverrideRepository,
-    IUnitRepository unitRepository,
     IDocumentRepository documentRepository,
     IApplicationUserRepository applicationUserRepository,
     IChargeGenerationService chargeGenerationService,
@@ -41,8 +40,8 @@ public class LeaseGroupService(
     public async Task<LeaseGroup> CreateGroupAsync(CreateLeaseGroupInput input)
     {
         await EnsureActorAsync(input.ActorUserId);
-        var unit = await ValidateGroupAsync(
-            input.UnitId,
+        var space = await ValidateGroupAsync(
+            input.SpaceId,
             input.StartDate,
             input.EndDate,
             input.DueDay,
@@ -52,15 +51,15 @@ public class LeaseGroupService(
             excludeGroupId: null,
             existingLeaseIds: new HashSet<int>());
 
-        return await CreateValidatedGroupAsync(unit, input, previousGroupId: null);
+        return await CreateValidatedGroupAsync(space, input, previousGroupId: null);
     }
 
     private async Task<LeaseGroup> CreateValidatedGroupAsync(
-        LeaseUnitContextDto unit,
+        LeaseSpaceContextDto space,
         CreateLeaseGroupInput input,
         int? previousGroupId)
     {
-        var group = new LeaseGroup { UnitId = input.UnitId, PreviousGroupId = previousGroupId };
+        var group = new LeaseGroup { SpaceId = input.SpaceId, PreviousGroupId = previousGroupId };
         await groupRepository.AddAsync(group);
         await uow.SaveChangesAsync();
 
@@ -69,7 +68,7 @@ public class LeaseGroupService(
         {
             await AddMemberAsync(
                 group,
-                unit,
+                space,
                 member,
                 input.StartDate,
                 input.EndDate,
@@ -93,8 +92,8 @@ public class LeaseGroupService(
             status => status is LeaseStatus.Draft or LeaseStatus.RevisionRequested,
             requireOwner: true);
         var existingIds = group.Leases.Select(lease => lease.Id).ToHashSet();
-        var unit = await ValidateGroupAsync(
-            group.UnitId,
+        var space = await ValidateGroupAsync(
+            group.SpaceId,
             input.StartDate,
             input.EndDate,
             input.DueDay,
@@ -127,7 +126,7 @@ public class LeaseGroupService(
             {
                 await AddMemberAsync(
                     group,
-                    unit,
+                    space,
                     member,
                     input.StartDate,
                     input.EndDate,
@@ -148,11 +147,7 @@ public class LeaseGroupService(
             lease.DueDay = input.DueDay;
             lease.Description = input.Description;
             lease.IsRentFree = input.IsRentFree;
-            lease.UnitTypeNameSnapshot = unit.UnitTypeName;
-            lease.UnitTypeUsageSnapshot = unit.UnitTypeUsage;
-            lease.RentalModeSnapshot = unit.RentalMode;
-            lease.UnitAreaSnapshot = unit.Area;
-            await leaseRepository.UpsertLeaseAreaAsync(lease.Id, member.Area, member.Area, LeaseAreaMode.Manual);
+            await leaseRepository.ReplaceLeaseAreasAsync(lease.Id, [(space, member.Area)]);
             await leaseRateOverrideRepository.ReplaceAsync(
                 lease.Id,
                 BuildRateOverrides(lease.Id, member.RateOverrides));
@@ -366,7 +361,7 @@ public class LeaseGroupService(
             "LeaseGroup.RestructureStartNotAfterTermination");
 
         var createInput = new CreateLeaseGroupInput(
-            oldGroup.UnitId,
+            oldGroup.SpaceId,
             input.StartDate,
             input.EndDate,
             input.DueDateRuleType,
@@ -376,8 +371,8 @@ public class LeaseGroupService(
             input.Members,
             input.ActorUserId,
             input.AccessScope);
-        var unit = await ValidateGroupAsync(
-            createInput.UnitId,
+        var space = await ValidateGroupAsync(
+            createInput.SpaceId,
             createInput.StartDate,
             createInput.EndDate,
             createInput.DueDay,
@@ -391,7 +386,7 @@ public class LeaseGroupService(
         TerminateLeases(
             leases, input.TerminationDate, input.TerminationReason, input.TerminationDescription);
         await uow.SaveChangesAsync();
-        var newGroup = await CreateValidatedGroupAsync(unit, createInput, oldGroup.Id);
+        var newGroup = await CreateValidatedGroupAsync(space, createInput, oldGroup.Id);
         foreach (var lease in leases)
             await chargeGenerationService.CancelFutureChargesAsync(
                 new CancelFutureLeaseChargesInput(lease.Id, input.TerminationDate));
@@ -451,40 +446,37 @@ public class LeaseGroupService(
     }
 
     public Task<LeaseGroupDetailDto?> GetDetailAsync(GetLeaseGroupInput input)
-        => groupRepository.GetDetailAsync(
-            input.GroupId,
-            input.AccessScope.PropertyIds?.ToList(),
-            input.AccessScope.UnitIds?.ToList());
+        => groupRepository.GetDetailAsync(input.GroupId, input.AccessScope);
 
     public Task<LeaseGroupLinkDto?> GetLinkByLeaseIdAsync(int leaseId)
         => groupRepository.GetLinkByLeaseIdAsync(leaseId);
 
-    private async Task<LeaseUnitContextDto> ValidateGroupAsync(
-        int unitId,
+    private async Task<LeaseSpaceContextDto> ValidateGroupAsync(
+        int spaceId,
         DateTime startDate,
         DateTime endDate,
         int dueDay,
         bool isRentFree,
         IReadOnlyCollection<LeaseGroupMemberInput> members,
-        LeaseAccessScopeInput accessScope,
+        SpaceAccessScope accessScope,
         int? excludeGroupId,
         IReadOnlySet<int> existingLeaseIds)
     {
-        var unit = Guard.NotFound(
-            await unitRepository.GetLeaseContextAsync(unitId),
-            "Seçilen birim bulunamadı.",
-            "Lease.UnitNotFound");
-        EnsureScope(unit.PropertyId, unit.UnitId, accessScope);
+        var space = Guard.NotFound(
+            await leaseRepository.GetSpaceContextAsync(spaceId),
+            "Seçilen alan bulunamadı.",
+            "Lease.SpaceNotFound");
+        EnsureSpaceInScope(space.Path, accessScope);
         Guard.InvalidField(
-            !unit.IsRentable || unit.UnitTypeUsage != UnitTypeUsage.Rentable,
-            nameof(unitId),
-            "Seçilen birim kiralanabilir değildir.",
-            "Lease.UnitNotRentable");
+            !space.IsActive || space.Usage != SpaceUsage.Rentable,
+            nameof(spaceId),
+            "Seçilen alan aktif ve kiralanabilir değildir.",
+            "Lease.SpaceNotRentable");
         Guard.InvalidField(
-            unit.RentalMode != UnitRentalMode.UnitBased,
-            nameof(unitId),
-            "Paylaşımlı grup yalnız birim bazlı birimlerde açılabilir.",
-            "Lease.GroupUnitNotUnitBased");
+            !space.IsShared,
+            nameof(spaceId),
+            "Paylaşımlı grup yalnız paylaşımlı alanlarda açılabilir.",
+            "Lease.GroupSpaceNotShared");
 
         Guard.InvalidField(
             members.Any(member => member.Area <= 0),
@@ -502,7 +494,7 @@ public class LeaseGroupService(
             "Grup satırlarından biri bu gruba ait değil.",
             "LeaseGroup.MemberNotFound");
         var violations = LeaseGroupPolicy.GetViolations(
-            unit.Area,
+            space.Area,
             members.Select(member => new LeaseGroupShare(
                 member.TenantId, member.Area, startDate, endDate)).ToList());
         Guard.InvalidField(
@@ -518,13 +510,13 @@ public class LeaseGroupService(
         Guard.InvalidField(
             violations.Contains(LeaseGroupViolation.AreaSumMismatch),
             "Members",
-            "Payların m² toplamı birim alanına eşit olmalıdır.",
+            "Payların m² toplamı alan yüzölçümüne eşit olmalıdır.",
             "LeaseGroup.AreaSumMismatch");
 
         foreach (var member in members)
         {
             await rules.ValidateApplicationDataAsync(
-                unitId,
+                spaceId,
                 member.TenantId,
                 startDate,
                 endDate,
@@ -532,24 +524,22 @@ public class LeaseGroupService(
                 member.RateOverrides,
                 accessScope,
                 isRentFree,
-                null,
-                null,
-                null,
-                member.LeaseId,
-                excludeGroupId,
-                member.Area);
+                member.Area,
+                isGroupFlow: true,
+                excludeLeaseId: member.LeaseId,
+                excludeLeaseGroupId: excludeGroupId);
         }
         Guard.InvalidField(
-            await leaseRepository.HasOpenApplicationForUnitAsync(unitId, null, excludeGroupId),
-            nameof(unitId),
-            "Seçilen birim için açık bir sözleşme başvurusu bulunmaktadır.",
+            await leaseRepository.HasOpenApplicationForSpaceAsync(spaceId, null, excludeGroupId),
+            nameof(spaceId),
+            "Seçilen alan için açık bir sözleşme başvurusu bulunmaktadır.",
             "Lease.OpenApplicationConflict");
-        return unit;
+        return space;
     }
 
     private async Task AddMemberAsync(
         LeaseGroup group,
-        LeaseUnitContextDto unit,
+        LeaseSpaceContextDto space,
         LeaseGroupMemberInput member,
         DateTime startDate,
         DateTime endDate,
@@ -570,7 +560,6 @@ public class LeaseGroupService(
         var lease = new Lease
         {
             LeaseNo = leaseNo,
-            UnitId = group.UnitId,
             LeaseGroupId = group.Id,
             TenantId = member.TenantId,
             StartDate = startDate,
@@ -580,16 +569,12 @@ public class LeaseGroupService(
             DueDateRuleType = dueDateRuleType,
             DueDay = dueDay,
             IsRentFree = isRentFree,
-            UnitTypeNameSnapshot = unit.UnitTypeName,
-            UnitTypeUsageSnapshot = unit.UnitTypeUsage,
-            RentalModeSnapshot = unit.RentalMode,
-            UnitAreaSnapshot = unit.Area,
             CreatedBy = actorUserId
         };
         await leaseRepository.AddAsync(lease);
         await uow.SaveChangesAsync();
 
-        await leaseRepository.UpsertLeaseAreaAsync(lease.Id, member.Area, member.Area, LeaseAreaMode.Manual);
+        await leaseRepository.ReplaceLeaseAreasAsync(lease.Id, [(space, member.Area)]);
         await leaseRateOverrideRepository.ReplaceAsync(
             lease.Id,
             BuildRateOverrides(lease.Id, member.RateOverrides));
@@ -613,16 +598,13 @@ public class LeaseGroupService(
     private async Task<LeaseGroup> GetGroupForMutationAsync(
         int groupId,
         string actorUserId,
-        LeaseAccessScopeInput accessScope,
+        SpaceAccessScope accessScope,
         Func<LeaseStatus, bool> canProceed,
         bool requireOwner)
     {
         await EnsureActorAsync(actorUserId);
         var group = Guard.NotFound(
-            await groupRepository.GetForMutationAsync(
-                groupId,
-                accessScope.PropertyIds?.ToList(),
-                accessScope.UnitIds?.ToList()),
+            await groupRepository.GetForMutationAsync(groupId, accessScope),
             "Sözleşme grubu bulunamadı veya yetki kapsamınızın dışında.",
             "LeaseGroup.NotFound");
         Guard.Conflict(

@@ -20,29 +20,31 @@ public class UserPermissionScopeRepository(ApplicationDbContext ctx)
 
     public async Task ReplaceAsync(
         string userId,
-        IReadOnlyCollection<int> propertyIds,
-        IReadOnlyCollection<int> unitIds,
+        IReadOnlyCollection<int> spaceIds,
         CancellationToken ct = default)
     {
         var existingScopes = await _dbSet
-            .Where(scope => scope.UserId == userId &&
-                (scope.ScopeType == ScopeType.Property || scope.ScopeType == ScopeType.Unit))
+            .Where(scope => scope.UserId == userId)
             .ToListAsync(ct);
         _dbSet.RemoveRange(existingScopes);
 
-        var scopes = propertyIds.Select(propertyId => new UserPermissionScope
+        var scopes = spaceIds.Distinct().Select(spaceId => new UserPermissionScope
         {
             UserId = userId,
-            ScopeType = ScopeType.Property,
-            ScopeId = propertyId,
-        }).Concat(unitIds.Select(unitId => new UserPermissionScope
-        {
-            UserId = userId,
-            ScopeType = ScopeType.Unit,
-            ScopeId = unitId,
-        }));
+            ScopeType = ScopeType.Space,
+            ScopeId = spaceId,
+        });
 
         await _dbSet.AddRangeAsync(scopes, ct);
+    }
+
+    public async Task<List<string>> RemoveBySpaceAsync(int spaceId, CancellationToken ct = default)
+    {
+        var scopes = await _dbSet
+            .Where(scope => scope.ScopeType == ScopeType.Space && scope.ScopeId == spaceId)
+            .ToListAsync(ct);
+        _dbSet.RemoveRange(scopes);
+        return scopes.Select(scope => scope.UserId).Distinct().ToList();
     }
 
     public async Task AddRangeAsync(IEnumerable<UserPermissionScope> scopes, CancellationToken ct = default)

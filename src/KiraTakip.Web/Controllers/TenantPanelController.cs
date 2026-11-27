@@ -39,8 +39,7 @@ public class TenantPanelController(
                 canViewLeases,
                 canViewCharges,
                 canViewPayments,
-                permissionScopeProvider.GlobalAccess ? null : permissionScopeProvider.AccessiblePropertyIds,
-                permissionScopeProvider.GlobalAccess ? null : permissionScopeProvider.AccessibleUnitIds));
+                permissionScopeProvider.SpaceScope));
 
         var userRole = await permissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.System.User.Invite)
             ? "Firma Yetkilisi"
@@ -82,7 +81,7 @@ public class TenantPanelController(
             {
                 ChargeId = item.ChargeId,
                 Period = item.Period,
-                UnitName = item.UnitName,
+                SpaceName = item.SpaceName,
                 DueDate = item.DueDate,
                 DayDifference = item.DayDifference,
                 RemainingAmount = item.RemainingAmount,

@@ -2,22 +2,15 @@ using KiraTakip.Models.Common;
 
 namespace KiraTakip.Models.Dtos.Tenant;
 
-public record GetTenantsInput(
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+public record GetTenantsInput(SpaceAccessScope? Scope = null);
 
 public record GetPagedTenantsInput(
     TableQuery Query,
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
-
-public record TenantAccessScopeInput(
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    SpaceAccessScope? Scope = null);
 
 public record GetTenantDetailsInput(
     int TenantId,
-    TenantAccessScopeInput? AccessScope = null);
+    SpaceAccessScope? AccessScope = null);
 
 public record GetTenantProfileInput(int TenantId);
 
@@ -34,7 +27,7 @@ public record CreateTenantInput(
     int TenantCategoryId,
     int? SectorId,
     IReadOnlyList<TenantDocumentUploadInput> Documents,
-    TenantAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record TenantDocumentUploadInput(
     int DocumentTypeId,
@@ -55,7 +48,7 @@ public record UpdateTenantInput(
     string? Address,
     int TenantCategoryId,
     int? SectorId,
-    TenantAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record CreatedTenantDto(int TenantId, string DisplayName);
 

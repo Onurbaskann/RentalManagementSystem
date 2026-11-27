@@ -10,8 +10,8 @@ public class ChargeIndexViewModel
     public TableQuery Query { get; set; } = new();
     public string Status { get; set; } = "tum";
     public int CancelledCount { get; set; }
-    public List<ChargePropertyFilterDto> Properties { get; set; } = [];
-    public List<ChargeUnitFilterDto> Units { get; set; } = [];
+    public int? SpaceId { get; set; }
+    public List<ChargeSpaceOptionDto> Spaces { get; set; } = [];
     public List<ChargeTenantFilterDto> Tenants { get; set; } = [];
     public List<int> AvailableYears { get; set; } = [];
 }

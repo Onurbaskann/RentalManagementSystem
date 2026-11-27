@@ -1,17 +1,10 @@
 ﻿using KiraTakip.Models.Dtos;
-using KiraTakip.Models.Dtos.Property;
 using KiraTakip.Models.Enums;
 
 namespace KiraTakip.Web.Models.ViewModels;
 
-public class UpdateAllocatedAreaViewModel
-{
-    public decimal AllocatedArea { get; set; }
-}
-
 public class LeaseDetailsViewModel
 {
-    public LeaseAllocatedAreaInfoDto? AllocatedAreaInfo { get; set; }
     public LeaseDetailDto Lease { get; set; } = null!;
     public int? GroupId { get; set; }
     public int RemainingDays { get; set; }
@@ -19,7 +12,7 @@ public class LeaseDetailsViewModel
     public decimal AnnualAmount { get; set; }
     public bool IsActive { get; set; }
     public double DurationPercentage { get; set; }
-    public OccupancyStatus UnitStatus { get; set; }
+    public OccupancyStatus SpaceStatus { get; set; }
     public List<LeaseListItemDto> PreviousLeases { get; set; } = [];
     public List<LeaseListItemDto> TenantOtherLeases { get; set; } = [];
     public List<ChargeListItemDto> Charges { get; set; } = [];

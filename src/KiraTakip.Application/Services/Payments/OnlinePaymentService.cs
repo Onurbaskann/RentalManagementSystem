@@ -38,8 +38,7 @@ public class OnlinePaymentService(
             new GetTenantChargeDetailsInput(
                 input.ChargeId,
                 input.TenantId,
-                input.AccessScope.PropertyIds,
-                input.AccessScope.UnitIds));
+                input.AccessScope));
         var eligibility = PaymentChargeEligibilityPolicy.CheckEligibility(
             charge.Status,
             charge.TotalAmount,
@@ -71,7 +70,7 @@ public class OnlinePaymentService(
             "Bu kalem için sonuçlanmamış bir sanal POS denemesi zaten var.",
             "ONLINE_PAYMENT_ACTIVE_ATTEMPT_EXISTS");
 
-        var resolved = await storeResolver.ResolveAsync(balance.ChargeTypeId, balance.UnitId, cancellationToken);
+        var resolved = await storeResolver.ResolveAsync(balance.ChargeTypeId, balance.SpaceId, cancellationToken);
 
         var provider = Guard.NotFound(
             providers.FirstOrDefault(candidate => candidate.ProviderCode == resolved.ProviderCode),

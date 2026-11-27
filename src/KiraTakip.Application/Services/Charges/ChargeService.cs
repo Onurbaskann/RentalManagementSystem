@@ -6,7 +6,7 @@ using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Repositories.Interfaces.Charges;
 using KiraTakip.Repositories.Interfaces.Payments;
-using KiraTakip.Repositories.Interfaces.Properties;
+using KiraTakip.Repositories.Interfaces.Leases;
 using KiraTakip.Services.Interfaces.Charges;
 using KiraTakip.Models.Dtos.Charge;
 
@@ -15,14 +15,14 @@ namespace KiraTakip.Services.Charges;
 public class ChargeService(
     IChargeRepository chargeRepository,
     IPaymentAllocationRepository paymentAllocationRepository,
-    IUnitRepository unitRepository,
+    ILeaseRepository leaseRepository,
     IChargeLineItemRepository chargeLineItemRepository,
     IUnitOfWork unitOfWork) : IChargeService
 {
     // ── Listeleme ────────────────────────────────────────────────────────
     public async Task<List<ChargeListItemDto>> GetListAsync(GetChargesInput input)
     {
-        return await chargeRepository.GetListAsync(input.LeaseId, input.PropertyIds?.ToList(), input.UnitIds?.ToList());
+        return await chargeRepository.GetListAsync(input.LeaseId, input.Scope);
     }
 
     public async Task<PagedResult<ChargeListItemDto>> GetPagedAsync(GetChargesPageInput input)
@@ -30,8 +30,8 @@ public class ChargeService(
         return await chargeRepository.GetPagedListAsync(
             input.Query,
             input.LeaseId,
-            input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
+            input.Scope,
+            input.SpaceId);
     }
 
     public Task<ChargeDetailDto?> GetDetailsAsync(GetChargeDetailsInput input)
@@ -42,8 +42,7 @@ public class ChargeService(
             await chargeRepository.GetTenantDetailsAsync(
                 input.ChargeId,
                 input.TenantId,
-                input.PropertyIds?.ToList(),
-                input.UnitIds?.ToList()),
+                input.Scope),
             "Tahakkuk bulunamadı.",
             "TENANT_CHARGE_NOT_FOUND");
 
@@ -67,15 +66,14 @@ public class ChargeService(
         var charges = await chargeRepository.GetTenantPagedListAsync(input);
         var overview = await chargeRepository.GetTenantChargeOverviewAsync(
             input.TenantId,
-            input.Today);
+            input.Today,
+            input.Scope);
         var collectedAmount = await paymentAllocationRepository.GetTenantApprovedTotalAsync(
             input.TenantId,
-            input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
-        var units = await unitRepository.GetTenantLeaseOptionsAsync(
+            input.Scope);
+        var units = await leaseRepository.GetActiveLeaseSpacesByTenantIdAsync(
             input.TenantId,
-            input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
+            input.Scope);
 
         return new TenantChargeIndexDataDto(
             charges,

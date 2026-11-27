@@ -11,8 +11,8 @@ public sealed class LeaseGroupFormViewModelValidator : IValidator<LeaseGroupForm
     {
         var errors = new List<ValidationError>();
 
-        if (input.IsEdit is false && input.UnitId is null or <= 0)
-            errors.Add(new ValidationError("Lütfen bir birim seçin.", nameof(input.UnitId)));
+        if (input.IsEdit is false && input.SpaceId is null or <= 0)
+            errors.Add(new ValidationError("Lütfen bir alan seçin.", nameof(input.SpaceId)));
         if (input.EndDate <= input.StartDate)
             errors.Add(new ValidationError("Bitiş tarihi başlangıç tarihinden büyük olmalıdır.", nameof(input.EndDate)));
         if (input.DueDateRuleType is not (DueDateRuleType.FixedDayOfMonth or DueDateRuleType.PeriodStartOffset))

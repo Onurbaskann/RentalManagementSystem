@@ -1,4 +1,5 @@
 using KiraTakip.Models.Common;
+using KiraTakip.Models.Dtos.Space;
 
 namespace KiraTakip.Models.Dtos.AdminUser;
 
@@ -11,9 +12,8 @@ public record UpdateAdminUserInput(
     string? CurrentUserId,
     string FullName,
     int RoleId,
-    bool HasAccessToAllProperties,
-    IReadOnlyList<int> PropertyIds,
-    IReadOnlyList<int> UnitIds);
+    bool HasAccessToAllSpaces,
+    IReadOnlyList<int> SpaceIds);
 
 public record ToggleAdminUserActiveInput(string UserId, string? CurrentUserId);
 
@@ -22,9 +22,8 @@ public record SendAdminUserInvitationInput(
     string? FullName,
     int RoleId,
     string InvitedByUserId,
-    bool HasAccessToAllProperties,
-    IReadOnlyList<int> PropertyIds,
-    IReadOnlyList<int> UnitIds);
+    bool HasAccessToAllSpaces,
+    IReadOnlyList<int> SpaceIds);
 
 public record CancelAdminUserInvitationInput(int InvitationId);
 
@@ -65,14 +64,9 @@ public record AdminUserIndexPageDto(
 
 public record AdminUserRoleOptionDto(int Id, string Name);
 
-public record AdminUserPropertyOptionDto(int Id, string Name, string Location);
-
-public record AdminUserUnitOptionDto(int Id, string Name, string PropertyName);
-
 public record AdminUserFormOptionsDto(
     List<AdminUserRoleOptionDto> Roles,
-    List<AdminUserPropertyOptionDto> Properties,
-    List<AdminUserUnitOptionDto> Units);
+    List<SpaceOptionDto> Spaces);
 
 public record AdminUserEditDataDto(
     string Id,
@@ -81,8 +75,7 @@ public record AdminUserEditDataDto(
     int RoleId,
     bool IsActive,
     bool IsCurrentUser,
-    bool HasAccessToAllProperties,
-    List<int> SelectedPropertyIds,
-    List<int> SelectedUnitIds,
+    bool HasAccessToAllSpaces,
+    List<int> SelectedSpaceIds,
     AdminUserFormOptionsDto Options);
 

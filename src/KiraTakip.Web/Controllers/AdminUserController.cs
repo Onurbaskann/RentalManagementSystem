@@ -89,9 +89,8 @@ public class AdminUserController(
                 currentUserContext.UserId,
                 model.FullName,
                 model.RoleId,
-                model.HasAccessToAllProperties,
-                model.SelectedPropertyIds ?? [],
-                model.SelectedUnitIds ?? []));
+                model.HasAccessToAllSpaces,
+                model.SelectedSpaceIds ?? []));
         }
         catch (BusinessValidationException exception)
         {
@@ -141,9 +140,8 @@ public class AdminUserController(
                 model.FullName,
                 model.RoleId,
                 currentUserId,
-                model.HasAccessToAllProperties,
-                model.SelectedPropertyIds ?? [],
-                model.SelectedUnitIds ?? []));
+                model.HasAccessToAllSpaces,
+                model.SelectedSpaceIds ?? []));
         }
         catch (BusinessValidationException exception)
         {
@@ -184,9 +182,8 @@ public class AdminUserController(
             RoleId = data.RoleId,
             IsActive = data.IsActive,
             IsCurrentUser = data.IsCurrentUser,
-            HasAccessToAllProperties = data.HasAccessToAllProperties,
-            SelectedPropertyIds = data.SelectedPropertyIds,
-            SelectedUnitIds = data.SelectedUnitIds
+            HasAccessToAllSpaces = data.HasAccessToAllSpaces,
+            SelectedSpaceIds = data.SelectedSpaceIds
         };
         ApplyFormOptions(model, data.Options);
 
@@ -198,21 +195,12 @@ public class AdminUserController(
         model.Roles = options.Roles
             .Select(role => new AdminUserRoleOptionViewModel { Id = role.Id, Name = role.Name })
             .ToList();
-        model.Properties = options.Properties
-            .Select(property => new AdminUserPropertyOptionViewModel
+        model.Spaces = options.Spaces
+            .Select(space => new AdminUserSpaceOptionViewModel
             {
-                PropertyId = property.Id,
-                Name = property.Name,
-                Location = property.Location,
-                Selected = model.SelectedPropertyIds?.Contains(property.Id) ?? false
-            }).ToList();
-        model.Units = options.Units
-            .Select(unit => new AdminUserUnitOptionViewModel
-            {
-                UnitId = unit.Id,
-                Name = unit.Name,
-                PropertyName = unit.PropertyName,
-                Selected = model.SelectedUnitIds?.Contains(unit.Id) ?? false
+                SpaceId = space.Id,
+                NamePath = space.NamePath,
+                Selected = model.SelectedSpaceIds?.Contains(space.Id) ?? false
             }).ToList();
     }
 
@@ -221,21 +209,12 @@ public class AdminUserController(
         model.Roles = options.Roles
             .Select(role => new AdminUserRoleOptionViewModel { Id = role.Id, Name = role.Name })
             .ToList();
-        model.Properties = options.Properties
-            .Select(property => new AdminUserPropertyOptionViewModel
+        model.Spaces = options.Spaces
+            .Select(space => new AdminUserSpaceOptionViewModel
             {
-                PropertyId = property.Id,
-                Name = property.Name,
-                Location = property.Location,
-                Selected = model.SelectedPropertyIds?.Contains(property.Id) ?? false
-            }).ToList();
-        model.Units = options.Units
-            .Select(unit => new AdminUserUnitOptionViewModel
-            {
-                UnitId = unit.Id,
-                Name = unit.Name,
-                PropertyName = unit.PropertyName,
-                Selected = model.SelectedUnitIds?.Contains(unit.Id) ?? false
+                SpaceId = space.Id,
+                NamePath = space.NamePath,
+                Selected = model.SelectedSpaceIds?.Contains(space.Id) ?? false
             }).ToList();
     }
 

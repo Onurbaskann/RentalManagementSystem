@@ -7,10 +7,11 @@ using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Repositories.Interfaces.Charges;
 using KiraTakip.Repositories.Interfaces.Leases;
-using KiraTakip.Repositories.Interfaces.Properties;
+using KiraTakip.Repositories.Interfaces.Spaces;
 using KiraTakip.Repositories.Interfaces.Tenants;
 using KiraTakip.Services.Interfaces.Charges;
 using KiraTakip.Models.Dtos.ManualCharge;
+using KiraTakip.Models.Dtos.Charge;
 
 namespace KiraTakip.Services.Charges;
 
@@ -18,61 +19,57 @@ public class ManualChargeService(
     IChargeRepository chargeRepository,
     ILeaseRepository leaseRepository,
     IChargeTypeRepository chargeTypeRepository,
-    IUnitRepository unitRepository,
+    ISpaceRepository spaceRepository,
     ITenantRepository tenantRepository,
     IUnitOfWork unitOfWork) : IManualChargeService, ITransactionalService
 {
     public Task<List<ManualChargeListItemDto>> GetAllAsync(GetManualChargesInput input)
         => chargeRepository.GetManualChargeListAsync(
-            input.PropertyIds?.ToList(),
+            input.Scope,
             input.Status,
             input.Relation,
-            input.LeaseId,
-            input.UnitIds?.ToList());
+            input.LeaseId);
 
     public Task<PagedResult<ManualChargeListItemDto>> GetPageAsync(GetManualChargesPageInput input)
         => chargeRepository.GetManualChargePagedListAsync(
             input.Query,
-            input.PropertyIds?.ToList(),
+            input.Scope,
             input.Relation,
-            input.LeaseId,
-            input.UnitIds?.ToList());
+            input.LeaseId);
 
     public Task<int> GetCancelledCountAsync(GetCancelledManualChargeCountInput input)
-        => chargeRepository.GetCancelledManualChargeCountAsync(
-            input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
+        => chargeRepository.GetCancelledManualChargeCountAsync(input.Scope);
 
     public Task<List<LeaseDropdownDto>> GetActiveLeasesAsync(GetActiveManualChargeLeasesInput input)
-        => leaseRepository.GetActiveDropdownAsync(
-            input.AccessScope.PropertyIds?.ToList(),
-            input.AccessScope.UnitIds?.ToList());
+        => leaseRepository.GetActiveDropdownAsync(input.AccessScope);
 
     public Task<List<ChargeTypeLookupDto>> GetManualChargeTypesAsync()
         => chargeTypeRepository.GetManualChargeTypesAsync();
 
-    public Task<List<UnitLookupDto>> GetAllUnitsAsync(GetManualChargeUnitsInput input)
-        => unitRepository.GetAllOptionsAsync(
-            input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
+    public Task<List<ChargeSpaceOptionDto>> GetActiveSpacesAsync(GetManualChargeSpacesInput input)
+        => chargeRepository.GetManualChargeSpaceOptionsAsync(input.Scope);
 
     public async Task CreateAsync(CreateManualChargeInput input)
     {
-        var propertyIds = input.AccessScope.PropertyIds?.ToList();
-        var unitIds = input.AccessScope.UnitIds?.ToList();
+        var scope = input.AccessScope;
 
-        var unitContext = await unitRepository.GetLeaseContextAsync(input.UnitId);
+        var space = await spaceRepository.GetNoTrackingAsync(input.SpaceId);
         Guard.InvalidField(
-            unitContext == null,
-            nameof(input.UnitId),
-            "Birim bulunamadı.",
-            "MANUAL_CHARGE_UNIT_NOT_FOUND");
-        var selectedUnit = unitContext!;
+            space == null || space.IsDeleted,
+            nameof(input.SpaceId),
+            "Alan bulunamadı.",
+            "MANUAL_CHARGE_SPACE_NOT_FOUND");
 
         Guard.Forbidden(
-            IsOutsideScope(selectedUnit.PropertyId, selectedUnit.UnitId, propertyIds, unitIds),
-            "Bu birim için işlem yetkiniz bulunmuyor.",
-            "MANUAL_CHARGE_UNIT_FORBIDDEN");
+            !scope.Includes(space!.Path),
+            "Bu alan için işlem yetkiniz bulunmuyor.",
+            "MANUAL_CHARGE_SPACE_FORBIDDEN");
+
+        Guard.InvalidField(
+            !space.IsActive,
+            nameof(input.SpaceId),
+            "Pasif alan için manuel borç oluşturulamaz.",
+            "MANUAL_CHARGE_SPACE_NOT_ACTIVE");
 
         var tenant = await tenantRepository.GetByIdAsync(input.TenantId);
         Guard.InvalidField(
@@ -83,7 +80,7 @@ public class ManualChargeService(
         var selectedTenant = tenant!;
 
         Guard.Forbidden(
-            !await tenantRepository.IsInScopeAsync(selectedTenant.Id, propertyIds, unitIds),
+            !await leaseRepository.IsTenantInScopeAsync(selectedTenant.Id, scope),
             "Bu kiracı için işlem yetkiniz bulunmuyor.",
             "MANUAL_CHARGE_TENANT_FORBIDDEN");
 
@@ -97,12 +94,13 @@ public class ManualChargeService(
                 "Sözleşme bulunamadı.",
                 "MANUAL_CHARGE_LEASE_NOT_FOUND");
             var selectedLease = lease!;
+            var leaseSpace = await leaseRepository.GetSpaceAndCategoryAsync(selectedLease.Id);
             var leaseValidation = ManualChargePolicy.ValidateLease(
                 selectedLease.Status,
                 selectedLease.TenantId,
                 input.TenantId,
-                selectedLease.UnitId,
-                input.UnitId);
+                leaseSpace?.SpaceId ?? 0,
+                input.SpaceId);
 
             Guard.InvalidField(
                 leaseValidation == ManualChargeLeaseValidationResult.Terminated,
@@ -120,10 +118,10 @@ public class ManualChargeService(
                 "Seçilen kiracı, sözleşmenin kiracısıyla eşleşmiyor.",
                 "MANUAL_CHARGE_LEASE_TENANT_MISMATCH");
             Guard.InvalidField(
-                leaseValidation == ManualChargeLeaseValidationResult.UnitMismatch,
+                leaseValidation == ManualChargeLeaseValidationResult.SpaceMismatch,
                 nameof(input.LeaseId),
-                "Seçilen birim, sözleşmenin birimiyle eşleşmiyor.",
-                "MANUAL_CHARGE_LEASE_UNIT_MISMATCH");
+                "Seçilen alan, sözleşmenin alanıyla eşleşmiyor.",
+                "MANUAL_CHARGE_LEASE_SPACE_MISMATCH");
             leaseId = selectedLease.Id;
         }
 
@@ -160,7 +158,7 @@ public class ManualChargeService(
         {
             ChargeNo = await GenerateChargeNoAsync(),
             TenantId = input.TenantId,
-            UnitId = input.UnitId,
+            SpaceId = input.SpaceId,
             LeaseId = leaseId,
             PeriodStart = input.DueDate,
             PeriodEnd = input.DueDate.AddDays(1),
@@ -184,8 +182,7 @@ public class ManualChargeService(
         var charge = Guard.NotFound(
             await chargeRepository.GetManualChargeByIdAsync(
                 input.ChargeId,
-                input.AccessScope.PropertyIds?.ToList(),
-                input.AccessScope.UnitIds?.ToList()),
+                input.AccessScope),
             "Manuel borç kaydı bulunamadı.",
             "MANUAL_CHARGE_NOT_FOUND");
 
@@ -225,18 +222,5 @@ public class ManualChargeService(
             "Tahakkuk No üretilemedi.",
             ErrorType.Failure,
             "Charge.NumberGenerationFailed");
-    }
-
-    private static bool IsOutsideScope(
-        int propertyId,
-        int unitId,
-        IReadOnlyCollection<int>? propertyIds,
-        IReadOnlyCollection<int>? unitIds)
-    {
-        if (propertyIds == null && unitIds == null)
-            return false;
-
-        return propertyIds?.Contains(propertyId) != true
-            && unitIds?.Contains(unitId) != true;
     }
 }

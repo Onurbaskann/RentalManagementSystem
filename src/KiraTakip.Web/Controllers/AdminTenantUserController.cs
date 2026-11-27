@@ -26,7 +26,7 @@ public class AdminTenantUserController(
         var actorUserId = userManager.GetUserId(User);
         var data = await tenantUserService.GetInviteDataAsync(new GetInviteDataInput(tenantId, actorUserId));
         model.Roles = data.Roles.Select(r => new RoleOptionViewModel { Id = r.Id, Name = r.Name }).ToList();
-        model.Units = data.Units;
+        model.Spaces = data.Spaces;
         ViewBag.TenantId = tenantId;
         ViewBag.TenantName = data.TenantDisplayName;
     }
@@ -90,7 +90,7 @@ public class AdminTenantUserController(
                 tenantId,
                 id,
                 currentUserId,
-                new ReservationAccessScopeInput()));
+                new SpaceAccessScope(true, [])));
         await PopulateEditContextAsync(tenantId);
         return View(ToEditViewModel(data));
     }
@@ -118,10 +118,10 @@ public class AdminTenantUserController(
                 id,
                 model.FullName,
                 model.RoleId,
-                model.HasAccessToAllUnits,
-                model.UnitIds,
+                model.HasAccessToAllSpaces,
+                model.SpaceIds,
                 currentUserId,
-                new ReservationAccessScopeInput()));
+                new SpaceAccessScope(true, [])));
         }
         catch (BusinessValidationException exception)
         {
@@ -192,7 +192,7 @@ public class AdminTenantUserController(
         }
 
         var currentUserId = userManager.GetUserId(User)!;
-        var unitIds = model.UnitIds.Count > 0 ? model.UnitIds : null;
+        var unitIds = model.SpaceIds.Count > 0 ? model.SpaceIds : null;
 
         try
         {
@@ -227,14 +227,14 @@ public class AdminTenantUserController(
                 tenantId,
                 userId,
                 currentUserId,
-                new ReservationAccessScopeInput()));
+                new SpaceAccessScope(true, [])));
         model.Email = data.Email;
         model.IsActive = data.IsActive;
         model.Roles = data.Roles
             .Select(role => new RoleOptionViewModel { Id = role.Id, Name = role.Name })
             .ToList();
-        model.LeaseUnits = data.LeaseUnits;
-        model.ReservableUnits = data.ReservableUnits;
+        model.LeaseSpaces = data.LeaseSpaces;
+        model.ReservableSpaces = data.ReservableSpaces;
         await PopulateEditContextAsync(tenantId);
     }
 
@@ -254,12 +254,12 @@ public class AdminTenantUserController(
             Email = data.Email,
             IsActive = data.IsActive,
             RoleId = data.RoleId,
-            HasAccessToAllUnits = data.HasAccessToAllUnits,
-            UnitIds = data.SelectedUnitIds,
+            HasAccessToAllSpaces = data.HasAccessToAllSpaces,
+            SpaceIds = data.SelectedSpaceIds,
             Roles = data.Roles
                 .Select(role => new RoleOptionViewModel { Id = role.Id, Name = role.Name })
                 .ToList(),
-            LeaseUnits = data.LeaseUnits,
-            ReservableUnits = data.ReservableUnits
+            LeaseSpaces = data.LeaseSpaces,
+            ReservableSpaces = data.ReservableSpaces
         };
 }

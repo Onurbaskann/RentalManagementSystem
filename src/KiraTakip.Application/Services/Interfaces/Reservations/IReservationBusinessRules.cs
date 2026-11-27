@@ -10,8 +10,8 @@ public interface IReservationBusinessRules : IBusinessRules
     DateTime GetCurrentTime();
     void EnsureScheduleIsValid(DateTime startDate, DateTime endDate, bool validatePastDate = true);
     void EnsureContentIsValid(ReservationContentPolicyInput input);
-    void EnsureUnitIsReservable(ReservationUnitContextDto unit, bool fieldValidation = false);
-    void EnsureAccessScope(int propertyId, int unitId, ReservationAccessScopeInput accessScope);
+    void EnsureSpaceIsReservable(ReservationSpaceContextDto space, bool fieldValidation = false);
+    void EnsureAccessScope(string spacePath, SpaceAccessScope accessScope);
     void EnsureTransitionAllowed(ReservationStatus currentStatus, ReservationStatus targetStatus);
     void EnsureCancellationAllowed(Reservation reservation, bool canOverrideTimeRestriction);
     void EnsureModificationAllowed(

@@ -83,7 +83,7 @@
                     <th class="w-28">No</th>
                     <th class="w-28">Tarih</th>
                     <th>Kiracı</th>
-                    <th>Taşınmaz / Birim</th>
+                    <th>Alan</th>
                     <th class="w-32">Dönem</th>
                     <th class="w-28">Kalem Tipi</th>
                     <th class="w-32 num">Tutar</th>
@@ -128,8 +128,7 @@
                         <td>@payment.PaymentDate.Tarih()</td>
                         <td class="font-semibold">@payment.TenantDisplayName</td>
                         <td>
-                            @payment.PropertyName
-                            <span class="cell-sub">@payment.UnitName</span>
+                            @payment.SpaceName
                         </td>
                         <td class="text-muted">@payment.ChargePeriodStart.ToString("MMMM yyyy")</td>
                         <td class="text-muted">@payment.ChargeTypeName</td>

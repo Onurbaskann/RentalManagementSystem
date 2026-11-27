@@ -1,5 +1,7 @@
 ﻿using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Common;
+using KiraTakip.Models.Dtos.Lease;
+using KiraTakip.Models.Dtos.Reservation;
 
 namespace KiraTakip.Web.Models.ViewModels;
 
@@ -39,9 +41,9 @@ public class TenantInvitationFormViewModel
     public string Email { get; set; } = string.Empty;
     public string? FullName { get; set; }
     public int RoleId { get; set; }
-    public List<int> UnitIds { get; set; } = [];
+    public List<int> SpaceIds { get; set; } = [];
     public List<RoleOptionViewModel> Roles { get; set; } = [];
-    public List<UnitLookupDto> Units { get; set; } = [];
+    public List<LeaseSpaceOptionDto> Spaces { get; set; } = [];
 }
 
 public class TenantUserEditViewModel
@@ -51,9 +53,9 @@ public class TenantUserEditViewModel
     public string Email { get; set; } = string.Empty;
     public bool IsActive { get; set; }
     public int RoleId { get; set; }
-    public bool HasAccessToAllUnits { get; set; }
-    public List<int> UnitIds { get; set; } = [];
+    public bool HasAccessToAllSpaces { get; set; }
+    public List<int> SpaceIds { get; set; } = [];
     public List<RoleOptionViewModel> Roles { get; set; } = [];
-    public List<UnitLookupDto> LeaseUnits { get; set; } = [];
-    public List<UnitListItemDto> ReservableUnits { get; set; } = [];
+    public List<LeaseSpaceOptionDto> LeaseSpaces { get; set; } = [];
+    public List<ReservationSpaceOptionDto> ReservableSpaces { get; set; } = [];
 }

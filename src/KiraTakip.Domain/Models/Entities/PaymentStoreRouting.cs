@@ -8,17 +8,13 @@ public class PaymentStoreRouting : BaseEntity
     [Column("BorcTipiId")]
     public int ChargeTypeId { get; set; }
 
-    [Column("TasinmazId")]
-    public int? PropertyId { get; set; }
-
-    [Column("BirimId")]
-    public int? UnitId { get; set; }
+    [Column("AlanId")]
+    public int? SpaceId { get; set; }
 
     [Column("MagazaId")]
     public int StoreId { get; set; }
 
     public ChargeType ChargeType { get; set; } = null!;
-    public Property? Property { get; set; }
-    public Unit? Unit { get; set; }
+    public Space? Space { get; set; }
     public Store Store { get; set; } = null!;
 }

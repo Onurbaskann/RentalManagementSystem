@@ -43,7 +43,7 @@ public class TenantPanelUpcomingChargeItem
 {
     public int ChargeId { get; set; }
     public string Period { get; set; } = string.Empty;
-    public string UnitName { get; set; } = string.Empty;
+    public string SpaceName { get; set; } = string.Empty;
     public DateTime DueDate { get; set; }
     public int DayDifference { get; set; }
     public decimal RemainingAmount { get; set; }

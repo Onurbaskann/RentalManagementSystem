@@ -19,14 +19,7 @@ public class ChargeReminderController(
     [Authorize(Policy = PermissionCatalog.Notification.BorcHatirlatma)]
     public async Task<IActionResult> SendDebtorEmails()
     {
-        await chargeReminderService.SendDebtRemindersAsync(GetScopeInput());
+        await chargeReminderService.SendDebtRemindersAsync(permissionScopeProvider.SpaceScope);
         return RedirectToAction(nameof(LeaseController.Index), "Lease");
     }
-
-    private ChargeReminderScopeInput GetScopeInput()
-        => permissionScopeProvider.GlobalAccess
-            ? new ChargeReminderScopeInput()
-            : new ChargeReminderScopeInput(
-                permissionScopeProvider.AccessiblePropertyIds,
-                permissionScopeProvider.AccessibleUnitIds);
 }

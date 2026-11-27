@@ -1,6 +1,7 @@
 ﻿using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Enums;
 using KiraTakip.Models.Dtos.Charge;
+using KiraTakip.Models.Dtos.Lease;
 
 namespace KiraTakip.Web.Models.ViewModels;
 
@@ -13,7 +14,7 @@ public class TenantChargeIndexViewModel
     public decimal CollectedAmount { get; set; }
     public decimal RemainingDebtAmount { get; set; }
     public decimal OverdueRemainingAmount { get; set; }
-    public List<TenantChargeUnitOptionDto> Units { get; set; } = [];
+    public List<LeaseSpaceOptionDto> Spaces { get; set; } = [];
     public List<int> AvailableYears { get; set; } = [];
     public bool CanReportPayment { get; set; }
 }
@@ -31,7 +32,7 @@ public class TenantChargeQueryViewModel
     public int Size { get; set; } = 10;
     public string? Q { get; set; }
     public string? Status { get; set; }
-    public int? UnitId { get; set; }
+    public int? SpaceId { get; set; }
     public string? Source { get; set; }
     public int? Year { get; set; }
 
@@ -41,7 +42,7 @@ public class TenantChargeQueryViewModel
         if (Size != 10) values["size"] = Size.ToString();
         if (!string.IsNullOrWhiteSpace(Q)) values["q"] = Q;
         if (!string.IsNullOrWhiteSpace(Status) && Status != "tum") values["status"] = Status;
-        if (UnitId.HasValue) values["unitId"] = UnitId.ToString();
+        if (SpaceId.HasValue) values["spaceId"] = SpaceId.ToString();
         if (!string.IsNullOrWhiteSpace(Source)) values["source"] = Source;
         if (Year.HasValue) values["year"] = Year.ToString();
 

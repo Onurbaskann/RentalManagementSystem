@@ -27,10 +27,10 @@ public class TenantChargeQueryViewModelValidator : IValidator<TenantChargeQueryV
             errors.Add(new ValidationError(
                 "Arama metni en fazla 200 karakter olabilir.",
                 nameof(input.Q)));
-        if (input.UnitId <= 0)
+        if (input.SpaceId <= 0)
             errors.Add(new ValidationError(
-                "Geçerli bir birim seçilmelidir.",
-                nameof(input.UnitId)));
+                "Geçerli bir alan seçilmelidir.",
+                nameof(input.SpaceId)));
         if (input.Year is < 2000 or > 2100)
             errors.Add(new ValidationError(
                 "Yıl 2000 ile 2100 arasında olmalıdır.",

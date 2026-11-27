@@ -10,6 +10,10 @@ internal sealed class UserPermissionScopeConfiguration : IEntityTypeConfiguratio
     public void Configure(EntityTypeBuilder<UserPermissionScope> entity)
     {
         entity.Property(k => k.UserId).IsRequired().HasMaxLength(450);
+        entity.HasOne(k => k.Space)
+              .WithMany()
+              .HasForeignKey(k => k.ScopeId)
+              .OnDelete(DeleteBehavior.Restrict);
         entity.HasIndex(k => new { k.UserId, k.ScopeType, k.ScopeId }).IsUnique();
     }
 }

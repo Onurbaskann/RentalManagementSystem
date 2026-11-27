@@ -1,14 +1,11 @@
 ﻿using KiraTakip.Models.Dtos.PaymentStoreRouting;
-using KiraTakip.Models.Enums;
 
 namespace KiraTakip.Web.Models.ViewModels;
 
 public class PaymentStoreRoutingFormViewModel
 {
     public int ChargeTypeId { get; set; }
-    public PaymentRoutingScope Scope { get; set; }
-    public int? PropertyId { get; set; }
-    public int? UnitId { get; set; }
+    public int? SpaceId { get; set; }
     public int StoreId { get; set; }
 }
 

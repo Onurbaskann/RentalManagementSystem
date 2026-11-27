@@ -7,11 +7,10 @@ public sealed record CapacityOccupant(
     DateTime EndDate,
     decimal AllocatedArea,
     int? LeaseId,
-    decimal? RentedArea,
-    LeaseAreaMode? Mode)
+    decimal? RentedArea)
 {
     public CapacityOccupant(DateTime startDate, DateTime endDate, decimal allocatedArea)
-        : this(startDate, endDate, allocatedArea, null, null, null)
+        : this(startDate, endDate, allocatedArea, null, null)
     {
     }
 }

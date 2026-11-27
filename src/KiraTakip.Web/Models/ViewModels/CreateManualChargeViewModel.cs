@@ -1,4 +1,5 @@
 ﻿using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Dtos.Charge;
 
 namespace KiraTakip.Web.Models.ViewModels;
 
@@ -6,7 +7,7 @@ public class CreateManualChargeViewModel
 {
     public int TenantId { get; set; }
     public int? LeaseId { get; set; }
-    public int UnitId { get; set; }
+    public int SpaceId { get; set; }
     public int ChargeTypeId { get; set; }
     public string Description { get; set; } = string.Empty;
     public decimal Amount { get; set; }
@@ -16,5 +17,5 @@ public class CreateManualChargeViewModel
     public string? Note { get; set; }
     public List<LeaseDropdownDto> ActiveLeases { get; set; } = [];
     public List<ChargeTypeLookupDto> ChargeTypes { get; set; } = [];
-    public List<UnitLookupDto> Units { get; set; } = [];
+    public List<ChargeSpaceOptionDto> Spaces { get; set; } = [];
 }

@@ -1,4 +1,5 @@
 using KiraTakip.Authorization;
+using KiraTakip.Domain.Leases;
 using KiraTakip.Web.Extensions;
 using KiraTakip.Web.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
@@ -7,7 +8,6 @@ using KiraTakip.Models.Dtos.Charge;
 using KiraTakip.Models.Dtos.ChargeReminder;
 using KiraTakip.Models.Dtos.Document;
 using KiraTakip.Models.Dtos.Lease;
-using KiraTakip.Models.Dtos.Property;
 using KiraTakip.Models.Dtos.RateHierarchy;
 using KiraTakip.Models.Dtos.Tenant;
 using KiraTakip.Models.Constants;
@@ -19,7 +19,6 @@ using KiraTakip.Services.Interfaces.Identity;
 using KiraTakip.Services.Interfaces.Leases;
 using KiraTakip.Services.Interfaces.Payments;
 using KiraTakip.Services.Interfaces.Pricing;
-using KiraTakip.Services.Interfaces.Properties;
 using KiraTakip.Services.Interfaces.Reporting;
 using KiraTakip.Services.Interfaces.Tenants;
 using Microsoft.AspNetCore.Authorization;
@@ -31,8 +30,6 @@ namespace KiraTakip.Web.Controllers;
 public partial class LeaseController(
     ILeaseService leaseService,
     ILeaseGroupService leaseGroupService,
-    IPropertyService propertyService,
-    ICapacityPlanService capacityPlanService,
     ITenantService tenantService,
     IStatisticsService statisticsService,
     IChargeService chargeService,
@@ -40,7 +37,6 @@ public partial class LeaseController(
     IChargeReminderService chargeReminderService,
     IDocumentService documentService,
     IPermissionScopeProvider permissionScopeProvider,
-    IPermissionScopeCache permissionScopeCache,
     ICurrentUserContext currentUserContext,
     ICurrentUserPermissionService permissionService,
     IOperationalPolicyProvider operationalPolicyProvider) : Controller
@@ -48,18 +44,14 @@ public partial class LeaseController(
     [Authorize(Policy = PermissionCatalog.Lease.Module)]
     public async Task<IActionResult> Index(string? filter, [FromQuery] TableQuery query)
     {
-        var propertyIds = permissionScopeProvider.GlobalAccess ? null : permissionScopeProvider.AccessiblePropertyIds;
-        var unitIds = permissionScopeProvider.GlobalAccess ? null : permissionScopeProvider.AccessibleUnitIds;
+        var scope = BuildAccessScope();
 
         var leases = await leaseService.GetPagedAsync(
-            new GetPagedLeasesInput(query, filter, propertyIds, unitIds));
+            new GetPagedLeasesInput(query, filter, scope));
 
-        ViewBag.DebtorCount = await chargeReminderService.GetDebtorCountAsync(
-            permissionScopeProvider.GlobalAccess
-                ? new ChargeReminderScopeInput()
-                : new ChargeReminderScopeInput(propertyIds, unitIds));
+        ViewBag.DebtorCount = await chargeReminderService.GetDebtorCountAsync(scope);
         ViewBag.TerminatedCount = await leaseService.GetTerminatedCountAsync(
-            new GetTerminatedLeaseCountInput(propertyIds, unitIds));
+            new GetTerminatedLeaseCountInput(scope));
         ViewBag.Filter = filter ?? "tum";
         ViewBag.Query = query;
 
@@ -71,30 +63,32 @@ public partial class LeaseController(
     {
         var leaseDetails = await leaseService.GetDetailsAsync(new GetLeaseDetailsInput(id));
         if (leaseDetails == null) return NotFound();
-        if (!IsInScope(leaseDetails.PropertyId, leaseDetails.UnitId)) return Forbid();
+        if (!IsInScope(leaseDetails.SpaceIdPath)) return Forbid();
         if (leaseDetails.Status is LeaseStatus.Draft or LeaseStatus.RevisionRequested)
             return RedirectToAction(nameof(Draft), new { id });
 
-        var previousLeases = await leaseService.GetByUnitAsync(new GetLeasesByUnitInput(leaseDetails.UnitId));
+        var previousLeases = await leaseService.GetBySpaceAsync(new GetLeasesBySpaceInput(leaseDetails.SpaceId));
         var tenantLeases = await leaseService.GetByTenantAsync(new GetLeasesByTenantInput(leaseDetails.TenantId));
         var lease = BuildLeaseForStatistics(leaseDetails);
 
         var viewModel = new LeaseDetailsViewModel
         {
             Lease = leaseDetails,
-            AllocatedAreaInfo = await capacityPlanService.GetAllocatedAreaInfoAsync(id, BuildAccessScope()),
             GroupId = (await leaseGroupService.GetLinkByLeaseIdAsync(id))?.GroupId,
             RemainingDays = statisticsService.GetRemainingDays(lease),
             MonthlyAmount = await statisticsService.GetMonthlyAmountAsync(lease),
             AnnualAmount = await statisticsService.GetAnnualAmountAsync(lease),
             IsActive = statisticsService.IsActive(lease),
             DurationPercentage = statisticsService.GetDurationPercentage(lease),
-            UnitStatus = statisticsService.GetUnitStatus(lease.Unit),
+            SpaceStatus = LeaseOccupancyPolicy.DetermineStatus(
+                statisticsService.IsActive(lease),
+                statisticsService.GetRemainingDays(lease),
+                operationalPolicyProvider.Current.LeaseExpiringSoonStatusDays),
             PreviousLeases = previousLeases.Where(item => item.Id != id).ToList(),
             TenantOtherLeases = tenantLeases
                 .Where(item => item.Id != id
-                    && item.UnitId != leaseDetails.UnitId
-                    && IsInScope(item.PropertyId, item.UnitId))
+                    && item.SpaceId != leaseDetails.SpaceId
+                    && IsInScope(item.SpaceIdPath))
                 .ToList(),
             EffectiveVatRate = leaseDetails.LeaseRateOverrides
                 .FirstOrDefault(rate => rate.ChargeTypeBehavior == ChargeTypeBehavior.MonthlyFixed)?.VatRate ?? 20m
@@ -119,8 +113,7 @@ public partial class LeaseController(
 
         viewModel.ParentRate = (await rateHierarchyService.GetParentForAsync(new GetParentRateInput(
             RateHierarchyLayer.Lease,
-            leaseDetails.PropertyId,
-            leaseDetails.UnitId,
+            leaseDetails.SpaceId,
             leaseDetails.TenantCategoryId,
             leaseDetails.StartDate.Year))).ToViewModel();
 
@@ -144,18 +137,21 @@ public partial class LeaseController(
 
     [HttpGet]
     [Authorize(Policy = PermissionCatalog.Lease.Module)]
-    public async Task<IActionResult> Create(int? unitId, int? tenantId, string? tur)
+    public async Task<IActionResult> Create(int? spaceId, int? tenantId, string? tur)
     {
         var canCreate = await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Create);
         var canCreateGroup = await permissionService.HasPermissionAsync(PermissionCatalog.Lease.CreateGroup);
         if (!canCreate && !canCreateGroup) return Forbid();
 
         if (canCreateGroup && (!canCreate || tur == LeaseCreateRoutes.SharedType))
-            return await CreateGroupFormAsync(unitId, tenantId);
+            return await CreateGroupFormAsync(spaceId, tenantId);
+        if (canCreateGroup && spaceId.HasValue
+            && (await leaseService.GetSelectableSpacesAsync(true, BuildAccessScope())).Any(space => space.Id == spaceId.Value))
+            return RedirectToAction(nameof(Create), new { spaceId, tenantId, tur = LeaseCreateRoutes.SharedType });
 
         var viewModel = new CreateLeaseViewModel
         {
-            UnitId = unitId,
+            SpaceId = spaceId,
             TenantId = tenantId ?? 0,
             SourceTenantId = tenantId
         };
@@ -189,7 +185,7 @@ public partial class LeaseController(
         try
         {
             lease = await leaseService.CreateDraftAsync(new CreateLeaseDraftInput(
-                viewModel.UnitId!.Value,
+                viewModel.SpaceId!.Value,
                 viewModel.TenantId,
                 viewModel.StartDate,
                 viewModel.EndDate,
@@ -200,9 +196,7 @@ public partial class LeaseController(
                 CurrentActorUserId(),
                 BuildAccessScope(),
                 viewModel.IsRentFree,
-                viewModel.RentedArea,
-                viewModel.AllocatedArea,
-                viewModel.AllocationMode));
+                viewModel.RentedArea));
         }
         catch (BusinessValidationException exception)
         {
@@ -212,7 +206,6 @@ public partial class LeaseController(
         }
 
         await UploadDocumentsAsync(lease.Id, viewModel.DocumentTypes);
-        await SetCapacityWarningAsync(lease.Id);
         return RedirectToAction(nameof(Draft), new { id = lease.Id });
     }
 
@@ -232,12 +225,12 @@ public partial class LeaseController(
             GroupMemberCount = groupLink?.MemberCount ?? 0,
             LeaseId = draft.LeaseId,
             LeaseNo = draft.LeaseNo,
-            UnitId = draft.UnitId,
+            SpaceId = draft.SpaceId,
             TenantId = draft.TenantId,
-            UnitTypeNameSnapshot = draft.UnitTypeNameSnapshot,
-            UnitTypeUsageSnapshot = draft.UnitTypeUsageSnapshot,
-            RentalModeSnapshot = draft.RentalModeSnapshot,
-            UnitAreaSnapshot = draft.UnitAreaSnapshot,
+            SpacePath = draft.SpacePath,
+            SpaceTypeNameSnapshot = draft.SpaceTypeNameSnapshot,
+            SpaceUsageSnapshot = draft.SpaceUsageSnapshot,
+            SpaceAreaSnapshot = draft.SpaceAreaSnapshot,
             StartDate = draft.StartDate,
             EndDate = draft.EndDate,
             DueDateRuleType = draft.DueDateRuleType,
@@ -245,8 +238,6 @@ public partial class LeaseController(
             Description = draft.Description,
             IsRentFree = draft.IsRentFree,
             RentedArea = draft.RentedArea,
-            AllocatedArea = draft.AllocatedArea,
-            AllocationMode = draft.AllocationMode,
             Status = draft.Status,
             RowVersion = draft.RowVersion,
             OwnerDisplayName = draft.OwnerDisplayName,
@@ -289,13 +280,12 @@ public partial class LeaseController(
     {
         if (!ModelState.IsValid) return await Draft(viewModel.LeaseId);
         await leaseService.UpdateDraftAsync(new UpdateLeaseDraftInput(
-            viewModel.LeaseId, viewModel.UnitId!.Value, viewModel.TenantId,
+            viewModel.LeaseId, viewModel.SpaceId!.Value, viewModel.TenantId,
             viewModel.StartDate, viewModel.EndDate, viewModel.DueDateRuleType,
             viewModel.DueDay, viewModel.Description,
             BuildRateOverrideInputs(viewModel.LeaseLineItems, viewModel.IsRentFree), viewModel.RowVersion,
             CurrentActorUserId(), BuildAccessScope(), viewModel.IsRentFree,
-            viewModel.RentedArea, viewModel.AllocatedArea, viewModel.AllocationMode));
-        await SetCapacityWarningAsync(viewModel.LeaseId);
+            viewModel.RentedArea));
         return RedirectToAction(nameof(Draft), new { id = viewModel.LeaseId });
     }
 
@@ -306,13 +296,12 @@ public partial class LeaseController(
     {
         if (!ModelState.IsValid) return await Draft(viewModel.LeaseId);
         await leaseService.ResubmitRevisionAsync(new ResubmitLeaseRevisionInput(
-            viewModel.LeaseId, viewModel.UnitId!.Value, viewModel.TenantId,
+            viewModel.LeaseId, viewModel.SpaceId!.Value, viewModel.TenantId,
             viewModel.StartDate, viewModel.EndDate, viewModel.DueDateRuleType,
             viewModel.DueDay, viewModel.Description,
             BuildRateOverrideInputs(viewModel.LeaseLineItems, viewModel.IsRentFree), null, viewModel.RowVersion,
             CurrentActorUserId(), BuildAccessScope(), viewModel.IsRentFree,
-            viewModel.RentedArea, viewModel.AllocatedArea, viewModel.AllocationMode));
-        await SetCapacityWarningAsync(viewModel.LeaseId);
+            viewModel.RentedArea));
         return RedirectToAction(nameof(Draft), new { id = viewModel.LeaseId });
     }
 
@@ -325,7 +314,6 @@ public partial class LeaseController(
         await leaseService.ApproveAsync(new ApproveLeaseInput(
             viewModel.LeaseId, viewModel.Explanation, viewModel.RowVersion,
             CurrentActorUserId(), BuildAccessScope()));
-        await SetCapacityWarningAsync(viewModel.LeaseId);
         return RedirectToAction(nameof(Details), new { id = viewModel.LeaseId });
     }
 
@@ -369,7 +357,6 @@ public partial class LeaseController(
 
         using var memoryStream = new MemoryStream();
         await viewModel.File.CopyToAsync(memoryStream);
-        var scope = BuildAccessScope();
         await documentService.UploadAsync(new UploadDocumentInput(
             DocumentOwnerType.Lease,
             viewModel.LeaseId,
@@ -379,7 +366,7 @@ public partial class LeaseController(
             memoryStream.ToArray(),
             InvalidateOld: true,
             AccessScope: new DocumentAccessScopeInput(
-                [DocumentOwnerType.Lease], scope.PropertyIds, scope.UnitIds)));
+                [DocumentOwnerType.Lease], Scope: BuildAccessScope())));
 
         return RedirectToAction(nameof(Draft), new { id = viewModel.LeaseId });
     }
@@ -420,20 +407,6 @@ public partial class LeaseController(
             viewModel.Description,
             BuildAccessScope()));
 
-        return RedirectToAction(nameof(Details), new { id });
-    }
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.Lease.UpdateAllocatedArea)]
-    public async Task<IActionResult> UpdateAllocatedArea(int id, UpdateAllocatedAreaViewModel viewModel)
-    {
-        ThrowIfModelStateInvalid();
-
-        await capacityPlanService.UpdateAllocatedAreaAsync(
-            new UpdateAllocatedAreaInput(id, viewModel.AllocatedArea, BuildAccessScope()));
-
-        TempData[KiraTakip.Web.Feedback.FeedbackTempDataKeys.SuccessMessage] = "Fiziksel m² güncellendi.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -489,7 +462,7 @@ public partial class LeaseController(
     }
 
     [HttpGet]
-    [Authorize]
+    [Authorize(Policy = PermissionCatalog.Lease.Module)]
     public async Task<IActionResult> GetDefaultLineItems(GetDefaultLeaseLineItemsViewModel query)
     {
         if (!await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Create)
@@ -503,11 +476,11 @@ public partial class LeaseController(
 
         var previews = await leaseService.GetDefaultLineItemsAsync(
             new ComposeLeaseLineItemsInput(
-                query.UnitId,
+                query.SpaceId,
                 query.TenantId,
                 query.StartDate,
                 query.LeaseId,
-                await BuildCurrentUserAccessScopeAsync()));
+                BuildAccessScope()));
 
         var result = previews.Select(preview => new LeaseLineItemInputDto
         {
@@ -529,23 +502,6 @@ public partial class LeaseController(
         return Json(result);
     }
 
-    private async Task SetCapacityWarningAsync(int leaseId)
-    {
-        var warning = await leaseService.GetCapacityWarningAsync(leaseId);
-        if (warning == null) return;
-
-        var shortTargets = new List<string>();
-        if (warning.NormTargetShort)
-            shortTargets.Add($"norm hedefi ({warning.NormTarget:0.##} m²)");
-        if (warning.MinimumTargetShort)
-            shortTargets.Add($"minimum hedef ({warning.MinimumTarget:0.##} m²)");
-        if (shortTargets.Count == 0) return;
-
-        TempData[KiraTakip.Web.Feedback.FeedbackTempDataKeys.WarningMessage] =
-            $"Bu ofiste {warning.FreeSlots} boş kontenjan için kalan alan {warning.RemainingArea:0.##} m²; "
-            + $"{string.Join(" ve ", shortTargets)} karşılanmıyor.";
-    }
-
     private void ThrowIfModelStateInvalid()
     {
         if (ModelState.IsValid) return;
@@ -563,18 +519,21 @@ public partial class LeaseController(
         {
             Id = details.Id,
             TenantId = details.TenantId,
-            UnitId = details.UnitId,
             StartDate = details.StartDate,
             EndDate = details.EndDate,
             Status = details.Status,
             TerminationDate = details.TerminationDate,
             IsRentFree = details.IsRentFree,
-            Unit = new Unit
-            {
-                Id = details.UnitId,
-                Area = details.UnitArea,
-                PropertyId = details.PropertyId
-            }
+            Areas =
+            [
+                new LeaseArea
+                {
+                    LeaseId = details.Id,
+                    SpaceId = details.SpaceId,
+                    RentedArea = details.RentedArea ?? details.SpaceArea,
+                    Space = new Space { Id = details.SpaceId, Area = details.SpaceArea }
+                }
+            ]
         };
 
     private static List<LeaseRateOverrideInput> BuildRateOverrideInputs(
@@ -613,18 +572,18 @@ public partial class LeaseController(
     private async Task PopulateCreateOptionsAsync(CreateLeaseViewModel viewModel)
     {
         var accessScope = BuildAccessScope();
-        viewModel.AvailableUnits = await propertyService.GetAvailableUnitsAsync(
-            new GetAvailableUnitsInput(accessScope.PropertyIds, accessScope.UnitIds, null, true));
-        viewModel.Tenants = await tenantService.GetAllAsync(
-            new GetTenantsInput(accessScope.PropertyIds, accessScope.UnitIds));
+        viewModel.AvailableSpaces = await leaseService.GetSelectableSpacesAsync(false, accessScope);
+        viewModel.Tenants = await tenantService.GetAllAsync(new GetTenantsInput(BuildAccessScope()));
         viewModel.DocumentTypes = await documentService.GetTypesAsync(
             new GetDocumentTypesInput(DocumentOwnerType.Lease));
 
-        ViewBag.UnitAreas = System.Text.Json.JsonSerializer.Serialize(
-            viewModel.AvailableUnits.ToDictionary(unit => unit.Id, unit => (double)unit.Area));
-        ViewBag.LeaseMinimumUsageArea = operationalPolicyProvider.Current.LeaseMinimumUsageArea;
+        ViewBag.SpaceAreas = SerializeSpaceAreas(viewModel.AvailableSpaces);
         await SetLeaseKindChoiceAsync(false, viewModel.SourceTenantId);
     }
+
+    private static string SerializeSpaceAreas(IEnumerable<LeaseSpaceOptionDto> spaces)
+        => System.Text.Json.JsonSerializer.Serialize(
+            spaces.ToDictionary(space => space.Id, space => (double)space.Area));
 
     private async Task SetLeaseKindChoiceAsync(bool isShared, int? tenantId)
     {
@@ -633,45 +592,27 @@ public partial class LeaseController(
             canCreate,
             await permissionService.HasPermissionAsync(PermissionCatalog.Lease.CreateGroup),
             isShared,
-            canCreate ? Url.Action(nameof(Create), "Lease", new { unitId = LeaseCreateRoutes.UnitIdPlaceholder, tenantId })! : string.Empty,
-            Url.Action(nameof(Create), "Lease", new { unitId = LeaseCreateRoutes.UnitIdPlaceholder, tenantId, tur = LeaseCreateRoutes.SharedType })!);
+            canCreate ? Url.Action(nameof(Create), "Lease", new { tenantId })! : string.Empty,
+            Url.Action(nameof(Create), "Lease", new { tenantId, tur = LeaseCreateRoutes.SharedType })!);
     }
 
     private async Task PopulateDraftOptionsAsync(LeaseDraftViewModel viewModel)
     {
-        var accessScope = BuildAccessScope();
-        viewModel.AvailableUnits = await propertyService.GetAvailableUnitsAsync(
-            new GetAvailableUnitsInput(accessScope.PropertyIds, accessScope.UnitIds, viewModel.LeaseId > 0 ? viewModel.UnitId : null, true));
-        viewModel.Tenants = await tenantService.GetAllAsync(
-            new GetTenantsInput(accessScope.PropertyIds, accessScope.UnitIds));
-        ViewBag.UnitAreas = System.Text.Json.JsonSerializer.Serialize(
-            viewModel.AvailableUnits.ToDictionary(unit => unit.Id, unit => (double)unit.Area));
-        ViewBag.LeaseMinimumUsageArea = operationalPolicyProvider.Current.LeaseMinimumUsageArea;
+        viewModel.AvailableSpaces = await leaseService.GetSelectableSpacesAsync(
+            false, BuildAccessScope(), viewModel.LeaseId > 0 ? viewModel.SpaceId : null);
+        viewModel.Tenants = await tenantService.GetAllAsync(new GetTenantsInput(BuildAccessScope()));
+        ViewBag.SpaceAreas = SerializeSpaceAreas(viewModel.AvailableSpaces);
     }
 
     private string CurrentActorUserId()
         => currentUserContext.UserId
             ?? throw new BusinessException("Oturum kullanıcısı bulunamadı.", ErrorType.Forbidden, "Lease.ActorNotFound");
 
-    private LeaseAccessScopeInput BuildAccessScope()
-        => permissionScopeProvider.GlobalAccess
-            ? new LeaseAccessScopeInput()
-            : new LeaseAccessScopeInput(
-                permissionScopeProvider.AccessiblePropertyIds,
-                permissionScopeProvider.AccessibleUnitIds);
+    private SpaceAccessScope BuildAccessScope()
+        => permissionScopeProvider.SpaceScope;
 
-    private async Task<LeaseAccessScopeInput> BuildCurrentUserAccessScopeAsync()
-    {
-        var scope = await permissionScopeCache.GetAsync(currentUserContext.UserId!);
-        return scope.GlobalAccess
-            ? new LeaseAccessScopeInput()
-            : new LeaseAccessScopeInput(scope.PropertyIds, scope.UnitIds);
-    }
-
-    private bool IsInScope(int propertyId, int unitId)
-        => permissionScopeProvider.GlobalAccess
-            || permissionScopeProvider.AccessiblePropertyIds.Contains(propertyId)
-            || permissionScopeProvider.AccessibleUnitIds.Contains(unitId);
+    private bool IsInScope(string spaceIdPath)
+        => permissionScopeProvider.SpaceScope.Includes(spaceIdPath);
 
     private static void PopulateRegenerationDefaults(LeaseDetailsViewModel viewModel)
     {

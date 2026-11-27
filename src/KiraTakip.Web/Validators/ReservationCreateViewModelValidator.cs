@@ -14,7 +14,7 @@ public class ReservationCreateViewModelValidator : IValidator<ReservationCreateV
             errors.Add(new ValidationError("Kiracı seçilmelidir.", nameof(input.TenantId)));
 
         ValidateCommon(
-            input.UnitId,
+            input.SpaceId,
             input.StartDate,
             input.EndDate,
             input.Title,
@@ -30,7 +30,7 @@ public class ReservationCreateViewModelValidator : IValidator<ReservationCreateV
     }
 
     internal static void ValidateCommon(
-        int? unitId,
+        int? spaceId,
         DateTime startDate,
         DateTime endDate,
         string? title,
@@ -39,8 +39,8 @@ public class ReservationCreateViewModelValidator : IValidator<ReservationCreateV
         IReadOnlyList<ReservationAttendeeInputViewModel> attendees,
         List<ValidationError> errors)
     {
-        if (unitId is null or <= 0)
-            errors.Add(new ValidationError("Taşınmaz birimi seçilmelidir.", nameof(ReservationCreateViewModel.UnitId)));
+        if (spaceId is null or <= 0)
+            errors.Add(new ValidationError("Alan seçilmelidir.", nameof(ReservationCreateViewModel.SpaceId)));
 
         if (startDate == default)
             errors.Add(new ValidationError("Başlangıç tarihi zorunludur.", nameof(ReservationCreateViewModel.StartDate)));
@@ -87,7 +87,7 @@ public class TenantReservationCreateViewModelValidator : IValidator<TenantReserv
     {
         var errors = new List<ValidationError>();
         ReservationCreateViewModelValidator.ValidateCommon(
-            input.UnitId,
+            input.SpaceId,
             input.StartDate,
             input.EndDate,
             input.Title,
@@ -111,7 +111,7 @@ public class ReservationEditViewModelValidator : IValidator<ReservationEditViewM
         if (input.RowVersion.Length == 0)
             errors.Add(new ValidationError("Rezervasyon sürüm bilgisi eksik. Sayfayı yenileyip tekrar deneyin.", nameof(input.RowVersion)));
         ReservationCreateViewModelValidator.ValidateCommon(
-            input.UnitId,
+            input.SpaceId,
             input.StartDate,
             input.EndDate,
             input.Title,

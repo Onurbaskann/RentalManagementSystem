@@ -4,7 +4,7 @@ public sealed record ChargeLineItemPaymentBalanceDto(
     int ChargeLineItemId,
     int ChargeId,
     int ChargeTypeId,
-    int UnitId,
+    int? SpaceId,
     int TenantId,
     string ChargeTypeName,
     string Description,

@@ -93,7 +93,7 @@ public class TenantUserController(
                 model.FullName,
                 model.RoleId,
                 currentUser.UserId!,
-                model.UnitIds.Count > 0 ? model.UnitIds : null));
+                model.SpaceIds.Count > 0 ? model.SpaceIds : null));
         }
         catch (BusinessValidationException exception)
         {
@@ -160,8 +160,8 @@ public class TenantUserController(
                 id,
                 model.FullName,
                 model.RoleId,
-                model.HasAccessToAllUnits,
-                model.UnitIds,
+                model.HasAccessToAllSpaces,
+                model.SpaceIds,
                 currentUser.UserId!,
                 GetAccessScope()));
         }
@@ -195,7 +195,7 @@ public class TenantUserController(
         model.Roles = data.Roles
             .Select(role => new RoleOptionViewModel { Id = role.Id, Name = role.Name })
             .ToList();
-        model.Units = data.Units;
+        model.Spaces = data.Spaces;
     }
 
     private async Task PopulateEditOptionsAsync(TenantUserEditViewModel model, string userId)
@@ -211,8 +211,8 @@ public class TenantUserController(
         model.Roles = data.Roles
             .Select(role => new RoleOptionViewModel { Id = role.Id, Name = role.Name })
             .ToList();
-        model.LeaseUnits = data.LeaseUnits;
-        model.ReservableUnits = data.ReservableUnits;
+        model.LeaseSpaces = data.LeaseSpaces;
+        model.ReservableSpaces = data.ReservableSpaces;
     }
 
     private static TenantUserEditViewModel ToEditViewModel(TenantUserEditDataDto data)
@@ -223,19 +223,14 @@ public class TenantUserController(
             Email = data.Email,
             IsActive = data.IsActive,
             RoleId = data.RoleId,
-            HasAccessToAllUnits = data.HasAccessToAllUnits,
-            UnitIds = data.SelectedUnitIds,
+            HasAccessToAllSpaces = data.HasAccessToAllSpaces,
+            SpaceIds = data.SelectedSpaceIds,
             Roles = data.Roles
                 .Select(role => new RoleOptionViewModel { Id = role.Id, Name = role.Name })
                 .ToList(),
-            LeaseUnits = data.LeaseUnits,
-            ReservableUnits = data.ReservableUnits
+            LeaseSpaces = data.LeaseSpaces,
+            ReservableSpaces = data.ReservableSpaces
         };
 
-    private ReservationAccessScopeInput GetAccessScope()
-        => permissionScopeProvider.GlobalAccess
-            ? new ReservationAccessScopeInput()
-            : new ReservationAccessScopeInput(
-                permissionScopeProvider.AccessiblePropertyIds,
-                permissionScopeProvider.AccessibleUnitIds);
+    private SpaceAccessScope GetAccessScope() => permissionScopeProvider.SpaceScope;
 }

@@ -40,7 +40,16 @@
             {
                 <li>Tarife: @rate</li>
             }
-            @if (!preview.HasAddress && !preview.AttributeNames.Any() && !preview.RateDescriptions.Any())
+            @foreach (var rule in preview.ReservationRuleDescriptions)
+            {
+                <li>Rezervasyon kuralı: @rule</li>
+            }
+            @foreach (var routing in preview.PaymentRoutingDescriptions)
+            {
+                <li>Ödeme yönlendirmesi: @routing</li>
+            }
+            @if (!preview.HasAddress && !preview.AttributeNames.Any() && !preview.RateDescriptions.Any()
+                 && !preview.ReservationRuleDescriptions.Any() && !preview.PaymentRoutingDescriptions.Any())
             {
                 <li class="text-muted list-none">Bağlı tanım yok.</li>
             }

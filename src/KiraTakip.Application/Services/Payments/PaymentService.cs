@@ -28,21 +28,18 @@ public class PaymentService(
     public Task<List<PaymentListItemDto>> GetAllAsync(GetPaymentsInput input)
         => paymentRepository.GetListAsync(
             input.ChargeId,
-            input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
+            input.Scope);
 
     public Task<PagedResult<PaymentListItemDto>> GetPagedAsync(GetPagedPaymentsInput input)
         => paymentRepository.GetPagedListAsync(
             input.Query,
             input.ChargeId,
-            input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
+            input.Scope);
 
     public Task<PaymentDetailDto?> GetByIdAsync(GetPaymentByIdInput input)
         => paymentRepository.GetDetailsAsync(
             input.PaymentId,
-            input.AccessScope.PropertyIds?.ToList(),
-            input.AccessScope.UnitIds?.ToList());
+            input.AccessScope);
 
     public async Task<ChargeDetailDto> GetCreationContextAsync(GetPaymentCreationContextInput input)
     {
@@ -91,7 +88,7 @@ public class PaymentService(
         paymentBusinessRules.EnsureLineItemPayable(balance);
         paymentBusinessRules.EnsureAdminAmountWithinAvailable(balance, input.Amount);
 
-        var resolved = await storeResolver.ResolveAsync(balance.ChargeTypeId, balance.UnitId);
+        var resolved = await storeResolver.ResolveAsync(balance.ChargeTypeId, balance.SpaceId);
 
         var payment = new PaymentAllocation
         {
@@ -123,8 +120,7 @@ public class PaymentService(
             new GetTenantChargeDetailsInput(
                 input.ChargeId,
                 input.TenantId,
-                input.AccessScope.PropertyIds,
-                input.AccessScope.UnitIds));
+                input.AccessScope));
         var eligibility = PaymentChargeEligibilityPolicy.CheckEligibility(
             charge.Status,
             charge.TotalAmount,
@@ -150,7 +146,7 @@ public class PaymentService(
         paymentBusinessRules.EnsureLineItemPayable(balance);
         paymentBusinessRules.EnsureTenantAmountWithinAvailable(balance, input.Amount);
 
-        var resolved = await storeResolver.ResolveAsync(balance.ChargeTypeId, balance.UnitId);
+        var resolved = await storeResolver.ResolveAsync(balance.ChargeTypeId, balance.SpaceId);
 
         var receiptType = Guard.NotFound(
             (await documentService.GetTypesAsync(
@@ -201,8 +197,7 @@ public class PaymentService(
         var payment = Guard.NotFound(
             await paymentRepository.GetForDecisionAsync(
                 input.PaymentId,
-                input.AccessScope.PropertyIds?.ToList(),
-                input.AccessScope.UnitIds?.ToList()),
+                input.AccessScope),
             "Ödeme bulunamadı.",
             "PAYMENT_NOT_FOUND");
         Guard.Conflict(
@@ -235,8 +230,7 @@ public class PaymentService(
         var payment = Guard.NotFound(
             await paymentRepository.GetForDecisionAsync(
                 input.PaymentId,
-                input.AccessScope.PropertyIds?.ToList(),
-                input.AccessScope.UnitIds?.ToList()),
+                input.AccessScope),
             "Ödeme bulunamadı.",
             "PAYMENT_NOT_FOUND");
         Guard.Conflict(
@@ -283,14 +277,11 @@ public class PaymentService(
 
     private static bool IsOutsideScope(
         ChargeDetailDto charge,
-        PaymentAccessScopeInput accessScope)
+        SpaceAccessScope accessScope)
     {
-        if (accessScope.PropertyIds == null && accessScope.UnitIds == null)
+        if (accessScope.HasGlobalAccess)
             return false;
 
-        return charge.PropertyId is not int propertyId
-            || charge.UnitId is not int unitId
-            || (accessScope.PropertyIds?.Contains(propertyId) != true
-                && accessScope.UnitIds?.Contains(unitId) != true);
+        return !charge.SpacePaths.Any(accessScope.Includes);
     }
 }

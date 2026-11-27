@@ -21,19 +21,16 @@ public class ManualChargeController(
         string? relation,
         int? leaseId)
     {
-        var accessScope = GetAccessScope();
+        var accessScope = permissionScopeProvider.SpaceScope;
 
         var manualCharges = await manualChargeService.GetPageAsync(new GetManualChargesPageInput(
             query,
-            accessScope.PropertyIds,
+            accessScope,
             relation,
-            leaseId,
-            accessScope.UnitIds));
+            leaseId));
 
         ViewBag.CancelledCount = await manualChargeService.GetCancelledCountAsync(
-            new GetCancelledManualChargeCountInput(
-                accessScope.PropertyIds,
-                accessScope.UnitIds));
+            new GetCancelledManualChargeCountInput(accessScope));
 
         ViewBag.Query = query;
         ViewBag.Status = query.Status ?? "tum";
@@ -57,7 +54,7 @@ public class ManualChargeController(
             {
                 viewModel.LeaseId = lease.Id;
                 viewModel.TenantId = lease.TenantId;
-                viewModel.UnitId = lease.UnitId;
+                viewModel.SpaceId = lease.SpaceId;
             }
         }
 
@@ -80,7 +77,7 @@ public class ManualChargeController(
             await manualChargeService.CreateAsync(new CreateManualChargeInput(
                 viewModel.TenantId,
                 viewModel.LeaseId,
-                viewModel.UnitId,
+                viewModel.SpaceId,
                 viewModel.ChargeTypeId,
                 viewModel.Description,
                 viewModel.Amount,
@@ -88,7 +85,7 @@ public class ManualChargeController(
                 viewModel.VatRate,
                 viewModel.DueDate,
                 viewModel.Note,
-                GetAccessScope()));
+                permissionScopeProvider.SpaceScope));
         }
         catch (BusinessValidationException exception)
         {
@@ -118,28 +115,19 @@ public class ManualChargeController(
         await manualChargeService.CancelAsync(new CancelManualChargeInput(
             id,
             viewModel.Reason,
-            GetAccessScope()));
+            permissionScopeProvider.SpaceScope));
 
         return RedirectToAction(nameof(Index));
     }
 
     private async Task PopulateOptionsAsync(CreateManualChargeViewModel viewModel)
     {
-        var accessScope = GetAccessScope();
+        var accessScope = permissionScopeProvider.SpaceScope;
 
         viewModel.ActiveLeases = await manualChargeService.GetActiveLeasesAsync(
             new GetActiveManualChargeLeasesInput(accessScope));
         viewModel.ChargeTypes = await manualChargeService.GetManualChargeTypesAsync();
-        viewModel.Units = await manualChargeService.GetAllUnitsAsync(
-            new GetManualChargeUnitsInput(
-                accessScope.PropertyIds,
-                accessScope.UnitIds));
+        viewModel.Spaces = await manualChargeService.GetActiveSpacesAsync(
+            new GetManualChargeSpacesInput(accessScope));
     }
-
-    private ManualChargeAccessScopeInput GetAccessScope()
-        => permissionScopeProvider.GlobalAccess
-            ? new ManualChargeAccessScopeInput()
-            : new ManualChargeAccessScopeInput(
-                permissionScopeProvider.AccessiblePropertyIds,
-                permissionScopeProvider.AccessibleUnitIds);
 }

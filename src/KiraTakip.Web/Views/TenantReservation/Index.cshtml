@@ -35,8 +35,7 @@
         <table>
             <thead>
                 <tr>
-                    <th>Birim</th>
-                    <th>Taşınmaz</th>
+                    <th>Alan</th>
                     <th>Başlangıç</th>
                     <th>Bitiş</th>
                     <th>Tutar</th>
@@ -55,8 +54,7 @@
                     <tr data-href="@detailsUrl"
                         class="cursor-pointer hover:bg-slate-50 transition-colors"
                         @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
-                        <td class="font-semibold">@reservation.UnitName</td>
-                        <td class="text-sm text-muted">@reservation.PropertyName</td>
+                        <td class="font-semibold">@reservation.SpaceName</td>
                         <td class="text-sm">@reservation.StartDate.ToString("dd.MM.yyyy HH:mm")</td>
                         <td class="text-sm">@reservation.EndDate.ToString("dd.MM.yyyy HH:mm")</td>
                         <td class="text-sm font-medium">@reservation.TotalAmount.ToString("N2") ₺</td>

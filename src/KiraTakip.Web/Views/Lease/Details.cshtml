@@ -16,13 +16,13 @@
     {
         LeaseStatus.Terminated => "badge-gecmis",
         LeaseStatus.Ended => "badge-bos",
-        _ => Model.UnitStatus == OccupancyStatus.ExpiringSoon ? "badge-surek" : "badge-kirali"
+        _ => Model.SpaceStatus == OccupancyStatus.ExpiringSoon ? "badge-surek" : "badge-kirali"
     };
     string sozlesmeDurumLabel = s.Status switch
     {
         LeaseStatus.Terminated => "Feshedildi",
         LeaseStatus.Ended => "Sona Erdi",
-        _ => Model.UnitStatus == OccupancyStatus.ExpiringSoon ? "Süresi Dolmak Üzere" : "Aktif"
+        _ => Model.SpaceStatus == OccupancyStatus.ExpiringSoon ? "Süresi Dolmak Üzere" : "Aktif"
     };
 
     string gunBadgeCls = Model.RemainingDays <= 10 ? "day-badge-red" : Model.RemainingDays <= 30 ? "day-badge-amber" : "day-badge-green";
@@ -32,13 +32,6 @@
     bool canExtend = await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.Extend);
     bool canTerminate = await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.Terminate);
     bool canRegenerate = await PermissionService.HasPermissionAsync(PermissionCatalog.Charge.Regenerate);
-    var areaInfo = Model.AllocatedAreaInfo;
-    bool showAreaCard = areaInfo != null;
-    decimal rentedAreaValue = areaInfo?.RentedArea ?? 0m;
-    decimal allocatedAreaValue = areaInfo?.AllocatedArea ?? 0m;
-    decimal minimumAreaValue = areaInfo?.MinimumUsageArea ?? 0m;
-    bool canEditArea = areaInfo is { IsEditable: true }
-        && await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.UpdateAllocatedArea);
 
     decimal aylikBedel = Model.MonthlyAmount;
     decimal kdvTutari = s.IsVatApplied ? aylikBedel * Model.EffectiveVatRate / 100 : 0;
@@ -92,13 +85,12 @@
     fesihNedeniSecim: '' ,
     showYenidenUret: false,
     showVade: false,
-    showAlan: false,
-    alanDegeri: @((Model.AllocatedAreaInfo?.AllocatedArea ?? 0m).ToString(System.Globalization.CultureInfo.InvariantCulture)),
+
     vadeKuraliTipi: @((int)s.DueDateRuleType),
     vadeGunu: @s.DueDay,
     tufeEnabled: false,
-    birimYuzolcumu: @s.UnitArea.ToString(System.Globalization.CultureInfo.InvariantCulture),
-    sozlesmeBirimId: @s.UnitId,
+    spaceArea: @s.SpaceArea.ToString(System.Globalization.CultureInfo.InvariantCulture),
+    sozlesmeSpaceId: @s.SpaceId,
     sozlesmeKiraciId: @s.TenantId,
     leaseId: @s.Id,
     tarifeYenidenUret: false,
@@ -169,7 +161,7 @@
     const kalemler = hedef === 'yenidenUret' ? 'yenidenUretKalemler' : 'uzatKalemler';
     if (this[yuklendi]) return;
     const dateParam = hedef === 'yenidenUret' ? this.yenidenUretBaslangicTarihi : '@DateTime.Today.ToString("yyyy-MM-dd")';
-    const res = await fetch(`/Lease/GetDefaultLineItems?unitId=${this.sozlesmeBirimId}&tenantId=${this.sozlesmeKiraciId}&startDate=${dateParam}&leaseId=${this.leaseId}`);
+    const res = await fetch(`/Lease/GetDefaultLineItems?spaceId=${this.sozlesmeSpaceId}&tenantId=${this.sozlesmeKiraciId}&startDate=${dateParam}&leaseId=${this.leaseId}`);
     const data = await res.json();
     this[kalemler] = data.map(k => ({
     ...k,
@@ -185,7 +177,7 @@
     this[yuklendi] = true;
     },
     hesaplaPopupTutar(k) {
-    return k.hesaplamaYontemi == 2 ? k.birimDeger * this.birimYuzolcumu : k.birimDeger;
+    return k.hesaplamaYontemi == 2 ? k.birimDeger * this.spaceArea : k.birimDeger;
     },
     kdvEnabled: @(s.IsVatApplied ? "true" : "false"),
     tufeOrani: 25,
@@ -310,18 +302,9 @@
 
             <!-- Sağ: Taşınmaz + Sözleşme Durumu -->
             <div class="text-right">
-                <div class="text-[11.5px] font-semibold text-muted mb-2.5">Taşınmaz</div>
-                <div class="font-display text-xl font-bold mb-1">@s.PropertyName</div>
-                @if (s.UnitStructure == UnitStructure.MultipleUnits)
-                {
-                    <div class="text-sm text-muted mb-1">Birim @s.UnitNo@(s.UnitFloorNo.HasValue ? $" • {s.UnitFloorNo}. Kat" : "") • @s.UnitArea.M2()</div>
-                    <div class="text-[13px] text-muted mb-2.5">@s.PropertyDistrict, @s.PropertyCity</div>
-                }
-                else
-                {
-                    <div class="text-sm text-muted mb-2.5">@s.UnitName • @s.PropertyDistrict, @s.PropertyCity</div>
-                }
-                <div class="text-[13px] text-muted mb-2.5">@FormatHelpers.UnitSnapshotText(s.UnitAreaSnapshot, s.UnitTypeNameSnapshot, s.UnitTypeUsageSnapshot, s.RentalModeSnapshot)</div>
+                <div class="text-[11.5px] font-semibold text-muted mb-2.5">Alan</div>
+                <div class="font-display text-xl font-bold mb-1">@s.SpaceName</div>
+                <div class="text-[13px] text-muted mb-2.5">@s.SpacePath • @s.SpaceArea.M2()</div>
                 <div class="mb-3">
                     <span class="badge @sozlesmeDurumBadgeCls text-[12.5px] px-3.5 py-1.5">@sozlesmeDurumLabel</span>
                     @if (s.IsRentFree)
@@ -329,7 +312,6 @@
                         <span class="badge bg-emerald-100 text-emerald-800 text-[12.5px] px-3.5 py-1.5 ml-1">Bedelsiz</span>
                     }
                 </div>
-                <a href="/Property/Details/@s.PropertyId.ToHashId()" class="btn btn-sm btn-secondary">Taşınmaz Detayı</a>
             </div>
         </div>
     </div>
@@ -506,68 +488,6 @@
         }
     </div>
 
-    @if (showAreaCard)
-    {
-        <!-- Fiziksel Alan -->
-        <div class="card mb-4">
-            <div class="flex items-center justify-between">
-                <div class="card-title">Fiziksel Alan</div>
-                @if (canEditArea)
-                {
-                    <button class="btn btn-sm btn-secondary" type="button" @@click="showAlan = true">Düzenle</button>
-                }
-            </div>
-            <div class="mt-2.5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                    <div class="text-[11.5px] text-muted">Kiralanan Alan</div>
-                    <div class="text-[15px] font-semibold mt-0.5">@rentedAreaValue.M2()</div>
-                </div>
-                <div>
-                    <div class="text-[11.5px] text-muted">Fiziksel Alan</div>
-                    <div class="text-[15px] font-semibold mt-0.5">@allocatedAreaValue.M2()</div>
-                </div>
-                <div>
-                    <div class="text-[11.5px] text-muted">Hesaplama</div>
-                    <div class="text-[15px] font-semibold mt-0.5">@(areaInfo!.Mode == LeaseAreaMode.Automatic ? "Otomatik" : "Manuel")</div>
-                </div>
-            </div>
-            @if (areaInfo.History.Count > 0)
-            {
-                <div class="mt-4 overflow-hidden rounded-lg border border-slate-200 bg-white">
-                    <table class="w-full text-xs">
-                        <thead class="bg-slate-50 border-b border-slate-200">
-                            <tr>
-                                <th class="text-left px-3 py-2 font-semibold text-muted">Geçerlilik</th>
-                                <th class="text-left px-3 py-2 font-semibold text-muted">Fiziksel Alan</th>
-                                <th class="text-left px-3 py-2 font-semibold text-muted">Mod</th>
-                                <th class="text-left px-3 py-2 font-semibold text-muted">Neden</th>
-                                <th class="text-left px-3 py-2 font-semibold text-muted">Kayıt</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var h in areaInfo.History.OrderByDescending(item => item.EffectiveFrom).ThenByDescending(item => item.CreatedAt))
-                            {
-                                <tr class="border-b border-slate-100 last:border-0">
-                                    <td class="px-3 py-2">@h.EffectiveFrom.Tarih()</td>
-                                    <td class="px-3 py-2 font-medium">@h.AllocatedArea.M2()</td>
-                                    <td class="px-3 py-2">@(h.Mode == LeaseAreaMode.Automatic ? "Otomatik" : "Manuel")</td>
-                                    <td class="px-3 py-2">@(h.Reason switch
-                                    {
-                                        LeaseAreaChangeReason.Activation => "Aktivasyon",
-                                        LeaseAreaChangeReason.CapacityChange => "Kontenjan değişikliği",
-                                        LeaseAreaChangeReason.ManualEdit => "Elle düzenleme",
-                                        _ => "Taşıma"
-                                    })</td>
-                                    <td class="px-3 py-2 text-muted">@h.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm") · @h.CreatedBy</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-        </div>
-    }
-
     <!-- Aylık Tahakkuk Kalemleri -->
     @if (Model.CurrentLineItems.Any())
     {
@@ -698,51 +618,23 @@
             <div class="card">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <div class="detail-label mb-3">Birim</div>
+                        <div class="detail-label mb-3">Alan (sözleşme anı)</div>
                         <div class="flex flex-col gap-2.5">
                             <div>
-                                <div class="text-xs text-muted">Ad</div>
-                                <div class="text-[15px] font-semibold">@s.UnitName</div>
+                                <div class="text-xs text-muted">Yol</div>
+                                <div class="text-[15px] font-semibold">@s.SpacePath</div>
                             </div>
                             <div>
-                                <div class="text-xs text-muted">Yüzölçüm</div>
-                                <div class="text-[15px] font-semibold">@s.UnitArea.ToString("N0") m²</div>
+                                <div class="text-xs text-muted">Alan yüzölçümü</div>
+                                <div class="text-[15px] font-semibold">@s.SpaceArea.ToString("N0") m²</div>
                             </div>
                             <div>
                                 <div class="text-xs text-muted">Tip</div>
-                                <div class="text-[15px] font-semibold">
-                                    @if (s.UnitStructure == UnitStructure.MultipleUnits)
-                                    {
-                                        <span>Birim @s.UnitNo</span>
-                                        if (s.UnitFloorNo.HasValue)
-                                        {
-
-                                            <span class="text-[13px] font-normal text-muted"> • @s.UnitFloorNo. Kat</span>
-                                        }
-                                    }
-                                    else
-                                    {
-
-                                        <span>Komple</span>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="detail-label mb-3">Taşınmaz</div>
-                        <div class="flex flex-col gap-2.5">
-                            <div>
-                                <div class="text-xs text-muted">Ad</div>
-                                <div class="text-[15px] font-semibold">@s.PropertyName</div>
+                                <div class="text-[15px] font-semibold">@(s.Area?.SnapshotTypeName)</div>
                             </div>
                             <div>
-                                <div class="text-xs text-muted">Konum</div>
-                                <div class="text-[15px] font-semibold">@s.PropertyNeighborhood, @s.PropertyDistrict / @s.PropertyCity</div>
-                            </div>
-                            <div>
-                                <div class="text-xs text-muted">Adres</div>
-                                <div class="text-sm">@s.PropertyAddress</div>
+                                <div class="text-xs text-muted">Kiralanan alan</div>
+                                <div class="text-[15px] font-semibold">@((s.RentedArea ?? s.SpaceArea).M2())</div>
                             </div>
                         </div>
                     </div>
@@ -842,7 +734,7 @@
                                             <tr data-href="@ksDetailsUrl"
                                                 class="cursor-pointer hover:bg-slate-50 transition-colors"
                                                 @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
-                                                <td class="font-semibold"><a href="@ksDetailsUrl" class="cell-link">@ks.UnitName</a></td>
+                                                <td class="font-semibold"><a href="@ksDetailsUrl" class="cell-link">@ks.SpacePath</a></td>
                                                 <td>@ks.StartDate.ToString("dd.MM.yyyy")</td>
                                                 <td>@ks.EndDate.ToString("dd.MM.yyyy")</td>
                                                 <td class="num">@(ks.IsRentFree ? "Bedelsiz" : $"{ks.MonthlyAmount:N0} ₺")</td>
@@ -1095,8 +987,7 @@
                                                                     {
                                                                         LineItemSourceType.UndefinedRate => "badge-bos",
                                                                         LineItemSourceType.LeaseRateOverride => "badge-surek",
-                                                                        LineItemSourceType.UnitRateOverride => "badge-kirali",
-                                                                        LineItemSourceType.PropertyRateOverride => "badge-bireysel",
+                                                                        LineItemSourceType.SpaceRate => "badge-kirali",
                                                                         LineItemSourceType.RateSchedule => "badge-bos",
                                                                         LineItemSourceType.ManualInput => "badge-surek",
                                                                         LineItemSourceType.ReservationRule => "badge-bireysel",
@@ -1106,8 +997,7 @@
                                                                     {
                                                                         LineItemSourceType.UndefinedRate => "Tanımsız Tarife",
                                                                         LineItemSourceType.LeaseRateOverride => "Sözleşme Tarifesi",
-                                                                        LineItemSourceType.UnitRateOverride => "Birim Tarifesi",
-                                                                        LineItemSourceType.PropertyRateOverride => "Taşınmaz Tarifesi",
+                                                                        LineItemSourceType.SpaceRate => "Alan Tarifesi",
                                                                         LineItemSourceType.RateSchedule => "Genel Tarife",
                                                                         LineItemSourceType.ManualInput => "Manuel Giriş",
                                                                         LineItemSourceType.ReservationRule => "Rezervasyon Kuralı",
@@ -1420,7 +1310,7 @@
                 </div>
                 <div class="bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5 mb-5 text-[12.5px] text-slate-600 space-y-1">
                     <div class="flex justify-between"><span class="text-muted">Kiracı</span><span class="font-semibold">@s.TenantDisplayName</span></div>
-                    <div class="flex justify-between"><span class="text-muted">Birim</span><span class="font-semibold">@s.UnitName</span></div>
+                    <div class="flex justify-between"><span class="text-muted">Alan</span><span class="font-semibold">@s.SpacePath</span></div>
                     <div class="flex justify-between"><span class="text-muted">Neden</span><span class="font-semibold" x-text="fesihNedeniSecim"></span></div>
                 </div>
                 <div class="flex gap-2.5">
@@ -1596,45 +1486,6 @@
         </div>
 
     </div>
-
-    @if (canEditArea)
-    {
-        <!-- MODAL: Fiziksel m² Düzenle -->
-        <div x-show="showAlan" x-cloak
-             class="fixed inset-0 bg-black/45 z-[1000] flex items-center justify-center p-5"
-            @@click.self="showAlan = false">
-            <div class="bg-white rounded-2xl w-full max-w-[480px] p-7">
-                <div class="flex justify-between items-center mb-5">
-                    <div class="text-lg font-bold">Fiziksel m² Düzenle</div>
-                    <button @@click="showAlan = false" class="bg-none border-none cursor-pointer text-xl text-muted">✕</button>
-                </div>
-
-                <div class="bg-amber-50 border border-amber-200 rounded-lg px-3.5 py-2.5 mb-5 text-[13px] text-amber-800">
-                    Kaydedince hesaplama modu <strong>Manuel</strong> olur.
-                </div>
-
-                <form method="post" action="/Lease/UpdateAllocatedArea/@s.Id.ToHashId()">
-                    @Html.AntiForgeryToken()
-
-                    <div class="form-group">
-                        <label class="form-label">Fiziksel m² *</label>
-                        <input type="number" name="AllocatedArea" class="form-control" step="0.01"
-                               min="@minimumAreaValue.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                               max="@rentedAreaValue.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                               x-model.number="alanDegeri" required />
-                        <div class="text-[11px] text-muted mt-1.5">
-                            @minimumAreaValue.M2() ile @rentedAreaValue.M2() (kiralanan alan) arasında olmalıdır.
-                        </div>
-                    </div>
-
-                    <div class="flex gap-2.5 mt-1">
-                        <button type="submit" class="btn btn-primary">Kaydet</button>
-                        <button type="button" class="btn btn-secondary" @@click="showAlan = false">İptal</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    }
 
     <!-- MODAL: Vade Kuralını Güncelle -->
     <div x-show="showVade" x-cloak

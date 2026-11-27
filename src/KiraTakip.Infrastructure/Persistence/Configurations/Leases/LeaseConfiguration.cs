@@ -8,10 +8,6 @@ internal sealed class LeaseConfiguration : IEntityTypeConfiguration<Lease>
 {
     public void Configure(EntityTypeBuilder<Lease> entity)
     {
-        entity.Property(s => s.UnitTypeNameSnapshot).IsRequired().HasMaxLength(100);
-        entity.Property(s => s.UnitAreaSnapshot).HasPrecision(18, 2);
-        entity.Property(s => s.UnitTypeUsageSnapshot).HasComment(EnumComment.For<UnitTypeUsage>());
-        entity.Property(s => s.RentalModeSnapshot).HasComment(EnumComment.For<UnitRentalMode>());
         entity.HasOne(s => s.LeaseGroup).WithMany(g => g.Leases)
               .HasForeignKey(s => s.LeaseGroupId).OnDelete(DeleteBehavior.Restrict);
         entity.Property(s => s.LeaseNo).HasMaxLength(20);
@@ -20,17 +16,9 @@ internal sealed class LeaseConfiguration : IEntityTypeConfiguration<Lease>
               .HasDatabaseName("UX_Sozlesmeler_SozlesmeNo_Silinmemis")
               .HasFilter("[IsDeleted] = 0");
         entity.Property(s => s.Status).HasComment(EnumComment.For<LeaseStatus>());
-        entity.HasOne(s => s.Unit)
-              .WithMany(b => b.Leases)
-              .OnDelete(DeleteBehavior.Restrict);
         entity.HasOne(s => s.Tenant)
               .WithMany()
               .OnDelete(DeleteBehavior.Restrict);
-        // Not: "Bir birimde tek devam-eden aktif sözleşme" kuralı tarih koşulu içerdiğinden
-        // filtered index ile ifade edilemez (SQL Server GETDATE() destegi yok);
-        // kontrol uygulama katmanında yapılır (LeaseService, tarih aralığı çakışması).
-        entity.HasIndex(s => s.UnitId, "IX_Lease_UnitId")
-              .HasDatabaseName("IX_Sozlesmeler_BirimId");
         entity.HasIndex(s => s.TenantId)
               .HasDatabaseName("IX_Sozlesmeler_KiraciId_Aktif")
               .HasFilter("[IsDeleted] = 0");

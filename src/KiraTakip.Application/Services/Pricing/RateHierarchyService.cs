@@ -1,7 +1,8 @@
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Interfaces.Pricing;
-using KiraTakip.Repositories.Interfaces.Properties;
+using KiraTakip.Repositories.Interfaces.Spaces;
+using KiraTakip.Domain.Spaces;
 using KiraTakip.Repositories.Interfaces.Reservations;
 using KiraTakip.Services.Interfaces.Pricing;
 using KiraTakip.Models.Dtos.RateHierarchy;
@@ -9,71 +10,73 @@ using KiraTakip.Models.Dtos.RateHierarchy;
 namespace KiraTakip.Services.Pricing;
 
 public class RateHierarchyService(
-    IPropertyRateOverrideRepository propertyRateRepository,
-    IUnitRateRepository unitRateRepository,
+    ISpaceRepository spaceRepository,
+    ISpaceRateRepository spaceRateRepository,
     IRateScheduleRepository rateScheduleRepository,
-    IReservationRateOverrideRepository reservationRateRepository,
-    IUnitRepository unitRepository) : IRateHierarchyService
+    IReservationRateOverrideRepository reservationRateRepository) : IRateHierarchyService
 {
 
     public async Task<ParentRateCardDto?> GetParentForAsync(GetParentRateInput input)
     {
         int targetYear = input.Year ?? DateTime.Now.Year;
 
-        // Lease katmanı: önce UnitRate'e bak
-        if (input.Layer == RateHierarchyLayer.Lease && input.UnitId.HasValue)
+        // Alan zinciri: Lease katmanında alanın kendisi + ataları, Space katmanında yalnız ataları (yakından uzağa).
+        if (input.SpaceId.HasValue)
         {
-            var unitRows = await unitRateRepository.GetRowsByUnitAsync(input.UnitId.Value, input.TenantCategoryId);
-            if (unitRows.Count > 0)
-                return new ParentRateCardDto(
-                    "Birim Tarifesi",
-                    null,
-                    unitRows);
+            var paths = await spaceRepository.GetPathsAsync([input.SpaceId.Value]);
+            if (paths.Count > 0)
+            {
+                var ancestors = SpaceTreePolicy.GetAncestorIds(paths[0]).Reverse().ToList();
+                var chain = input.Layer == RateHierarchyLayer.Lease
+                    ? ancestors.Prepend(input.SpaceId.Value).ToList()
+                    : ancestors;
 
-            if (!input.PropertyId.HasValue)
-                input = input with { PropertyId = await unitRepository.GetPropertyIdAsync(input.UnitId.Value) };
-        }
+                if (chain.Count > 0)
+                {
+                    var rows = await spaceRateRepository.GetParentRowsAsync(chain, input.TenantCategoryId);
+                    foreach (var spaceId in chain)
+                    {
+                        var hit = rows.Where(r => r.SpaceId == spaceId).Select(r => r.Row).ToList();
+                        if (hit.Count == 0) continue;
 
-        // Unit veya Lease katmanı: TasinmazTarife'a bak
-        if (input.Layer is RateHierarchyLayer.Unit or RateHierarchyLayer.Lease
-            && input.PropertyId.HasValue)
-        {
-            var rates = await propertyRateRepository.GetForHiyerarsiAsync(
-                input.PropertyId.Value,
-                input.TenantCategoryId);
-
-            if (rates.Count > 0)
-                return new ParentRateCardDto(
-                    "Taşınmaz Tarifesi",
-                    null,
-                    rates.Select(rate => new ParentRateRowDto(
-                        rate.TenantCategory.Name,
-                        rate.ChargeType.Name,
-                        rate.CalculationMethod,
-                        rate.UnitValue,
-                        rate.KdvRate)).ToList());
+                        var space = await spaceRepository.GetNoTrackingAsync(spaceId);
+                        return new ParentRateCardDto(
+                            space == null ? "Alan Tarifesi" : $"Alan Tarifesi - {space.Name}",
+                            null,
+                            hit);
+                    }
+                }
+            }
         }
 
         // Her katman için sonuç: Genel Tarife
-        var rows = await rateScheduleRepository.GetRowsByYearAndCategoryAsync(
+        var generalRows = await rateScheduleRepository.GetRowsByYearAndCategoryAsync(
             targetYear,
             input.TenantCategoryId);
 
         return new ParentRateCardDto(
             $"Genel Tarife - {targetYear}",
             null,
-            rows);
+            generalRows);
     }
 
-    public async Task<ParentReservationRateOverrideCardDto?> GetReservationParentAsync(
-        GetParentReservationRateInput input)
+    public async Task<ParentReservationRateOverrideCardDto?> GetReservationParentAsync(int spaceId)
     {
-        int targetYear = input.Year ?? DateTime.Now.Year;
-
-        var rows = await reservationRateRepository.GetGeneralRowsAsync(targetYear);
+        var rule = await reservationRateRepository.GetInheritedForSpaceAsync(spaceId);
+        IReadOnlyList<ParentReservationRateOverrideRowDto> rows = rule == null
+            ? []
+            :
+            [
+                new ParentReservationRateOverrideRowDto(
+                    rule.Space.Name,
+                    rule.FreeDurationMinutes,
+                    rule.BillingPeriodMinutes,
+                    rule.PeriodRate,
+                    rule.KdvRate)
+            ];
 
         return new ParentReservationRateOverrideCardDto(
-            $"Rezervasyon Tarifesi - {targetYear}",
+            "Rezervasyon Kuralı (en yakın üst alan)",
             null,
             rows);
     }

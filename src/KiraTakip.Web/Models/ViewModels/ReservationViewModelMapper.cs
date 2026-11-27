@@ -8,9 +8,9 @@ public static class ReservationViewModelMapper
 {
     public static CalculateReservationInput ToInput(
         this ReservationCalculationQueryViewModel viewModel,
-        ReservationAccessScopeInput accessScope)
+        SpaceAccessScope accessScope)
         => new(
-            viewModel.UnitId,
+            viewModel.SpaceId,
             DateTime.Parse(viewModel.Start!),
             DateTime.Parse(viewModel.End!),
             accessScope);
@@ -18,10 +18,10 @@ public static class ReservationViewModelMapper
     public static CreateReservationRequestInput ToInput(
         this ReservationCreateViewModel viewModel,
         ICurrentUserContext currentUser,
-        ReservationAccessScopeInput accessScope,
+        SpaceAccessScope accessScope,
         bool createAndApprove)
         => MapCreate(
-            viewModel.UnitId!.Value,
+            viewModel.SpaceId!.Value,
             viewModel.TenantId!.Value,
             viewModel.StartDate,
             viewModel.EndDate,
@@ -37,9 +37,9 @@ public static class ReservationViewModelMapper
     public static CreateReservationRequestInput ToInput(
         this TenantReservationCreateViewModel viewModel,
         ICurrentUserContext currentUser,
-        ReservationAccessScopeInput accessScope)
+        SpaceAccessScope accessScope)
         => MapCreate(
-            viewModel.UnitId!.Value,
+            viewModel.SpaceId!.Value,
             currentUser.TenantId!.Value,
             viewModel.StartDate,
             viewModel.EndDate,
@@ -53,7 +53,7 @@ public static class ReservationViewModelMapper
             accessScope);
 
     private static CreateReservationRequestInput MapCreate(
-        int unitId,
+        int spaceId,
         int tenantId,
         DateTime startDate,
         DateTime endDate,
@@ -64,9 +64,9 @@ public static class ReservationViewModelMapper
         IReadOnlyList<ReservationAttendeeInputViewModel> attendees,
         bool createAndApprove,
         ICurrentUserContext currentUser,
-        ReservationAccessScopeInput accessScope)
+        SpaceAccessScope accessScope)
         => new(
-            unitId,
+            spaceId,
             tenantId,
             startDate,
             endDate,
@@ -91,11 +91,11 @@ public static class ReservationViewModelMapper
     public static UpdateReservationInput ToInput(
         this ReservationEditViewModel viewModel,
         ICurrentUserContext currentUser,
-        ReservationAccessScopeInput accessScope,
+        SpaceAccessScope accessScope,
         bool canOverrideTimeRestriction)
         => new(
             viewModel.Id,
-            viewModel.UnitId!.Value,
+            viewModel.SpaceId!.Value,
             viewModel.TenantId!.Value,
             viewModel.StartDate,
             viewModel.EndDate,

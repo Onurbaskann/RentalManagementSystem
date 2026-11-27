@@ -7,12 +7,10 @@ using KiraTakip.Models.Dtos.Invitation;
 using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Repositories.Interfaces.Identity;
-using KiraTakip.Repositories.Interfaces.Properties;
 using KiraTakip.Services.Interfaces.Auditing;
 using KiraTakip.Services.Interfaces.Identity;
-using KiraTakip.Services.Interfaces.Properties;
+using KiraTakip.Services.Interfaces.Spaces;
 using KiraTakip.Models.Dtos.AdminUser;
-using KiraTakip.Models.Dtos.Property;
 
 namespace KiraTakip.Services.Identity;
 
@@ -21,11 +19,10 @@ public class AdminUserService(
     IRoleRepository roleRepository,
     IInvitationRepository invitationRepository,
     IUserRoleRepository userRoleRepository,
-    IUnitRepository unitRepository,
     IUserPermissionScopeRepository userPermissionScopeRepository,
     IUnitOfWork unitOfWork,
     IApplicationUserManager userManager,
-    IPropertyService propertyService,
+    ISpaceService spaceService,
     IPermissionService permissionService,
     IUserRoleService userRoleService,
     IInvitationService invitationService,
@@ -98,16 +95,9 @@ public class AdminUserService(
     {
         var roles = await roleRepository.GetActiveInternalRoleOptionsAsync();
 
-        var properties = (await propertyService.GetAllAsync(new GetPropertiesInput()))
-            .Select(property => new AdminUserPropertyOptionDto(
-                property.Id,
-                property.Name,
-                $"{property.City} / {property.District}"))
-            .ToList();
+        var spaces = await spaceService.GetActiveOptionsAsync();
 
-        var units = await unitRepository.GetAdminUserOptionsAsync();
-
-        return new AdminUserFormOptionsDto(roles, properties, units);
+        return new AdminUserFormOptionsDto(roles, spaces);
     }
 
     public async Task<AdminUserEditDataDto?> GetEditDataAsync(GetAdminUserEditDataInput input)
@@ -116,10 +106,8 @@ public class AdminUserService(
         if (!IsManagedInternalUser(user)) return null;
         var managedUser = user!;
 
-        var selectedPropertyIds = await userPermissionScopeRepository
-            .GetScopeIdsAsync(managedUser.Id, ScopeType.Property);
-        var selectedUnitIds = await userPermissionScopeRepository
-            .GetScopeIdsAsync(managedUser.Id, ScopeType.Unit);
+        var selectedSpaceIds = await userPermissionScopeRepository
+            .GetScopeIdsAsync(managedUser.Id, ScopeType.Space);
         var roleId = await userRoleRepository.GetFirstRoleIdAsync(managedUser.Id) ?? 0;
 
         return new AdminUserEditDataDto(
@@ -129,9 +117,8 @@ public class AdminUserService(
             roleId,
             managedUser.IsActive,
             managedUser.Id == input.CurrentUserId,
-            managedUser.TumTasinmazlaraErisim,
-            selectedPropertyIds,
-            selectedUnitIds,
+            managedUser.HasAccessToAllSpaces,
+            selectedSpaceIds,
             await GetFormOptionsAsync());
     }
 
@@ -154,20 +141,19 @@ public class AdminUserService(
             "Kendi rolünüzü değiştiremezsiniz.",
             nameof(input.RoleId));
 
-        var (propertyScopeIds, unitScopeIds) = await GetValidatedScopeIdsAsync(
-            input.HasAccessToAllProperties,
-            input.PropertyIds,
-            input.UnitIds);
+        var spaceScopeIds = await GetValidatedScopeIdsAsync(
+            input.HasAccessToAllSpaces,
+            input.SpaceIds);
 
         await userRoleService.RemoveAllRolesAsync(user.Id);
         await userRoleService.AddRoleByRolIdAsync(user.Id, input.RoleId, input.CurrentUserId);
         await permissionService.SetUserPermissionsAsync(user.Id, Array.Empty<string>());
 
         user.AdSoyad = input.FullName;
-        user.TumTasinmazlaraErisim = input.HasAccessToAllProperties;
+        user.HasAccessToAllSpaces = input.HasAccessToAllSpaces;
         await userManager.UpdateAsync(user);
 
-        await SetScopeAsync(user.Id, propertyScopeIds, unitScopeIds);
+        await SetScopeAsync(user.Id, spaceScopeIds);
     }
 
     [Transactional]
@@ -205,21 +191,18 @@ public class AdminUserService(
             nameof(input.RoleId),
             "Geçersiz rol seçildi.");
 
-        var (validatedPropertyIds, validatedUnitIds) = await GetValidatedScopeIdsAsync(
-            input.HasAccessToAllProperties,
-            input.PropertyIds,
-            input.UnitIds);
-        var propertyIds = input.HasAccessToAllProperties ? null : validatedPropertyIds;
-        var unitIds = input.HasAccessToAllProperties ? null : validatedUnitIds;
+        var validatedSpaceIds = await GetValidatedScopeIdsAsync(
+            input.HasAccessToAllSpaces,
+            input.SpaceIds);
+        var spaceIds = input.HasAccessToAllSpaces ? null : validatedSpaceIds;
 
         await invitationService.SendAsync(new SendInvitationInput(
             input.Email,
             input.FullName,
             input.RoleId,
             input.InvitedByUserId,
-            HasAccessToAllProperties: input.HasAccessToAllProperties,
-            PropertyIds: propertyIds,
-            UnitIds: unitIds));
+            HasAccessToAllSpaces: input.HasAccessToAllSpaces,
+            SpaceIds: spaceIds));
     }
 
     public async Task CancelInvitationAsync(CancelAdminUserInvitationInput input)
@@ -240,50 +223,38 @@ public class AdminUserService(
         await invitationService.ResendAsync(input.InvitationId, input.ResentByUserId);
     }
 
-    private async Task<(List<int> PropertyIds, List<int> UnitIds)> GetValidatedScopeIdsAsync(
-        bool hasAccessToAllProperties,
-        IReadOnlyList<int> propertyIds,
-        IReadOnlyList<int> unitIds)
+    private async Task<List<int>> GetValidatedScopeIdsAsync(
+        bool hasAccessToAllSpaces,
+        IReadOnlyList<int> spaceIds)
     {
-        if (hasAccessToAllProperties) return ([], []);
+        if (hasAccessToAllSpaces) return [];
 
-        var distinctPropertyIds = propertyIds.Distinct().ToList();
-        var distinctUnitIds = unitIds.Distinct().ToList();
-
-        var validPropertyIds = (await propertyService.GetAllAsync(new GetPropertiesInput()))
-            .Select(property => property.Id)
+        var distinctSpaceIds = spaceIds.Distinct().ToList();
+        var validSpaceIds = (await spaceService.GetActiveOptionsAsync())
+            .Select(space => space.Id)
             .ToHashSet();
         Guard.InvalidField(
-            distinctPropertyIds.Any(propertyId => !validPropertyIds.Contains(propertyId)),
-            "SelectedPropertyIds",
-            "Geçersiz taşınmaz seçildi.");
+            distinctSpaceIds.Any(spaceId => !validSpaceIds.Contains(spaceId)),
+            "SelectedSpaceIds",
+            "Geçersiz alan seçildi.");
 
-        var validUnitIds = (await unitRepository.GetAdminUserOptionsAsync())
-            .Select(unit => unit.Id)
-            .ToHashSet();
-        Guard.InvalidField(
-            distinctUnitIds.Any(unitId => !validUnitIds.Contains(unitId)),
-            "SelectedUnitIds",
-            "Geçersiz birim seçildi.");
-
-        return (distinctPropertyIds, distinctUnitIds);
+        return distinctSpaceIds;
     }
 
     private static bool IsManagedInternalUser(ApplicationUser? user)
         => user is { IsSuperAdmin: false, UserType: UserType.Internal, TenantId: null };
 
-    private async Task SetScopeAsync(string userId, List<int> propertyIds, List<int> unitIds)
+    private async Task SetScopeAsync(string userId, List<int> spaceIds)
     {
-        await userPermissionScopeRepository.ReplaceAsync(userId, propertyIds, unitIds);
+        await userPermissionScopeRepository.ReplaceAsync(userId, spaceIds);
         await unitOfWork.SaveChangesAsync();
 
         scopeCache.Invalidate(userId);
 
         var details = AuditDetails.Serialize(new
         {
-            propertyCount = propertyIds.Count,
-            unitCount = unitIds.Count,
-            cleared = propertyIds.Count == 0 && unitIds.Count == 0
+            spaceCount = spaceIds.Count,
+            cleared = spaceIds.Count == 0
         });
 
         await auditService.LogAsync(AuditEventTypes.UserScopeChanged, AuditEntityTypes.ApplicationUser, userId, details);

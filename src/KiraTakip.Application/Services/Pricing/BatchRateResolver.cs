@@ -1,15 +1,17 @@
+using KiraTakip.Domain.Spaces;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Interfaces.Leases;
 using KiraTakip.Repositories.Interfaces.Pricing;
+using KiraTakip.Repositories.Interfaces.Spaces;
 using KiraTakip.Services.Interfaces.Pricing;
 
 namespace KiraTakip.Services.Pricing;
 
 public class BatchRateResolver(
     ILeaseRateOverrideRepository leaseRateOverrideRepository,
-    IUnitRateRepository unitRateRepository,
-    IPropertyRateOverrideRepository propertyRateOverrideRepository,
+    ISpaceRepository spaceRepository,
+    ISpaceRateRepository spaceRateRepository,
     IRateScheduleRepository rateScheduleRepository,
     ILeaseRepository leaseRepository) : IBatchRateResolver
 {
@@ -22,7 +24,7 @@ public class BatchRateResolver(
         var leaseIds = requests.Select(r => r.LeaseId).Distinct().ToList();
         var chargeTypeIds = requests.Select(r => r.ChargeTypeId).Distinct().ToList();
 
-        // Kademe 0: sözleşme override — RateResolverService.ResolveAsync satır 21-26 ile aynı.
+        // Kademe 0: sözleşme override — RateResolverService.ResolveAsync ile aynı.
         var leaseRateLookup = (await leaseRateOverrideRepository.GetRatesAsync(leaseIds, chargeTypeIds))
             .ToDictionary(r => (r.LeaseId, r.ChargeTypeId), r => r.Rate);
 
@@ -38,35 +40,34 @@ public class BatchRateResolver(
 
         if (remaining.Count == 0) return result;
 
-        // ResolveAsync satır 31-39: sözleşmeden taşınmaz + kiracı kategorisi.
-        var propertyAndCategoryByLease = await leaseRepository.GetPropertyAndCategoriesAsync(
+        // Sözleşmeden alan (yol dahil) + kiracı kategorisi: 1 sorgu. İstekteki SpaceId bilinçli yok sayılır;
+        // alan her zaman sözleşmeden gelir (RateResolverService ile aynı).
+        var spaceAndCategoryByLease = await leaseRepository.GetSpaceAndCategoriesAsync(
             remaining.Select(r => r.LeaseId).Distinct().ToList());
 
-        var tenantCategoryIds = propertyAndCategoryByLease.Values
-            .Where(v => v.TenantCategoryId.HasValue)
-            .Select(v => v.TenantCategoryId!.Value)
+        var tenantCategoryIds = spaceAndCategoryByLease.Values
+            .Select(v => v.TenantCategoryId)
             .Distinct()
             .ToList();
 
-        // Kademe 1: birim rate — ResolveAsync satır 46-50.
-        var unitRateLookup = tenantCategoryIds.Count == 0
-            ? new Dictionary<(int, int, int), RateValueDto>()
-            : (await unitRateRepository.GetRatesAsync(
-                    remaining.Select(r => r.UnitId).Distinct().ToList(),
-                    tenantCategoryIds,
-                    chargeTypeIds))
-                .ToDictionary(r => (r.UnitId, r.TenantCategoryId, r.ChargeTypeId), r => r.Rate);
+        // Alan zinciri (alan + atalar, SpaceRateResolver ile aynı sıra) için tek toplu sorgu.
+        // Silinmiş alan için zincir kurulmaz (tekil çözücüyle aynı: doğrudan genel tarife). Tek sorgu.
+        var livePaths = (await spaceRepository.GetPathsAsync(
+                spaceAndCategoryByLease.Values.Select(v => v.SpaceId).Distinct().ToList()))
+            .ToHashSet(StringComparer.Ordinal);
+        var chainByLease = spaceAndCategoryByLease.ToDictionary(
+            kv => kv.Key,
+            kv => livePaths.Contains(kv.Value.SpacePath)
+                ? SpaceTreePolicy.GetAncestorIds(kv.Value.SpacePath).Reverse().Prepend(kv.Value.SpaceId).ToList()
+                : new List<int>());
 
-        // Kademe 2: taşınmaz rate — ResolveAsync satır 53-58 (tek taşınmaz varsayımı; Property/Details
-        // tek taşınmaza ait olduğu için pratikte 1 sorgu; birden çok taşınmaz olursa taşınmaz başına 1 sorgu).
-        var propertyRateLookup = new Dictionary<(int PropertyId, int TenantCategoryId, int ChargeTypeId), RateValueDto>();
-        foreach (var propertyId in propertyAndCategoryByLease.Values.Select(v => v.PropertyId).Distinct())
-        {
-            foreach (var rate in await propertyRateOverrideRepository.GetActiveRatesAsync(propertyId))
-                propertyRateLookup[(propertyId, rate.TenantCategoryId, rate.ChargeTypeId)] = rate.Rate;
-        }
+        var chainSpaceIds = chainByLease.Values.SelectMany(c => c).Distinct().ToList();
+        var spaceRateLookup = tenantCategoryIds.Count == 0 || chainSpaceIds.Count == 0
+            ? new Dictionary<(int SpaceId, int TenantCategoryId, int ChargeTypeId), RateValueDto>()
+            : (await spaceRateRepository.GetActiveRatesAsync(chainSpaceIds, tenantCategoryIds, chargeTypeIds))
+                .ToDictionary(r => (r.SpaceId, r.TenantCategoryId, r.ChargeTypeId), r => r.Rate);
 
-        // Kademe 3: genel tarife — ResolveAsync satır 60-65 (yıl-fallback sıralaması bellekte).
+        // Genel tarife (yıl düşmesi bellekte, D6): 1 sorgu.
         var scheduleByKey = tenantCategoryIds.Count == 0
             ? new Dictionary<(int, int), List<(int TenantCategoryId, int ChargeTypeId, int Year, RateValueDto Rate)>>()
             : (await rateScheduleRepository.GetRatesAsync(tenantCategoryIds, chargeTypeIds))
@@ -77,46 +78,34 @@ public class BatchRateResolver(
         {
             var key = (request.LeaseId, request.ChargeTypeId);
 
-            if (!propertyAndCategoryByLease.TryGetValue(request.LeaseId, out var info))
+            if (!spaceAndCategoryByLease.TryGetValue(request.LeaseId, out var info))
             {
                 result[key] = null;
                 continue;
             }
 
-            var (propertyId, tenantCategoryId) = info;
+            var tenantCategoryId = info.TenantCategoryId;
 
-            if (tenantCategoryId.HasValue
-                && unitRateLookup.TryGetValue((request.UnitId, tenantCategoryId.Value, request.ChargeTypeId), out var unitRate))
+            RateSnapshot? snapshot = null;
+            foreach (var spaceId in chainByLease[request.LeaseId])
             {
-                result[key] = Wrap(unitRate, LineItemSourceType.UnitRateOverride);
-                continue;
+                if (spaceRateLookup.TryGetValue((spaceId, tenantCategoryId, request.ChargeTypeId), out var spaceRate))
+                {
+                    snapshot = Wrap(spaceRate, LineItemSourceType.SpaceRate);
+                    break;
+                }
             }
 
-            if (tenantCategoryId.HasValue
-                && propertyRateLookup.TryGetValue((propertyId, tenantCategoryId.Value, request.ChargeTypeId), out var propertyRate))
-            {
-                result[key] = Wrap(propertyRate, LineItemSourceType.PropertyRateOverride);
-                continue;
-            }
-
-            if (!tenantCategoryId.HasValue)
-            {
-                result[key] = null;
-                continue;
-            }
-
-            if (scheduleByKey.TryGetValue((tenantCategoryId.Value, request.ChargeTypeId), out var scheduleRows))
+            if (snapshot == null && scheduleByKey.TryGetValue((tenantCategoryId, request.ChargeTypeId), out var scheduleRows))
             {
                 var best = scheduleRows
                     .OrderByDescending(r => r.Year == request.Period.Year ? 1 : 0)
                     .ThenByDescending(r => r.Year)
                     .First();
-                result[key] = Wrap(best.Rate, LineItemSourceType.RateSchedule);
+                snapshot = Wrap(best.Rate, LineItemSourceType.RateSchedule);
             }
-            else
-            {
-                result[key] = null;
-            }
+
+            result[key] = snapshot;
         }
 
         return result;

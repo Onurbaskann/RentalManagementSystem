@@ -1,7 +1,7 @@
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('leaseGroupExtend', (config) => ({
-            unitId: config.unitId,
+            spaceId: config.spaceId,
             startDate: config.startDate,
             isRentFree: config.isRentFree,
             readOnly: false,
@@ -16,7 +16,7 @@
                 if (m.loaded) return;
                 m.loading = true; m.error = null;
                 try {
-                    const response = await fetch(`/Lease/GetDefaultLineItems?unitId=${this.unitId}&tenantId=${m.tenantId}&startDate=${this.startDate}&leaseId=${m.leaseId}`);
+                    const response = await fetch(`/Lease/GetDefaultLineItems?spaceId=${this.spaceId}&tenantId=${m.tenantId}&startDate=${this.startDate}&leaseId=${m.leaseId}`);
                     if (!response.ok) throw new Error('Tarife kalemleri alınamadı.');
                     m.lineItems = (await response.json()).map(item => ({ ...item }));
                     m.loaded = true;
@@ -25,7 +25,7 @@
             },
             amount(item, m) { return item.calculationMethod == 2 ? item.unitValue * Number(m.area || 0) : item.unitValue; },
             sourceLabel(source) {
-                const labels = { LeaseRateOverride: 'Sözleşme Tarifesi', UnitRateOverride: 'Birim Tarifesi', PropertyRateOverride: 'Taşınmaz Tarifesi', RateSchedule: 'Genel Tarife', ManualInput: 'Manuel Giriş' };
+                const labels = { LeaseRateOverride: 'Sözleşme Tarifesi', SpaceRate: 'Alan Tarifesi', RateSchedule: 'Genel Tarife', ManualInput: 'Manuel Giriş' };
                 return labels[source] || 'Tarife';
             }
         }));

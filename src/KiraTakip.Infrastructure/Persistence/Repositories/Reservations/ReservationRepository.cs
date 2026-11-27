@@ -12,45 +12,28 @@ namespace KiraTakip.Repositories.Reservations;
 public class ReservationRepository(ApplicationDbContext ctx) : RepositoryBase<Reservation>(ctx), IReservationRepository
 {
     public async Task<List<ReservationListItemDto>> GetListAsync(
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope scope)
     {
         var query = _dbSet.AsNoTracking().AsQueryable();
 
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(reservation =>
-                propertyIds.Contains(reservation.Unit.PropertyId)
-                || unitIds.Contains(reservation.UnitId));
-        }
+        query = ApplyScope(query, scope);
 
         return await ProjectList(query).ToListAsync();
     }
 
     public async Task<PagedResult<ReservationListItemDto>> GetPagedListAsync(
         TableQuery tableQuery,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope scope)
     {
         var query = _dbSet.AsNoTracking().AsQueryable();
 
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(reservation =>
-                propertyIds.Contains(reservation.Unit.PropertyId)
-                || unitIds.Contains(reservation.UnitId));
-        }
+        query = ApplyScope(query, scope);
 
         if (!string.IsNullOrWhiteSpace(tableQuery.Q))
         {
             var search = tableQuery.Q.Trim();
             query = query.Where(reservation =>
-                EF.Functions.Like(reservation.Unit.Name, $"%{search}%")
-                || EF.Functions.Like(reservation.Unit.Property.Name, $"%{search}%")
+                EF.Functions.Like(reservation.Space.Name, $"%{search}%")
                 || EF.Functions.Like(reservation.Tenant.Name, $"%{search}%")
                 || EF.Functions.Like(reservation.ReservationNo, $"%{search}%"));
         }
@@ -78,42 +61,26 @@ public class ReservationRepository(ApplicationDbContext ctx) : RepositoryBase<Re
     }
 
     public Task<int> GetCancelledCountAsync(
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope scope)
     {
         var query = _dbSet
             .AsNoTracking()
             .Where(reservation => reservation.Status == ReservationStatus.Cancelled);
 
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(reservation =>
-                propertyIds.Contains(reservation.Unit.PropertyId)
-                || unitIds.Contains(reservation.UnitId));
-        }
+        query = ApplyScope(query, scope);
 
         return query.CountAsync();
     }
 
     public async Task<List<ReservationListItemDto>> GetTenantListAsync(
         int tenantId,
-        List<int>? authorizedPropertyIds = null,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope scope)
     {
         var query = _dbSet
             .AsNoTracking()
             .Where(reservation => reservation.TenantId == tenantId);
 
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(reservation =>
-                propertyIds.Contains(reservation.Unit.PropertyId)
-                || unitIds.Contains(reservation.UnitId));
-        }
+        query = ApplyScope(query, scope);
 
         return await ProjectList(query).ToListAsync();
     }
@@ -121,27 +88,18 @@ public class ReservationRepository(ApplicationDbContext ctx) : RepositoryBase<Re
     public async Task<PagedResult<ReservationListItemDto>> GetTenantPagedListAsync(
         int tenantId,
         TableQuery tableQuery,
-        List<int>? authorizedPropertyIds = null,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope scope)
     {
         var query = _dbSet.AsNoTracking()
             .Where(reservation => reservation.TenantId == tenantId);
 
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(reservation =>
-                propertyIds.Contains(reservation.Unit.PropertyId)
-                || unitIds.Contains(reservation.UnitId));
-        }
+        query = ApplyScope(query, scope);
 
         if (!string.IsNullOrWhiteSpace(tableQuery.Q))
         {
             var search = tableQuery.Q.Trim();
             query = query.Where(reservation =>
-                EF.Functions.Like(reservation.Unit.Name, $"%{search}%")
-                || EF.Functions.Like(reservation.Unit.Property.Name, $"%{search}%"));
+                EF.Functions.Like(reservation.Space.Name, $"%{search}%"));
         }
 
         return await GetPagedResultAsync(
@@ -159,10 +117,9 @@ public class ReservationRepository(ApplicationDbContext ctx) : RepositoryBase<Re
             {
                 Id = reservation.Id,
                 ReservationNo = reservation.ReservationNo,
-                UnitId = reservation.UnitId,
-                UnitName = reservation.Unit.Name,
-                PropertyId = reservation.Unit.PropertyId,
-                PropertyName = reservation.Unit.Property.Name,
+                SpaceId = reservation.SpaceId,
+                SpaceName = reservation.Space.Name,
+                SpacePath = reservation.Space.Path,
                 TenantId = reservation.TenantId,
                 TenantDisplayName = reservation.Tenant.Name,
                 ChargeId = _ctx.Charges
@@ -204,10 +161,9 @@ public class ReservationRepository(ApplicationDbContext ctx) : RepositoryBase<Re
             {
                 Id = r.Id,
                 ReservationNo = r.ReservationNo,
-                UnitId = r.UnitId,
-                UnitName = r.Unit.Name,
-                PropertyId = r.Unit.PropertyId,
-                PropertyName = r.Unit.Property.Name,
+                SpaceId = r.SpaceId,
+                SpaceName = r.Space.Name,
+                SpacePath = r.Space.Path,
                 TenantId = r.TenantId,
                 TenantDisplayName = r.Tenant.Name,
                 ChargeId = _ctx.Charges.Where(t => t.ReservationId == r.Id).Select(t => (int?)t.Id).FirstOrDefault(),
@@ -247,23 +203,22 @@ public class ReservationRepository(ApplicationDbContext ctx) : RepositoryBase<Re
 
     public Task<Reservation?> GetForOperationAsync(int id)
         => _dbSet
-            .Include(reservation => reservation.Unit)
-                .ThenInclude(unit => unit.UnitType)
+            .Include(reservation => reservation.Space)
             .Include(reservation => reservation.Attendees)
             .FirstOrDefaultAsync(reservation => reservation.Id == id);
 
-    public Task<int?> GetUnitIdAsync(int reservationId)
+    public Task<int?> GetSpaceIdAsync(int reservationId)
         => _dbSet.AsNoTracking()
             .Where(reservation => reservation.Id == reservationId)
-            .Select(reservation => (int?)reservation.UnitId)
+            .Select(reservation => (int?)reservation.SpaceId)
             .FirstOrDefaultAsync();
 
-    public Task AcquireUnitDecisionLockAsync(int unitId)
+    public Task AcquireSpaceDecisionLockAsync(int spaceId)
     {
         if (_ctx.Database.CurrentTransaction == null)
             throw new InvalidOperationException("Rezervasyon karar kilidi aktif transaction gerektirir.");
 
-        var resource = $"KiraTakip.Reservation.Unit.{unitId}";
+        var resource = $"KiraTakip.Reservation.Space.{spaceId}";
         return _ctx.Database.ExecuteSqlInterpolatedAsync($@"
             DECLARE @result int;
             EXEC @result = sys.sp_getapplock
@@ -313,12 +268,12 @@ public class ReservationRepository(ApplicationDbContext ctx) : RepositoryBase<Re
 
         return reservations
             .OrderBy(reservation => reservation.StartDate)
-            .ThenBy(reservation => reservation.Unit.Name)
+            .ThenBy(reservation => reservation.Space.Name)
             .Select(reservation => new ReservationCalendarItemDto(
                 reservation.Id,
-                reservation.UnitId,
-                reservation.Unit.Name,
-                reservation.Unit.Property.Name,
+                reservation.SpaceId,
+                reservation.Space.Name,
+                reservation.Space.Path,
                 reservation.Title,
                 reservation.Tenant.Name,
                 reservation.StartDate,
@@ -335,9 +290,9 @@ public class ReservationRepository(ApplicationDbContext ctx) : RepositoryBase<Re
 
         return reservations
             .OrderBy(reservation => reservation.StartDate)
-            .ThenBy(reservation => reservation.UnitId)
+            .ThenBy(reservation => reservation.SpaceId)
             .Select(reservation => new TenantReservationCalendarItemDto(
-                reservation.UnitId,
+                reservation.SpaceId,
                 reservation.StartDate,
                 reservation.EndDate,
                 reservation.Status,
@@ -357,51 +312,62 @@ public class ReservationRepository(ApplicationDbContext ctx) : RepositoryBase<Re
                 && reservation.StartDate < query.ToExclusive
                 && reservation.EndDate > query.FromInclusive);
 
-        if (query.UnitId.HasValue)
-            reservations = reservations.Where(reservation => reservation.UnitId == query.UnitId.Value);
+        if (query.SpaceId.HasValue)
+            reservations = reservations.Where(reservation => reservation.SpaceId == query.SpaceId.Value);
 
-        if (query.PropertyIds != null || query.UnitIds != null)
-        {
-            var propertyIds = query.PropertyIds ?? [];
-            var unitIds = query.UnitIds ?? [];
-            reservations = reservations.Where(reservation =>
-                propertyIds.Contains(reservation.Unit.PropertyId)
-                || unitIds.Contains(reservation.UnitId));
-        }
-
-        return reservations;
+        return ApplyScope(reservations, query.Scope);
     }
 
     public async Task<bool> IsConflictAsync(
-        int unitId,
+        int spaceId,
         DateTime startDate,
         DateTime endDate,
         int? excludedReservationId = null)
     {
         return await _dbSet.AnyAsync(r =>
-            r.UnitId == unitId &&
+            r.SpaceId == spaceId &&
             r.Status == ReservationStatus.Confirmed &&
             (!excludedReservationId.HasValue || r.Id != excludedReservationId.Value) &&
             r.StartDate < endDate &&
             r.EndDate > startDate);
     }
 
-    public Task<List<int>> GetActiveUnitIdsAsync(IReadOnlyCollection<int> unitIds, DateTime now)
-        => _dbSet
-            .Where(reservation => unitIds.Contains(reservation.UnitId)
-                && reservation.Status == ReservationStatus.Confirmed
-                && reservation.EndDate >= now)
-            .Select(reservation => reservation.UnitId)
-            .Distinct()
+    public Task<ReservationSpaceContextDto?> GetSpaceContextAsync(int spaceId)
+        => _ctx.Spaces.AsNoTracking()
+            .Where(space => space.Id == spaceId)
+            .Select(space => new ReservationSpaceContextDto(
+                space.Id,
+                space.Path,
+                space.IsActive,
+                space.Usage))
+            .FirstOrDefaultAsync();
+
+    public Task<List<ReservationSpaceOptionDto>> GetReservableSpacesAsync(SpaceAccessScope scope)
+    {
+        var roots = scope.RootPaths.ToList();
+        return _ctx.Spaces.AsNoTracking()
+            .Where(space => space.IsActive && space.Usage == SpaceUsage.Reservable)
+            .Where(space => scope.HasGlobalAccess || roots.Any(path => space.Path.StartsWith(path)))
+            .OrderBy(space => space.Path)
+            .Select(space => new ReservationSpaceOptionDto(space.Id, space.Name, space.Path))
+            .ToListAsync();
+    }
+
+    public Task<List<ReservationSpaceOptionDto>> GetActiveSpaceOptionsAsync()
+        => _ctx.Spaces.AsNoTracking()
+            .Where(space => space.IsActive)
+            .OrderBy(space => space.Path)
+            .Select(space => new ReservationSpaceOptionDto(space.Id, space.Name, space.Path))
             .ToListAsync();
 
-    public Task<bool> HasConfirmedForUnitTypeAsync(int unitTypeId)
-        => _dbSet.AsNoTracking().AnyAsync(reservation =>
-            reservation.Status == ReservationStatus.Confirmed
-            && _ctx.Units.Any(unit => unit.UnitTypeId == unitTypeId && unit.Id == reservation.UnitId));
+    private static IQueryable<Reservation> ApplyScope(IQueryable<Reservation> query, SpaceAccessScope scope)
+    {
+        if (scope.HasGlobalAccess)
+            return query;
 
-    public Task<bool> ExistsForUnitAsync(int unitId)
-        => _dbSet.AsNoTracking().AnyAsync(reservation => reservation.UnitId == unitId);
+        var roots = scope.RootPaths.ToList();
+        return query.Where(reservation => roots.Any(path => reservation.Space.Path.StartsWith(path)));
+    }
 
     public Task<List<string>> GetExistingReservationNosAsync()
         => _dbSet

@@ -9,10 +9,9 @@ public class ChargeListItemDto
     public int? LeaseId { get; set; }
     public int TenantId { get; set; }
     public string TenantDisplayName { get; set; } = string.Empty;
-    public int? PropertyId { get; set; }
-    public string? PropertyName { get; set; }
-    public int? UnitId { get; set; }
-    public string? UnitName { get; set; }
+    public int? SpaceId { get; set; }
+    public string? SpaceName { get; set; }
+    public string? SpacePath { get; set; }
     public DateTime PeriodStart { get; set; }
     public DateTime DueDate { get; set; }
     public decimal TotalAmount { get; set; }

@@ -9,7 +9,7 @@ public class ParentReservationRateOverrideCardViewModel
 
 public class ParentReservationRateOverrideRow
 {
-    public string UnitTypeName { get; set; } = string.Empty;
+    public string SpaceName { get; set; } = string.Empty;
     public int FreeDurationMinutes { get; set; }
     public int BillingPeriodMinutes { get; set; }
     public decimal PeriodRate { get; set; }

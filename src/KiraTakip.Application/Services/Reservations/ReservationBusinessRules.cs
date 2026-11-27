@@ -140,46 +140,35 @@ public class ReservationBusinessRules(
         }
     }
 
-    public void EnsureUnitIsReservable(
-        ReservationUnitContextDto unit,
+    public void EnsureSpaceIsReservable(
+        ReservationSpaceContextDto space,
         bool fieldValidation = false)
     {
-        var invalid = !ReservationUnitPolicy.IsReservable(
-            unit.IsUnitActive,
-            unit.IsUnitTypeActive,
-            unit.Usage);
+        var invalid = !ReservationSpacePolicy.IsReservable(
+            space.IsSpaceActive,
+            space.Usage);
 
         if (fieldValidation)
         {
             Guard.InvalidField(
                 invalid,
-                nameof(unit.UnitId),
-                "Seçilen birim aktif veya rezervasyona uygun değildir.",
-                "RESERVATION_UNIT_NOT_RESERVABLE");
+                nameof(space.SpaceId),
+                "Seçilen alan aktif veya rezervasyona uygun değildir.",
+                "RESERVATION_SPACE_NOT_RESERVABLE");
             return;
         }
 
         Guard.Against(
             invalid,
-            "Seçilen birim aktif veya rezervasyona uygun değildir.",
-            "RESERVATION_UNIT_NOT_RESERVABLE");
+            "Seçilen alan aktif veya rezervasyona uygun değildir.",
+            "RESERVATION_SPACE_NOT_RESERVABLE");
     }
 
-    public void EnsureAccessScope(
-        int propertyId,
-        int unitId,
-        ReservationAccessScopeInput accessScope)
-    {
-        if (accessScope.PropertyIds == null && accessScope.UnitIds == null)
-            return;
-
-        var hasPropertyAccess = accessScope.PropertyIds?.Contains(propertyId) == true;
-        var hasUnitAccess = accessScope.UnitIds?.Contains(unitId) == true;
-        Guard.Forbidden(
-            !hasPropertyAccess && !hasUnitAccess,
+    public void EnsureAccessScope(string spacePath, SpaceAccessScope accessScope)
+        => Guard.Forbidden(
+            !accessScope.Includes(spacePath),
             "Bu rezervasyon yetki kapsamınızın dışındadır.",
             "RESERVATION_OUT_OF_SCOPE");
-    }
 
     public void EnsureCancellationAllowed(
         Reservation reservation,

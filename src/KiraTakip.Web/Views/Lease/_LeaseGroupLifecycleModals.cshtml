@@ -4,7 +4,7 @@
     var group = Model.Group;
     var extendConfig = System.Text.Json.JsonSerializer.Serialize(new
     {
-        unitId = group.UnitId,
+        spaceId = group.SpaceId,
         startDate = group.StartDate.ToString("yyyy-MM-dd"),
         isRentFree = group.IsRentFree,
         members = group.Members.Select((member, index) => new

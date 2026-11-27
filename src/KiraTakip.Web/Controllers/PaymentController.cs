@@ -28,8 +28,7 @@ public class PaymentController(
         var pagedResult = await paymentService.GetPagedAsync(new GetPagedPaymentsInput(
             query,
             chargeId,
-            accessScope.PropertyIds,
-            accessScope.UnitIds));
+            accessScope));
 
         ViewBag.ChargeId = chargeId;
         ViewBag.Query = query;
@@ -142,10 +141,5 @@ public class PaymentController(
         return RedirectToAction(nameof(Details), new { id = viewModel.PaymentId });
     }
 
-    private PaymentAccessScopeInput GetAccessScope()
-        => permissionScopeProvider.GlobalAccess
-            ? new PaymentAccessScopeInput()
-            : new PaymentAccessScopeInput(
-                permissionScopeProvider.AccessiblePropertyIds,
-                permissionScopeProvider.AccessibleUnitIds);
+    private SpaceAccessScope GetAccessScope() => permissionScopeProvider.SpaceScope;
 }

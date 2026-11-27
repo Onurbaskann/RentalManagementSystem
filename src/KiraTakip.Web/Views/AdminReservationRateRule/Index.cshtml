@@ -11,7 +11,7 @@
 <div class="page-header flex items-center justify-between">
     <div>
         <div class="page-title">Rezervasyon Ücret Kuralları</div>
-        <div class="page-subtitle">@Model.Total kayıt · Birime özel kural genel kuralı geçersiz kılar</div>
+        <div class="page-subtitle">@Model.Total kayıt · Alanın kendi kuralı yoksa en yakın üst alanın kuralı uygulanır</div>
     </div>
     <a href="/Admin/ReservationRateOverride/Create" class="btn btn-primary">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -24,7 +24,7 @@
         <table>
             <thead>
                 <tr>
-                    <th>Kapsam</th>
+                    <th>Alan / Borç Tipi</th>
                     <th class="w-32 text-center">Ücretsiz Süre</th>
                     <th class="w-32 text-center">Periyot</th>
                     <th class="w-32 text-right">Periyot Ücreti</th>
@@ -38,16 +38,8 @@
                 {
                     <tr>
                         <td>
-                            @if (k.UnitId == null)
-                            {
-                                <span class="font-semibold">Genel Kural</span>
-                                <div class="text-xs text-muted">Tüm toplantı salonları</div>
-                            }
-                            else
-                            {
-                                <span class="font-semibold">@k.UnitName</span>
-                                <div class="text-xs text-muted">@k.PropertyName</div>
-                            }
+                            <span class="font-semibold">@k.SpaceName</span>
+                            <div class="text-xs text-muted">@k.ChargeTypeName</div>
                             @if (!string.IsNullOrEmpty(k.Description))
                             {
                                 <div class="text-[11px] text-muted mt-0.5">@k.Description</div>

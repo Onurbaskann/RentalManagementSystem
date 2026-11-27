@@ -5,7 +5,7 @@
     var group = Model.Group;
     ViewData["Title"] = "Paylaşımlı Sözleşme Grubu";
     ViewData["UseCentralFeedback"] = true;
-    bool areaMatches = Math.Abs(Model.TotalArea - group.UnitArea) < 0.005m;
+    bool areaMatches = Math.Abs(Model.TotalArea - group.SpaceArea) < 0.005m;
 }
 
 <div class="max-w-[1050px] mx-auto" x-data="{ approveOpen: false, resubmitOpen: false, deleteOpen: false, extendOpen: false, terminateOpen: false }">
@@ -13,7 +13,7 @@
         <div>
             <a href="@Url.Action("Index", "Lease")" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary">← Sözleşmeler</a>
             <div class="page-title">Paylaşımlı Sözleşme Grubu</div>
-            <div class="page-subtitle">@group.PropertyName — @group.UnitName • Başvuru sahibi: @group.OwnerDisplayName</div>
+            <div class="page-subtitle">@group.SpacePath • Başvuru sahibi: @group.OwnerDisplayName</div>
             @if (group.PreviousGroupId.HasValue)
             {
                 <div class="text-xs mt-1"><a href="@Url.Action("Group", "Lease", new { id = group.PreviousGroupId.Value })" class="text-primary">Yeniden yapılandırılan önceki grup →</a></div>
@@ -72,7 +72,7 @@
     <div class="mb-4 grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
         <div class="rounded-lg border border-slate-200 bg-white p-3"><span class="text-muted block">Süre</span><strong>@group.StartDate.ToString("dd.MM.yyyy") – @group.EndDate.ToString("dd.MM.yyyy")</strong></div>
         <div class="rounded-lg border border-slate-200 bg-white p-3"><span class="text-muted block">Vade</span><strong>@(group.DueDateRuleType == DueDateRuleType.FixedDayOfMonth ? $"Ayın {group.DueDay}. günü" : $"Dönem başı + {group.DueDay} gün")</strong></div>
-        <div class="rounded-lg border border-slate-200 bg-white p-3"><span class="text-muted block">Birim alanı / Σ m²</span><strong class="@(areaMatches ? "" : "text-amber-700")">@group.UnitArea.M2() / @Model.TotalArea.M2()</strong></div>
+        <div class="rounded-lg border border-slate-200 bg-white p-3"><span class="text-muted block">Alan yüzölçümü / Σ m²</span><strong class="@(areaMatches ? "" : "text-amber-700")">@group.SpaceArea.M2() / @Model.TotalArea.M2()</strong></div>
         <div class="rounded-lg border border-slate-200 bg-white p-3"><span class="text-muted block">Oluşturma</span><strong>@group.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</strong></div>
     </div>
 

@@ -44,18 +44,18 @@
             <span asp-validation-for="RoleId" class="form-error"></span>
         </div>
 
-        @if (Model.Units.Any())
+        @if (Model.Spaces.Any())
         {
             <div class="form-group">
-                <label class="form-label">Birim Erişimi <span class="text-muted font-normal">(opsiyonel — boş bırakılırsa tüm birimler)</span></label>
+                <label class="form-label">Alan Erişimi <span class="text-muted font-normal">(opsiyonel — boş bırakılırsa tüm alanlar)</span></label>
                 <div class="border border-[var(--color-border)] rounded-lg p-3 flex flex-col gap-2 max-h-48 overflow-y-auto">
-                    @foreach (var b in Model.Units)
+                    @foreach (var b in Model.Spaces)
                     {
                         <label class="flex items-center gap-2 text-[13.5px] cursor-pointer">
-                            <input type="checkbox" name="UnitIds" value="@b.Id"
+                            <input type="checkbox" name="SpaceIds" value="@b.Id"
                                    class="w-4 h-4 accent-primary"
-                                   @(Model.UnitIds.Contains(b.Id) ? "checked" : "") />
-                            <span>@b.PropertyName — @b.Name@(b.UnitNo != null ? " (" + b.UnitNo + ")" : "")</span>
+                                   @(Model.SpaceIds.Contains(b.Id) ? "checked" : "") />
+                            <span>@b.NamePath</span>
                         </label>
                     }
                 </div>

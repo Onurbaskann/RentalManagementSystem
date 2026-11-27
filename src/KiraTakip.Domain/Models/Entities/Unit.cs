@@ -31,5 +31,4 @@ public class Unit : BaseEntity
 
     public Property Property { get; set; } = null!;
     public UnitType UnitType { get; set; } = null!;
-    public List<Lease> Leases { get; set; } = [];
 }

@@ -24,24 +24,19 @@
         <div class="card mb-4">
             <div class="text-lg font-bold mb-5 flex items-center gap-2">
                 <span class="w-1.5 h-4 bg-primary rounded-full"></span>
-                <span>Birim ve Kiracı</span>
+                <span>Alan ve Kiracı</span>
             </div>
 
             <div class="form-group mb-5">
-                <label asp-for="UnitId" class="form-label">Taşınmaz Birimi <span class="text-red-500">*</span></label>
-                <select asp-for="UnitId" class="form-control" x-on:change="birimSecildi($event)">
-                    <option value="">— Birim seçin —</option>
-                    @foreach (var b in Model.Units)
+                <label asp-for="SpaceId" class="form-label">Alan <span class="text-red-500">*</span></label>
+                <select asp-for="SpaceId" class="form-control" x-on:change="birimSecildi($event)">
+                    <option value="">— Alan seçin —</option>
+                    @foreach (var b in Model.Spaces)
                     {
-                        <option value="@b.Id"
-                            data-property="@b.PropertyName"
-                            data-tur="@b.UnitTypeName">
-                            @b.PropertyName — @b.Name
-                            @if (!string.IsNullOrEmpty(b.UnitTypeName)) { <text>(@b.UnitTypeName)</text> }
-                        </option>
+                        <option value="@b.Id">@b.Name</option>
                     }
                 </select>
-                <span asp-validation-for="UnitId" class="form-error"></span>
+                <span asp-validation-for="SpaceId" class="form-error"></span>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -196,7 +191,7 @@ const reservationCalculateUrl = '@Url.Action(
 
 function rezervasyonForm() {
     return {
-        unitId: @(Model.UnitId > 0 ? Model.UnitId.ToString() : "0"),
+        spaceId: @(Model.SpaceId > 0 ? Model.SpaceId.ToString() : "0"),
         tenantId: @(Model.TenantId > 0 ? Model.TenantId.ToString() : "0"),
         baslangic: '@Model.StartDate.ToString("yyyy-MM-ddTHH:mm")',
         bitis: '@Model.EndDate.ToString("yyyy-MM-ddTHH:mm")',
@@ -209,7 +204,7 @@ function rezervasyonForm() {
         },
 
         birimSecildi(e) {
-            this.unitId = parseInt(e.target.value) || 0;
+            this.spaceId = parseInt(e.target.value) || 0;
             this.hesapla();
         },
 
@@ -221,7 +216,7 @@ function rezervasyonForm() {
 
         hesapla() {
             clearTimeout(this._timer);
-            if (!this.unitId || !this.baslangic || !this.bitis) {
+            if (!this.spaceId || !this.baslangic || !this.bitis) {
                 this.hesapSonucu = null;
                 this.hataMessaji = null;
                 return;
@@ -231,7 +226,7 @@ function rezervasyonForm() {
 
         async _fetchHesap() {
             try {
-                const r = await fetch(`${reservationCalculateUrl}?unitId=${this.unitId}&start=${encodeURIComponent(this.baslangic)}&end=${encodeURIComponent(this.bitis)}`);
+                const r = await fetch(`${reservationCalculateUrl}?spaceId=${this.spaceId}&start=${encodeURIComponent(this.baslangic)}&end=${encodeURIComponent(this.bitis)}`);
                 if (!r.ok) {
                     this.hesapSonucu = null;
                     this.hataMessaji = 'Ücret hesaplanamadı.';

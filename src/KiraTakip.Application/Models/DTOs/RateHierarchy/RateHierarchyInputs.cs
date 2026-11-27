@@ -4,9 +4,6 @@ namespace KiraTakip.Models.Dtos.RateHierarchy;
 
 public record GetParentRateInput(
     RateHierarchyLayer Layer,
-    int? PropertyId = null,
-    int? UnitId = null,
+    int? SpaceId = null,
     int? TenantCategoryId = null,
     int? Year = null);
-
-public record GetParentReservationRateInput(int? Year = null);

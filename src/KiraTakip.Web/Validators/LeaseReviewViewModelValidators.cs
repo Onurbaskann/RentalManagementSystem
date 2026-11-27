@@ -10,8 +10,8 @@ public sealed class LeaseDraftViewModelValidator : IValidator<LeaseDraftViewMode
     public ValidationResult Validate(LeaseDraftViewModel input)
     {
         var errors = LeaseReviewValidation.ValidateIdentity(input.LeaseId, input.RowVersion);
-        if (input.UnitId is null or <= 0)
-            errors.Add(new ValidationError("Lütfen bir birim seçin.", nameof(input.UnitId)));
+        if (input.SpaceId is null or <= 0)
+            errors.Add(new ValidationError("Lütfen bir alan seçin.", nameof(input.SpaceId)));
         if (input.TenantId <= 0)
             errors.Add(new ValidationError("Lütfen bir kiracı seçin.", nameof(input.TenantId)));
         if (input.EndDate <= input.StartDate)
@@ -22,12 +22,6 @@ public sealed class LeaseDraftViewModelValidator : IValidator<LeaseDraftViewMode
             errors.Add(new ValidationError("Vade günü 1-31 arasında olmalıdır.", nameof(input.DueDay)));
         if (input.RentedArea < 0)
             errors.Add(new ValidationError("Kiralanan m² negatif olamaz.", nameof(input.RentedArea)));
-        if (input.AllocatedArea < 0)
-            errors.Add(new ValidationError("Fiziksel m² negatif olamaz.", nameof(input.AllocatedArea)));
-        if (input.AllocationMode.HasValue && !Enum.IsDefined(input.AllocationMode.Value))
-            errors.Add(new ValidationError("Geçerli bir fiziksel m² modu seçilmelidir.", nameof(input.AllocationMode)));
-        if (input.AllocationMode == LeaseAreaMode.Manual && input.AllocatedArea is null)
-            errors.Add(new ValidationError("Manuel modda fiziksel m² zorunludur.", nameof(input.AllocatedArea)));
         LeaseLineItemValidationRules.AddErrors(
             input.LeaseLineItems
                 .Where(lineItem => !input.IsRentFree

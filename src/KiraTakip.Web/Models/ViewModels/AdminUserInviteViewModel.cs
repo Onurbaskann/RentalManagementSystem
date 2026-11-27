@@ -9,9 +9,7 @@ public class AdminUserInviteViewModel
     public int RoleId { get; set; }
 
     public List<AdminUserRoleOptionViewModel> Roles { get; set; } = [];
-    public bool HasAccessToAllProperties { get; set; }
-    public List<int> SelectedPropertyIds { get; set; } = [];
-    public List<AdminUserPropertyOptionViewModel> Properties { get; set; } = [];
-    public List<int> SelectedUnitIds { get; set; } = [];
-    public List<AdminUserUnitOptionViewModel> Units { get; set; } = [];
+    public bool HasAccessToAllSpaces { get; set; }
+    public List<int> SelectedSpaceIds { get; set; } = [];
+    public List<AdminUserSpaceOptionViewModel> Spaces { get; set; } = [];
 }

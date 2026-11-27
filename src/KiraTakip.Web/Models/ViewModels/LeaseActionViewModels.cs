@@ -27,7 +27,7 @@ public class CalculateRentIncreaseViewModel
 
 public class GetDefaultLeaseLineItemsViewModel
 {
-    public int UnitId { get; set; }
+    public int SpaceId { get; set; }
     public int TenantId { get; set; }
     public DateTime StartDate { get; set; }
     public int? LeaseId { get; set; }

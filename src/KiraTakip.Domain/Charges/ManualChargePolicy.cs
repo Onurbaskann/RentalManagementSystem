@@ -9,7 +9,7 @@ public enum ManualChargeLeaseValidationResult
     Terminated = 1,
     NotActive = 2,
     TenantMismatch = 3,
-    UnitMismatch = 4
+    SpaceMismatch = 4
 }
 
 public enum ManualChargeCancellationValidationResult
@@ -31,8 +31,8 @@ public static class ManualChargePolicy
         LeaseStatus leaseStatus,
         int leaseTenantId,
         int targetTenantId,
-        int leaseUnitId,
-        int targetUnitId)
+        int leaseSpaceId,
+        int targetSpaceId)
     {
         if (leaseStatus == LeaseStatus.Terminated)
             return ManualChargeLeaseValidationResult.Terminated;
@@ -43,8 +43,8 @@ public static class ManualChargePolicy
         if (leaseTenantId != targetTenantId)
             return ManualChargeLeaseValidationResult.TenantMismatch;
 
-        if (leaseUnitId != targetUnitId)
-            return ManualChargeLeaseValidationResult.UnitMismatch;
+        if (leaseSpaceId != targetSpaceId)
+            return ManualChargeLeaseValidationResult.SpaceMismatch;
 
         return ManualChargeLeaseValidationResult.Valid;
     }

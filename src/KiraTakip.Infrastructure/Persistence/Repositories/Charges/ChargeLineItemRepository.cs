@@ -47,21 +47,18 @@ public class ChargeLineItemRepository(ApplicationDbContext context)
 
     public async Task<List<TenantPanelDebtSliceDto>> GetTenantDebtDistributionAsync(
         int tenantId,
-        List<int>? authorizedPropertyIds = null,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope? scope = null)
     {
         var query = _dbSet.AsNoTracking()
             .Where(lineItem => lineItem.Charge.TenantId == tenantId
                 && lineItem.Charge.Status != ChargeStatus.Cancelled
                 && lineItem.Charge.TotalAmount > lineItem.Charge.PaidAmount
                 && lineItem.Charge.TotalAmount > 0);
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
+        if (scope is { HasGlobalAccess: false })
         {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(lineItem =>
-                propertyIds.Contains(lineItem.Charge.Unit.PropertyId)
-                || unitIds.Contains(lineItem.Charge.UnitId));
+            var roots = scope.RootPaths.ToList();
+            query = query.Where(lineItem => lineItem.Charge.Space != null
+                && roots.Any(root => lineItem.Charge.Space.Path.StartsWith(root)));
         }
 
         var amounts = await query.Select(lineItem => new
@@ -88,7 +85,7 @@ public class ChargeLineItemRepository(ApplicationDbContext context)
                 lineItem.Id,
                 lineItem.ChargeId,
                 lineItem.ChargeTypeId,
-                lineItem.Charge.UnitId,
+                lineItem.Charge.SpaceId,
                 lineItem.Charge.TenantId,
                 lineItem.ChargeType.Name,
                 lineItem.Description,
@@ -112,7 +109,7 @@ public class ChargeLineItemRepository(ApplicationDbContext context)
                 lineItem.Id,
                 lineItem.ChargeId,
                 lineItem.ChargeTypeId,
-                lineItem.Charge.UnitId,
+                lineItem.Charge.SpaceId,
                 lineItem.Charge.TenantId,
                 lineItem.ChargeType.Name,
                 lineItem.Description,

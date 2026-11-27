@@ -7,7 +7,7 @@
 <div class="page-header">
     <a href="/Admin/ReservationRateOverride" class="text-[12.5px] text-muted no-underline inline-flex items-center gap-1 mb-2 hover:text-primary transition-colors">← Rezervasyon Ücret Kuralları</a>
     <div class="page-title">Yeni Rezervasyon Ücret Kuralı</div>
-    <div class="page-subtitle">Rezervasyona uygun birim için özel ücret kuralı oluşturun</div>
+    <div class="page-subtitle">Alan için rezervasyon ücret kuralı ve borç tipi tanımlayın</div>
 </div>
 
 <div class="card">
@@ -17,15 +17,28 @@
 
 
         <div class="form-group">
-            <label asp-for="UnitId" class="form-label">Birim <span class="text-danger">*</span></label>
-            <select asp-for="UnitId" class="form-control">
-                <option value="">— Birim seçin —</option>
-                @foreach (var b in Model.ReservableUnits)
+            <label asp-for="SpaceId" class="form-label">Alan <span class="text-danger">*</span></label>
+            <select asp-for="SpaceId" class="form-control">
+                <option value="">— Alan seçin —</option>
+                @foreach (var b in Model.Spaces)
                 {
-                    <option value="@b.Id">@b.PropertyName — @b.Name</option>
+                    var depth = b.Path.Count(c => c == '/') - 1;
+                    <option value="@b.Id" selected="@(Model.SpaceId == b.Id ? "selected" : null)">@(new string('·', Math.Max(depth, 0)) + " " + b.Name)</option>
                 }
             </select>
-            <span asp-validation-for="UnitId" class="form-error"></span>
+            <span asp-validation-for="SpaceId" class="form-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="ChargeTypeId" class="form-label">Borç Tipi <span class="text-danger">*</span></label>
+            <select asp-for="ChargeTypeId" class="form-control">
+                <option value="">— Borç tipi seçin —</option>
+                @foreach (var t in Model.ChargeTypes)
+                {
+                    <option value="@t.Id" selected="@(Model.ChargeTypeId == t.Id ? "selected" : null)">@t.Name</option>
+                }
+            </select>
+            <span asp-validation-for="ChargeTypeId" class="form-error"></span>
         </div>
 
         <div class="two-col">

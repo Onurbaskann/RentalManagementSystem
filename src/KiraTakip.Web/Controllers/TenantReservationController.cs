@@ -28,11 +28,7 @@ public class TenantReservationController(
             new GetTenantReservationsPageInput(
                 tenantId,
                 query,
-                permissionScopeProvider.GlobalAccess
-                    ? new ReservationAccessScopeInput()
-                    : new ReservationAccessScopeInput(
-                        permissionScopeProvider.AccessiblePropertyIds,
-                        permissionScopeProvider.AccessibleUnitIds)));
+                permissionScopeProvider.SpaceScope));
         ViewBag.Query = query;
         return View(list);
     }
@@ -108,11 +104,7 @@ public class TenantReservationController(
     public async Task<IActionResult> Calendar([FromQuery] ReservationCalendarQueryViewModel query)
     {
         var tenantId = currentUserContext.TenantId!.Value;
-        var scope = permissionScopeProvider.GlobalAccess
-            ? new ReservationAccessScopeInput()
-            : new ReservationAccessScopeInput(
-                permissionScopeProvider.AccessiblePropertyIds,
-                permissionScopeProvider.AccessibleUnitIds);
+        var scope = permissionScopeProvider.SpaceScope;
 
         return View(await reservationService.GetTenantCalendarAsync(
             query.ToTenantInput(tenantId, scope)));
@@ -121,13 +113,9 @@ public class TenantReservationController(
     [HttpGet("Availability")]
     public async Task<IActionResult> Availability([FromQuery] ReservationAvailabilityQueryViewModel query)
     {
-        var scope = permissionScopeProvider.GlobalAccess
-            ? new ReservationAccessScopeInput()
-            : new ReservationAccessScopeInput(
-                permissionScopeProvider.AccessiblePropertyIds,
-                permissionScopeProvider.AccessibleUnitIds);
+        var scope = permissionScopeProvider.SpaceScope;
         if (!query.TryMap(scope, out var input))
-            return BadRequest(new { code = "RESERVATION_AVAILABILITY_INPUT_REQUIRED", message = "Birim, başlangıç ve bitiş zamanı zorunludur." });
+            return BadRequest(new { code = "RESERVATION_AVAILABILITY_INPUT_REQUIRED", message = "Alan, başlangıç ve bitiş zamanı zorunludur." });
 
         return Json(await reservationService.CheckAvailabilityAsync(input!));
     }
@@ -136,13 +124,9 @@ public class TenantReservationController(
     {
         var options = await reservationService.GetFormOptionsAsync(
             new GetReservationFormOptionsInput(GetAccessScope()));
-        viewModel.Units = options.Units;
+        viewModel.Spaces = options.Spaces;
     }
 
-    private ReservationAccessScopeInput GetAccessScope()
-        => permissionScopeProvider.GlobalAccess
-            ? new ReservationAccessScopeInput()
-            : new ReservationAccessScopeInput(
-                permissionScopeProvider.AccessiblePropertyIds,
-                permissionScopeProvider.AccessibleUnitIds);
+    private SpaceAccessScope GetAccessScope()
+        => permissionScopeProvider.SpaceScope;
 }

@@ -9,12 +9,15 @@
 
 <div asp-validation-summary="ModelOnly" class="form-error mb-3"></div>
 
-@await Html.PartialAsync("_LeaseUnitPicker", null, new ViewDataDictionary(ViewData) { ["ReadOnly"] = readOnly })
+@if (!readOnly)
+{
+    @await Html.PartialAsync("_LeaseKindChoice")
+}
 
-@await Html.PartialAsync("_LeaseKindChoice")
+@await Html.PartialAsync("_LeaseSpaceSelect", null, new ViewDataDictionary(ViewData) { ["ReadOnly"] = readOnly, ["StepNumber"] = (hasKind && !readOnly ? 2 : 1).ToString() })
 
 <div class="card mt-4">
-    @await Html.PartialAsync("_LeaseStepHeader", null, new ViewDataDictionary(ViewData) { ["Number"] = step.ToString(), ["NumberExpr"] = "stepNo(3)", ["StepTitle"] = "Kiracı" })
+    @await Html.PartialAsync("_LeaseStepHeader", null, new ViewDataDictionary(ViewData) { ["Number"] = step.ToString(), ["StepTitle"] = "Kiracı" })
     <div class="form-group">
         <label class="form-label">Kiracı *</label>
         @if (tenantLocked && !readOnly)
@@ -34,47 +37,17 @@
         }
         <span asp-validation-for="TenantId" class="form-error"></span>
     </div>
-    <div x-show="isCap()" x-cloak>
-        <div class="form-group">
-            <label class="form-label">Kiralanan alan (m²) *</label>
-            <input name="RentedArea" type="number" step="0.01" min="0" class="form-control" x-model.number="rentedArea"
-                   :disabled="readOnly || !isCap()" />
-            <div class="text-muted text-[12.5px] mt-1">Sözleşmede kiralanan ve faturalanan m².</div>
-            <div class="text-muted text-[12.5px] mt-1" x-show="minArea > 0"
-                 x-text="`En az ${minArea} m² kiralanmalıdır.`"></div>
-            <div x-show="isLastSlot()" class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[13px] mt-2"
-                 x-text="`Bu birimdeki son boş yer: kalan ${unitInfo()?.lastSlot} m² kiralanan alan olarak önerildi, değiştirebilirsiniz.`"></div>
-            <span asp-validation-for="RentedArea" class="form-error"></span>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Fiziksel alan nasıl belirlensin?</label>
-            <div class="flex gap-4 text-[13.5px]">
-                <label class="flex items-center gap-1.5">
-                    <input type="radio" name="AllocationMode" value="@((int)LeaseAreaMode.Automatic)" x-model.number="allocationMode"
-                           :disabled="readOnly || !isCap()" /> Otomatik
-                </label>
-                <label class="flex items-center gap-1.5">
-                    <input type="radio" name="AllocationMode" value="@((int)LeaseAreaMode.Manual)" x-model.number="allocationMode"
-                           :disabled="readOnly || !isCap()" /> Elle girilen
-                </label>
-            </div>
-            <span asp-validation-for="AllocationMode" class="form-error"></span>
-        </div>
-        <div class="form-group mb-0">
-            <label class="form-label">Fiziksel alan<span x-show="isManual()"> *</span></label>
-            <input x-show="!isManual()" type="number" class="form-control" readonly :value="autoArea()" />
-            <input x-show="isManual()" name="AllocatedArea" type="number" step="0.01" min="0" class="form-control" x-model.number="allocatedArea"
-                   :disabled="readOnly || !isCap() || !isManual()" />
-            <div class="text-muted text-[12.5px] mt-1" x-show="!isManual()">Kontenjan başına ideal alana göre hesaplanır; onayda güncel kontenjanla yeniden hesaplanır.</div>
-            <div class="text-muted text-[12.5px] mt-1" x-show="isManual()"
-                 x-text="`Kişi başı asgari fiziksel alan (${minArea} m²) ile kiralanan alan arasında olmalı.`"></div>
-            <span asp-validation-for="AllocatedArea" class="form-error"></span>
-        </div>
+    <div class="form-group mb-0">
+        <label class="form-label">Kiralanan alan (m²)</label>
+        <input name="RentedArea" type="number" step="0.01" min="0" class="form-control" x-model.number="rentedArea"
+               :placeholder="spaceAreaText()" :disabled="readOnly" />
+        <div class="text-muted text-[12.5px] mt-1">Boş bırakılırsa alanın tamamı kiralanır; sözleşmede kiralanan ve faturalanan m².</div>
+        <span asp-validation-for="RentedArea" class="form-error"></span>
     </div>
 </div>
 
 <div class="card mt-4">
-    @await Html.PartialAsync("_LeaseStepHeader", null, new ViewDataDictionary(ViewData) { ["Number"] = (step + 1).ToString(), ["NumberExpr"] = "stepNo(4)", ["StepTitle"] = "Süre ve vade" })
+    @await Html.PartialAsync("_LeaseStepHeader", null, new ViewDataDictionary(ViewData) { ["Number"] = (step + 1).ToString(), ["StepTitle"] = "Süre ve vade" })
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
         <div class="form-group mb-0">
             <label class="form-label">Başlangıç Tarihi *</label>
@@ -137,11 +110,11 @@
 
 <div class="card mt-4">
     <div class="flex justify-between items-center">
-        @await Html.PartialAsync("_LeaseStepHeader", null, new ViewDataDictionary(ViewData) { ["Number"] = (step + 2).ToString(), ["NumberExpr"] = "stepNo(5)", ["StepTitle"] = "Sözleşme tarifesi" })
+        @await Html.PartialAsync("_LeaseStepHeader", null, new ViewDataDictionary(ViewData) { ["Number"] = (step + 2).ToString(), ["StepTitle"] = "Sözleşme tarifesi" })
         <span x-show="loading" class="text-xs text-muted mb-5">Yükleniyor…</span>
     </div>
-    <div x-show="!(unitId && tenantId && startDate)" class="text-muted text-sm italic">Birim, kiracı ve başlangıç tarihi seçilince tarife yüklenir.</div>
-    <div x-show="unitId && tenantId && startDate" x-cloak>
+    <div x-show="!(spaceId && tenantId && startDate)" class="text-muted text-sm italic">Alan, kiracı ve başlangıç tarihi seçilince tarife yüklenir.</div>
+    <div x-show="spaceId && tenantId && startDate" x-cloak>
     <div x-show="error" class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4 text-sm" x-text="error"></div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         @await Html.PartialAsync("_LeaseLineItemFields", null, new ViewDataDictionary(ViewData)
@@ -149,7 +122,7 @@
             ["ItemsExpr"] = "lineItems",
             ["NamePrefix"] = "LeaseLineItems",
             ["AmountExpr"] = "amount(item)",
-            ["AreaExpr"] = "unitArea()"
+            ["AreaExpr"] = "spaceArea()"
         })
     </div>
     <div x-show="!loading && lineItems.length === 0" class="text-muted text-sm italic">Bu seçimlere uygun tarife bulunamadı.</div>

@@ -21,7 +21,7 @@ public sealed record ParentReservationRateOverrideCardDto(
     IReadOnlyList<ParentReservationRateOverrideRowDto> Rows);
 
 public sealed record ParentReservationRateOverrideRowDto(
-    string UnitTypeName,
+    string SpaceName,
     int FreeDurationMinutes,
     int BillingPeriodMinutes,
     decimal PeriodRate,

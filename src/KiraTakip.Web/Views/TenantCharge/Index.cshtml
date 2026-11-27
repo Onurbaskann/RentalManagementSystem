@@ -87,11 +87,11 @@
         <form method="get" class="flex flex-wrap items-center gap-2.5 p-3 bg-slate-50/50 border-b border-slate-200" action="@indexUrl">
             <input type="search" name="q" value="@query.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: dönem, taşınmaz…" />
 
-            <select name="unitId" class="form-control w-44 text-xs font-medium">
-                <option value="">— Tüm Birimler —</option>
-                @foreach (var unit in Model.Units)
+            <select name="spaceId" class="form-control w-44 text-xs font-medium">
+                <option value="">— Tüm Alanlar —</option>
+                @foreach (var unit in Model.Spaces)
                 {
-                    <option value="@unit.Id" selected="@(query.UnitId == unit.Id ? "selected" : null)">@unit.Name</option>
+                    <option value="@unit.Id" selected="@(query.SpaceId == unit.Id ? "selected" : null)">@unit.NamePath</option>
                 }
             </select>
 
@@ -123,7 +123,7 @@
                 <thead>
                     <tr>
                         <th class="w-36">Dönem</th>
-                        <th>Birim</th>
+                        <th>Alan</th>
                         <th class="w-28 cell-center">Vade</th>
                         <th class="w-32 num">Borç</th>
                         <th class="w-32 num">Ödenen</th>
@@ -180,11 +180,7 @@
                                 </div>
                             </td>
                             <td>
-                                @(charge.PropertyName ?? "—")
-                                @if (!string.IsNullOrEmpty(charge.UnitName))
-                                {
-                                    <span class="cell-sub">@charge.UnitName</span>
-                                }
+                                @(charge.SpaceName ?? "—")
                             </td>
                             <td class="cell-center">@charge.DueDate.Tarih()</td>
                             <td class="num">@charge.TotalAmount.Tl()</td>

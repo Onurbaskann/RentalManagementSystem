@@ -10,8 +10,11 @@ public class Reservation : BaseEntity
     [Column("RezervasyonNo")]
     public string ReservationNo { get; set; } = string.Empty;
 
-    [Column("BirimId")]
-    public int UnitId { get; set; }
+    [Column("AlanId")]
+    public int SpaceId { get; set; }
+
+    [Column("BorcTipiId")]
+    public int ChargeTypeId { get; set; }
 
     [Column("KiraciId")]
     public int TenantId { get; set; }
@@ -103,7 +106,8 @@ public class Reservation : BaseEntity
     [Timestamp]
     public byte[] RowVersion { get; set; } = [];
 
-    public Unit Unit { get; set; } = null!;
+    public Space Space { get; set; } = null!;
+    public ChargeType ChargeType { get; set; } = null!;
     public Tenant Tenant { get; set; } = null!;
     public ApplicationUser? RequestedByUser { get; set; }
     public ApplicationUser? ApprovedByUser { get; set; }

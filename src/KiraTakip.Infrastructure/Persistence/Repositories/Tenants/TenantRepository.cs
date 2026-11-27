@@ -14,24 +14,10 @@ public class TenantRepository(ApplicationDbContext context)
     : RepositoryBase<Tenant>(context), ITenantRepository
 {
     public async Task<List<TenantListItemDto>> GetListAsync(
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope? scope)
     {
-        IQueryable<Tenant> query = _dbSet.AsNoTracking();
-        var scopeRestricted = authorizedPropertyIds != null || authorizedUnitIds != null;
-        var propertyIds = authorizedPropertyIds ?? [];
-        var unitIds = authorizedUnitIds ?? [];
-
-        if (scopeRestricted)
-        {
-            var authorizedTenantIds = _ctx.Leases
-                .Where(lease => propertyIds.Contains(lease.Unit.PropertyId)
-                    || unitIds.Contains(lease.UnitId))
-                .Select(lease => lease.TenantId)
-                .Distinct();
-
-            query = query.Where(tenant => authorizedTenantIds.Contains(tenant.Id));
-        }
+        var query = ApplyScope(_dbSet.AsNoTracking(), scope);
+        var roots = scope is { HasGlobalAccess: false } ? scope.RootPaths.ToList() : null;
 
         var now = DateTime.Now;
         return await query
@@ -51,32 +37,18 @@ public class TenantRepository(ApplicationDbContext context)
                     && lease.Status == LeaseStatus.Active
                     && lease.StartDate <= now
                     && lease.EndDate >= now
-                    && (!scopeRestricted
-                        || propertyIds.Contains(lease.Unit.PropertyId)
-                        || unitIds.Contains(lease.UnitId)))
+                    && (roots == null
+                        || lease.Areas.Any(area => roots.Any(root => area.Space.Path.StartsWith(root)))))
             })
             .ToListAsync();
     }
 
     public async Task<PagedResult<TenantListItemDto>> GetPagedListAsync(
         TableQuery tableQuery,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope? scope)
     {
-        IQueryable<Tenant> query = _dbSet.AsNoTracking();
-        var scopeRestricted = authorizedPropertyIds != null || authorizedUnitIds != null;
-        var propertyIds = authorizedPropertyIds ?? [];
-        var unitIds = authorizedUnitIds ?? [];
-
-        if (scopeRestricted)
-        {
-            var authorizedTenantIds = _ctx.Leases
-                .Where(lease => propertyIds.Contains(lease.Unit.PropertyId)
-                    || unitIds.Contains(lease.UnitId))
-                .Select(lease => lease.TenantId)
-                .Distinct();
-            query = query.Where(tenant => authorizedTenantIds.Contains(tenant.Id));
-        }
+        var query = ApplyScope(_dbSet.AsNoTracking(), scope);
+        var roots = scope is { HasGlobalAccess: false } ? scope.RootPaths.ToList() : null;
 
         if (!string.IsNullOrWhiteSpace(tableQuery.Q))
         {
@@ -108,29 +80,15 @@ public class TenantRepository(ApplicationDbContext context)
                     && lease.Status == LeaseStatus.Active
                     && lease.StartDate <= now
                     && lease.EndDate >= now
-                    && (!scopeRestricted
-                        || propertyIds.Contains(lease.Unit.PropertyId)
-                        || unitIds.Contains(lease.UnitId)))
+                    && (roots == null
+                        || lease.Areas.Any(area => roots.Any(root => area.Space.Path.StartsWith(root)))))
             });
 
         return await GetPagedResultAsync(query, itemsQuery, tableQuery);
     }
 
-    public Task<bool> IsInScopeAsync(
-        int tenantId,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
-    {
-        if (authorizedPropertyIds == null && authorizedUnitIds == null)
-            return _dbSet.AsNoTracking().AnyAsync(tenant => tenant.Id == tenantId);
-
-        var propertyIds = authorizedPropertyIds ?? [];
-        var unitIds = authorizedUnitIds ?? [];
-        return _ctx.Leases.AsNoTracking().AnyAsync(lease =>
-            lease.TenantId == tenantId
-            && (propertyIds.Contains(lease.Unit.PropertyId)
-                || unitIds.Contains(lease.UnitId)));
-    }
+    public Task<bool> IsInScopeAsync(int tenantId, SpaceAccessScope? scope)
+        => ApplyScope(_dbSet.AsNoTracking(), scope).AnyAsync(tenant => tenant.Id == tenantId);
 
     public Task<List<ReservationTenantOptionDto>> GetReservationOptionsAsync()
         => _dbSet.AsNoTracking()
@@ -141,9 +99,8 @@ public class TenantRepository(ApplicationDbContext context)
 
     public Task<TenantDetailsDto?> GetDetailsAsync(
         int id,
-        List<int>? authorizedPropertyIds = null,
-        List<int>? authorizedUnitIds = null)
-        => ApplyScope(_dbSet.AsNoTracking(), authorizedPropertyIds, authorizedUnitIds)
+        SpaceAccessScope? scope = null)
+        => ApplyScope(_dbSet.AsNoTracking(), scope)
             .Where(tenant => tenant.Id == id)
             .Select(tenant => new TenantDetailsDto
             {
@@ -167,9 +124,8 @@ public class TenantRepository(ApplicationDbContext context)
 
     public Task<Tenant?> GetForUpdateAsync(
         int id,
-        List<int>? authorizedPropertyIds = null,
-        List<int>? authorizedUnitIds = null)
-        => ApplyScope(_dbSet, authorizedPropertyIds, authorizedUnitIds)
+        SpaceAccessScope? scope = null)
+        => ApplyScope(_dbSet, scope)
             .FirstOrDefaultAsync(tenant => tenant.Id == id);
 
     public Task<bool> TenantNoExistsAsync(string tenantNo, int? excludeTenantId = null)
@@ -221,16 +177,15 @@ public class TenantRepository(ApplicationDbContext context)
         if (!await _dbSet.AsNoTracking().AnyAsync(tenant => tenant.Id == tenantId))
             return null;
 
-        var leaseScopes = await _ctx.Leases
+        var spacePaths = await _ctx.Leases
             .AsNoTracking()
             .Where(lease => lease.TenantId == tenantId)
-            .Select(lease => new { lease.Unit.PropertyId, lease.UnitId })
+            .SelectMany(lease => lease.Areas)
+            .Select(area => area.Space.Path)
+            .Distinct()
             .ToListAsync();
 
-        return new DocumentOwnerContextDto(
-            tenantId,
-            leaseScopes.Select(scope => scope.PropertyId).Distinct().ToList(),
-            leaseScopes.Select(scope => scope.UnitId).Distinct().ToList());
+        return new DocumentOwnerContextDto(tenantId, spacePaths);
     }
 
     public async Task<bool> HasHistoricalDependencyAsync(int tenantId)
@@ -240,19 +195,14 @@ public class TenantRepository(ApplicationDbContext context)
             || await _ctx.Users.IgnoreQueryFilters().AnyAsync(user => user.TenantId == tenantId)
             || await _ctx.Roller.IgnoreQueryFilters().AnyAsync(role => role.TenantId == tenantId);
 
-    private IQueryable<Tenant> ApplyScope(
-        IQueryable<Tenant> query,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds)
+    private IQueryable<Tenant> ApplyScope(IQueryable<Tenant> query, SpaceAccessScope? scope)
     {
-        if (authorizedPropertyIds == null && authorizedUnitIds == null)
+        if (scope == null || scope.HasGlobalAccess)
             return query;
 
-        var propertyIds = authorizedPropertyIds ?? [];
-        var unitIds = authorizedUnitIds ?? [];
+        var roots = scope.RootPaths.ToList();
         var authorizedTenantIds = _ctx.Leases
-            .Where(lease => propertyIds.Contains(lease.Unit.PropertyId)
-                || unitIds.Contains(lease.UnitId))
+            .Where(lease => lease.Areas.Any(area => roots.Any(root => area.Space.Path.StartsWith(root))))
             .Select(lease => lease.TenantId)
             .Distinct();
 

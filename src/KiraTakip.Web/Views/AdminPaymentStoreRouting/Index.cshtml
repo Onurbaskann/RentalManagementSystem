@@ -1,6 +1,5 @@
 ﻿@model KiraTakip.Web.Models.ViewModels.PaymentStoreRoutingIndexViewModel
 @using KiraTakip.Models.Common
-@using KiraTakip.Models.Enums
 @{
     ViewData["Title"] = "Ödeme Yönlendirmeleri";
     ViewData["UseCentralFeedback"] = true;
@@ -8,13 +7,12 @@
         Model.Data.Routings,
         "/Admin/PaymentStoreRouting",
         Model.Query.ToQueryDict());
-    var unitGroups = Model.Data.Units.GroupBy(unit => unit.ParentName).OrderBy(group => group.Key);
 }
 
 <div class="page-header">
     <div>
         <div class="page-title">Ödeme Yönlendirmeleri</div>
-        <div class="page-subtitle">Bir tahakkuk kaleminin ödemesi hangi mağazaya gidecek, burada belirlenir. Ödeme sırasında sırasıyla <strong>Birim → Taşınmaz → Genel</strong> yönlendirmesi aranır.</div>
+        <div class="page-subtitle">Bir tahakkuk kaleminin ödemesi hangi mağazaya gidecek, burada belirlenir. Ödeme sırasında sırasıyla <strong>Alan → üst alanlar → Genel</strong> yönlendirmesi aranır.</div>
     </div>
 </div>
 
@@ -82,43 +80,16 @@ else if (Model.Guide != null && Model.Guide.HasUsableDefault && !Model.Guide.IsC
             </div>
 
             <div class="form-group">
-                <label class="form-label">Kapsam <span class="text-red-500">*</span></label>
-                <select asp-for="Form.Scope" name="Scope" id="routing-scope" class="form-control">
-                    <option value="0" selected="@(Model.Form.Scope == PaymentRoutingScope.General)">Genel — tüm taşınmazlar</option>
-                    <option value="1" selected="@(Model.Form.Scope == PaymentRoutingScope.Property)">Taşınmaz — seçilen taşınmaza özel</option>
-                    <option value="2" selected="@(Model.Form.Scope == PaymentRoutingScope.Unit)">Birim — seçilen birime özel</option>
-                </select>
-                <div id="scope-help" class="text-xs text-muted mt-1"></div>
-                @Html.ValidationMessage("Scope", null, new { @class = "text-red-500 text-xs" })
-            </div>
-
-            <div class="form-group" id="property-field">
-                <label class="form-label">Taşınmaz <span class="text-red-500">*</span></label>
-                <select asp-for="Form.PropertyId" name="PropertyId" id="routing-property" class="form-control">
-                    <option value="">Seçiniz</option>
-                    @foreach (var item in Model.Data.Properties)
+                <label class="form-label">Alan</label>
+                <select asp-for="Form.SpaceId" name="SpaceId" class="form-control">
+                    <option value="">Genel — tüm alanlar</option>
+                    @foreach (var item in Model.Data.Spaces)
                     {
-                        <option value="@item.Id" selected="@(Model.Form.PropertyId == item.Id)">@item.Name</option>
+                        <option value="@item.Id" selected="@(Model.Form.SpaceId == item.Id)">@item.NamePath</option>
                     }
                 </select>
-                @Html.ValidationMessage("PropertyId", null, new { @class = "text-red-500 text-xs" })
-            </div>
-
-            <div class="form-group" id="unit-field">
-                <label class="form-label">Birim <span class="text-red-500">*</span></label>
-                <select asp-for="Form.UnitId" name="UnitId" id="routing-unit" class="form-control">
-                    <option value="">Seçiniz</option>
-                    @foreach (var group in unitGroups)
-                    {
-                        <optgroup label="@group.Key">
-                            @foreach (var item in group)
-                            {
-                                <option value="@item.Id" selected="@(Model.Form.UnitId == item.Id)">@item.Name</option>
-                            }
-                        </optgroup>
-                    }
-                </select>
-                @Html.ValidationMessage("UnitId", null, new { @class = "text-red-500 text-xs" })
+                <div class="text-xs text-muted mt-1">Boş bırakılırsa bu borç tipinin tüm alanları için varsayılan mağaza olur (her aktif borç tipinde zorunludur). Alan seçilirse o alan ve altındaki alanlar için geçerlidir; genel yönlendirmenin yerine geçer.</div>
+                @Html.ValidationMessage("SpaceId", null, new { @class = "text-red-500 text-xs" })
             </div>
 
             <div class="form-group">
@@ -154,8 +125,7 @@ else if (Model.Guide != null && Model.Guide.HasUsableDefault && !Model.Guide.IsC
                 <select name="source" class="form-control">
                     <option value="">Tümü</option>
                     <option value="General" selected="@(Model.Query.Source == "General")">Genel</option>
-                    <option value="Property" selected="@(Model.Query.Source == "Property")">Taşınmaz</option>
-                    <option value="Unit" selected="@(Model.Query.Source == "Unit")">Birim</option>
+                    <option value="Space" selected="@(Model.Query.Source == "Space")">Alan</option>
                 </select>
             </div>
             <input type="hidden" name="size" value="@Model.Query.Size" />
@@ -200,7 +170,7 @@ else if (Model.Guide != null && Model.Guide.HasUsableDefault && !Model.Guide.IsC
                                     <div class="font-medium text-slate-700">@routing.ChargeTypeName</div>
                                 </td>
                                 <td>
-                                    <div class="text-sm font-medium">@(routing.Scope == PaymentRoutingScope.General ? "Genel (varsayılan)" : routing.Scope == PaymentRoutingScope.Property ? "Taşınmaza özel" : "Birime özel")</div>
+                                    <div class="text-sm font-medium">@(routing.SpaceId == null ? "Genel (varsayılan)" : "Alana özel")</div>
                                     <div class="text-xs text-muted">@routing.ScopeName</div>
                                 </td>
                                 <td>
@@ -227,10 +197,10 @@ else if (Model.Guide != null && Model.Guide.HasUsableDefault && !Model.Guide.IsC
                                     }
                                 </td>
                                 <td class="text-right">
-                                    @if (routing.IsActive && routing.Scope != PaymentRoutingScope.General)
+                                    @if (routing.IsActive && routing.SpaceId != null)
                                     {
                                         <form method="post" action="/Admin/PaymentStoreRouting/Deactivate/@routing.Id.ToHashId()" class="inline"
-                                              data-confirm="«@routing.ScopeName» için tanımlı yönlendirme kaldırılsın mı? Bu kapsamdaki yeni ödemeler bir üst kapsamın mağazasına (Birim → Taşınmaz → Genel) yönlendirilir. Kayıt silinmez, listede «Geçmiş» olarak kalır.">
+                                              data-confirm="«@routing.ScopeName» için tanımlı yönlendirme kaldırılsın mı? Bu kapsamdaki yeni ödemeler bir üst kapsamın mağazasına (Alan → üst alanlar → Genel) yönlendirilir. Kayıt silinmez, listede «Geçmiş» olarak kalır.">
                                             @Html.AntiForgeryToken()
                                             <button type="submit" class="btn btn-sm btn-danger" asp-permission="@PermissionCatalog.PaymentRouting.Edit">Yönlendirmeyi Kaldır</button>
                                         </form>
@@ -252,31 +222,4 @@ else if (Model.Guide != null && Model.Guide.HasUsableDefault && !Model.Guide.IsC
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script>
-        (() => {
-            const scope = document.getElementById('routing-scope');
-            const propertyField = document.getElementById('property-field');
-            const unitField = document.getElementById('unit-field');
-            const property = document.getElementById('routing-property');
-            const unit = document.getElementById('routing-unit');
-            const scopeHelp = document.getElementById('scope-help');
-            const scopeHelpText = {
-                '0': 'Bu borç tipinin tüm taşınmaz ve birimleri için varsayılan mağaza. Her aktif borç tipinde zorunludur.',
-                '1': 'Yalnız seçilen taşınmazdaki birimler için geçerlidir; genel yönlendirmenin yerine geçer.',
-                '2': 'Yalnız seçilen birim için geçerlidir; taşınmaz ve genel yönlendirmenin yerine geçer.'
-            };
-
-            const refresh = () => {
-                const value = scope.value;
-                propertyField.classList.toggle('hidden', value !== '1');
-                unitField.classList.toggle('hidden', value !== '2');
-                if (value !== '1') property.value = '';
-                if (value !== '2') unit.value = '';
-                scopeHelp.textContent = scopeHelpText[value] || '';
-            };
-
-            scope.addEventListener('change', refresh);
-            refresh();
-        })();
-    </script>
 }

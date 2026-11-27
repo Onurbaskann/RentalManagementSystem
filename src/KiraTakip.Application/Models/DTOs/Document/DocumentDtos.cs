@@ -46,5 +46,4 @@ public record GetDocumentsForOwnersInput(
 
 public record DocumentOwnerContextDto(
     int TenantId,
-    IReadOnlyList<int> PropertyIds,
-    IReadOnlyList<int> UnitIds);
+    IReadOnlyList<string> SpacePaths);

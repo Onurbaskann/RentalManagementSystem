@@ -19,15 +19,14 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
 
     public async Task<List<PaymentListItemDto>> GetListAsync(
         int? chargeId,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope? scope)
     {
         IQueryable<PaymentAllocation> query = _dbSet.AsNoTracking();
 
         if (chargeId.HasValue)
             query = query.Where(o => o.ChargeId == chargeId.Value);
 
-        query = ApplyScope(query, authorizedPropertyIds, authorizedUnitIds);
+        query = ApplyScope(query, scope);
 
         return await query
             .OrderByDescending(o => o.EntryDate)
@@ -50,8 +49,9 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
                 TenantDisplayName = o.Charge.Tenant.Name,
                 ChargePeriodStart = o.Charge.PeriodStart,
                 CreatedByUserDisplayName = o.GirenUser != null ? (o.GirenUser.AdSoyad ?? o.GirenUser.Email) : null,
-                PropertyName = o.Charge.Unit.Property.Name,
-                UnitName = o.Charge.Unit.Name,
+                SpaceName = o.Charge.Lease != null
+                    ? o.Charge.Lease.Areas.Select(area => area.SnapshotPath).FirstOrDefault() ?? string.Empty
+                    : o.Charge.Space != null ? o.Charge.Space.Name : string.Empty,
                 StoreId = o.StoreAccount.StoreId,
                 StoreName = o.StoreAccount.Store.Name
             })
@@ -61,15 +61,14 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
     public async Task<PagedResult<PaymentListItemDto>> GetPagedListAsync(
         TableQuery tableQuery,
         int? chargeId,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope? scope)
     {
         IQueryable<PaymentAllocation> query = _dbSet.AsNoTracking();
 
         if (chargeId.HasValue)
             query = query.Where(o => o.ChargeId == chargeId.Value);
 
-        query = ApplyScope(query, authorizedPropertyIds, authorizedUnitIds);
+        query = ApplyScope(query, scope);
 
         if (!string.IsNullOrWhiteSpace(tableQuery.Q))
         {
@@ -77,8 +76,8 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
             query = query.Where(o =>
                 EF.Functions.Like(o.Charge.Tenant.Name, $"%{searchTerm}%") ||
                 EF.Functions.Like(o.PaymentNo, $"%{searchTerm}%") ||
-                EF.Functions.Like(o.Charge.Unit.Property.Name, $"%{searchTerm}%") ||
-                EF.Functions.Like(o.Charge.Unit.Name, $"%{searchTerm}%") ||
+                (o.Charge.Space != null && EF.Functions.Like(o.Charge.Space.Name, $"%{searchTerm}%")) ||
+                o.Charge.Lease!.Areas.Any(area => EF.Functions.Like(area.SnapshotPath, $"%{searchTerm}%")) ||
                 EF.Functions.Like(o.ChargeLineItem.ChargeType.Name, $"%{searchTerm}%") ||
                 (o.Description != null && EF.Functions.Like(o.Description, $"%{searchTerm}%")));
         }
@@ -125,8 +124,9 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
                 TenantDisplayName = o.Charge.Tenant.Name,
                 ChargePeriodStart = o.Charge.PeriodStart,
                 CreatedByUserDisplayName = o.GirenUser != null ? (o.GirenUser.AdSoyad ?? o.GirenUser.Email) : null,
-                PropertyName = o.Charge.Unit.Property.Name,
-                UnitName = o.Charge.Unit.Name,
+                SpaceName = o.Charge.Lease != null
+                    ? o.Charge.Lease.Areas.Select(area => area.SnapshotPath).FirstOrDefault() ?? string.Empty
+                    : o.Charge.Space != null ? o.Charge.Space.Name : string.Empty,
                 StoreId = o.StoreAccount.StoreId,
                 StoreName = o.StoreAccount.Store.Name
             });
@@ -136,13 +136,11 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
 
     public async Task<PaymentDetailDto?> GetDetailsAsync(
         int id,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope? scope)
     {
         var query = ApplyScope(
             _dbSet.AsNoTracking().Where(payment => payment.Id == id),
-            authorizedPropertyIds,
-            authorizedUnitIds);
+            scope);
 
         return await query
             .Select(o => new PaymentDetailDto
@@ -168,7 +166,6 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
                 StoreName = o.StoreAccount.Store.Name,
                 StoreProviderCode = o.StoreAccount.ProviderCode,
                 StoreCurrency = o.StoreAccount.Currency,
-                PropertyId = o.Charge.Unit.PropertyId,
                 TenantDisplayName = o.Charge.Tenant.Name,
                 ChargePeriodStart = o.Charge.PeriodStart,
                 CreatedByUserDisplayName = o.GirenUser != null ? (o.GirenUser.AdSoyad ?? o.GirenUser.Email) : null,
@@ -187,15 +184,14 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
 
     public async Task<PaymentAllocation?> GetForDecisionAsync(
         int id,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope? scope)
     {
         var query = _dbSet
             .Include(payment => payment.Charge)
             .Include(payment => payment.ChargeLineItem)
             .Where(payment => payment.Id == id);
 
-        query = ApplyScope(query, authorizedPropertyIds, authorizedUnitIds);
+        query = ApplyScope(query, scope);
 
         return await query.FirstOrDefaultAsync();
     }
@@ -213,20 +209,13 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
 
     public async Task<decimal> GetTenantApprovedTotalAsync(
         int tenantId,
-        List<int>? authorizedPropertyIds = null,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope? scope = null)
     {
-        var query = _dbSet.AsNoTracking().Where(payment =>
-            payment.Charge.TenantId == tenantId
-            && payment.Status == PaymentStatus.Approved);
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(payment =>
-                propertyIds.Contains(payment.Charge.Unit.PropertyId)
-                || unitIds.Contains(payment.Charge.UnitId));
-        }
+        var query = ApplyScope(
+            _dbSet.AsNoTracking().Where(payment =>
+                payment.Charge.TenantId == tenantId
+                && payment.Status == PaymentStatus.Approved),
+            scope);
 
         return await query.SumAsync(payment => (decimal?)payment.Amount) ?? 0m;
     }
@@ -240,14 +229,10 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
     public async Task<TenantPanelPaymentDataDto> GetTenantPanelDataAsync(
         GetTenantPanelPaymentDataInput input)
     {
-        var propertyIds = input.PropertyIds?.ToList();
-        var unitIds = input.UnitIds?.ToList();
         var sixMonthStart = new DateTime(input.Today.Year, input.Today.Month, 1).AddMonths(-5);
-        var query = _dbSet.AsNoTracking().Where(payment =>
-            payment.Charge.TenantId == input.TenantId
-            && (propertyIds == null && unitIds == null
-                || propertyIds != null && propertyIds.Contains(payment.Charge.Unit.PropertyId)
-                || unitIds != null && unitIds.Contains(payment.Charge.UnitId)));
+        var query = ApplyScope(
+            _dbSet.AsNoTracking().Where(payment => payment.Charge.TenantId == input.TenantId),
+            input.Scope);
         var monthlyPaid = await query
             .Where(payment => payment.Status == PaymentStatus.Approved
                 && payment.PaymentDate >= sixMonthStart)
@@ -275,8 +260,6 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
             .Where(payment => payment.Id == paymentId)
             .Select(payment => new PaymentMatchingContextDto(
                 payment.Id,
-                payment.Charge.Unit.PropertyId,
-                payment.Charge.UnitId,
                 payment.Status,
                 payment.StoreAccountId))
             .FirstOrDefaultAsync();
@@ -291,8 +274,7 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
     public async Task<List<PaymentCandidateDto>> GetCandidatesAsync(
         PaymentMatchingBasisDto basis,
         PaymentMatchingPolicyDto policy,
-        IReadOnlyList<int>? propertyIds,
-        IReadOnlyList<int>? unitIds = null)
+        SpaceAccessScope? scope)
     {
         var tolerance = basis.Amount * policy.AmountTolerancePercent / 100m;
         IQueryable<PaymentAllocation> query = _dbSet.AsNoTracking()
@@ -300,10 +282,7 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
             .Where(payment => payment.StoreAccountId == basis.StoreAccountId)
             .Where(payment => !_ctx.PaymentMatches.Any(match => match.PaymentAllocationId == payment.Id));
 
-        query = ApplyScope(
-            query,
-            propertyIds?.ToList(),
-            unitIds?.ToList());
+        query = ApplyScope(query, scope);
 
         var candidates = await query.Select(payment => new PaymentCandidateDto
         {
@@ -339,17 +318,17 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
             .Select(payment => new
             {
                 payment.Charge.TenantId,
-                payment.Charge.UnitId,
-                payment.Charge.Unit.PropertyId
+                SpacePaths = payment.Charge.LeaseId != null
+                    ? payment.Charge.Lease!.Areas.Select(area => area.Space.Path).ToList()
+                    : payment.Charge.Space != null
+                        ? new List<string> { payment.Charge.Space.Path }
+                        : new List<string>()
             })
             .FirstOrDefaultAsync();
 
         return context == null
             ? null
-            : new DocumentOwnerContextDto(
-                context.TenantId,
-                [context.PropertyId],
-                [context.UnitId]);
+            : new DocumentOwnerContextDto(context.TenantId, context.SpacePaths);
     }
 
     public Task<List<string>> GetExistingPaymentNosAsync()
@@ -361,15 +340,15 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
 
     private static IQueryable<PaymentAllocation> ApplyScope(
         IQueryable<PaymentAllocation> query,
-        IReadOnlyCollection<int>? propertyIds,
-        IReadOnlyCollection<int>? unitIds)
+        SpaceAccessScope? scope)
     {
-        if (propertyIds == null && unitIds == null)
+        if (scope == null || scope.HasGlobalAccess)
             return query;
 
-        return query.Where(payment =>
-            (propertyIds != null && propertyIds.Contains(payment.Charge.Unit.PropertyId))
-            || (unitIds != null && unitIds.Contains(payment.Charge.UnitId)));
+        var roots = scope.RootPaths.ToList();
+        return query.Where(payment => payment.Charge.LeaseId != null
+            ? payment.Charge.Lease!.Areas.Any(area => roots.Any(root => area.Space.Path.StartsWith(root)))
+            : payment.Charge.Space != null && roots.Any(root => payment.Charge.Space.Path.StartsWith(root)));
     }
 
     // Dönem Bazlı blok — yalnız onaylanmış ödemeler, tahakkukun ait olduğu DÖNEM (Charge.PeriodStart)
@@ -382,7 +361,7 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
             .Where(payment => payment.Status == PaymentStatus.Approved
                 && payment.Charge.PeriodStart.Year == input.Year);
 
-        query = ApplyScope(query, input.PropertyIds, input.UnitIds);
+        query = ApplyScope(query, input.Scope);
 
         if (input.StoreId.HasValue)
             query = query.Where(payment => payment.StoreAccount.StoreId == input.StoreId.Value);
@@ -411,7 +390,7 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
             .Where(payment => payment.Status == PaymentStatus.Approved
                 && payment.Charge.PeriodStart.Year == input.Year);
 
-        query = ApplyScope(query, input.PropertyIds, input.UnitIds);
+        query = ApplyScope(query, input.Scope);
 
         if (input.StoreId.HasValue)
             query = query.Where(payment => payment.StoreAccount.StoreId == input.StoreId.Value);
@@ -440,7 +419,7 @@ public class PaymentAllocationRepository : RepositoryBase<PaymentAllocation>, IP
             .Where(payment => payment.Status == PaymentStatus.Approved
                 && payment.PaymentDate.Year == input.Year);
 
-        query = ApplyScope(query, input.PropertyIds, input.UnitIds);
+        query = ApplyScope(query, input.Scope);
 
         if (input.StoreId.HasValue)
             query = query.Where(payment => payment.StoreAccount.StoreId == input.StoreId.Value);

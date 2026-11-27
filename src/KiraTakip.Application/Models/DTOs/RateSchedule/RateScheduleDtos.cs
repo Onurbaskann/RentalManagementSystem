@@ -8,8 +8,7 @@ public record RateMatrixDto(
     int Year,
     bool IsActive,
     List<RateMatrixColumnDto> Columns,
-    List<RateMatrixRowDto> Rows,
-    List<RateMatrixReservationRowDto> ReservationRows
+    List<RateMatrixRowDto> Rows
 );
 
 public record RateMatrixColumnDto(int ChargeTypeId, string Name, string Code);
@@ -25,19 +24,8 @@ public record RateMatrixCellDto(
     decimal KdvRate
 );
 
-public record RateMatrixReservationRowDto(
-    int ReservationRateId,
-    int UnitTypeId,
-    string UnitTypeName,
-    int FreeDurationMinutes,
-    int BillingPeriodMinutes,
-    decimal PeriodRate,
-    decimal KdvRate
-);
-
 public record SaveRateMatrixInput(
-    List<SaveRateCellInput> Cells,
-    List<SaveReservationCellInput> ReservationCells
+    List<SaveRateCellInput> Cells
 );
 
 public record SaveRateCellInput(
@@ -46,15 +34,6 @@ public record SaveRateCellInput(
     int ChargeTypeId,
     CalculationMethod CalculationMethod,
     decimal UnitValue,
-    decimal KdvRate
-);
-
-public record SaveReservationCellInput(
-    int ReservationRateId,
-    int UnitTypeId,
-    int FreeDurationMinutes,
-    int BillingPeriodMinutes,
-    decimal PeriodRate,
     decimal KdvRate
 );
 

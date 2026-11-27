@@ -6,7 +6,7 @@ namespace KiraTakip.Web.Models.ViewModels;
 
 public interface ILeaseFormViewModel
 {
-    int? UnitId { get; set; }
+    int? SpaceId { get; set; }
     int TenantId { get; set; }
     DateTime StartDate { get; set; }
     DateTime EndDate { get; set; }
@@ -15,9 +15,7 @@ public interface ILeaseFormViewModel
     string? Description { get; set; }
     bool IsRentFree { get; set; }
     decimal? RentedArea { get; set; }
-    decimal? AllocatedArea { get; set; }
-    LeaseAreaMode? AllocationMode { get; set; }
-    List<UnitLookupDto> AvailableUnits { get; set; }
+    List<LeaseSpaceOptionDto> AvailableSpaces { get; set; }
     List<TenantListItemDto> Tenants { get; set; }
     List<LeaseLineItemInputDto> LeaseLineItems { get; set; }
 }
@@ -26,12 +24,12 @@ public sealed class LeaseDraftViewModel : ILeaseFormViewModel
 {
     public int LeaseId { get; set; }
     public string LeaseNo { get; set; } = string.Empty;
-    public int? UnitId { get; set; }
+    public int? SpaceId { get; set; }
     public int TenantId { get; set; }
-    public string UnitTypeNameSnapshot { get; set; } = string.Empty;
-    public UnitTypeUsage UnitTypeUsageSnapshot { get; set; }
-    public UnitRentalMode RentalModeSnapshot { get; set; }
-    public decimal UnitAreaSnapshot { get; set; }
+    public string SpacePath { get; set; } = string.Empty;
+    public string SpaceTypeNameSnapshot { get; set; } = string.Empty;
+    public SpaceUsage SpaceUsageSnapshot { get; set; }
+    public decimal SpaceAreaSnapshot { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public DueDateRuleType DueDateRuleType { get; set; }
@@ -39,8 +37,6 @@ public sealed class LeaseDraftViewModel : ILeaseFormViewModel
     public string? Description { get; set; }
     public bool IsRentFree { get; set; }
     public decimal? RentedArea { get; set; }
-    public decimal? AllocatedArea { get; set; }
-    public LeaseAreaMode? AllocationMode { get; set; }
     public LeaseStatus Status { get; set; }
     public byte[] RowVersion { get; set; } = [];
     public string OwnerDisplayName { get; set; } = string.Empty;
@@ -53,7 +49,7 @@ public sealed class LeaseDraftViewModel : ILeaseFormViewModel
     public int? GroupId { get; set; }
     public int GroupMemberCount { get; set; }
     public bool IsGrouped => GroupId.HasValue;
-    public List<UnitLookupDto> AvailableUnits { get; set; } = [];
+    public List<LeaseSpaceOptionDto> AvailableSpaces { get; set; } = [];
     public List<TenantListItemDto> Tenants { get; set; } = [];
     public List<LeaseLineItemInputDto> LeaseLineItems { get; set; } = [];
     public IReadOnlyList<LeaseReviewHistoryDto> ReviewHistory { get; set; } = [];

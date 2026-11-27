@@ -12,21 +12,20 @@ internal sealed class ReservationRateOverrideConfiguration : IEntityTypeConfigur
         entity.Property(r => r.PeriodRate).HasPrecision(18, 2);
         entity.Property(r => r.KdvRate).HasPrecision(5, 2);
         entity.Property(r => r.Description).HasMaxLength(300);
-        entity.HasOne(r => r.Unit)
+        entity.HasOne(r => r.Space)
               .WithMany()
-              .OnDelete(DeleteBehavior.SetNull);
-        entity.HasOne(r => r.UnitType)
+              .HasForeignKey(r => r.SpaceId)
+              .OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne(r => r.ChargeType)
               .WithMany()
+              .HasForeignKey(r => r.ChargeTypeId)
               .OnDelete(DeleteBehavior.Restrict);
-        entity.HasIndex(r => new { r.UnitTypeId, r.Year })
+        entity.HasIndex(r => r.SpaceId)
               .IsUnique()
-              .HasDatabaseName("UX_RezervasyonTarifeler_BirimTuruYil_GenelKural")
-              .HasFilter("[BirimId] IS NULL");
+              .HasDatabaseName("UX_RezervasyonTarifeler_AlanId_Silinmemis")
+              .HasFilter("[IsDeleted] = 0");
         entity.ToTable(t =>
         {
-            t.HasCheckConstraint(
-                "CK_RezervasyonTarife_BirimOrYilTuru",
-                "[BirimId] IS NOT NULL OR ([BirimTuruId] IS NOT NULL AND [Yil] IS NOT NULL)");
             t.HasCheckConstraint(
                 "CK_RezervasyonTarifeler_Degerler_Pozitif",
                 "[PeriyotUcreti] >= 0 AND [UcretsizSureDakika] >= 0 AND [UcretlendirmePeriyoduDakika] > 0 AND [KdvOrani] BETWEEN 0 AND 100");

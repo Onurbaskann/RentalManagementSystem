@@ -24,7 +24,7 @@ public class SpaceRateResolver(
             {
                 var hit = rates.FirstOrDefault(r => r.SpaceId == id);
                 if (hit.Rate != null)
-                    return Wrap(hit.Rate, LineItemSourceType.UnitRateOverride);
+                    return Wrap(hit.Rate, LineItemSourceType.SpaceRate);
             }
         }
 

@@ -22,7 +22,7 @@
     </div>
 }
 
-<div class="card" x-data="{ seciliRolId: '@Model.RoleId', globalErisim: @(Model.HasAccessToAllProperties ? "true" : "false") }">
+<div class="card" x-data="{ seciliRolId: '@Model.RoleId', globalErisim: @(Model.HasAccessToAllSpaces ? "true" : "false") }">
     <form method="post" action="/Admin/Users/Edit/@Model.Id">
         @Html.AntiForgeryToken()
 
@@ -76,68 +76,41 @@
             <div class="bg-slate-50 border border-slate-100 rounded-xl p-4">
                 <div class="text-[10px] font-bold text-slate-400 mb-3 flex items-center gap-2">
                     <span class="w-1.5 h-1.5 bg-primary rounded-full"></span>
-                    Taşınmaz Erişim Kapsamı
+                    Alan Erişim Kapsamı
                 </div>
 
                 <label class="flex items-center gap-2.5 cursor-pointer">
-                    <input type="checkbox" name="HasAccessToAllProperties" value="true"
-                           @(Model.HasAccessToAllProperties ? "checked" : "")
+                    <input type="checkbox" name="HasAccessToAllSpaces" value="true"
+                           @(Model.HasAccessToAllSpaces ? "checked" : "")
                            @@change="globalErisim = $event.target.checked"
                            class="w-4 h-4 rounded border-slate-300 accent-primary" />
-                    <input type="hidden" name="HasAccessToAllProperties" value="false" />
-                    <span class="text-[13.5px] font-semibold text-slate-700">Tüm Taşınmazlara Erişim</span>
+                    <input type="hidden" name="HasAccessToAllSpaces" value="false" />
+                    <span class="text-[13.5px] font-semibold text-slate-700">Tüm Alanlara Erişim</span>
                 </label>
                 <p class="text-[11.5px] text-slate-400 mt-1.5 ml-6" x-show="globalErisim">
-                    Kullanıcı sistemdeki tüm taşınmazlara erişebilir.
+                    Kullanıcı sistemdeki tüm alanlara erişebilir.
                 </p>
 
-                <!-- Spesifik taşınmaz / unit kapsamı: global toggle kapalıyken -->
-                @if (Model.Properties.Any() || Model.Units.Any())
+                <!-- Spesifik alan kapsamı: global toggle kapalıyken -->
+                @if (Model.Spaces.Any())
                 {
                     <div x-show="seciliRolId !== '@systemAdminRoleId' && seciliRolId !== '0' && !globalErisim" x-cloak class="mt-3">
-                        @if (Model.Properties.Any())
-                        {
-                            <div class="text-[11.5px] font-semibold text-slate-500 mb-2">Taşınmaz Bazlı</div>
-                            <div class="flex flex-col gap-2.5">
-                                @for (int i = 0; i < Model.Properties.Count; i++)
-                                {
-                                    <label class="flex items-center gap-2.5 text-[13.5px] cursor-pointer group">
-                                        <input type="checkbox" name="SelectedPropertyIds"
-                                               value="@Model.Properties[i].PropertyId"
-                                               @(Model.Properties[i].Selected ? "checked" : "")
-                                               class="w-4 h-4 rounded border-slate-300 accent-primary" />
-                                        <div class="flex flex-col">
-                                            <span class="font-semibold text-slate-700 group-hover:text-primary transition-colors">@Model.Properties[i].Name</span>
-                                            <span class="text-[11px] text-slate-400">@Model.Properties[i].Location</span>
-                                        </div>
-                                    </label>
-                                }
-                            </div>
-                        }
-                        @if (Model.Units.Any())
-                        {
-                            <div class="@(Model.Properties.Any() ? "mt-4 pt-3 border-t border-slate-200/60" : "")">
-                                <div class="text-[11.5px] font-semibold text-slate-500 mb-2">Birim Yetkileri</div>
-                                <div class="flex flex-col gap-2.5">
-                                    @for (int i = 0; i < Model.Units.Count; i++)
-                                    {
-                                        <label class="flex items-center gap-2.5 text-[13.5px] cursor-pointer group">
-                                            <input type="checkbox" name="SelectedUnitIds"
-                                                   value="@Model.Units[i].UnitId"
-                                                   @(Model.Units[i].Selected ? "checked" : "")
-                                                   class="w-4 h-4 rounded border-slate-300 accent-primary" />
-                                            <div class="flex flex-col">
-                                                <span class="font-semibold text-slate-700 group-hover:text-primary transition-colors">@Model.Units[i].Name</span>
-                                                <span class="text-[11px] text-slate-400">@Model.Units[i].PropertyName</span>
-                                            </div>
-                                        </label>
-                                    }
-                                </div>
-                            </div>
-                        }
+                        <div class="text-[11.5px] font-semibold text-slate-500 mb-2">Alan Yetkileri</div>
+                        <div class="flex flex-col gap-2.5">
+                            @for (int i = 0; i < Model.Spaces.Count; i++)
+                            {
+                                <label class="flex items-center gap-2.5 text-[13.5px] cursor-pointer group">
+                                    <input type="checkbox" name="SelectedSpaceIds"
+                                           value="@Model.Spaces[i].SpaceId"
+                                           @(Model.Spaces[i].Selected ? "checked" : "")
+                                           class="w-4 h-4 rounded border-slate-300 accent-primary" />
+                                    <span class="font-semibold text-slate-700 group-hover:text-primary transition-colors">@Model.Spaces[i].NamePath</span>
+                                </label>
+                            }
+                        </div>
                         <div class="text-[11px] text-slate-400 mt-4 pt-3 border-t border-slate-200/60 italic flex items-center gap-1.5">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                            Kullanıcı yalnızca seçilen taşınmaz/birimlere bağlı bilgileri görebilir.
+                            Kullanıcı yalnızca seçilen alanlara (ve alt alanlarına) bağlı bilgileri görebilir.
                         </div>
                     </div>
                 }

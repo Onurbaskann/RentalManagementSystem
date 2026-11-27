@@ -24,9 +24,9 @@ internal sealed class ChargeConfiguration : IEntityTypeConfiguration<Charge>
               .WithMany()
               .HasForeignKey(t => t.TenantId)
               .OnDelete(DeleteBehavior.Restrict);
-        entity.HasOne(t => t.Unit)
+        entity.HasOne(t => t.Space)
               .WithMany()
-              .HasForeignKey(t => t.UnitId)
+              .HasForeignKey(t => t.SpaceId)
               .OnDelete(DeleteBehavior.Restrict);
         entity.HasOne(t => t.Lease)
               .WithMany()
@@ -43,8 +43,8 @@ internal sealed class ChargeConfiguration : IEntityTypeConfiguration<Charge>
         entity.HasIndex(t => t.TenantId)
               .HasDatabaseName("IX_Tahakkuklar_KiraciId_Aktif")
               .HasFilter("[IsDeleted] = 0");
-        entity.HasIndex(t => t.UnitId)
-              .HasDatabaseName("IX_Tahakkuklar_BirimId_Aktif")
+        entity.HasIndex(t => t.SpaceId)
+              .HasDatabaseName("IX_Tahakkuklar_AlanId_Aktif")
               .HasFilter("[IsDeleted] = 0");
         entity.HasIndex(t => t.ReservationId)
               .IsUnique()

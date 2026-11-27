@@ -21,12 +21,6 @@ public class ReportController(
             return BadRequest(ModelState);
 
         var selectedYear = query.Year ?? DateTime.Today.Year;
-        var propertyIds = permissionScopeProvider.GlobalAccess
-            ? null
-            : permissionScopeProvider.AccessiblePropertyIds;
-        var unitIds = permissionScopeProvider.GlobalAccess
-            ? null
-            : permissionScopeProvider.AccessibleUnitIds;
 
         var report = await reportService.GetMonthlyCollectionReportAsync(
             new GetMonthlyCollectionReportInput(
@@ -34,8 +28,7 @@ public class ReportController(
                 DateTime.Today,
                 query.StoreId,
                 query.ChargeTypeId,
-                propertyIds,
-                unitIds));
+                permissionScopeProvider.SpaceScope));
 
         return View(report.ToViewModel());
     }

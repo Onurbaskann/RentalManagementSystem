@@ -6,5 +6,4 @@ public class RateMatrixViewModel
     public bool IsActive { get; set; }
     public List<RateMatrixChargeTypeColumn> Columns { get; set; } = [];
     public List<RateMatrixRow> Rows { get; set; } = [];
-    public List<RateMatrixReservationRow> ReservationRows { get; set; } = [];
 }

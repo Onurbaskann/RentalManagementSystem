@@ -25,7 +25,6 @@ public class PaymentDetailDto
     public DateTime EntryDate { get; set; }
     public DateTime? ApprovalDate { get; set; }
     public string? RejectionReason { get; set; }
-    public int? PropertyId { get; set; }
     public string TenantDisplayName { get; set; } = string.Empty;
     public DateTime ChargePeriodStart { get; set; }
     public string? CreatedByUserDisplayName { get; set; }

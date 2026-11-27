@@ -5,14 +5,11 @@ namespace KiraTakip.Models.Entities;
 [Table("RezervasyonTarifeler")]
 public class ReservationRateOverride : BaseEntity
 {
-    [Column("BirimId")]
-    public int? UnitId { get; set; }
+    [Column("AlanId")]
+    public int SpaceId { get; set; }
 
-    [Column("BirimTuruId")]
-    public int? UnitTypeId { get; set; }
-
-    [Column("Yil")]
-    public int? Year { get; set; }
+    [Column("BorcTipiId")]
+    public int ChargeTypeId { get; set; }
 
     [Column("UcretsizSureDakika")]
     public int FreeDurationMinutes { get; set; }
@@ -29,6 +26,6 @@ public class ReservationRateOverride : BaseEntity
     [Column("Aciklama")]
     public string? Description { get; set; }
 
-    public Unit? Unit { get; set; }
-    public UnitType? UnitType { get; set; }
+    public Space Space { get; set; } = null!;
+    public ChargeType ChargeType { get; set; } = null!;
 }

@@ -11,13 +11,13 @@ public class PaymentStoreResolver(IPaymentStoreRoutingRepository routingReposito
 {
     public async Task<ResolvedPaymentStoreAccountDto> ResolveAsync(
         int chargeTypeId,
-        int unitId,
+        int? spaceId,
         CancellationToken cancellationToken = default)
     {
         var candidate = Guard.NotFound(
-            await routingRepository.GetResolutionCandidateAsync(chargeTypeId, unitId, cancellationToken),
-            "Birim bulunamadı.",
-            "PAYMENT_ROUTING_UNIT_NOT_FOUND");
+            await routingRepository.GetResolutionCandidateAsync(chargeTypeId, spaceId, cancellationToken),
+            "Alan bulunamadı.",
+            "PAYMENT_ROUTING_SPACE_NOT_FOUND");
 
         Guard.Conflict(
             !candidate.RoutingId.HasValue,
@@ -38,10 +38,9 @@ public class PaymentStoreResolver(IPaymentStoreRoutingRepository routingReposito
 
         return new ResolvedPaymentStoreAccountDto(
             candidate.RoutingId!.Value,
-            candidate.MatchedScope!.Value,
+            candidate.MatchedSpaceId,
             chargeTypeId,
-            candidate.UnitId,
-            candidate.PropertyId,
+            candidate.SpaceId,
             candidate.StoreId!.Value,
             candidate.StoreAccountId!.Value,
             candidate.ProviderCode!,

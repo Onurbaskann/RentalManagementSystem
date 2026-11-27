@@ -25,20 +25,12 @@ public class ReservationController(
     [Authorize(Policy = PermissionCatalog.Reservation.Module)]
     public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
-        var propertyIds = permissionScopeProvider.GlobalAccess
-            ? null
-            : permissionScopeProvider.AccessiblePropertyIds;
-        var unitIds = permissionScopeProvider.GlobalAccess
-            ? null
-            : permissionScopeProvider.AccessibleUnitIds;
+        var scope = permissionScopeProvider.SpaceScope;
 
         var reservations = await reservationService.GetPageAsync(
-            new GetReservationsPageInput(
-                query,
-                propertyIds,
-                unitIds));
+            new GetReservationsPageInput(query, scope));
         var cancelledCount = await reservationService.GetCancelledCountAsync(
-            new GetCancelledReservationCountInput(propertyIds, unitIds));
+            new GetCancelledReservationCountInput(scope));
 
         ViewBag.Query = query;
         ViewBag.CancelledCount = cancelledCount;
@@ -55,7 +47,7 @@ public class ReservationController(
     public async Task<IActionResult> Availability([FromQuery] ReservationAvailabilityQueryViewModel query)
     {
         if (!query.TryMap(GetAccessScope(), out var input))
-            return BadRequest(new { code = "RESERVATION_AVAILABILITY_INPUT_REQUIRED", message = "Birim, başlangıç ve bitiş zamanı zorunludur." });
+            return BadRequest(new { code = "RESERVATION_AVAILABILITY_INPUT_REQUIRED", message = "Alan, başlangıç ve bitiş zamanı zorunludur." });
 
         return Json(await reservationService.CheckAvailabilityAsync(input!));
     }
@@ -114,7 +106,7 @@ public class ReservationController(
 
         var viewModel = new ReservationCreateViewModel
         {
-            UnitId = query.UnitId,
+            SpaceId = query.SpaceId,
             StartDate = DateTime.Today.AddDays(1).AddHours(9),
             EndDate = DateTime.Today.AddDays(1).AddHours(11)
         };
@@ -132,7 +124,7 @@ public class ReservationController(
         var viewModel = new ReservationEditViewModel
         {
             Id = reservation.Id,
-            UnitId = reservation.UnitId,
+            SpaceId = reservation.SpaceId,
             TenantId = reservation.TenantId,
             StartDate = reservation.StartDate,
             EndDate = reservation.EndDate,
@@ -263,7 +255,7 @@ public class ReservationController(
         var options = await reservationService.GetFormOptionsAsync(
             new GetReservationFormOptionsInput(GetAccessScope()));
 
-        viewModel.Units = options.Units;
+        viewModel.Spaces = options.Spaces;
         viewModel.Tenants = options.Tenants;
     }
 
@@ -271,14 +263,10 @@ public class ReservationController(
     {
         var options = await reservationService.GetFormOptionsAsync(
             new GetReservationFormOptionsInput(GetAccessScope()));
-        viewModel.Units = options.Units;
+        viewModel.Spaces = options.Spaces;
         viewModel.Tenants = options.Tenants;
     }
 
-    private ReservationAccessScopeInput GetAccessScope()
-        => permissionScopeProvider.GlobalAccess
-            ? new ReservationAccessScopeInput()
-            : new ReservationAccessScopeInput(
-                permissionScopeProvider.AccessiblePropertyIds,
-                permissionScopeProvider.AccessibleUnitIds);
+    private SpaceAccessScope GetAccessScope()
+        => permissionScopeProvider.SpaceScope;
 }

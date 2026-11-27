@@ -1,4 +1,5 @@
 using KiraTakip.Data;
+using KiraTakip.Domain.Spaces;
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
 using KiraTakip.Models.Dtos;
@@ -19,14 +20,14 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
     public ChargeRepository(ApplicationDbContext ctx) : base(ctx) { }
 
     // ── Listeleme (DTO) ───────────────────────────────────────────────────
-    public async Task<List<ChargeListItemDto>> GetListAsync(int? leaseId, List<int>? authorizedPropertyIds, List<int>? authorizedUnitIds = null)
+    public async Task<List<ChargeListItemDto>> GetListAsync(int? leaseId, SpaceAccessScope? scope)
     {
         IQueryable<Charge> q = _dbSet.AsNoTracking();
 
         if (leaseId.HasValue)
             q = q.Where(t => t.LeaseId == leaseId.Value);
 
-        q = ApplyScope(q, authorizedPropertyIds, authorizedUnitIds);
+        q = ApplyScope(q, scope);
 
         return await q.OrderByDescending(t => t.PeriodStart)
                       .Select(t => new ChargeListItemDto
@@ -36,10 +37,9 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                           LeaseId = t.LeaseId,
                           TenantId = t.TenantId,
                           TenantDisplayName = t.Tenant.Name,
-                          PropertyId = t.Unit.PropertyId,
-                          PropertyName = t.Unit.Property.Name,
-                          UnitId = t.UnitId,
-                          UnitName = t.Unit.Name,
+                          SpaceId = t.SpaceId,
+                          SpaceName = t.Space!.Name,
+                          SpacePath = t.Space!.Path,
                           PeriodStart = t.PeriodStart,
                           DueDate = t.DueDate,
                           TotalAmount = t.TotalAmount,
@@ -74,20 +74,20 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
     }
 
     // ── Sayfalı listeleme (DTO) ───────────────────────────────────────────
-    public async Task<PagedResult<ChargeListItemDto>> GetPagedListAsync(TableQuery q, int? leaseId, List<int>? authorizedPropertyIds, List<int>? authorizedUnitIds = null)
+    public async Task<PagedResult<ChargeListItemDto>> GetPagedListAsync(TableQuery q, int? leaseId, SpaceAccessScope? scope, int? spaceId = null)
     {
         IQueryable<Charge> query = _dbSet.AsNoTracking();
 
         if (leaseId.HasValue)
             query = query.Where(t => t.LeaseId == leaseId.Value);
 
-        query = ApplyScope(query, authorizedPropertyIds, authorizedUnitIds);
+        query = ApplyScope(query, scope);
 
         if (!string.IsNullOrWhiteSpace(q.Q))
         {
             var s = q.Q.Trim();
             query = query.Where(t => EF.Functions.Like(t.Tenant.Name, $"%{s}%") ||
-                                     EF.Functions.Like(t.Unit.Property.Name, $"%{s}%") ||
+                                     EF.Functions.Like(t.Space!.Name, $"%{s}%") ||
                                      EF.Functions.Like(t.ChargeNo, $"%{s}%"));
         }
 
@@ -95,8 +95,17 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
         if (q.To.HasValue) query = query.Where(t => t.DueDate <= q.To.Value);
         if (q.Min.HasValue) query = query.Where(t => t.TotalAmount >= q.Min.Value);
         if (q.Max.HasValue) query = query.Where(t => t.TotalAmount <= q.Max.Value);
-        if (q.PropertyId.HasValue) query = query.Where(t => t.Unit.PropertyId == q.PropertyId.Value);
-        if (q.UnitId.HasValue) query = query.Where(t => t.UnitId == q.UnitId.Value);
+        if (spaceId.HasValue)
+        {
+            // Seçilen alan + altındaki alanlar (eski taşınmaz/birim filtresinin karşılığı).
+            var selectedPath = await _ctx.Spaces.AsNoTracking()
+                .Where(space => space.Id == spaceId.Value)
+                .Select(space => space.Path)
+                .FirstOrDefaultAsync();
+            query = selectedPath == null
+                ? query.Where(t => false)
+                : query.Where(t => t.Space != null && t.Space.Path.StartsWith(selectedPath));
+        }
         if (q.TenantId.HasValue) query = query.Where(t => t.TenantId == q.TenantId.Value);
         if (q.Year.HasValue) query = query.Where(t => t.PeriodStart.Year == q.Year.Value);
 
@@ -151,10 +160,9 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                                    LeaseId = t.LeaseId,
                                    TenantId = t.TenantId,
                                    TenantDisplayName = t.Tenant.Name,
-                                   PropertyId = t.Unit.PropertyId,
-                                   PropertyName = t.Unit.Property.Name,
-                                   UnitId = t.UnitId,
-                                   UnitName = t.Unit.Name,
+                                   SpaceId = t.SpaceId,
+                                   SpaceName = t.Space!.Name,
+                                   SpacePath = t.Space!.Path,
                                    PeriodStart = t.PeriodStart,
                                    DueDate = t.DueDate,
                                    TotalAmount = t.TotalAmount,
@@ -197,25 +205,20 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
             .Where(charge => charge.TenantId == input.TenantId
                 && charge.Status != ChargeStatus.Cancelled);
 
-        query = ApplyScope(
-            query,
-            input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
+        query = ApplyScope(query, input.Scope);
 
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
             // Not: Tenant.Name buraya dahil edilmez — bu sorguda charge.TenantId zaten sabit
             // (satır 197), yani tüm satırların Tenant.Name'i aynı: arama terimi kiracının
-            // kendi adıyla eşleşirse OR koşulu tüm sonuç kümesini true yapar ve Property/Unit
+            // kendi adıyla eşleşirse OR koşulu tüm sonuç kümesini true yapar ve alan
             // filtresini devre dışı bırakırdı.
             var search = filter.Search.Trim();
-            query = query.Where(charge =>
-                EF.Functions.Like(charge.Unit.Property.Name, $"%{search}%")
-                || EF.Functions.Like(charge.Unit.Name, $"%{search}%"));
+            query = query.Where(charge => EF.Functions.Like(charge.Space!.Name, $"%{search}%"));
         }
 
-        if (filter.UnitId.HasValue)
-            query = query.Where(charge => charge.UnitId == filter.UnitId.Value);
+        if (filter.SpaceId.HasValue)
+            query = query.Where(charge => charge.SpaceId == filter.SpaceId.Value);
         if (filter.Year.HasValue)
             query = query.Where(charge => charge.PeriodStart.Year == filter.Year.Value);
 
@@ -262,10 +265,9 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                 LeaseId = charge.LeaseId,
                 TenantId = charge.TenantId,
                 TenantDisplayName = charge.Tenant.Name,
-                PropertyId = charge.Unit.PropertyId,
-                PropertyName = charge.Unit.Property.Name,
-                UnitId = charge.UnitId,
-                UnitName = charge.Unit.Name,
+                SpaceId = charge.SpaceId,
+                SpaceName = charge.Space!.Name,
+                SpacePath = charge.Space!.Path,
                 PeriodStart = charge.PeriodStart,
                 DueDate = charge.DueDate,
                 TotalAmount = charge.TotalAmount,
@@ -320,25 +322,17 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
     public Task<ChargeDetailDto?> GetTenantDetailsAsync(
         int chargeId,
         int tenantId,
-        List<int>? authorizedPropertyIds = null,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope? scope = null)
     {
-        var query = CreateDetailsQuery().Where(charge =>
-            charge.Id == chargeId && charge.TenantId == tenantId);
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(charge =>
-                charge.PropertyId.HasValue && propertyIds.Contains(charge.PropertyId.Value)
-                || charge.UnitId.HasValue && unitIds.Contains(charge.UnitId.Value));
-        }
+        var source = ApplyScope(
+            _dbSet.AsNoTracking().Where(charge => charge.Id == chargeId && charge.TenantId == tenantId),
+            scope);
 
-        return query.FirstOrDefaultAsync();
+        return CreateDetailsQuery(source).FirstOrDefaultAsync();
     }
-    private IQueryable<ChargeDetailDto> CreateDetailsQuery()
+    private IQueryable<ChargeDetailDto> CreateDetailsQuery(IQueryable<Charge>? source = null)
     {
-        return _dbSet.AsNoTracking()
+        return (source ?? _dbSet.AsNoTracking())
                            .Select(t => new ChargeDetailDto
                            {
                                Id = t.Id,
@@ -347,10 +341,9 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                                LeaseNo = t.Lease != null ? t.Lease.LeaseNo : null,
                                TenantId = t.TenantId,
                                TenantDisplayName = t.Tenant.Name,
-                               PropertyId = t.Unit.PropertyId,
-                               PropertyName = t.Unit.Property.Name,
-                               UnitId = t.UnitId,
-                               UnitName = t.Unit.Name,
+                               SpaceId = t.SpaceId,
+                               SpaceName = t.Space!.Name,
+                               SpacePath = t.Space!.Path,
                                PeriodStart = t.PeriodStart,
                                PeriodEnd = t.PeriodEnd,
                                DueDate = t.DueDate,
@@ -401,46 +394,10 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
 
     public async Task<ChargeIndexOptionsDto> GetIndexOptionsAsync(GetChargeIndexOptionsInput input)
     {
-        List<ChargePropertyFilterDto> properties;
-        List<ChargeUnitFilterDto> units;
+        var scope = input.Scope;
+        var spaces = await LoadSpaceOptionsAsync(scope, activeOnly: false);
 
-        var propertyIds = input.HasGlobalAccess
-            ? null
-            : input.PropertyIds?.ToList() ?? [];
-        var unitIds = input.HasGlobalAccess
-            ? null
-            : input.UnitIds?.ToList() ?? [];
-
-        if (!input.HasGlobalAccess)
-        {
-            var authorizedUnits = _ctx.Units.AsNoTracking()
-                .Where(unit => propertyIds!.Contains(unit.PropertyId) || unitIds!.Contains(unit.Id));
-
-            properties = await authorizedUnits
-                .Select(unit => new ChargePropertyFilterDto(unit.PropertyId, unit.Property.Name))
-                .Distinct()
-                .OrderBy(property => property.Name)
-                .ToListAsync();
-            units = await authorizedUnits
-                .OrderBy(unit => unit.PropertyId)
-                .ThenBy(unit => unit.Name)
-                .Select(unit => new ChargeUnitFilterDto(unit.Id, unit.Name, unit.PropertyId))
-                .ToListAsync();
-        }
-        else
-        {
-            properties = await _ctx.Properties.AsNoTracking()
-                .OrderBy(property => property.Name)
-                .Select(property => new ChargePropertyFilterDto(property.Id, property.Name))
-                .ToListAsync();
-            units = await _ctx.Units.AsNoTracking()
-                .OrderBy(unit => unit.PropertyId)
-                .ThenBy(unit => unit.Name)
-                .Select(unit => new ChargeUnitFilterDto(unit.Id, unit.Name, unit.PropertyId))
-                .ToListAsync();
-        }
-
-        var optionCharges = ApplyScope(_dbSet.AsNoTracking(), propertyIds, unitIds);
+        var optionCharges = ApplyScope(_dbSet.AsNoTracking(), scope);
         var tenantOptions = await optionCharges
             .Select(charge => new
             {
@@ -466,19 +423,17 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                 .CountAsync(charge => charge.Status == ChargeStatus.Cancelled);
         }
 
-        return new ChargeIndexOptionsDto(properties, units, tenants, availableYears, cancelledCount);
+        return new ChargeIndexOptionsDto(spaces, tenants, availableYears, cancelledCount);
     }
 
     public async Task<TenantChargeOverviewDto> GetTenantChargeOverviewAsync(
         int tenantId,
         DateTime today,
-        List<int>? authorizedPropertyIds = null,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope? scope = null)
     {
         var query = ApplyScope(
             _dbSet.AsNoTracking().Where(charge => charge.TenantId == tenantId),
-            authorizedPropertyIds,
-            authorizedUnitIds);
+            scope);
         var activeCharges = query.Where(charge => charge.Status != ChargeStatus.Cancelled);
 
         var totalChargeAmount = await activeCharges
@@ -511,10 +466,7 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
             .AsNoTracking()
             .Where(lineItem => lineItem.Charge.Status != ChargeStatus.Cancelled);
 
-        query = ApplyLineItemScope(
-            query,
-            input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
+        query = ApplyLineItemScope(query, input.Scope);
 
         if (input.ChargeTypeId.HasValue)
             query = query.Where(lineItem => lineItem.ChargeTypeId == input.ChargeTypeId.Value);
@@ -580,10 +532,7 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                 && lineItem.Charge.DueDate < input.Today
                 && lineItem.TotalAmount > lineItem.PaidAmount);
 
-        query = ApplyLineItemScope(
-            query,
-            input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
+        query = ApplyLineItemScope(query, input.Scope);
 
         if (input.ChargeTypeId.HasValue)
             query = query.Where(lineItem => lineItem.ChargeTypeId == input.ChargeTypeId.Value);
@@ -596,37 +545,27 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
 
     private static IQueryable<ChargeLineItem> ApplyLineItemScope(
         IQueryable<ChargeLineItem> query,
-        List<int>? propertyIds,
-        List<int>? unitIds)
+        SpaceAccessScope? scope)
     {
-        if (propertyIds == null && unitIds == null)
+        if (scope == null || scope.HasGlobalAccess)
             return query;
 
-        if (propertyIds != null && unitIds != null)
-        {
-            return query.Where(lineItem =>
-                propertyIds.Contains(lineItem.Charge.Unit.PropertyId)
-                || unitIds.Contains(lineItem.Charge.UnitId));
-        }
-
-        if (propertyIds != null)
-            return query.Where(lineItem => propertyIds.Contains(lineItem.Charge.Unit.PropertyId));
-
-        return query.Where(lineItem => unitIds!.Contains(lineItem.Charge.UnitId));
+        var roots = scope.RootPaths.ToList();
+        return query.Where(lineItem => lineItem.Charge.Space != null
+            && roots.Any(root => lineItem.Charge.Space.Path.StartsWith(root)));
     }
 
     // ── Manuel Borç — DTO ─────────────────────────────────────────────────
     public async Task<List<ManualChargeListItemDto>> GetManualChargeListAsync(
-        List<int>? propertyIds,
+        SpaceAccessScope? scope,
         string? status = null,
         string? relation = null,
-        int? leaseId = null,
-        List<int>? unitIds = null)
+        int? leaseId = null)
     {
         IQueryable<Charge> q = _dbSet.AsNoTracking()
             .Where(t => t.SourceType == ChargeSourceType.Manual);
 
-        q = ApplyScope(q, propertyIds, unitIds);
+        q = ApplyScope(q, scope);
 
         if (leaseId.HasValue)
             q = q.Where(t => t.LeaseId == leaseId.Value);
@@ -671,8 +610,8 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                           TenantId = t.TenantId,
                           TenantCategoryName = t.Tenant.TenantCategory != null ? t.Tenant.TenantCategory.Name : null,
                           TenantDisplayName = t.Tenant.Name,
-                          PropertyName = t.Unit.Property.Name,
-                          UnitName = t.Unit.Name,
+                          SpaceId = t.SpaceId,
+                          SpaceName = t.Space!.Name,
                           ChargeTypeCode = t.LineItems
                               .OrderBy(k => k.ChargeType.SortOrder)
                               .Select(k => k.ChargeType.Code)
@@ -693,28 +632,26 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
     }
 
     public async Task<int> GetCancelledManualChargeCountAsync(
-        List<int>? propertyIds,
-        List<int>? unitIds = null)
+        SpaceAccessScope? scope)
     {
         IQueryable<Charge> q = _dbSet.AsNoTracking()
             .Where(t => t.SourceType == ChargeSourceType.Manual && t.Status == ChargeStatus.Cancelled);
 
-        q = ApplyScope(q, propertyIds, unitIds);
+        q = ApplyScope(q, scope);
 
         return await q.CountAsync();
     }
 
     public async Task<PagedResult<ManualChargeListItemDto>> GetManualChargePagedListAsync(
         TableQuery tableQuery,
-        List<int>? propertyIds,
+        SpaceAccessScope? scope,
         string? relation = null,
-        int? leaseId = null,
-        List<int>? unitIds = null)
+        int? leaseId = null)
     {
         IQueryable<Charge> query = _dbSet.AsNoTracking()
             .Where(charge => charge.SourceType == ChargeSourceType.Manual);
 
-        query = ApplyScope(query, propertyIds, unitIds);
+        query = ApplyScope(query, scope);
 
         if (leaseId.HasValue)
             query = query.Where(charge => charge.LeaseId == leaseId.Value);
@@ -758,8 +695,7 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
             var search = tableQuery.Q.Trim();
             query = query.Where(charge =>
                 EF.Functions.Like(charge.Tenant.Name, $"%{search}%")
-                || EF.Functions.Like(charge.Unit.Property.Name, $"%{search}%")
-                || EF.Functions.Like(charge.Unit.Name, $"%{search}%")
+                || EF.Functions.Like(charge.Space!.Name, $"%{search}%")
                 || charge.LineItems.Any(lineItem =>
                     EF.Functions.Like(lineItem.Description, $"%{search}%")));
         }
@@ -778,8 +714,8 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                     ? charge.Tenant.TenantCategory.Name
                     : null,
                 TenantDisplayName = charge.Tenant.Name,
-                PropertyName = charge.Unit.Property.Name,
-                UnitName = charge.Unit.Name,
+                SpaceId = charge.SpaceId,
+                SpaceName = charge.Space!.Name,
                 ChargeTypeCode = charge.LineItems
                     .OrderBy(lineItem => lineItem.ChargeType.SortOrder)
                     .Select(lineItem => lineItem.ChargeType.Code)
@@ -823,18 +759,13 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
     public async Task<TenantLeaseChargeDataDto> GetTenantLeaseDataAsync(
         GetTenantLeaseChargeDataInput input)
     {
-        var propertyIds = input.PropertyIds?.ToList();
-        var unitIds = input.UnitIds?.ToList();
         var charges = new List<ChargeListItemDto>();
         if (input.IncludeHistory)
         {
-            charges = await _dbSet
-                .AsNoTracking()
-                .Where(charge => charge.TenantId == input.TenantId
-                    && charge.LeaseId == input.LeaseId
-                    && (propertyIds == null && unitIds == null
-                        || propertyIds != null && propertyIds.Contains(charge.Unit.PropertyId)
-                        || unitIds != null && unitIds.Contains(charge.UnitId)))
+            charges = await ApplyScope(
+                    _dbSet.AsNoTracking().Where(charge => charge.TenantId == input.TenantId
+                        && charge.LeaseId == input.LeaseId),
+                    input.Scope)
                 .OrderByDescending(charge => charge.PeriodStart)
                 .Select(charge => new ChargeListItemDto
                 {
@@ -843,10 +774,9 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                     LeaseId = charge.LeaseId,
                     TenantId = charge.TenantId,
                     TenantDisplayName = charge.Tenant.Name,
-                    PropertyId = charge.Unit.PropertyId,
-                    PropertyName = charge.Unit.Property.Name,
-                    UnitId = charge.UnitId,
-                    UnitName = charge.Unit.Name,
+                    SpaceId = charge.SpaceId,
+                    SpaceName = charge.Space!.Name,
+                    SpacePath = charge.Space!.Path,
                     PeriodStart = charge.PeriodStart,
                     DueDate = charge.DueDate,
                     TotalAmount = charge.TotalAmount,
@@ -891,15 +821,13 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                 .ToListAsync();
         }
 
-        var currentCharge = await _dbSet
-            .AsNoTracking()
-            .Include(charge => charge.LineItems)
-                .ThenInclude(lineItem => lineItem.ChargeType)
+        var currentCharge = await ApplyScope(
+                _dbSet.AsNoTracking()
+                    .Include(charge => charge.LineItems)
+                        .ThenInclude(lineItem => lineItem.ChargeType),
+                input.Scope)
             .Where(charge => charge.TenantId == input.TenantId
                 && charge.LeaseId == input.LeaseId
-                && (propertyIds == null && unitIds == null
-                    || propertyIds != null && propertyIds.Contains(charge.Unit.PropertyId)
-                    || unitIds != null && unitIds.Contains(charge.UnitId))
                 && charge.SourceType == ChargeSourceType.Lease
                 && charge.Status != ChargeStatus.Cancelled
                 && charge.PeriodStart <= input.Today)
@@ -935,15 +863,12 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
     public async Task<TenantPanelChargeDataDto> GetTenantPanelDataAsync(
         GetTenantPanelChargeDataInput input)
     {
-        var propertyIds = input.PropertyIds?.ToList();
-        var unitIds = input.UnitIds?.ToList();
         var openCharges = ApplyScope(
             _dbSet.AsNoTracking().Where(charge =>
                 charge.TenantId == input.TenantId
                 && charge.Status != ChargeStatus.Cancelled
                 && charge.TotalAmount > charge.PaidAmount),
-            propertyIds,
-            unitIds);
+            input.Scope);
 
         var totalOutstandingDebt = 0m;
         var upcomingPaymentCount = 0;
@@ -989,8 +914,7 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                     charge.PeriodStart,
                     charge.DueDate,
                     charge.TotalAmount - charge.PaidAmount,
-                    charge.Unit.Property.Name,
-                    charge.Unit.Name))
+                    charge.Space!.Name))
                 .ToListAsync();
         }
 
@@ -1006,8 +930,7 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
                     && charge.Status != ChargeStatus.Cancelled
                     && charge.DueDate >= sixMonthStart
                     && charge.DueDate < nextMonthStart),
-                propertyIds,
-                unitIds);
+                input.Scope);
             monthlyExpected = await monthlyQuery
                 .GroupBy(charge => new { charge.DueDate.Year, charge.DueDate.Month })
                 .Select(group => new TenantPanelMonthlyTotalDto(
@@ -1029,14 +952,13 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
     }
     public async Task<Charge?> GetManualChargeByIdAsync(
         int id,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope? scope)
     {
         var query = _dbSet
             .Include(t => t.Allocations)
             .Where(t => t.Id == id && t.SourceType == ChargeSourceType.Manual);
 
-        query = ApplyScope(query, authorizedPropertyIds, authorizedUnitIds);
+        query = ApplyScope(query, scope);
 
         return await query.FirstOrDefaultAsync();
     }
@@ -1055,27 +977,18 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
     {
         IQueryable<Charge> query = _dbSet
             .Include(t => t.Tenant)
-            .Include(t => t.Unit).ThenInclude(unit => unit.Property)
+            .Include(t => t.Space)
             .Include(t => t.Allocations)
             .Where(t => t.Status != ChargeStatus.Paid
                      && t.Status != ChargeStatus.Cancelled
                      && t.DueDate <= input.DueDateLimit);
 
-        query = ApplyScope(
-            query,
-            input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
+        query = ApplyScope(query, input.Scope);
 
         return await query.ToListAsync(cancellationToken);
     }
 
     // ── Hesaplama ─────────────────────────────────────────────────────────
-    public Task<bool> HasActiveForUnitTypeAsync(int unitTypeId)
-        => _dbSet.AsNoTracking().AnyAsync(charge =>
-            charge.Status != ChargeStatus.Paid
-            && charge.Status != ChargeStatus.Cancelled
-            && charge.Unit.UnitTypeId == unitTypeId);
-
     public Task<Charge?> GetByReservationWithAllocationsAsync(int reservationId)
         => _dbSet.Include(charge => charge.Allocations)
             .FirstOrDefaultAsync(charge => charge.ReservationId == reservationId);
@@ -1105,24 +1018,56 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
             .Select(charge => charge.ChargeNo)
             .ToListAsync();
 
-    private static IQueryable<Charge> ApplyScope(
-        IQueryable<Charge> query,
-        List<int>? propertyIds,
-        List<int>? unitIds)
+    // Kapsam: Charge.SpaceId'nin alan yolu kapsam köklerinden birinin altında olmalı (D13). SpaceId boşsa
+    // (bugünkü UnitId boş davranışı gibi) global olmayan kullanıcıya görünmez.
+    private static IQueryable<Charge> ApplyScope(IQueryable<Charge> query, SpaceAccessScope? scope)
     {
-        if (propertyIds == null && unitIds == null)
+        if (scope == null || scope.HasGlobalAccess)
             return query;
 
-        if (propertyIds != null && unitIds != null)
+        var roots = scope.RootPaths.ToList();
+        return query.Where(charge => charge.Space != null
+            && roots.Any(root => charge.Space.Path.StartsWith(root)));
+    }
+
+    public Task<List<ChargeSpaceOptionDto>> GetManualChargeSpaceOptionsAsync(SpaceAccessScope? scope)
+        => LoadSpaceOptionsAsync(scope, activeOnly: true);
+
+    private async Task<List<ChargeSpaceOptionDto>> LoadSpaceOptionsAsync(SpaceAccessScope? scope, bool activeOnly)
+    {
+        var query = _ctx.Spaces.AsNoTracking().Where(space => !space.IsDeleted);
+        if (activeOnly)
+            query = query.Where(space => space.IsActive);
+
+        if (scope is { HasGlobalAccess: false })
         {
-            return query.Where(charge =>
-                propertyIds.Contains(charge.Unit.PropertyId)
-                || unitIds.Contains(charge.UnitId));
+            var roots = scope.RootPaths.ToList();
+            query = query.Where(space => roots.Any(root => space.Path.StartsWith(root)));
         }
 
-        if (propertyIds != null)
-            return query.Where(charge => propertyIds.Contains(charge.Unit.PropertyId));
+        var rows = await query
+            .OrderBy(space => space.Path)
+            .Select(space => new { space.Id, space.Name, space.Path })
+            .ToListAsync();
 
-        return query.Where(charge => unitIds!.Contains(charge.UnitId));
+        var ancestorIds = rows
+            .SelectMany(row => SpaceTreePolicy.GetAncestorIds(row.Path))
+            .Distinct()
+            .ToList();
+        var ancestorNames = ancestorIds.Count == 0
+            ? new Dictionary<int, string>()
+            : await _ctx.Spaces.AsNoTracking()
+                .Where(space => ancestorIds.Contains(space.Id))
+                .ToDictionaryAsync(space => space.Id, space => space.Name);
+
+        return rows
+            .Select(row => new ChargeSpaceOptionDto(
+                row.Id,
+                row.Name,
+                string.Join(" / ", SpaceTreePolicy.GetAncestorIds(row.Path)
+                    .Where(ancestorNames.ContainsKey)
+                    .Select(id => ancestorNames[id])
+                    .Append(row.Name))))
+            .ToList();
     }
 }

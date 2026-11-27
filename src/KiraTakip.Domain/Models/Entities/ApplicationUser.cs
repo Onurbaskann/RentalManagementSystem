@@ -12,7 +12,8 @@ public class ApplicationUser : IdentityUser, IAuditable
 
     [Column("KiraciId")]
     public int? TenantId { get; set; }
-    public bool TumTasinmazlaraErisim { get; set; } = false;
+    [Column("TumAlanlaraErisim")]
+    public bool HasAccessToAllSpaces { get; set; } = false;
     public bool IsSuperAdmin { get; set; } = false;
     public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;

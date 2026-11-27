@@ -1,7 +1,6 @@
 using KiraTakip.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos.Lease;
-using KiraTakip.Models.Dtos.Property;
 using KiraTakip.Models.Dtos.Tenant;
 using KiraTakip.Models.Enums;
 using KiraTakip.Web.Models.ViewModels;
@@ -21,15 +20,12 @@ public partial class LeaseController
     public IActionResult CreateGroup()
         => RedirectToAction(nameof(Create), new { tur = LeaseCreateRoutes.SharedType });
 
-    private async Task<IActionResult> CreateGroupFormAsync(int? unitId, int? tenantId)
+    private async Task<IActionResult> CreateGroupFormAsync(int? spaceId, int? tenantId)
     {
         var viewModel = new LeaseGroupFormViewModel();
         await PopulateGroupCreateOptionsAsync(viewModel);
-        if (unitId.HasValue && viewModel.PickerUnits.Any(unit =>
-                unit.Id == unitId.Value && unit.RentalMode == UnitRentalMode.CapacityBased))
-            return RedirectToAction(nameof(Create), new { unitId, tenantId });
-        if (unitId.HasValue && viewModel.AvailableUnits.Any(unit => unit.Id == unitId.Value))
-            viewModel.UnitId = unitId;
+        if (spaceId.HasValue && viewModel.AvailableSpaces.Any(space => space.Id == spaceId.Value))
+            viewModel.SpaceId = spaceId;
         if (tenantId.HasValue)
         {
             if (viewModel.Tenants.All(tenant => tenant.Id != tenantId.Value)) return NotFound();
@@ -54,7 +50,7 @@ public partial class LeaseController
         try
         {
             var group = await leaseGroupService.CreateGroupAsync(new CreateLeaseGroupInput(
-                viewModel.UnitId!.Value,
+                viewModel.SpaceId!.Value,
                 viewModel.StartDate,
                 viewModel.EndDate,
                 viewModel.DueDateRuleType,
@@ -119,9 +115,9 @@ public partial class LeaseController
         var viewModel = new LeaseGroupFormViewModel
         {
             GroupId = group.GroupId,
-            UnitId = group.UnitId,
-            UnitName = $"{group.PropertyName} — {group.UnitName}",
-            UnitArea = group.UnitArea,
+            SpaceId = group.SpaceId,
+            SpacePath = group.SpacePath,
+            SpaceArea = group.SpaceArea,
             StartDate = group.StartDate,
             EndDate = group.EndDate,
             DueDateRuleType = group.DueDateRuleType,
@@ -338,14 +334,13 @@ public partial class LeaseController
             new GetLeaseGroupInput(viewModel.GroupId, accessScope));
         if (group != null)
         {
-            viewModel.UnitId = group.UnitId;
-            viewModel.UnitName = $"{group.PropertyName} — {group.UnitName}";
-            viewModel.UnitArea = group.UnitArea;
+            viewModel.SpaceId = group.SpaceId;
+            viewModel.SpacePath = group.SpacePath;
+            viewModel.SpaceArea = group.SpaceArea;
         }
-        viewModel.Tenants = await tenantService.GetAllAsync(
-            new GetTenantsInput(accessScope.PropertyIds, accessScope.UnitIds));
-        ViewBag.UnitAreas = System.Text.Json.JsonSerializer.Serialize(
-            new Dictionary<int, double> { [viewModel.UnitId ?? 0] = (double)viewModel.UnitArea });
+        viewModel.Tenants = await tenantService.GetAllAsync(new GetTenantsInput(BuildAccessScope()));
+        ViewBag.SpaceAreas = System.Text.Json.JsonSerializer.Serialize(
+            new Dictionary<int, double> { [viewModel.SpaceId ?? 0] = (double)viewModel.SpaceArea });
     }
 
 
@@ -360,17 +355,9 @@ public partial class LeaseController
 
     private async Task PopulateGroupCreateOptionsAsync(LeaseGroupFormViewModel viewModel)
     {
-        var accessScope = BuildAccessScope();
-        viewModel.AvailableUnits = await propertyService.GetAvailableUnitsAsync(
-            new GetAvailableUnitsInput(accessScope.PropertyIds, accessScope.UnitIds, null, false));
-        viewModel.PickerUnits = await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Create)
-            ? await propertyService.GetAvailableUnitsAsync(
-                new GetAvailableUnitsInput(accessScope.PropertyIds, accessScope.UnitIds, null, true))
-            : viewModel.AvailableUnits;
-        viewModel.Tenants = await tenantService.GetAllAsync(
-            new GetTenantsInput(accessScope.PropertyIds, accessScope.UnitIds));
-        ViewBag.UnitAreas = System.Text.Json.JsonSerializer.Serialize(
-            viewModel.AvailableUnits.ToDictionary(unit => unit.Id, unit => (double)unit.Area));
+        viewModel.AvailableSpaces = await leaseService.GetSelectableSpacesAsync(true, BuildAccessScope());
+        viewModel.Tenants = await tenantService.GetAllAsync(new GetTenantsInput(BuildAccessScope()));
+        ViewBag.SpaceAreas = SerializeSpaceAreas(viewModel.AvailableSpaces);
         await SetLeaseKindChoiceAsync(true, null);
     }
 
@@ -381,14 +368,13 @@ public partial class LeaseController
             new GetLeaseGroupInput(viewModel.GroupId, accessScope));
         if (group != null)
         {
-            viewModel.UnitId = group.UnitId;
-            viewModel.UnitName = $"{group.PropertyName} — {group.UnitName}";
-            viewModel.UnitArea = group.UnitArea;
+            viewModel.SpaceId = group.SpaceId;
+            viewModel.SpacePath = group.SpacePath;
+            viewModel.SpaceArea = group.SpaceArea;
         }
-        viewModel.AvailableUnits = [];
-        viewModel.Tenants = await tenantService.GetAllAsync(
-            new GetTenantsInput(accessScope.PropertyIds, accessScope.UnitIds));
-        ViewBag.UnitAreas = System.Text.Json.JsonSerializer.Serialize(
-            new Dictionary<int, double> { [viewModel.UnitId ?? 0] = (double)viewModel.UnitArea });
+        viewModel.AvailableSpaces = [];
+        viewModel.Tenants = await tenantService.GetAllAsync(new GetTenantsInput(BuildAccessScope()));
+        ViewBag.SpaceAreas = System.Text.Json.JsonSerializer.Serialize(
+            new Dictionary<int, double> { [viewModel.SpaceId ?? 0] = (double)viewModel.SpaceArea });
     }
 }

@@ -29,12 +29,11 @@ public interface IReservationService
     Task<ReservationAvailabilityResultDto> CheckAvailabilityAsync(
         CheckReservationAvailabilityInput input);
 
-    // Ücret kuralları (birime özel)
-    Task<List<ReservationRateOverrideListItemDto>> GetRateRulesAsync();
-    Task<PagedResult<ReservationRateOverrideListItemDto>> GetRateRulesPagedAsync(TableQuery query);
+    // Ücret kuralları (alan bazlı)
+    Task<List<ReservationSpaceOptionDto>> GetRateRuleSpaceOptionsAsync(SpaceAccessScope scope);
+    Task<List<ChargeTypeLookupDto>> GetRateRuleChargeTypeOptionsAsync();
+    Task<PagedResult<ReservationRateOverrideListItemDto>> GetRateRulesPagedAsync(TableQuery query, SpaceAccessScope scope);
     Task<ReservationRateOverride?> GetRateRuleByIdAsync(GetRateRuleByIdInput input);
     Task SaveRateRuleAsync(SaveReservationRateRuleInput input);
-    Task SaveUnitReservationRateRuleAsync(SaveUnitReservationRateRuleInput input);
     Task ToggleRateRuleStatusAsync(ToggleRateRuleStatusInput input);
-    Task ClearUnitReservationRateRuleAsync(ClearUnitReservationRateRuleInput input);
 }

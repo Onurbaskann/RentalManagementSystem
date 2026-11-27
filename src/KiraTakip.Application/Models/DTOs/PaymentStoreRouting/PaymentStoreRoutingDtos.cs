@@ -1,13 +1,11 @@
 using KiraTakip.Models.Common;
-using KiraTakip.Models.Enums;
+using KiraTakip.Models.Dtos.Space;
 
 namespace KiraTakip.Models.Dtos.PaymentStoreRouting;
 
 public record UpsertPaymentStoreRoutingInput(
     int ChargeTypeId,
-    PaymentRoutingScope Scope,
-    int? PropertyId,
-    int? UnitId,
+    int? SpaceId,
     int StoreId);
 
 public class PaymentStoreRoutingListItemDto
@@ -16,10 +14,8 @@ public class PaymentStoreRoutingListItemDto
     public int ChargeTypeId { get; set; }
     public string ChargeTypeName { get; set; } = string.Empty;
     public string ChargeTypeCode { get; set; } = string.Empty;
-    public PaymentRoutingScope Scope { get; set; }
     public string ScopeName { get; set; } = string.Empty;
-    public int? PropertyId { get; set; }
-    public int? UnitId { get; set; }
+    public int? SpaceId { get; set; }
     public int StoreId { get; set; }
     public string StoreName { get; set; } = string.Empty;
     public string StoreCode { get; set; } = string.Empty;
@@ -29,8 +25,6 @@ public class PaymentStoreRoutingListItemDto
     public string? Currency { get; set; }
     public bool IsActive { get; set; }
 }
-
-public record PaymentStoreRoutingLookupDto(int Id, string Name, string? ParentName = null);
 
 public record ChargeTypeRoutingOptionDto(int Id, string Name, bool IsActive);
 
@@ -48,10 +42,9 @@ public record MissingDefaultRoutingDto(
 
 public class PaymentRoutingResolutionCandidateDto
 {
-    public int UnitId { get; set; }
-    public int PropertyId { get; set; }
+    public int? SpaceId { get; set; }
     public int? RoutingId { get; set; }
-    public PaymentRoutingScope? MatchedScope { get; set; }
+    public int? MatchedSpaceId { get; set; }
     public int? StoreId { get; set; }
     public bool IsStoreActive { get; set; }
     public int ActiveAccountCount { get; set; }
@@ -62,10 +55,9 @@ public class PaymentRoutingResolutionCandidateDto
 
 public record ResolvedPaymentStoreAccountDto(
     int RoutingId,
-    PaymentRoutingScope MatchedScope,
+    int? MatchedSpaceId,
     int ChargeTypeId,
-    int UnitId,
-    int PropertyId,
+    int? SpaceId,
     int StoreId,
     int StoreAccountId,
     string ProviderCode,
@@ -77,7 +69,6 @@ public class PaymentStoreRoutingIndexDataDto
     public int HistoryCount { get; set; }
     public List<MissingDefaultRoutingDto> MissingDefaults { get; set; } = [];
     public List<ChargeTypeRoutingOptionDto> ChargeTypes { get; set; } = [];
-    public List<PaymentStoreRoutingLookupDto> Properties { get; set; } = [];
-    public List<PaymentStoreRoutingLookupDto> Units { get; set; } = [];
+    public List<SpaceOptionDto> Spaces { get; set; } = [];
     public List<StoreRoutingOptionDto> Stores { get; set; } = [];
 }

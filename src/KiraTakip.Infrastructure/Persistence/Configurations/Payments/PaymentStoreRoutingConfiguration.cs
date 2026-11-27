@@ -13,13 +13,9 @@ internal sealed class PaymentStoreRoutingConfiguration : IEntityTypeConfiguratio
             .WithMany()
             .HasForeignKey(routing => routing.ChargeTypeId)
             .OnDelete(DeleteBehavior.Restrict);
-        entity.HasOne(routing => routing.Property)
+        entity.HasOne(routing => routing.Space)
             .WithMany()
-            .HasForeignKey(routing => routing.PropertyId)
-            .OnDelete(DeleteBehavior.Restrict);
-        entity.HasOne(routing => routing.Unit)
-            .WithMany()
-            .HasForeignKey(routing => routing.UnitId)
+            .HasForeignKey(routing => routing.SpaceId)
             .OnDelete(DeleteBehavior.Restrict);
         entity.HasOne(routing => routing.Store)
             .WithMany()
@@ -28,27 +24,15 @@ internal sealed class PaymentStoreRoutingConfiguration : IEntityTypeConfiguratio
 
         entity.HasIndex(routing => routing.ChargeTypeId)
             .IsUnique()
-            .HasFilter("[TasinmazId] IS NULL AND [BirimId] IS NULL AND [Aktif] = 1 AND [IsDeleted] = 0")
+            .HasFilter("[AlanId] IS NULL AND [Aktif] = 1 AND [IsDeleted] = 0")
             .HasDatabaseName("UX_OdemeMagazaYonlendirmeleri_Genel_Aktif");
-        entity.HasIndex(routing => new { routing.ChargeTypeId, routing.PropertyId })
+        entity.HasIndex(routing => new { routing.ChargeTypeId, routing.SpaceId })
             .IsUnique()
-            .HasFilter("[TasinmazId] IS NOT NULL AND [BirimId] IS NULL AND [Aktif] = 1 AND [IsDeleted] = 0")
-            .HasDatabaseName("UX_OdemeMagazaYonlendirmeleri_Tasinmaz_Aktif");
-        entity.HasIndex(routing => new { routing.ChargeTypeId, routing.UnitId })
-            .IsUnique()
-            .HasFilter("[TasinmazId] IS NULL AND [BirimId] IS NOT NULL AND [Aktif] = 1 AND [IsDeleted] = 0")
-            .HasDatabaseName("UX_OdemeMagazaYonlendirmeleri_Birim_Aktif");
+            .HasFilter("[AlanId] IS NOT NULL AND [Aktif] = 1 AND [IsDeleted] = 0")
+            .HasDatabaseName("UX_OdemeMagazaYonlendirmeleri_Alan_Aktif");
         entity.HasIndex(routing => routing.StoreId)
             .HasDatabaseName("IX_OdemeMagazaYonlendirmeleri_MagazaId");
-        entity.HasIndex(routing => routing.PropertyId)
-            .HasDatabaseName("IX_OdemeMagazaYonlendirmeleri_TasinmazId");
-        entity.HasIndex(routing => routing.UnitId)
-            .HasDatabaseName("IX_OdemeMagazaYonlendirmeleri_BirimId");
-
-        entity.ToTable(table => table.HasCheckConstraint(
-            "CK_OdemeMagazaYonlendirmeleri_Kapsam",
-            "([TasinmazId] IS NULL AND [BirimId] IS NULL) OR " +
-            "([TasinmazId] IS NOT NULL AND [BirimId] IS NULL) OR " +
-            "([TasinmazId] IS NULL AND [BirimId] IS NOT NULL)"));
+        entity.HasIndex(routing => routing.SpaceId)
+            .HasDatabaseName("IX_OdemeMagazaYonlendirmeleri_AlanId");
     }
 }

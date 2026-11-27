@@ -94,7 +94,7 @@
                 <tr>
                     <th class="w-28">No</th>
                     <th>Kiracı</th>
-                    <th>Taşınmaz / Birim</th>
+                    <th>Alan</th>
                     <th class="w-28 cell-center">Başlangıç</th>
                     <th class="w-28 cell-center">Bitiş</th>
                     <th class="w-32 num">Aylık Bedel</th>
@@ -112,7 +112,7 @@
                     bool revisionRequested = s.Status == LeaseStatus.RevisionRequested;
                     string dayBadgeClass = kalanGun <= 10 ? "bg-red-50 text-red-700 border-red-200" : kalanGun <= 30 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200";
                     string statusSearch = draft ? "onay bekliyor taslak" : revisionRequested ? "revizyon istendi" : string.Empty;
-                    var search = $"{s.Id} {s.TenantDisplayName} {s.PropertyName} {s.UnitName} {statusSearch}".ToLower();
+                    var search = $"{s.Id} {s.TenantDisplayName} {s.SpacePath} {s.SpaceName} {statusSearch}".ToLower();
                     string rowHref = draft || revisionRequested
                         ? $"/Lease/Draft/{s.Id.ToHashId()}"
                         : $"/Lease/Details/{s.Id.ToHashId()}";
@@ -129,8 +129,7 @@
                             }
                         </td>
                         <td>
-                            <a href="/Property/Details/@s.PropertyId.ToHashId()" class="font-medium hover:text-primary transition-colors">@s.PropertyName</a>
-                            <span class="cell-sub">@s.UnitName</span>
+                            <span class="font-medium">@(string.IsNullOrEmpty(s.SpacePath) ? s.SpaceName : s.SpacePath)</span>
                         </td>
                         <td class="cell-center">@s.StartDate.Tarih()</td>
                         <td class="cell-center">@s.EndDate.Tarih()</td>

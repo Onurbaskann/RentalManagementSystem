@@ -28,9 +28,13 @@ internal sealed class ReservationConfiguration : IEntityTypeConfiguration<Reserv
         entity.Property(r => r.RequestedByEmailSnapshot).HasMaxLength(256);
         entity.Property(r => r.RejectionReason).HasMaxLength(450);
         entity.Property(r => r.CancellationReason).HasMaxLength(450);
-        entity.HasOne(r => r.Unit)
+        entity.HasOne(r => r.Space)
               .WithMany()
-              .HasForeignKey(r => r.UnitId)
+              .HasForeignKey(r => r.SpaceId)
+              .OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne(r => r.ChargeType)
+              .WithMany()
+              .HasForeignKey(r => r.ChargeTypeId)
               .OnDelete(DeleteBehavior.Restrict);
         entity.HasOne(r => r.Tenant)
               .WithMany()
@@ -52,8 +56,8 @@ internal sealed class ReservationConfiguration : IEntityTypeConfiguration<Reserv
               .WithMany()
               .HasForeignKey(r => r.CancelledByUserId)
               .OnDelete(DeleteBehavior.Restrict);
-        entity.HasIndex(r => new { r.UnitId, r.StartDate, r.EndDate, r.Status })
-              .HasDatabaseName("IX_Rezervasyonlari_BirimTarihDurum_Aktif")
+        entity.HasIndex(r => new { r.SpaceId, r.StartDate, r.EndDate, r.Status })
+              .HasDatabaseName("IX_Rezervasyonlari_AlanTarihDurum_Aktif")
               .HasFilter("[IsDeleted] = 0");
         entity.HasIndex(r => r.TenantId)
               .HasDatabaseName("IX_Rezervasyonlari_KiraciId_Aktif")

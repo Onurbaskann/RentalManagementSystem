@@ -41,7 +41,7 @@ public class IdentitySeedService
                 EmailConfirmed = true,
                 IsActive = true,
                 UserType = UserType.Internal,
-                TumTasinmazlaraErisim = tumTasinmazlaraErisim,
+                HasAccessToAllSpaces = tumTasinmazlaraErisim,
                 IsSuperAdmin = isSuperAdmin
             };
             var result = await _userManager.CreateAsync(user, password);
@@ -54,7 +54,7 @@ public class IdentitySeedService
                 throw new InvalidOperationException("Seed admin hesabı iç kullanıcı olmalıdır.");
             var dirty = false;
             if (!user.IsActive) { user.IsActive = true; dirty = true; }
-            if (user.TumTasinmazlaraErisim != tumTasinmazlaraErisim) { user.TumTasinmazlaraErisim = tumTasinmazlaraErisim; dirty = true; }
+            if (user.HasAccessToAllSpaces != tumTasinmazlaraErisim) { user.HasAccessToAllSpaces = tumTasinmazlaraErisim; dirty = true; }
             if (user.IsSuperAdmin != isSuperAdmin) { user.IsSuperAdmin = isSuperAdmin; dirty = true; }
             if (dirty)
             {

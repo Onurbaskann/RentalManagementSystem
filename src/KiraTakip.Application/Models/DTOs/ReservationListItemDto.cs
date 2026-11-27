@@ -6,10 +6,9 @@ public class ReservationListItemDto
 {
     public int Id { get; set; }
     public string ReservationNo { get; set; } = string.Empty;
-    public int UnitId { get; set; }
-    public string UnitName { get; set; } = string.Empty;
-    public int PropertyId { get; set; }
-    public string PropertyName { get; set; } = string.Empty;
+    public int SpaceId { get; set; }
+    public string SpaceName { get; set; } = string.Empty;
+    public string SpacePath { get; set; } = string.Empty;
     public int TenantId { get; set; }
     public string TenantDisplayName { get; set; } = string.Empty;
     public int? ChargeId { get; set; }

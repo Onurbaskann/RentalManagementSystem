@@ -80,7 +80,7 @@
                 <tr>
                     <th class="w-28">No</th>
                     <th>Başlık</th>
-                    <th>Taşınmaz / Birim</th>
+                    <th>Alan</th>
                     <th>Kiracı</th>
                     <th class="w-36">Zaman Dilimi</th>
                     <th class="w-24 cell-center">Toplam</th>
@@ -106,8 +106,7 @@
                         <td class="font-mono text-muted-sm">@r.ReservationNo</td>
                         <td><a href="@detailsUrl" class="cell-link">@(string.IsNullOrWhiteSpace(r.Title) ? "—" : r.Title)</a></td>
                         <td>
-                            @r.PropertyName
-                            <span class="cell-sub">@r.UnitName</span>
+                            @r.SpaceName
                         </td>
                         <td>@r.TenantDisplayName</td>
                         <td>

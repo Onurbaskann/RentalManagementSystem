@@ -47,11 +47,10 @@ public class TenantChargeController(
                     query.Size,
                     query.Q,
                     query.Status,
-                    query.UnitId,
+                    query.SpaceId,
                     query.Source,
                     query.Year),
-                ScopePropertyIds(),
-                ScopeUnitIds()));
+                permissionScopeProvider.SpaceScope));
 
         var viewModel = new TenantChargeIndexViewModel
         {
@@ -62,7 +61,7 @@ public class TenantChargeController(
             CollectedAmount = indexData.CollectedAmount,
             RemainingDebtAmount = indexData.RemainingDebtAmount,
             OverdueRemainingAmount = indexData.OverdueRemainingAmount,
-            Units = indexData.Units,
+            Spaces = indexData.Spaces,
             AvailableYears = indexData.AvailableYears,
             CanReportPayment = await permissionService.HasModuleAccessAsync(
                 PermissionCatalog.TenantPortal.Payment.Module)
@@ -78,8 +77,7 @@ public class TenantChargeController(
             new GetTenantChargeDetailsInput(
                 id,
                 currentUserContext.TenantId!.Value,
-                ScopePropertyIds(),
-                ScopeUnitIds()));
+                permissionScopeProvider.SpaceScope));
         var paymentDocuments = await documentService.GetListsAsync(
             new GetDocumentsForOwnersInput(
                 DocumentOwnerType.Payment,
@@ -123,7 +121,7 @@ public class TenantChargeController(
             viewModel.Receipt.FileName,
             viewModel.Receipt.ContentType,
             stream.ToArray(),
-            new PaymentAccessScopeInput(ScopePropertyIds(), ScopeUnitIds()),
+            permissionScopeProvider.SpaceScope,
             ChargeLineItemId: viewModel.ChargeLineItemId));
 
         return RedirectToAction(nameof(Details), new { id = viewModel.ChargeId });
@@ -140,7 +138,7 @@ public class TenantChargeController(
             chargeLineItemId,
             amount,
             currentUserContext.UserId!,
-            new PaymentAccessScopeInput(ScopePropertyIds(), ScopeUnitIds())));
+            permissionScopeProvider.SpaceScope));
 
         if (string.IsNullOrWhiteSpace(result.RedirectUrl))
         {
@@ -193,14 +191,4 @@ public class TenantChargeController(
 
         return RedirectToAction(nameof(Details), new { id = result.ChargeId });
     }
-
-    private IReadOnlyList<int>? ScopePropertyIds()
-        => permissionScopeProvider.GlobalAccess
-            ? null
-            : permissionScopeProvider.AccessiblePropertyIds;
-
-    private IReadOnlyList<int>? ScopeUnitIds()
-        => permissionScopeProvider.GlobalAccess
-            ? null
-            : permissionScopeProvider.AccessibleUnitIds;
 }

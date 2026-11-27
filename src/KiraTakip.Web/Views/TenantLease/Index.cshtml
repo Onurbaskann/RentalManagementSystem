@@ -31,8 +31,8 @@
         <table class="w-full">
             <thead>
                 <tr>
-                    <th>Birim</th>
-                    <th>Taşınmaz</th>
+                    <th>Alan</th>
+                    <th>Konum</th>
                     <th class="w-28 cell-center">Başlangıç</th>
                     <th class="w-28 cell-center">Bitiş</th>
                     <th class="w-32 num">Aylık Bedel</th>
@@ -47,7 +47,7 @@
                     bool isExpiringSoon = isActive && remainingDays <= 30;
                     bool isTerminated = lease.Status == LeaseStatus.Terminated;
                     string dayBadgeClass = remainingDays <= 10 ? "bg-red-50 text-red-700 border-red-200" : remainingDays <= 30 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200";
-                    var search = $"{lease.UnitName} {lease.PropertyName}".ToLower();
+                    var search = $"{lease.SpaceName} {lease.SpacePath}".ToLower();
                     var detailsHref = Url.Action(
                         nameof(KiraTakip.Web.Controllers.TenantLeaseController.Details),
                         nameof(KiraTakip.Web.Controllers.TenantLeaseController).Replace("Controller", string.Empty),
@@ -56,8 +56,8 @@
                     <tr data-row data-search="@search" data-href="@detailsHref"
                         class="cursor-pointer hover:bg-slate-50 transition-colors"
                         @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
-                        <td class="font-semibold">@lease.UnitName</td>
-                        <td class="text-sm text-muted">@lease.PropertyName</td>
+                        <td class="font-semibold">@lease.SpaceName</td>
+                        <td class="text-sm text-muted">@lease.SpacePath</td>
                         <td class="cell-center text-sm">@lease.StartDate.Tarih()</td>
                         <td class="cell-center text-sm">@lease.EndDate.Tarih()</td>
                         <td class="num text-sm font-medium">@(lease.IsRentFree ? "Bedelsiz" : lease.MonthlyAmount.Tl())</td>

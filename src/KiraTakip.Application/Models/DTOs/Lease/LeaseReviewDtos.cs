@@ -15,12 +15,12 @@ public sealed class LeaseDraftEditDto
 {
     public int LeaseId { get; init; }
     public string LeaseNo { get; init; } = string.Empty;
-    public int UnitId { get; init; }
+    public int SpaceId { get; init; }
     public int TenantId { get; init; }
-    public string UnitTypeNameSnapshot { get; init; } = string.Empty;
-    public UnitTypeUsage UnitTypeUsageSnapshot { get; init; }
-    public UnitRentalMode RentalModeSnapshot { get; init; }
-    public decimal UnitAreaSnapshot { get; init; }
+    public string SpacePath { get; init; } = string.Empty;
+    public string SpaceTypeNameSnapshot { get; init; } = string.Empty;
+    public SpaceUsage SpaceUsageSnapshot { get; init; }
+    public decimal SpaceAreaSnapshot { get; init; }
     public DateTime StartDate { get; init; }
     public DateTime EndDate { get; init; }
     public DueDateRuleType DueDateRuleType { get; init; }
@@ -28,8 +28,6 @@ public sealed class LeaseDraftEditDto
     public string? Description { get; init; }
     public bool IsRentFree { get; init; }
     public decimal? RentedArea { get; init; }
-    public decimal? AllocatedArea { get; init; }
-    public LeaseAreaMode? AllocationMode { get; init; }
     public LeaseStatus Status { get; init; }
     public byte[] RowVersion { get; init; } = [];
     public string OwnerUserId { get; init; } = string.Empty;
@@ -42,19 +40,19 @@ public sealed class LeaseDraftEditDto
 
 public sealed record GetTenantPortalLeasesInput(
     int TenantId,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public sealed record GetTenantPortalLeasesPageInput(
     int TenantId,
     KiraTakip.Models.Common.TableQuery Query,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public sealed record GetLeaseDraftInput(
     int LeaseId,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public sealed record CreateLeaseDraftInput(
-    int UnitId,
+    int SpaceId,
     int TenantId,
     DateTime StartDate,
     DateTime EndDate,
@@ -63,15 +61,13 @@ public sealed record CreateLeaseDraftInput(
     string? Description,
     IReadOnlyCollection<LeaseRateOverrideInput> RateOverrides,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope,
+    SpaceAccessScope AccessScope,
     bool IsRentFree = false,
-    decimal? RentedArea = null,
-    decimal? AllocatedArea = null,
-    LeaseAreaMode? AllocationMode = null);
+    decimal? RentedArea = null);
 
 public sealed record UpdateLeaseDraftInput(
     int LeaseId,
-    int UnitId,
+    int SpaceId,
     int TenantId,
     DateTime StartDate,
     DateTime EndDate,
@@ -81,15 +77,13 @@ public sealed record UpdateLeaseDraftInput(
     IReadOnlyCollection<LeaseRateOverrideInput> RateOverrides,
     byte[] ExpectedRowVersion,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope,
+    SpaceAccessScope AccessScope,
     bool IsRentFree = false,
-    decimal? RentedArea = null,
-    decimal? AllocatedArea = null,
-    LeaseAreaMode? AllocationMode = null);
+    decimal? RentedArea = null);
 
 public sealed record ResubmitLeaseRevisionInput(
     int LeaseId,
-    int UnitId,
+    int SpaceId,
     int TenantId,
     DateTime StartDate,
     DateTime EndDate,
@@ -100,29 +94,27 @@ public sealed record ResubmitLeaseRevisionInput(
     string? Explanation,
     byte[] ExpectedRowVersion,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope,
+    SpaceAccessScope AccessScope,
     bool IsRentFree = false,
-    decimal? RentedArea = null,
-    decimal? AllocatedArea = null,
-    LeaseAreaMode? AllocationMode = null);
+    decimal? RentedArea = null);
 
 public sealed record RequestLeaseRevisionInput(
     int LeaseId,
     string Explanation,
     byte[] ExpectedRowVersion,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public sealed record ApproveLeaseInput(
     int LeaseId,
     string? Explanation,
     byte[] ExpectedRowVersion,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public sealed record DeleteLeaseDraftInput(
     int LeaseId,
     string Explanation,
     byte[] ExpectedRowVersion,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);

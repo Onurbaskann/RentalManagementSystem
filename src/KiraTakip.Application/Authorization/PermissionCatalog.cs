@@ -414,6 +414,8 @@ public static class PermissionCatalog
         Charge.Module, Charge.Regenerate,
         PropertyMultiplier.Module, PropertyMultiplier.Edit,
         ReservationRateRule.Module, ReservationRateRule.Create, ReservationRateRule.Edit,
+        Space.Module, Space.Create, Space.Edit, Space.Deactivate, Space.Activate, Space.Delete,
+        Space.EditRate, Space.EditAddress, Space.EditAttributes,
     ];
 
     public static bool IsScopeAware(string permission) => ScopeAware.Contains(permission);

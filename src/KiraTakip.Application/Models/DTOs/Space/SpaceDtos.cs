@@ -32,6 +32,8 @@ public record UpdateSpaceInput(
 
 public record SpaceSaveResult(int Id, IReadOnlyList<SpaceChangeWarning> Warnings);
 
+public record SpaceOptionDto(int Id, string Name, string NamePath);
+
 public record SpaceTreeRow(
     int Id,
     int? ParentId,
@@ -79,7 +81,9 @@ public record SpaceDeletePreviewDto(
     IReadOnlyList<SpaceChangeViolation> Violations,
     bool HasAddress,
     IReadOnlyList<string> AttributeNames,
-    IReadOnlyList<string> RateDescriptions)
+    IReadOnlyList<string> RateDescriptions,
+    IReadOnlyList<string> ReservationRuleDescriptions,
+    IReadOnlyList<string> PaymentRoutingDescriptions)
 {
     public bool CanDelete => Violations.Count == 0;
 }
@@ -87,7 +91,9 @@ public record SpaceDeletePreviewDto(
 public record SpaceLinkedDefinitions(
     SpaceAddress? Address,
     List<SpaceAttributeValue> AttributeValues,
-    List<SpaceRate> Rates);
+    List<SpaceRate> Rates,
+    List<ReservationRateOverride> ReservationRules,
+    List<PaymentStoreRouting> PaymentRoutings);
 
 public enum SpaceTypeDeleteResult { Deleted = 1, Deactivated = 2 }
 

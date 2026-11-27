@@ -12,7 +12,7 @@ public interface ITenantService
     Task<TenantDetailsDto> GetProfileAsync(GetTenantProfileInput input);
     Task<CreatedTenantDto> CreateAsync(CreateTenantInput input);
     Task UpdateAsync(UpdateTenantInput input);
-    Task DeleteAsync(int id, TenantAccessScopeInput accessScope);
+    Task DeleteAsync(int id, SpaceAccessScope accessScope);
     Task<string> GenerateTenantNoAsync();
     Task<bool> IsInactiveAsync(CheckTenantInactiveInput input, CancellationToken ct = default);
 }

@@ -3,23 +3,20 @@ using KiraTakip.Models.Common;
 namespace KiraTakip.Models.Dtos.Reservation;
 
 public record GetReservationsInput(
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    SpaceAccessScope Scope);
 
 public record GetReservationsPageInput(
     TableQuery Query,
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    SpaceAccessScope Scope);
 
 public record GetCancelledReservationCountInput(
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    SpaceAccessScope Scope);
 
 public record GetTenantReservationsInput(
     int TenantId,
-    ReservationAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record GetTenantReservationsPageInput(
     int TenantId,
     TableQuery Query,
-    ReservationAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);

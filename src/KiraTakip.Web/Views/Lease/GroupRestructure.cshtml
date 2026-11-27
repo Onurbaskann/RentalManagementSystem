@@ -35,7 +35,7 @@
                     <span class="w-1.5 h-4 bg-red-600 rounded-full"></span><span>Mevcut Grubun Feshi</span>
                 </div>
                 <div class="bg-primary/5 border border-primary/10 rounded-lg p-3 text-[13.5px] font-medium text-primary mb-4">
-                    @Model.UnitName • @Model.UnitArea.M2()
+                    @Model.SpacePath • @Model.SpaceArea.M2()
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5" x-data="{ choice: '@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(reasonChoice))', other: '@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(otherReason ? Model.TerminationReason : ""))' }">
                     <div class="form-group mb-0">
@@ -71,7 +71,7 @@
                 <div class="text-[15px] font-bold mb-5 pb-3 border-b border-[var(--color-border)] flex items-center gap-2">
                     <span class="w-1.5 h-4 bg-primary rounded-full"></span><span>Yeni Grup: Süre ve Vade (tüm sözleşmeler için ortak)</span>
                 </div>
-                <input type="hidden" name="UnitId" value="@Model.UnitId" />
+                <input type="hidden" name="SpaceId" value="@Model.SpaceId" />
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                     <div class="form-group mb-0">
                         <label class="form-label">Başlangıç Tarihi *</label>

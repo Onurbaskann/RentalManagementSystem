@@ -12,8 +12,8 @@ public class Charge : BaseEntity
     [Column("KiraciId")]
     public int TenantId { get; set; }
 
-    [Column("BirimId")]
-    public int UnitId { get; set; }
+    [Column("AlanId")]
+    public int? SpaceId { get; set; }
 
     [Column("SozlesmeId")]
     public int? LeaseId { get; set; }
@@ -55,7 +55,7 @@ public class Charge : BaseEntity
     public DateTime? LastReminderDate { get; set; }
 
     public Tenant Tenant { get; set; } = null!;
-    public Unit Unit { get; set; } = null!;
+    public Space? Space { get; set; }
     public Lease? Lease { get; set; }
     public Reservation? Reservation { get; set; }
     public List<PaymentAllocation> Allocations { get; set; } = [];

@@ -12,24 +12,8 @@ public class LeaseDetailDto
     public string? TenantEmail { get; set; }
     public int? TenantCategoryId { get; set; }
     public string? TenantCategoryName { get; set; }
-    public int UnitId { get; set; }
-    public string UnitName { get; set; } = string.Empty;
-    public string? UnitNo { get; set; }
-    public int? UnitFloorNo { get; set; }
-    public decimal UnitArea { get; set; }
-    public string UnitTypeNameSnapshot { get; set; } = string.Empty;
-    public UnitTypeUsage UnitTypeUsageSnapshot { get; set; }
-    public UnitRentalMode RentalModeSnapshot { get; set; }
-    public decimal UnitAreaSnapshot { get; set; }
-    public decimal? RentedArea { get; set; }
+    public LeaseAreaDto? Area { get; set; }
     public int? LeaseGroupId { get; set; }
-    public UnitStructure UnitStructure { get; set; }
-    public int PropertyId { get; set; }
-    public string PropertyName { get; set; } = string.Empty;
-    public string PropertyCity { get; set; } = string.Empty;
-    public string PropertyDistrict { get; set; } = string.Empty;
-    public string PropertyNeighborhood { get; set; } = string.Empty;
-    public string PropertyAddress { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public string? Description { get; set; }
@@ -42,4 +26,11 @@ public class LeaseDetailDto
     public int DueDay { get; set; }
     public List<LeaseActivityLogDto> ActivityLog { get; set; } = [];
     public List<LeaseRateDto> LeaseRateOverrides { get; set; } = [];
+
+    public int SpaceId => Area?.SpaceId ?? 0;
+    public string SpaceName => Area?.SpaceName ?? string.Empty;
+    public string SpacePath => Area?.SnapshotPath ?? string.Empty;
+    public string SpaceIdPath => Area?.SpaceIdPath ?? string.Empty;
+    public decimal SpaceArea => Area?.SpaceArea ?? 0m;
+    public decimal? RentedArea => Area?.RentedArea;
 }

@@ -14,7 +14,7 @@
     </div>
 </div>
 
-<div class="card" x-data="{ seciliRolId: @(Model.RoleId > 0 ? Model.RoleId.ToString() : "0"), tumErisim: @(Model.HasAccessToAllProperties ? "true" : "false") }">
+<div class="card" x-data="{ seciliRolId: @(Model.RoleId > 0 ? Model.RoleId.ToString() : "0"), tumErisim: @(Model.HasAccessToAllSpaces ? "true" : "false") }">
     <form method="post" action="/Admin/Users/Invite">
         @Html.AntiForgeryToken()
 
@@ -42,27 +42,26 @@
             <span asp-validation-for="RoleId" class="form-error"></span>
         </div>
 
-        @if (Model.Properties.Any())
+        @if (Model.Spaces.Any())
         {
             <div class="form-group" x-show="seciliRolId !== '0'" x-cloak>
-                <label class="form-label">Taşınmaz Yetkileri</label>
+                <label class="form-label">Alan Yetkileri</label>
 
                 <label class="flex items-center gap-2 cursor-pointer mb-3">
-                    <input type="checkbox" asp-for="HasAccessToAllProperties" x-model="tumErisim" class="rounded accent-blue-600" />
-                    <span class="text-sm font-medium">Tüm Taşınmazlara Erişim</span>
+                    <input type="checkbox" asp-for="HasAccessToAllSpaces" x-model="tumErisim" class="rounded accent-blue-600" />
+                    <span class="text-sm font-medium">Tüm Alanlara Erişim</span>
                 </label>
 
                 <div x-show="!tumErisim" x-cloak class="grid grid-cols-1 gap-1.5 pl-1">
-                    @for (int i = 0; i < Model.Properties.Count; i++)
+                    @for (int i = 0; i < Model.Spaces.Count; i++)
                     {
                         <label class="flex items-center gap-2 cursor-pointer text-sm">
                             <input type="checkbox"
-                                   name="SelectedPropertyIds"
-                                   value="@Model.Properties[i].PropertyId"
-                                   @(Model.Properties[i].Selected ? "checked" : "")
+                                   name="SelectedSpaceIds"
+                                   value="@Model.Spaces[i].SpaceId"
+                                   @(Model.Spaces[i].Selected ? "checked" : "")
                                    class="rounded" />
-                            <span class="font-medium">@Model.Properties[i].Name</span>
-                            <span class="text-muted">— @Model.Properties[i].Location</span>
+                            <span class="font-medium">@Model.Spaces[i].NamePath</span>
                         </label>
                     }
                 </div>

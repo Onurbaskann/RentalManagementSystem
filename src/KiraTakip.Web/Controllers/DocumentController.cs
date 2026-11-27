@@ -95,22 +95,16 @@ public class DocumentController(
         if (paymentAllowed)
             allowedOwnerTypes.Add(DocumentOwnerType.Payment);
 
-        IReadOnlyList<int>? propertyIds = null;
-        IReadOnlyList<int>? unitIds = null;
+        SpaceAccessScope? spaceScope = null;
         if (!currentUserContext.IsKiraciUser)
         {
             var scope = await permissionScopeCache.GetAsync(currentUserContext.UserId!);
-            if (!scope.GlobalAccess)
-            {
-                propertyIds = scope.PropertyIds;
-                unitIds = scope.UnitIds;
-            }
+            spaceScope = new SpaceAccessScope(scope.GlobalAccess, scope.SpaceRootPaths);
         }
 
         return new DocumentAccessScopeInput(
             allowedOwnerTypes,
-            propertyIds,
-            unitIds,
+            Scope: spaceScope,
             TenantId: currentUserContext.IsKiraciUser
                 ? currentUserContext.TenantId
                 : null);

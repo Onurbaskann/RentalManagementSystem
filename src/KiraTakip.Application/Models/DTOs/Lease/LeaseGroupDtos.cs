@@ -13,7 +13,7 @@ public sealed record LeaseGroupMemberInput(
     IReadOnlyCollection<LeaseRateOverrideInput> RateOverrides);
 
 public sealed record CreateLeaseGroupInput(
-    int UnitId,
+    int SpaceId,
     DateTime StartDate,
     DateTime EndDate,
     DueDateRuleType DueDateRuleType,
@@ -22,7 +22,7 @@ public sealed record CreateLeaseGroupInput(
     bool IsRentFree,
     IReadOnlyCollection<LeaseGroupMemberInput> Members,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public sealed record UpdateLeaseGroupInput(
     int GroupId,
@@ -34,25 +34,25 @@ public sealed record UpdateLeaseGroupInput(
     bool IsRentFree,
     IReadOnlyCollection<LeaseGroupMemberInput> Members,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public sealed record ResubmitLeaseGroupInput(
     int GroupId,
     string? Explanation,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public sealed record DeleteLeaseGroupDraftInput(
     int GroupId,
     string Explanation,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public sealed record ApproveLeaseGroupInput(
     int GroupId,
     string? Explanation,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 /// <summary>Uzatmada sözleşme başına tarife satırları (A2). Listelenmeyen sözleşme için boş kabul edilir.</summary>
 public sealed record ExtendLeaseGroupMemberInput(
@@ -70,7 +70,7 @@ public sealed record ExtendLeaseGroupInput(
     bool CanOverrideRate,
     IReadOnlyCollection<ExtendLeaseGroupMemberInput> Members,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public sealed record TerminateLeaseGroupInput(
     int GroupId,
@@ -78,7 +78,7 @@ public sealed record TerminateLeaseGroupInput(
     string TerminationReason,
     string? Description,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 /// <summary>Eski grup feshedilir, yeni grup (PreviousGroupId = GroupId) Draft açılır. Members satırlarında LeaseId null olmalıdır.</summary>
 public sealed record RestructureLeaseGroupInput(
@@ -94,11 +94,11 @@ public sealed record RestructureLeaseGroupInput(
     bool IsRentFree,
     IReadOnlyCollection<LeaseGroupMemberInput> Members,
     string ActorUserId,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public sealed record GetLeaseGroupInput(
     int GroupId,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public sealed class LeaseGroupMemberDto
 {
@@ -118,11 +118,10 @@ public sealed class LeaseGroupDetailDto
 {
     public int GroupId { get; init; }
     public int? PreviousGroupId { get; init; }
-    public int UnitId { get; init; }
-    public string UnitName { get; init; } = string.Empty;
-    public int PropertyId { get; init; }
-    public string PropertyName { get; init; } = string.Empty;
-    public decimal UnitArea { get; init; }
+    public int SpaceId { get; init; }
+    public string SpaceName { get; init; } = string.Empty;
+    public string SpacePath { get; init; } = string.Empty;
+    public decimal SpaceArea { get; init; }
     public DateTime StartDate { get; init; }
     public DateTime EndDate { get; init; }
     public DueDateRuleType DueDateRuleType { get; init; }

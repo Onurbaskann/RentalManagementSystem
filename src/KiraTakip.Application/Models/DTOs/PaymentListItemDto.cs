@@ -21,8 +21,7 @@ public class PaymentListItemDto
     public string TenantDisplayName { get; set; } = string.Empty;
     public DateTime ChargePeriodStart { get; set; }
     public string? CreatedByUserDisplayName { get; set; }
-    public string PropertyName { get; set; } = string.Empty;
-    public string UnitName { get; set; } = string.Empty;
+    public string SpaceName { get; set; } = string.Empty;
     public int StoreId { get; set; }
     public string StoreName { get; set; } = string.Empty;
 }

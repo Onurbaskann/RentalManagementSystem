@@ -5,8 +5,7 @@ namespace KiraTakip.Services.Interfaces.Identity;
 public interface IPermissionScopeProvider
 {
     bool GlobalAccess { get; }
-    IReadOnlyList<int> AccessiblePropertyIds { get; }
-    IReadOnlyList<int> AccessibleUnitIds { get; }
-    bool IsInScope(int propertyId);
+    SpaceAccessScope SpaceScope { get; }
+    bool IsSpaceInScope(string spacePath);
     void Initialize(UserScopeDto dto);
 }

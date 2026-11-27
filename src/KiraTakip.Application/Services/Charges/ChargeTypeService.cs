@@ -3,16 +3,17 @@ using KiraTakip.Helpers;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.ChargeType;
+using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Interfaces.Charges;
 using KiraTakip.Repositories.Interfaces.Payments;
-using KiraTakip.Repositories.Interfaces.Properties;
+using KiraTakip.Repositories.Interfaces.Reservations;
 using KiraTakip.Services.Interfaces.Charges;
 
 namespace KiraTakip.Services.Charges;
 
 public class ChargeTypeService(
     IChargeTypeRepository chargeTypeRepository,
-    IUnitTypeRepository unitTypeRepository,
+    IReservationRateOverrideRepository reservationRateRepository,
     IPaymentStoreRoutingRepository paymentStoreRoutingRepository,
     IUnitOfWork uow) : IChargeTypeService
 {
@@ -62,6 +63,18 @@ public class ChargeTypeService(
             $"'{entity.Name}' bir sistem kaydıdır ve pasif yapılamaz.",
             "CHARGE_TYPE_SYSTEM_DEACTIVATION_FORBIDDEN");
 
+        Guard.Conflict(
+            entity.IsActive && !input.IsActive
+                && await reservationRateRepository.AnyActiveByChargeTypeAsync(id),
+            ActiveReservationRuleMessage,
+            "CHARGE_TYPE_USED_BY_ACTIVE_RESERVATION_RULE");
+
+        Guard.Conflict(
+            entity.Behavior != input.Behavior
+                && await chargeTypeRepository.IsChargeTypeUsedAsync(id),
+            "Bu borç tipi rezervasyon kuralı, rezervasyon veya tahakkuk kaleminde kullanıldığı için davranışı değiştirilemez.",
+            "CHARGE_TYPE_BEHAVIOR_CHANGE_FORBIDDEN");
+
         if (!entity.IsActive && input.IsActive)
         {
             Guard.Conflict(
@@ -89,8 +102,9 @@ public class ChargeTypeService(
         {
             Guard.Conflict(entity.IsSystem, $"'{entity.Name}' bir sistem kaydıdır ve pasif yapılamaz.");
             Guard.Conflict(
-                await unitTypeRepository.AnyAktifByBorcTipiIdAsync(id),
-                "Bu borç tipi aktif bir birim türüne bağlı. Önce ilgili birim türünü pasif yapın.");
+                await reservationRateRepository.AnyActiveByChargeTypeAsync(id),
+                ActiveReservationRuleMessage,
+                "CHARGE_TYPE_USED_BY_ACTIVE_RESERVATION_RULE");
         }
         else
         {
@@ -106,6 +120,9 @@ public class ChargeTypeService(
 
         return entity.IsActive;
     }
+
+    private const string ActiveReservationRuleMessage =
+        "Bu borç tipi aktif bir rezervasyon kuralında kullanılıyor. Önce ilgili kuralı pasif yapın veya başka bir borç tipi seçin.";
 
     public async Task ChangeSortOrderAsync(int id, int newSortOrder)
     {

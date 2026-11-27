@@ -11,38 +11,27 @@ namespace KiraTakip.Repositories.Leases;
 public class LeaseGroupRepository(ApplicationDbContext ctx)
     : RepositoryBase<LeaseGroup>(ctx), ILeaseGroupRepository
 {
-    public Task<LeaseGroup?> GetForMutationAsync(
-        int groupId,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+    public Task<LeaseGroup?> GetForMutationAsync(int groupId, SpaceAccessScope? scope)
         => ApplyScope(
                 _dbSet
-                    .Include(group => group.Unit)
-                    .ThenInclude(unit => unit.Property)
-                    .Include(group => group.Leases)
+                    .Include(group => group.Space)
+                    .Include(group => group.Leases).ThenInclude(lease => lease.Areas)
                     .Where(group => group.Id == groupId),
-                authorizedPropertyIds,
-                authorizedUnitIds)
+                scope)
             .FirstOrDefaultAsync();
 
-    public async Task<LeaseGroupDetailDto?> GetDetailAsync(
-        int groupId,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+    public async Task<LeaseGroupDetailDto?> GetDetailAsync(int groupId, SpaceAccessScope? scope)
     {
         var group = await ApplyScope(
                 _dbSet.AsNoTracking().Where(item => item.Id == groupId),
-                authorizedPropertyIds,
-                authorizedUnitIds)
+                scope)
             .Select(item => new
             {
                 item.Id,
                 item.PreviousGroupId,
-                item.UnitId,
-                UnitName = item.Unit.Name,
-                item.Unit.PropertyId,
-                PropertyName = item.Unit.Property.Name,
-                UnitArea = item.Unit.Area,
+                item.SpaceId,
+                SpaceName = item.Space.Name,
+                SpaceArea = item.Space.Area,
                 item.CreatedBy,
                 item.CreatedAt
             })
@@ -60,7 +49,7 @@ public class LeaseGroupRepository(ApplicationDbContext ctx)
                 TenantId = lease.TenantId,
                 TenantName = lease.Tenant.Name,
                 Status = lease.Status,
-                Area = lease.LeaseArea != null ? lease.LeaseArea.RentedArea : 0m,
+                Area = lease.Areas.OrderBy(area => area.Id).Select(area => area.RentedArea).FirstOrDefault(),
                 RowVersion = lease.RowVersion,
                 RateOverrides = lease.LeaseRateOverrides
                     .OrderBy(rate => rate.ChargeType.Name)
@@ -90,7 +79,8 @@ public class LeaseGroupRepository(ApplicationDbContext ctx)
                 lease.DueDateRuleType,
                 lease.DueDay,
                 lease.Description,
-                lease.IsRentFree
+                lease.IsRentFree,
+                SnapshotPath = lease.Areas.OrderBy(area => area.Id).Select(area => area.SnapshotPath).FirstOrDefault()
             })
             .FirstOrDefaultAsync();
 
@@ -130,11 +120,10 @@ public class LeaseGroupRepository(ApplicationDbContext ctx)
         {
             GroupId = group.Id,
             PreviousGroupId = group.PreviousGroupId,
-            UnitId = group.UnitId,
-            UnitName = group.UnitName,
-            PropertyId = group.PropertyId,
-            PropertyName = group.PropertyName,
-            UnitArea = group.UnitArea,
+            SpaceId = group.SpaceId,
+            SpaceName = group.SpaceName,
+            SpacePath = string.IsNullOrEmpty(first?.SnapshotPath) ? group.SpaceName : first.SnapshotPath,
+            SpaceArea = group.SpaceArea,
             StartDate = first?.StartDate ?? default,
             EndDate = first?.EndDate ?? default,
             DueDateRuleType = first?.DueDateRuleType ?? default,
@@ -168,17 +157,11 @@ public class LeaseGroupRepository(ApplicationDbContext ctx)
             .Select(lease => lease.Id)
             .ToListAsync();
 
-    private static IQueryable<LeaseGroup> ApplyScope(
-        IQueryable<LeaseGroup> query,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds)
+    private static IQueryable<LeaseGroup> ApplyScope(IQueryable<LeaseGroup> query, SpaceAccessScope? scope)
     {
-        if (authorizedPropertyIds == null && authorizedUnitIds == null) return query;
+        if (scope == null || scope.HasGlobalAccess) return query;
 
-        var propertyIds = authorizedPropertyIds ?? [];
-        var unitIds = authorizedUnitIds ?? [];
-        return query.Where(group =>
-            propertyIds.Contains(group.Unit.PropertyId)
-            || unitIds.Contains(group.UnitId));
+        var roots = scope.RootPaths.ToList();
+        return query.Where(group => roots.Any(root => group.Space.Path.StartsWith(root)));
     }
 }

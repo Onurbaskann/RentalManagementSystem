@@ -32,7 +32,7 @@ public static class ParentRateViewModelMapper
                 Description = data.Description,
                 Rows = data.Rows.Select(row => new ParentReservationRateOverrideRow
                 {
-                    UnitTypeName = row.UnitTypeName,
+                    SpaceName = row.SpaceName,
                     FreeDurationMinutes = row.FreeDurationMinutes,
                     BillingPeriodMinutes = row.BillingPeriodMinutes,
                     PeriodRate = row.PeriodRate,

@@ -12,8 +12,8 @@ public class CreateManualChargeViewModelValidator : IValidator<CreateManualCharg
         if (input.TenantId <= 0)
             errors.Add(new ValidationError("Kiracı seçilmelidir.", nameof(input.TenantId)));
 
-        if (input.UnitId <= 0)
-            errors.Add(new ValidationError("Birim seçilmelidir.", nameof(input.UnitId)));
+        if (input.SpaceId <= 0)
+            errors.Add(new ValidationError("Alan seçilmelidir.", nameof(input.SpaceId)));
 
         if (input.ChargeTypeId <= 0)
             errors.Add(new ValidationError("Borç tipi seçilmelidir.", nameof(input.ChargeTypeId)));

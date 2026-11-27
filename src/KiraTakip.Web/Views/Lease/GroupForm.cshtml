@@ -14,7 +14,7 @@
     <div class="page-header">
         <a href="@backUrl" class="text-[12.5px] text-muted no-underline inline-block mb-2 hover:text-primary transition-colors">← @(Model.IsEdit ? "Gruba Dön" : "Sözleşmeler")</a>
         <div class="page-title">@(Model.IsEdit ? "Paylaşımlı Grubu Düzenle" : "Yeni Sözleşme Başvurusu")</div>
-        <div class="page-subtitle">Aynı birimi paylaşan kiracıların sözleşmeleri tek başvuruda açılır; onaylanana kadar sözleşmeler aktifleşmez.</div>
+        <div class="page-subtitle">Aynı alanı paylaşan kiracıların sözleşmeleri tek başvuruda açılır; onaylanana kadar sözleşmeler aktifleşmez.</div>
     </div>
 
     <div x-data="leaseGroupForm()" x-init="init()" x-cloak @@datechanged="onPickerChanged($event)">
@@ -27,17 +27,17 @@
             @if (Model.IsEdit)
             {
                 <div class="card">
-                    @await Html.PartialAsync("_LeaseStepHeader", null, new ViewDataDictionary(ViewData) { ["Number"] = "1", ["StepTitle"] = "Birim" })
-                    <input type="hidden" name="UnitId" value="@Model.UnitId" />
+                    @await Html.PartialAsync("_LeaseStepHeader", null, new ViewDataDictionary(ViewData) { ["Number"] = "1", ["StepTitle"] = "Alan" })
+                    <input type="hidden" name="SpaceId" value="@Model.SpaceId" />
                     <div class="rounded-lg border border-primary bg-primary/5 p-3.5 text-[13.5px] font-semibold text-primary">
-                        @Model.UnitName • @Model.UnitArea.M2()
+                        @Model.SpacePath • @Model.SpaceArea.M2()
                     </div>
                 </div>
             }
             else
             {
-                @await Html.PartialAsync("_LeaseUnitPicker", null, new ViewDataDictionary(ViewData) { ["ReadOnly"] = false })
                 @await Html.PartialAsync("_LeaseKindChoice")
+                @await Html.PartialAsync("_LeaseSpaceSelect", null, new ViewDataDictionary(ViewData) { ["ReadOnly"] = false, ["StepNumber"] = (ViewData[LeaseKindChoiceViewModel.ViewDataKey] is LeaseKindChoiceViewModel { IsVisible: true } ? 2 : 1).ToString() })
             }
 
             @await Html.PartialAsync("_LeaseGroupMembersCard", Model.Tenants, new ViewDataDictionary(ViewData) { ["NumberExpr"] = "stepNo(3)" })
@@ -99,7 +99,7 @@
 
             <div class="sticky bottom-0 z-10 mt-6 -mx-px flex flex-wrap items-center justify-between gap-3 rounded-t-xl border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
                 <div class="text-[13px]" :class="Math.abs(remaining()) < 0.005 ? 'text-emerald-700' : 'text-amber-700'">
-                    <span>Birim alanı <strong x-text="`${fmt(unitArea())} m²`"></strong></span>
+                    <span>Alan yüzölçümü <strong x-text="`${fmt(spaceArea())} m²`"></strong></span>
                     <span class="mx-2">•</span>
                     <span>Kiracılara dağıtılan <strong x-text="`${fmt(totalArea())} m²`"></strong></span>
                     <span class="mx-2">•</span>

@@ -55,14 +55,6 @@ public class AdminRateController(IRateScheduleService rateScheduleService) : Con
                 ce.CalculationMethod,
                 ce.UnitValue,
                 ce.KdvRate
-            )).ToList(),
-            vm.ReservationCells.Select(rc => new SaveReservationCellInput(
-                rc.ReservationRateId,
-                rc.UnitTypeId,
-                rc.FreeDurationMinutes,
-                rc.BillingPeriodMinutes,
-                rc.PeriodRate,
-                rc.KdvRate
             )).ToList()
         );
 
@@ -137,16 +129,6 @@ public class AdminRateController(IRateScheduleService rateScheduleService) : Con
                 UnitValue = cell.UnitValue,
                 KdvRate = cell.KdvRate
             }).ToList()
-        }).ToList(),
-        ReservationRows = matrix.ReservationRows.Select(row => new RateMatrixReservationRow
-        {
-            ReservationRateId = row.ReservationRateId,
-            UnitTypeId = row.UnitTypeId,
-            UnitTypeName = row.UnitTypeName,
-            FreeDurationMinutes = row.FreeDurationMinutes,
-            BillingPeriodMinutes = row.BillingPeriodMinutes,
-            PeriodRate = row.PeriodRate,
-            KdvRate = row.KdvRate
         }).ToList()
     };
 
@@ -163,21 +145,6 @@ public class AdminRateController(IRateScheduleService rateScheduleService) : Con
 
             cell.CalculationMethod = postedCell.CalculationMethod;
             cell.UnitValue = postedCell.UnitValue;
-            cell.KdvRate = postedCell.KdvRate;
-        }
-
-        var postedReservationCells = posted.ReservationCells
-            .GroupBy(cell => cell.UnitTypeId)
-            .ToDictionary(group => group.Key, group => group.Last());
-
-        foreach (var cell in matrix.ReservationRows)
-        {
-            if (!postedReservationCells.TryGetValue(cell.UnitTypeId, out var postedCell))
-                continue;
-
-            cell.FreeDurationMinutes = postedCell.FreeDurationMinutes;
-            cell.BillingPeriodMinutes = postedCell.BillingPeriodMinutes;
-            cell.PeriodRate = postedCell.PeriodRate;
             cell.KdvRate = postedCell.KdvRate;
         }
     }

@@ -111,9 +111,8 @@ public enum LineItemSourceType
 {
     UndefinedRate = 0,
     LeaseRateOverride = 1,
-    UnitRateOverride = 2,
+    SpaceRate = 2,
     RateSchedule = 3,
-    PropertyRateOverride = 4,
     ManualInput = 5,
     ReservationRule = 6
 }
@@ -204,16 +203,3 @@ public enum UnitRentalMode
     CapacityBased = 2
 }
 
-public enum LeaseAreaMode
-{
-    Automatic = 1,
-    Manual = 2
-}
-
-public enum LeaseAreaChangeReason
-{
-    Activation = 1,
-    CapacityChange = 2,
-    ManualEdit = 3,
-    Migration = 4
-}

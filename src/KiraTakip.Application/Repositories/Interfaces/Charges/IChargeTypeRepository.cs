@@ -13,7 +13,7 @@ public interface IChargeTypeRepository : IRepositoryBase<ChargeType>
     Task<bool> CodeExistsAsync(string code, int? excludeId = null);
     Task<List<ChargeTypeLookupDto>> GetRezervasyonAdaylariAsync();
     Task<bool> IsActiveReservationSpecificAsync(int id);
+    Task<bool> IsChargeTypeUsedAsync(int chargeTypeId, CancellationToken ct = default);
     Task<List<ChargeType>> GetActiveGenerationTypesAsync();
     Task<List<ChargeType>> GetPricingMatrixTypesAsync();
-    Task<ChargeType?> ResolveReservationTypeAsync(int? preferredChargeTypeId);
 }

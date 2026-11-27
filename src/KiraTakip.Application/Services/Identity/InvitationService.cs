@@ -46,12 +46,9 @@ public class InvitationService(
             InvitedByUserId = input.InvitedByUserId,
             UserType = userType,
             TenantId = input.TenantId,
-            HasAccessToAllProperties = input.HasAccessToAllProperties,
-            PropertyIds = (input.PropertyIds != null && input.PropertyIds.Any())
-                ? System.Text.Json.JsonSerializer.Serialize(input.PropertyIds)
-                : null,
-            UnitIds = (input.UnitIds != null && input.UnitIds.Any())
-                ? System.Text.Json.JsonSerializer.Serialize(input.UnitIds)
+            HasAccessToAllSpaces = input.HasAccessToAllSpaces,
+            SpaceIds = (input.SpaceIds != null && input.SpaceIds.Any())
+                ? System.Text.Json.JsonSerializer.Serialize(input.SpaceIds)
                 : null,
             ExpiresAt = DateTime.UtcNow.Add(ttl),
             Status = InvitationStatus.Pending,
@@ -142,7 +139,7 @@ public class InvitationService(
             EmailConfirmed = true,
             UserType = invitation.UserType,
             TenantId = invitation.TenantId,
-            TumTasinmazlaraErisim = invitation.HasAccessToAllProperties,
+            HasAccessToAllSpaces = invitation.HasAccessToAllSpaces,
             IsActive = true,
         };
 
@@ -156,30 +153,16 @@ public class InvitationService(
             RoleAssignmentOperation.Invitation);
 
         var scopes = new List<UserPermissionScope>();
-        if (!invitation.HasAccessToAllProperties && invitation.PropertyIds != null)
+        if (!invitation.HasAccessToAllSpaces && invitation.SpaceIds != null)
         {
-            var ids = System.Text.Json.JsonSerializer.Deserialize<List<int>>(invitation.PropertyIds) ?? [];
-            foreach (var propertyId in ids)
+            var ids = System.Text.Json.JsonSerializer.Deserialize<List<int>>(invitation.SpaceIds) ?? [];
+            foreach (var spaceId in ids.Distinct())
             {
                 scopes.Add(new UserPermissionScope
                 {
                     UserId = user.Id,
-                    ScopeType = ScopeType.Property,
-                    ScopeId = propertyId,
-                });
-            }
-        }
-
-        if (invitation.UnitIds != null)
-        {
-            var unitIds = System.Text.Json.JsonSerializer.Deserialize<List<int>>(invitation.UnitIds) ?? [];
-            foreach (var unitId in unitIds)
-            {
-                scopes.Add(new UserPermissionScope
-                {
-                    UserId = user.Id,
-                    ScopeType = ScopeType.Unit,
-                    ScopeId = unitId,
+                    ScopeType = ScopeType.Space,
+                    ScopeId = spaceId,
                 });
             }
         }

@@ -15,7 +15,7 @@
         }
         else
         {
-            <span class="text-[11px] text-fuchsia-700/70 font-medium">@Model.Rows.Count alan türü tanımlı</span>
+            <span class="text-[11px] text-fuchsia-700/70 font-medium">en yakın üst alanın kuralı</span>
         }
         @if (Model.Description != null)
         {
@@ -28,13 +28,13 @@
         @if (!Model.Rows.Any())
         {
             <p class="text-[11px] text-fuchsia-400 italic text-center py-2">
-                Bu yıl için rezervasyon tarifesi bulunamadı.
+                Üst alanlarda rezervasyon kuralı bulunamadı.
             </p>
         }
         else
         {
             <div class="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 gap-y-1 text-xs">
-                <div class="text-[10px] font-bold text-fuchsia-400 pb-1 border-b border-fuchsia-50 mb-1">Alan Türü</div>
+                <div class="text-[10px] font-bold text-fuchsia-400 pb-1 border-b border-fuchsia-50 mb-1">Alan</div>
                 <div class="text-[10px] font-bold text-fuchsia-400 pb-1 border-b border-fuchsia-50 mb-1">Ücretsiz</div>
                 <div class="text-[10px] font-bold text-fuchsia-400 pb-1 border-b border-fuchsia-50 mb-1">Periyot</div>
                 <div class="text-[10px] font-bold text-fuchsia-400 pb-1 border-b border-fuchsia-50 mb-1 text-right">Ücret</div>
@@ -42,7 +42,7 @@
 
                 @foreach (var satir in Model.Rows)
                 {
-                    <span class="font-bold text-slate-700">@satir.UnitTypeName</span>
+                    <span class="font-bold text-slate-700">@satir.SpaceName</span>
                     <span class="text-slate-400">@satir.FreeDurationMinutes dk</span>
                     <span class="text-slate-400">@satir.BillingPeriodMinutes dk</span>
                     <span class="text-right font-bold text-fuchsia-700 font-mono">@satir.PeriodRate.ToString("N2") ₺</span>

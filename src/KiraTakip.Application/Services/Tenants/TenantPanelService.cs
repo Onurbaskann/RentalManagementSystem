@@ -40,8 +40,7 @@ public class TenantPanelService(
             ? await leaseRepository.CountActiveByTenantAsync(
                 input.TenantId,
                 input.Today,
-                input.PropertyIds?.ToList(),
-                input.UnitIds?.ToList())
+                input.Scope)
             : 0;
 
         var chargeData = input.CanViewCharges || input.CanViewPayments
@@ -51,15 +50,13 @@ public class TenantPanelService(
                     input.Today,
                     IncludeDebtData: input.CanViewCharges,
                     IncludeMonthlyExpected: input.CanViewPayments,
-                    PropertyIds: input.PropertyIds,
-                    UnitIds: input.UnitIds))
+                    Scope: input.Scope))
             : new TenantPanelChargeDataDto(0m, 0, 0m, 0, 0m, [], [], []);
 
         var debtTypeDistribution = input.CanViewCharges
             ? await chargeLineItemRepository.GetTenantDebtDistributionAsync(
                 input.TenantId,
-                input.PropertyIds?.ToList(),
-                input.UnitIds?.ToList())
+                input.Scope)
             : [];
 
         var paymentData = input.CanViewPayments
@@ -67,8 +64,7 @@ public class TenantPanelService(
                 new GetTenantPanelPaymentDataInput(
                     input.TenantId,
                     input.Today,
-                    PropertyIds: input.PropertyIds,
-                    UnitIds: input.UnitIds))
+                    Scope: input.Scope))
             : new TenantPanelPaymentDataDto([], []);
 
         var turkishCulture = CultureInfo.GetCultureInfo("tr-TR");
@@ -107,9 +103,7 @@ public class TenantPanelService(
             return new TenantPanelUpcomingChargeDto(
                 charge.ChargeId,
                 charge.PeriodStart.ToString("MMMM yyyy", turkishCulture),
-                string.IsNullOrEmpty(charge.UnitName)
-                    ? charge.PropertyName ?? "—"
-                    : $"{charge.UnitName} · {charge.PropertyName}",
+                string.IsNullOrEmpty(charge.SpaceName) ? "—" : charge.SpaceName,
                 charge.DueDate,
                 dayDifference,
                 charge.RemainingAmount,

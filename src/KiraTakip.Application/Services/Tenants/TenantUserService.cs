@@ -9,12 +9,13 @@ using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Repositories.Interfaces.Identity;
 using KiraTakip.Repositories.Interfaces.Leases;
-using KiraTakip.Repositories.Interfaces.Properties;
+using KiraTakip.Repositories.Interfaces.Reservations;
 using KiraTakip.Repositories.Interfaces.Tenants;
 using KiraTakip.Services.Interfaces.Auditing;
 using KiraTakip.Services.Interfaces.Identity;
 using KiraTakip.Services.Interfaces.Tenants;
 using KiraTakip.Models.Dtos.TenantUser;
+using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Dtos.Reservation;
 
 namespace KiraTakip.Services.Tenants;
@@ -26,7 +27,7 @@ public class TenantUserService(
     IRoleRepository roleRepository,
     IUserRoleRepository userRoleRepository,
     ILeaseRepository leaseRepository,
-    IUnitRepository unitRepository,
+    IReservationRepository reservationRepository,
     IUserPermissionScopeRepository permissionScopeRepository,
     IApplicationUserManager userManager,
     IInvitationService invitationService,
@@ -146,12 +147,12 @@ public class TenantUserService(
                 || !role.IsSystemRole && role.Name != RoleNames.KiraciYoneticisi)
             .Select(role => new RoleLookupDto(role.Id, role.Name))
             .ToList();
-        var units = await leaseRepository.GetActiveLeaseUnitsByTenantIdAsync(input.TenantId);
+        var spaces = await leaseRepository.GetActiveLeaseSpacesByTenantIdAsync(input.TenantId);
 
         return new TenantInviteDataDto(
             tenant.DisplayName,
             visibleRoles,
-            units);
+            spaces);
     }
 
     public async Task SendInvitationAsync(SendTenantInvitationInput input)
@@ -192,16 +193,16 @@ public class TenantUserService(
             "Bu e-posta adresi için bekleyen bir davet zaten bulunmaktadır.",
             "TENANT_INVITATION_ALREADY_PENDING");
 
-        var unitIds = input.UnitIds?.Distinct().ToList();
-        if (unitIds is { Count: > 0 })
+        var spaceIds = input.SpaceIds?.Distinct().ToList();
+        if (spaceIds is { Count: > 0 })
         {
-            var validUnits = await leaseRepository.GetActiveLeaseUnitsByTenantIdAsync(input.TenantId);
-            var validUnitIds = validUnits.Select(unit => unit.Id).ToHashSet();
+            var validSpaces = await leaseRepository.GetActiveLeaseSpacesByTenantIdAsync(input.TenantId);
+            var validSpaceIds = validSpaces.Select(space => space.Id).ToHashSet();
             Guard.InvalidField(
-                unitIds.Any(unitId => !validUnitIds.Contains(unitId)),
-                nameof(input.UnitIds),
-                "Geçersiz birim seçildi.",
-                "TENANT_INVITATION_INVALID_UNIT");
+                spaceIds.Any(spaceId => !validSpaceIds.Contains(spaceId)),
+                nameof(input.SpaceIds),
+                "Geçersiz alan seçildi.",
+                "TENANT_INVITATION_INVALID_SPACE");
         }
 
         await invitationService.SendAsync(new SendInvitationInput(
@@ -210,8 +211,8 @@ public class TenantUserService(
             input.RoleId,
             input.InvitedByUserId,
             input.TenantId,
-            HasAccessToAllProperties: unitIds is not { Count: > 0 },
-            UnitIds: unitIds));
+            HasAccessToAllSpaces: spaceIds is not { Count: > 0 },
+            SpaceIds: spaceIds));
     }
 
     public async Task<InitialTenantInvitationResultDto> TrySendInitialRepresentativeInvitationAsync(
@@ -235,7 +236,7 @@ public class TenantUserService(
                 tenantManagerRole.Id,
                 input.InvitedByUserId,
                 input.TenantId,
-                HasAccessToAllProperties: true));
+                HasAccessToAllSpaces: true));
 
             return new InitialTenantInvitationResultDto(true, null);
         }
@@ -259,12 +260,12 @@ public class TenantUserService(
             "Kullanıcı bulunamadı.",
             "TENANT_USER_NOT_FOUND");
         var roles = await GetEditRoleOptionsAsync(input.TenantId, user.RoleId, input.CurrentUserId);
-        var (leaseUnits, reservableUnits) = await GetAssignableUnitsAsync(
+        var (leaseSpaces, reservableSpaces) = await GetAssignableSpacesAsync(
             input.TenantId,
             input.AccessScope);
-        var selectedUnitIds = await permissionScopeRepository.GetScopeIdsAsync(
+        var selectedSpaceIds = await permissionScopeRepository.GetScopeIdsAsync(
             user.Id,
-            ScopeType.Unit);
+            ScopeType.Space);
 
         return new TenantUserEditDataDto(
             user.Id,
@@ -272,11 +273,11 @@ public class TenantUserService(
             user.Email,
             user.IsActive,
             user.RoleId,
-            user.HasAccessToAllUnits,
-            selectedUnitIds,
+            user.HasAccessToAllSpaces,
+            selectedSpaceIds,
             roles,
-            leaseUnits,
-            reservableUnits);
+            leaseSpaces,
+            reservableSpaces);
     }
 
     public async Task EditTenantUserAsync(EditTenantUserInput input)
@@ -314,23 +315,23 @@ public class TenantUserService(
                 "TENANT_USER_ROLE_ASSIGNMENT_FORBIDDEN");
         }
 
-        var selectedUnitIds = input.HasAccessToAllUnits
+        var selectedSpaceIds = input.HasAccessToAllSpaces
             ? []
-            : input.UnitIds.Distinct().ToList();
-        if (!input.HasAccessToAllUnits)
+            : input.SpaceIds.Distinct().ToList();
+        if (!input.HasAccessToAllSpaces)
         {
-            var (leaseUnits, reservableUnits) = await GetAssignableUnitsAsync(
+            var (leaseSpaces, reservableSpaces) = await GetAssignableSpacesAsync(
                 input.TenantId,
                 input.AccessScope);
-            var assignableUnitIds = leaseUnits.Select(unit => unit.Id)
-                .Concat(reservableUnits.Select(unit => unit.Id))
+            var assignableSpaceIds = leaseSpaces.Select(space => space.Id)
+                .Concat(reservableSpaces.Select(space => space.Id))
                 .ToHashSet();
             Guard.InvalidField(
-                selectedUnitIds.Count == 0
-                    || selectedUnitIds.Any(unitId => !assignableUnitIds.Contains(unitId)),
-                nameof(input.UnitIds),
-                "Seçilen birimlerden en az biri bu kullanıcıya atanamaz.",
-                "TENANT_USER_INVALID_UNIT_SCOPE");
+                selectedSpaceIds.Count == 0
+                    || selectedSpaceIds.Any(spaceId => !assignableSpaceIds.Contains(spaceId)),
+                nameof(input.SpaceIds),
+                "Seçilen alanlardan en az biri bu kullanıcıya atanamaz.",
+                "TENANT_USER_INVALID_SPACE_SCOPE");
         }
 
         if (roleChanged
@@ -354,18 +355,18 @@ public class TenantUserService(
         }
 
         user.AdSoyad = input.FullName.Trim();
-        var previousGlobalAccess = user.TumTasinmazlaraErisim;
-        var previousUnitIds = await permissionScopeRepository.GetScopeIdsAsync(
+        var previousGlobalAccess = user.HasAccessToAllSpaces;
+        var previousSpaceIds = await permissionScopeRepository.GetScopeIdsAsync(
             user.Id,
-            ScopeType.Unit);
-        user.TumTasinmazlaraErisim = input.HasAccessToAllUnits;
+            ScopeType.Space);
+        user.HasAccessToAllSpaces = input.HasAccessToAllSpaces;
         var updateResult = await userManager.UpdateAsync(user);
         Guard.InvalidField(
             !updateResult.Succeeded,
             nameof(input.FullName),
             "Kullanıcı güncellenemedi.",
             "TENANT_USER_UPDATE_FAILED");
-        await permissionScopeRepository.ReplaceAsync(user.Id, [], selectedUnitIds);
+        await permissionScopeRepository.ReplaceAsync(user.Id, selectedSpaceIds);
         await unitOfWork.SaveChangesAsync();
 
         if (roleChanged)
@@ -381,8 +382,8 @@ public class TenantUserService(
         await userSecurityService.UpdateStampAsync(user.Id);
         permissionScopeCache.Invalidate(user.Id);
 
-        if (previousGlobalAccess != input.HasAccessToAllUnits
-            || !previousUnitIds.Order().SequenceEqual(selectedUnitIds.Order()))
+        if (previousGlobalAccess != input.HasAccessToAllSpaces
+            || !previousSpaceIds.Order().SequenceEqual(selectedSpaceIds.Order()))
         {
             await auditService.LogAsync(
                 AuditEventTypes.UserScopeChanged,
@@ -391,8 +392,8 @@ public class TenantUserService(
                 AuditDetails.Serialize(new
                 {
                     tenantId = input.TenantId,
-                    hasAccessToAllUnits = input.HasAccessToAllUnits,
-                    unitCount = selectedUnitIds.Count
+                    hasAccessToAllSpaces = input.HasAccessToAllSpaces,
+                    spaceCount = selectedSpaceIds.Count
                 }));
         }
     }
@@ -437,23 +438,16 @@ public class TenantUserService(
         return permissions.Contains(modulePermission) && permissions.Contains(actionPermission);
     }
 
-    private async Task<(List<UnitLookupDto> LeaseUnits, List<UnitListItemDto> ReservableUnits)>
-        GetAssignableUnitsAsync(int tenantId, ReservationAccessScopeInput accessScope)
+    private async Task<(List<LeaseSpaceOptionDto> LeaseSpaces, List<ReservationSpaceOptionDto> ReservableSpaces)>
+        GetAssignableSpacesAsync(int tenantId, SpaceAccessScope accessScope)
     {
-        var propertyIds = accessScope.PropertyIds?.ToList();
-        var unitIds = accessScope.UnitIds?.ToList();
-        var leaseUnits = await leaseRepository.GetActiveLeaseUnitsByTenantIdAsync(
-            tenantId,
-            propertyIds,
-            unitIds);
-        var reservableUnits = await unitRepository.GetReservableUnitsAsync(
-            propertyIds,
-            unitIds);
+        var leaseSpaces = await leaseRepository.GetActiveLeaseSpacesByTenantIdAsync(tenantId, accessScope);
+        var reservableSpaces = await reservationRepository.GetReservableSpacesAsync(accessScope);
 
-        var leaseUnitIds = leaseUnits.Select(unit => unit.Id).ToHashSet();
-        reservableUnits = reservableUnits
-            .Where(unit => !leaseUnitIds.Contains(unit.Id))
+        var leaseSpaceIds = leaseSpaces.Select(space => space.Id).ToHashSet();
+        reservableSpaces = reservableSpaces
+            .Where(space => !leaseSpaceIds.Contains(space.Id))
             .ToList();
-        return (leaseUnits, reservableUnits);
+        return (leaseSpaces, reservableSpaces);
     }
 }

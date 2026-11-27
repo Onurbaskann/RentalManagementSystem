@@ -10,8 +10,8 @@ public class ReservationCalculationQueryViewModelValidator
     {
         var errors = new List<ValidationError>();
 
-        if (input.UnitId <= 0)
-            errors.Add(new ValidationError("Birim bilgisi geçersizdir.", nameof(input.UnitId)));
+        if (input.SpaceId <= 0)
+            errors.Add(new ValidationError("Alan bilgisi geçersizdir.", nameof(input.SpaceId)));
 
         var hasValidStart = DateTime.TryParse(input.Start, out var startDate);
         var hasValidEnd = DateTime.TryParse(input.End, out var endDate);

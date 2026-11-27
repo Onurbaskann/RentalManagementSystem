@@ -39,14 +39,11 @@ public class Invitation : BaseEntity
     [Column("OlusanKullaniciId")]
     public string? CreatedUserId { get; set; }
 
-    [Column("TumTasinmazlaraErisim")]
-    public bool HasAccessToAllProperties { get; set; } = false;
+    [Column("TumAlanlaraErisim")]
+    public bool HasAccessToAllSpaces { get; set; } = false;
 
-    [Column("TasinmazIds")]
-    public string? PropertyIds { get; set; }
-
-    [Column("BirimIds")]
-    public string? UnitIds { get; set; }
+    [Column("AlanIds")]
+    public string? SpaceIds { get; set; }
 
     public Role? Role { get; set; }
 }

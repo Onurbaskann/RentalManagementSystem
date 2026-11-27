@@ -11,18 +11,15 @@ public record GetBankTransactionByIdInput(int Id);
 public record MatchBankTransactionInput(
     int PaymentId,
     int BankTransactionId,
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    SpaceAccessScope? Scope = null);
 
 public record UnmatchBankTransactionInput(
     int MatchId,
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    SpaceAccessScope? Scope = null);
 
 public record GetBankTransactionPaymentCandidatesInput(
     int BankTransactionId,
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    SpaceAccessScope? Scope = null);
 
 public record GetBankTransactionCandidatesInput(int PaymentId);
 
@@ -34,7 +31,5 @@ public record PaymentMatchingPolicyDto(
 
 public record PaymentMatchingContextDto(
     int PaymentId,
-    int PropertyId,
-    int UnitId,
     PaymentStatus Status,
     int StoreAccountId);

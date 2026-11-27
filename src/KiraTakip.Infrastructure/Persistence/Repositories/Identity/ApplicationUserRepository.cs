@@ -216,7 +216,7 @@ public class ApplicationUserRepository(ApplicationDbContext ctx)
                 user.AdSoyad ?? string.Empty,
                 user.Email ?? string.Empty,
                 user.IsActive,
-                user.TumTasinmazlaraErisim,
+                user.HasAccessToAllSpaces,
                 _ctx.UserRoller
                     .Where(userRole => userRole.UserId == user.Id)
                     .Select(userRole => userRole.RoleId)
@@ -237,7 +237,7 @@ public class ApplicationUserRepository(ApplicationDbContext ctx)
         => _ctx.Users.AsNoTracking()
             .Where(user => user.Id == userId)
             .Select(user => new UserScopeAccountDto(
-                user.TumTasinmazlaraErisim || user.IsSuperAdmin))
+                user.HasAccessToAllSpaces || user.IsSuperAdmin))
             .FirstOrDefaultAsync(ct);
     public async Task<bool> HasTenantManagerAsync(
         int tenantId,

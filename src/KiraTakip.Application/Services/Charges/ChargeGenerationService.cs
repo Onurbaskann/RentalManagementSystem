@@ -9,7 +9,7 @@ using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Repositories.Interfaces.Charges;
 using KiraTakip.Repositories.Interfaces.Leases;
-using KiraTakip.Repositories.Interfaces.Properties;
+using KiraTakip.Repositories.Interfaces.Spaces;
 using KiraTakip.Repositories.Interfaces.Tenants;
 using KiraTakip.Services.Interfaces.Charges;
 using KiraTakip.Services.Interfaces.Pricing;
@@ -22,7 +22,7 @@ public class ChargeGenerationService(
     IUnitOfWork uow,
     IRateResolverService rateResolver,
     ILeaseRepository leaseRepository,
-    IUnitRepository unitRepository,
+    ISpaceRepository spaceRepository,
     ITenantRepository tenantRepository) : IChargeGenerationService, ITransactionalService
 {
     public async Task GenerateForLeaseAsync(GenerateLeaseChargesInput input)
@@ -35,6 +35,14 @@ public class ChargeGenerationService(
             !LeaseLifecycle.CanGenerateCharges(lease.Status),
             "Yalnız aktif sözleşme için tahakkuk üretilebilir.",
             "Lease.NotActive");
+
+        // Tek alanlı sözleşme (S-15): tahakkukun alanı sözleşmenin tek LeaseArea.SpaceId'si.
+        var leaseSpaceInfo = await leaseRepository.GetSpaceAndCategoryAsync(input.LeaseId);
+        Guard.Against(
+            leaseSpaceInfo == null,
+            $"Sözleşme {input.LeaseId} için alan bulunamadı.",
+            "Lease.SpaceNotFound");
+        var leaseSpaceId = leaseSpaceInfo!.Value.SpaceId;
 
         var usedChargeNos = (await chargeRepository.GetExistingChargeNosAsync()).ToHashSet();
 
@@ -52,7 +60,7 @@ public class ChargeGenerationService(
                 lease.StartDate,
                 lease.EndDate);
             var composedPreviews = await ComposeLineItemsAsync(
-                new ComposeLeaseLineItemsInput(lease.UnitId, lease.TenantId, periodStartDate, input.LeaseId));
+                new ComposeLeaseLineItemsInput(leaseSpaceId, lease.TenantId, periodStartDate, input.LeaseId));
             var lineItems = new List<ChargeLineItem>();
 
             foreach (var preview in composedPreviews)
@@ -97,7 +105,7 @@ public class ChargeGenerationService(
             {
                 ChargeNo = chargeNo,
                 TenantId = lease.TenantId,
-                UnitId = lease.UnitId,
+                SpaceId = leaseSpaceId,
                 LeaseId = input.LeaseId,
                 PeriodStart = periodStartDate,
                 PeriodEnd = periodEnd,
@@ -195,11 +203,14 @@ public class ChargeGenerationService(
 
     public async Task<IList<ChargeLineItemPreview>> ComposeLineItemsAsync(ComposeLeaseLineItemsInput input)
     {
-        var unit = Guard.NotFound(
-            await unitRepository.GetByIdAsync(input.UnitId),
-            "Birim bulunamadı.",
-            "Unit.NotFound");
-        EnsureScope(unit.PropertyId, unit.Id, input.AccessScope);
+        var space = Guard.NotFound(
+            await spaceRepository.GetNoTrackingAsync(input.SpaceId),
+            "Alan bulunamadı.",
+            "Space.NotFound");
+        Guard.Forbidden(
+            input.AccessScope != null && !input.AccessScope.Includes(space.Path),
+            "Bu alan yetki kapsamınızın dışındadır.",
+            "Lease.SpaceOutOfScope");
 
         Guard.NotFound(
             await tenantRepository.GetByIdAsync(input.TenantId),
@@ -213,8 +224,8 @@ public class ChargeGenerationService(
                 $"Sözleşme {input.LeaseId.Value} bulunamadı.",
                 "Lease.NotFound");
             Guard.Against(
-                lease.UnitId != input.UnitId || lease.TenantId != input.TenantId,
-                "Sözleşme, birim ve kiracı bilgileri birbiriyle uyuşmuyor.",
+                lease.SpaceId != input.SpaceId || lease.TenantId != input.TenantId,
+                "Sözleşme, alan ve kiracı bilgileri birbiriyle uyuşmuyor.",
                 "Lease.PricingContextMismatch");
         }
 
@@ -253,7 +264,7 @@ public class ChargeGenerationService(
             RateSnapshot? snapshot = await rateResolver.ResolveAsync(
                 input.LeaseId,
                 input.TenantId,
-                input.UnitId,
+                input.SpaceId,
                 ct.Id,
                 input.Period);
 
@@ -261,7 +272,7 @@ public class ChargeGenerationService(
             {
                 var multiplierBase = LeaseRatePolicy.CalculateMultiplier(
                     snapshot.CalculationMethod,
-                    unit.Area,
+                    space.Area,
                     rentedArea,
                     snapshot.SourceType == LineItemSourceType.LeaseRateOverride);
                 var calculation = ChargeAmountPolicy.Calculate(
@@ -310,22 +321,5 @@ public class ChargeGenerationService(
         }
 
         return previewList;
-    }
-
-    private static void EnsureScope(
-        int propertyId,
-        int unitId,
-        LeaseAccessScopeInput? accessScope)
-    {
-        if (accessScope == null
-            || (accessScope.PropertyIds == null && accessScope.UnitIds == null))
-            return;
-
-        var propertyAccess = accessScope.PropertyIds?.Contains(propertyId) == true;
-        var unitAccess = accessScope.UnitIds?.Contains(unitId) == true;
-        Guard.Forbidden(
-            !propertyAccess && !unitAccess,
-            "Bu birim yetki kapsamınızın dışındadır.",
-            "Lease.UnitOutOfScope");
     }
 }

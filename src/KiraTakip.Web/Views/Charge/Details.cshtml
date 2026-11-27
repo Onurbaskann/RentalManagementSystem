@@ -113,19 +113,17 @@
             }
         </div>
         <div>
-            <span class="text-muted">Taşınmaz: </span>
-            @if (Model.PropertyId != null)
+            <span class="text-muted">Alan: </span>
+            @if (Model.SpaceId != null)
             {
-                <a href="/Property/Details/@Model.PropertyId.ToHashId()" class="font-semibold no-underline hover:underline">@Model.PropertyName</a>
+                var spaceRootId = KiraTakip.Domain.Spaces.SpaceTreePolicy.GetAncestorIds(Model.SpacePath ?? "").FirstOrDefault();
+                if (spaceRootId == 0) { spaceRootId = Model.SpaceId.Value; }
+                <a href="/Space/@spaceRootId.ToHashId()?node=@Model.SpaceId.ToHashId()" class="font-semibold no-underline hover:underline">@Model.SpaceName</a>
             }
             else
             {
-                <span class="font-semibold">Toplantı Salonu</span>
+                <span class="font-semibold">-</span>
             }
-        </div>
-        <div>
-            <span class="text-muted">Birim: </span>
-            <span class="font-semibold">@(Model.UnitName ?? "Rezervasyon")</span>
         </div>
         @if (Model.LeaseId != null)
         {
@@ -166,8 +164,7 @@
                         {
                             LineItemSourceType.UndefinedRate => "badge-bos",
                             LineItemSourceType.LeaseRateOverride => "badge-surek",
-                            LineItemSourceType.UnitRateOverride => "badge-kirali",
-                            LineItemSourceType.PropertyRateOverride => "badge-bireysel",
+                            LineItemSourceType.SpaceRate => "badge-kirali",
                             LineItemSourceType.RateSchedule => "badge-bos",
                             LineItemSourceType.ManualInput => "badge-surek",
                             LineItemSourceType.ReservationRule => "badge-bireysel",
@@ -177,8 +174,7 @@
                         {
                             LineItemSourceType.UndefinedRate => "Tanımsız Tarife",
                             LineItemSourceType.LeaseRateOverride => "Sözleşme Tarifesi",
-                            LineItemSourceType.UnitRateOverride => "Birim Tarifesi",
-                            LineItemSourceType.PropertyRateOverride => "Taşınmaz Tarifesi",
+                            LineItemSourceType.SpaceRate => "Alan Tarifesi",
                             LineItemSourceType.RateSchedule => "Genel Tarife",
                             LineItemSourceType.ManualInput => "Manuel Giriş",
                             LineItemSourceType.ReservationRule => "Rezervasyon Kuralı",
@@ -188,8 +184,7 @@
                         {
                             LineItemSourceType.UndefinedRate => "Fiyat tanımı bulunamadığı için 0₺ olarak üretildi.",
                             LineItemSourceType.LeaseRateOverride => "Sözleşmeye özel tarife fiyatı kullanıldı.",
-                            LineItemSourceType.UnitRateOverride => "Birim düzeyinde özel fiyat kullanıldı.",
-                            LineItemSourceType.PropertyRateOverride => "Taşınmaz ve kiracı kategorisine özel matris fiyatı kullanıldı.",
+                            LineItemSourceType.SpaceRate => "Alanın veya en yakın üst alanın tarifesi kullanıldı.",
                             LineItemSourceType.RateSchedule => "Genel tarife fiyatı uygulandı.",
                             LineItemSourceType.ManualInput => "Kullanıcı tarafından manuel olarak girildi.",
                             LineItemSourceType.ReservationRule => "Rezervasyon kuralından aktarıldı.",

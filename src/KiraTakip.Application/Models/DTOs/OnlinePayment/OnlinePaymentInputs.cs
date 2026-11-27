@@ -15,7 +15,7 @@ public record InitiateOnlinePaymentInput(
     int ChargeLineItemId,
     decimal Amount,
     string InitiatedByUserId,
-    PaymentAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record InitiateOnlinePaymentResult(
     int OnlinePaymentTransactionId,

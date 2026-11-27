@@ -79,8 +79,7 @@ public class BankTransactionController(
         var paymentCandidates = await bankTransactionService.GetPaymentCandidatesAsync(
             new GetBankTransactionPaymentCandidatesInput(
                 id,
-                accessScope.PropertyIds,
-                accessScope.UnitIds));
+                accessScope));
 
         return View(new BankTransactionMatchSelectionViewModel
         {
@@ -125,8 +124,7 @@ public class BankTransactionController(
         await bankTransactionService.MatchAsync(new MatchBankTransactionInput(
             model.PaymentId,
             model.BankTransactionId,
-            accessScope.PropertyIds,
-            accessScope.UnitIds));
+            accessScope));
 
         return RedirectToAction(nameof(Index));
     }
@@ -138,8 +136,7 @@ public class BankTransactionController(
     {
         await bankTransactionService.UnmatchAsync(new UnmatchBankTransactionInput(
             matchId,
-            GetPaymentAccessScope().PropertyIds,
-            GetPaymentAccessScope().UnitIds));
+            GetPaymentAccessScope()));
         return RedirectToAction(nameof(Index));
     }
 
@@ -150,8 +147,7 @@ public class BankTransactionController(
     {
         var paymentId = await bankTransactionService.UnmatchAsync(new UnmatchBankTransactionInput(
             matchId,
-            GetPaymentAccessScope().PropertyIds,
-            GetPaymentAccessScope().UnitIds));
+            GetPaymentAccessScope()));
 
         return RedirectToAction(
             nameof(PaymentController.Details),
@@ -159,10 +155,5 @@ public class BankTransactionController(
             new { id = paymentId });
     }
 
-    private PaymentAccessScopeInput GetPaymentAccessScope()
-        => permissionScopeProvider.GlobalAccess
-            ? new PaymentAccessScopeInput()
-            : new PaymentAccessScopeInput(
-                permissionScopeProvider.AccessiblePropertyIds,
-                permissionScopeProvider.AccessibleUnitIds);
+    private SpaceAccessScope GetPaymentAccessScope() => permissionScopeProvider.SpaceScope;
 }

@@ -21,21 +21,17 @@ public class TenantService(
     IUniqueConstraintViolationDetector uniqueConstraintDetector) : ITenantService, ITransactionalService
 {
     public Task<List<TenantListItemDto>> GetAllAsync(GetTenantsInput input)
-        => tenantRepository.GetListAsync(
-            input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
+        => tenantRepository.GetListAsync(input.Scope);
 
     public Task<PagedResult<TenantListItemDto>> GetPagedAsync(GetPagedTenantsInput input)
         => tenantRepository.GetPagedListAsync(
             input.Query,
-            input.PropertyIds?.ToList(),
-            input.UnitIds?.ToList());
+            input.Scope);
 
     public Task<TenantDetailsDto?> GetDetailsAsync(GetTenantDetailsInput input)
         => tenantRepository.GetDetailsAsync(
             input.TenantId,
-            input.AccessScope?.PropertyIds?.ToList(),
-            input.AccessScope?.UnitIds?.ToList());
+            input.AccessScope);
 
     public async Task<TenantDetailsDto> GetProfileAsync(GetTenantProfileInput input)
         => Guard.NotFound(
@@ -109,8 +105,7 @@ public class TenantService(
         var tenant = Guard.NotFound(
             await tenantRepository.GetForUpdateAsync(
                 input.TenantId,
-                input.AccessScope.PropertyIds?.ToList(),
-                input.AccessScope.UnitIds?.ToList()),
+                input.AccessScope),
             "Kiracı bulunamadı.",
             "Tenant.NotFound");
 
@@ -144,13 +139,12 @@ public class TenantService(
         await SaveWithConflictRetryAsync(tenant, canRegenerateTenantNo: false);
     }
 
-    public async Task DeleteAsync(int id, TenantAccessScopeInput accessScope)
+    public async Task DeleteAsync(int id, SpaceAccessScope accessScope)
     {
         var tenant = Guard.NotFound(
             await tenantRepository.GetForUpdateAsync(
                 id,
-                accessScope.PropertyIds?.ToList(),
-                accessScope.UnitIds?.ToList()),
+                accessScope),
             "Kiracı bulunamadı.",
             "Tenant.NotFound");
 
@@ -239,6 +233,6 @@ public class TenantService(
         }
     }
 
-    private static bool HasScopeRestriction(TenantAccessScopeInput accessScope)
-        => accessScope.PropertyIds != null || accessScope.UnitIds != null;
+    private static bool HasScopeRestriction(SpaceAccessScope accessScope)
+        => !accessScope.HasGlobalAccess;
 }

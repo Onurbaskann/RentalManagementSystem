@@ -6,6 +6,6 @@ public interface IPaymentStoreResolver
 {
     Task<ResolvedPaymentStoreAccountDto> ResolveAsync(
         int chargeTypeId,
-        int unitId,
+        int? spaceId,
         CancellationToken cancellationToken = default);
 }

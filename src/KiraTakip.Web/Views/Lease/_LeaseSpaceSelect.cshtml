@@ -1,0 +1,45 @@
+@{
+    bool readOnly = ViewData["ReadOnly"] as bool? ?? false;
+    string stepNumber = ViewData["StepNumber"]?.ToString() ?? "1";
+}
+<div class="card">
+    @await Html.PartialAsync("_LeaseStepHeader", null, new ViewDataDictionary(ViewData) { ["Number"] = stepNumber, ["StepTitle"] = "Alan seçin" })
+    <input type="hidden" name="SpaceId" :value="spaceId ?? ''" />
+
+    <template x-if="spaceInfo() && !showSpaceList()">
+        <div class="flex items-start justify-between gap-3 rounded-lg border border-primary bg-primary/5 p-3.5">
+            <div class="min-w-0">
+                <div class="text-[14px] font-bold text-primary" x-text="spaceInfo().namePath"></div>
+                <div class="text-[12.5px] text-muted mt-0.5" x-text="spaceInfo().areaText"></div>
+            </div>
+            @if (!readOnly)
+            {
+                <button type="button" class="btn btn-secondary btn-sm shrink-0" x-on:click="clearSpace()">Değiştir</button>
+            }
+        </div>
+    </template>
+
+    @if (!readOnly)
+    {
+        <div x-show="showSpaceList()" x-cloak>
+            <div class="flex gap-2 mb-3">
+                <input type="search" class="form-control" placeholder="Alan ara…" x-model="spaceQuery" aria-label="Alan ara" />
+                <button type="button" class="btn btn-secondary btn-sm shrink-0" x-show="spaceId" x-on:click="cancelChangeSpace()">Vazgeç</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-[420px] overflow-y-auto pr-1">
+                <template x-for="s in filteredSpaces()" :key="s.id">
+                    <button type="button"
+                            class="text-left rounded-lg border p-3 transition-colors hover:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                            :class="String(spaceId) === String(s.id) ? 'border-primary bg-primary/5' : 'border-[var(--color-border)] bg-[var(--color-card)]'"
+                            :aria-pressed="String(spaceId) === String(s.id) ? 'true' : 'false'"
+                            x-on:click="selectSpace(s.id)">
+                        <div class="text-[13.5px] font-semibold" x-text="s.namePath"></div>
+                        <div class="text-[12px] text-muted mt-0.5" x-text="s.areaText"></div>
+                    </button>
+                </template>
+            </div>
+            <div class="text-muted text-sm italic" x-show="filteredSpaces().length === 0">Aramaya uygun kiralanabilir alan bulunamadı.</div>
+        </div>
+    }
+    @Html.ValidationMessage("SpaceId", new { @class = "form-error" })
+</div>

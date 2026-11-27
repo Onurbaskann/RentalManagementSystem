@@ -1,5 +1,6 @@
 using KiraTakip.Models;
 using KiraTakip.Models.Common;
+using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Dtos.Reservation;
 
 namespace KiraTakip.Models.Dtos.TenantUser;
@@ -48,7 +49,7 @@ public record GetInviteDataInput(int TenantId, string? ActorUserId = null);
 public record TenantInviteDataDto(
     string TenantDisplayName,
     List<RoleLookupDto> Roles,
-    List<UnitLookupDto> Units);
+    List<LeaseSpaceOptionDto> Spaces);
 
 public record RoleLookupDto(int Id, string Name);
 
@@ -58,7 +59,7 @@ public record SendTenantInvitationInput(
     string? FullName,
     int RoleId,
     string InvitedByUserId,
-    List<int>? UnitIds);
+    List<int>? SpaceIds);
 
 public record SendInitialTenantRepresentativeInput(
     int TenantId,
@@ -73,7 +74,7 @@ public record TenantUserEditCoreDto(
     string FullName,
     string Email,
     bool IsActive,
-    bool HasAccessToAllUnits,
+    bool HasAccessToAllSpaces,
     int RoleId,
     string RoleName);
 
@@ -81,7 +82,7 @@ public record GetTenantUserForEditInput(
     int TenantId,
     string UserId,
     string CurrentUserId,
-    ReservationAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record TenantUserEditDataDto(
     string Id,
@@ -89,18 +90,18 @@ public record TenantUserEditDataDto(
     string Email,
     bool IsActive,
     int RoleId,
-    bool HasAccessToAllUnits,
-    List<int> SelectedUnitIds,
+    bool HasAccessToAllSpaces,
+    List<int> SelectedSpaceIds,
     List<RoleLookupDto> Roles,
-    List<UnitLookupDto> LeaseUnits,
-    List<UnitListItemDto> ReservableUnits);
+    List<LeaseSpaceOptionDto> LeaseSpaces,
+    List<ReservationSpaceOptionDto> ReservableSpaces);
 
 public record EditTenantUserInput(
     int TenantId,
     string UserId,
     string FullName,
     int RoleId,
-    bool HasAccessToAllUnits,
-    List<int> UnitIds,
+    bool HasAccessToAllSpaces,
+    List<int> SpaceIds,
     string CurrentUserId,
-    ReservationAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);

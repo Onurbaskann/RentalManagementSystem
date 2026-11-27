@@ -8,7 +8,9 @@
     string status = Model.Status;
     var query = Model.Query;
     int cancelledCount = Model.CancelledCount;
-    var pagination = new PaginationModel { Page = Model.Charges.Page, Size = Model.Charges.Size, Total = Model.Charges.Total, BasePath = "/Charge", Extra = query.ToQueryDict() };
+    var extra = query.ToQueryDict();
+    if (Model.SpaceId.HasValue) extra["spaceId"] = Model.SpaceId.Value.ToString();
+    var pagination = new PaginationModel { Page = Model.Charges.Page, Size = Model.Charges.Size, Total = Model.Charges.Total, BasePath = "/Charge", Extra = extra };
 }
 
 <div class="page-header flex items-center justify-between">
@@ -46,40 +48,18 @@
     </div>
 }
 
-<script>
-    window._tahakkukBirimler = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-                        Model.Units.Select(unit => new { id = unit.Id, ad = unit.Name, propertyId = unit.PropertyId })
-                ));
-</script>
 <div class="card p-0 overflow-hidden">
     <form method="get" class="flex flex-col gap-2.5 p-3 bg-slate-50/50 border-b border-slate-200" action="/Charge"
-          x-data="{
-        propertyId: '@(query.PropertyId?.ToString() ?? "")',
-        unitId: '@(query.UnitId?.ToString() ?? "")',
-        get filtrelenmisBirimler() {
-        if (!this.propertyId) return [];
-        var tid = parseInt(this.propertyId);
-        return window._tahakkukBirimler.filter(function(b) { return b.propertyId === tid; });
-        }
-        }">
-        <input type="search" name="q" value="@query.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: kiracı, taşınmaz…" />
+>
+        <input type="search" name="q" value="@query.Q" class="form-control w-full max-w-xs text-xs font-medium" placeholder="Ara: kiracı, alan…" />
 
         <div class="flex flex-wrap items-center gap-2.5">
-            <select name="propertyId" x-model="propertyId" @@change="unitId = ''"
-                    class="form-control w-44 text-xs font-medium">
-                <option value="">— Tüm Taşınmazlar —</option>
-                @foreach (var property in Model.Properties)
+            <select name="spaceId" class="form-control w-56 text-xs font-medium">
+                <option value="">— Tüm Alanlar —</option>
+                @foreach (var space in Model.Spaces)
                 {
-                    <option value="@property.Id">@property.Name</option>
+                    <option value="@space.Id" selected="@(Model.SpaceId == space.Id ? "selected" : null)">@space.NamePath</option>
                 }
-            </select>
-
-            <select name="unitId" x-model="unitId" x-show="filtrelenmisBirimler.length > 0"
-                    class="form-control w-44 text-xs font-medium" x-cloak>
-                <option value="">— Tüm Birimler —</option>
-                <template x-for="b in filtrelenmisBirimler" :key="b.id">
-                    <option :value="b.id" x-text="b.ad" :selected="b.id.toString() === unitId"></option>
-                </template>
             </select>
 
             <select name="tenantId" class="form-control w-44 text-xs font-medium">
@@ -131,8 +111,7 @@
             }
             @{
                 int activeFilterCount = (string.IsNullOrEmpty(query.Q) ? 0 : 1)
-                    + (query.PropertyId.HasValue ? 1 : 0)
-                    + (query.UnitId.HasValue ? 1 : 0)
+                    + (Model.SpaceId.HasValue ? 1 : 0)
                     + (query.TenantId.HasValue ? 1 : 0)
                     + (!string.IsNullOrEmpty(query.Source) ? 1 : 0)
                     + (query.Year.HasValue ? 1 : 0)
@@ -158,7 +137,7 @@
                 <tr>
                     <th class="w-36">Dönem</th>
                     <th>Kiracı</th>
-                    <th>Taşınmaz / Birim</th>
+                    <th>Alan</th>
                     <th class="w-28 cell-center">Vade</th>
                     <th class="w-32 num">Borç</th>
                     <th class="w-32 num">Ödenen</th>
@@ -211,8 +190,7 @@
                         </td>
                         <td>@(charge.TenantDisplayName ?? "Toplantı Salonu Rez.")</td>
                         <td>
-                            @(charge.PropertyName ?? "Toplantı Salonu")
-                            <span class="cell-sub">@(charge.UnitName ?? "Ortak Alan")</span>
+                            @(charge.SpaceName ?? "-")
                         </td>
                         <td class="cell-center">@charge.DueDate.Tarih()</td>
                         <td class="num">@charge.TotalAmount.Tl()</td>
@@ -263,8 +241,7 @@
                                                 {
                                                     LineItemSourceType.UndefinedRate => "badge-bos",
                                                     LineItemSourceType.LeaseRateOverride => "badge-surek",
-                                                    LineItemSourceType.UnitRateOverride => "badge-kirali",
-                                                    LineItemSourceType.PropertyRateOverride => "badge-bireysel",
+                                                    LineItemSourceType.SpaceRate => "badge-kirali",
                                                     LineItemSourceType.RateSchedule => "badge-bos",
                                                     LineItemSourceType.ManualInput => "badge-surek",
                                                     LineItemSourceType.ReservationRule => "badge-bireysel",
@@ -274,8 +251,7 @@
                                                 {
                                                     LineItemSourceType.UndefinedRate => "Tarife Yok",
                                                     LineItemSourceType.LeaseRateOverride => "Sözleşme",
-                                                    LineItemSourceType.UnitRateOverride => "Birim",
-                                                    LineItemSourceType.PropertyRateOverride => "Taşınmaz",
+                                                    LineItemSourceType.SpaceRate => "Alan",
                                                     LineItemSourceType.RateSchedule => "Genel",
                                                     LineItemSourceType.ManualInput => "Manuel",
                                                     LineItemSourceType.ReservationRule => "Rezervasyon",

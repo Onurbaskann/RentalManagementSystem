@@ -205,8 +205,8 @@
                                 @@click="$el.dataset.href && !$event.target.closest('a,[data-stop]') && (window.location.href = $el.dataset.href)">
                                 <td>
                                     <a href="@leaseDetailsUrl" class="cell-link">
-                                        <div class="font-semibold">@lease.PropertyName</div>
-                                        <div class="text-xs text-muted">@lease.UnitName</div>
+                                        <div class="font-semibold">@lease.SpaceName</div>
+                                        <div class="text-xs text-muted">@lease.SpacePath</div>
                                     </a>
                                 </td>
                                 <td>@lease.StartDate.Tarih()</td>

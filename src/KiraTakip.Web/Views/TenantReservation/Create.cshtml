@@ -18,15 +18,15 @@
 
         <div class="card mb-4">
             <div class="form-group">
-                <label asp-for="UnitId" class="form-label">Birim <span class="text-red-500">*</span></label>
-                <select asp-for="UnitId" class="form-control">
-                    <option value="">— Birim seçin —</option>
-                    @foreach (var unit in Model.Units)
+                <label asp-for="SpaceId" class="form-label">Alan <span class="text-red-500">*</span></label>
+                <select asp-for="SpaceId" class="form-control">
+                    <option value="">— Alan seçin —</option>
+                    @foreach (var unit in Model.Spaces)
                     {
-                        <option value="@unit.Id">@unit.PropertyName — @unit.Name</option>
+                        <option value="@unit.Id">@unit.Name</option>
                     }
                 </select>
-                <span asp-validation-for="UnitId" class="form-error"></span>
+                <span asp-validation-for="SpaceId" class="form-error"></span>
             </div>
             <div class="form-group">
                 <label asp-for="Title" class="form-label">Rezervasyon Başlığı <span class="text-red-500">*</span></label>

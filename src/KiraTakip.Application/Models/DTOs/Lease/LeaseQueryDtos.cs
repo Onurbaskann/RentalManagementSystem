@@ -5,35 +5,27 @@ namespace KiraTakip.Models.Dtos.Lease;
 
 public record GetLeasesInput(
     string? Filter = null,
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    SpaceAccessScope? Scope = null);
 
 public record GetPagedLeasesInput(
     TableQuery Query,
     string? Filter = null,
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    SpaceAccessScope? Scope = null);
 
-public record GetTerminatedLeaseCountInput(
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+public record GetTerminatedLeaseCountInput(SpaceAccessScope? Scope = null);
 
 public record GetLeaseDetailsInput(int LeaseId);
 public record GetTenantLeaseDetailsInput(
     int LeaseId,
     int TenantId,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 public record GetLeasesByTenantInput(
     int TenantId,
-    LeaseAccessScopeInput? AccessScope = null);
-public record GetLeasesByUnitInput(int UnitId);
+    SpaceAccessScope? AccessScope = null);
+public record GetLeasesBySpaceInput(int SpaceId);
 public record GetLeaseDepositsInput(
     IReadOnlyCollection<int> LeaseIds,
     int? TenantId = null);
-public record LeaseAccessScopeInput(
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
-
 public record GetLeaseSummaryInput(
     int LeaseId,
     int TenantId,
@@ -59,18 +51,29 @@ public record LeaseRateOverrideInput(
     CalculationMethod CalculationMethod,
     decimal VatRate);
 
-public record LeaseUnitContextDto(
-    int UnitId,
-    int PropertyId,
+public record LeaseSpaceContextDto(
+    int SpaceId,
+    string Code,
+    string Name,
+    string TypeName,
+    SpaceUsage Usage,
     decimal Area,
-    bool IsRentable,
-    string UnitTypeName,
-    UnitTypeUsage UnitTypeUsage,
-    UnitRentalMode RentalMode,
-    int? Capacity = null);
+    string Path,
+    string NamePath,
+    bool IsShared,
+    bool IsActive);
+
+public record LeaseSpaceOptionDto(
+    int Id,
+    string Name,
+    string NamePath,
+    decimal Area,
+    bool IsShared);
+
+public record LeaseOwnerContextDto(int TenantId, IReadOnlyList<string> SpacePaths);
 
 public record CreateLeaseInput(
-    int UnitId,
+    int SpaceId,
     int TenantId,
     DateTime StartDate,
     DateTime EndDate,
@@ -78,11 +81,9 @@ public record CreateLeaseInput(
     int DueDay,
     string? Description,
     IReadOnlyCollection<LeaseRateOverrideInput> RateOverrides,
-    LeaseAccessScopeInput AccessScope,
+    SpaceAccessScope AccessScope,
     bool IsRentFree = false,
-    decimal? RentedArea = null,
-    decimal? AllocatedArea = null,
-    LeaseAreaMode? AllocationMode = null);
+    decimal? RentedArea = null);
 
 public record ExtendLeaseInput(
     int LeaseId,
@@ -94,21 +95,21 @@ public record ExtendLeaseInput(
     bool UpdateRate,
     bool CanOverrideRate,
     IReadOnlyCollection<LeaseRateOverrideInput> RateOverrides,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record TerminateLeaseInput(
     int LeaseId,
     DateTime TerminationDate,
     string TerminationReason,
     string? Description,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record UpdateLeaseDueDateInput(
     int LeaseId,
     DueDateRuleType RuleType,
     int DueDay,
     string? Description,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record RegenerateLeaseInput(
     int LeaseId,
@@ -116,18 +117,18 @@ public record RegenerateLeaseInput(
     bool UpdateRate,
     bool CanOverrideRate,
     IReadOnlyCollection<LeaseRateOverrideInput> RateOverrides,
-    LeaseAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record GenerateLeaseChargesInput(int LeaseId);
 public record RegenerateLeaseChargesInput(int LeaseId, DateTime StartDate);
 public record CancelFutureLeaseChargesInput(int LeaseId, DateTime TerminationDate);
 public record RecalculateLeaseDueDatesInput(int LeaseId);
 public record ComposeLeaseLineItemsInput(
-    int UnitId,
+    int SpaceId,
     int TenantId,
     DateTime Period,
     int? LeaseId = null,
-    LeaseAccessScopeInput? AccessScope = null);
+    SpaceAccessScope? AccessScope = null);
 
 public record CalculateInflationAdjustedAmountInput(decimal CurrentAmount, decimal InflationRate);
 public record CalculateVatAmountInput(decimal AmountExcludingVat, decimal VatRate);

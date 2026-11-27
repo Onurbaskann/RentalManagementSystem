@@ -13,7 +13,11 @@ public interface ILeaseService
     Task<int> GetTerminatedCountAsync(GetTerminatedLeaseCountInput input);
     Task<LeaseDetailDto?> GetDetailsAsync(GetLeaseDetailsInput input);
     Task<LeaseDetailDto> GetTenantDetailsAsync(GetTenantLeaseDetailsInput input);
-    Task<LeaseCapacityWarningDto?> GetCapacityWarningAsync(int leaseId);
+    /// <summary>Aktif ve kiralanabilir alanların düz listesi (kapsamdakiler); sharedOnly true = paylaşımlı alanlar (grup akışı).</summary>
+    Task<List<LeaseSpaceOptionDto>> GetSelectableSpacesAsync(
+        bool sharedOnly,
+        SpaceAccessScope? scope,
+        int? includeSpaceId = null);
     Task<Lease> CreateAsync(CreateLeaseInput input);
     Task<Lease> CreateDraftAsync(CreateLeaseDraftInput input);
     Task<LeaseDraftEditDto?> GetDraftForEditAsync(GetLeaseDraftInput input);
@@ -31,6 +35,6 @@ public interface ILeaseService
     Task<List<LeaseListItemDto>> GetByTenantAsync(GetLeasesByTenantInput input);
     Task<List<LeaseListItemDto>> GetTenantPortalLeasesAsync(GetTenantPortalLeasesInput input);
     Task<PagedResult<LeaseListItemDto>> GetTenantPortalLeasesPageAsync(GetTenantPortalLeasesPageInput input);
-    Task<List<LeaseListItemDto>> GetByUnitAsync(GetLeasesByUnitInput input);
+    Task<List<LeaseListItemDto>> GetBySpaceAsync(GetLeasesBySpaceInput input);
     Task<Dictionary<int, decimal?>> GetDepositsAsync(GetLeaseDepositsInput input);
 }

@@ -27,7 +27,7 @@
                 {
                     <div class="mb-4 rounded-lg border p-3 text-[13px]"
                          :class="Math.abs(remaining()) < 0.005 ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'">
-                        <span>Birim alanı <strong x-text="`${fmt(unitArea())} m²`"></strong></span>
+                        <span>Alan yüzölçümü <strong x-text="`${fmt(spaceArea())} m²`"></strong></span>
                         <span class="mx-2">•</span>
                         <span>Kiracılara dağıtılan <strong x-text="`${fmt(totalArea())} m²`"></strong></span>
                         <span class="mx-2">•</span>
@@ -63,8 +63,8 @@
                         </div>
 
                         <div class="mt-4 pt-3 border-t border-[var(--color-border)]">
-                            <div x-show="!(unitId && m.tenantId && startDate)" class="text-muted text-sm">Birim, kiracı ve başlangıç tarihi seçilince tarife yüklenir.</div>
-                            <div x-show="unitId && m.tenantId && startDate">
+                            <div x-show="!(spaceId && m.tenantId && startDate)" class="text-muted text-sm">Alan, kiracı ve başlangıç tarihi seçilince tarife yüklenir.</div>
+                            <div x-show="spaceId && m.tenantId && startDate">
                                 <button type="button" class="w-full flex justify-between items-center gap-2 text-left bg-transparent border-0 p-0 cursor-pointer text-[13px]"
                                         @@click="m.tariffOpen = !m.tariffOpen">
                                     <span class="font-semibold" x-text="tariffSummary(m)"></span>

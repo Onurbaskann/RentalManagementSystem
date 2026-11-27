@@ -2,10 +2,9 @@ using KiraTakip.Data;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Infrastructure.Transactions;
 using KiraTakip.Models.Dtos.PaymentStoreRouting;
-using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Interfaces.Charges;
 using KiraTakip.Repositories.Interfaces.Payments;
-using KiraTakip.Repositories.Interfaces.Properties;
+using KiraTakip.Services.Interfaces.Spaces;
 using KiraTakip.Services.Interfaces.Payments;
 
 namespace KiraTakip.Services.Payments;
@@ -13,8 +12,7 @@ namespace KiraTakip.Services.Payments;
 public class PaymentStoreRoutingService(
     IPaymentStoreRoutingRepository routingRepository,
     IChargeTypeRepository chargeTypeRepository,
-    IPropertyRepository propertyRepository,
-    IUnitRepository unitRepository,
+    ISpaceService spaceService,
     IStoreRepository storeRepository,
     IPaymentStoreRoutingBusinessRules businessRules,
     IUnitOfWork unitOfWork,
@@ -23,24 +21,24 @@ public class PaymentStoreRoutingService(
     public async Task<PaymentStoreRoutingIndexDataDto> GetManagementDataAsync(TableQuery query)
     {
         var chargeTypes = await chargeTypeRepository.GetListAsync();
-        var properties = await propertyRepository.GetListAsync(null);
-        var units = await unitRepository.GetAllOptionsAsync(null);
+        var spaces = await spaceService.GetActiveOptionsAsync();
+        var routings = await routingRepository.GetPagedListAsync(query);
+        var chains = spaces.ToDictionary(item => item.Id, item => item.NamePath);
+        foreach (var routing in routings.Items)
+        {
+            if (routing.SpaceId is int spaceId && chains.TryGetValue(spaceId, out var chain))
+                routing.ScopeName = chain;
+        }
 
         return new PaymentStoreRoutingIndexDataDto
         {
-            Routings = await routingRepository.GetPagedListAsync(query),
+            Routings = routings,
             HistoryCount = await routingRepository.GetHistoryCountAsync(),
             MissingDefaults = await routingRepository.GetMissingDefaultsAsync(),
             ChargeTypes = chargeTypes
                 .Select(item => new ChargeTypeRoutingOptionDto(item.Id, item.Name, item.IsActive))
                 .ToList(),
-            Properties = properties
-                .OrderBy(item => item.Name)
-                .Select(item => new PaymentStoreRoutingLookupDto(item.Id, item.Name))
-                .ToList(),
-            Units = units
-                .Select(item => new PaymentStoreRoutingLookupDto(item.Id, item.Name, item.PropertyName))
-                .ToList(),
+            Spaces = spaces,
             Stores = await storeRepository.GetRoutingOptionsAsync()
         };
     }
@@ -49,9 +47,7 @@ public class PaymentStoreRoutingService(
     {
         await businessRules.EnsureUpsertAllowedAsync(input);
 
-        var propertyId = input.Scope == PaymentRoutingScope.Property ? input.PropertyId : null;
-        var unitId = input.Scope == PaymentRoutingScope.Unit ? input.UnitId : null;
-        var existing = await routingRepository.FindActiveAsync(input.ChargeTypeId, propertyId, unitId);
+        var existing = await routingRepository.FindActiveAsync(input.ChargeTypeId, input.SpaceId);
         if (existing != null)
         {
             existing.StoreId = input.StoreId;
@@ -61,8 +57,7 @@ public class PaymentStoreRoutingService(
             await routingRepository.AddAsync(new PaymentStoreRouting
             {
                 ChargeTypeId = input.ChargeTypeId,
-                PropertyId = propertyId,
-                UnitId = unitId,
+                SpaceId = input.SpaceId,
                 StoreId = input.StoreId,
                 IsActive = true
             });

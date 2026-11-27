@@ -2,8 +2,10 @@ using System.Globalization;
 using KiraTakip.Data;
 using KiraTakip.Domain.Spaces;
 using KiraTakip.Infrastructure.Exceptions;
+using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.Space;
 using KiraTakip.Models.Enums;
+using KiraTakip.Repositories.Interfaces.Identity;
 using KiraTakip.Repositories.Interfaces.Spaces;
 using KiraTakip.Services.Interfaces.Identity;
 using KiraTakip.Services.Interfaces.Spaces;
@@ -14,21 +16,32 @@ public class SpaceService(
     ISpaceRepository spaceRepository,
     ISpaceTypeRepository spaceTypeRepository,
     ISpaceLockRepository lockRepository,
+    IUserPermissionScopeRepository scopeRepository,
+    IPermissionScopeCache scopeCache,
     IUnitOfWork uow,
     ICurrentUserContext currentUser,
     TimeProvider timeProvider) : ISpaceService
 {
+    private const string SpaceNotFound = "Alan bulunamadı.";
+    private const string RootCreateForbidden = "Kök alan oluşturmak için tüm alanlara erişim yetkisi gerekir.";
+    private const string ForbiddenCode = "Space.Forbidden";
     private const string SystemUserId = "system";
     private const string CodeField = "Code";
     private const string NameField = "Name";
     private const string AddressField = "Address";
     private const string SpaceTypeField = "SpaceTypeId";
 
-    public Task<List<SpaceTreeRow>> GetRootsAsync() => spaceRepository.GetRootRowsAsync();
+    public Task<List<SpaceTreeRow>> GetRootsAsync(SpaceAccessScope scope) => spaceRepository.GetRootRowsAsync(scope);
 
-    public async Task<SpaceTreeNodeDto> GetTreeAsync(int spaceId)
+    public async Task EnsureInScopeAsync(int spaceId, SpaceAccessScope scope)
+        => EnsureInScope(Guard.NotFound(await spaceRepository.GetNoTrackingAsync(spaceId), SpaceNotFound), scope);
+
+    public Task<List<SpaceOptionDto>> GetActiveOptionsAsync() => spaceRepository.GetActiveOptionsAsync();
+
+    public async Task<SpaceTreeNodeDto> GetTreeAsync(int spaceId, SpaceAccessScope scope)
     {
-        var space = Guard.NotFound(await spaceRepository.GetNoTrackingAsync(spaceId), "Alan bulunamadı.");
+        var space = Guard.NotFound(await spaceRepository.GetNoTrackingAsync(spaceId), SpaceNotFound);
+        EnsureInScope(space, scope);
         var rows = await spaceRepository.GetTreeRowsAsync(space.Path);
         var nodes = rows.ToDictionary(r => r.Id, ToNode);
         foreach (var row in rows)
@@ -39,54 +52,63 @@ public class SpaceService(
         return nodes[spaceId];
     }
 
-    public async Task<SpaceDetailDto> GetDetailAsync(int spaceId)
+    public async Task<SpaceDetailDto> GetDetailAsync(int spaceId, SpaceAccessScope scope)
     {
-        var s = Guard.NotFound(await spaceRepository.GetNoTrackingAsync(spaceId), "Alan bulunamadı.");
+        var s = Guard.NotFound(await spaceRepository.GetNoTrackingAsync(spaceId), SpaceNotFound);
+        EnsureInScope(s, scope);
         return new SpaceDetailDto(
             s.Id, s.ParentId, s.SpaceTypeId, s.Code, s.Name, s.SortOrder, s.Description,
             s.Area, s.Usage, s.IsPreAllocatable, s.IsShared, s.IsActive, s.Depth);
     }
 
-    public Task<List<SpaceHistoryDto>> GetHistoryAsync(int spaceId) => spaceRepository.GetHistoryAsync(spaceId);
-
-    public Task<SpaceSaveResult> CreateAsync(CreateSpaceInput input)
-        => uow.ExecuteInTransactionAsync(_ => CreateCoreAsync(input));
-
-    public Task<SpaceSaveResult> UpdateAsync(UpdateSpaceInput input)
-        => uow.ExecuteInTransactionAsync(_ => UpdateCoreAsync(input));
-
-    public async Task<SpaceAddressInput?> GetAddressAsync(int spaceId)
+    public async Task<List<SpaceHistoryDto>> GetHistoryAsync(int spaceId, SpaceAccessScope scope)
     {
+        await EnsureInScopeAsync(spaceId, scope);
+        return await spaceRepository.GetHistoryAsync(spaceId);
+    }
+
+    public Task<SpaceSaveResult> CreateAsync(CreateSpaceInput input, SpaceAccessScope scope)
+        => uow.ExecuteInTransactionAsync(_ => CreateCoreAsync(input, scope));
+
+    public Task<SpaceSaveResult> UpdateAsync(UpdateSpaceInput input, SpaceAccessScope scope)
+        => uow.ExecuteInTransactionAsync(_ => UpdateCoreAsync(input, scope));
+
+    public async Task<SpaceAddressInput?> GetAddressAsync(int spaceId, SpaceAccessScope scope)
+    {
+        await EnsureInScopeAsync(spaceId, scope);
         var address = (await spaceRepository.GetLinkedDefinitionsAsync(spaceId)).Address;
         return address == null ? null : new SpaceAddressInput(address.City, address.District, address.Neighborhood, address.Address);
     }
 
-    public Task UpdateAddressAsync(int spaceId, SpaceAddressInput address)
-        => uow.ExecuteInTransactionAsync(_ => UpdateAddressCoreAsync(spaceId, address));
+    public Task UpdateAddressAsync(int spaceId, SpaceAddressInput address, SpaceAccessScope scope)
+        => uow.ExecuteInTransactionAsync(_ => UpdateAddressCoreAsync(spaceId, address, scope));
 
-    public Task DeactivateAsync(int spaceId)
-        => uow.ExecuteInTransactionAsync(_ => DeactivateCoreAsync(spaceId));
+    public Task DeactivateAsync(int spaceId, SpaceAccessScope scope)
+        => uow.ExecuteInTransactionAsync(_ => DeactivateCoreAsync(spaceId, scope));
 
-    public Task ActivateAsync(int spaceId)
-        => uow.ExecuteInTransactionAsync(_ => ActivateCoreAsync(spaceId));
+    public Task ActivateAsync(int spaceId, SpaceAccessScope scope)
+        => uow.ExecuteInTransactionAsync(_ => ActivateCoreAsync(spaceId, scope));
 
-    public Task DeleteAsync(int spaceId)
-        => uow.ExecuteInTransactionAsync(_ => DeleteCoreAsync(spaceId));
+    public Task DeleteAsync(int spaceId, SpaceAccessScope scope)
+        => uow.ExecuteInTransactionAsync(_ => DeleteCoreAsync(spaceId, scope));
 
-    public async Task<SpaceDeletePreviewDto> GetDeletePreviewAsync(int spaceId)
+    public async Task<SpaceDeletePreviewDto> GetDeletePreviewAsync(int spaceId, SpaceAccessScope scope)
     {
-        Guard.NotFound(await spaceRepository.GetNoTrackingAsync(spaceId), "Alan bulunamadı.");
+        await EnsureInScopeAsync(spaceId, scope);
         var violations = await GetDeleteViolationsAsync(spaceId);
         var links = await spaceRepository.GetLinkedDefinitionsAsync(spaceId);
         return new SpaceDeletePreviewDto(
             violations,
             links.Address != null,
             links.AttributeValues.Select(v => v.AttributeDefinition.Name).ToList(),
-            links.Rates.Select(r => $"{r.TenantCategory.Name} / {r.ChargeType.Name}").ToList());
+            links.Rates.Select(r => $"{r.TenantCategory.Name} / {r.ChargeType.Name}").ToList(),
+            links.ReservationRules.Select(r => r.ChargeType.Name).ToList(),
+            links.PaymentRoutings.Select(r => $"{r.ChargeType.Name} / {r.Store.Name}").ToList());
     }
 
-    private async Task<SpaceSaveResult> CreateCoreAsync(CreateSpaceInput input)
+    private async Task<SpaceSaveResult> CreateCoreAsync(CreateSpaceInput input, SpaceAccessScope scope)
     {
+        Guard.Forbidden(input.ParentId == null && !scope.HasGlobalAccess, RootCreateForbidden, ForbiddenCode);
         var code = input.Code?.Trim() ?? string.Empty;
         var name = input.Name?.Trim() ?? string.Empty;
         Guard.InvalidField(code.Length is 0 or > 50, CodeField, "Kod zorunludur ve en fazla 50 karakter olabilir.");
@@ -99,6 +121,7 @@ public class SpaceService(
         if (input.ParentId is int parentId)
         {
             var parentHint = Guard.NotFound(await spaceRepository.GetNoTrackingAsync(parentId), "Üst alan bulunamadı.");
+            EnsureInScope(parentHint, scope);
             await lockRepository.AcquireRootLockAsync([SpaceTreePolicy.GetRootId(parentHint.Path)]);
 
             parent = Guard.NotFound(await spaceRepository.GetByIdAsync(parentId), "Üst alan bulunamadı.");
@@ -174,12 +197,13 @@ public class SpaceService(
         return new SpaceSaveResult(space.Id, await GetWarningsAsync(space));
     }
 
-    private async Task<SpaceSaveResult> UpdateCoreAsync(UpdateSpaceInput input)
+    private async Task<SpaceSaveResult> UpdateCoreAsync(UpdateSpaceInput input, SpaceAccessScope scope)
     {
         var name = input.Name?.Trim() ?? string.Empty;
         Guard.InvalidField(name.Length is 0 or > 200, NameField, "Ad zorunludur ve en fazla 200 karakter olabilir.");
 
-        var hint = Guard.NotFound(await spaceRepository.GetNoTrackingAsync(input.Id), "Alan bulunamadı.");
+        var hint = Guard.NotFound(await spaceRepository.GetNoTrackingAsync(input.Id), SpaceNotFound);
+        EnsureInScope(hint, scope);
         await lockRepository.AcquireRootLockAsync([SpaceTreePolicy.GetRootId(hint.Path)]);
         var space = Guard.NotFound(await spaceRepository.GetByIdAsync(input.Id), "Alan bulunamadı.");
 
@@ -230,7 +254,7 @@ public class SpaceService(
         return new SpaceSaveResult(space.Id, await GetWarningsAsync(space));
     }
 
-    private async Task UpdateAddressCoreAsync(int spaceId, SpaceAddressInput input)
+    private async Task UpdateAddressCoreAsync(int spaceId, SpaceAddressInput input, SpaceAccessScope scope)
     {
         Guard.InvalidField(
             string.IsNullOrWhiteSpace(input.City)
@@ -241,7 +265,8 @@ public class SpaceService(
             "Kök alan için adres zorunludur.",
             "Space.AddressRequired");
 
-        var hint = Guard.NotFound(await spaceRepository.GetNoTrackingAsync(spaceId), "Alan bulunamadı.");
+        var hint = Guard.NotFound(await spaceRepository.GetNoTrackingAsync(spaceId), SpaceNotFound);
+        EnsureInScope(hint, scope);
         Guard.Conflict(hint.ParentId != null, "Adres yalnız kök alanda düzenlenebilir.", "Space.AddressRootOnly");
         await lockRepository.AcquireRootLockAsync([spaceId]);
 
@@ -253,9 +278,10 @@ public class SpaceService(
         await uow.SaveChangesAsync();
     }
 
-    private async Task DeactivateCoreAsync(int spaceId)
+    private async Task DeactivateCoreAsync(int spaceId, SpaceAccessScope scope)
     {
-        var hint = Guard.NotFound(await spaceRepository.GetNoTrackingAsync(spaceId), "Alan bulunamadı.");
+        var hint = Guard.NotFound(await spaceRepository.GetNoTrackingAsync(spaceId), SpaceNotFound);
+        EnsureInScope(hint, scope);
         await lockRepository.AcquireRootLockAsync([SpaceTreePolicy.GetRootId(hint.Path)]);
         var space = Guard.NotFound(await spaceRepository.GetByIdAsync(spaceId), "Alan bulunamadı.");
         Guard.Conflict(!space.IsActive, "Alan zaten pasif.", "Space.AlreadyInactive");
@@ -271,9 +297,10 @@ public class SpaceService(
         await uow.SaveChangesAsync();
     }
 
-    private async Task ActivateCoreAsync(int spaceId)
+    private async Task ActivateCoreAsync(int spaceId, SpaceAccessScope scope)
     {
-        var hint = Guard.NotFound(await spaceRepository.GetNoTrackingAsync(spaceId), "Alan bulunamadı.");
+        var hint = Guard.NotFound(await spaceRepository.GetNoTrackingAsync(spaceId), SpaceNotFound);
+        EnsureInScope(hint, scope);
         await lockRepository.AcquireRootLockAsync([SpaceTreePolicy.GetRootId(hint.Path)]);
         var space = Guard.NotFound(await spaceRepository.GetByIdAsync(spaceId), "Alan bulunamadı.");
         Guard.Conflict(space.IsActive, "Alan zaten aktif.", "Space.AlreadyActive");
@@ -288,9 +315,10 @@ public class SpaceService(
         await uow.SaveChangesAsync();
     }
 
-    private async Task DeleteCoreAsync(int spaceId)
+    private async Task DeleteCoreAsync(int spaceId, SpaceAccessScope scope)
     {
-        var hint = Guard.NotFound(await spaceRepository.GetNoTrackingAsync(spaceId), "Alan bulunamadı.");
+        var hint = Guard.NotFound(await spaceRepository.GetNoTrackingAsync(spaceId), SpaceNotFound);
+        EnsureInScope(hint, scope);
         await lockRepository.AcquireRootLockAsync([SpaceTreePolicy.GetRootId(hint.Path)]);
         var space = Guard.NotFound(await spaceRepository.GetByIdAsync(spaceId), "Alan bulunamadı.");
 
@@ -301,8 +329,12 @@ public class SpaceService(
             SoftDelete(links.Address);
         links.AttributeValues.ForEach(SoftDelete);
         links.Rates.ForEach(SoftDelete);
+        links.ReservationRules.ForEach(SoftDelete);
+        links.PaymentRoutings.ForEach(SoftDelete);
         SoftDelete(space);
+        var affectedUsers = await scopeRepository.RemoveBySpaceAsync(spaceId);
         await uow.SaveChangesAsync();
+        scopeCache.InvalidateMany(affectedUsers);
     }
 
     private async Task<IReadOnlyList<SpaceChangeViolation>> GetDeleteViolationsAsync(int spaceId)
@@ -358,6 +390,9 @@ public class SpaceService(
             string.Join(" ", violations.Select(SpaceViolationMessages.Message)),
             SpaceViolationMessages.Code(violations[0]));
     }
+
+    private static void EnsureInScope(Space space, SpaceAccessScope scope)
+        => Guard.Forbidden(!scope.Includes(space.Path), "Bu alan için yetkiniz yok.", ForbiddenCode);
 
     private static void SoftDelete(BaseEntity entity)
     {

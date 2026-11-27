@@ -30,12 +30,13 @@
                 ? "Süresi Dolmak Üzere"
                 : "Aktif";
 
-    var displayedArea = leaseDetails.RentedArea ?? leaseDetails.UnitArea;
+    var displayedArea = leaseDetails.RentedArea ?? leaseDetails.SpaceArea;
     string displayedAreaText = displayedArea.M2();
     if (leaseDetails.LeaseGroupId.HasValue && leaseDetails.RentedArea.HasValue)
     {
-        var totalArea = leaseDetails.UnitAreaSnapshot > 0 ? leaseDetails.UnitAreaSnapshot : leaseDetails.UnitArea;
-        displayedAreaText = $"{totalArea.M2()}'lik birimin {leaseDetails.RentedArea.Value.M2()}'si, paylaşımlı";
+        var snapshotArea = leaseDetails.Area?.SnapshotArea ?? 0m;
+        var totalArea = snapshotArea > 0 ? snapshotArea : leaseDetails.SpaceArea;
+        displayedAreaText = $"{totalArea.M2()}'lik alanın {leaseDetails.RentedArea.Value.M2()}'si, paylaşımlı";
     }
 
     decimal monthlyAmount = Model.MonthlyAmount;
@@ -83,7 +84,7 @@
     </div>
 }
 
-<!-- Ana Kart: Kiracı + Unit/Taşınmaz -->
+<!-- Ana Kart: Kiracı + Alan -->
 <div class="card mb-4">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
         <!-- Sol: Kiracı (firma) -->
@@ -124,19 +125,11 @@
             </div>
         </div>
 
-        <!-- Sağ: Unit/Taşınmaz + Durum -->
+        <!-- Sağ: Alan + Durum -->
         <div class="text-right">
-            <div class="text-[11.5px] font-semibold text-muted mb-2.5">Taşınmaz</div>
-            <div class="font-display text-xl font-bold mb-1">@leaseDetails.PropertyName</div>
-            @if (leaseDetails.UnitStructure == UnitStructure.MultipleUnits)
-            {
-                <div class="text-sm text-muted mb-1">Birim @leaseDetails.UnitNo@(leaseDetails.UnitFloorNo.HasValue ? $" • {leaseDetails.UnitFloorNo}. Kat" : "") • @displayedAreaText</div>
-                <div class="text-[13px] text-muted mb-2.5">@leaseDetails.PropertyDistrict, @leaseDetails.PropertyCity</div>
-            }
-            else
-            {
-                <div class="text-sm text-muted mb-2.5">@leaseDetails.UnitName • @leaseDetails.PropertyDistrict, @leaseDetails.PropertyCity</div>
-            }
+            <div class="text-[11.5px] font-semibold text-muted mb-2.5">Alan</div>
+            <div class="font-display text-xl font-bold mb-1">@leaseDetails.SpaceName</div>
+            <div class="text-sm text-muted mb-2.5">@leaseDetails.SpacePath • @displayedAreaText</div>
             <div>
                 <span class="badge @leaseStatusBadgeClass text-[12.5px] px-3.5 py-1.5">@leaseStatusLabel</span>
                 @if (leaseDetails.IsRentFree)
@@ -363,7 +356,7 @@
 <div id="lease-tabs">
     <div class="tabs">
         <button class="tab">Detaylar</button>
-        <button class="tab">Birim Bilgisi</button>
+        <button class="tab">Alan Bilgisi</button>
         @if (hasChargeAccess)
         {
             <button class="tab" data-tab="odemeler">Ödemeler (@Model.Charges.Count)</button>
@@ -418,56 +411,24 @@
         </div>
     </div>
 
-    <!-- Tab 2: Unit Bilgisi -->
+    <!-- Tab 2: Alan Bilgisi -->
     <div class="tab-content">
         <div class="card">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <div class="detail-label mb-3">Birim</div>
+                    <div class="detail-label mb-3">Alan</div>
                     <div class="flex flex-col gap-2.5">
                         <div>
                             <div class="text-xs text-muted">Ad</div>
-                            <div class="text-[15px] font-semibold">@leaseDetails.UnitName</div>
+                            <div class="text-[15px] font-semibold">@leaseDetails.SpaceName</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted">Konum</div>
+                            <div class="text-sm">@leaseDetails.SpacePath</div>
                         </div>
                         <div>
                             <div class="text-xs text-muted">Yüzölçüm</div>
                             <div class="text-[15px] font-semibold">@displayedAreaText</div>
-                        </div>
-                        <div>
-                            <div class="text-xs text-muted">Tip</div>
-                            <div class="text-[15px] font-semibold">
-                                @if (leaseDetails.UnitStructure == UnitStructure.MultipleUnits)
-                                {
-                                    <span>Birim @leaseDetails.UnitNo</span>
-                                    if (leaseDetails.UnitFloorNo.HasValue)
-                                    {
-
-                                        <span class="text-[13px] font-normal text-muted"> • @leaseDetails.UnitFloorNo. Kat</span>
-                                    }
-                                }
-                                else
-                                {
-
-                                    <span>Komple</span>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    <div class="detail-label mb-3">Taşınmaz</div>
-                    <div class="flex flex-col gap-2.5">
-                        <div>
-                            <div class="text-xs text-muted">Ad</div>
-                            <div class="text-[15px] font-semibold">@leaseDetails.PropertyName</div>
-                        </div>
-                        <div>
-                            <div class="text-xs text-muted">Konum</div>
-                            <div class="text-[15px] font-semibold">@leaseDetails.PropertyNeighborhood, @leaseDetails.PropertyDistrict / @leaseDetails.PropertyCity</div>
-                        </div>
-                        <div>
-                            <div class="text-xs text-muted">Adres</div>
-                            <div class="text-sm">@leaseDetails.PropertyAddress</div>
                         </div>
                     </div>
                 </div>

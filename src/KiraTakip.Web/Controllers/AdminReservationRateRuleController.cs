@@ -3,7 +3,7 @@ using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Dtos.Reservation;
 using KiraTakip.Web.Models.ViewModels;
-using KiraTakip.Services.Interfaces.Properties;
+using KiraTakip.Services.Interfaces.Identity;
 using KiraTakip.Services.Interfaces.Reservations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,13 +14,13 @@ namespace KiraTakip.Web.Controllers;
 [Route("Admin/ReservationRateOverride")]
 public class AdminReservationRateRuleController(
     IReservationService reservationService,
-    IUnitService unitService) : Controller
+    IPermissionScopeProvider permissionScopeProvider) : Controller
 {
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.ReservationRateRule.Module)]
     public async Task<IActionResult> Index([FromQuery] TableQuery query)
     {
-        var liste = await reservationService.GetRateRulesPagedAsync(query);
+        var liste = await reservationService.GetRateRulesPagedAsync(query, permissionScopeProvider.SpaceScope);
         ViewBag.Query = query;
         return View(liste);
     }
@@ -54,14 +54,16 @@ public class AdminReservationRateRuleController(
         try
         {
             await reservationService.SaveRateRuleAsync(new SaveReservationRateRuleInput(
-                vm.Id,
-                vm.UnitId,
+                0,
+                vm.SpaceId!.Value,
+                vm.ChargeTypeId!.Value,
                 vm.FreeDurationMinutes,
                 vm.BillingPeriodMinutes,
                 vm.PeriodRate,
                 vm.KdvRate,
                 vm.Description,
-                vm.IsActive
+                vm.IsActive,
+                permissionScopeProvider.SpaceScope
             ));
         }
         catch (BusinessValidationException exception)
@@ -77,13 +79,14 @@ public class AdminReservationRateRuleController(
     [Authorize(Policy = PermissionCatalog.ReservationRateRule.Module)]
     public async Task<IActionResult> Edit(int id)
     {
-        var kural = await reservationService.GetRateRuleByIdAsync(new GetRateRuleByIdInput(id));
+        var kural = await reservationService.GetRateRuleByIdAsync(new GetRateRuleByIdInput(id, permissionScopeProvider.SpaceScope));
         if (kural == null) return NotFound();
 
         var vm = new ReservationRateOverrideViewModel
         {
             Id = kural.Id,
-            UnitId = kural.UnitId,
+            SpaceId = kural.SpaceId,
+            ChargeTypeId = kural.ChargeTypeId,
             FreeDurationMinutes = kural.FreeDurationMinutes,
             BillingPeriodMinutes = kural.BillingPeriodMinutes,
             PeriodRate = kural.PeriodRate,
@@ -100,6 +103,9 @@ public class AdminReservationRateRuleController(
     [Authorize(Policy = PermissionCatalog.ReservationRateRule.Edit)]
     public async Task<IActionResult> Edit(int id, [FromForm] ReservationRateOverrideViewModel vm)
     {
+        if (id <= 0)
+            return NotFound();
+
         vm.Id = id;
 
         if (!ModelState.IsValid)
@@ -112,13 +118,15 @@ public class AdminReservationRateRuleController(
         {
             await reservationService.SaveRateRuleAsync(new SaveReservationRateRuleInput(
                 vm.Id,
-                vm.UnitId,
+                vm.SpaceId!.Value,
+                vm.ChargeTypeId!.Value,
                 vm.FreeDurationMinutes,
                 vm.BillingPeriodMinutes,
                 vm.PeriodRate,
                 vm.KdvRate,
                 vm.Description,
-                vm.IsActive
+                vm.IsActive,
+                permissionScopeProvider.SpaceScope
             ));
         }
         catch (BusinessValidationException exception)
@@ -135,12 +143,13 @@ public class AdminReservationRateRuleController(
     [Authorize(Policy = PermissionCatalog.ReservationRateRule.Edit)]
     public async Task<IActionResult> ToggleStatus(int id)
     {
-        await reservationService.ToggleRateRuleStatusAsync(new ToggleRateRuleStatusInput(id));
+        await reservationService.ToggleRateRuleStatusAsync(new ToggleRateRuleStatusInput(id, permissionScopeProvider.SpaceScope));
         return RedirectToAction(nameof(Index));
     }
 
     private async Task PopulateDropdownsAsync(ReservationRateOverrideViewModel vm)
     {
-        vm.ReservableUnits = await unitService.GetReservableUnitsAsync();
+        vm.Spaces = await reservationService.GetRateRuleSpaceOptionsAsync(permissionScopeProvider.SpaceScope);
+        vm.ChargeTypes = await reservationService.GetRateRuleChargeTypeOptionsAsync();
     }
 }

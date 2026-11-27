@@ -9,8 +9,8 @@ public class ManualChargeListItemDto
     public int? LeaseId { get; set; }
     public string? LeaseNo { get; set; }
     public string? TenantDisplayName { get; set; }
-    public string? PropertyName { get; set; }
-    public string? UnitName { get; set; }
+    public int? SpaceId { get; set; }
+    public string? SpaceName { get; set; }
     public string? ChargeTypeCode { get; set; }
     public string? FirstLineItemDescription { get; set; }
     public decimal ExpectedAmount { get; set; }

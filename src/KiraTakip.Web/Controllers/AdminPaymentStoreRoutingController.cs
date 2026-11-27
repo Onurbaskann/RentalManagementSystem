@@ -1,7 +1,6 @@
 ﻿using KiraTakip.Authorization;
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos.PaymentStoreRouting;
-using KiraTakip.Models.Enums;
 using KiraTakip.Web.Models.ViewModels;
 using KiraTakip.Services.Interfaces.Payments;
 using Microsoft.AspNetCore.Authorization;
@@ -21,8 +20,7 @@ public class AdminPaymentStoreRoutingController(IPaymentStoreRoutingService rout
             query,
             new PaymentStoreRoutingFormViewModel
             {
-                ChargeTypeId = chargeTypeId.GetValueOrDefault(),
-                Scope = PaymentRoutingScope.General
+                ChargeTypeId = chargeTypeId.GetValueOrDefault()
             },
             chargeTypeId);
         return View(model);
@@ -40,9 +38,7 @@ public class AdminPaymentStoreRoutingController(IPaymentStoreRoutingService rout
         {
             await routingService.UpsertAsync(new UpsertPaymentStoreRoutingInput(
                 model.ChargeTypeId,
-                model.Scope,
-                model.PropertyId,
-                model.UnitId,
+                model.SpaceId,
                 model.StoreId));
         }
         catch (BusinessValidationException exception)

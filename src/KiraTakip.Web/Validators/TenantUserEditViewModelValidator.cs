@@ -12,15 +12,15 @@ public class TenantUserEditViewModelValidator : IValidator<TenantUserEditViewMod
         if (input.RoleId < 1)
             errors.Add(new ValidationError("Rol seçilmelidir.", nameof(input.RoleId)));
 
-        if (input.UnitIds.Count != input.UnitIds.Distinct().Count())
+        if (input.SpaceIds.Count != input.SpaceIds.Distinct().Count())
             errors.Add(new ValidationError(
-                "Aynı birim birden fazla seçilemez.",
-                nameof(input.UnitIds)));
+                "Aynı alan birden fazla seçilemez.",
+                nameof(input.SpaceIds)));
 
-        if (!input.HasAccessToAllUnits && input.UnitIds.Count == 0)
+        if (!input.HasAccessToAllSpaces && input.SpaceIds.Count == 0)
             errors.Add(new ValidationError(
-                "Tüm birimlere erişim verilmeyecekse en az bir birim seçilmelidir.",
-                nameof(input.UnitIds)));
+                "Tüm alanlara erişim verilmeyecekse en az bir alan seçilmelidir.",
+                nameof(input.SpaceIds)));
 
         return errors.Count == 0
             ? ValidationResult.Valid()

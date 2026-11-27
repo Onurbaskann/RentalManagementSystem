@@ -9,8 +9,10 @@ public class ReservationRateOverrideViewModelValidator : IValidator<ReservationR
     {
         var errors = new List<ValidationError>();
 
-        if (input.UnitId is null or <= 0)
-            errors.Add(new ValidationError("Birim seçilmelidir.", nameof(input.UnitId)));
+        if (input.SpaceId is null or <= 0)
+            errors.Add(new ValidationError("Alan seçilmelidir.", nameof(input.SpaceId)));
+        if (input.ChargeTypeId is null or <= 0)
+            errors.Add(new ValidationError("Borç tipi seçilmelidir.", nameof(input.ChargeTypeId)));
         if (input.FreeDurationMinutes is < 0 or > 1440)
             errors.Add(new ValidationError(
                 "Ücretsiz süre 0–1440 dakika arası olmalıdır.",

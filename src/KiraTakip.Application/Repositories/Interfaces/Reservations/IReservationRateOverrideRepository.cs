@@ -1,18 +1,21 @@
 using KiraTakip.Models.Dtos;
-using KiraTakip.Models.Dtos.RateHierarchy;
 using KiraTakip.Repositories.Interfaces.Common;
 
 namespace KiraTakip.Repositories.Interfaces.Reservations;
 
 public interface IReservationRateOverrideRepository : IRepositoryBase<ReservationRateOverride>
 {
-    Task<List<ParentReservationRateOverrideRowDto>> GetGeneralRowsAsync(int year);
-    Task<List<ReservationRateOverrideListItemDto>> GetUcretKurallariListAsync();
-    Task<PagedResult<ReservationRateOverrideListItemDto>> GetRateRulesPagedAsync(TableQuery query);
-    Task<ReservationRateOverride?> GetActiveForUnitAsync(int unitId);
-    Task<ReservationRateOverride?> GetForUnitAsync(int unitId);
-    Task<ReservationRateOverride?> GetGeneralAsync(int unitTypeId, int year);
-    Task<ReservationRateOverride?> GetWithUnitAsync(int id);
-    Task<Dictionary<int, ReservationRateOverride>> GetByUnitIdsAsync(IReadOnlyCollection<int> unitIds, bool activeOnly);
+    Task<PagedResult<ReservationRateOverrideListItemDto>> GetRateRulesPagedAsync(TableQuery query, SpaceAccessScope scope);
+
+    /// <summary>
+    /// Alanın kendi aktif kuralı, yoksa en yakın atanın aktif kuralı (D8). Alan ve ata zinciri tek sorguda gelir.
+    /// <paramref name="includeSelf"/> false ise yalnız ataların kuralı aranır.
+    /// </summary>
+    Task<ReservationRateOverride?> GetActiveForSpaceAsync(int spaceId, string spacePath, bool includeSelf = true);
+
+    Task<ReservationRateOverride?> GetInheritedForSpaceAsync(int spaceId);
+    Task<ReservationRateOverride?> GetForSpaceAsync(int spaceId);
+    Task<ReservationRateOverride?> GetWithSpaceAsync(int id);
+    Task<bool> AnyActiveByChargeTypeAsync(int chargeTypeId);
     void Remove(ReservationRateOverride rate);
 }

@@ -1,5 +1,6 @@
 using KiraTakip.Models.Common;
 using KiraTakip.Data;
+using KiraTakip.Domain.Spaces;
 using KiraTakip.Models.Dtos.PaymentStoreRouting;
 using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Common;
@@ -22,20 +23,13 @@ public class PaymentStoreRoutingRepository(ApplicationDbContext context)
                 routing.ChargeType.Code.Contains(search) ||
                 routing.Store.Name.Contains(search) ||
                 routing.Store.Code.Contains(search) ||
-                (routing.Property != null && routing.Property.Name.Contains(search)) ||
-                (routing.Unit != null && routing.Unit.Name.Contains(search)));
+                (routing.Space != null && routing.Space.Name.Contains(search)));
         }
 
-        if (Enum.TryParse<PaymentRoutingScope>(tableQuery.Source, out var scope))
-        {
-            query = scope switch
-            {
-                PaymentRoutingScope.General => query.Where(r => r.PropertyId == null && r.UnitId == null),
-                PaymentRoutingScope.Property => query.Where(r => r.PropertyId != null && r.UnitId == null),
-                PaymentRoutingScope.Unit => query.Where(r => r.PropertyId == null && r.UnitId != null),
-                _ => query
-            };
-        }
+        if (string.Equals(tableQuery.Source, "General", StringComparison.OrdinalIgnoreCase))
+            query = query.Where(r => r.SpaceId == null);
+        else if (string.Equals(tableQuery.Source, "Space", StringComparison.OrdinalIgnoreCase))
+            query = query.Where(r => r.SpaceId != null);
 
         query = string.Equals(tableQuery.Status, "gecmis", StringComparison.OrdinalIgnoreCase)
             ? query.Where(r => !r.IsActive)
@@ -44,9 +38,8 @@ public class PaymentStoreRoutingRepository(ApplicationDbContext context)
         var items = query
             .OrderByDescending(routing => routing.IsActive)
             .ThenBy(routing => routing.ChargeType.SortOrder)
-            .ThenBy(routing => routing.PropertyId == null && routing.UnitId == null ? 0 : routing.PropertyId != null ? 1 : 2)
-            .ThenBy(routing => routing.Property != null ? routing.Property.Name : routing.Unit != null ? routing.Unit.Property.Name : string.Empty)
-            .ThenBy(routing => routing.Unit != null ? routing.Unit.Name : string.Empty)
+            .ThenBy(routing => routing.SpaceId == null ? 0 : 1)
+            .ThenBy(routing => routing.Space != null ? routing.Space.Path : string.Empty)
             .ThenBy(routing => routing.Id)
             .Select(routing => new PaymentStoreRoutingListItemDto
             {
@@ -54,18 +47,8 @@ public class PaymentStoreRoutingRepository(ApplicationDbContext context)
                 ChargeTypeId = routing.ChargeTypeId,
                 ChargeTypeName = routing.ChargeType.Name,
                 ChargeTypeCode = routing.ChargeType.Code,
-                Scope = routing.PropertyId == null && routing.UnitId == null
-                    ? PaymentRoutingScope.General
-                    : routing.PropertyId != null
-                        ? PaymentRoutingScope.Property
-                        : PaymentRoutingScope.Unit,
-                ScopeName = routing.PropertyId == null && routing.UnitId == null
-                    ? "Tüm taşınmazlar"
-                    : routing.Property != null
-                        ? routing.Property.Name
-                        : routing.Unit!.Property.Name + " / " + routing.Unit.Name,
-                PropertyId = routing.PropertyId,
-                UnitId = routing.UnitId,
+                ScopeName = routing.Space != null ? routing.Space.Name : "Tüm alanlar",
+                SpaceId = routing.SpaceId,
                 StoreId = routing.StoreId,
                 StoreName = routing.Store.Name,
                 StoreCode = routing.Store.Code,
@@ -92,8 +75,7 @@ public class PaymentStoreRoutingRepository(ApplicationDbContext context)
         => _ctx.ChargeTypes.AsNoTracking()
             .Where(chargeType => !_dbSet.Any(routing =>
                 routing.ChargeTypeId == chargeType.Id &&
-                routing.PropertyId == null &&
-                routing.UnitId == null &&
+                routing.SpaceId == null &&
                 routing.IsActive &&
                 routing.Store.IsActive &&
                 routing.Store.Accounts.Count(account => account.IsActive) == 1))
@@ -108,16 +90,14 @@ public class PaymentStoreRoutingRepository(ApplicationDbContext context)
 
     public Task<PaymentStoreRouting?> FindActiveAsync(
         int chargeTypeId,
-        int? propertyId,
-        int? unitId,
+        int? spaceId,
         bool tracking = true)
     {
         IQueryable<PaymentStoreRouting> query = _dbSet;
         if (!tracking) query = query.AsNoTracking();
         return query.FirstOrDefaultAsync(routing =>
             routing.ChargeTypeId == chargeTypeId &&
-            routing.PropertyId == propertyId &&
-            routing.UnitId == unitId &&
+            routing.SpaceId == spaceId &&
             routing.IsActive);
     }
 
@@ -128,8 +108,7 @@ public class PaymentStoreRoutingRepository(ApplicationDbContext context)
         => _dbSet.AsNoTracking()
             .Where(routing =>
                 routing.ChargeTypeId == chargeTypeId &&
-                routing.PropertyId == null &&
-                routing.UnitId == null &&
+                routing.SpaceId == null &&
                 routing.IsActive)
             .Select(routing => (int?)routing.StoreId)
             .FirstOrDefaultAsync();
@@ -137,39 +116,38 @@ public class PaymentStoreRoutingRepository(ApplicationDbContext context)
     public Task<bool> HasUsableDefaultAsync(int chargeTypeId)
         => _dbSet.AsNoTracking().AnyAsync(routing =>
             routing.ChargeTypeId == chargeTypeId &&
-            routing.PropertyId == null &&
-            routing.UnitId == null &&
+            routing.SpaceId == null &&
             routing.IsActive &&
             routing.Store.IsActive &&
             routing.Store.Accounts.Count(account => account.IsActive) == 1);
 
     public async Task<PaymentRoutingResolutionCandidateDto?> GetResolutionCandidateAsync(
         int chargeTypeId,
-        int unitId,
+        int? spaceId,
         CancellationToken cancellationToken = default)
     {
-        var unit = await _ctx.Units.AsNoTracking()
-            .Where(item => item.Id == unitId)
-            .Select(item => new { item.Id, item.PropertyId })
-            .FirstOrDefaultAsync(cancellationToken);
-        if (unit == null) return null;
+        var candidateSpaceIds = new List<int>();
+        if (spaceId.HasValue)
+        {
+            var path = await _ctx.Spaces.AsNoTracking()
+                .Where(item => item.Id == spaceId.Value)
+                .Select(item => item.Path)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (path == null) return null;
+
+            candidateSpaceIds.AddRange(SpaceTreePolicy.GetAncestorIds(path));
+            candidateSpaceIds.Add(spaceId.Value);
+        }
 
         var routing = await _dbSet.AsNoTracking()
             .Where(item => item.IsActive && item.ChargeTypeId == chargeTypeId &&
-                (item.UnitId == unitId ||
-                 (item.UnitId == null && item.PropertyId == unit.PropertyId) ||
-                 (item.UnitId == null && item.PropertyId == null)))
-            .OrderBy(item => item.UnitId == unitId ? 0 : item.PropertyId == unit.PropertyId ? 1 : 2)
+                (item.SpaceId == null || candidateSpaceIds.Contains(item.SpaceId.Value)))
+            .OrderByDescending(item => item.SpaceId == null ? -1 : item.Space!.Depth)
             .Select(item => new PaymentRoutingResolutionCandidateDto
             {
-                UnitId = unit.Id,
-                PropertyId = unit.PropertyId,
+                SpaceId = spaceId,
                 RoutingId = item.Id,
-                MatchedScope = item.UnitId != null
-                    ? PaymentRoutingScope.Unit
-                    : item.PropertyId != null
-                        ? PaymentRoutingScope.Property
-                        : PaymentRoutingScope.General,
+                MatchedSpaceId = item.SpaceId,
                 StoreId = item.StoreId,
                 IsStoreActive = item.Store.IsActive,
                 ActiveAccountCount = item.Store.Accounts.Count(account => account.IsActive),
@@ -188,11 +166,7 @@ public class PaymentStoreRoutingRepository(ApplicationDbContext context)
             })
             .FirstOrDefaultAsync(cancellationToken);
 
-        return routing ?? new PaymentRoutingResolutionCandidateDto
-        {
-            UnitId = unit.Id,
-            PropertyId = unit.PropertyId
-        };
+        return routing ?? new PaymentRoutingResolutionCandidateDto { SpaceId = spaceId };
     }
 
     public Task<bool> HasActiveRoutingForStoreAsync(int storeId)

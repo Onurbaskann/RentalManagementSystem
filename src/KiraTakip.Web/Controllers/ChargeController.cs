@@ -17,34 +17,25 @@ public class ChargeController(
 {
     [HttpGet("")]
     [Authorize(Policy = PermissionCatalog.Payment.Module)]
-    public async Task<IActionResult> Index([FromQuery] TableQuery query)
+    public async Task<IActionResult> Index([FromQuery] TableQuery query, int? spaceId)
     {
         await chargeService.UpdateDelaysAsync();
 
-        var propertyIds = permissionScopeProvider.GlobalAccess
-            ? null
-            : permissionScopeProvider.AccessiblePropertyIds;
-        var unitIds = (!permissionScopeProvider.GlobalAccess && permissionScopeProvider.AccessibleUnitIds.Count > 0)
-            ? permissionScopeProvider.AccessibleUnitIds
-            : null;
+        var scope = permissionScopeProvider.SpaceScope;
 
         var pagedResult = await chargeService.GetPagedAsync(
-            new GetChargesPageInput(query, PropertyIds: propertyIds, UnitIds: unitIds));
+            new GetChargesPageInput(query, Scope: scope, SpaceId: spaceId));
         var options = await chargeService.GetIndexOptionsAsync(
-            new GetChargeIndexOptionsInput(
-                permissionScopeProvider.GlobalAccess,
-                propertyIds,
-                unitIds,
-                query.Status));
+            new GetChargeIndexOptionsInput(scope, query.Status));
 
         var model = new ChargeIndexViewModel
         {
             Charges = pagedResult,
             Query = query,
+            SpaceId = spaceId,
             Status = query.Status ?? "tum",
             CancelledCount = options.CancelledCount,
-            Properties = options.Properties,
-            Units = options.Units,
+            Spaces = options.Spaces,
             Tenants = options.Tenants,
             AvailableYears = options.AvailableYears,
         };
@@ -67,8 +58,6 @@ public class ChargeController(
 
     private bool IsInScope(ChargeDetailDto charge)
         => permissionScopeProvider.GlobalAccess
-            || (charge.PropertyId.HasValue
-                && permissionScopeProvider.AccessiblePropertyIds.Contains(charge.PropertyId.Value))
-            || (charge.UnitId.HasValue
-                && permissionScopeProvider.AccessibleUnitIds.Contains(charge.UnitId.Value));
+            || (!string.IsNullOrEmpty(charge.SpacePath)
+                && permissionScopeProvider.IsSpaceInScope(charge.SpacePath));
 }

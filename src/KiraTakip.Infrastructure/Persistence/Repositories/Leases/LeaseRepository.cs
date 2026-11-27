@@ -1,38 +1,58 @@
+using System.Linq.Expressions;
 using KiraTakip.Models.Common;
 using KiraTakip.Data;
-using KiraTakip.Domain.Leases;
+using KiraTakip.Domain.Spaces;
 using KiraTakip.Models.Dtos;
 using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Common;
 using KiraTakip.Repositories.Interfaces.Leases;
 using Microsoft.EntityFrameworkCore;
 using KiraTakip.Models.Dtos.Lease;
-using KiraTakip.Models.Dtos.Document;
-using KiraTakip.Models.Dtos.Property;
 
 namespace KiraTakip.Repositories.Leases;
 
 public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(ctx), ILeaseRepository
 {
+    private const string NamePathSeparator = " / ";
+
     private static readonly LeaseStatus[] TenantVisibleStatuses =
         [LeaseStatus.Active, LeaseStatus.Ended, LeaseStatus.Terminated];
 
-    public async Task<List<LeaseListItemDto>> GetListAsync(
-        string? filter,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+    private static readonly Expression<Func<Lease, LeaseListItemDto>> ListItemProjection = lease => new LeaseListItemDto
+    {
+        Id = lease.Id,
+        LeaseNo = lease.LeaseNo,
+        TenantId = lease.TenantId,
+        TenantDisplayName = lease.Tenant.DisplayName,
+        TenantCategoryName = lease.Tenant.TenantCategory != null ? lease.Tenant.TenantCategory.Name : string.Empty,
+        Area = lease.Areas
+            .OrderBy(area => area.Id)
+            .Select(area => new LeaseAreaDto
+            {
+                SpaceId = area.SpaceId,
+                SpaceName = area.Space.Name,
+                SpaceIdPath = area.Space.Path,
+                SpaceArea = area.Space.Area,
+                RentedArea = area.RentedArea,
+                SnapshotCode = area.SnapshotCode,
+                SnapshotName = area.SnapshotName,
+                SnapshotTypeName = area.SnapshotTypeName,
+                SnapshotUsage = area.SnapshotUsage,
+                SnapshotArea = area.SnapshotArea,
+                SnapshotPath = area.SnapshotPath
+            })
+            .FirstOrDefault(),
+        StartDate = lease.StartDate,
+        EndDate = lease.EndDate,
+        MonthlyAmount = 0,
+        IsRentFree = lease.IsRentFree,
+        Status = lease.Status
+    };
+
+    public async Task<List<LeaseListItemDto>> GetListAsync(string? filter, SpaceAccessScope? scope)
     {
         var now = DateTime.Now;
-        var query = _dbSet.AsNoTracking().AsQueryable();
-
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(lease =>
-                propertyIds.Contains(lease.Unit.PropertyId)
-                || unitIds.Contains(lease.UnitId));
-        }
+        var query = ApplyScope(_dbSet.AsNoTracking(), scope);
 
         query = filter switch
         {
@@ -48,24 +68,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
 
         return await query
             .OrderByDescending(s => s.StartDate)
-            .Select(s => new LeaseListItemDto
-            {
-                Id = s.Id,
-                LeaseNo = s.LeaseNo,
-                TenantId = s.TenantId,
-                TenantDisplayName = s.Tenant.DisplayName,
-                TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Name : string.Empty,
-                UnitId = s.UnitId,
-                UnitName = s.Unit.Name,
-                PropertyId = s.Unit.PropertyId,
-                PropertyName = s.Unit.Property.Name,
-                StartDate = s.StartDate,
-                EndDate = s.EndDate,
-                MonthlyAmount = 0,
-                IsRentFree = s.IsRentFree,
-                Status = s.Status,
-                UnitArea = s.Unit.Area
-            })
+            .Select(ListItemProjection)
             .ToListAsync();
     }
 
@@ -76,85 +79,39 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
     public Task<LeaseDetailDto?> GetTenantDetailsAsync(
         int leaseId,
         int tenantId,
-        List<int>? authorizedPropertyIds = null,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope? scope = null)
     {
         var query = _dbSet.AsNoTracking().Where(lease =>
             lease.Id == leaseId
             && lease.TenantId == tenantId
             && TenantVisibleStatuses.Contains(lease.Status));
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(lease =>
-                propertyIds.Contains(lease.Unit.PropertyId)
-                || unitIds.Contains(lease.UnitId));
-        }
 
-        return ProjectDetails(query).FirstOrDefaultAsync();
+        return ProjectDetails(ApplyScope(query, scope)).FirstOrDefaultAsync();
     }
 
     public async Task<List<LeaseListItemDto>> GetTenantPortalListAsync(
         int tenantId,
-        List<int>? authorizedPropertyIds = null,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope? scope = null)
     {
-        var query = _dbSet.AsNoTracking().Where(lease =>
-            lease.TenantId == tenantId
-            && TenantVisibleStatuses.Contains(lease.Status));
-
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(lease =>
-                propertyIds.Contains(lease.Unit.PropertyId)
-                || unitIds.Contains(lease.UnitId));
-        }
+        var query = ApplyScope(
+            _dbSet.AsNoTracking().Where(lease =>
+                lease.TenantId == tenantId
+                && TenantVisibleStatuses.Contains(lease.Status)),
+            scope);
 
         return await query
             .OrderByDescending(lease => lease.StartDate)
-            .Select(lease => new LeaseListItemDto
-            {
-                Id = lease.Id,
-                LeaseNo = lease.LeaseNo,
-                TenantId = lease.TenantId,
-                TenantDisplayName = lease.Tenant.DisplayName,
-                TenantCategoryName = lease.Tenant.TenantCategory != null
-                    ? lease.Tenant.TenantCategory.Name
-                    : string.Empty,
-                UnitId = lease.UnitId,
-                UnitName = lease.Unit.Name,
-                PropertyId = lease.Unit.PropertyId,
-                PropertyName = lease.Unit.Property.Name,
-                StartDate = lease.StartDate,
-                EndDate = lease.EndDate,
-                MonthlyAmount = 0,
-                IsRentFree = lease.IsRentFree,
-                Status = lease.Status,
-                UnitArea = lease.Unit.Area
-            })
+            .Select(ListItemProjection)
             .ToListAsync();
     }
 
     public async Task<PagedResult<LeaseListItemDto>> GetPagedListAsync(
         TableQuery tableQuery,
         string? filter,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope? scope)
     {
         var now = DateTime.Now;
-        var query = _dbSet.AsNoTracking().AsQueryable();
-
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(lease =>
-                propertyIds.Contains(lease.Unit.PropertyId)
-                || unitIds.Contains(lease.UnitId));
-        }
+        var query = ApplyScope(_dbSet.AsNoTracking(), scope);
 
         query = filter switch
         {
@@ -172,32 +129,16 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             var search = tableQuery.Q.Trim();
             query = query.Where(lease =>
                 EF.Functions.Like(lease.Tenant.Name, $"%{search}%")
-                || EF.Functions.Like(lease.Unit.Property.Name, $"%{search}%")
-                || EF.Functions.Like(lease.Unit.Name, $"%{search}%")
+                || lease.Areas.Any(area =>
+                    EF.Functions.Like(area.SnapshotPath, $"%{search}%")
+                    || EF.Functions.Like(area.Space.Name, $"%{search}%"))
                 || EF.Functions.Like(lease.LeaseNo, $"%{search}%"));
         }
 
         var itemsQuery = query
             .OrderByDescending(lease => lease.StartDate)
             .ThenByDescending(lease => lease.Id)
-            .Select(lease => new LeaseListItemDto
-            {
-                Id = lease.Id,
-                LeaseNo = lease.LeaseNo,
-                TenantId = lease.TenantId,
-                TenantDisplayName = lease.Tenant.DisplayName,
-                TenantCategoryName = lease.Tenant.TenantCategory != null ? lease.Tenant.TenantCategory.Name : string.Empty,
-                UnitId = lease.UnitId,
-                UnitName = lease.Unit.Name,
-                PropertyId = lease.Unit.PropertyId,
-                PropertyName = lease.Unit.Property.Name,
-                StartDate = lease.StartDate,
-                EndDate = lease.EndDate,
-                MonthlyAmount = 0,
-                IsRentFree = lease.IsRentFree,
-                Status = lease.Status,
-                UnitArea = lease.Unit.Area
-            });
+            .Select(ListItemProjection);
 
         return await GetPagedResultAsync(query, itemsQuery, tableQuery);
     }
@@ -205,54 +146,28 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
     public async Task<PagedResult<LeaseListItemDto>> GetTenantPortalPagedListAsync(
         int tenantId,
         TableQuery tableQuery,
-        List<int>? authorizedPropertyIds = null,
-        List<int>? authorizedUnitIds = null)
+        SpaceAccessScope? scope = null)
     {
-        var query = _dbSet.AsNoTracking().Where(lease =>
-            lease.TenantId == tenantId
-            && TenantVisibleStatuses.Contains(lease.Status));
-
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(lease =>
-                propertyIds.Contains(lease.Unit.PropertyId)
-                || unitIds.Contains(lease.UnitId));
-        }
+        var query = ApplyScope(
+            _dbSet.AsNoTracking().Where(lease =>
+                lease.TenantId == tenantId
+                && TenantVisibleStatuses.Contains(lease.Status)),
+            scope);
 
         if (!string.IsNullOrWhiteSpace(tableQuery.Q))
         {
             var search = tableQuery.Q.Trim();
             query = query.Where(lease =>
-                EF.Functions.Like(lease.Unit.Name, $"%{search}%")
-                || EF.Functions.Like(lease.Unit.Property.Name, $"%{search}%")
+                lease.Areas.Any(area =>
+                    EF.Functions.Like(area.SnapshotPath, $"%{search}%")
+                    || EF.Functions.Like(area.Space.Name, $"%{search}%"))
                 || EF.Functions.Like(lease.LeaseNo, $"%{search}%"));
         }
 
         var itemsQuery = query
             .OrderByDescending(lease => lease.StartDate)
             .ThenByDescending(lease => lease.Id)
-            .Select(lease => new LeaseListItemDto
-            {
-                Id = lease.Id,
-                LeaseNo = lease.LeaseNo,
-                TenantId = lease.TenantId,
-                TenantDisplayName = lease.Tenant.DisplayName,
-                TenantCategoryName = lease.Tenant.TenantCategory != null
-                    ? lease.Tenant.TenantCategory.Name
-                    : string.Empty,
-                UnitId = lease.UnitId,
-                UnitName = lease.Unit.Name,
-                PropertyId = lease.Unit.PropertyId,
-                PropertyName = lease.Unit.Property.Name,
-                StartDate = lease.StartDate,
-                EndDate = lease.EndDate,
-                MonthlyAmount = 0,
-                IsRentFree = lease.IsRentFree,
-                Status = lease.Status,
-                UnitArea = lease.Unit.Area
-            });
+            .Select(ListItemProjection);
 
         return await GetPagedResultAsync(query, itemsQuery, tableQuery);
     }
@@ -268,24 +183,24 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             TenantEmail = s.Tenant.Email,
             TenantCategoryId = s.Tenant.TenantCategoryId,
             TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Name : string.Empty,
-            UnitId = s.UnitId,
-            UnitName = s.Unit.Name,
-            UnitNo = s.Unit.UnitNo,
-            UnitFloorNo = s.Unit.FloorNo,
-            UnitArea = s.Unit.Area,
-            UnitTypeNameSnapshot = s.UnitTypeNameSnapshot,
-            UnitTypeUsageSnapshot = s.UnitTypeUsageSnapshot,
-            RentalModeSnapshot = s.RentalModeSnapshot,
-            UnitAreaSnapshot = s.UnitAreaSnapshot,
-            RentedArea = s.LeaseArea != null ? s.LeaseArea.RentedArea : (decimal?)null,
+            Area = s.Areas
+                .OrderBy(area => area.Id)
+                .Select(area => new LeaseAreaDto
+                {
+                    SpaceId = area.SpaceId,
+                    SpaceName = area.Space.Name,
+                    SpaceIdPath = area.Space.Path,
+                    SpaceArea = area.Space.Area,
+                    RentedArea = area.RentedArea,
+                    SnapshotCode = area.SnapshotCode,
+                    SnapshotName = area.SnapshotName,
+                    SnapshotTypeName = area.SnapshotTypeName,
+                    SnapshotUsage = area.SnapshotUsage,
+                    SnapshotArea = area.SnapshotArea,
+                    SnapshotPath = area.SnapshotPath
+                })
+                .FirstOrDefault(),
             LeaseGroupId = s.LeaseGroupId,
-            UnitStructure = s.Unit.Property.UnitStructure,
-            PropertyId = s.Unit.PropertyId,
-            PropertyName = s.Unit.Property.Name,
-            PropertyCity = s.Unit.Property.City,
-            PropertyDistrict = s.Unit.Property.District,
-            PropertyNeighborhood = s.Unit.Property.Neighborhood,
-            PropertyAddress = s.Unit.Property.Address,
             StartDate = s.StartDate,
             EndDate = s.EndDate,
             Description = s.Description,
@@ -328,205 +243,232 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
                     }).ToList()
         });
 
-    public async Task<List<LeaseListItemDto>> GetByTenantIdAsync(
-        int tenantId,
-        List<int>? authorizedPropertyIds = null,
-        List<int>? authorizedUnitIds = null)
+    public async Task<List<LeaseListItemDto>> GetByTenantIdAsync(int tenantId, SpaceAccessScope? scope = null)
     {
-        var query = _dbSet.AsNoTracking()
-            .Where(s => s.TenantId == tenantId);
-
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(lease =>
-                propertyIds.Contains(lease.Unit.PropertyId)
-                || unitIds.Contains(lease.UnitId));
-        }
+        var query = ApplyScope(_dbSet.AsNoTracking().Where(s => s.TenantId == tenantId), scope);
 
         return await query
             .OrderByDescending(s => s.StartDate)
-            .Select(s => new LeaseListItemDto
-            {
-                Id = s.Id,
-                LeaseNo = s.LeaseNo,
-                TenantId = s.TenantId,
-                TenantDisplayName = s.Tenant.DisplayName,
-                TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Name : string.Empty,
-                UnitId = s.UnitId,
-                UnitName = s.Unit.Name,
-                PropertyId = s.Unit.PropertyId,
-                PropertyName = s.Unit.Property.Name,
-                StartDate = s.StartDate,
-                EndDate = s.EndDate,
-                MonthlyAmount = 0,
-                IsRentFree = s.IsRentFree,
-                Status = s.Status,
-                UnitArea = s.Unit.Area
-            })
+            .Select(ListItemProjection)
             .ToListAsync();
     }
 
-    public async Task<List<LeaseListItemDto>> GetByUnitIdAsync(int unitId)
+    public async Task<List<LeaseListItemDto>> GetBySpaceIdAsync(int spaceId)
     {
         return await _dbSet.AsNoTracking()
-            .Where(s => s.UnitId == unitId)
+            .Where(s => s.Areas.Any(area => area.SpaceId == spaceId))
             .OrderByDescending(s => s.StartDate)
-            .Select(s => new LeaseListItemDto
-            {
-                Id = s.Id,
-                LeaseNo = s.LeaseNo,
-                TenantId = s.TenantId,
-                TenantDisplayName = s.Tenant.DisplayName,
-                TenantCategoryName = s.Tenant.TenantCategory != null ? s.Tenant.TenantCategory.Name : string.Empty,
-                UnitId = s.UnitId,
-                UnitName = s.Unit.Name,
-                PropertyId = s.Unit.PropertyId,
-                PropertyName = s.Unit.Property.Name,
-                StartDate = s.StartDate,
-                EndDate = s.EndDate,
-                MonthlyAmount = 0,
-                IsRentFree = s.IsRentFree,
-                Status = s.Status,
-                UnitArea = s.Unit.Area
-            })
+            .Select(ListItemProjection)
             .ToListAsync();
     }
 
     public Task<int> CountActiveByTenantAsync(
         int tenantId,
         DateTime currentTime,
-        List<int>? authorizedPropertyIds = null,
-        List<int>? authorizedUnitIds = null)
-    {
-        var query = _dbSet.AsNoTracking().Where(lease =>
-            lease.TenantId == tenantId
-            && lease.Status == LeaseStatus.Active
-            && lease.StartDate <= currentTime
-            && lease.EndDate >= currentTime);
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(lease =>
-                propertyIds.Contains(lease.Unit.PropertyId)
-                || unitIds.Contains(lease.UnitId));
-        }
+        SpaceAccessScope? scope = null)
+        => ApplyScope(
+                _dbSet.AsNoTracking().Where(lease =>
+                    lease.TenantId == tenantId
+                    && lease.Status == LeaseStatus.Active
+                    && lease.StartDate <= currentTime
+                    && lease.EndDate >= currentTime),
+                scope)
+            .CountAsync();
 
-        return query.CountAsync();
-    }
-
-    public Task<int> GetTerminatedCountAsync(
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
-    {
-        var query = _dbSet.AsNoTracking().Where(lease => lease.Status == LeaseStatus.Terminated);
-
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(lease =>
-                propertyIds.Contains(lease.Unit.PropertyId)
-                || unitIds.Contains(lease.UnitId));
-        }
-
-        return query.CountAsync();
-    }
+    public Task<int> GetTerminatedCountAsync(SpaceAccessScope? scope)
+        => ApplyScope(
+                _dbSet.AsNoTracking().Where(lease => lease.Status == LeaseStatus.Terminated),
+                scope)
+            .CountAsync();
 
     public async Task<List<Lease>> GetAktiflerAsync()
         => await _dbSet
             .Include(s => s.Tenant)
-            .Include(s => s.Unit).ThenInclude(b => b.Property)
+            .Include(s => s.Areas).ThenInclude(area => area.Space)
             .Where(s => s.Status == LeaseStatus.Active)
             .OrderBy(s => s.Tenant.Name)
             .ToListAsync();
 
-    public async Task<(int TasinmazId, int? KategoriId)?> GetPropertyAndCategoryAsync(int leaseId)
+    public async Task<(int SpaceId, string SpacePath, int TenantCategoryId)?> GetSpaceAndCategoryAsync(int leaseId)
     {
         var info = await _dbSet.AsNoTracking()
             .Where(s => s.Id == leaseId)
-            .Select(s => new { s.Unit.PropertyId, s.Tenant.TenantCategoryId })
+            .Select(s => new
+            {
+                s.Tenant.TenantCategoryId,
+                Area = s.Areas
+                    .OrderBy(area => area.Id)
+                    .Select(area => new { area.SpaceId, area.Space.Path })
+                    .FirstOrDefault()
+            })
             .FirstOrDefaultAsync();
-        return info == null ? null : (info.PropertyId, info.TenantCategoryId);
+        return info?.Area == null
+            ? null
+            : (info.Area.SpaceId, info.Area.Path, info.TenantCategoryId);
     }
 
-    public async Task<Dictionary<int, (int PropertyId, int? TenantCategoryId)>> GetPropertyAndCategoriesAsync(
+    public async Task<Dictionary<int, (int SpaceId, string SpacePath, int TenantCategoryId)>> GetSpaceAndCategoriesAsync(
         IReadOnlyCollection<int> leaseIds)
     {
         var rows = await _dbSet.AsNoTracking()
             .Where(s => leaseIds.Contains(s.Id))
-            .Select(s => new { s.Id, s.Unit.PropertyId, s.Tenant.TenantCategoryId })
+            .Select(s => new
+            {
+                s.Id,
+                s.Tenant.TenantCategoryId,
+                Area = s.Areas
+                    .OrderBy(area => area.Id)
+                    .Select(area => new { area.SpaceId, area.Space.Path })
+                    .FirstOrDefault()
+            })
             .ToListAsync();
 
-        return rows.ToDictionary(r => r.Id, r => (r.PropertyId, (int?)r.TenantCategoryId));
+        return rows
+            .Where(row => row.Area != null)
+            .ToDictionary(row => row.Id, row => (row.Area!.SpaceId, row.Area.Path, row.TenantCategoryId));
     }
 
-    public async Task<List<LeaseDropdownDto>> GetActiveDropdownAsync(
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+    public async Task<List<LeaseDropdownDto>> GetActiveDropdownAsync(SpaceAccessScope? scope)
     {
-        var query = _dbSet.AsNoTracking()
-            .Where(lease => lease.Status == LeaseStatus.Active);
-
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(lease =>
-                propertyIds.Contains(lease.Unit.PropertyId)
-                || unitIds.Contains(lease.UnitId));
-        }
+        var query = ApplyScope(
+            _dbSet.AsNoTracking().Where(lease => lease.Status == LeaseStatus.Active),
+            scope);
 
         return await query
             .OrderBy(s => s.Tenant.Name)
             .Select(s => new LeaseDropdownDto
             {
                 Id = s.Id,
-                UnitId = s.UnitId,
+                SpaceId = s.Areas.OrderBy(area => area.Id).Select(area => area.SpaceId).FirstOrDefault(),
                 TenantId = s.TenantId,
                 TenantDisplayName = s.Tenant.DisplayName,
-                UnitName = s.Unit.Name,
-                PropertyName = s.Unit.Property.Name
+                SpacePath = s.Areas.OrderBy(area => area.Id).Select(area => area.SnapshotPath).FirstOrDefault() ?? string.Empty
             })
             .ToListAsync();
     }
 
-    public async Task<List<UnitLookupDto>> GetActiveLeaseUnitsByTenantIdAsync(
+    public async Task<List<LeaseSpaceOptionDto>> GetActiveLeaseSpacesByTenantIdAsync(
         int tenantId,
-        List<int>? authorizedPropertyIds = null,
-        List<int>? authorizedUnitIds = null,
+        SpaceAccessScope? scope = null,
         CancellationToken ct = default)
     {
-        var query = _dbSet
-            .AsNoTracking()
-            .Where(s => s.TenantId == tenantId && s.Status == LeaseStatus.Active);
+        var query = ApplyScope(
+            _dbSet.AsNoTracking().Where(s => s.TenantId == tenantId && s.Status == LeaseStatus.Active),
+            scope);
 
-        if (authorizedPropertyIds != null || authorizedUnitIds != null)
-        {
-            var propertyIds = authorizedPropertyIds ?? [];
-            var unitIds = authorizedUnitIds ?? [];
-            query = query.Where(lease =>
-                propertyIds.Contains(lease.Unit.PropertyId)
-                || unitIds.Contains(lease.UnitId));
-        }
-
-        return await query
-            .Select(s => new UnitLookupDto
+        var rows = await query
+            .SelectMany(s => s.Areas)
+            .Select(area => new
             {
-                Id = s.UnitId,
-                Name = s.Unit.Name,
-                PropertyName = s.Unit.Property.Name,
-                UnitNo = s.Unit.UnitNo,
+                Id = area.SpaceId,
+                area.Space.Name,
+                area.Space.Area,
+                area.Space.IsShared,
+                area.Space.Path
             })
             .Distinct()
-            .OrderBy(b => b.PropertyName).ThenBy(b => b.Name)
             .ToListAsync(ct);
+
+        var names = await LoadAncestorNamesAsync(rows.Select(row => row.Path));
+        return rows
+            .Select(row => new LeaseSpaceOptionDto(row.Id, row.Name, BuildNamePath(row.Path, row.Name, names), row.Area, row.IsShared))
+            .OrderBy(option => option.NamePath, StringComparer.CurrentCulture)
+            .ToList();
     }
 
+    public Task<bool> IsTenantInScopeAsync(int tenantId, SpaceAccessScope? scope)
+        => scope == null || scope.HasGlobalAccess
+            ? ctx.Tenants.AsNoTracking().AnyAsync(tenant => tenant.Id == tenantId)
+            : ApplyScope(_dbSet.AsNoTracking().Where(lease => lease.TenantId == tenantId), scope).AnyAsync();
+
+    public async Task<LeaseSpaceContextDto?> GetSpaceContextAsync(int spaceId)
+    {
+        var row = await ctx.Spaces.AsNoTracking()
+            .Where(space => space.Id == spaceId)
+            .Select(space => new
+            {
+                space.Id,
+                space.Code,
+                space.Name,
+                TypeName = space.SpaceType.Name,
+                space.Usage,
+                space.Area,
+                space.Path,
+                space.IsShared,
+                space.IsActive
+            })
+            .FirstOrDefaultAsync();
+        if (row == null) return null;
+
+        var names = await LoadAncestorNamesAsync([row.Path]);
+        return new LeaseSpaceContextDto(
+            row.Id,
+            row.Code,
+            row.Name,
+            row.TypeName,
+            row.Usage,
+            row.Area,
+            row.Path,
+            BuildNamePath(row.Path, row.Name, names),
+            row.IsShared,
+            row.IsActive);
+    }
+
+    public async Task<List<LeaseSpaceOptionDto>> GetSelectableSpacesAsync(
+        bool sharedOnly,
+        SpaceAccessScope? scope,
+        int? includeSpaceId = null)
+    {
+        var query = ctx.Spaces.AsNoTracking().Where(space =>
+            (space.IsActive && space.Usage == SpaceUsage.Rentable && space.IsShared == sharedOnly)
+            || (includeSpaceId.HasValue && space.Id == includeSpaceId.Value));
+
+        if (scope is { HasGlobalAccess: false })
+        {
+            var roots = scope.RootPaths.ToList();
+            query = query.Where(space =>
+                space.Id == includeSpaceId || roots.Any(root => space.Path.StartsWith(root)));
+        }
+
+        var rows = await query
+            .Select(space => new { space.Id, space.Name, space.Path, space.Area, space.IsShared })
+            .ToListAsync();
+        var names = await LoadAncestorNamesAsync(rows.Select(row => row.Path));
+
+        return rows
+            .Select(row => new LeaseSpaceOptionDto(
+                row.Id,
+                row.Name,
+                BuildNamePath(row.Path, row.Name, names),
+                row.Area,
+                row.IsShared))
+            .OrderBy(option => option.NamePath, StringComparer.CurrentCulture)
+            .ToList();
+    }
+
+    private async Task<Dictionary<int, string>> LoadAncestorNamesAsync(IEnumerable<string> paths)
+    {
+        var ids = paths
+            .SelectMany(SpaceTreePolicy.GetAncestorIds)
+            .Distinct()
+            .ToList();
+        if (ids.Count == 0) return [];
+
+        return await ctx.Spaces.AsNoTracking()
+            .Where(space => ids.Contains(space.Id))
+            .ToDictionaryAsync(space => space.Id, space => space.Name);
+    }
+
+    private static string BuildNamePath(string path, string ownName, IReadOnlyDictionary<int, string> ancestorNames)
+        => string.Join(
+            NamePathSeparator,
+            SpaceTreePolicy.GetAncestorIds(path)
+                .Where(ancestorNames.ContainsKey)
+                .Select(id => ancestorNames[id])
+                .Append(ownName));
+
     public Task<bool> HasOverlappingActiveLeaseAsync(
-        int unitId,
+        int spaceId,
         DateTime startDate,
         DateTime endDate,
         int? excludeLeaseId,
@@ -535,7 +477,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
         var start = startDate.Date;
         var end = endDate.Date;
         return _dbSet.AsNoTracking().AnyAsync(lease =>
-            lease.UnitId == unitId
+            lease.Areas.Any(area => area.SpaceId == spaceId)
             && !lease.IsDeleted
             && (lease.Status == LeaseStatus.Active
                 || lease.Status == LeaseStatus.Draft
@@ -546,38 +488,32 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             && lease.EndDate.Date >= start);
     }
 
-    public async Task<LeaseDraftEditDto?> GetDraftForEditAsync(
-        int leaseId,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+    public async Task<LeaseDraftEditDto?> GetDraftForEditAsync(int leaseId, SpaceAccessScope? scope)
     {
         var query = ApplyScope(
             _dbSet.AsNoTracking().Where(lease =>
                 lease.Id == leaseId
                 && (lease.Status == LeaseStatus.Draft
                     || lease.Status == LeaseStatus.RevisionRequested)),
-            authorizedPropertyIds,
-            authorizedUnitIds);
+            scope);
 
         var draft = await query.Select(lease => new LeaseDraftEditDto
         {
             LeaseId = lease.Id,
             LeaseNo = lease.LeaseNo,
-            UnitId = lease.UnitId,
+            SpaceId = lease.Areas.OrderBy(area => area.Id).Select(area => area.SpaceId).FirstOrDefault(),
             TenantId = lease.TenantId,
-            UnitTypeNameSnapshot = lease.UnitTypeNameSnapshot,
-            UnitTypeUsageSnapshot = lease.UnitTypeUsageSnapshot,
-            RentalModeSnapshot = lease.RentalModeSnapshot,
-            UnitAreaSnapshot = lease.UnitAreaSnapshot,
+            SpacePath = lease.Areas.OrderBy(area => area.Id).Select(area => area.SnapshotPath).FirstOrDefault() ?? string.Empty,
+            SpaceTypeNameSnapshot = lease.Areas.OrderBy(area => area.Id).Select(area => area.SnapshotTypeName).FirstOrDefault() ?? string.Empty,
+            SpaceUsageSnapshot = lease.Areas.OrderBy(area => area.Id).Select(area => area.SnapshotUsage).FirstOrDefault(),
+            SpaceAreaSnapshot = lease.Areas.OrderBy(area => area.Id).Select(area => area.SnapshotArea).FirstOrDefault(),
             StartDate = lease.StartDate,
             EndDate = lease.EndDate,
             DueDateRuleType = lease.DueDateRuleType,
             DueDay = lease.DueDay,
             Description = lease.Description,
             IsRentFree = lease.IsRentFree,
-            RentedArea = lease.LeaseArea != null ? lease.LeaseArea.RentedArea : (decimal?)null,
-            AllocatedArea = lease.LeaseArea != null ? lease.LeaseArea.AllocatedArea : (decimal?)null,
-            AllocationMode = lease.LeaseArea != null ? lease.LeaseArea.AllocationMode : (LeaseAreaMode?)null,
+            RentedArea = lease.Areas.OrderBy(area => area.Id).Select(area => (decimal?)area.RentedArea).FirstOrDefault(),
             Status = lease.Status,
             RowVersion = lease.RowVersion,
             OwnerUserId = lease.CreatedBy,
@@ -628,27 +564,22 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
         return draft;
     }
 
-    public Task<Lease?> GetForDecisionAsync(
-        int leaseId,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds = null)
+    public Task<Lease?> GetForDecisionAsync(int leaseId, SpaceAccessScope? scope)
         => ApplyScope(
                 _dbSet
-                    .Include(lease => lease.Unit)
-                    .ThenInclude(unit => unit.Property)
+                    .Include(lease => lease.Areas)
                     .Where(lease => lease.Id == leaseId
                         && (lease.Status == LeaseStatus.Draft
                             || lease.Status == LeaseStatus.RevisionRequested)),
-                authorizedPropertyIds,
-                authorizedUnitIds)
+                scope)
             .FirstOrDefaultAsync();
 
-    public Task<bool> HasOpenApplicationForUnitAsync(
-        int unitId,
+    public Task<bool> HasOpenApplicationForSpaceAsync(
+        int spaceId,
         int? excludedLeaseId = null,
         int? excludedLeaseGroupId = null)
         => _dbSet.AsNoTracking().AnyAsync(lease =>
-            lease.UnitId == unitId
+            lease.Areas.Any(area => area.SpaceId == spaceId)
             && (!excludedLeaseId.HasValue || lease.Id != excludedLeaseId.Value)
             && (!excludedLeaseGroupId.HasValue || lease.LeaseGroupId != excludedLeaseGroupId.Value)
             && (lease.Status == LeaseStatus.Draft
@@ -691,10 +622,10 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
     public Task<Lease?> GetWithActivityLogAsync(int leaseId)
         => _dbSet
             .Include(lease => lease.ActivityLog)
-            .Include(lease => lease.Unit).ThenInclude(unit => unit.UnitType)
+            .Include(lease => lease.Areas).ThenInclude(area => area.Space)
             .FirstOrDefaultAsync(lease => lease.Id == leaseId);
 
-    public async Task<DocumentOwnerContextDto?> GetDocumentOwnerContextAsync(
+    public async Task<LeaseOwnerContextDto?> GetDocumentOwnerContextAsync(
         int leaseId,
         bool tenantPortalOnly = false)
     {
@@ -705,17 +636,13 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
             .Select(lease => new
             {
                 lease.TenantId,
-                lease.UnitId,
-                lease.Unit.PropertyId
+                SpacePaths = lease.Areas.Select(area => area.Space.Path).ToList()
             })
             .FirstOrDefaultAsync();
 
         return context == null
             ? null
-            : new DocumentOwnerContextDto(
-                context.TenantId,
-                [context.PropertyId],
-                [context.UnitId]);
+            : new LeaseOwnerContextDto(context.TenantId, context.SpacePaths);
     }
 
     public Task<List<string>> GetExistingLeaseNosAsync()
@@ -729,6 +656,7 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
         => await ctx.LeaseAreas
             .AsNoTracking()
             .Where(area => area.LeaseId == leaseId)
+            .OrderBy(area => area.Id)
             .Select(area => (decimal?)area.RentedArea)
             .FirstOrDefaultAsync();
 
@@ -738,138 +666,45 @@ public class LeaseRepository(ApplicationDbContext ctx) : RepositoryBase<Lease>(c
         return await ctx.LeaseAreas
             .AsNoTracking()
             .Where(area => ids.Contains(area.LeaseId))
-            .ToDictionaryAsync(area => area.LeaseId, area => area.RentedArea);
+            .GroupBy(area => area.LeaseId)
+            .Select(group => new { LeaseId = group.Key, Rented = group.Sum(area => area.RentedArea) })
+            .ToDictionaryAsync(row => row.LeaseId, row => row.Rented);
     }
 
-    public async Task<IReadOnlyList<CapacityOccupant>> GetOpenLeaseAreasForUnitAsync(
-        int unitId,
-        DateTime start,
-        DateTime end,
-        int? excludeLeaseId)
-    {
-        var rangeStart = start.Date;
-        var rangeEnd = end.Date;
-        return await CapacityOccupantQuery.OpenForUnit(ctx, unitId)
-            .Where(lease => (!excludeLeaseId.HasValue || lease.Id != excludeLeaseId.Value)
-                && lease.StartDate.Date <= rangeEnd
-                && lease.EndDate.Date >= rangeStart)
-            .Select(CapacityOccupantQuery.Projection)
-            .ToListAsync();
-    }
-
-    public async Task<List<CapacityPlanLeaseDto>> GetOpenLeasesForCapacityPlanAsync(int unitId, DateTime fromDate)
-    {
-        var from = fromDate.Date;
-        return await CapacityOccupantQuery.OpenForUnit(ctx, unitId)
-            .Where(lease => lease.EndDate.Date >= from)
-            .OrderBy(lease => lease.Id)
-            .Select(lease => new CapacityPlanLeaseDto(
-                lease.Id,
-                lease.LeaseNo,
-                lease.Tenant.Name,
-                lease.StartDate,
-                lease.EndDate,
-                lease.Status,
-                lease.LeaseArea != null ? (decimal?)lease.LeaseArea.RentedArea : null,
-                lease.LeaseArea != null ? lease.LeaseArea.AllocatedArea : 0m,
-                lease.LeaseArea != null ? (LeaseAreaMode?)lease.LeaseArea.AllocationMode : null))
-            .ToListAsync();
-    }
-
-    public Task<List<LeaseArea>> GetTrackedLeaseAreasAsync(IReadOnlyCollection<int> leaseIds)
-        => ctx.LeaseAreas.IgnoreQueryFilters()
-            .Where(area => leaseIds.Contains(area.LeaseId) && !area.IsDeleted)
-            .ToListAsync();
-
-    public Task<LeaseArea?> GetLeaseAreaAsync(int leaseId)
-        => ctx.LeaseAreas.AsNoTracking().FirstOrDefaultAsync(area => area.LeaseId == leaseId);
-
-    public void AddLeaseAreaHistory(
-        LeaseArea area,
-        LeaseAreaMode mode,
-        DateTime effectiveFrom,
-        LeaseAreaChangeReason reason)
-        => ctx.LeaseAreaHistories.Add(new LeaseAreaHistory
-        {
-            LeaseArea = area,
-            AllocatedArea = area.AllocatedArea,
-            Mode = mode,
-            EffectiveFrom = effectiveFrom.Date,
-            Reason = reason
-        });
-
-    public async Task<IReadOnlyList<LeaseAreaHistory>> GetLeaseAreaHistoryAsync(int leaseId)
-        => await ctx.LeaseAreaHistories.AsNoTracking()
-            .Where(history => history.LeaseArea.LeaseId == leaseId && !history.IsDeleted)
-            .OrderBy(history => history.EffectiveFrom)
-            .ThenBy(history => history.CreatedAt)
-            .ThenBy(history => history.Id)
-            .ToListAsync();
-
-    public async Task<IReadOnlyList<LeaseAreaHistoryItemDto>> GetLeaseAreaHistoryItemsAsync(int leaseId)
-    {
-        var history = await GetLeaseAreaHistoryAsync(leaseId);
-        var userIds = history.Select(item => item.CreatedBy).Distinct().ToList();
-        var names = await ctx.Users.AsNoTracking()
-            .Where(user => userIds.Contains(user.Id))
-            .Select(user => new { user.Id, Name = user.AdSoyad ?? user.UserName })
-            .ToDictionaryAsync(user => user.Id, user => user.Name);
-        return history
-            .Select(item => new LeaseAreaHistoryItemDto(
-                item.EffectiveFrom,
-                item.AllocatedArea,
-                item.Mode,
-                item.Reason,
-                item.CreatedAt,
-                names.TryGetValue(item.CreatedBy, out var name) && !string.IsNullOrEmpty(name)
-                    ? name
-                    : item.CreatedBy))
-            .ToList();
-    }
-
-    public async Task<LeaseArea> UpsertLeaseAreaAsync(
+    public async Task ReplaceLeaseAreasAsync(
         int leaseId,
-        decimal rentedArea,
-        decimal allocatedArea,
-        LeaseAreaMode mode)
+        IReadOnlyCollection<(LeaseSpaceContextDto Space, decimal RentedArea)> areas)
     {
-        var area = await ctx.LeaseAreas.FirstOrDefaultAsync(item => item.LeaseId == leaseId);
-        if (area == null)
+        var existing = await ctx.LeaseAreas.Where(area => area.LeaseId == leaseId).ToListAsync();
+        var targetSpaceIds = areas.Select(item => item.Space.SpaceId).ToHashSet();
+        foreach (var removed in existing.Where(area => !targetSpaceIds.Contains(area.SpaceId)))
+            ctx.LeaseAreas.Remove(removed);
+
+        foreach (var (space, rentedArea) in areas)
         {
-            area = new LeaseArea
+            var row = existing.FirstOrDefault(area => area.SpaceId == space.SpaceId);
+            if (row == null)
             {
-                LeaseId = leaseId,
-                RentedArea = rentedArea,
-                AllocatedArea = allocatedArea,
-                AllocationMode = mode
-            };
-            ctx.LeaseAreas.Add(area);
-            return area;
+                row = new LeaseArea { LeaseId = leaseId, SpaceId = space.SpaceId };
+                ctx.LeaseAreas.Add(row);
+            }
+
+            row.RentedArea = rentedArea;
+            row.SnapshotCode = space.Code;
+            row.SnapshotName = space.Name;
+            row.SnapshotTypeName = space.TypeName;
+            row.SnapshotUsage = space.Usage;
+            row.SnapshotArea = space.Area;
+            row.SnapshotPath = space.NamePath;
         }
-
-        area.RentedArea = rentedArea;
-        area.AllocatedArea = allocatedArea;
-        area.AllocationMode = mode;
-        return area;
     }
 
-    public async Task RemoveLeaseAreaAsync(int leaseId)
+    private static IQueryable<Lease> ApplyScope(IQueryable<Lease> query, SpaceAccessScope? scope)
     {
-        var area = await ctx.LeaseAreas.FirstOrDefaultAsync(item => item.LeaseId == leaseId);
-        if (area != null) ctx.LeaseAreas.Remove(area);
-    }
+        if (scope == null || scope.HasGlobalAccess) return query;
 
-    private static IQueryable<Lease> ApplyScope(
-        IQueryable<Lease> query,
-        List<int>? authorizedPropertyIds,
-        List<int>? authorizedUnitIds)
-    {
-        if (authorizedPropertyIds == null && authorizedUnitIds == null) return query;
-
-        var propertyIds = authorizedPropertyIds ?? [];
-        var unitIds = authorizedUnitIds ?? [];
-        return query.Where(lease =>
-            propertyIds.Contains(lease.Unit.PropertyId)
-            || unitIds.Contains(lease.UnitId));
+        var roots = scope.RootPaths.ToList();
+        return query.Where(lease => lease.Areas.Any(area =>
+            roots.Any(root => area.Space.Path.StartsWith(root))));
     }
 }

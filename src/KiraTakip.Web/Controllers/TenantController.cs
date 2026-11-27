@@ -39,7 +39,7 @@ public class TenantController(
     {
         var accessScope = BuildAccessScope();
         var tenants = await tenantService.GetPagedAsync(
-            new GetPagedTenantsInput(query, accessScope.PropertyIds, accessScope.UnitIds));
+            new GetPagedTenantsInput(query, accessScope));
 
         return View(new TenantIndexViewModel
         {
@@ -61,9 +61,7 @@ public class TenantController(
         if (tenant == null)
             return permissionScopeProvider.GlobalAccess ? NotFound() : Forbid();
 
-        var leases = await leaseService.GetByTenantAsync(new GetLeasesByTenantInput(
-            id,
-            new LeaseAccessScopeInput(accessScope.PropertyIds, accessScope.UnitIds)));
+        var leases = await leaseService.GetByTenantAsync(new GetLeasesByTenantInput(id, accessScope));
 
         var depositAmounts = await leaseService.GetDepositsAsync(
             new GetLeaseDepositsInput(leases.Select(lease => lease.Id).ToList()));
@@ -73,8 +71,7 @@ public class TenantController(
                 id,
                 new DocumentAccessScopeInput(
                     [DocumentOwnerType.Tenant],
-                    accessScope.PropertyIds,
-                    accessScope.UnitIds)));
+                    Scope: accessScope)));
         var documentTypes = await documentService.GetTypesAsync(
             new GetDocumentTypesInput(DocumentOwnerType.Tenant));
 
@@ -257,7 +254,7 @@ public class TenantController(
     private static CreateTenantInput ToCreateInput(
         TenantFormViewModel viewModel,
         IReadOnlyList<TenantDocumentUploadInput> documents,
-        TenantAccessScopeInput accessScope)
+        SpaceAccessScope accessScope)
         => new(
             viewModel.TenantNo,
             viewModel.Name!,
@@ -276,7 +273,7 @@ public class TenantController(
     private static UpdateTenantInput ToUpdateInput(
         int id,
         TenantFormViewModel viewModel,
-        TenantAccessScopeInput accessScope)
+        SpaceAccessScope accessScope)
         => new(
             id,
             viewModel.TenantNo,
@@ -292,10 +289,5 @@ public class TenantController(
             viewModel.SectorId,
             accessScope);
 
-    private TenantAccessScopeInput BuildAccessScope()
-        => permissionScopeProvider.GlobalAccess
-            ? new TenantAccessScopeInput()
-            : new TenantAccessScopeInput(
-                permissionScopeProvider.AccessiblePropertyIds,
-                permissionScopeProvider.AccessibleUnitIds);
+    private SpaceAccessScope BuildAccessScope() => permissionScopeProvider.SpaceScope;
 }

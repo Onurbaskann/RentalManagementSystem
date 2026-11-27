@@ -34,44 +34,44 @@
 
 <div class="form-group">
     <label class="flex items-center gap-2 text-[13.5px] cursor-pointer">
-        <input asp-for="HasAccessToAllUnits" class="w-4 h-4 accent-primary" />
-        <span class="font-semibold">Tüm Birimlere Erişim</span>
+        <input asp-for="HasAccessToAllSpaces" class="w-4 h-4 accent-primary" />
+        <span class="font-semibold">Tüm Alanlara Erişim</span>
     </label>
-    <div class="text-muted text-[12.5px] mt-1">Kapalıysa kullanıcının erişebileceği birimleri aşağıdan seçin.</div>
+    <div class="text-muted text-[12.5px] mt-1">Kapalıysa kullanıcının erişebileceği alanları aşağıdan seçin.</div>
 </div>
 
 <div id="unitScopeOptions" class="form-group">
-    <label class="form-label">Birim Erişimi</label>
-    <span asp-validation-for="UnitIds" class="form-error block mb-2"></span>
-    @if (!Model.LeaseUnits.Any() && !Model.ReservableUnits.Any())
+    <label class="form-label">Alan Erişimi</label>
+    <span asp-validation-for="SpaceIds" class="form-error block mb-2"></span>
+    @if (!Model.LeaseSpaces.Any() && !Model.ReservableSpaces.Any())
     {
-        <div class="text-muted text-[13px]">Atanabilecek birim bulunamadı.</div>
+        <div class="text-muted text-[13px]">Atanabilecek alan bulunamadı.</div>
     }
     else
     {
         <div class="border border-[var(--color-border)] rounded-lg p-3 max-h-64 overflow-y-auto">
-            @if (Model.LeaseUnits.Any())
+            @if (Model.LeaseSpaces.Any())
             {
-                <div class="text-[12px] font-semibold text-muted mb-2">Sözleşmeli Birimler</div>
+                <div class="text-[12px] font-semibold text-muted mb-2">Sözleşmeli Alanlar</div>
                 <div class="flex flex-col gap-2 mb-4">
-                    @foreach (var unit in Model.LeaseUnits)
+                    @foreach (var unit in Model.LeaseSpaces)
                     {
                         <label class="flex items-center gap-2 text-[13.5px] cursor-pointer">
-                            <input type="checkbox" name="UnitIds" value="@unit.Id" class="unit-scope-checkbox w-4 h-4 accent-primary" @(Model.UnitIds.Contains(unit.Id) ? "checked" : null) />
-                            <span>@unit.PropertyName — @unit.Name@(unit.UnitNo != null ? " (" + unit.UnitNo + ")" : "")</span>
+                            <input type="checkbox" name="SpaceIds" value="@unit.Id" class="unit-scope-checkbox w-4 h-4 accent-primary" @(Model.SpaceIds.Contains(unit.Id) ? "checked" : null) />
+                            <span>@unit.NamePath</span>
                         </label>
                     }
                 </div>
             }
-            @if (Model.ReservableUnits.Any())
+            @if (Model.ReservableSpaces.Any())
             {
-                <div class="text-[12px] font-semibold text-muted mb-2">Rezervasyon Birimleri</div>
+                <div class="text-[12px] font-semibold text-muted mb-2">Rezervasyon Alanları</div>
                 <div class="flex flex-col gap-2">
-                    @foreach (var unit in Model.ReservableUnits)
+                    @foreach (var unit in Model.ReservableSpaces)
                     {
                         <label class="flex items-center gap-2 text-[13.5px] cursor-pointer">
-                            <input type="checkbox" name="UnitIds" value="@unit.Id" class="unit-scope-checkbox w-4 h-4 accent-primary" @(Model.UnitIds.Contains(unit.Id) ? "checked" : null) />
-                            <span>@unit.PropertyName — @unit.Name@(unit.UnitNo != null ? " (" + unit.UnitNo + ")" : "")</span>
+                            <input type="checkbox" name="SpaceIds" value="@unit.Id" class="unit-scope-checkbox w-4 h-4 accent-primary" @(Model.SpaceIds.Contains(unit.Id) ? "checked" : null) />
+                            <span>@unit.Name</span>
                         </label>
                     }
                 </div>
@@ -82,7 +82,7 @@
 
 <script>
     (() => {
-        const allUnits = document.getElementById('@Html.IdFor(model => model.HasAccessToAllUnits)');
+        const allUnits = document.getElementById('@Html.IdFor(model => model.HasAccessToAllSpaces)');
         const options = document.getElementById('unitScopeOptions');
         const updateState = () => {
             const disabled = allUnits.checked;

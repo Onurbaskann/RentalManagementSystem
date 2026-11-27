@@ -10,10 +10,11 @@ public class ChargeDetailDto
     public string? LeaseNo { get; set; }
     public int TenantId { get; set; }
     public string TenantDisplayName { get; set; } = string.Empty;
-    public int? PropertyId { get; set; }
-    public string? PropertyName { get; set; }
-    public int? UnitId { get; set; }
-    public string? UnitName { get; set; }
+    public int? SpaceId { get; set; }
+    public string? SpaceName { get; set; }
+    public string? SpacePath { get; set; }
+    // Kapsam denetimi için (tek alan → en çok bir yol).
+    public IEnumerable<string> SpacePaths => string.IsNullOrEmpty(SpacePath) ? [] : [SpacePath];
     public DateTime PeriodStart { get; set; }
     public DateTime PeriodEnd { get; set; }
     public DateTime DueDate { get; set; }

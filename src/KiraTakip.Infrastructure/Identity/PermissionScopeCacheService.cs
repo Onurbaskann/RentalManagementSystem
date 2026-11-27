@@ -4,7 +4,9 @@ using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Interfaces;
 using KiraTakip.Repositories.Interfaces.Identity;
 using KiraTakip.Services.Interfaces.Identity;
+using KiraTakip.Services.Interfaces.Spaces;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Primitives;
 
 namespace KiraTakip.Services.Identity;
 
@@ -13,6 +15,7 @@ public class PermissionScopeCacheService(
     IServiceScopeFactory scopeFactory) : IPermissionScopeCache
 {
     private static readonly TimeSpan Ttl = TimeSpan.FromMinutes(30);
+    private CancellationTokenSource _resetToken = new();
 
     public async Task<UserScopeDto> GetAsync(string userId)
     {
@@ -23,30 +26,27 @@ public class PermissionScopeCacheService(
         var userRepository = scope.ServiceProvider.GetRequiredService<IApplicationUserRepository>();
         var permissionScopeRepository = scope.ServiceProvider
             .GetRequiredService<IUserPermissionScopeRepository>();
+        var spaceScopeService = scope.ServiceProvider.GetRequiredService<ISpaceScopeService>();
         var user = await userRepository.GetScopeAccountAsync(userId);
         if (user == null)
             return new UserScopeDto { GlobalAccess = false };
 
-        UserScopeDto dto;
-        if (user.HasGlobalAccess)
+        var spaceIds = user.HasGlobalAccess
+            ? []
+            : await permissionScopeRepository.GetScopeIdsAsync(userId, ScopeType.Space);
+        var spaceScope = await spaceScopeService.BuildAsync(user.HasGlobalAccess, spaceIds);
+        var dto = new UserScopeDto
         {
-            dto = new UserScopeDto { GlobalAccess = true };
-        }
-        else
-        {
-            dto = new UserScopeDto
-            {
-                GlobalAccess = false,
-                PropertyIds = await permissionScopeRepository.GetScopeIdsAsync(
-                    userId,
-                    ScopeType.Property),
-                UnitIds = await permissionScopeRepository.GetScopeIdsAsync(
-                    userId,
-                    ScopeType.Unit)
-            };
-        }
+            GlobalAccess = spaceScope.HasGlobalAccess,
+            SpaceRootPaths = spaceScope.RootPaths
+        };
 
-        cache.Set(CacheKey(userId), dto, Ttl);
+        cache.Set(
+            CacheKey(userId),
+            dto,
+            new MemoryCacheEntryOptions()
+                .SetAbsoluteExpiration(Ttl)
+                .AddExpirationToken(new CancellationChangeToken(_resetToken.Token)));
         return dto;
     }
 
@@ -56,6 +56,13 @@ public class PermissionScopeCacheService(
     {
         foreach (var userId in userIds)
             cache.Remove(CacheKey(userId));
+    }
+
+    public void InvalidateAll()
+    {
+        var previous = Interlocked.Exchange(ref _resetToken, new CancellationTokenSource());
+        previous.Cancel();
+        previous.Dispose();
     }
 
     private static string CacheKey(string userId) => $"YetkiKapsami_{userId}";

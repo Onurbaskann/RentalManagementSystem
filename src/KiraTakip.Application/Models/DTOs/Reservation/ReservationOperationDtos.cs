@@ -2,38 +2,34 @@ using KiraTakip.Models.Enums;
 
 namespace KiraTakip.Models.Dtos.Reservation;
 
-public record ReservationAccessScopeInput(
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
-
 public record GetReservationByIdInput(
     int ReservationId,
-    ReservationAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record GetTenantReservationByIdInput(
     int ReservationId,
     int TenantId,
-    ReservationAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record GetReservationFormOptionsInput(
-    ReservationAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record CalculateReservationInput(
-    int UnitId,
+    int SpaceId,
     DateTime StartDate,
     DateTime EndDate,
-    ReservationAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record CreateReservationInput(
-    int UnitId,
+    int SpaceId,
     int TenantId,
     DateTime StartDate,
     DateTime EndDate,
     string? Description,
-    ReservationAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record CreateReservationRequestInput(
-    int UnitId,
+    int SpaceId,
     int TenantId,
     DateTime StartDate,
     DateTime EndDate,
@@ -46,12 +42,12 @@ public record CreateReservationRequestInput(
     string RequestedByUserId,
     string RequestedByDisplayName,
     string RequestedByEmailAddress,
-    ReservationAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record CancelReservationInput(
     int ReservationId,
     string Reason,
-    ReservationAccessScopeInput AccessScope,
+    SpaceAccessScope AccessScope,
     bool CanOverrideTimeRestriction = false,
     string? ActorUserId = null);
 
@@ -59,25 +55,25 @@ public record CancelTenantReservationInput(
     int ReservationId,
     int TenantId,
     string Reason,
-    ReservationAccessScopeInput AccessScope,
+    SpaceAccessScope AccessScope,
     string ActorUserId = "");
 
 public record ApproveReservationInput(
     int ReservationId,
     byte[] ExpectedRowVersion,
     string ActorUserId,
-    ReservationAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record RejectReservationInput(
     int ReservationId,
     string Reason,
     byte[] ExpectedRowVersion,
     string ActorUserId,
-    ReservationAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record UpdateReservationInput(
     int ReservationId,
-    int UnitId,
+    int SpaceId,
     int TenantId,
     DateTime StartDate,
     DateTime EndDate,
@@ -92,11 +88,11 @@ public record UpdateReservationInput(
     string ActorEmailAddress,
     bool CanOverrideTimeRestriction,
     string? OverrideReason,
-    ReservationAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record TransferReservationToChargeInput(
     int ReservationId,
-    ReservationAccessScopeInput AccessScope);
+    SpaceAccessScope AccessScope);
 
 public record ReservationAttendeePolicyInput(
     string? DisplayName,
@@ -110,19 +106,18 @@ public record ReservationContentPolicyInput(
     string? InternalNotes,
     IReadOnlyList<ReservationAttendeePolicyInput> Attendees);
 
-public record ReservationUnitContextDto(
-    int UnitId,
-    int PropertyId,
-    int UnitTypeId,
-    string UnitTypeName,
-    bool IsUnitActive,
-    bool IsUnitTypeActive,
-    UnitTypeUsage Usage);
+public record ReservationSpaceContextDto(
+    int SpaceId,
+    string Path,
+    bool IsSpaceActive,
+    SpaceUsage Usage);
+
+public record ReservationSpaceOptionDto(int Id, string Name, string Path);
 
 public record ReservationTenantOptionDto(int Id, string DisplayName);
 
 public record ReservationFormOptionsDto(
-    List<UnitListItemDto> Units,
+    List<ReservationSpaceOptionDto> Spaces,
     List<ReservationTenantOptionDto> Tenants);
 
 public class ReservationCalculationResultDto
@@ -136,6 +131,7 @@ public class ReservationCalculationResultDto
     public decimal VatRate { get; set; }
     public decimal VatAmount { get; set; }
     public decimal TotalAmount { get; set; }
+    public int? ChargeTypeId { get; set; }
     public bool HasRateRule { get; set; }
     public string? ErrorMessage { get; set; }
 }

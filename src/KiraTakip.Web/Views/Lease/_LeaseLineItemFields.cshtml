@@ -4,7 +4,7 @@
     string itemsExpr = ViewData["ItemsExpr"] as string ?? "lineItems";
     string namePrefix = ViewData["NamePrefix"] as string ?? "LeaseLineItems";
     string amountExpr = ViewData["AmountExpr"] as string ?? "amount(item)";
-    string areaExpr = ViewData["AreaExpr"] as string ?? "unitArea()";
+    string areaExpr = ViewData["AreaExpr"] as string ?? "spaceArea()";
 }
 <template x-for="(item, index) in @itemsExpr" :key="item.chargeTypeId">
     <div class="bg-slate-50/50 border border-[var(--color-border)] rounded-xl p-4"

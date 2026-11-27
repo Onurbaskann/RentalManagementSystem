@@ -9,22 +9,19 @@ public record GetTenantPanelDashboardInput(
     bool CanViewLeases,
     bool CanViewCharges,
     bool CanViewPayments,
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    SpaceAccessScope? Scope = null);
 
 public record GetTenantPanelChargeDataInput(
     int TenantId,
     DateTime Today,
     bool IncludeDebtData,
     bool IncludeMonthlyExpected,
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    SpaceAccessScope? Scope = null);
 
 public record GetTenantPanelPaymentDataInput(
     int TenantId,
     DateTime Today,
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null);
+    SpaceAccessScope? Scope = null);
 
 public record TenantPanelMonthlyTotalDto(int Year, int Month, decimal Total);
 
@@ -35,8 +32,7 @@ public record TenantPanelUpcomingChargeDataDto(
     DateTime PeriodStart,
     DateTime DueDate,
     decimal RemainingAmount,
-    string? PropertyName,
-    string? UnitName);
+    string? SpaceName);
 
 public record TenantPanelRecentPaymentDataDto(
     int PaymentId,
@@ -67,7 +63,7 @@ public record TenantPanelMonthlyCashFlowDto(
 public record TenantPanelUpcomingChargeDto(
     int ChargeId,
     string Period,
-    string UnitName,
+    string SpaceName,
     DateTime DueDate,
     int DayDifference,
     decimal RemainingAmount,
