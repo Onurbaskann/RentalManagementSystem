@@ -29,8 +29,8 @@ public record GetLeaseDepositsInput(
 public record GetLeaseSummaryInput(
     int LeaseId,
     int TenantId,
-    int UnitId,
-    decimal UnitArea,
+    int SpaceId,
+    decimal SpaceArea,
     DateTime StartDate,
     DateTime EndDate,
     LeaseStatus Status,

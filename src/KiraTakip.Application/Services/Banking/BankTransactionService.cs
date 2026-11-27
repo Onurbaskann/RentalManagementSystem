@@ -71,11 +71,7 @@ public class BankTransactionService(
             "Ödeme bulunamadı.");
 
         Guard.Forbidden(
-            IsOutsideScope(
-                payment.PropertyId,
-                payment.UnitId,
-                input.PropertyIds,
-                input.UnitIds),
+            await IsOutsideScopeAsync(input.PaymentId, input.Scope),
             "Bu ödeme için banka eşleştirmesi yapma yetkiniz bulunmuyor.");
 
         Guard.Conflict(
@@ -120,11 +116,7 @@ public class BankTransactionService(
             "Banka eşleşmesi bulunamadı.");
 
         Guard.Forbidden(
-            IsOutsideScope(
-                match.PaymentAllocation.Charge.Unit.PropertyId,
-                match.PaymentAllocation.Charge.UnitId,
-                input.PropertyIds,
-                input.UnitIds),
+            await IsOutsideScopeAsync(match.PaymentAllocationId, input.Scope),
             "Bu banka eşleşmesini kaldırma yetkiniz bulunmuyor.");
 
         var paymentId = match.PaymentAllocationId;
@@ -148,8 +140,7 @@ public class BankTransactionService(
             : await paymentAllocationRepository.GetCandidatesAsync(
                 basis,
                 GetMatchingPolicy(),
-                input.PropertyIds,
-                input.UnitIds);
+                input.Scope);
     }
 
     public async Task<List<BankTransactionListItemDto>> GetTransactionCandidatesAsync(GetBankTransactionCandidatesInput input)
@@ -165,17 +156,12 @@ public class BankTransactionService(
                 GetMatchingPolicy());
     }
 
-    private static bool IsOutsideScope(
-        int propertyId,
-        int unitId,
-        IReadOnlyCollection<int>? propertyIds,
-        IReadOnlyCollection<int>? unitIds)
+    private async Task<bool> IsOutsideScopeAsync(int paymentId, SpaceAccessScope? scope)
     {
-        if (propertyIds == null && unitIds == null)
+        if (scope == null || scope.HasGlobalAccess)
             return false;
 
-        return propertyIds?.Contains(propertyId) != true
-            && unitIds?.Contains(unitId) != true;
+        return await paymentAllocationRepository.GetDetailsAsync(paymentId, scope) == null;
     }
 
     private PaymentMatchingPolicyDto GetMatchingPolicy()

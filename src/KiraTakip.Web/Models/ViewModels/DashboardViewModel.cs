@@ -6,21 +6,16 @@ public class DashboardViewModel
     public string UserRole { get; set; } = string.Empty;
     public string DateLabel { get; set; } = string.Empty;
 
-    public int TotalProperties { get; set; }
-    public Dictionary<string, int> PropertyTypeDistribution { get; set; } = [];
-    public int TotalUnits { get; set; }
-    public int RentedUnits { get; set; }
-    public int VacantUnits { get; set; }
-    public int ExpiringLeaseUnits { get; set; }
-    public int PartiallyLeasedUnits { get; set; }
-    public int TotalCapacity { get; set; }
-    public int OccupiedCapacity { get; set; }
+    public int TotalRootSpaces { get; set; }
+    public int RentableSpaces { get; set; }
+    public int LeasedSpaces { get; set; }
+    public int VacantSpaces { get; set; }
     public int ActiveLeases { get; set; }
     public int RenewalsThisMonth { get; set; }
     public decimal TotalMonthlyRevenue { get; set; }
     public decimal ProjectedAnnualRevenue { get; set; }
     public List<ExpiringLeaseSummary> ExpiringLeases { get; set; } = [];
-    public List<VacantUnitSummary> VacantUnitSummaries { get; set; } = [];
+    public List<VacantSpaceSummary> VacantSpaceSummaries { get; set; } = [];
 
     public bool HasPaymentAccess { get; set; }
     public decimal ExpectedCollectionThisMonth { get; set; }
@@ -38,7 +33,7 @@ public class DashboardViewModel
     public decimal MonthlyRevenueCollectionRate { get; set; }
     public int ChargesDueTodayCount { get; set; }
     public decimal ChargesDueTodayAmount { get; set; }
-    public List<DashboardPropertyRevenue> TopRevenueProperties { get; set; } = [];
+    public List<DashboardRootSpaceRevenue> TopRevenueRootSpaces { get; set; } = [];
     public List<DashboardTenantRevenue> TopRevenueTenants { get; set; } = [];
     public List<DashboardStoreRevenue> TopRevenueStores { get; set; } = [];
     public List<DashboardRiskyTenant> RiskyTenants { get; set; } = [];
@@ -53,22 +48,21 @@ public class DashboardViewModel
     public DashboardRevenueTrendSet RevenueTrendManual { get; set; } = new();
     public DashboardRevenueTrendSet RevenueTrendReservation { get; set; } = new();
 
-    // Doluluk Dağılımı — taşınmaz bazlı + m² karşılaştırması
-    public List<DashboardPropertyOccupancy> PropertyOccupancies { get; set; } = [];
+    // Doluluk Dağılımı — kök alan bazlı: kiralanabilir alan / aktif sözleşmeli alan
+    public List<DashboardSpaceOccupancy> SpaceOccupancies { get; set; } = [];
     public decimal OccupancyCountRate { get; set; }
-    public decimal OccupancyAreaRate { get; set; }
 
     // Süresi Dolmak Üzere — durum özeti + süre özeti
     public Dictionary<string, int> LeaseStatusDistribution { get; set; } = [];
     public double AverageLeaseDurationMonths { get; set; }
 }
 
-public class DashboardPropertyRevenue
+public class DashboardRootSpaceRevenue
 {
-    public int PropertyId { get; set; }
-    public string PropertyName { get; set; } = string.Empty;
+    public int RootSpaceId { get; set; }
+    public string RootSpaceName { get; set; } = string.Empty;
     public decimal TotalCollected { get; set; }
-    public int UnitCount { get; set; }
+    public int RentableSpaceCount { get; set; }
 }
 
 public class DashboardTenantRevenue
@@ -116,32 +110,27 @@ public class DashboardRevenueTrendSet
     public List<DashboardMonthlyRevenueTrendRow> Months12 { get; set; } = [];
 }
 
-public class DashboardPropertyOccupancy
+public class DashboardSpaceOccupancy
 {
-    public int PropertyId { get; set; }
-    public string PropertyName { get; set; } = string.Empty;
-    public int UnitCount { get; set; }
-    public int LeasedUnitCount { get; set; }
-    public int ExpiringSoonUnitCount { get; set; }
-    public int VacantUnitCount { get; set; }
-    public int PartiallyLeasedUnitCount { get; set; }
+    public int RootSpaceId { get; set; }
+    public string RootSpaceName { get; set; } = string.Empty;
+    public int RentableSpaceCount { get; set; }
+    public int LeasedSpaceCount { get; set; }
 }
 
 public class ExpiringLeaseSummary
 {
     public int LeaseId { get; set; }
     public string TenantName { get; set; } = string.Empty;
-    public string PropertyName { get; set; } = string.Empty;
-    public string UnitName { get; set; } = string.Empty;
+    public string SpaceName { get; set; } = string.Empty;
     public int RemainingDays { get; set; }
     public DateTime EndDate { get; set; }
 }
 
-public class VacantUnitSummary
+public class VacantSpaceSummary
 {
-    public int UnitId { get; set; }
-    public string PropertyName { get; set; } = string.Empty;
-    public string UnitName { get; set; } = string.Empty;
-    public string District { get; set; } = string.Empty;
+    public int SpaceId { get; set; }
+    public string RootSpaceName { get; set; } = string.Empty;
+    public string SpaceName { get; set; } = string.Empty;
     public decimal Area { get; set; }
 }

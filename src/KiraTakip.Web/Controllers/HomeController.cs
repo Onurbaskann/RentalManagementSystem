@@ -9,14 +9,14 @@ using KiraTakip.Services.Interfaces.Charges;
 using KiraTakip.Services.Interfaces.Identity;
 using KiraTakip.Services.Interfaces.Leases;
 using KiraTakip.Services.Interfaces.Payments;
-using KiraTakip.Services.Interfaces.Properties;
 using KiraTakip.Services.Interfaces.Reservations;
+using KiraTakip.Services.Interfaces.Spaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using System.Globalization;
-using KiraTakip.Models.Dtos.Property;
+using KiraTakip.Models.Dtos.Space;
 using KiraTakip.Models.Dtos.Lease;
 using KiraTakip.Models.Dtos.Charge;
 using KiraTakip.Models.Dtos.Payment;
@@ -27,7 +27,7 @@ namespace KiraTakip.Web.Controllers;
 
 [Authorize]
 public class HomeController(
-    IPropertyService propertyService,
+    ISpaceService spaceService,
     ILeaseService leaseService,
     IChargeService chargeService,
     IPaymentService paymentService,
@@ -52,16 +52,11 @@ public class HomeController(
         var now = DateTime.Now;
         var today = DateTime.Today;
         var turkishCulture = CultureInfo.GetCultureInfo("tr-TR");
-        var scope = await permissionScopeCache.GetAsync(currentUser.Id);
-        var propertyIds = scope.GlobalAccess ? null : scope.PropertyIds;
-        var unitIds = scope.GlobalAccess ? null : scope.UnitIds;
+        var scopeDto = await permissionScopeCache.GetAsync(currentUser.Id);
+        var scope = new SpaceAccessScope(scopeDto.GlobalAccess, scopeDto.SpaceRootPaths);
 
-        var properties = await propertyService.GetAllAsync(
-            new GetPropertiesInput(propertyIds, unitIds));
-        var leases = await leaseService.GetAllAsync(
-            new GetLeasesInput(PropertyIds: propertyIds, UnitIds: unitIds));
-        var availableUnits = await propertyService.GetAvailableUnitsAsync(
-            new GetAvailableUnitsInput(propertyIds, unitIds));
+        var roots = await spaceService.GetRootsAsync(scope);
+        var leases = await leaseService.GetAllAsync(new GetLeasesInput(Scope: scope));
 
         var activeLeases = leases.Where(lease => lease.IsActive).ToList();
         decimal totalMonthlyRevenue = 0m;
@@ -77,47 +72,57 @@ public class HomeController(
             UserName = currentUser.AdSoyad ?? currentUser.Email ?? "Kullanıcı",
             UserRole = role,
             DateLabel = today.ToString("d MMMM yyyy, dddd", turkishCulture),
-            TotalProperties = properties.Count,
-            PropertyTypeDistribution = properties
-                .GroupBy(property => string.IsNullOrEmpty(property.PropertyTypeName) ? "Diğer" : property.PropertyTypeName)
-                .ToDictionary(group => group.Key, group => group.Count()),
-            TotalUnits = properties.Sum(property => property.UnitCount),
-            RentedUnits = properties.Sum(property => property.LeasedUnitCount),
-            VacantUnits = properties.Sum(property => property.VacantUnitCount),
-            ExpiringLeaseUnits = properties.Sum(property => property.ExpiringSoonUnitCount),
-            PartiallyLeasedUnits = properties.Sum(property => property.PartiallyLeasedUnitCount),
-            TotalCapacity = properties.Sum(property => property.TotalCapacity),
-            OccupiedCapacity = properties.Sum(property => property.OccupiedCapacity),
+            TotalRootSpaces = roots.Count,
             ActiveLeases = activeLeases.Count,
             ActiveTenantCount = activeLeases.Select(lease => lease.TenantId).Distinct().Count(),
             TotalMonthlyRevenue = totalMonthlyRevenue,
             ProjectedAnnualRevenue = totalMonthlyRevenue * 12,
         };
 
-        // Doluluk Dağılımı — taşınmaz bazlı kırılım + adet/m² karşılaştırması
-        viewModel.PropertyOccupancies = properties
-            .Select(property => new DashboardPropertyOccupancy
+        // Doluluk Dağılımı — kök alan başına kiralanabilir alan sayısı / aktif sözleşmeli alan sayısı
+        var leasedSpaceIds = activeLeases
+            .Where(lease => lease.SpaceId > 0)
+            .Select(lease => lease.SpaceId)
+            .ToHashSet();
+        var openApplicationSpaceIds = leases
+            .Where(lease => lease.Status is LeaseStatus.Draft or LeaseStatus.RevisionRequested && lease.SpaceId > 0)
+            .Select(lease => lease.SpaceId)
+            .ToHashSet();
+        var vacantSpaces = new List<VacantSpaceSummary>();
+        var rentableCountsByRoot = new Dictionary<int, int>();
+        foreach (var root in roots)
+        {
+            var tree = await spaceService.GetTreeAsync(root.Id, scope);
+            var rentableNodes = FlattenTree(tree)
+                .Where(node => node.IsActive && node.Usage == SpaceUsage.Rentable)
+                .ToList();
+            var leasedCount = rentableNodes.Count(node => leasedSpaceIds.Contains(node.Id));
+            rentableCountsByRoot[root.Id] = rentableNodes.Count;
+            viewModel.SpaceOccupancies.Add(new DashboardSpaceOccupancy
             {
-                PropertyId = property.Id,
-                PropertyName = property.Name,
-                UnitCount = property.UnitCount,
-                LeasedUnitCount = property.LeasedUnitCount,
-                ExpiringSoonUnitCount = property.ExpiringSoonUnitCount,
-                VacantUnitCount = property.VacantUnitCount,
-                PartiallyLeasedUnitCount = property.PartiallyLeasedUnitCount
-            })
-            .OrderByDescending(property => property.UnitCount)
+                RootSpaceId = root.Id,
+                RootSpaceName = root.Name,
+                RentableSpaceCount = rentableNodes.Count,
+                LeasedSpaceCount = leasedCount
+            });
+            vacantSpaces.AddRange(rentableNodes
+                .Where(node => !leasedSpaceIds.Contains(node.Id) && !openApplicationSpaceIds.Contains(node.Id))
+                .Select(node => new VacantSpaceSummary
+                {
+                    SpaceId = node.Id,
+                    RootSpaceName = root.Name,
+                    SpaceName = node.Name,
+                    Area = node.Area
+                }));
+        }
+        viewModel.SpaceOccupancies = viewModel.SpaceOccupancies
+            .OrderByDescending(occupancy => occupancy.RentableSpaceCount)
             .ToList();
-
-        var occupiedUnitEquivalent = properties.Sum(property => property.OccupiedUnitEquivalent);
-        viewModel.OccupancyCountRate = viewModel.TotalUnits > 0
-            ? Math.Round(occupiedUnitEquivalent / viewModel.TotalUnits * 100m, 1)
-            : 0m;
-
-        var totalLeasedArea = properties.Sum(property => property.LeasedUnitArea);
-        var totalTrackedArea = totalLeasedArea + properties.Sum(property => property.VacantUnitArea);
-        viewModel.OccupancyAreaRate = totalTrackedArea > 0
-            ? Math.Round(totalLeasedArea / totalTrackedArea * 100m, 1)
+        viewModel.RentableSpaces = viewModel.SpaceOccupancies.Sum(occupancy => occupancy.RentableSpaceCount);
+        viewModel.LeasedSpaces = viewModel.SpaceOccupancies.Sum(occupancy => occupancy.LeasedSpaceCount);
+        viewModel.VacantSpaces = viewModel.RentableSpaces - viewModel.LeasedSpaces;
+        viewModel.OccupancyCountRate = viewModel.RentableSpaces > 0
+            ? Math.Round((decimal)viewModel.LeasedSpaces / viewModel.RentableSpaces * 100m, 1)
             : 0m;
 
         // Süresi Dolmak Üzere — durum özeti + ortalama süre özeti
@@ -150,30 +155,18 @@ public class HomeController(
             {
                 LeaseId = lease.Id,
                 TenantName = lease.TenantDisplayName,
-                PropertyName = lease.PropertyName,
-                UnitName = lease.UnitName,
+                SpaceName = lease.SpaceName,
                 RemainingDays = lease.RemainingDays,
                 EndDate = lease.EndDate
             }).ToList();
 
-        viewModel.VacantUnitSummaries = availableUnits
-            .Take(5)
-            .Select(unit => new VacantUnitSummary
-            {
-                UnitId = unit.Id,
-                PropertyName = unit.PropertyName,
-                UnitName = unit.Name,
-                District = unit.District,
-                Area = unit.Area
-            }).ToList();
+        viewModel.VacantSpaceSummaries = vacantSpaces.Take(5).ToList();
 
         if (await permissionService.HasModuleAccessAsync(PermissionCatalog.Payment.Module))
         {
             viewModel.HasPaymentAccess = true;
             await chargeService.UpdateDelaysAsync();
-            var charges = await chargeService.GetListAsync(new GetChargesInput(
-                PropertyIds: propertyIds,
-                UnitIds: unitIds));
+            var charges = await chargeService.GetListAsync(new GetChargesInput(Scope: scope));
             var chargesThisMonth = charges
                 .Where(charge => charge.PeriodStart.Year == now.Year && charge.PeriodStart.Month == now.Month)
                 .ToList();
@@ -185,9 +178,7 @@ public class HomeController(
                 .Where(charge => charge.Status == ChargeStatus.Overdue)
                 .Sum(charge => charge.TotalAmount - charge.PaidAmount);
 
-            var payments = await paymentService.GetAllAsync(new GetPaymentsInput(
-                PropertyIds: propertyIds,
-                UnitIds: unitIds));
+            var payments = await paymentService.GetAllAsync(new GetPaymentsInput(Scope: scope));
             viewModel.PendingPaymentApprovalCount = payments.Count(payment => payment.Status == PaymentStatus.PendingApproval);
 
             var unmatchedTransactions = await bankTransactionService.GetAllAsync(
@@ -202,7 +193,7 @@ public class HomeController(
                 .Sum(charge => charge.TotalAmount);
 
             var reservations = await reservationService.GetAllAsync(
-                new GetReservationsInput(propertyIds, unitIds));
+                new GetReservationsInput(scope));
             viewModel.UntransferredReservationCount = reservations
                 .Count(reservation => reservation.Status == ReservationStatus.Confirmed
                     && reservation.TotalAmount > 0
@@ -303,24 +294,24 @@ public class HomeController(
             viewModel.ChargesDueTodayCount = chargesDueToday.Count;
             viewModel.ChargesDueTodayAmount = chargesDueToday.Sum(charge => charge.TotalAmount - charge.PaidAmount);
 
-            // Top 5 gelir getiren taşınmaz (son 12 ay charge dönemleri, ödenen tutara göre)
+            // Top 5 gelir getiren kök alan (son 12 ay charge dönemleri, ödenen tutara göre)
             var lastYear = today.AddYears(-1);
-            var unitCountsByProperty = properties.ToDictionary(property => property.Id, property => property.UnitCount);
-            viewModel.TopRevenueProperties = charges
-                .Where(charge => charge.PeriodStart >= lastYear && charge.PropertyId != null && charge.PaidAmount > 0)
-                .GroupBy(charge => new
+            var rootNamesById = roots.ToDictionary(root => root.Id, root => root.Name);
+            viewModel.TopRevenueRootSpaces = charges
+                .Where(charge => charge.PeriodStart >= lastYear && charge.PaidAmount > 0 && !string.IsNullOrEmpty(charge.SpacePath))
+                .Select(charge => (Charge: charge, RootId: roots
+                    .Select(root => root.Id)
+                    .FirstOrDefault(rootId => charge.SpacePath!.Contains($"/{rootId}/"))))
+                .Where(item => item.RootId != 0)
+                .GroupBy(item => item.RootId)
+                .Select(group => new DashboardRootSpaceRevenue
                 {
-                    PropertyId = charge.PropertyId!.Value,
-                    PropertyName = charge.PropertyName ?? "—"
+                    RootSpaceId = group.Key,
+                    RootSpaceName = rootNamesById[group.Key],
+                    TotalCollected = group.Sum(item => item.Charge.PaidAmount),
+                    RentableSpaceCount = rentableCountsByRoot.TryGetValue(group.Key, out var rentableCount) ? rentableCount : 0
                 })
-                .Select(group => new DashboardPropertyRevenue
-                {
-                    PropertyId = group.Key.PropertyId,
-                    PropertyName = group.Key.PropertyName,
-                    TotalCollected = group.Sum(charge => charge.PaidAmount),
-                    UnitCount = unitCountsByProperty.TryGetValue(group.Key.PropertyId, out var unitCount) ? unitCount : 0
-                })
-                .OrderByDescending(property => property.TotalCollected)
+                .OrderByDescending(root => root.TotalCollected)
                 .Take(5)
                 .ToList();
 
@@ -372,6 +363,14 @@ public class HomeController(
         }
 
         return View(viewModel);
+    }
+
+    private static IEnumerable<SpaceTreeNodeDto> FlattenTree(SpaceTreeNodeDto node)
+    {
+        yield return node;
+        foreach (var child in node.Children)
+            foreach (var descendant in FlattenTree(child))
+                yield return descendant;
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

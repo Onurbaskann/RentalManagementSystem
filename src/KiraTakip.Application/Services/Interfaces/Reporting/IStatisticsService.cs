@@ -6,12 +6,10 @@ namespace KiraTakip.Services.Interfaces.Reporting;
 
 public interface IStatisticsService
 {
-    OccupancyStatus GetUnitStatus(Unit unit);
-    Lease? GetActiveLease(Unit unit);
     bool IsActive(Lease lease);
     Task<decimal> GetMonthlyAmountAsync(Lease lease);
     // Toplu hali — GetMonthlyAmountAsync(Lease) ile aynı hesaplama, çok sayıda sözleşme için N+1
-    // sorgu yerine tek seferde bulk-resolve eder (ör. Property/Details). Anahtar: Lease.Id.
+    // sorgu yerine tek seferde bulk-resolve eder (ör. alan detayı). Anahtar: Lease.Id.
     Task<Dictionary<int, decimal>> GetMonthlyAmountsAsync(IReadOnlyCollection<Lease> leases);
     Task<decimal> GetAnnualAmountAsync(Lease lease);
     Task<LeaseSummaryDto> GetLeaseSummaryAsync(GetLeaseSummaryInput input);

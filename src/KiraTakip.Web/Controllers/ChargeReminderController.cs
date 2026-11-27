@@ -19,7 +19,7 @@ public class ChargeReminderController(
     [Authorize(Policy = PermissionCatalog.Notification.BorcHatirlatma)]
     public async Task<IActionResult> SendDebtorEmails()
     {
-        await chargeReminderService.SendDebtRemindersAsync(permissionScopeProvider.SpaceScope);
+        await chargeReminderService.SendDebtRemindersAsync(new ChargeReminderScopeInput(permissionScopeProvider.SpaceScope));
         return RedirectToAction(nameof(LeaseController.Index), "Lease");
     }
 }

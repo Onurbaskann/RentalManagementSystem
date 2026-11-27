@@ -1,5 +1,6 @@
 using KiraTakip.Infrastructure.Exceptions;
 using KiraTakip.Models.Dtos;
+using KiraTakip.Models.Entities;
 using KiraTakip.Models.Enums;
 using KiraTakip.Repositories.Interfaces.Charges;
 using KiraTakip.Repositories.Interfaces.Leases;
@@ -18,28 +19,8 @@ public class StatisticsService(
     IBatchRateResolver batchRateResolver,
     IOperationalPolicyProvider operationalPolicyProvider) : IStatisticsService
 {
-    public OccupancyStatus GetUnitStatus(Unit unit)
-    {
-        var activeLease = unit.Leases
-            .Where(lease => LeaseSchedulePolicy.IsActive(lease.Status, lease.StartDate, lease.EndDate, DateTime.Now))
-            .OrderByDescending(lease => lease.EndDate)
-            .FirstOrDefault();
-
-        var remainingDays = activeLease != null
-            ? LeaseSchedulePolicy.GetRemainingDays(activeLease.EndDate, DateTime.Now)
-            : 0;
-
-        return LeaseOccupancyPolicy.DetermineStatus(
-            activeLease != null,
-            remainingDays,
-            operationalPolicyProvider.Current.LeaseExpiringSoonStatusDays);
-    }
-
-    public Lease? GetActiveLease(Unit unit)
-        => unit.Leases
-            .Where(lease => LeaseSchedulePolicy.IsActive(lease.Status, lease.StartDate, lease.EndDate, DateTime.Now))
-            .OrderByDescending(lease => lease.EndDate)
-            .FirstOrDefault();
+    private static LeaseArea? GetPrimaryArea(Lease lease)
+        => lease.Areas.OrderBy(area => area.Id).FirstOrDefault();
 
     public bool IsActive(Lease lease)
         => LeaseSchedulePolicy.IsActive(lease.Status, lease.StartDate, lease.EndDate, DateTime.Now);
@@ -48,8 +29,8 @@ public class StatisticsService(
         => await GetMonthlyAmountAsync(
             lease.Id,
             lease.TenantId,
-            lease.UnitId,
-            lease.Unit?.Area ?? 0m,
+            GetPrimaryArea(lease)?.SpaceId ?? 0,
+            GetPrimaryArea(lease)?.Space?.Area ?? 0m,
             DateTime.Today,
             lease.IsRentFree);
 
@@ -70,7 +51,7 @@ public class StatisticsService(
             foreach (var chargeType in monthlyFixedTypes)
             {
                 if (!LeaseBillingPolicy.ShouldIncludeChargeType(lease.IsRentFree, chargeType.Code)) continue;
-                requests.Add(new RateResolutionRequest(lease.Id, lease.TenantId, lease.UnitId, chargeType.Id, period));
+                requests.Add(new RateResolutionRequest(lease.Id, lease.TenantId, GetPrimaryArea(lease)?.SpaceId ?? 0, chargeType.Id, period));
             }
         }
 
@@ -80,7 +61,7 @@ public class StatisticsService(
         foreach (var lease in leases)
         {
             decimal total = 0m;
-            var area = lease.Unit?.Area ?? 0m;
+            var area = GetPrimaryArea(lease)?.Space?.Area ?? 0m;
             decimal? rentedArea = rentedAreas.TryGetValue(lease.Id, out var rented) ? rented : null;
             foreach (var chargeType in monthlyFixedTypes)
             {
@@ -103,14 +84,14 @@ public class StatisticsService(
         var monthlyAmount = await GetMonthlyAmountAsync(
             input.LeaseId,
             input.TenantId,
-            input.UnitId,
-            input.UnitArea,
+            input.SpaceId,
+            input.SpaceArea,
             input.CurrentTime.Date,
             input.IsRentFree);
         var isActive = LeaseSchedulePolicy.IsActive(input.Status, input.StartDate, input.EndDate, input.CurrentTime);
         var remainingDays = LeaseSchedulePolicy.GetRemainingDays(input.EndDate, input.CurrentTime);
         var durationPercentage = LeaseSchedulePolicy.GetDurationPercentage(input.StartDate, input.EndDate, input.CurrentTime);
-        var unitStatus = LeaseOccupancyPolicy.DetermineStatus(
+        var spaceStatus = LeaseOccupancyPolicy.DetermineStatus(
             isActive,
             remainingDays,
             operationalPolicyProvider.Current.LeaseExpiringSoonStatusDays);
@@ -121,13 +102,13 @@ public class StatisticsService(
             monthlyAmount * 12,
             isActive,
             durationPercentage,
-            unitStatus);
+            spaceStatus);
     }
 
     private async Task<decimal> GetMonthlyAmountAsync(
         int leaseId,
         int tenantId,
-        int unitId,
+        int spaceId,
         decimal area,
         DateTime period,
         bool isRentFree)
@@ -145,7 +126,7 @@ public class StatisticsService(
             var snapshot = await rateResolver.ResolveAsync(
                 leaseId,
                 tenantId,
-                unitId,
+                spaceId,
                 chargeType.Id,
                 period);
             if (snapshot == null) continue;

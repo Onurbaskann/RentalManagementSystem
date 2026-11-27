@@ -93,7 +93,7 @@ public record SpaceLinkedDefinitions(
     List<SpaceAttributeValue> AttributeValues,
     List<SpaceRate> Rates,
     List<ReservationRateOverride> ReservationRules,
-    List<PaymentStoreRouting> PaymentRoutings);
+    List<KiraTakip.Models.Entities.PaymentStoreRouting> PaymentRoutings);
 
 public enum SpaceTypeDeleteResult { Deleted = 1, Deactivated = 2 }
 

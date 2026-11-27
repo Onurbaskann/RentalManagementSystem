@@ -38,8 +38,7 @@ public class ChargeReminderService(
         var debts = await chargeRepository.GetPendingReminderChargesAsync(
             new GetPendingChargeRemindersInput(
                 dueDateLimit,
-                input.PropertyIds,
-                input.UnitIds),
+                input.Scope),
             cancellationToken);
 
         return debts.GroupBy(charge => charge.TenantId).Count();
@@ -64,8 +63,7 @@ public class ChargeReminderService(
         var debts = await chargeRepository.GetPendingReminderChargesAsync(
             new GetPendingChargeRemindersInput(
                 dueDateLimit,
-                input.PropertyIds,
-                input.UnitIds),
+                input.Scope),
             cancellationToken);
         var groups = debts.GroupBy(charge => charge.TenantId).ToList();
 
@@ -105,8 +103,7 @@ public class ChargeReminderService(
                 Email = tenant.Email,
                 Debts = group.OrderBy(charge => charge.DueDate).Select(charge => new DebtReminderLineViewModel
                 {
-                    PropertyName = charge.Unit.Property.Name,
-                    UnitName = charge.Unit.Name,
+                    SpaceName = charge.Space?.Name ?? string.Empty,
                     PeriodStart = charge.PeriodStart,
                     DueDate = charge.DueDate,
                     TotalAmount = charge.TotalAmount,

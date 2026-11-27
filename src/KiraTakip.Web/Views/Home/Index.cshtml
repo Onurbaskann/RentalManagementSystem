@@ -2,13 +2,10 @@
 @{
     ViewData["Title"] = "Ana Sayfa";
     ViewData["UseCentralFeedback"] = true;
-    int totalUnits = Model.RentedUnits + Model.VacantUnits + Model.ExpiringLeaseUnits + Model.PartiallyLeasedUnits;
-    double rentedPercentage = totalUnits > 0 ? (double)Model.RentedUnits / totalUnits * 100 : 0;
-    double expiringPercentage = totalUnits > 0 ? (double)Model.ExpiringLeaseUnits / totalUnits * 100 : 0;
-    double partialPercentage = totalUnits > 0 ? (double)Model.PartiallyLeasedUnits / totalUnits * 100 : 0;
-    double vacantPercentage = totalUnits > 0 ? (double)Model.VacantUnits / totalUnits * 100 : 0;
+    double leasedPercentage = Model.RentableSpaces > 0 ? (double)Model.LeasedSpaces / Model.RentableSpaces * 100 : 0;
+    double vacantPercentage = Model.RentableSpaces > 0 ? (double)Model.VacantSpaces / Model.RentableSpaces * 100 : 0;
 
-    bool hasPropertyAccess = await PermissionService.HasModuleAccessAsync(PermissionCatalog.Property.Module);
+    bool hasSpaceAccess = await PermissionService.HasModuleAccessAsync(PermissionCatalog.Space.Module);
     bool hasLeaseAccess = await PermissionService.HasModuleAccessAsync(PermissionCatalog.Lease.Module);
     bool hasPaymentAccess = await PermissionService.HasModuleAccessAsync(PermissionCatalog.Payment.Module);
     bool hasChargeAccess = await PermissionService.HasModuleAccessAsync(PermissionCatalog.Charge.Module);
@@ -96,42 +93,35 @@
 
 
 <!-- ─── §3.2 GENEL BAKIŞ ─── -->
-@if (hasPropertyAccess || hasLeaseAccess || hasPaymentAccess)
+@if (hasSpaceAccess || hasLeaseAccess || hasPaymentAccess)
 {
     <div class="section-label">Genel Bakış</div>
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
 
-        @if (hasPropertyAccess)
+        @if (hasSpaceAccess)
         {
         <div class="card lg:col-span-2">
-            <div class="stat-rail-label">Toplam Taşınmaz</div>
-            <div class="stat-rail-value" data-countup="@Model.TotalProperties" data-decimals="0">0</div>
-            <div class="stat-rail-sub truncate">@string.Join(", ", Model.PropertyTypeDistribution.Select(kv => $"{kv.Value} {kv.Key}"))</div>
+            <div class="stat-rail-label">Kök Alan</div>
+            <div class="stat-rail-value" data-countup="@Model.TotalRootSpaces" data-decimals="0">0</div>
+            <div class="stat-rail-sub truncate">@Model.RentableSpaces kiralanabilir alan</div>
 
-            @if (Model.PropertyOccupancies.Any())
+            @if (Model.SpaceOccupancies.Any())
             {
-                var propertyPages = Model.PropertyOccupancies.Chunk(4).ToList();
+                var propertyPages = Model.SpaceOccupancies.Chunk(4).ToList();
                 <div class="mt-4" x-data="{ propertySayfa: 0 }">
                     @for (int pageIndex = 0; pageIndex < propertyPages.Count; pageIndex++)
                     {
                         <div class="space-y-2" x-show="propertySayfa === @pageIndex" x-cloak>
-                            @foreach (var propertyOccupancy in propertyPages[pageIndex])
+                            @foreach (var spaceOccupancy in propertyPages[pageIndex])
                             {
-                                var propUnitTotal = propertyOccupancy.UnitCount;
-                                var propLeasedPct = propUnitTotal > 0 ? (double)propertyOccupancy.LeasedUnitCount / propUnitTotal * 100 : 0;
-                                var propExpiringPct = propUnitTotal > 0 ? (double)propertyOccupancy.ExpiringSoonUnitCount / propUnitTotal * 100 : 0;
-                                var propPartialPct = propUnitTotal > 0 ? (double)propertyOccupancy.PartiallyLeasedUnitCount / propUnitTotal * 100 : 0;
-                                var propVacantPct = propUnitTotal > 0 ? (double)propertyOccupancy.VacantUnitCount / propUnitTotal * 100 : 0;
+                                var spaceLeasedPct = spaceOccupancy.RentableSpaceCount > 0 ? (double)spaceOccupancy.LeasedSpaceCount / spaceOccupancy.RentableSpaceCount * 100 : 0;
                                 <div>
                                     <div class="flex items-center justify-between text-[11px] text-slate-600 mb-1">
-                                        <span class="truncate">@propertyOccupancy.PropertyName</span>
-                                        <span class="text-muted shrink-0 ml-2">@propertyOccupancy.UnitCount birim</span>
+                                        <span class="truncate">@spaceOccupancy.RootSpaceName</span>
+                                        <span class="text-muted shrink-0 ml-2">@spaceOccupancy.LeasedSpaceCount / @spaceOccupancy.RentableSpaceCount alan</span>
                                     </div>
                                     <div class="h-1.5 rounded-full overflow-hidden bg-slate-100 flex">
-                                        <div class="h-full bg-emerald-500" style="width:@propLeasedPct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
-                                        <div class="h-full bg-sky-500" style="width:@propPartialPct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
-                                        <div class="h-full bg-amber-500" style="width:@propExpiringPct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
-                                        <div class="h-full bg-slate-400" style="width:@propVacantPct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                                        <div class="h-full bg-emerald-500" style="width:@spaceLeasedPct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
                                     </div>
                                 </div>
                             }
@@ -157,16 +147,9 @@
             }
 
             <div class="mt-3 pt-2 border-t border-[var(--color-border)] flex items-center justify-between text-[11px] text-slate-500">
-                <span>Toplam @Model.TotalUnits birim</span>
-                <span class="font-semibold text-slate-700">Doluluk %@Model.OccupancyCountRate.ToString("F0") · m² %@Model.OccupancyAreaRate.ToString("F0")</span>
+                <span>Kiralanabilir @Model.RentableSpaces alan</span>
+                <span class="font-semibold text-slate-700">Doluluk %@Model.OccupancyCountRate.ToString("F0")</span>
             </div>
-            @if (Model.TotalCapacity > 0)
-            {
-                <div class="mt-1 flex items-center justify-between text-[11px] text-slate-500">
-                    <span>Kontenjan</span>
-                    <span class="font-semibold text-slate-700">@Model.OccupiedCapacity / @Model.TotalCapacity</span>
-                </div>
-            }
         </div>
         }
 
@@ -312,7 +295,7 @@
 
 
 <!-- ─── §3.5 GRAFİK PANELİ ─── -->
-@if (hasPaymentAccess || hasPropertyAccess)
+@if (hasPaymentAccess || hasSpaceAccess)
 {
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
 
@@ -371,40 +354,32 @@
     }
 
     <!-- Doluluk Donut -->
-    @if (hasPropertyAccess)
+    @if (hasSpaceAccess)
     {
     <div class="card lg:col-span-1">
         <div class="section-title mb-1">Doluluk Dağılımı</div>
-        <div class="text-xs text-muted mb-4">Birim bazında</div>
-        @if (Model.TotalUnits > 0)
+        <div class="text-xs text-muted mb-4">Kiralanabilir alan bazında</div>
+        @if (Model.RentableSpaces > 0)
         {
             <div id="chart-doluluk"></div>
             <div class="mt-4 space-y-2">
                 <div class="flex items-center justify-between">
                     <span class="flex items-center gap-2 text-xs text-slate-600"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>Kiralı</span>
-                    <span class="text-sm font-semibold tabular-nums">@Model.RentedUnits <span class="text-xs font-normal text-muted">%@rentedPercentage.ToString("F0")</span></span>
-                </div>
-                <div class="flex items-center justify-between">
-                    <span class="flex items-center gap-2 text-xs text-slate-600"><span class="w-2 h-2 rounded-full bg-sky-500 inline-block"></span>Kısmen Dolu</span>
-                    <span class="text-sm font-semibold tabular-nums">@Model.PartiallyLeasedUnits <span class="text-xs font-normal text-muted">%@partialPercentage.ToString("F0")</span></span>
-                </div>
-                <div class="flex items-center justify-between">
-                    <span class="flex items-center gap-2 text-xs text-slate-600"><span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>Dolmak Üzere</span>
-                    <span class="text-sm font-semibold tabular-nums">@Model.ExpiringLeaseUnits <span class="text-xs font-normal text-muted">%@expiringPercentage.ToString("F0")</span></span>
+                    <span class="text-sm font-semibold tabular-nums">@Model.LeasedSpaces <span class="text-xs font-normal text-muted">%@leasedPercentage.ToString("F0")</span></span>
                 </div>
                 <div class="flex items-center justify-between">
                     <span class="flex items-center gap-2 text-xs text-slate-600"><span class="w-2 h-2 rounded-full bg-slate-400 inline-block"></span>Boş</span>
-                    <span class="text-sm font-semibold tabular-nums">@Model.VacantUnits <span class="text-xs font-normal text-muted">%@vacantPercentage.ToString("F0")</span></span>
+                    <span class="text-sm font-semibold tabular-nums">@Model.VacantSpaces <span class="text-xs font-normal text-muted">%@vacantPercentage.ToString("F0")</span></span>
                 </div>
                 <div class="flex items-center justify-between border-t border-[var(--color-border)] pt-2">
                     <span class="text-xs text-muted">Toplam</span>
-                    <span class="text-sm font-semibold tabular-nums text-primary">@totalUnits</span>
+                    <span class="text-sm font-semibold tabular-nums text-primary">@Model.RentableSpaces</span>
                 </div>
             </div>
         }
         else
         {
-            <div class="text-center py-10 text-slate-400 text-sm">Henüz birim yok</div>
+            <div class="text-center py-10 text-slate-400 text-sm">Henüz kiralanabilir alan yok</div>
         }
     </div>
     }
@@ -424,7 +399,7 @@
                         class="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all">Kiracı</button>
                 <button type="button" @@click="gelirSekme = 'property'"
                         :class="gelirSekme === 'property' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'"
-                        class="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all">Taşınmaz</button>
+                        class="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all">Alan</button>
                 <button type="button" @@click="gelirSekme = 'store'"
                         :class="gelirSekme === 'store' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'"
                         class="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all">Mağaza</button>
@@ -468,34 +443,34 @@
         }
         </div>
 
-        <!-- Taşınmaz sekmesi -->
+        <!-- Alan sekmesi -->
         <div x-show="gelirSekme === 'property'" x-cloak>
-        @if (!Model.TopRevenueProperties.Any())
+        @if (!Model.TopRevenueRootSpaces.Any())
         {
             <div class="text-center py-8 text-slate-400 text-sm">Henüz tahsilat verisi yok</div>
         }
         else
         {
-            var maxPropertyRevenue = Model.TopRevenueProperties.Max(property => property.TotalCollected);
+            var maxRootSpaceRevenue = Model.TopRevenueRootSpaces.Max(rootSpace => rootSpace.TotalCollected);
             <div class="space-y-2.5">
                 @{ int rank = 0; }
-                @foreach (var propertyRevenue in Model.TopRevenueProperties)
+                @foreach (var rootSpaceRevenue in Model.TopRevenueRootSpaces)
                 {
                     rank++;
-                    var pct = maxPropertyRevenue > 0 ? (double)(propertyRevenue.TotalCollected / maxPropertyRevenue) * 100 : 0;
-                    <a href="/Property/Details/@propertyRevenue.PropertyId.ToHashId()" class="block p-2 rounded-lg hover:bg-slate-50 transition-colors no-underline">
+                    var pct = maxRootSpaceRevenue > 0 ? (double)(rootSpaceRevenue.TotalCollected / maxRootSpaceRevenue) * 100 : 0;
+                    <a href="/Space/@rootSpaceRevenue.RootSpaceId.ToHashId()" class="block p-2 rounded-lg hover:bg-slate-50 transition-colors no-underline">
                         <div class="flex items-center justify-between mb-1.5">
                             <div class="flex items-center gap-2 min-w-0">
                                 <span class="w-5 h-5 rounded-md bg-primary-light text-primary text-[10px] font-bold flex items-center justify-center shrink-0">@rank</span>
-                                <span class="text-[13px] font-semibold text-slate-800 truncate">@propertyRevenue.PropertyName</span>
+                                <span class="text-[13px] font-semibold text-slate-800 truncate">@rootSpaceRevenue.RootSpaceName</span>
                             </div>
-                            <span class="text-[12px] font-bold text-slate-800 shrink-0">@propertyRevenue.TotalCollected.ToString("N0") ₺</span>
+                            <span class="text-[12px] font-bold text-slate-800 shrink-0">@rootSpaceRevenue.TotalCollected.ToString("N0") ₺</span>
                         </div>
                         <div class="h-1 rounded-full overflow-hidden bg-slate-100">
                             <div class="h-full bg-accent"
                                  style="width:@pct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
                         </div>
-                        <div class="text-[10px] text-slate-500 mt-1">@propertyRevenue.UnitCount birim</div>
+                        <div class="text-[10px] text-slate-500 mt-1">@rootSpaceRevenue.RentableSpaceCount alan</div>
                     </a>
                 }
             </div>
@@ -576,7 +551,7 @@
 
 
 <!-- ─── §3.6 LİSTE PANELİ ─── -->
-@if (hasLeaseAccess || hasPropertyAccess)
+@if (hasLeaseAccess || hasSpaceAccess)
 {
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
 
@@ -623,7 +598,7 @@
                     <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50/50 border-l-4 @borderCls hover:translate-x-0.5 transition-all">
                         <div class="flex-1 min-w-0">
                             <div class="text-sm font-semibold text-slate-800 truncate">@leaseSummary.TenantName</div>
-                            <div class="text-xs text-slate-500 truncate mt-0.5">@leaseSummary.PropertyName, @leaseSummary.UnitName</div>
+                            <div class="text-xs text-slate-500 truncate mt-0.5">@leaseSummary.SpaceName</div>
                         </div>
                         <div class="ml-3 shrink-0 text-right">
                             <span class="px-2 py-1 rounded text-[11px] font-bold @badgeClass">@leaseSummary.RemainingDays gün</span>
@@ -636,31 +611,31 @@
     </div>
     }
 
-    <!-- B: Boş Units -->
-    @if (hasPropertyAccess)
+    <!-- B: Boş Alanlar -->
+    @if (hasSpaceAccess)
     {
     <div class="card">
         <div class="flex items-center justify-between mb-4">
-            <div class="section-title">Boş Birimler</div>
+            <div class="section-title">Boş Alanlar</div>
             <a href="/Lease/Create" class="link-more">Kiraya Ver</a>
         </div>
-        @if (!Model.VacantUnitSummaries.Any())
+        @if (!Model.VacantSpaceSummaries.Any())
         {
-            <div class="text-center py-8 text-slate-400 text-sm">Tüm birimler kiralı</div>
+            <div class="text-center py-8 text-slate-400 text-sm">Tüm alanlar kiralı</div>
         }
         else
         {
             <div class="space-y-2">
-                @foreach (var vacantUnit in Model.VacantUnitSummaries)
+                @foreach (var vacantSpace in Model.VacantSpaceSummaries)
                 {
                     <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50/50 border-l-4 border-slate-300 hover:translate-x-0.5 transition-all">
                         <div class="flex-1 min-w-0">
-                            <div class="text-sm font-semibold text-slate-800 truncate">@vacantUnit.PropertyName</div>
-                            <div class="text-xs text-slate-500 truncate mt-0.5">@vacantUnit.UnitName, @vacantUnit.District</div>
+                            <div class="text-sm font-semibold text-slate-800 truncate">@vacantSpace.RootSpaceName</div>
+                            <div class="text-xs text-slate-500 truncate mt-0.5">@vacantSpace.SpaceName</div>
                         </div>
                         <div class="ml-3 shrink-0 text-right">
-                            <span class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[11px] font-bold">@vacantUnit.Area.ToString("F0") m²</span>
-                            <a href="/Lease/Create?unitId=@vacantUnit.UnitId.ToHashId()" class="link-more mt-0.5 flex justify-end">Kiraya Ver</a>
+                            <span class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[11px] font-bold">@vacantSpace.Area.ToString("F0") m²</span>
+                            <a href="/Lease/Create?spaceId=@vacantSpace.SpaceId.ToHashId()" class="link-more mt-0.5 flex justify-end">Kiraya Ver</a>
                         </div>
                     </div>
                 }
@@ -898,18 +873,18 @@
                 }
             }
 
-            // §4.B — Doluluk Donut (legend HTML'de; renkler legend noktalarıyla aynı: emerald/sky/amber/slate)
+            // §4.B — Doluluk Donut (legend HTML'de; renkler legend noktalarıyla aynı: emerald/slate)
             var dolulukEl = document.querySelector('#chart-doluluk');
             if (dolulukEl) {
-                var dolulukData   = [@Model.RentedUnits, @Model.PartiallyLeasedUnits, @Model.ExpiringLeaseUnits, @Model.VacantUnits];
-                var dolulukLabels = ['Kiralı', 'Kısmen Dolu', 'Dolmak Üzere', 'Boş'];
+                var dolulukData   = [@Model.LeasedSpaces, @Model.VacantSpaces];
+                var dolulukLabels = ['Kiralı', 'Boş'];
 
                 if (dolulukData.reduce(function (a, b) { return a + b; }, 0) > 0) {
                     new ApexCharts(dolulukEl, {
                         chart: { type: 'donut', height: 200, animations: { enabled: true, speed: 600 } },
                         series: dolulukData,
                         labels: dolulukLabels,
-                        colors: ['#10b981', '#0ea5e9', '#f59e0b', '#94a3b8'],
+                        colors: ['#10b981', '#94a3b8'],
                         plotOptions: {
                             pie: {
                                 donut: {
@@ -918,7 +893,7 @@
                                         show: true,
                                         total: {
                                             show: true,
-                                            label: 'Birim',
+                                            label: 'Alan',
                                             formatter: function (w) {
                                                 return w.globals.seriesTotals.reduce(function (a, b) { return a + b; }, 0);
                                             }
@@ -930,7 +905,7 @@
                         dataLabels: { enabled: false },
                         legend: { show: false },
                         stroke: { width: 2, colors: ['#fff'] },
-                        tooltip: { y: { formatter: function (v) { return v + ' birim'; } } }
+                        tooltip: { y: { formatter: function (v) { return v + ' alan'; } } }
                     }).render();
                 }
             }

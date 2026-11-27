@@ -36,8 +36,7 @@ public record DocumentMutationResult(DocumentOwnerType OwnerType, int OwnerId);
 
 public record DocumentAccessScopeInput(
     IReadOnlyList<DocumentOwnerType> AllowedOwnerTypes,
-    IReadOnlyList<int>? PropertyIds = null,
-    IReadOnlyList<int>? UnitIds = null,
+    SpaceAccessScope? Scope = null,
     int? TenantId = null);
 
 public record GetDocumentsForOwnersInput(

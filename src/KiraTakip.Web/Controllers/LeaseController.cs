@@ -49,7 +49,7 @@ public partial class LeaseController(
         var leases = await leaseService.GetPagedAsync(
             new GetPagedLeasesInput(query, filter, scope));
 
-        ViewBag.DebtorCount = await chargeReminderService.GetDebtorCountAsync(scope);
+        ViewBag.DebtorCount = await chargeReminderService.GetDebtorCountAsync(new ChargeReminderScopeInput(scope));
         ViewBag.TerminatedCount = await leaseService.GetTerminatedCountAsync(
             new GetTerminatedLeaseCountInput(scope));
         ViewBag.Filter = filter ?? "tum";

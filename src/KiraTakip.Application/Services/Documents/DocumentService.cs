@@ -186,19 +186,26 @@ public class DocumentService(
     public Task<List<DocumentType>> GetTypesAsync(GetDocumentTypesInput input)
         => documentTypeRepository.GetForTargetAsync(input.TargetEntity, input.RequiredOnly);
 
-    private Task<DocumentOwnerContextDto?> GetOwnerContextAsync(
+    private async Task<DocumentOwnerContextDto?> GetOwnerContextAsync(
         DocumentOwnerType ownerType,
         int ownerId,
         bool tenantPortalOnly)
-        => ownerType switch
+    {
+        switch (ownerType)
         {
-            DocumentOwnerType.Tenant => tenantRepository.GetDocumentOwnerContextAsync(ownerId),
-            DocumentOwnerType.Lease => leaseRepository.GetDocumentOwnerContextAsync(
-                ownerId,
-                tenantPortalOnly),
-            DocumentOwnerType.Payment => paymentAllocationRepository.GetDocumentOwnerContextAsync(ownerId),
-            _ => Task.FromResult<DocumentOwnerContextDto?>(null)
-        };
+            case DocumentOwnerType.Tenant:
+                return await tenantRepository.GetDocumentOwnerContextAsync(ownerId);
+            case DocumentOwnerType.Lease:
+                var leaseContext = await leaseRepository.GetDocumentOwnerContextAsync(ownerId, tenantPortalOnly);
+                return leaseContext == null
+                    ? null
+                    : new DocumentOwnerContextDto(leaseContext.TenantId, leaseContext.SpacePaths);
+            case DocumentOwnerType.Payment:
+                return await paymentAllocationRepository.GetDocumentOwnerContextAsync(ownerId);
+            default:
+                return null;
+        }
+    }
 
     private static void EnsureAccess(
         DocumentOwnerType ownerType,
@@ -216,13 +223,10 @@ public class DocumentService(
             "Bu belge yetki kapsamınızın dışındadır.",
             "Document.TenantOutOfScope");
 
-        var hasScopeRestriction = accessScope.PropertyIds != null || accessScope.UnitIds != null;
-        if (!hasScopeRestriction) return;
+        if (accessScope.Scope == null || accessScope.Scope.HasGlobalAccess) return;
 
-        var propertyAccess = accessScope.PropertyIds?.Intersect(ownerContext.PropertyIds).Any() == true;
-        var unitAccess = accessScope.UnitIds?.Intersect(ownerContext.UnitIds).Any() == true;
         Guard.Forbidden(
-            !propertyAccess && !unitAccess,
+            !ownerContext.SpacePaths.Any(accessScope.Scope.Includes),
             "Bu belge yetki kapsamınızın dışındadır.",
             "Document.OutOfScope");
     }

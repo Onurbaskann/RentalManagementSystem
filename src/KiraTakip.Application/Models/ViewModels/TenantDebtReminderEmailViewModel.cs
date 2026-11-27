@@ -13,8 +13,7 @@ public class TenantDebtReminderEmailViewModel
 
 public class DebtReminderLineViewModel
 {
-    public string PropertyName { get; set; } = string.Empty;
-    public string UnitName { get; set; } = string.Empty;
+    public string SpaceName { get; set; } = string.Empty;
     public DateTime PeriodStart { get; set; }
     public DateTime DueDate { get; set; }
     public decimal TotalAmount { get; set; }
