@@ -106,7 +106,7 @@
                                 <td><span class="badge @statusClass">@statusLabel</span></td>
                                 <td><span class="badge @compatibilityClass" data-tip="@compatibilityTooltip">@compatibilityLabel</span></td>
                                 <td>
-                                    <form method="post" action="/BankTransaction/Match">
+                                    <form asp-permission="@PermissionCatalog.Payment.MatchBankTransaction" method="post" action="/BankTransaction/Match">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="PaymentId" value="@payment.Id" />
                                         <input type="hidden" name="BankTransactionId" value="@transaction.Id" />

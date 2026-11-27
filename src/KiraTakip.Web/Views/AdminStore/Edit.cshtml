@@ -66,7 +66,7 @@
                     <form method="post" action="/Admin/Store/DeactivateAccount/@Model.Store.Id.ToHashId()/@activeAccount.Id.ToHashId()"
                           data-confirm="Aktif mağaza hesabı kapatılsın mı? Yeni hesap tanımlanana kadar bu mağazaya ödeme yönlendirilemez.">
                         @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-sm btn-danger" asp-permission="@PermissionCatalog.Store.Account">Hesabı Kapat</button>
+                        <button type="submit" class="btn btn-sm btn-danger" asp-permission="@PermissionCatalog.Store.DeactivateAccount">Hesabı Kapat</button>
                     </form>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-emerald-100">
@@ -98,7 +98,7 @@
         }
 
         <form method="post" action="/Admin/Store/ReplaceAccount/@Model.Store.Id.ToHashId()"
-              asp-form-write-permission="@PermissionCatalog.Store.Account">
+              asp-form-write-permission="@PermissionCatalog.Store.ReplaceAccount">
             @Html.AntiForgeryToken()
             <input type="hidden" name="StoreId" value="@Model.Store.Id" />
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -139,7 +139,7 @@
                 @Html.ValidationMessage("MerchantPassword", null, new { @class = "text-red-500 text-xs mt-1" })
                 <div class="text-xs text-muted mt-1">Mevcut parola gösterilmez. Her hesap sürümü için parola yeniden girilir.</div>
             </div>
-            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Store.Account">
+            <button type="submit" class="btn btn-primary" asp-permission="@PermissionCatalog.Store.ReplaceAccount">
                 @(activeAccount == null ? "Hesap Oluştur" : "Yeni Hesap Sürümü Oluştur")
             </button>
         </form>

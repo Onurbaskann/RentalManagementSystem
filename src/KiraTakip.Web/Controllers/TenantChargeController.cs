@@ -63,8 +63,8 @@ public class TenantChargeController(
             OverdueRemainingAmount = indexData.OverdueRemainingAmount,
             Spaces = indexData.Spaces,
             AvailableYears = indexData.AvailableYears,
-            CanReportPayment = await permissionService.HasModuleAccessAsync(
-                PermissionCatalog.TenantPortal.Payment.Module)
+            CanReportPayment = await permissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.Payment.Report),
+            CanStartOnlinePayment = await permissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.Payment.StartOnline)
         };
 
         return View(viewModel);
@@ -87,13 +87,13 @@ public class TenantChargeController(
         {
             Charge = charge,
             PaymentDocuments = paymentDocuments,
-            CanReportPayment = await permissionService.HasModuleAccessAsync(
-                PermissionCatalog.TenantPortal.Payment.Module)
+            CanReportPayment = await permissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.Payment.Report),
+            CanStartOnlinePayment = await permissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.Payment.StartOnline)
         });
     }
 
     [HttpPost("ReportPayment")]
-    [Authorize(Policy = PermissionCatalog.TenantPortal.Payment.Module)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.Payment.Report)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ReportPayment(TenantChargePaymentFormViewModel viewModel)
     {
@@ -128,7 +128,7 @@ public class TenantChargeController(
     }
 
     [HttpPost("StartOnlinePayment")]
-    [Authorize(Policy = PermissionCatalog.TenantPortal.Payment.Module)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.Payment.StartOnline)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> StartOnlinePayment(int chargeId, int chargeLineItemId, decimal amount)
     {

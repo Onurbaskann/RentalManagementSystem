@@ -43,15 +43,15 @@ public static class HelpSections
             foreach (var c in controllers) map[c] = id;
         }
         Add("yonetim-anasayfa", "Home");
-        Add("yonetim-tasinmaz", "Property", "Unit", "PropertyPricing", "UnitCapacity");
+        Add("yonetim-tasinmaz", "Space");
         Add("yonetim-kiraci", "Tenant");
         Add("yonetim-sozlesme", "Lease", "ChargeReminder");
         Add("yonetim-finans", "Charge", "ManualCharge", "Payment", "BankTransaction");
         Add("yonetim-rapor", "Report");
         Add("yonetim-rezervasyon", "Reservation");
         Add("yonetim-yetki", "AdminUser", "AdminTenantUser", "AdminRole", "AdminAuditLog");
-        Add("yonetim-parametre", "AdminUnitType", "AdminTenantCategory", "AdminSector", "AdminChargeType", "AdminStore",
-            "AdminPaymentStoreRouting", "AdminPropertyType", "AdminDocumentType", "AdminSystemSetting", "AdminRate");
+        Add("yonetim-parametre", "AdminSpaceType", "AdminSpaceAttribute", "AdminTenantCategory", "AdminSector", "AdminChargeType", "AdminStore",
+            "AdminPaymentStoreRouting", "AdminDocumentType", "AdminSystemSetting", "AdminRate");
         Add("tarife-hiyerarsisi", "AdminReservationRateRule");
         Add("kiraci-panel", "TenantPanel");
         Add("kiraci-sozlesme-borc", "TenantLease", "TenantCharge");

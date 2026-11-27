@@ -12,7 +12,7 @@
 </div>
 
 <div class="card">
-    <form method="post" action="/Admin/Rate/AddYear">
+    <form asp-form-write-permission="@PermissionCatalog.RateSchedule.Create" method="post" action="/Admin/Rate/AddYear">
         @Html.AntiForgeryToken()
 
         <div class="form-group">

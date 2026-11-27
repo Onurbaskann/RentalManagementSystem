@@ -13,6 +13,8 @@ public class TenantUserListViewModel
     public bool CanInvite { get; set; }
     public bool CanEdit { get; set; }
     public bool CanDeactivate { get; set; }
+    public bool CanResendInvite { get; set; }
+    public bool CanCancelInvite { get; set; }
 }
 
 public class TenantUserListItemViewModel

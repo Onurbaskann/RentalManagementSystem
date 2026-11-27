@@ -81,7 +81,7 @@
                             </a>
                             @if (!dt.IsSystem)
                             {
-                                <form method="post" action="/Admin/DocumentType/ToggleStatus/@dt.Id.ToHashId()"
+                                <form asp-permission="@PermissionCatalog.DocumentType.ToggleStatus" method="post" action="/Admin/DocumentType/ToggleStatus/@dt.Id.ToHashId()"
                                       data-confirm="@(dt.IsActive ? $"'{dt.Name}' pasif yapılsın mı?" : $"'{dt.Name}' aktif yapılsın mı?")"
                                       class="inline ml-1.5">
                                     @Html.AntiForgeryToken()

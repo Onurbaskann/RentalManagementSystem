@@ -103,7 +103,9 @@ public class ChargeReminderService(
                 Email = tenant.Email,
                 Debts = group.OrderBy(charge => charge.DueDate).Select(charge => new DebtReminderLineViewModel
                 {
-                    SpaceName = charge.Space?.Name ?? string.Empty,
+                    SpaceName = charge.Lease?.Areas.OrderBy(area => area.Id).Select(area => area.SnapshotPath).FirstOrDefault()
+                        ?? charge.Space?.Name
+                        ?? string.Empty,
                     PeriodStart = charge.PeriodStart,
                     DueDate = charge.DueDate,
                     TotalAmount = charge.TotalAmount,

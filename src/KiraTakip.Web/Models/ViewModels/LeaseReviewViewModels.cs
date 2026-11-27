@@ -43,6 +43,7 @@ public sealed class LeaseDraftViewModel : ILeaseFormViewModel
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public bool CanEdit { get; set; }
+    public bool CanUploadDocument { get; set; }
     public bool CanApprove { get; set; }
     public bool CanRequestRevision { get; set; }
     public bool CanDelete { get; set; }

@@ -15,7 +15,7 @@
 </div>
 
 <div class="card" x-data="{ seciliRolId: @(Model.RoleId > 0 ? Model.RoleId.ToString() : "0"), tumErisim: @(Model.HasAccessToAllSpaces ? "true" : "false") }">
-    <form method="post" action="/Admin/Users/Invite">
+    <form asp-form-write-permission="@PermissionCatalog.Invitation.Create" method="post" action="/Admin/Users/Invite">
         @Html.AntiForgeryToken()
 
 

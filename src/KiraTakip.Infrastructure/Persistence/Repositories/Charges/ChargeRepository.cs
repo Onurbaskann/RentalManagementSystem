@@ -978,6 +978,8 @@ public class ChargeRepository : RepositoryBase<Charge>, IChargeRepository
         IQueryable<Charge> query = _dbSet
             .Include(t => t.Tenant)
             .Include(t => t.Space)
+            .Include(t => t.Lease!)
+                .ThenInclude(lease => lease.Areas)
             .Include(t => t.Allocations)
             .Where(t => t.Status != ChargeStatus.Paid
                      && t.Status != ChargeStatus.Cancelled

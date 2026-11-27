@@ -92,7 +92,7 @@
                             </td>
                             <td><span class="badge @matchClass" data-tip="@matchTooltip">@matchLabel</span></td>
                             <td>
-                                <form method="post" action="/BankTransaction/Match">
+                                <form asp-permission="@PermissionCatalog.Payment.MatchBankTransaction" method="post" action="/BankTransaction/Match">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="PaymentId" value="@payment.Id" />
                                     <input type="hidden" name="BankTransactionId" value="@transaction.Id" />

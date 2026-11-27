@@ -54,8 +54,8 @@ namespace KiraTakip.Web.Hosting
                 if (app.Environment.IsDevelopment())
                     await EnsureMissingSystemSettingsAsync(dbContext);
 
-                // Veritabanının boş olup olmadığını kontrol et (örneğin hiç Taşınmaz/Property tanımı yoksa boş kabul edelim)
-                var isDbEmpty = !await dbContext.Properties.AnyAsync();
+                // Veritabanının boş olup olmadığını kontrol et (örneğin hiç Alan tanımı yoksa boş kabul edelim)
+                var isDbEmpty = !await dbContext.Spaces.AnyAsync();
 
                 if (app.Environment.IsDevelopment() && (runSeed || isDbEmpty))
                 {
@@ -88,15 +88,12 @@ namespace KiraTakip.Web.Hosting
                     await domainSeed.SeedEnumDegerleriAsync();
                     await domainSeed.SeedBorcTipleriAsync();
                     await domainSeed.SeedOdemeMagazalariAsync();
-                    await domainSeed.SeedTasinmazTipleriAsync();
-                    await domainSeed.SeedBirimTurleriAsync();
                     await domainSeed.SeedKiraciKategorileriAsync();
                     await domainSeed.SeedSektorlerAsync();
                     await domainSeed.SeedTarifelerAsync(); // Tarife.Yil oluşur
                     await spaceSeed.SeedAsync();
                     await domainSeed.EnsureVarsayilanReservationRateOverrideAsync();
 
-                    await domainSeed.SeedTasinmazFiyatlarAsync();
                     await domainSeed.SeedIcRollerVeKullanicilarAsync();
                     await domainSeed.SeedDomainDataAsync();
                     await domainSeed.SeedOrnekMagazaYonlendirmeleriAsync();

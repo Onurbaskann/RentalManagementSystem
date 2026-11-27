@@ -15,6 +15,7 @@ using KiraTakip.Domain.Reservations;
 using System.IO;
 using KiraTakip.Domain.Payments;
 using KiraTakip.Domain.Charges;
+using KiraTakip.Domain.Spaces;
 using KiraTakip.Models.Dtos.Role;
 
 namespace KiraTakip.Infrastructure.Seeding;
@@ -172,7 +173,7 @@ public class SeedDataService(
             primaryValidFrom: DateTime.UtcNow.AddYears(-1));
 
         // =========================================================================
-        // Seviye 1: Genel / Varsayılan Yönlendirmeler (General - Tüm Taşınmazlar)
+        // Seviye 1: Genel / Varsayılan Yönlendirmeler (General - Tüm Alanlar, AlanId = null)
         // =========================================================================
         var chargeTypes = await ctx.ChargeTypes.ToListAsync();
 
@@ -182,16 +183,15 @@ public class SeedDataService(
             if (ct == null) return;
 
             var exists = await ctx.PaymentStoreRoutings.AnyAsync(r =>
-                r.ChargeTypeId == ct.Id && r.PropertyId == null && r.UnitId == null && r.IsActive)
+                r.ChargeTypeId == ct.Id && r.SpaceId == null && r.IsActive)
                 || ctx.PaymentStoreRoutings.Local.Any(r =>
-                r.ChargeTypeId == ct.Id && r.PropertyId == null && r.UnitId == null && r.IsActive);
+                r.ChargeTypeId == ct.Id && r.SpaceId == null && r.IsActive);
             if (!exists)
             {
                 ctx.PaymentStoreRoutings.Add(new PaymentStoreRouting
                 {
                     ChargeTypeId = ct.Id,
-                    PropertyId = null,
-                    UnitId = null,
+                    SpaceId = null,
                     StoreId = storeId,
                     IsActive = true
                 });
@@ -210,10 +210,10 @@ public class SeedDataService(
 
         // Geriye kalan veya dinamik eklenmiş diğer borç tipleri varsa fallback olarak storeKira
         var routedChargeTypeIds = (await ctx.PaymentStoreRoutings
-            .Where(r => r.PropertyId == null && r.UnitId == null && r.IsActive)
+            .Where(r => r.SpaceId == null && r.IsActive)
             .Select(r => r.ChargeTypeId)
             .ToListAsync())
-            .Union(ctx.PaymentStoreRoutings.Local.Where(r => r.PropertyId == null && r.UnitId == null && r.IsActive).Select(r => r.ChargeTypeId))
+            .Union(ctx.PaymentStoreRoutings.Local.Where(r => r.SpaceId == null && r.IsActive).Select(r => r.ChargeTypeId))
             .ToHashSet();
 
         var missingChargeTypeIds = chargeTypes.Select(ct => ct.Id).Where(id => !routedChargeTypeIds.Contains(id)).ToList();
@@ -222,8 +222,7 @@ public class SeedDataService(
             ctx.PaymentStoreRoutings.Add(new PaymentStoreRouting
             {
                 ChargeTypeId = missingId,
-                PropertyId = null,
-                UnitId = null,
+                SpaceId = null,
                 StoreId = storeKira.Id,
                 IsActive = true
             });
@@ -232,24 +231,23 @@ public class SeedDataService(
     }
 
     /// <summary>
-    /// Ödeme yönlendirmesinin Birim → Taşınmaz → Genel öncelik sırasını ve geçmiş yönlendirmeleri
+    /// Ödeme yönlendirmesinin Alan (en yakın ata) → Genel öncelik sırasını ve geçmiş yönlendirmeleri
     /// gerçek seed verisiyle (Teknokent A Blok / B Blok / Otopark / Ofisler) gösterir.
-    /// Idempotent — `SeedDomainDataAsync` çalışıp taşınmazlar oluştuktan sonra çağrılmalıdır.
+    /// Idempotent — `SeedDomainDataAsync` çalışıp alanlar oluştuktan sonra çağrılmalıdır.
     /// </summary>
     public async Task SeedOrnekMagazaYonlendirmeleriAsync()
     {
-        var teknokentA = await ctx.Properties.FirstOrDefaultAsync(p => p.Name == "Teknokent A Blok");
-        var teknokentB = await ctx.Properties.FirstOrDefaultAsync(p => p.Name == "Teknokent B Blok");
-        var otopark = await ctx.Properties.FirstOrDefaultAsync(p => p.Name == "Teknokent Açık Otoparkı");
+        var spaceByName = await ctx.Spaces.AsNoTracking().ToDictionaryAsync(s => s.Name);
+        spaceByName.TryGetValue("Teknokent A Blok", out var teknokentA);
+        spaceByName.TryGetValue("Teknokent B Blok", out var teknokentB);
+        spaceByName.TryGetValue("Teknokent Açık Otoparkı", out var otopark);
 
         if (teknokentA == null) return;
 
-        var ofis101 = await ctx.Units.FirstOrDefaultAsync(u => u.PropertyId == teknokentA.Id && u.UnitNo == "101");
-        var ofis102 = await ctx.Units.FirstOrDefaultAsync(u => u.PropertyId == teknokentA.Id && u.UnitNo == "102");
-        var birimKafe = await ctx.Units.FirstOrDefaultAsync(u => u.PropertyId == teknokentA.Id && u.UnitNo == "K01");
-        var birimBEA01 = teknokentB == null
-            ? null
-            : await ctx.Units.FirstOrDefaultAsync(u => u.PropertyId == teknokentB.Id && u.UnitNo == "B-EA01");
+        spaceByName.TryGetValue("Ofis A-101", out var ofis101);
+        spaceByName.TryGetValue("Ofis A-102", out var ofis102);
+        spaceByName.TryGetValue("Ortak Çalışma Alanı", out var birimKafe);
+        spaceByName.TryGetValue("B Blok Konferans ve Etkinlik Salonu", out var birimBEA01);
 
         var kiraTipi = await ctx.ChargeTypes.FirstOrDefaultAsync(b => b.Code == BorcTipiConsts.Kira);
         var ortakTipi = await ctx.ChargeTypes.FirstOrDefaultAsync(b => b.Code == "ORTAK");
@@ -264,34 +262,16 @@ public class SeedDataService(
         var storeRezervasyon = await ctx.Stores.FirstAsync(s => s.Code == "STR-REZERVASYON");
         var storeUnit101 = await ctx.Stores.FirstAsync(s => s.Code == "STR-UNIT101");
 
-        async Task EnsurePropertyOverrideAsync(int chargeTypeId, int propertyId, int storeId, bool isActive = true)
+        async Task EnsureSpaceRoutingAsync(int chargeTypeId, int spaceId, int storeId, bool isActive = true)
         {
             var exists = await ctx.PaymentStoreRoutings.AnyAsync(r =>
-                r.ChargeTypeId == chargeTypeId && r.PropertyId == propertyId && r.UnitId == null && r.IsActive == isActive);
+                r.ChargeTypeId == chargeTypeId && r.SpaceId == spaceId && r.IsActive == isActive);
             if (!exists)
             {
                 ctx.PaymentStoreRoutings.Add(new PaymentStoreRouting
                 {
                     ChargeTypeId = chargeTypeId,
-                    PropertyId = propertyId,
-                    UnitId = null,
-                    StoreId = storeId,
-                    IsActive = isActive
-                });
-            }
-        }
-
-        async Task EnsureUnitOverrideAsync(int chargeTypeId, int unitId, int storeId, bool isActive = true)
-        {
-            var exists = await ctx.PaymentStoreRoutings.AnyAsync(r =>
-                r.ChargeTypeId == chargeTypeId && r.PropertyId == null && r.UnitId == unitId && r.IsActive == isActive);
-            if (!exists)
-            {
-                ctx.PaymentStoreRoutings.Add(new PaymentStoreRouting
-                {
-                    ChargeTypeId = chargeTypeId,
-                    PropertyId = null,
-                    UnitId = unitId,
+                    SpaceId = spaceId,
                     StoreId = storeId,
                     IsActive = isActive
                 });
@@ -299,73 +279,71 @@ public class SeedDataService(
         }
 
         // =========================================================================
-        // Seviye 2: Taşınmaz Seviyesi Özel Yönlendirmeleri (Property Override)
+        // Üst Alan Seviyesi Özel Yönlendirmeleri (Bina / Otopark kök alanları)
         // =========================================================================
         // A. Teknokent A Blok için Ortak Gider -> STR-TESIS
-        await EnsurePropertyOverrideAsync(ortakTipi.Id, teknokentA.Id, storeTesis.Id);
+        await EnsureSpaceRoutingAsync(ortakTipi.Id, teknokentA.Id, storeTesis.Id);
 
         // B. Teknokent B Blok için Etkinlik Bedeli -> STR-REZERVASYON
         if (teknokentB != null && etkinlikTipi != null)
         {
-            await EnsurePropertyOverrideAsync(etkinlikTipi.Id, teknokentB.Id, storeRezervasyon.Id);
+            await EnsureSpaceRoutingAsync(etkinlikTipi.Id, teknokentB.Id, storeRezervasyon.Id);
         }
 
         // C. Teknokent Açık Otoparkı için Kira Bedeli -> STR-TESIS
         if (otopark != null)
         {
-            await EnsurePropertyOverrideAsync(kiraTipi.Id, otopark.Id, storeTesis.Id);
+            await EnsureSpaceRoutingAsync(kiraTipi.Id, otopark.Id, storeTesis.Id);
         }
 
-
-        // D. Teknokent A Blok iÃ§in Tabela ve Reklam Bedeli -> STR-KIRA
-        if (reklamTipi != null && teknokentA != null)
+        // D. Teknokent A Blok için Tabela ve Reklam Bedeli -> STR-KIRA
+        if (reklamTipi != null)
         {
-            await EnsurePropertyOverrideAsync(reklamTipi.Id, teknokentA.Id, storeKira.Id);
+            await EnsureSpaceRoutingAsync(reklamTipi.Id, teknokentA.Id, storeKira.Id);
         }
 
         // =========================================================================
-        // Seviye 3: Birim Seviyesi Özel Yönlendirmeleri (Unit Override - En Yüksek Öncelik)
+        // Alt Alan Seviyesi Özel Yönlendirmeleri (En Yüksek Öncelik)
         // =========================================================================
-        // A. Ofis 101 için Kira -> STR-UNIT101
+        // A. Ofis A-101 için Kira -> STR-UNIT101
         if (ofis101 != null)
         {
-            await EnsureUnitOverrideAsync(kiraTipi.Id, ofis101.Id, storeUnit101.Id);
+            await EnsureSpaceRoutingAsync(kiraTipi.Id, ofis101.Id, storeUnit101.Id);
         }
 
-        // B. Tekno Kafe (K01) için Kira -> STR-TICARI
+        // B. Ortak Çalışma Alanı (eski Tekno Kafe) için Kira -> STR-TICARI
         if (birimKafe != null)
         {
-            await EnsureUnitOverrideAsync(kiraTipi.Id, birimKafe.Id, storeTicari.Id);
-            // C. Tekno Kafe (K01) için Ortak Gider -> STR-TICARI
-            await EnsureUnitOverrideAsync(ortakTipi.Id, birimKafe.Id, storeTicari.Id);
+            await EnsureSpaceRoutingAsync(kiraTipi.Id, birimKafe.Id, storeTicari.Id);
+            // C. Ortak Çalışma Alanı için Ortak Gider -> STR-TICARI
+            await EnsureSpaceRoutingAsync(ortakTipi.Id, birimKafe.Id, storeTicari.Id);
         }
 
-        // D. B Blok Konferans Salonu (B-EA01) için Etkinlik -> STR-REZERVASYON
+        // D. B Blok Konferans Salonu için Etkinlik -> STR-REZERVASYON
         if (birimBEA01 != null && etkinlikTipi != null)
         {
-            await EnsureUnitOverrideAsync(etkinlikTipi.Id, birimBEA01.Id, storeRezervasyon.Id);
+            await EnsureSpaceRoutingAsync(etkinlikTipi.Id, birimBEA01.Id, storeRezervasyon.Id);
         }
 
-
-        // E. Tekno Kafe (K01) iÃ§in Tabela ve Reklam Bedeli -> STR-TICARI
+        // E. Ortak Çalışma Alanı için Tabela ve Reklam Bedeli -> STR-TICARI
         if (reklamTipi != null && birimKafe != null)
         {
-            await EnsureUnitOverrideAsync(reklamTipi.Id, birimKafe.Id, storeTicari.Id);
+            await EnsureSpaceRoutingAsync(reklamTipi.Id, birimKafe.Id, storeTicari.Id);
         }
 
         // =========================================================================
-        // Seviye 4: Pasif / Geçmiş Yönlendirmeler (History / Inactive Override)
+        // Pasif / Geçmiş Yönlendirmeler (History / Inactive Override)
         // =========================================================================
-        // Örnek 1: Ofis 102 için eskiden STR-UNIT101'e yönlendirilmiş ancak sonradan pasife alınmış
+        // Örnek 1: Ofis A-102 için eskiden STR-UNIT101'e yönlendirilmiş ancak sonradan pasife alınmış
         if (ofis102 != null)
         {
-            await EnsureUnitOverrideAsync(kiraTipi.Id, ofis102.Id, storeUnit101.Id, isActive: false);
+            await EnsureSpaceRoutingAsync(kiraTipi.Id, ofis102.Id, storeUnit101.Id, isActive: false);
         }
 
         // Örnek 2: Teknokent Açık Otoparkı için eski Ortak Gider yönlendirmesi pasife alınmış
         if (otopark != null)
         {
-            await EnsurePropertyOverrideAsync(ortakTipi.Id, otopark.Id, storeKira.Id, isActive: false);
+            await EnsureSpaceRoutingAsync(ortakTipi.Id, otopark.Id, storeKira.Id, isActive: false);
         }
 
         await ctx.SaveChangesAsync();
@@ -441,96 +419,43 @@ public class SeedDataService(
             code, name, "Seed Mağaza", true, merchantId, merchantUser, DateTime.UtcNow);
 
 
+    /// <summary>
+    /// S-7: bugünkü varsayılan rezervasyon kuralı her kök alana yazılır (kural yoksa rezervasyon yapılamaz).
+    /// </summary>
     public async Task EnsureVarsayilanReservationRateOverrideAsync()
     {
-        var cariYil = DateTime.Now.Year;
         var varsayilanUcret = 500m;
         var varsayilanUcretsizSure = 120;
         var varsayilanPeriyot = 60;
         var varsayilanKdv = 20m;
 
-        var rezBirimTurleri = await ctx.UnitTypes
-            .Where(t => t.IsActive && t.Usage == UnitTypeUsage.Reservable)
-            .ToListAsync();
-        if (!rezBirimTurleri.Any()) return;
-
-        var mevcut = await ctx.RezervasyonTarifeler
-            .Where(r => r.UnitId == null && r.Year == cariYil)
-            .Select(r => r.UnitTypeId)
-            .ToListAsync();
-
-        foreach (var bt in rezBirimTurleri.Where(b => !mevcut.Contains(b.Id)))
-        {
-            ctx.RezervasyonTarifeler.Add(new ReservationRateOverride
-            {
-                Year = cariYil,
-                UnitTypeId = bt.Id,
-                FreeDurationMinutes = varsayilanUcretsizSure,
-                BillingPeriodMinutes = varsayilanPeriyot,
-                PeriodRate = varsayilanUcret,
-                KdvRate = varsayilanKdv,
-                Description = $"{cariYil} varsayılan — {bt.Name}"
-            });
-        }
-        await ctx.SaveChangesAsync();
-    }
-
-    public async Task SeedTasinmazTipleriAsync()
-    {
-        var existingCodes = await ctx.TasinmazTipleri.Select(t => t.Code).ToListAsync();
-        var toAdd = new List<PropertyType>();
-
-        if (!existingCodes.Contains("BINA")) toAdd.Add(new PropertyType { Name = "Bina", Code = "BINA", IsActive = true, SortOrder = 1, SupportsSingleUnit = true, SupportsMultipleUnits = true });
-        if (!existingCodes.Contains("OTOPARK")) toAdd.Add(new PropertyType { Name = "Otopark", Code = "OTOPARK", IsActive = true, SortOrder = 2, SupportsSingleUnit = true, SupportsMultipleUnits = false });
-        if (!existingCodes.Contains("DEPO")) toAdd.Add(new PropertyType { Name = "Depo", Code = "DEPO", IsActive = true, SortOrder = 3, SupportsSingleUnit = true, SupportsMultipleUnits = true });
-
-        if (toAdd.Any())
-        {
-            ctx.TasinmazTipleri.AddRange(toAdd);
-            await ctx.SaveChangesAsync();
-        }
-    }
-
-    public async Task SeedBirimTurleriAsync()
-    {
-        var existingCodes = await ctx.UnitTypes.Select(t => t.Code).ToListAsync();
-
         var toplantiBorcTipiId = await ctx.ChargeTypes
             .Where(b => b.Code == "TOPLANTI")
             .Select(b => (int?)b.Id)
             .FirstOrDefaultAsync();
+        if (toplantiBorcTipiId is null) return;
 
-        var etkinliBorcTipiId = await ctx.ChargeTypes
-            .Where(b => b.Code == "ETKINLIK")
-            .Select(b => (int?)b.Id)
-            .FirstOrDefaultAsync();
+        var kokAlanlar = await ctx.Spaces
+            .Where(sp => sp.ParentId == null && sp.IsActive)
+            .ToListAsync();
+        if (kokAlanlar.Count == 0) return;
 
-        var toAdd = new List<UnitType>();
-        if (!existingCodes.Contains("OFIS")) toAdd.Add(new UnitType { Name = "Ofis", Code = "OFIS", IsActive = true, Usage = UnitTypeUsage.Rentable, SortOrder = 1 });
-        if (!existingCodes.Contains("CAFE")) toAdd.Add(new UnitType { Name = "Kafe", Code = "CAFE", IsActive = true, Usage = UnitTypeUsage.Rentable, SortOrder = 2 });
-        if (!existingCodes.Contains("OTOPARK")) toAdd.Add(new UnitType { Name = "Otopark Alanı", Code = "OTOPARK", IsActive = true, Usage = UnitTypeUsage.Rentable, SortOrder = 3 });
-        if (!existingCodes.Contains("TOPLANTI")) toAdd.Add(new UnitType { Name = "Toplantı Salonu", Code = "TOPLANTI", IsActive = true, Usage = UnitTypeUsage.Reservable, SortOrder = 10, ChargeTypeId = toplantiBorcTipiId });
-        if (!existingCodes.Contains("ETKINLIK")) toAdd.Add(new UnitType { Name = "Etkinlik Alanı", Code = "ETKINLIK", IsActive = true, Usage = UnitTypeUsage.Reservable, SortOrder = 11, ChargeTypeId = etkinliBorcTipiId });
+        var mevcut = await ctx.RezervasyonTarifeler.Select(r => r.SpaceId).ToListAsync();
 
-        if (toAdd.Any())
+        foreach (var kok in kokAlanlar.Where(k => !mevcut.Contains(k.Id)))
         {
-            ctx.UnitTypes.AddRange(toAdd);
-            await ctx.SaveChangesAsync();
+            ctx.RezervasyonTarifeler.Add(new ReservationRateOverride
+            {
+                SpaceId = kok.Id,
+                ChargeTypeId = toplantiBorcTipiId.Value,
+                FreeDurationMinutes = varsayilanUcretsizSure,
+                BillingPeriodMinutes = varsayilanPeriyot,
+                PeriodRate = varsayilanUcret,
+                KdvRate = varsayilanKdv,
+                Description = $"Varsayılan rezervasyon kuralı — {kok.Name}"
+            });
         }
-
-        if (toplantiBorcTipiId.HasValue)
-        {
-            await ctx.UnitTypes
-                .Where(t => t.Code == "TOPLANTI" && t.ChargeTypeId == null)
-                .ExecuteUpdateAsync(s => s.SetProperty(t => t.ChargeTypeId, toplantiBorcTipiId));
-        }
-
-        if (etkinliBorcTipiId.HasValue)
-        {
-            await ctx.UnitTypes
-                .Where(t => t.Code == "ETKINLIK" && t.ChargeTypeId == null)
-                .ExecuteUpdateAsync(s => s.SetProperty(t => t.ChargeTypeId, etkinliBorcTipiId));
-        }
+        await ctx.SaveChangesAsync();
     }
 
     public async Task SeedKiraciKategorileriAsync()
@@ -612,12 +537,9 @@ public class SeedDataService(
 
     public async Task SeedDomainDataAsync()
     {
-        if (await ctx.Properties.AnyAsync()) return;
+        if (await ctx.Tenants.AnyAsync()) return;
 
         var now = DateTime.Now;
-        var tipiMap = await ctx.TasinmazTipleri.ToDictionaryAsync(t => t.Code, k => k.Id);
-        var birimTuruMap = await ctx.UnitTypes.ToDictionaryAsync(t => t.Code, t => t.Id);
-        var birimTuruById = await ctx.UnitTypes.AsNoTracking().ToDictionaryAsync(t => t.Id);
         var katMap = await ctx.Kategoriler.Where(k => k.Type == CategoryType.Tenant).ToDictionaryAsync(k => k.Code, k => k.Id);
         var sekMap = await ctx.Kategoriler.Where(k => k.Type == CategoryType.Sector).ToDictionaryAsync(k => k.Code, k => k.Id);
 
@@ -634,462 +556,38 @@ public class SeedDataService(
         var agroGida = Tenant("KRC-000005", katMap["AKADEMIK"], sekMap["TARIM"], "AgroGıda İnovasyon Arge A.Ş.",
             vergiNo: "3456789012", ticaretSicilNo: "İZM-999", telefon: "0232 888 9900", email: "iletisim@agrogida.com", adres: "Teknokent");
 
-        ctx.Tenants.AddRange(yzCozum, megaFinans, biotech, egeLojistik, agroGida);
-
-        // --- Taşınmaz (Teknokent A Blok) ---
-        var ofisTuruId = birimTuruMap["OFIS"];
-        var etkinlikTuruId = birimTuruMap["ETKINLIK"];
-        var cafeTuruId = birimTuruMap["CAFE"];
-        var otoparkBirimTuruId = birimTuruMap["OTOPARK"];
-        var toplantiTuruId = birimTuruMap["TOPLANTI"];
-
-        var teknokent = new Property
-        {
-            Name = "Teknokent A Blok",
-            PropertyTypeId = tipiMap.GetValueOrDefault("BINA"),
-            UnitStructure = UnitStructure.MultipleUnits,
-            City = "İzmir",
-            District = "Bornova",
-            Neighborhood = "Ege Üniversitesi",
-            Address = "Ege Üniversitesi Teknokent Kampüsü",
-            OpenArea = 500,
-            ClosedArea = 4500,
-            FloorCount = 4,
-            Description = "Ofis bazlı kiralanabilir teknokent binası"
-        };
-
-        // 5 Kiralanabilir Ofis Ekleme
-        for (int ofis = 1; ofis <= 5; ofis++)
-        {
-            var ofisNo = $"10{ofis}";
-            teknokent.Units.Add(new Unit
-            {
-                UnitNo = ofisNo,
-                FloorNo = 1,
-                Name = $"Ofis {ofisNo}",
-                Area = 50 + (ofis * 10),
-                UnitTypeId = ofisTuruId
-            });
-        }
-
-        // Zemin Kat Kafe Ekleme
-        teknokent.Units.Add(new Unit
-        {
-            UnitNo = "K01",
-            FloorNo = 0,
-            Name = "Tekno Kafe",
-            Area = 120,
-            UnitTypeId = cafeTuruId,
-            Description = "Zemin kat ana kafeterya ve dinlenme alanı."
-        });
-
-        // 2 Rezerve Edilebilir Toplantı Odası Ekleme
-        var toplantiZ01 = new Unit
-        {
-            UnitNo = "Z01",
-            FloorNo = 0,
-            Name = "Toplantı Salonu Z01",
-            Area = 80,
-            UnitTypeId = toplantiTuruId,
-            Description = "Ortak kullanıma açık ana toplantı salonu."
-        };
-        var toplantiZ02 = new Unit
-        {
-            UnitNo = "Z02",
-            FloorNo = 0,
-            Name = "Toplantı Odası Z02",
-            Area = 40,
-            UnitTypeId = toplantiTuruId,
-            Description = "Ortak kullanıma açık küçük toplantı odası."
-        };
-        teknokent.Units.Add(toplantiZ01);
-        teknokent.Units.Add(toplantiZ02);
-
-        // 2 Rezerve Edilebilir Etkinlik Alanı Ekleme
-        var etkinlikA01 = new Unit
-        {
-            UnitNo = "EA01",
-            FloorNo = 0,
-            Name = "A Blok Konferans Salonu",
-            Area = 200,
-            UnitTypeId = etkinlikTuruId,
-            Description = "120 kişilik çok amaçlı konferans ve etkinlik salonu."
-        };
-        var etkinlikA02 = new Unit
-        {
-            UnitNo = "EA02",
-            FloorNo = 0,
-            Name = "A Blok Fuaye ve Sergi Alanı",
-            Area = 150,
-            UnitTypeId = etkinlikTuruId,
-            Description = "Lansman, kokteyl ve sergi organizasyonları için fuaye alanı."
-        };
-        teknokent.Units.Add(etkinlikA01);
-        teknokent.Units.Add(etkinlikA02);
-
-        // 2. Taşınmaz: Teknokent B Blok (6 Kiralanabilir Ofis, 3 Rezervasyon Alanı)
-        var teknokentB = new Property
-        {
-            Name = "Teknokent B Blok",
-            PropertyTypeId = tipiMap.GetValueOrDefault("BINA"),
-            UnitStructure = UnitStructure.MultipleUnits,
-            City = "İzmir",
-            District = "Bornova",
-            Neighborhood = "Ege Üniversitesi",
-            Address = "Ege Üniversitesi Teknokent Kampüsü B Blok",
-            OpenArea = 400,
-            ClosedArea = 5200,
-            FloorCount = 5,
-            Description = "Yazılım ve Ar-Ge firmaları için kiralanabilir modern teknopark binası"
-        };
-
-        // 6 Kiralanabilir Ofis Ekleme
-        var bOfisler = new[]
-        {
-            (No: "201", Kat: 2, Alan: 75m),
-            (No: "202", Kat: 2, Alan: 85m),
-            (No: "203", Kat: 2, Alan: 95m),
-            (No: "301", Kat: 3, Alan: 65m),
-            (No: "302", Kat: 3, Alan: 110m),
-            (No: "303", Kat: 3, Alan: 120m)
-        };
-        foreach (var ofis in bOfisler)
-        {
-            teknokentB.Units.Add(new Unit
-            {
-                UnitNo = ofis.No,
-                FloorNo = ofis.Kat,
-                Name = $"Ofis B-{ofis.No}",
-                Area = ofis.Alan,
-                UnitTypeId = ofisTuruId,
-                Description = $"{ofis.Kat}. Kat güney cephe ofisi."
-            });
-        }
-
-        // 3 Rezerve Edilebilir Alan Ekleme (2 Toplantı Salonu + 1 Etkinlik Alanı)
-        teknokentB.Units.Add(new Unit
-        {
-            UnitNo = "B-Z01",
-            FloorNo = 0,
-            Name = "B Blok Toplantı Salonu 1",
-            Area = 50,
-            UnitTypeId = toplantiTuruId,
-            Description = "12 kişilik toplantı salonu."
-        });
-        teknokentB.Units.Add(new Unit
-        {
-            UnitNo = "B-Z02",
-            FloorNo = 0,
-            Name = "B Blok Toplantı Salonu 2",
-            Area = 70,
-            UnitTypeId = toplantiTuruId,
-            Description = "20 kişilik toplantı salonu."
-        });
-        teknokentB.Units.Add(new Unit
-        {
-            UnitNo = "B-EA01",
-            FloorNo = 0,
-            Name = "B Blok Konferans ve Etkinlik Salonu",
-            Area = 220,
-            UnitTypeId = etkinlikTuruId,
-            Description = "150 kişilik seminer, lansman ve konferans salonu."
-        });
-
-        // 3. Taşınmaz: Teknokent Açık Otoparkı (SingleUnit Yapısı)
-        var otopark = new Property
-        {
-            Name = "Teknokent Açık Otoparkı",
-            PropertyTypeId = tipiMap.GetValueOrDefault("OTOPARK"),
-            UnitStructure = UnitStructure.SingleUnit,
-            City = "İzmir",
-            District = "Bornova",
-            Neighborhood = "Ege Üniversitesi",
-            Address = "Ege Üniversitesi Teknokent Kampüsü Açık Otopark Alanı",
-            OpenArea = 2500,
-            ClosedArea = 0,
-            FloorCount = 0,
-            Description = "100 araç kapasiteli kampüs açık otopark alanı"
-        };
-        otopark.Units.Add(new Unit
-        {
-            Name = "Teknokent Açık Otoparkı",
-            Area = 2500,
-            UnitTypeId = otoparkBirimTuruId,
-            Description = "Tekil taşınmaz kiralama birimi."
-        });
-
-        // 4. Taşınmaz: Teknokent C Blok (Yeni Ar-Ge Merkezi - Boş/Kiralanabilir Birimler)
-        var teknokentC = new Property
-        {
-            Name = "Teknokent C Blok (Ar-Ge Merkezi)",
-            PropertyTypeId = tipiMap.GetValueOrDefault("BINA"),
-            UnitStructure = UnitStructure.MultipleUnits,
-            City = "İzmir",
-            District = "Bornova",
-            Neighborhood = "Ege Üniversitesi",
-            Address = "Ege Üniversitesi Teknokent Kampüsü C Blok",
-            OpenArea = 600,
-            ClosedArea = 6000,
-            FloorCount = 6,
-            Description = "Yeni Ar-Ge binası (kiralanmaya hazır boş ofis ve laboratuvar birimleri)."
-        };
-
-        // Kiralanabilir Boş Birimler (İş kuralı: Çoklu birim yapısında en az 1 birim bulunmalıdır)
-        teknokentC.Units.Add(new Unit
-        {
-            UnitNo = "C-101",
-            FloorNo = 1,
-            Name = "Ofis C-101 (Ar-Ge Ofisi)",
-            Area = 120,
-            UnitTypeId = ofisTuruId,
-            Description = "1. Kat geniş Ar-Ge ofis birimi."
-        });
-        teknokentC.Units.Add(new Unit
-        {
-            UnitNo = "C-102",
-            FloorNo = 1,
-            Name = "Ofis C-102 (Yazılım Laboratuvarı)",
-            Area = 150,
-            UnitTypeId = ofisTuruId,
-            Description = "1. Kat altyapısı hazır laboratuvar birimi."
-        });
-        teknokentC.Units.Add(new Unit
-        {
-            UnitNo = "C-201",
-            FloorNo = 2,
-            Name = "Ofis C-201 (Açık İnovasyon Ofisi)",
-            Area = 200,
-            UnitTypeId = ofisTuruId,
-            Description = "2. Kat açık ofis konseptli Ar-Ge birimi."
-        });
-        teknokentC.Units.Add(new Unit
-        {
-            UnitNo = "C-Z01",
-            FloorNo = 0,
-            Name = "C Blok Toplantı Salonu",
-            Area = 60,
-            UnitTypeId = toplantiTuruId,
-            Description = "C Blok zemin kat toplantı salonu."
-        });
-
-        // 5. Taşınmaz: Teknokent D Blok (Kuluçka ve Girişimcilik Merkezi)
-        var teknokentD = new Property
-        {
-            Name = "Teknokent D Blok (Kuluçka ve Girişimcilik Merkezi)",
-            PropertyTypeId = tipiMap.GetValueOrDefault("BINA"),
-            UnitStructure = UnitStructure.MultipleUnits,
-            City = "İzmir",
-            District = "Bornova",
-            Neighborhood = "Ege Üniversitesi",
-            Address = "Ege Üniversitesi Teknokent Kampüsü D Blok",
-            OpenArea = 350,
-            ClosedArea = 3200,
-            FloorCount = 3,
-            Description = "Erken aşama girişimler ve kuluçka ekipleri için tasarlanmış ortak çalışma ve inovasyon merkezi."
-        };
-
-        teknokentD.Units.Add(new Unit
-        {
-            UnitNo = "D-101",
-            FloorNo = 1,
-            Name = "Kuluçka Ofisi D-101",
-            Area = 45,
-            UnitTypeId = ofisTuruId,
-            Description = "1. Kat kuluçka girişim ofisi."
-        });
-        teknokentD.Units.Add(new Unit
-        {
-            UnitNo = "D-102",
-            FloorNo = 1,
-            Name = "Kuluçka Ofisi D-102",
-            Area = 55,
-            UnitTypeId = ofisTuruId,
-            Description = "1. Kat kuluçka girişim ofisi."
-        });
-        teknokentD.Units.Add(new Unit
-        {
-            UnitNo = "D-201",
-            FloorNo = 2,
-            Name = "Girişim Ofisi D-201",
-            Area = 75,
-            UnitTypeId = ofisTuruId,
-            Description = "2. Kat ölçeklenme aşaması girişim ofisi."
-        });
-        teknokentD.Units.Add(new Unit
-        {
-            UnitNo = "D-Z01",
-            FloorNo = 0,
-            Name = "D Blok Seminer ve Toplantı Odası",
-            Area = 50,
-            UnitTypeId = toplantiTuruId,
-            Description = "D Blok zemin kat kuluçka seminer ve toplantı odası."
-        });
-
-        ctx.Properties.AddRange(teknokent, teknokentB, otopark, teknokentC, teknokentD);
-        await ctx.SaveChangesAsync();
+        // --- Alan Eşlemesi (F1 SpaceSeedData alan ağacı) ---
+        var spaceByName = await LoadSpacesAsync();
+        Space Sp(string name) => spaceByName.TryGetValue(name, out var sp)
+            ? sp
+            : throw new InvalidOperationException($"Alan seed'inde '{name}' alanı bulunamadı; SpaceSeedData önce çalışmalıdır.");
 
         // --- Kiracı Kullanıcılarının ve Yetkilerinin Oluşturulması (Sözleşme iş akışında ActorUserId için) ---
+        ctx.Tenants.AddRange(yzCozum, megaFinans, biotech, egeLojistik, agroGida);
+        await ctx.SaveChangesAsync();
+
         var (adminId, yzUserId, megaUserId, biotechUserId, egeUserId, agroUserId) =
             await SeedKiraciKullanicilariAsync([yzCozum, megaFinans, biotech, egeLojistik, agroGida]);
 
-        // --- Tarifelerin Oluşturulması ---
-        await SeedTasinmazFiyatlarAsync();
-
         var btKiraId = (await ctx.ChargeTypes.FirstAsync(b => b.Code == BorcTipiConsts.Kira)).Id;
         var btDepozitoId = (await ctx.ChargeTypes.FirstAsync(b => b.Code == BorcTipiConsts.Depozito)).Id;
-        var btOrtakId = (await ctx.ChargeTypes.FirstAsync(b => b.Code == "ORTAK")).Id;
 
-        var birim101 = teknokent.Units.First(b => b.UnitNo == "101");
-        var birim102 = teknokent.Units.First(b => b.UnitNo == "102");
-        var birim103 = teknokent.Units.First(b => b.UnitNo == "103");
-        var birim104 = teknokent.Units.First(b => b.UnitNo == "104");
-        var birim105 = teknokent.Units.First(b => b.UnitNo == "105");
-        var birimKafe = teknokent.Units.First(b => b.UnitNo == "K01");
-        var birimOtopark = otopark.Units.First();
-        var birimB201 = teknokentB.Units.First(b => b.UnitNo == "201");
-        var birimB202 = teknokentB.Units.First(b => b.UnitNo == "202");
-        var birimB203 = teknokentB.Units.First(b => b.UnitNo == "203");
-        var birimB301 = teknokentB.Units.First(b => b.UnitNo == "301");
-        var birimB302 = teknokentB.Units.First(b => b.UnitNo == "302");
-        var birimB303 = teknokentB.Units.First(b => b.UnitNo == "303");
-        var birimToplantiZ01 = teknokent.Units.First(b => b.UnitNo == "Z01");
-        var birimToplantiZ02 = teknokent.Units.First(b => b.UnitNo == "Z02");
-        var birimEtkinlikEA01 = teknokent.Units.First(b => b.UnitNo == "EA01");
-        var birimEtkinlikEA02 = teknokent.Units.First(b => b.UnitNo == "EA02");
-        var birimToplantiBZ01 = teknokentB.Units.First(b => b.UnitNo == "B-Z01");
-        var birimToplantiBZ02 = teknokentB.Units.First(b => b.UnitNo == "B-Z02");
-        var birimEtkinlikBEA01 = teknokentB.Units.First(b => b.UnitNo == "B-EA01");
+        // Eski birim -> alan eşlemesi (yalnız kiralanabilir, paylaşımlı olmayan alanlar; her sözleşme ayrı alan)
+        var birim101 = Sp("Ofis A-101");
+        var birim102 = Sp("Ofis A-102");
+        var birim103 = Sp("Ofis A-103");
+        var birim104 = Sp("Ofis E-101");
+        var birim105 = Sp("Girişim Ofisi D-201");
+        var birimKafe = Sp("Ortak Çalışma Alanı");
+        var birimOtopark = Sp("Teknokent Açık Otoparkı");
+        var birimB201 = Sp("Ofis B-101");
+        var birimB202 = Sp("Ofis B-102");
+        var birimB203 = Sp("Ofis E-102");
+        var birimB301 = Sp("Ofis C-101 (Ar-Ge Ofisi)");
+        var birimB302 = Sp("Ofis C-102 (Yazılım Laboratuvarı)");
 
-        // Unit Tarifesi Örneği (Hiyerarşide Matrisin Üstündedir)
-        // Ofis 101 için Akademik kategorisinde özel unit fiyatı tanımlayalım
-        ctx.UnitRates.Add(new UnitRate
-        {
-            UnitId = birim101.Id,
-            TenantCategoryId = katMap["AKADEMIK"],
-            ChargeTypeId = btKiraId,
-            CalculationMethod = CalculationMethod.M2,
-            UnitValue = 400, // Genel Tarife 300 / Matris 320 yerine unit bazlı 400
-            KdvRate = 20
-        });
-
-        // Diğer Birim Tarifeleri (Kafe, B-203, B-303)
-        ctx.UnitRates.AddRange(
-            new UnitRate { UnitId = birimKafe.Id, TenantCategoryId = katMap["AKADEMIK"], ChargeTypeId = btKiraId, CalculationMethod = CalculationMethod.M2, UnitValue = 650, KdvRate = 20 },
-            new UnitRate { UnitId = birimKafe.Id, TenantCategoryId = katMap["AKADEMIK"], ChargeTypeId = btOrtakId, CalculationMethod = CalculationMethod.M2, UnitValue = 180, KdvRate = 20 },
-            new UnitRate { UnitId = birimKafe.Id, TenantCategoryId = katMap["AKADEMIK"], ChargeTypeId = btDepozitoId, CalculationMethod = CalculationMethod.M2, UnitValue = 1950, KdvRate = 20 },
-            new UnitRate { UnitId = birimKafe.Id, TenantCategoryId = katMap["AKADEMIK_OLMAYAN"], ChargeTypeId = btKiraId, CalculationMethod = CalculationMethod.M2, UnitValue = 650, KdvRate = 20 },
-            new UnitRate { UnitId = birimKafe.Id, TenantCategoryId = katMap["AKADEMIK_OLMAYAN"], ChargeTypeId = btOrtakId, CalculationMethod = CalculationMethod.M2, UnitValue = 180, KdvRate = 20 },
-            new UnitRate { UnitId = birimKafe.Id, TenantCategoryId = katMap["AKADEMIK_OLMAYAN"], ChargeTypeId = btDepozitoId, CalculationMethod = CalculationMethod.M2, UnitValue = 1950, KdvRate = 20 },
-            // B-203 için sadece Kira tanımlandı, Ortak Gider tanımlanmadı (Taşınmaz 110 TL'den düşecek)
-            new UnitRate { UnitId = birimB203.Id, TenantCategoryId = katMap["AKADEMIK"], ChargeTypeId = btKiraId, CalculationMethod = CalculationMethod.M2, UnitValue = 380, KdvRate = 20 },
-            // B-303 için sadece Kira tanımlandı, Ortak Gider tanımlanmadı (Taşınmaz 160 TL'den düşecek)
-            new UnitRate { UnitId = birimB303.Id, TenantCategoryId = katMap["AKADEMIK_OLMAYAN"], ChargeTypeId = btKiraId, CalculationMethod = CalculationMethod.M2, UnitValue = 550, KdvRate = 20 }
-        );
-
-        // Reservation Tarifesi - Genel (UnitId = null)
-        var mevcutGenelRez = await ctx.RezervasyonTarifeler
-            .FirstOrDefaultAsync(r => r.UnitId == null && r.UnitTypeId == toplantiTuruId && r.Year == now.Year);
-        if (mevcutGenelRez != null)
-        {
-            mevcutGenelRez.FreeDurationMinutes = 60;
-            mevcutGenelRez.BillingPeriodMinutes = 60;
-            mevcutGenelRez.PeriodRate = 400m;
-            mevcutGenelRez.KdvRate = 20m;
-            mevcutGenelRez.Description = "Genel Toplantı Salonu fiyatlandırma kuralı";
-        }
-        else
-        {
-            ctx.RezervasyonTarifeler.Add(new ReservationRateOverride
-            {
-                Year = now.Year,
-                UnitTypeId = toplantiTuruId,
-                UnitId = null,
-                FreeDurationMinutes = 60,
-                BillingPeriodMinutes = 60,
-                PeriodRate = 400m,
-                KdvRate = 20m,
-                Description = "Genel Toplantı Salonu fiyatlandırma kuralı"
-            });
-        }
-
-        // Reservation Tarifesi - Unit (UnitId = Z01.Id)
-        ctx.RezervasyonTarifeler.Add(new ReservationRateOverride
-        {
-            Year = now.Year,
-            UnitTypeId = toplantiTuruId,
-            UnitId = birimToplantiZ01.Id,
-            FreeDurationMinutes = 30,
-            BillingPeriodMinutes = 60,
-            PeriodRate = 600m,
-            KdvRate = 20m,
-            Description = "Toplantı Salonu Z01 için özel fiyatlandırma kuralı"
-        });
-
-        // 1. Ozel Etkinlik Alani Tarifesi: B-EA01
-        ctx.RezervasyonTarifeler.Add(new ReservationRateOverride
-        {
-            Year = now.Year,
-            UnitTypeId = etkinlikTuruId,
-            UnitId = birimEtkinlikBEA01.Id,
-            FreeDurationMinutes = 0,
-            BillingPeriodMinutes = 60,
-            PeriodRate = 2500m,
-            KdvRate = 20m,
-            Description = "B Blok Konferans ve Etkinlik Salonu ozel saatlik fiyatlandirma kuralı"
-        });
-
-        // 2. Tamamen Ucretsiz Rezervasyon Tarifeleri:
-        // Ucretsiz Tarife 1: A Blok Toplanti Odasi Z02
-        ctx.RezervasyonTarifeler.Add(new ReservationRateOverride
-        {
-            Year = now.Year,
-            UnitTypeId = toplantiTuruId,
-            UnitId = birimToplantiZ02.Id,
-            FreeDurationMinutes = 480,
-            BillingPeriodMinutes = 60,
-            PeriodRate = 0m,
-            KdvRate = 20m,
-            Description = "Toplanti Odasi Z02 - Tamamen Ucretsiz Tahsis Kurali"
-        });
-
-        // Ucretsiz Tarife 2: B Blok Toplanti Salonu 1 (B-Z01)
-        ctx.RezervasyonTarifeler.Add(new ReservationRateOverride
-        {
-            Year = now.Year,
-            UnitTypeId = toplantiTuruId,
-            UnitId = birimToplantiBZ01.Id,
-            FreeDurationMinutes = 480,
-            BillingPeriodMinutes = 60,
-            PeriodRate = 0m,
-            KdvRate = 20m,
-            Description = "B Blok Toplanti Salonu 1 (B-Z01) - Tamamen Ucretsiz Tahsis Kurali"
-        });
-
-        // 3. Genel Etkinlik Alani Tarifesi
-        var mevcutGenelEtkinlik = await ctx.RezervasyonTarifeler
-            .FirstOrDefaultAsync(r => r.UnitId == null && r.UnitTypeId == etkinlikTuruId && r.Year == now.Year);
-        if (mevcutGenelEtkinlik != null)
-        {
-            mevcutGenelEtkinlik.FreeDurationMinutes = 0;
-            mevcutGenelEtkinlik.BillingPeriodMinutes = 60;
-            mevcutGenelEtkinlik.PeriodRate = 1500m;
-            mevcutGenelEtkinlik.KdvRate = 20m;
-            mevcutGenelEtkinlik.Description = "Genel Etkinlik Alani saatlik fiyatlandirma kuralı";
-        }
-        else
-        {
-            ctx.RezervasyonTarifeler.Add(new ReservationRateOverride
-            {
-                Year = now.Year,
-                UnitTypeId = etkinlikTuruId,
-                UnitId = null,
-                FreeDurationMinutes = 0,
-                BillingPeriodMinutes = 60,
-                PeriodRate = 1500m,
-                KdvRate = 20m,
-                Description = "Genel Etkinlik Alani saatlik fiyatlandirma kuralı"
-            });
-        }
+        // Rezervasyon kuralları (alan + borç tipi; genel tür/yıl kuralı kalktığı için her rezervasyonluk alana ayrı kural)
+        await SeedRezervasyonKurallariAsync(Sp, now);
 
         // Kullanıcı tanımlı Belge Türlerini ekle
         var btKimlik = new DocumentType
@@ -1301,7 +799,7 @@ public class SeedDataService(
         await ctx.SaveChangesAsync();
 
         // Yardımcı fonksiyon: Dinamik m2 unit bedeli çözünürlüğü
-        async Task<decimal> ResolveKiraM2Rate(Unit b, Tenant k)
+        async Task<decimal> ResolveKiraM2Rate(Space b, Tenant k)
         {
             var res = await rateResolver.ResolveAsync(null, k.Id, b.Id, btKiraId, now);
             return res?.UnitValue ?? 0;
@@ -1483,7 +981,8 @@ public class SeedDataService(
         var sozlesme6 = MakeSozlesme(LeaseNumberPolicy.FormatLeaseNo(6), birimOtopark, egeLojistik,
             startYearMinus1.AddMonths(4), startYearMinus1.AddYears(2).AddDays(-1), true,
             vadeKuraliTipi: DueDateRuleType.FixedDayOfMonth, vadeGunu: 5,
-            notlar: "Açık otopark alanı filo kiralama sözleşmesi");
+            notlar: "Açık otopark alanı filo kiralama sözleşmesi",
+            rentedArea: 2500m);
         sozlesme6.ReviewHistory.Add(new LeaseReviewHistory
         {
             ActionType = LeaseReviewActionType.DraftCreated,
@@ -1677,15 +1176,6 @@ public class SeedDataService(
             sozlesme6, sozlesme7, sozlesme8, sozlesme9, sozlesme10, sozlesme11, sozlesme12
         };
 
-        foreach (var sozlesme in sozlesmeler)
-        {
-            birimTuruById.TryGetValue(sozlesme.Unit.UnitTypeId, out var birimTuru);
-            sozlesme.UnitTypeNameSnapshot = birimTuru?.Name ?? string.Empty;
-            sozlesme.UnitTypeUsageSnapshot = birimTuru?.Usage ?? UnitTypeUsage.Rentable;
-            sozlesme.RentalModeSnapshot = birimTuru?.RentalMode ?? UnitRentalMode.UnitBased;
-            sozlesme.UnitAreaSnapshot = sozlesme.Unit.Area;
-        }
-
         ctx.Leases.AddRange(sozlesmeler);
         await ctx.SaveChangesAsync();
 
@@ -1838,11 +1328,11 @@ public class SeedDataService(
         {
             var yzCozumId = yzCozumEntity.Id;
 
-            await EnsureKiraciUserAsync("mehmet.yildiz@yz.com", defaultPassword, "Mehmet Yıldız", yzCozumId, tumTasinmazlaraErisim: false);
+            await EnsureKiraciUserAsync("mehmet.yildiz@yz.com", defaultPassword, "Mehmet Yıldız", yzCozumId, hasAccessToAllSpaces: false);
             var mehmetUser = await userManager.FindByEmailAsync("mehmet.yildiz@yz.com");
             if (mehmetUser != null)
             {
-                var ofis101 = await ctx.Units.FirstOrDefaultAsync(b => b.UnitNo == "101");
+                var ofis101 = await ctx.Spaces.FirstOrDefaultAsync(sp => sp.Name == "Ofis A-101");
                 if (ofis101 != null)
                 {
                     var hasScope = await ctx.KullaniciYetkiKapsamlari.AnyAsync(s => s.UserId == mehmetUser.Id);
@@ -1851,7 +1341,7 @@ public class SeedDataService(
                         ctx.KullaniciYetkiKapsamlari.Add(new UserPermissionScope
                         {
                             UserId = mehmetUser.Id,
-                            ScopeType = ScopeType.Unit,
+                            ScopeType = ScopeType.Space,
                             ScopeId = ofis101.Id
                         });
                         await ctx.SaveChangesAsync();
@@ -1877,100 +1367,6 @@ public class SeedDataService(
             egeUser?.Id ?? adminId,
             agroUser?.Id ?? adminId
         );
-    }
-
-    public async Task SeedTasinmazFiyatlarAsync()
-    {
-        var katAkademik = await ctx.Kategoriler.FirstAsync(k => k.Type == CategoryType.Tenant && k.Code == "AKADEMIK");
-        var katAkadOlmayan = await ctx.Kategoriler.FirstAsync(k => k.Type == CategoryType.Tenant && k.Code == "AKADEMIK_OLMAYAN");
-
-        var btKira = await ctx.ChargeTypes.FirstAsync(b => b.Code == BorcTipiConsts.Kira);
-        var btOrtak = await ctx.ChargeTypes.FirstAsync(b => b.Code == "ORTAK");
-        var btPortal = await ctx.ChargeTypes.FirstAsync(b => b.Code == "PORTAL");
-        var btDepozito = await ctx.ChargeTypes.FirstAsync(b => b.Code == BorcTipiConsts.Depozito);
-
-        var teknokent = await ctx.Properties.FirstOrDefaultAsync(t => t.Name == "Teknokent A Blok");
-        if (teknokent != null && !await ctx.TasinmazTarifeler.AnyAsync(f => f.PropertyId == teknokent.Id))
-        {
-
-
-
-
-
-
-
-
-            ctx.TasinmazTarifeler.AddRange(
-                // Akademik için (m2 bazlı kira ve ortak gider) - Taşınmaz Tarifesi
-                new PropertyRateOverride { PropertyId = teknokent.Id, TenantCategoryId = katAkademik.Id, ChargeTypeId = btKira.Id, UnitValue = 320, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = teknokent.Id, TenantCategoryId = katAkademik.Id, ChargeTypeId = btOrtak.Id, UnitValue = 95, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = teknokent.Id, TenantCategoryId = katAkademik.Id, ChargeTypeId = btPortal.Id, UnitValue = 480, CalculationMethod = CalculationMethod.Fixed, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = teknokent.Id, TenantCategoryId = katAkademik.Id, ChargeTypeId = btDepozito.Id, UnitValue = 960, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-
-                // Akademik Olmayan için - Taşınmaz Tarifesi
-                new PropertyRateOverride { PropertyId = teknokent.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btKira.Id, UnitValue = 430, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = teknokent.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btOrtak.Id, UnitValue = 140, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = teknokent.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btPortal.Id, UnitValue = 700, CalculationMethod = CalculationMethod.Fixed, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = teknokent.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btDepozito.Id, UnitValue = 1290, CalculationMethod = CalculationMethod.M2, KdvRate = 20 }
-            );
-
-            await ctx.SaveChangesAsync();
-        }
-
-        // 2. Teknokent B Blok Taşınmaz Tarifesi
-        var teknokentB = await ctx.Properties.FirstOrDefaultAsync(t => t.Name == "Teknokent B Blok");
-        if (teknokentB != null && !await ctx.TasinmazTarifeler.AnyAsync(f => f.PropertyId == teknokentB.Id))
-        {
-            ctx.TasinmazTarifeler.AddRange(
-                // Akademik için — Not: Portal tanımlanmadı, böylece Portal gideri bir üst seviye olan Genel Tarife'den düşecek!
-                new PropertyRateOverride { PropertyId = teknokentB.Id, TenantCategoryId = katAkademik.Id, ChargeTypeId = btKira.Id, UnitValue = 360, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = teknokentB.Id, TenantCategoryId = katAkademik.Id, ChargeTypeId = btOrtak.Id, UnitValue = 110, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = teknokentB.Id, TenantCategoryId = katAkademik.Id, ChargeTypeId = btDepozito.Id, UnitValue = 1080, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-
-                // Akademik Olmayan için
-                new PropertyRateOverride { PropertyId = teknokentB.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btKira.Id, UnitValue = 490, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = teknokentB.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btOrtak.Id, UnitValue = 160, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = teknokentB.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btPortal.Id, UnitValue = 800, CalculationMethod = CalculationMethod.Fixed, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = teknokentB.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btDepozito.Id, UnitValue = 30000, CalculationMethod = CalculationMethod.Fixed, KdvRate = 20 }
-            );
-
-            await ctx.SaveChangesAsync();
-        }
-
-        // 3. Teknokent Açık Otoparkı Taşınmaz Tarifesi
-        var otopark = await ctx.Properties.FirstOrDefaultAsync(t => t.Name == "Teknokent Açık Otoparkı");
-        if (otopark != null && !await ctx.TasinmazTarifeler.AnyAsync(f => f.PropertyId == otopark.Id))
-        {
-            ctx.TasinmazTarifeler.AddRange(
-                // Otopark için sadece Kira ve Ortak Gider tanımlandı (Portal ve Depozito tanımlanmadı)
-                new PropertyRateOverride { PropertyId = otopark.Id, TenantCategoryId = katAkademik.Id, ChargeTypeId = btKira.Id, UnitValue = 80, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = otopark.Id, TenantCategoryId = katAkademik.Id, ChargeTypeId = btOrtak.Id, UnitValue = 20, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-
-                new PropertyRateOverride { PropertyId = otopark.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btKira.Id, UnitValue = 120, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = otopark.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btOrtak.Id, UnitValue = 30, CalculationMethod = CalculationMethod.M2, KdvRate = 20 }
-            );
-
-            await ctx.SaveChangesAsync();
-        }
-
-        // 4. Teknokent D Blok Taşınmaz Tarifesi
-        var teknokentD = await ctx.Properties.FirstOrDefaultAsync(t => t.Name == "Teknokent D Blok (Kuluçka ve Girişimcilik Merkezi)");
-        if (teknokentD != null && !await ctx.TasinmazTarifeler.AnyAsync(f => f.PropertyId == teknokentD.Id))
-        {
-            ctx.TasinmazTarifeler.AddRange(
-                // Akademik için
-                new PropertyRateOverride { PropertyId = teknokentD.Id, TenantCategoryId = katAkademik.Id, ChargeTypeId = btKira.Id, UnitValue = 280, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = teknokentD.Id, TenantCategoryId = katAkademik.Id, ChargeTypeId = btOrtak.Id, UnitValue = 85, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = teknokentD.Id, TenantCategoryId = katAkademik.Id, ChargeTypeId = btDepozito.Id, UnitValue = 840, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-
-                // Akademik Olmayan için
-                new PropertyRateOverride { PropertyId = teknokentD.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btKira.Id, UnitValue = 380, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = teknokentD.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btOrtak.Id, UnitValue = 120, CalculationMethod = CalculationMethod.M2, KdvRate = 20 },
-                new PropertyRateOverride { PropertyId = teknokentD.Id, TenantCategoryId = katAkadOlmayan.Id, ChargeTypeId = btDepozito.Id, UnitValue = 1140, CalculationMethod = CalculationMethod.M2, KdvRate = 20 }
-            );
-
-            await ctx.SaveChangesAsync();
-        }
     }
 
     public async Task SeedTahakkuklarAsync()
@@ -2023,11 +1419,6 @@ public class SeedDataService(
             var egeLojistik = await ctx.Tenants.FirstAsync(t => t.TenantNo == "KRC-000004");
             var agroGida = await ctx.Tenants.FirstAsync(t => t.TenantNo == "KRC-000005");
 
-            var ofis101 = await ctx.Units.FirstAsync(u => u.UnitNo == "101");
-            var ofis102 = await ctx.Units.FirstAsync(u => u.UnitNo == "102");
-            var ofis103 = await ctx.Units.FirstAsync(u => u.UnitNo == "103");
-            var ofis104 = await ctx.Units.FirstAsync(u => u.UnitNo == "104");
-            var birimKafe = await ctx.Units.FirstAsync(u => u.UnitNo == "K01");
             var sozlesme1 = sozlesmeler.First(s => s.LeaseNo == LeaseNumberPolicy.FormatLeaseNo(1));
             var sozlesme2 = sozlesmeler.First(s => s.LeaseNo == LeaseNumberPolicy.FormatLeaseNo(2));
             var sozlesme3 = sozlesmeler.First(s => s.LeaseNo == LeaseNumberPolicy.FormatLeaseNo(3));
@@ -2036,13 +1427,10 @@ public class SeedDataService(
             var sozlesme6 = sozlesmeler.First(s => s.LeaseNo == LeaseNumberPolicy.FormatLeaseNo(6));
             var sozlesme9 = sozlesmeler.First(s => s.LeaseNo == LeaseNumberPolicy.FormatLeaseNo(9));
 
-            var ofisOtopark = sozlesme6.Unit ?? await ctx.Units.FirstAsync(u => u.Id == sozlesme6.UnitId);
-            var birimB203 = sozlesme9.Unit ?? await ctx.Units.FirstAsync(u => u.Id == sozlesme9.UnitId);
-
             // =========================================================================
             // 1. Manuel Operasyonel ve İptal Edilen Tahakkukların Tanımlanması (> 10 adet)
             // =========================================================================
-            Charge CreateManual(int seq, Tenant tenant, Unit unit, Lease lease, ChargeType cType,
+            Charge CreateManual(int seq, Tenant tenant, Lease lease, ChargeType cType,
                 string desc, decimal netAmount, int dueDayOffset, ChargeStatus status = ChargeStatus.Pending, string? cancelNote = null, DateTime? periodStart = null)
             {
                 var kdv = Math.Round(netAmount * 0.20m, 2);
@@ -2056,7 +1444,7 @@ public class SeedDataService(
                 {
                     ChargeNo = ChargeNumberPolicy.FormatChargeNo(900000 + seq),
                     TenantId = tenant.Id,
-                    UnitId = unit.Id,
+                    SpaceId = lease.Areas[0].SpaceId,
                     LeaseId = lease.Id,
                     PeriodStart = pStart,
                     PeriodEnd = pEnd,
@@ -2088,73 +1476,73 @@ public class SeedDataService(
             }
 
             // --- Cari Ay (Eylül 2026) Manuel Tahakkukları ---
-            var manuel01 = CreateManual(1, yzCozum, ofis101, sozlesme1, btOrtak, "Yüksek Kapasiteli Fiber İnternet Altyapı ve Kablolama Bedeli", 4000m, 5);
-            var manuel02 = CreateManual(2, megaFinans, ofis102, sozlesme2, manuelBorcTipi, "Bina İçi Güvenlik Geçiş Kartları ve Turnike Entegrasyon Bedeli", 2500m, 7);
-            var manuel03 = CreateManual(3, biotech, ofis103, sozlesme3, btOrtak, "Laboratuvar Atık Yönetimi ve Özel Arıtma Bertaraf Hizmeti", 6000m, 10);
-            var manuel04 = CreateManual(4, egeLojistik, ofisOtopark, sozlesme6, manuelBorcTipi, "Ağır Vasıta ve Filo Zemin Bakım ve Çizgi Boyama Masrafı", 5000m, 6);
-            var manuel05 = CreateManual(5, agroGida, birimKafe, sozlesme5, btOrtak, "Yağ Tutucu ve Havalandırma Bacası Periyodik Temizlik Bedeli", 3500m, 4);
-            var manuel06 = CreateManual(6, agroGida, birimB203, sozlesme9, manuelBorcTipi, "Ofis Cam Cephe Dış Temizlik ve Dağcı Vinç Hizmet Bedeli", 2000m, 8);
-            var manuel07 = CreateManual(7, yzCozum, ofis104, sozlesme4, btOrtak, "Ek Çalışma Alanı Elektrik Alt Sayaç Tüketim Fark Bedeli", 1800m, 9);
-            var manuel08 = CreateManual(8, megaFinans, ofis102, sozlesme2, manuelBorcTipi, "Ortak Teras Alanı Kurumsal Ağırlama ve Organizasyon Payı", 3000m, 11);
-            var manuel09 = CreateManual(9, egeLojistik, ofisOtopark, sozlesme6, manuelBorcTipi, "Ekstra Otopark Güvenlik ve Gece Devriye Hizmeti", 2500m, 5);
-            var manuel10 = CreateManual(10, megaFinans, ofis102, sozlesme2, btOrtak, "Yıllık İklimlendirme ve Filtre Bakım Payı", 1500m, 8);
-            var manuel11 = CreateManual(11, agroGida, birimKafe, sozlesme5, manuelBorcTipi, "Kafe Önü Bahçe Sundurması Onarım ve Tadilat Bedeli", 4500m, 12);
-            var manuel12 = CreateManual(12, biotech, ofis103, sozlesme3, btOrtak, "Biyolojik Güvenlik Kabini Kalibrasyon ve Sertifikasyon Katkısı", 3200m, 10);
-            var manuel13 = CreateManual(13, yzCozum, ofis101, sozlesme1, manuelBorcTipi, "Akıllı Giriş Sistemi İlave Manyetik Kart ve Token Tedarik Bedeli", 1200m, 6);
+            var manuel01 = CreateManual(1, yzCozum, sozlesme1, btOrtak, "Yüksek Kapasiteli Fiber İnternet Altyapı ve Kablolama Bedeli", 4000m, 5);
+            var manuel02 = CreateManual(2, megaFinans, sozlesme2, manuelBorcTipi, "Bina İçi Güvenlik Geçiş Kartları ve Turnike Entegrasyon Bedeli", 2500m, 7);
+            var manuel03 = CreateManual(3, biotech, sozlesme3, btOrtak, "Laboratuvar Atık Yönetimi ve Özel Arıtma Bertaraf Hizmeti", 6000m, 10);
+            var manuel04 = CreateManual(4, egeLojistik, sozlesme6, manuelBorcTipi, "Ağır Vasıta ve Filo Zemin Bakım ve Çizgi Boyama Masrafı", 5000m, 6);
+            var manuel05 = CreateManual(5, agroGida, sozlesme5, btOrtak, "Yağ Tutucu ve Havalandırma Bacası Periyodik Temizlik Bedeli", 3500m, 4);
+            var manuel06 = CreateManual(6, agroGida, sozlesme9, manuelBorcTipi, "Ofis Cam Cephe Dış Temizlik ve Dağcı Vinç Hizmet Bedeli", 2000m, 8);
+            var manuel07 = CreateManual(7, yzCozum, sozlesme4, btOrtak, "Ek Çalışma Alanı Elektrik Alt Sayaç Tüketim Fark Bedeli", 1800m, 9);
+            var manuel08 = CreateManual(8, megaFinans, sozlesme2, manuelBorcTipi, "Ortak Teras Alanı Kurumsal Ağırlama ve Organizasyon Payı", 3000m, 11);
+            var manuel09 = CreateManual(9, egeLojistik, sozlesme6, manuelBorcTipi, "Ekstra Otopark Güvenlik ve Gece Devriye Hizmeti", 2500m, 5);
+            var manuel10 = CreateManual(10, megaFinans, sozlesme2, btOrtak, "Yıllık İklimlendirme ve Filtre Bakım Payı", 1500m, 8);
+            var manuel11 = CreateManual(11, agroGida, sozlesme5, manuelBorcTipi, "Kafe Önü Bahçe Sundurması Onarım ve Tadilat Bedeli", 4500m, 12);
+            var manuel12 = CreateManual(12, biotech, sozlesme3, btOrtak, "Biyolojik Güvenlik Kabini Kalibrasyon ve Sertifikasyon Katkısı", 3200m, 10);
+            var manuel13 = CreateManual(13, yzCozum, sozlesme1, manuelBorcTipi, "Akıllı Giriş Sistemi İlave Manyetik Kart ve Token Tedarik Bedeli", 1200m, 6);
 
             // İptal Edilen Cari Ay Manuel Tahakkuklar
-            var manuel14 = CreateManual(14, yzCozum, ofis101, sozlesme1, manuelBorcTipi, "Mükerrer Girilen Sunucu Odası Soğutma Ekstra Bedeli", 2000m, 3,
+            var manuel14 = CreateManual(14, yzCozum, sozlesme1, manuelBorcTipi, "Mükerrer Girilen Sunucu Odası Soğutma Ekstra Bedeli", 2000m, 3,
                 status: ChargeStatus.Cancelled, cancelNote: "Mükerrer muhasebe kaydı ve sözleşme kapsamı dahilinde olduğu tespitiyle iptal edildi.");
-            var manuel15 = CreateManual(15, egeLojistik, ofisOtopark, sozlesme6, manuelBorcTipi, "Hatalı Giriş Yapılan Otopark Aydınlatma Direk Onarım Payı", 1500m, 4,
+            var manuel15 = CreateManual(15, egeLojistik, sozlesme6, manuelBorcTipi, "Hatalı Giriş Yapılan Otopark Aydınlatma Direk Onarım Payı", 1500m, 4,
                 status: ChargeStatus.Cancelled, cancelNote: "Sigorta şirketi tarafından tazmin edildiği için iptal edilmiştir.");
 
             // --- Geçmiş Aylar (Ocak - Ağustos 2026) Manuel Tahakkukları ---
             var pastManualCharges = new List<Charge>
             {
                 // Ocak 2026
-                CreateManual(16, yzCozum, ofis101, sozlesme1, manuelBorcTipi, "Yıllık Sunucu Odası Yangın Söndürme Tüpleri Dolum ve Kontrolü", 2800m, 10, periodStart: new DateTime(2026, 1, 1)),
-                CreateManual(17, megaFinans, ofis102, sozlesme2, btOrtak, "Ofis Zemin Halı Yıkama ve Dezenfeksiyon Hizmeti", 1900m, 12, periodStart: new DateTime(2026, 1, 1)),
-                CreateManual(18, biotech, ofis103, sozlesme3, btOrtak, "Hassas Terazi ve Ölçüm Cihazları Yıllık Kalibrasyon Katkı Bedeli", 3200m, 15, periodStart: new DateTime(2026, 1, 1)),
+                CreateManual(16, yzCozum, sozlesme1, manuelBorcTipi, "Yıllık Sunucu Odası Yangın Söndürme Tüpleri Dolum ve Kontrolü", 2800m, 10, periodStart: new DateTime(2026, 1, 1)),
+                CreateManual(17, megaFinans, sozlesme2, btOrtak, "Ofis Zemin Halı Yıkama ve Dezenfeksiyon Hizmeti", 1900m, 12, periodStart: new DateTime(2026, 1, 1)),
+                CreateManual(18, biotech, sozlesme3, btOrtak, "Hassas Terazi ve Ölçüm Cihazları Yıllık Kalibrasyon Katkı Bedeli", 3200m, 15, periodStart: new DateTime(2026, 1, 1)),
 
                 // Şubat 2026
-                CreateManual(19, egeLojistik, ofisOtopark, sozlesme6, manuelBorcTipi, "Otopark Zemin Buzlanma Önleme ve Tuzlama Hizmet Payı", 1500m, 8, periodStart: new DateTime(2026, 2, 1)),
-                CreateManual(20, agroGida, birimKafe, sozlesme5, btOrtak, "Mutfak Alanı Yağ Ayırıcı Filtre ve Pompa Bakım Masrafı", 2400m, 10, periodStart: new DateTime(2026, 2, 1)),
-                CreateManual(21, yzCozum, ofis104, sozlesme4, manuelBorcTipi, "İlave Ofis İçi Network Switch ve Patch Panel Montaj Bedeli", 3100m, 14, periodStart: new DateTime(2026, 2, 1)),
+                CreateManual(19, egeLojistik, sozlesme6, manuelBorcTipi, "Otopark Zemin Buzlanma Önleme ve Tuzlama Hizmet Payı", 1500m, 8, periodStart: new DateTime(2026, 2, 1)),
+                CreateManual(20, agroGida, sozlesme5, btOrtak, "Mutfak Alanı Yağ Ayırıcı Filtre ve Pompa Bakım Masrafı", 2400m, 10, periodStart: new DateTime(2026, 2, 1)),
+                CreateManual(21, yzCozum, sozlesme4, manuelBorcTipi, "İlave Ofis İçi Network Switch ve Patch Panel Montaj Bedeli", 3100m, 14, periodStart: new DateTime(2026, 2, 1)),
 
                 // Mart 2026
-                CreateManual(22, megaFinans, ofis102, sozlesme2, manuelBorcTipi, "Toplantı Odası Ses Yalıtım Panelleri ve Akustik Düzenleme", 4200m, 9, periodStart: new DateTime(2026, 3, 1)),
-                CreateManual(23, biotech, ofis103, sozlesme3, btOrtak, "Kimyasal Atık Depolama Alanı Periyodik İlaçlama ve Bertarafı", 2900m, 11, periodStart: new DateTime(2026, 3, 1)),
-                CreateManual(24, egeLojistik, ofisOtopark, sozlesme6, manuelBorcTipi, "Açık Otopark Güvenlik Kamerası Lens ve Gece Görüş Bakımı", 1800m, 14, periodStart: new DateTime(2026, 3, 1)),
-                CreateManual(25, yzCozum, ofis101, sozlesme1, manuelBorcTipi, "Mükerrer Girilen Sunucu Raf Montaj Bedeli", 1600m, 5,
+                CreateManual(22, megaFinans, sozlesme2, manuelBorcTipi, "Toplantı Odası Ses Yalıtım Panelleri ve Akustik Düzenleme", 4200m, 9, periodStart: new DateTime(2026, 3, 1)),
+                CreateManual(23, biotech, sozlesme3, btOrtak, "Kimyasal Atık Depolama Alanı Periyodik İlaçlama ve Bertarafı", 2900m, 11, periodStart: new DateTime(2026, 3, 1)),
+                CreateManual(24, egeLojistik, sozlesme6, manuelBorcTipi, "Açık Otopark Güvenlik Kamerası Lens ve Gece Görüş Bakımı", 1800m, 14, periodStart: new DateTime(2026, 3, 1)),
+                CreateManual(25, yzCozum, sozlesme1, manuelBorcTipi, "Mükerrer Girilen Sunucu Raf Montaj Bedeli", 1600m, 5,
                     status: ChargeStatus.Cancelled, cancelNote: "Muhasebe departmanı tarafından sehven mükerrer fatura edildiği için iptal edilmiştir.", periodStart: new DateTime(2026, 3, 1)),
 
                 // Nisan 2026
-                CreateManual(26, agroGida, birimKafe, sozlesme5, btOrtak, "Bina Terası Bahçe Oturma Grupları Ahşap Koruma ve Vernikleme", 2500m, 8, periodStart: new DateTime(2026, 4, 1)),
-                CreateManual(27, yzCozum, ofis101, sozlesme1, manuelBorcTipi, "Yüksek Hızlı Metro Ethernet Altyapı Bağlantı ve Hat Test Payı", 3800m, 10, periodStart: new DateTime(2026, 4, 1)),
-                CreateManual(28, megaFinans, ofis102, sozlesme2, btOrtak, "Bina İçi Acil Aydınlatma ve Yönlendirme Armatürleri Yenileme", 2100m, 12, periodStart: new DateTime(2026, 4, 1)),
+                CreateManual(26, agroGida, sozlesme5, btOrtak, "Bina Terası Bahçe Oturma Grupları Ahşap Koruma ve Vernikleme", 2500m, 8, periodStart: new DateTime(2026, 4, 1)),
+                CreateManual(27, yzCozum, sozlesme1, manuelBorcTipi, "Yüksek Hızlı Metro Ethernet Altyapı Bağlantı ve Hat Test Payı", 3800m, 10, periodStart: new DateTime(2026, 4, 1)),
+                CreateManual(28, megaFinans, sozlesme2, btOrtak, "Bina İçi Acil Aydınlatma ve Yönlendirme Armatürleri Yenileme", 2100m, 12, periodStart: new DateTime(2026, 4, 1)),
 
                 // Mayıs 2026
-                CreateManual(29, biotech, ofis103, sozlesme3, btOrtak, "Temiz Oda Hava Basınç Fark Sensörleri Değişim Bedeli", 4400m, 7, periodStart: new DateTime(2026, 5, 1)),
-                CreateManual(30, egeLojistik, ofisOtopark, sozlesme6, manuelBorcTipi, "Lojistik Sevkiyat Girişi Otomatik Sarmal Kepenk Motor Bakımı", 3300m, 10, periodStart: new DateTime(2026, 5, 1)),
-                CreateManual(31, agroGida, birimKafe, sozlesme5, btOrtak, "Kafe Açık Alan Gölgelik Tente Kumaş Yenileme ve Mekanizma Tamiri", 3600m, 14, periodStart: new DateTime(2026, 5, 1)),
+                CreateManual(29, biotech, sozlesme3, btOrtak, "Temiz Oda Hava Basınç Fark Sensörleri Değişim Bedeli", 4400m, 7, periodStart: new DateTime(2026, 5, 1)),
+                CreateManual(30, egeLojistik, sozlesme6, manuelBorcTipi, "Lojistik Sevkiyat Girişi Otomatik Sarmal Kepenk Motor Bakımı", 3300m, 10, periodStart: new DateTime(2026, 5, 1)),
+                CreateManual(31, agroGida, sozlesme5, btOrtak, "Kafe Açık Alan Gölgelik Tente Kumaş Yenileme ve Mekanizma Tamiri", 3600m, 14, periodStart: new DateTime(2026, 5, 1)),
 
                 // Haziran 2026
-                CreateManual(32, yzCozum, ofis104, sozlesme4, btOrtak, "Yaz Dönemi Merkezi Chiller Klima Soğutma Gaz Dolumu Payı", 4100m, 9, periodStart: new DateTime(2026, 6, 1)),
-                CreateManual(33, megaFinans, ofis102, sozlesme2, manuelBorcTipi, "Veri Merkezi UPS Güç Kaynağı Akü Grubu Test ve Değişim Masrafı", 5000m, 11, periodStart: new DateTime(2026, 6, 1)),
-                CreateManual(34, biotech, ofis103, sozlesme3, btOrtak, "Biyolojik Güvenlik Kabinleri Yıllık Validasyon ve Sertifikasyon Katkısı", 3900m, 15, periodStart: new DateTime(2026, 6, 1)),
+                CreateManual(32, yzCozum, sozlesme4, btOrtak, "Yaz Dönemi Merkezi Chiller Klima Soğutma Gaz Dolumu Payı", 4100m, 9, periodStart: new DateTime(2026, 6, 1)),
+                CreateManual(33, megaFinans, sozlesme2, manuelBorcTipi, "Veri Merkezi UPS Güç Kaynağı Akü Grubu Test ve Değişim Masrafı", 5000m, 11, periodStart: new DateTime(2026, 6, 1)),
+                CreateManual(34, biotech, sozlesme3, btOrtak, "Biyolojik Güvenlik Kabinleri Yıllık Validasyon ve Sertifikasyon Katkısı", 3900m, 15, periodStart: new DateTime(2026, 6, 1)),
 
                 // Temmuz 2026
-                CreateManual(35, egeLojistik, ofisOtopark, sozlesme6, manuelBorcTipi, "Yaz Dönemi Otopark Alanı Asfalt Çatlak Dolgu ve Çizgi Yenileme", 2800m, 8, periodStart: new DateTime(2026, 7, 1)),
-                CreateManual(36, agroGida, birimB203, sozlesme9, btOrtak, "Soğuk Hava Deposu Kompresör Revizyon ve Fan Temizlik Bedeli", 4500m, 10, periodStart: new DateTime(2026, 7, 1)),
-                CreateManual(37, yzCozum, ofis101, sozlesme1, manuelBorcTipi, "Ofis İçi Akıllı Aydınlatma Otomasyonu Kart Değişimi", 1600m, 12, periodStart: new DateTime(2026, 7, 1)),
-                CreateManual(38, megaFinans, ofis102, sozlesme2, btOrtak, "Sehven Açılan Ortak Koridor İklimlendirme Katkı Payı", 2200m, 6,
+                CreateManual(35, egeLojistik, sozlesme6, manuelBorcTipi, "Yaz Dönemi Otopark Alanı Asfalt Çatlak Dolgu ve Çizgi Yenileme", 2800m, 8, periodStart: new DateTime(2026, 7, 1)),
+                CreateManual(36, agroGida, sozlesme9, btOrtak, "Soğuk Hava Deposu Kompresör Revizyon ve Fan Temizlik Bedeli", 4500m, 10, periodStart: new DateTime(2026, 7, 1)),
+                CreateManual(37, yzCozum, sozlesme1, manuelBorcTipi, "Ofis İçi Akıllı Aydınlatma Otomasyonu Kart Değişimi", 1600m, 12, periodStart: new DateTime(2026, 7, 1)),
+                CreateManual(38, megaFinans, sozlesme2, btOrtak, "Sehven Açılan Ortak Koridor İklimlendirme Katkı Payı", 2200m, 6,
                     status: ChargeStatus.Cancelled, cancelNote: "Taşınmaz genel bütçesinden karşılandığı için tahakkuk iptal edilmiştir.", periodStart: new DateTime(2026, 7, 1)),
 
                 // Ağustos 2026
-                CreateManual(39, megaFinans, ofis102, sozlesme2, btOrtak, "Yıllık Yangın ve Tahliye Tatbikatı Dış Danışmanlık ve Raporlama Payı", 2300m, 8, periodStart: new DateTime(2026, 8, 1)),
-                CreateManual(40, biotech, ofis103, sozlesme3, btOrtak, "Saf Su Arıtma Sistemi Reçine ve Membran Filtre Değişim Bedeli", 3700m, 10, periodStart: new DateTime(2026, 8, 1)),
-                CreateManual(41, agroGida, birimKafe, sozlesme5, manuelBorcTipi, "Gıda Analiz Laboratuvarı Havalandırma Kanalı Dezenfeksiyon Hizmeti", 2900m, 12, periodStart: new DateTime(2026, 8, 1)),
-                CreateManual(42, egeLojistik, ofisOtopark, sozlesme6, manuelBorcTipi, "Giriş Güvenlik Kulübesi Ekstra Kamera ve Monitör Bağlantısı", 1750m, 14, periodStart: new DateTime(2026, 8, 1))
+                CreateManual(39, megaFinans, sozlesme2, btOrtak, "Yıllık Yangın ve Tahliye Tatbikatı Dış Danışmanlık ve Raporlama Payı", 2300m, 8, periodStart: new DateTime(2026, 8, 1)),
+                CreateManual(40, biotech, sozlesme3, btOrtak, "Saf Su Arıtma Sistemi Reçine ve Membran Filtre Değişim Bedeli", 3700m, 10, periodStart: new DateTime(2026, 8, 1)),
+                CreateManual(41, agroGida, sozlesme5, manuelBorcTipi, "Gıda Analiz Laboratuvarı Havalandırma Kanalı Dezenfeksiyon Hizmeti", 2900m, 12, periodStart: new DateTime(2026, 8, 1)),
+                CreateManual(42, egeLojistik, sozlesme6, manuelBorcTipi, "Giriş Güvenlik Kulübesi Ekstra Kamera ve Monitör Bağlantısı", 1750m, 14, periodStart: new DateTime(2026, 8, 1))
             };
 
             ctx.Charges.AddRange(manuel01, manuel02, manuel03, manuel04, manuel05, manuel06, manuel07,
@@ -2585,14 +1973,16 @@ public class SeedDataService(
 
     private async Task SeedRezervasyonlarAsync()
     {
-        var salonZ01 = await ctx.Units.FirstAsync(u => u.UnitNo == "Z01");
-        var salonZ02 = await ctx.Units.FirstAsync(u => u.UnitNo == "Z02");
-        var salonEA01 = await ctx.Units.FirstAsync(u => u.UnitNo == "EA01");
-        var salonEA02 = await ctx.Units.FirstAsync(u => u.UnitNo == "EA02");
-        var salonBZ01 = await ctx.Units.FirstAsync(u => u.UnitNo == "B-Z01");
-        var salonBZ02 = await ctx.Units.FirstAsync(u => u.UnitNo == "B-Z02");
-        var salonBEA01 = await ctx.Units.FirstAsync(u => u.UnitNo == "B-EA01");
-        var salonDZ01 = await ctx.Units.FirstOrDefaultAsync(u => u.UnitNo == "D-Z01") ?? salonZ01;
+        var spaceByName = await ctx.Spaces.AsNoTracking().ToDictionaryAsync(sp => sp.Name);
+        var salonZ01 = spaceByName["Toplantı Salonu Z01"];
+        var salonZ02 = spaceByName["Toplantı Odası Z02"];
+        var salonEA01 = spaceByName["A Blok Konferans Salonu"];
+        var salonEA02 = spaceByName["A Blok Fuaye ve Sergi Alanı"];
+        var salonBZ01 = spaceByName["B Blok Toplantı Salonu 1"];
+        var salonBZ02 = spaceByName["B Blok Toplantı Salonu 2"];
+        var salonBEA01 = spaceByName["B Blok Konferans ve Etkinlik Salonu"];
+        var salonDZ01 = spaceByName["D Blok Seminer ve Toplantı Odası"];
+        var ruleChargeTypes = await ctx.RezervasyonTarifeler.ToDictionaryAsync(r => r.SpaceId, r => r.ChargeTypeId);
 
         var yzCozum = await ctx.Tenants.FirstAsync(t => t.TenantNo == "KRC-000001");
         var megaFinans = await ctx.Tenants.FirstAsync(t => t.TenantNo == "KRC-000002");
@@ -2625,7 +2015,7 @@ public class SeedDataService(
         // Local helper to create and add a reservation with an owner attendee
         Reservation CreateReservation(
             int seq,
-            Unit unit,
+            Space unit,
             Tenant tenant,
             ApplicationUser? reqUser,
             DateTime start,
@@ -2654,7 +2044,8 @@ public class SeedDataService(
             var rzv = new Reservation
             {
                 ReservationNo = ReservationNumberPolicy.FormatReservationNo(seq),
-                UnitId = unit.Id,
+                SpaceId = unit.Id,
+                ChargeTypeId = ruleChargeTypes[unit.Id],
                 TenantId = tenant.Id,
                 StartDate = start,
                 EndDate = end,
@@ -2708,13 +2099,13 @@ public class SeedDataService(
         }
 
         // Local helper for reservation charge
-        Charge CreateCharge(int seq, Reservation rzv, Unit unit, Tenant tenant, ChargeType chargeType, decimal expectedAmount, decimal kdvRate, decimal kdvAmount, decimal totalAmount, decimal paidAmount, ChargeStatus status, DateTime dueDate)
+        Charge CreateCharge(int seq, Reservation rzv, Space unit, Tenant tenant, ChargeType chargeType, decimal expectedAmount, decimal kdvRate, decimal kdvAmount, decimal totalAmount, decimal paidAmount, ChargeStatus status, DateTime dueDate)
         {
             return new Charge
             {
                 ChargeNo = ChargeNumberPolicy.FormatChargeNo(800000 + seq),
                 TenantId = tenant.Id,
-                UnitId = unit.Id,
+                SpaceId = unit.Id,
                 ReservationId = rzv.Id,
                 PeriodStart = rzv.StartDate,
                 PeriodEnd = rzv.EndDate,
@@ -3179,20 +2570,86 @@ public class SeedDataService(
             RegistrationDate = DateTime.Now.AddMonths(-Random.Shared.Next(6, 36))
         };
 
-    private static Lease MakeSozlesme(string leaseNo, Unit unit, Tenant tenant,
+    private Dictionary<int, Space> _spacesById = [];
+
+    private async Task<Dictionary<string, Space>> LoadSpacesAsync()
+    {
+        var spaces = await ctx.Spaces.AsNoTracking().Include(sp => sp.SpaceType).ToListAsync();
+        _spacesById = spaces.ToDictionary(sp => sp.Id);
+        return spaces.ToDictionary(sp => sp.Name);
+    }
+
+    private LeaseArea BuildLeaseArea(Space space, decimal? rentedArea) => new()
+    {
+        SpaceId = space.Id,
+        RentedArea = rentedArea ?? space.Area,
+        SnapshotCode = space.Code,
+        SnapshotName = space.Name,
+        SnapshotTypeName = space.SpaceType.Name,
+        SnapshotUsage = space.Usage,
+        SnapshotArea = space.Area,
+        SnapshotPath = string.Join(
+            " / ",
+            SpaceTreePolicy.GetAncestorIds(space.Path)
+                .Where(_spacesById.ContainsKey)
+                .Select(id => _spacesById[id].Name)
+                .Append(space.Name))
+    };
+
+    private async Task SeedRezervasyonKurallariAsync(Func<string, Space> sp, DateTime now)
+    {
+        var toplantiId = (await ctx.ChargeTypes.FirstAsync(b => b.Code == "TOPLANTI")).Id;
+        var etkinlikId = (await ctx.ChargeTypes.FirstAsync(b => b.Code == "ETKINLIK")).Id;
+        var mevcut = await ctx.RezervasyonTarifeler.Select(r => r.SpaceId).ToListAsync();
+
+        void Rule(string spaceName, int chargeTypeId, int freeMinutes, int periodMinutes, decimal periodRate, string description)
+        {
+            var space = sp(spaceName);
+            if (mevcut.Contains(space.Id)) return;
+
+            ctx.RezervasyonTarifeler.Add(new ReservationRateOverride
+            {
+                SpaceId = space.Id,
+                ChargeTypeId = chargeTypeId,
+                FreeDurationMinutes = freeMinutes,
+                BillingPeriodMinutes = periodMinutes,
+                PeriodRate = periodRate,
+                KdvRate = 20m,
+                Description = description
+            });
+        }
+
+        // Eski özel birim kuralları
+        Rule("Toplantı Salonu Z01", toplantiId, 30, 60, 600m, "Toplantı Salonu Z01 için özel fiyatlandırma kuralı");
+        Rule("B Blok Konferans ve Etkinlik Salonu", etkinlikId, 0, 60, 2500m, "B Blok Konferans ve Etkinlik Salonu özel saatlik fiyatlandırma kuralı");
+        Rule("Toplantı Odası Z02", toplantiId, 480, 60, 0m, "Toplantı Odası Z02 - Tamamen Ücretsiz Tahsis Kuralı");
+        Rule("B Blok Toplantı Salonu 1", toplantiId, 480, 60, 0m, "B Blok Toplantı Salonu 1 - Tamamen Ücretsiz Tahsis Kuralı");
+
+        // Eski genel (tür bazlı) kurallar: artık her rezervasyonluk alanın kendi kuralı
+        const string genelToplanti = "Genel Toplantı Salonu fiyatlandırma kuralı";
+        const string genelEtkinlik = "Genel Etkinlik Alanı saatlik fiyatlandırma kuralı";
+        Rule("B Blok Toplantı Salonu 2", toplantiId, 60, 60, 400m, genelToplanti);
+        Rule("C Blok Toplantı Salonu", toplantiId, 60, 60, 400m, genelToplanti);
+        Rule("D Blok Seminer ve Toplantı Odası", toplantiId, 60, 60, 400m, genelToplanti);
+        Rule("A Blok Konferans Salonu", etkinlikId, 0, 60, 1500m, genelEtkinlik);
+        Rule("A Blok Fuaye ve Sergi Alanı", etkinlikId, 0, 60, 1500m, genelEtkinlik);
+        Rule("Açık Hava Etkinlik Alanı", etkinlikId, 0, 60, 1500m, genelEtkinlik);
+    }
+
+    private Lease MakeSozlesme(string leaseNo, Space space, Tenant tenant,
         DateTime baslangic, DateTime bitis,
         bool kdv, decimal kdvOrani = 20, string? notlar = null,
         DueDateRuleType vadeKuraliTipi = DueDateRuleType.FixedDayOfMonth,
         int vadeGunu = 1,
         LeaseStatus status = LeaseStatus.Active,
         DateTime? terminationDate = null,
-        string? terminationReason = null) => new()
+        string? terminationReason = null,
+        decimal? rentedArea = null) => new()
         {
             LeaseNo = leaseNo,
-            Unit = unit,
-            UnitId = unit.Id,
             Tenant = tenant,
             TenantId = tenant.Id,
+            Areas = [BuildLeaseArea(space, rentedArea)],
             StartDate = baslangic,
             EndDate = bitis,
             Description = notlar,
@@ -3270,19 +2727,17 @@ public class SeedDataService(
         ctx.SozlesmeTarifeler.RemoveRange(ctx.SozlesmeTarifeler.IgnoreQueryFilters());
         ctx.SozlesmeIncelemeGecmisleri.RemoveRange(ctx.SozlesmeIncelemeGecmisleri.IgnoreQueryFilters());
         ctx.SozlesmeIslemGecmisleri.RemoveRange(ctx.SozlesmeIslemGecmisleri.IgnoreQueryFilters());
+        ctx.LeaseAreas.RemoveRange(ctx.LeaseAreas.IgnoreQueryFilters());
         ctx.Leases.RemoveRange(ctx.Leases.IgnoreQueryFilters());
+        await ctx.SaveChangesAsync();
+        await ctx.LeaseGroups.IgnoreQueryFilters().ExecuteUpdateAsync(g => g.SetProperty(x => x.PreviousGroupId, (int?)null));
+        ctx.LeaseGroups.RemoveRange(ctx.LeaseGroups.IgnoreQueryFilters());
 
         ctx.PaymentStoreRoutings.RemoveRange(ctx.PaymentStoreRoutings.IgnoreQueryFilters());
         ctx.StoreAccounts.RemoveRange(ctx.StoreAccounts.IgnoreQueryFilters());
         ctx.Stores.RemoveRange(ctx.Stores.IgnoreQueryFilters());
 
         await ClearSpaceDataAsync();
-
-        ctx.UnitRates.RemoveRange(ctx.UnitRates.IgnoreQueryFilters());
-        ctx.Units.RemoveRange(ctx.Units.IgnoreQueryFilters());
-
-        ctx.TasinmazTarifeler.RemoveRange(ctx.TasinmazTarifeler.IgnoreQueryFilters());
-        ctx.Properties.RemoveRange(ctx.Properties.IgnoreQueryFilters());
 
         ctx.GenelTarifeler.RemoveRange(ctx.GenelTarifeler.IgnoreQueryFilters());
 
@@ -3327,8 +2782,6 @@ public class SeedDataService(
 
         // Sistem Tanımları (Baştan seed edileceği için temizlenebilir)
         ctx.Kategoriler.RemoveRange(ctx.Kategoriler.IgnoreQueryFilters());
-        ctx.UnitTypes.RemoveRange(ctx.UnitTypes.IgnoreQueryFilters());
-        ctx.TasinmazTipleri.RemoveRange(ctx.TasinmazTipleri.IgnoreQueryFilters());
         ctx.ChargeTypes.RemoveRange(ctx.ChargeTypes.IgnoreQueryFilters().Where(b => !b.IsSystem));
         ctx.DocumentTypes.RemoveRange(ctx.DocumentTypes.IgnoreQueryFilters().Where(b => !b.IsSystem));
 
@@ -3341,7 +2794,7 @@ public class SeedDataService(
         string adSoyad,
         int tenantId,
         string roleName = RoleNames.KiraciYoneticisi,
-        bool tumTasinmazlaraErisim = true)
+        bool hasAccessToAllSpaces = true)
     {
         var admin = await userManager.FindByEmailAsync(IdentitySeedService.AdminEmail);
         if (admin == null || !admin.IsActive || !admin.IsSuperAdmin || admin.UserType != UserType.Internal)
@@ -3359,7 +2812,7 @@ public class SeedDataService(
                 IsActive = true,
                 UserType = UserType.Tenant,
                 TenantId = tenantId,
-                TumTasinmazlaraErisim = tumTasinmazlaraErisim
+                HasAccessToAllSpaces = hasAccessToAllSpaces
             };
             var result = await userManager.CreateAsync(user, password);
             if (!result.Succeeded)
@@ -3372,7 +2825,7 @@ public class SeedDataService(
             user.UserType = UserType.Tenant;
             user.TenantId = tenantId;
             user.IsActive = true;
-            user.TumTasinmazlaraErisim = tumTasinmazlaraErisim;
+            user.HasAccessToAllSpaces = hasAccessToAllSpaces;
             user.AdSoyad = adSoyad;
             await userManager.UpdateAsync(user);
             var token = await userManager.GeneratePasswordResetTokenAsync(user);
@@ -3415,6 +2868,8 @@ public class SeedDataService(
             PermissionCatalog.TenantPortal.Lease.Module,
             PermissionCatalog.TenantPortal.Charge.Module,
             PermissionCatalog.TenantPortal.Payment.Module,
+            PermissionCatalog.TenantPortal.Payment.Report,
+            PermissionCatalog.TenantPortal.Payment.StartOnline,
             PermissionCatalog.TenantPortal.Reservation.Module,
             PermissionCatalog.TenantPortal.Reservation.Create,
             PermissionCatalog.TenantPortal.Reservation.Cancel
@@ -3450,6 +2905,8 @@ public class SeedDataService(
             PermissionCatalog.Payment.Reject,
             PermissionCatalog.Payment.ImportBankStatement,
             PermissionCatalog.Payment.MatchBankTransaction,
+            PermissionCatalog.Payment.UnmatchBankTransaction,
+            PermissionCatalog.Payment.RemovePaymentMatch,
             PermissionCatalog.Charge.Module,
             PermissionCatalog.Charge.Regenerate,
             PermissionCatalog.ManualCharge.Module,
@@ -3458,11 +2915,10 @@ public class SeedDataService(
             PermissionCatalog.Notification.Module,
             PermissionCatalog.Notification.BorcHatirlatma,
             PermissionCatalog.Store.Module,
-            PermissionCatalog.Store.Account,
+            PermissionCatalog.Store.DeactivateAccount,
+            PermissionCatalog.Store.ReplaceAccount,
             PermissionCatalog.PaymentRouting.Module,
             PermissionCatalog.RateSchedule.Module,
-            PermissionCatalog.Property.Module,
-            PermissionCatalog.Unit.Module,
             PermissionCatalog.Space.Module,
             PermissionCatalog.Tenant.Module,
             PermissionCatalog.Lease.Module
@@ -3478,14 +2934,6 @@ public class SeedDataService(
         const string operasyonRolAdi = "Tesis ve Operasyon Sorumlusu";
         var operasyonPermissions = new[]
         {
-            PermissionCatalog.Property.Module,
-            PermissionCatalog.Property.Create,
-            PermissionCatalog.Property.Edit,
-            PermissionCatalog.Unit.Module,
-            PermissionCatalog.Unit.Create,
-            PermissionCatalog.Unit.Edit,
-            PermissionCatalog.Unit.OverrideRate,
-            PermissionCatalog.Unit.UpdateCapacity,
             PermissionCatalog.Space.Module,
             PermissionCatalog.Space.Create,
             PermissionCatalog.Space.Edit,
@@ -3497,8 +2945,11 @@ public class SeedDataService(
             PermissionCatalog.Tenant.Edit,
             PermissionCatalog.Lease.Module,
             PermissionCatalog.Lease.Create,
+            PermissionCatalog.Lease.UpdateDraft,
+            PermissionCatalog.Lease.ResubmitRevision,
+            PermissionCatalog.Lease.UploadDraftDocument,
             PermissionCatalog.Lease.Edit,
-            PermissionCatalog.Lease.UpdateAllocatedArea,
+            PermissionCatalog.Lease.UpdateDueDate,
             PermissionCatalog.Lease.Extend,
             PermissionCatalog.Lease.Terminate,
             PermissionCatalog.Lease.Approve,
@@ -3520,13 +2971,14 @@ public class SeedDataService(
             PermissionCatalog.DocumentType.Module,
             PermissionCatalog.DocumentType.Create,
             PermissionCatalog.DocumentType.Edit,
+            PermissionCatalog.DocumentType.ToggleStatus,
             PermissionCatalog.Charge.Module,
             PermissionCatalog.Payment.Module
         };
 
         var operasyonRol = await EnsureInternalRoleAsync(
             operasyonRolAdi,
-            "Taşınmaz, bağımsız bölüm, sözleşme, rezervasyon ve belge süreçlerini yönetir.",
+            "Alan, sözleşme, rezervasyon ve belge süreçlerini yönetir.",
             operasyonPermissions,
             admin.Id);
 
@@ -3577,7 +3029,7 @@ public class SeedDataService(
                 EmailConfirmed = true,
                 IsActive = true,
                 UserType = UserType.Internal,
-                TumTasinmazlaraErisim = true,
+                HasAccessToAllSpaces = true,
                 IsSuperAdmin = false
             };
             var result = await userManager.CreateAsync(user, password);
@@ -3588,7 +3040,7 @@ public class SeedDataService(
         {
             user.UserType = UserType.Internal;
             user.IsActive = true;
-            user.TumTasinmazlaraErisim = true;
+            user.HasAccessToAllSpaces = true;
             user.AdSoyad = adSoyad;
             await userManager.UpdateAsync(user);
 

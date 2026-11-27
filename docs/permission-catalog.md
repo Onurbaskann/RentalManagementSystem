@@ -6,24 +6,6 @@
 
 ---
 
-## Taşınmaz
-
-| Permission | Açıklama |
-|------------|----------|
-| `Tasinmaz.View` | Taşınmaz listele/detay görüntüle |
-| `Tasinmaz.Create` | Yeni taşınmaz ekle |
-| `Tasinmaz.Edit` | Taşınmaz düzenle |
-
-## Birim (Taşınmaza bağlı)
-
-| Permission | Açıklama |
-|------------|----------|
-| `Birim.View` | Birim görüntüle |
-| `Birim.Create` | Birim ekle |
-| `Birim.Edit` | Birim düzenle |
-| `Birim.ManageRate` | Birim özel fiyat (BirimRate) yönet |
-| `Internal.Unit.UpdateCapacity` | Kontenjanı değiştir — endpoint `POST UnitCapacity/Apply`; önizleme `POST UnitCapacity/Preview` modül izni `Internal.Unit` ile |
-
 ## Alan (Alan Hiyerarşisi, F1)
 
 | Permission | Açıklama |
@@ -74,7 +56,32 @@
 | `Sozlesme.Extend` | Sözleşme süresi uzat |
 | `Sozlesme.Terminate` | Sözleşme feshet |
 | `Sozlesme.OverrideRate` | Sözleşme kalem fiyatına elle müdahale (SozlesmeRate) yetkisini yönet |
-| `Internal.Lease.UpdateAllocatedArea` | Fiziksel m² düzenle (açık ofis sözleşmesi) — endpoint `POST Lease/UpdateAllocatedArea`; seed'de `Lease.Edit` sahibi rollere verilir |
+| `Internal.Lease.UpdateDraft` | `POST Lease/UpdateDraft` — başvuru taslağı düzenle (eski: `Lease.Create`); seed'de `Lease.Create` sahibi rollere verilir |
+| `Internal.Lease.ResubmitRevision` | `POST Lease/ResubmitRevision` — revizyon istenen başvuruyu yeniden gönder (eski: `Lease.Create`); `Lease.Create` sahiplerine |
+| `Internal.Lease.UploadDraftDocument` | `POST Lease/UploadDraftDocument` — başvuru belgesi yükle (eski: `Lease.Create`); `Lease.Create` sahiplerine |
+| `Internal.Lease.UpdateDueDate` | `POST Lease/UpdateDueDate` — vade günü düzenle (eski: `Lease.Edit`); `Lease.Edit` sahiplerine |
+| `Internal.ReservationRateRule.ToggleStatus` | `POST Admin/ReservationRateOverride/ToggleStatus` — kural aktif/pasif (eski: `ReservationRateRule.Edit`); `ReservationRateRule.Edit` sahiplerine |
+| `Internal.ChargeType.ToggleStatus` | `POST Admin/ChargeType/ToggleStatus/{id} — aktif/pasif` (eski: `ChargeType.Edit`); `ChargeType.Edit` sahiplerine |
+| `Internal.ChargeType.ChangeSortOrder` | `POST Admin/ChargeType/ChangeSortOrder/{id} — sıra değiştir` (eski: `ChargeType.Edit`); `ChargeType.Edit` sahiplerine |
+| `Internal.DocumentType.ToggleStatus` | `POST Admin/DocumentType/ToggleStatus/{id} — aktif/pasif` (eski: `DocumentType.Edit`); `DocumentType.Edit` sahiplerine |
+| `Internal.Sector.ToggleStatus` | `POST Admin/Sector/ToggleStatus/{id} — aktif/pasif` (eski: `Sector.Edit`); `Sector.Edit` sahiplerine |
+| `Internal.TenantCategory.ToggleStatus` | `POST Admin/TenantCategory/ToggleStatus/{id} — aktif/pasif` (eski: `TenantCategory.Edit`); `TenantCategory.Edit` sahiplerine |
+| `Internal.Store.ToggleStatus` | `POST Admin/Store/ToggleStatus/{id} — aktif/pasif` (eski: `Store.Edit`); `Store.Edit` sahiplerine |
+| `Internal.Store.DeactivateAccount` | `POST Admin/Store/DeactivateAccount/{id}/{accountId} — hesap pasifleştir` (eski: `Store.Account`); `Store.Account` sahiplerine |
+| `Internal.Store.ReplaceAccount` | `POST Admin/Store/ReplaceAccount/{id} — hesap değiştir` (eski: `Store.Account`); `Store.Account` sahiplerine |
+| `Internal.RateSchedule.ToggleStatus` | `POST Admin/Rate/ToggleStatus/{year} — aktif/pasif` (eski: `RateSchedule.Edit`); `RateSchedule.Edit` sahiplerine |
+| `Internal.RateSchedule.UpdateLine` | `POST Admin/Rate/Year/{year}/UpdateLine — tarife satırı güncelle` (eski: `RateSchedule.Edit`); `RateSchedule.Edit` sahiplerine |
+| `Internal.Payment.UnmatchBankTransaction` | `POST BankTransaction/Unmatch — banka eşleşmesini kaldır; ScopeAware` (eski: `Payment.MatchBankTransaction`); `Payment.MatchBankTransaction` sahiplerine |
+| `Internal.Payment.RemovePaymentMatch` | `POST BankTransaction/RemovePaymentMatch — ödeme eşleşmesini kaldır; ScopeAware` (eski: `Payment.MatchBankTransaction`); `Payment.MatchBankTransaction` sahiplerine |
+| `Tenant.System.User.CancelInvite` | `POST Tenant/Users/Invite/Cancel/{id} — daveti iptal et` (eski: `Tenant.System.User.Invite`); `Tenant.System.User.Invite` sahiplerine |
+| `Tenant.System.User.ResendInvite` | `POST Tenant/Users/Invite/Resend/{id} — daveti yeniden gönder` (eski: `Tenant.System.User.Invite`); `Tenant.System.User.Invite` sahiplerine |
+| `Tenant.Payment.Report` | `POST Tenant/Charges/ReportPayment — ödeme bildir` (eski: `Tenant.Payment (modül)`); `Tenant.Payment (modül)` sahiplerine |
+| `Tenant.Payment.StartOnline` | `POST Tenant/Charges/StartOnlinePayment — online ödeme başlat` (eski: `Tenant.Payment (modül)`); `Tenant.Payment (modül)` sahiplerine |
+| `Internal.Notification.BorcHatirlatma` | `POST ChargeReminder/SendDebtorEmails`; ScopeAware (alan kapsamı uygulanır) |
+
+> Kaldırıldı (alan hiyerarşisi F2a/P7a): `Internal.Property.*`, `Internal.Unit.*` (Create/Edit/OverrideRate/UpdateCapacity), `Internal.PropertyType.*`, `Internal.UnitType.*`, `Internal.PropertyMultiplier.*`, `Internal.Lease.UpdateAllocatedArea`.
+>
+> Kaldırıldı (P7e, hiçbir endpoint'i korumuyordu): `Internal.Store.Account` (yerine `Store.DeactivateAccount`/`ReplaceAccount`), `Internal.RateSchedule.Edit` (yerine `RateSchedule.ToggleStatus`/`UpdateLine`), `System.User.Create` (kullanıcı davetle oluşur: `Invitation.Create`), `System.User.AssignPermission` (kullanılmıyordu).
 
 ## Ödeme (Faz 5'te aktifleşir, şimdiden tanımlı)
 
@@ -103,10 +110,6 @@
 |------------|----------|
 | `Parametre.View` | Parametre ekranlarını görüntüle (genel) |
 | `Parametre.Manage` | Parametre kayıtlarını yönet (genel) |
-| `TasinmazTipi.View` | Taşınmaz tiplerini görüntüle |
-| `TasinmazTipi.Manage` | Taşınmaz tiplerini yönet |
-| `BirimTuru.View` | Birim türlerini görüntüle |
-| `BirimTuru.Manage` | Birim türlerini yönet |
 | `KiraciKategori.View` | Kiracı kategorilerini görüntüle |
 | `KiraciKategori.Manage` | Kiracı kategorilerini yönet |
 | `Sektor.View` | Sektörleri görüntüle |
@@ -170,17 +173,15 @@
 | Permission | Admin | Yonetici | Goruntuleyici |
 |------------|:-----:|:--------:|:-------------:|
 | `*.View` (tümü) | ✅ | ✅ | ✅ (sadece atanmış taşınmazlar) |
-| `Tasinmaz.Create/Edit` | ✅ | ⚙️ | ❌ |
-| `Birim.Create/Edit` | ✅ | ⚙️ | ❌ |
 | `Kiraci.Create/Edit` | ✅ | ⚙️ | ❌ |
 | `Sozlesme.Create/Edit` | ✅ | ⚙️ | ❌ |
 | `Sozlesme.Extend/Terminate` | ✅ | ⚙️ | ❌ |
 | `Odeme.*` | ✅ | ⚙️ | ❌ |
 | `Kullanici.*` | ✅ | ❌ | ❌ |
-| `Parametre.*` / `TasinmazTipi.*` / `BirimTuru.*` / `KiraciKategori.*` / `Sektor.*` | ✅ | ❌ | ❌ |
+| `Parametre.*` / `KiraciKategori.*` / `Sektor.*` | ✅ | ❌ | ❌ |
 | `Tarife.*` / `BorcTipi.Manage` / `RezervasyonUcretKural.Manage` | ✅ | ❌ | ❌ |
 | `TasinmazCarpan.*` | ✅ | ⚙️ | ❌ |
-| `Birim.ManageRate` / `Sozlesme.OverrideRate` / `Tahakkuk.Regenerate` | ✅ | ⚙️ | ❌ |
+| `Sozlesme.OverrideRate` / `Tahakkuk.Regenerate` | ✅ | ⚙️ | ❌ |
 | `Rezervasyon.View` / `ManuelBorc.View` | ✅ | ⚙️ | ✅ (kapsam) |
 | `Rezervasyon.Create/Edit/Cancel/TransferToTahakkuk` | ✅ | ⚙️ | ❌ |
 | `ManuelBorc.Create/Cancel` | ✅ | ⚙️ | ❌ |

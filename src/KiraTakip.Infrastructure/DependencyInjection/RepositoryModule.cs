@@ -18,14 +18,12 @@ using KiraTakip.Repositories.Interfaces.Identity;
 using KiraTakip.Repositories.Interfaces.Leases;
 using KiraTakip.Repositories.Interfaces.Payments;
 using KiraTakip.Repositories.Interfaces.Pricing;
-using KiraTakip.Repositories.Interfaces.Properties;
 using KiraTakip.Repositories.Interfaces.Reservations;
 using KiraTakip.Repositories.Interfaces.Settings;
 using KiraTakip.Repositories.Interfaces.Tenants;
 using KiraTakip.Repositories.Leases;
 using KiraTakip.Repositories.Payments;
 using KiraTakip.Repositories.Pricing;
-using KiraTakip.Repositories.Properties;
 using KiraTakip.Repositories.Reservations;
 using KiraTakip.Repositories.Settings;
 using KiraTakip.Repositories.Tenants;
@@ -38,8 +36,6 @@ namespace KiraTakip.Infrastructure.DependencyInjection
         {
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<ITenantRepository, TenantRepository>();
-            services.AddScoped<IPropertyRepository, PropertyRepository>();
-            services.AddScoped<IUnitRepository, UnitRepository>();
             services.AddScoped<ILeaseRepository, LeaseRepository>();
             services.AddScoped<ILeaseGroupRepository, LeaseGroupRepository>();
             services.AddScoped<ILeaseReviewHistoryRepository, LeaseReviewHistoryRepository>();
@@ -48,13 +44,10 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<IPaymentAllocationRepository, PaymentAllocationRepository>();
             services.AddScoped<IPaymentMatchRepository, PaymentMatchRepository>();
             services.AddScoped<IBankTransactionRepository, BankTransactionRepository>();
-            services.AddScoped<IPropertyRateOverrideRepository, PropertyRateOverrideRepository>();
             services.AddScoped<IChargeTypeRepository, ChargeTypeRepository>();
             services.AddScoped<ILeaseRateOverrideRepository, LeaseRateOverrideRepository>();
-            services.AddScoped<IUnitRateRepository, UnitRateRepository>();
             services.AddScoped<IRateScheduleRepository, RateScheduleRepository>();
             services.AddScoped<IReservationRateOverrideRepository, ReservationRateOverrideRepository>();
-            services.AddScoped<IUnitTypeRepository, UnitTypeRepository>();
             services.AddScoped<ISpaceRepository, SpaceRepository>();
             services.AddScoped<ISpaceLockRepository, SpaceLockRepository>();
             services.AddScoped<ISpaceTypeRepository, SpaceTypeRepository>();
@@ -64,7 +57,6 @@ namespace KiraTakip.Infrastructure.DependencyInjection
             services.AddScoped<IDocumentRepository, DocumentRepository>();
             services.AddScoped<IDocumentContentRepository, DocumentContentRepository>();
             services.AddScoped<ICategoryRepository, CategoryRepository>();
-            services.AddScoped<IPropertyTypeRepository, PropertyTypeRepository>();
             services.AddScoped<IReservationRepository, ReservationRepository>();
             services.AddScoped<IUserPermissionRepository, UserPermissionRepository>();
             services.AddScoped<IAuditLogRepository, AuditLogRepository>();

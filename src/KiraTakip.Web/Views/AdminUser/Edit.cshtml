@@ -23,7 +23,7 @@
 }
 
 <div class="card" x-data="{ seciliRolId: '@Model.RoleId', globalErisim: @(Model.HasAccessToAllSpaces ? "true" : "false") }">
-    <form method="post" action="/Admin/Users/Edit/@Model.Id">
+    <form asp-form-write-permission="@PermissionCatalog.User.Edit" method="post" action="/Admin/Users/Edit/@Model.Id">
         @Html.AntiForgeryToken()
 
 

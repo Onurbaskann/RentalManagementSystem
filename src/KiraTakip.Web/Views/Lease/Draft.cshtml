@@ -116,7 +116,7 @@
             <div class="text-sm text-muted italic mb-4">Henüz belge yüklenmedi.</div>
         }
 
-        @if (Model.CanEdit)
+        @if (Model.CanUploadDocument)
         {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 @foreach (var type in Model.DocumentTypes)

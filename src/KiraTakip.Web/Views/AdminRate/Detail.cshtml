@@ -20,7 +20,7 @@
     <div class="page-subtitle">Kiracı kategorisi × borç tipi bazında yıllık birim fiyatlar</div>
 </div>
 
-<form method="post" action="/Admin/Rate/Year/@Model.Year/UpdateLine">
+<form asp-form-write-permission="@PermissionCatalog.RateSchedule.UpdateLine" method="post" action="/Admin/Rate/Year/@Model.Year/UpdateLine">
     @Html.AntiForgeryToken()
     <input type="hidden" name="Year" value="@Model.Year" />
     <input type="hidden" name="IsActive" value="@Model.IsActive.ToString().ToLower()" />

@@ -2,7 +2,6 @@ namespace KiraTakip.Models.Settings;
 
 public sealed class OperationalPolicySettings
 {
-    public decimal LeaseMinimumUsageArea { get; init; } = 5m;
     public int PaymentReminderDaysBefore { get; init; } = 5;
     public int PaymentReminderCooldownDays { get; init; } = 7;
     public int InvitationValidityDays { get; init; } = 7;

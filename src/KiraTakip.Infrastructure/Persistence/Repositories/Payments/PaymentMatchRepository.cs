@@ -19,7 +19,7 @@ public class PaymentMatchRepository(ApplicationDbContext context)
             .Include(match => match.BankTransaction)
             .Include(match => match.PaymentAllocation)
                 .ThenInclude(payment => payment.Charge)
-                    .ThenInclude(charge => charge.Unit)
+                    .ThenInclude(charge => charge.Space)
             .FirstOrDefaultAsync(match => match.Id == matchId);
 
     public Task RemoveAsync(PaymentMatch match)

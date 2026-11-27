@@ -60,7 +60,7 @@
                                   data-confirm="'@store.Name' mağazası @(store.IsActive ? "pasif" : "aktif") yapılsın mı?">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-sm @(store.IsActive ? "btn-danger" : "btn-amber")"
-                                        asp-permission="@PermissionCatalog.Store.Edit">
+                                        asp-permission="@PermissionCatalog.Store.ToggleStatus">
                                     @(store.IsActive ? "Pasif Yap" : "Aktif Yap")
                                 </button>
                             </form>

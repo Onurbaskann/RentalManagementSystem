@@ -28,7 +28,7 @@
     string gunBadgeCls = Model.RemainingDays <= 10 ? "day-badge-red" : Model.RemainingDays <= 30 ? "day-badge-amber" : "day-badge-green";
     string gunMesaj = feshedildi ? "Sözleşme feshedildi." : Model.RemainingDays <= 0 ? "Sözleşme sona erdi." : Model.RemainingDays <= 30 ? "Süresi dolmak üzere!" : "Sözleşme aktif.";
 
-    bool canEdit = await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.Edit);
+    bool canUpdateDueDate = await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.UpdateDueDate);
     bool canExtend = await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.Extend);
     bool canTerminate = await PermissionService.HasPermissionAsync(PermissionCatalog.Lease.Terminate);
     bool canRegenerate = await PermissionService.HasPermissionAsync(PermissionCatalog.Charge.Regenerate);
@@ -300,7 +300,7 @@
                 </div>
             </div>
 
-            <!-- Sağ: Taşınmaz + Sözleşme Durumu -->
+            <!-- Sağ: Alan + Sözleşme Durumu -->
             <div class="text-right">
                 <div class="text-[11.5px] font-semibold text-muted mb-2.5">Alan</div>
                 <div class="font-display text-xl font-bold mb-1">@s.SpaceName</div>
@@ -398,7 +398,7 @@
                         }
                     </div>
                 </div>
-                @if (canEdit && LeaseLifecycle.CanUpdateDueDate(s.Status))
+                @if (canUpdateDueDate && LeaseLifecycle.CanUpdateDueDate(s.Status))
                 {
                     <button class="btn btn-sm btn-secondary" type="button" @@click="showVade = true">Düzenle</button>
                 }
@@ -554,7 +554,7 @@
     <div id="lease-tabs">
         <div class="tabs">
             <button class="tab">Detaylar</button>
-            <button class="tab">Birim Bilgisi</button>
+            <button class="tab">Alan Bilgisi</button>
             <button class="tab">Geçmiş Sözleşmeler (@(Model.PreviousLeases.Count + Model.TenantOtherLeases.Count))</button>
             <button class="tab">İşlem Geçmişi (@s.ActivityLog.Count)</button>
             @if (Model.HasPaymentAccess)
@@ -613,7 +613,7 @@
             </div>
         </div>
 
-        <!-- Tab 2: Unit Bilgisi -->
+        <!-- Tab 2: Alan Bilgisi -->
         <div class="tab-content">
             <div class="card">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -645,12 +645,12 @@
         <!-- Tab 3: Geçmiş Sözleşmeler -->
         <div class="tab-content">
             <div class="flex flex-col gap-6">
-                <!-- Bölüm 1: Bu Birime Ait Diğer Sözleşmeler -->
+                <!-- Bölüm 1: Bu Alana Ait Diğer Sözleşmeler -->
                 <div>
-                    <div class="text-[13px] font-semibold text-slate-700 mb-2">Bu Birime Ait Diğer Sözleşmeler <span class="text-muted font-normal">(@Model.PreviousLeases.Count)</span></div>
+                    <div class="text-[13px] font-semibold text-slate-700 mb-2">Bu Alana Ait Diğer Sözleşmeler <span class="text-muted font-normal">(@Model.PreviousLeases.Count)</span></div>
                     @if (!Model.PreviousLeases.Any())
                     {
-                        <div class="card text-center text-muted p-6 text-[13px]">Bu birime ait başka sözleşme yok.</div>
+                        <div class="card text-center text-muted p-6 text-[13px]">Bu alana ait başka sözleşme yok.</div>
                     }
                     else
                     {
@@ -1251,7 +1251,7 @@
             <div x-show="!showFesihConfirm">
                 <div class="bg-red-50 border border-red-200 rounded-lg px-3.5 py-3 mb-5 text-[12.5px] text-red-800 space-y-1">
                     <div class="font-semibold">Bu işlem geri alınamaz.</div>
-                    <div>Feshedilen sözleşme aktif gelir hesaplarına dahil edilmez ve birim yeniden kiralanabilir hale gelir.</div>
+                    <div>Feshedilen sözleşme aktif gelir hesaplarına dahil edilmez ve alan yeniden kiralanabilir hale gelir.</div>
                     <div class="pt-0.5 border-t border-red-200 text-[12px]">Fesih tarihini izleyen aydan itibaren ödeme alınmamış tahakkuklar otomatik olarak <strong>iptal edilir</strong>. Mevcut ay ve önceki dönemler ile ödenmişler etkilenmez.</div>
                 </div>
 

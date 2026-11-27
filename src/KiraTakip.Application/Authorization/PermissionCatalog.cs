@@ -17,24 +17,6 @@ public static class PermissionCatalog
 {
     // ─── Internal Operations (Internal.*) ────────────────────────────────────
 
-    public static class Property
-    {
-        public const string Module = "Internal.Property";
-        public const string Create = "Internal.Property.Create";
-        public const string Edit   = "Internal.Property.Edit";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle")];
-    }
-
-    public static class Unit
-    {
-        public const string Module      = "Internal.Unit";
-        public const string Create      = "Internal.Unit.Create";
-        public const string Edit        = "Internal.Unit.Edit";
-        public const string OverrideRate = "Internal.Unit.OverrideRate";
-        public const string UpdateCapacity = "Internal.Unit.UpdateCapacity";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(OverrideRate, "Elle Müdahale"), new(UpdateCapacity, "Kontenjanı Değiştir")];
-    }
-
     public static class Space
     {
         public const string Module         = "Internal.Space";
@@ -95,8 +77,11 @@ public static class PermissionCatalog
         public const string ExtendGroup = "Internal.Lease.ExtendGroup";
         public const string TerminateGroup = "Internal.Lease.TerminateGroup";
         public const string RestructureGroup = "Internal.Lease.RestructureGroup";
-        public const string UpdateAllocatedArea = "Internal.Lease.UpdateAllocatedArea";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(Extend, "Süre Uzat"), new(Terminate, "Feshet"), new(OverrideRate, "Elle Müdahale"), new(Approve, "Onayla"), new(RequestRevision, "Revizyon İste"), new(DeleteDraft, "Başvuru Sil"), new(CreateGroup, "Paylaşımlı Grup Oluştur"), new(UpdateGroup, "Grup Taslağı Düzenle"), new(ResubmitGroup, "Grubu Yeniden Gönder"), new(DeleteGroupDraft, "Grup Taslağı Sil"), new(ApproveGroup, "Grup Onayla"), new(ExtendGroup, "Grubu Uzat"), new(TerminateGroup, "Grubu Feshet"), new(RestructureGroup, "Grubu Yeniden Yapılandır"), new(UpdateAllocatedArea, "Fiziksel m² Düzenle")];
+        public const string UpdateDraft = "Internal.Lease.UpdateDraft";
+        public const string ResubmitRevision = "Internal.Lease.ResubmitRevision";
+        public const string UploadDraftDocument = "Internal.Lease.UploadDraftDocument";
+        public const string UpdateDueDate = "Internal.Lease.UpdateDueDate";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(Extend, "Süre Uzat"), new(Terminate, "Feshet"), new(OverrideRate, "Elle Müdahale"), new(Approve, "Onayla"), new(RequestRevision, "Revizyon İste"), new(DeleteDraft, "Başvuru Sil"), new(CreateGroup, "Paylaşımlı Grup Oluştur"), new(UpdateGroup, "Grup Taslağı Düzenle"), new(ResubmitGroup, "Grubu Yeniden Gönder"), new(DeleteGroupDraft, "Grup Taslağı Sil"), new(ApproveGroup, "Grup Onayla"), new(ExtendGroup, "Grubu Uzat"), new(TerminateGroup, "Grubu Feshet"), new(RestructureGroup, "Grubu Yeniden Yapılandır"), new(UpdateDraft, "Başvuru Taslağı Düzenle"), new(ResubmitRevision, "Revizyonu Yeniden Gönder"), new(UploadDraftDocument, "Başvuru Belgesi Yükle"), new(UpdateDueDate, "Vade Günü Düzenle")];
     }
 
     public static class Payment
@@ -108,7 +93,9 @@ public static class PermissionCatalog
         public const string Reject               = "Internal.Payment.Reject";
         public const string ImportBankStatement  = "Internal.Payment.ImportBankStatement";
         public const string MatchBankTransaction = "Internal.Payment.MatchBankTransaction";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(UploadReceipt, "Dekont Yükle"), new(Approve, "Onayla"), new(Reject, "Reddet"), new(ImportBankStatement, "Banka Hareketleri İçe Aktar"), new(MatchBankTransaction, "Banka Hareketi Eşleştir")];
+        public const string UnmatchBankTransaction = "Internal.Payment.UnmatchBankTransaction";
+        public const string RemovePaymentMatch = "Internal.Payment.RemovePaymentMatch";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(UploadReceipt, "Dekont Yükle"), new(Approve, "Onayla"), new(Reject, "Reddet"), new(ImportBankStatement, "Banka Hareketleri İçe Aktar"), new(MatchBankTransaction, "Banka Hareketi Eşleştir"), new(UnmatchBankTransaction, "Banka Eşleşmesini Kaldır"), new(RemovePaymentMatch, "Ödeme Eşleşmesini Kaldır")];
     }
 
     public static class ChargeType
@@ -116,7 +103,9 @@ public static class PermissionCatalog
         public const string Module = "Internal.ChargeType";
         public const string Create = "Internal.ChargeType.Create";
         public const string Edit   = "Internal.ChargeType.Edit";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle")];
+        public const string ToggleStatus = "Internal.ChargeType.ToggleStatus";
+        public const string ChangeSortOrder = "Internal.ChargeType.ChangeSortOrder";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(ToggleStatus, "Aktif/Pasif"), new(ChangeSortOrder, "Sıra Değiştir")];
     }
 
     public static class Store
@@ -124,9 +113,11 @@ public static class PermissionCatalog
         public const string Module  = "Internal.Store";
         public const string Create  = "Internal.Store.Create";
         public const string Edit    = "Internal.Store.Edit";
-        public const string Account = "Internal.Store.Account";
+        public const string ToggleStatus = "Internal.Store.ToggleStatus";
+        public const string DeactivateAccount = "Internal.Store.DeactivateAccount";
+        public const string ReplaceAccount = "Internal.Store.ReplaceAccount";
         public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions =
-            [new(Create, "Ekle"), new(Edit, "Düzenle"), new(Account, "Hesap Yönet")];
+            [new(Create, "Ekle"), new(Edit, "Düzenle"), new(ToggleStatus, "Aktif/Pasif"), new(DeactivateAccount, "Hesap Pasifleştir"), new(ReplaceAccount, "Hesap Değiştir")];
     }
 
     public static class PaymentRouting
@@ -145,28 +136,13 @@ public static class PermissionCatalog
         public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Edit, "Düzenle")];
     }
 
-    public static class PropertyType
-    {
-        public const string Module = "Internal.PropertyType";
-        public const string Create = "Internal.PropertyType.Create";
-        public const string Edit   = "Internal.PropertyType.Edit";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle")];
-    }
-
-    public static class UnitType
-    {
-        public const string Module = "Internal.UnitType";
-        public const string Create = "Internal.UnitType.Create";
-        public const string Edit   = "Internal.UnitType.Edit";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle")];
-    }
-
     public static class TenantCategory
     {
         public const string Module = "Internal.TenantCategory";
         public const string Create = "Internal.TenantCategory.Create";
         public const string Edit   = "Internal.TenantCategory.Edit";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle")];
+        public const string ToggleStatus = "Internal.TenantCategory.ToggleStatus";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(ToggleStatus, "Aktif/Pasif")];
     }
 
     public static class Sector
@@ -174,7 +150,8 @@ public static class PermissionCatalog
         public const string Module = "Internal.Sector";
         public const string Create = "Internal.Sector.Create";
         public const string Edit   = "Internal.Sector.Edit";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle")];
+        public const string ToggleStatus = "Internal.Sector.ToggleStatus";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(ToggleStatus, "Aktif/Pasif")];
     }
 
     public static class DocumentType
@@ -183,15 +160,17 @@ public static class PermissionCatalog
         public const string Create = "Internal.DocumentType.Create";
         public const string Edit   = "Internal.DocumentType.Edit";
         public const string Delete = "Internal.DocumentType.Delete";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(Delete, "Sil")];
+        public const string ToggleStatus = "Internal.DocumentType.ToggleStatus";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(Delete, "Sil"), new(ToggleStatus, "Aktif/Pasif")];
     }
 
     public static class RateSchedule
     {
         public const string Module = "Internal.RateSchedule";
         public const string Create = "Internal.RateSchedule.Create";
-        public const string Edit   = "Internal.RateSchedule.Edit";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle")];
+        public const string ToggleStatus = "Internal.RateSchedule.ToggleStatus";
+        public const string UpdateLine = "Internal.RateSchedule.UpdateLine";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(ToggleStatus, "Aktif/Pasif"), new(UpdateLine, "Satır Güncelle")];
     }
 
     public static class Charge
@@ -231,19 +210,13 @@ public static class PermissionCatalog
         ];
     }
 
-    public static class PropertyMultiplier
-    {
-        public const string Module = "Internal.PropertyMultiplier";
-        public const string Edit   = "Internal.PropertyMultiplier.Edit";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Edit, "Düzenle")];
-    }
-
     public static class ReservationRateRule
     {
         public const string Module = "Internal.ReservationRateRule";
         public const string Create = "Internal.ReservationRateRule.Create";
         public const string Edit   = "Internal.ReservationRateRule.Edit";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle")];
+        public const string ToggleStatus = "Internal.ReservationRateRule.ToggleStatus";
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(ToggleStatus, "Aktif/Pasif")];
     }
 
     public static class Notification
@@ -258,10 +231,8 @@ public static class PermissionCatalog
     public static class User
     {
         public const string Module           = "System.User";
-        public const string Create           = "System.User.Create";
         public const string Edit             = "System.User.Edit";
-        public const string AssignPermission = "System.User.AssignPermission";
-        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Create, "Ekle"), new(Edit, "Düzenle"), new(AssignPermission, "Yetki Ata")];
+        public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Edit, "Düzenle")];
     }
 
     public static class Role
@@ -307,7 +278,9 @@ public static class PermissionCatalog
         public static class Payment
         {
             public const string Module = "Tenant.Payment";
-            public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [];
+            public const string Report = "Tenant.Payment.Report";
+            public const string StartOnline = "Tenant.Payment.StartOnline";
+            public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Report, "Ödeme Bildir"), new(StartOnline, "Online Ödeme Başlat")];
         }
 
         public static class Statement
@@ -338,7 +311,9 @@ public static class PermissionCatalog
                 public const string Invite     = "Tenant.System.User.Invite";
                 public const string Edit       = "Tenant.System.User.Edit";
                 public const string Deactivate = "Tenant.System.User.Deactivate";
-                public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Invite, "Davet Et"), new(Edit, "Düzenle"), new(Deactivate, "Pasifleştir")];
+                public const string CancelInvite = "Tenant.System.User.CancelInvite";
+                public const string ResendInvite = "Tenant.System.User.ResendInvite";
+                public static readonly IReadOnlyList<PermissionActionInfo> ActionDefinitions = [new(Invite, "Davet Et"), new(Edit, "Düzenle"), new(Deactivate, "Pasifleştir"), new(CancelInvite, "Daveti İptal Et"), new(ResendInvite, "Daveti Yeniden Gönder")];
             }
 
             public static class Role
@@ -357,8 +332,6 @@ public static class PermissionCatalog
     public static readonly IReadOnlyList<PermissionModuleInfo> AllModules =
     [
         // Internal
-        new(Property.Module,               "Taşınmaz",                   Property.ActionDefinitions),
-        new(Unit.Module,                  "Birim",                      Unit.ActionDefinitions),
         new(Space.Module,                  "Alan",                       Space.ActionDefinitions),
         new(Tenant.Module,                 "Kiracı",                     Tenant.ActionDefinitions),
         new(Lease.Module,               "Sözleşme",                   Lease.ActionDefinitions),
@@ -370,15 +343,12 @@ public static class PermissionCatalog
         new(Store.Module,                    "Mağaza",                     Store.ActionDefinitions, "Parametreler"),
         new(PaymentRouting.Module,           "Ödeme Yönlendirmeleri",      PaymentRouting.ActionDefinitions, "Parametreler"),
         new(Parameter.Module,              "Sistem Ayarları",                  Parameter.ActionDefinitions, "Parametreler"),
-        new(PropertyType.Module,           "Taşınmaz Tipi",              PropertyType.ActionDefinitions, "Parametreler"),
-        new(UnitType.Module,              "Birim Tipi",                 UnitType.ActionDefinitions, "Parametreler"),
         new(SpaceType.Module,              "Alan Türü",                  SpaceType.ActionDefinitions, "Parametreler"),
         new(SpaceAttribute.Module,         "Alan Özelliği",              SpaceAttribute.ActionDefinitions, "Parametreler"),
         new(TenantCategory.Module,         "Kiracı Kategorisi",          TenantCategory.ActionDefinitions, "Parametreler"),
         new(Sector.Module,                 "Sektör",                     Sector.ActionDefinitions, "Parametreler"),
         new(DocumentType.Module,              "Belge Türü",              DocumentType.ActionDefinitions),
         new(RateSchedule.Module,                 "Yıllık Tarife",                     RateSchedule.ActionDefinitions),
-        new(PropertyMultiplier.Module,         "Taşınmaz Katsayısı",           PropertyMultiplier.ActionDefinitions),
         new(ReservationRateRule.Module, "Rezervasyon Tarife Kuralı",  ReservationRateRule.ActionDefinitions),
         new(Notification.Module,               "Bildirim",                   Notification.ActionDefinitions),
         // System
@@ -399,23 +369,23 @@ public static class PermissionCatalog
 
     public static readonly IReadOnlyList<string> ScopeAware =
     [
-        Property.Module, Property.Create, Property.Edit,
-        Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate, Unit.UpdateCapacity,
         Tenant.Module, Tenant.Create, Tenant.Edit, Tenant.Delete,
         Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
         Lease.Approve, Lease.RequestRevision, Lease.DeleteDraft,
+        Lease.UpdateDraft, Lease.ResubmitRevision, Lease.UploadDraftDocument, Lease.UpdateDueDate,
         Lease.CreateGroup, Lease.UpdateGroup, Lease.ResubmitGroup, Lease.DeleteGroupDraft, Lease.ApproveGroup,
-        Lease.ExtendGroup, Lease.TerminateGroup, Lease.RestructureGroup, Lease.UpdateAllocatedArea,
+        Lease.ExtendGroup, Lease.TerminateGroup, Lease.RestructureGroup,
         Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject, Payment.MatchBankTransaction,
+        Payment.UnmatchBankTransaction, Payment.RemovePaymentMatch,
         ManualCharge.Module, ManualCharge.Create, ManualCharge.Cancel,
         Reservation.Module, Reservation.Create, Reservation.Edit, Reservation.Cancel,
         Reservation.Approve, Reservation.Reject, Reservation.OverrideTimeRestriction,
         Reservation.TransferToCharge,
         Charge.Module, Charge.Regenerate,
-        PropertyMultiplier.Module, PropertyMultiplier.Edit,
-        ReservationRateRule.Module, ReservationRateRule.Create, ReservationRateRule.Edit,
+        ReservationRateRule.Module, ReservationRateRule.Create, ReservationRateRule.Edit, ReservationRateRule.ToggleStatus,
         Space.Module, Space.Create, Space.Edit, Space.Deactivate, Space.Activate, Space.Delete,
         Space.EditRate, Space.EditAddress, Space.EditAttributes,
+        Notification.Module, Notification.BorcHatirlatma,
     ];
 
     public static bool IsScopeAware(string permission) => ScopeAware.Contains(permission);
@@ -424,10 +394,11 @@ public static class PermissionCatalog
     [
         TenantPortal.Lease.Module,
         TenantPortal.Charge.Module,
-        TenantPortal.Payment.Module,
+        TenantPortal.Payment.Module, TenantPortal.Payment.Report, TenantPortal.Payment.StartOnline,
         TenantPortal.Reservation.Module, TenantPortal.Reservation.Create, TenantPortal.Reservation.Cancel,
         TenantPortal.System.User.Module, TenantPortal.System.User.Invite,
         TenantPortal.System.User.Edit, TenantPortal.System.User.Deactivate,
+        TenantPortal.System.User.CancelInvite, TenantPortal.System.User.ResendInvite,
         TenantPortal.System.Role.Module, TenantPortal.System.Role.Create,
         TenantPortal.System.Role.Edit, TenantPortal.System.Role.Delete,
     ];
@@ -435,39 +406,38 @@ public static class PermissionCatalog
     public static readonly IReadOnlyList<string> InternalAll =
     [
         // Internal.*
-        Property.Module, Property.Create, Property.Edit,
-        Unit.Module, Unit.Create, Unit.Edit, Unit.OverrideRate, Unit.UpdateCapacity,
         Space.Module, Space.Create, Space.Edit, Space.Deactivate, Space.Activate, Space.Delete,
         Space.EditRate, Space.EditAddress, Space.EditAttributes,
         Tenant.Module, Tenant.Create, Tenant.Edit, Tenant.Delete,
         Lease.Module, Lease.Create, Lease.Edit, Lease.Extend, Lease.Terminate, Lease.OverrideRate,
         Lease.Approve, Lease.RequestRevision, Lease.DeleteDraft,
+        Lease.UpdateDraft, Lease.ResubmitRevision, Lease.UploadDraftDocument, Lease.UpdateDueDate,
         Lease.CreateGroup, Lease.UpdateGroup, Lease.ResubmitGroup, Lease.DeleteGroupDraft, Lease.ApproveGroup,
-        Lease.ExtendGroup, Lease.TerminateGroup, Lease.RestructureGroup, Lease.UpdateAllocatedArea,
+        Lease.ExtendGroup, Lease.TerminateGroup, Lease.RestructureGroup,
         Payment.Module, Payment.Create, Payment.UploadReceipt, Payment.Approve, Payment.Reject,
         Payment.ImportBankStatement, Payment.MatchBankTransaction,
+        Payment.UnmatchBankTransaction, Payment.RemovePaymentMatch,
         ChargeType.Module, ChargeType.Create, ChargeType.Edit,
-        Store.Module, Store.Create, Store.Edit, Store.Account,
+        ChargeType.ToggleStatus, ChargeType.ChangeSortOrder,
+        Store.Module, Store.Create, Store.Edit,
+        Store.ToggleStatus, Store.DeactivateAccount, Store.ReplaceAccount,
         PaymentRouting.Module, PaymentRouting.Create, PaymentRouting.Edit,
         Parameter.Module, Parameter.Edit,
-        PropertyType.Module, PropertyType.Create, PropertyType.Edit,
-        UnitType.Module, UnitType.Create, UnitType.Edit,
         SpaceType.Module, SpaceType.Create, SpaceType.Edit, SpaceType.ToggleStatus,
         SpaceAttribute.Module, SpaceAttribute.Create, SpaceAttribute.Edit, SpaceAttribute.ToggleStatus,
-        TenantCategory.Module, TenantCategory.Create, TenantCategory.Edit,
-        Sector.Module, Sector.Create, Sector.Edit,
-        DocumentType.Module, DocumentType.Create, DocumentType.Edit, DocumentType.Delete,
-        RateSchedule.Module, RateSchedule.Create, RateSchedule.Edit,
+        TenantCategory.Module, TenantCategory.Create, TenantCategory.Edit, TenantCategory.ToggleStatus,
+        Sector.Module, Sector.Create, Sector.Edit, Sector.ToggleStatus,
+        DocumentType.Module, DocumentType.Create, DocumentType.Edit, DocumentType.Delete, DocumentType.ToggleStatus,
+        RateSchedule.Module, RateSchedule.Create, RateSchedule.ToggleStatus, RateSchedule.UpdateLine,
         Charge.Module, Charge.Regenerate,
         ManualCharge.Module, ManualCharge.Create, ManualCharge.Cancel,
         Reservation.Module, Reservation.Create, Reservation.Edit, Reservation.Cancel,
         Reservation.Approve, Reservation.Reject, Reservation.OverrideTimeRestriction,
         Reservation.TransferToCharge,
-        PropertyMultiplier.Module, PropertyMultiplier.Edit,
-        ReservationRateRule.Module, ReservationRateRule.Create, ReservationRateRule.Edit,
+        ReservationRateRule.Module, ReservationRateRule.Create, ReservationRateRule.Edit, ReservationRateRule.ToggleStatus,
         Notification.Module, Notification.BorcHatirlatma,
         // System.*
-        User.Module, User.Create, User.Edit, User.AssignPermission,
+        User.Module, User.Edit,
         Role.Module, Role.Create, Role.Edit, Role.Delete,
         Invitation.Module, Invitation.Create, Invitation.Cancel, Invitation.Resend,
         Audit.Module,

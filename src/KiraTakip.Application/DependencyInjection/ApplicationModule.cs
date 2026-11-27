@@ -14,7 +14,6 @@ using KiraTakip.Services.Interfaces.Identity;
 using KiraTakip.Services.Interfaces.Leases;
 using KiraTakip.Services.Interfaces.Payments;
 using KiraTakip.Services.Interfaces.Pricing;
-using KiraTakip.Services.Interfaces.Properties;
 using KiraTakip.Services.Interfaces.Reporting;
 using KiraTakip.Services.Interfaces.Reservations;
 using KiraTakip.Services.Interfaces.Security;
@@ -25,7 +24,6 @@ using KiraTakip.Services.Interfaces.Tenants;
 using KiraTakip.Services.Leases;
 using KiraTakip.Services.Payments;
 using KiraTakip.Services.Pricing;
-using KiraTakip.Services.Properties;
 using KiraTakip.Services.Reporting;
 using KiraTakip.Services.Reservations;
 using KiraTakip.Services.Security;
@@ -53,15 +51,6 @@ public static class ApplicationModule
         // Audit
         services.AddScoped<IAuditService, AuditService>();
 
-        // Properties & Units
-        services.AddScoped<IPropertyService, PropertyService>();
-        services.AddScoped<IUnitService, UnitService>();
-        services.AddScoped<ICapacityPlanService, CapacityPlanService>();
-        services.AddScoped<IAllocationSuggestionStrategy, DefaultAllocationSuggestionStrategy>();
-        services.AddKeyedScoped<IAllocationSuggestionStrategy, ProportionalReductionStrategy>(
-            AllocationStrategyKeys.ProportionalReduction);
-        services.AddScoped<IPropertyTypeService, PropertyTypeService>();
-        services.AddScoped<IUnitTypeService, UnitTypeService>();
 
         // Spaces
         services.AddScoped<ISpaceService, SpaceService>();
@@ -98,8 +87,6 @@ public static class ApplicationModule
         services.AddScoped<IRateResolverService, RateResolverService>();
         services.AddScoped<IBatchRateResolver, BatchRateResolver>();
         services.AddScoped<ISpaceRateResolver, SpaceRateResolver>();
-        services.AddScoped<IPropertyPricingService, PropertyPricingService>();
-        services.AddScoped<IUnitPricingService, UnitPricingService>();
         services.AddScoped<IRateHierarchyService, RateHierarchyService>();
         services.AddScoped<IRateScheduleService, RateScheduleService>();
 

@@ -24,7 +24,7 @@
         <div class="form-group mb-0 min-w-[260px]">
             <label for="spaceId">Alan</label>
             <select id="spaceId" name="spaceId" class="form-control">
-                <option value="">Tüm rezervasyon birimleri</option>
+                <option value="">Tüm rezervasyon alanları</option>
                 @foreach (var unit in calendarUnits)
                 {
                     <option value="@unit.Id" selected="@(Model.SelectedSpaceId == unit.Id)">@unit.Name</option>

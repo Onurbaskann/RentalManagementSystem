@@ -17,7 +17,7 @@
 </div>
 
 <div class="card">
-    <form method="post" action="/Admin/Tenants/@tenantId.ToHashId()/Users/Invite">
+    <form asp-form-write-permission="@PermissionCatalog.Invitation.Create" method="post" action="/Admin/Tenants/@tenantId.ToHashId()/Users/Invite">
         @Html.AntiForgeryToken()
 
 

@@ -115,7 +115,7 @@ public class AdminDocumentTypeController(IDocumentTypeService documentTypeServic
 
     [HttpPost("ToggleStatus/{id}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.DocumentType.Edit)]
+    [Authorize(Policy = PermissionCatalog.DocumentType.ToggleStatus)]
     public async Task<IActionResult> ToggleStatus(int id)
     {
         var entity = await documentTypeService.GetByIdAsync(id);

@@ -8,6 +8,7 @@
     bool canReject = await PermissionService.HasPermissionAsync(PermissionCatalog.Payment.Reject);
     bool canUpload = await PermissionService.HasPermissionAsync(PermissionCatalog.Payment.UploadReceipt);
     bool canMatch = await PermissionService.HasPermissionAsync(PermissionCatalog.Payment.MatchBankTransaction);
+    bool canRemoveMatch = await PermissionService.HasPermissionAsync(PermissionCatalog.Payment.RemovePaymentMatch);
     bool pending = Model.Status == PaymentStatus.PendingApproval;
     var documents = (ViewBag.Documents as List<Document>) ?? [];
     var documentTypes = (ViewBag.DocumentTypes as List<DocumentType>) ?? [];
@@ -207,7 +208,7 @@
                             <div class="text-slate-500 text-[11.5px] leading-relaxed truncate mb-2" title="@match.BankTransactionDescription">@match.BankTransactionDescription</div>
                             <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-200/60">
                                 <span class="text-[10px] font-bold text-slate-400">@(match.MatchType == MatchType.Manual ? "Manuel Eşleşme" : "Otomatik")</span>
-                                @if (canMatch)
+                                @if (canRemoveMatch)
                                 {
                                     <form method="post" action="/BankTransaction/RemovePaymentMatch" data-confirm="Banka eşleşmesi kaldırılsın mı?" class="shrink-0">
                                         @Html.AntiForgeryToken()

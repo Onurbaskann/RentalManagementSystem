@@ -101,7 +101,7 @@ public class AdminChargeTypeController(IChargeTypeService chargeTypeService) : C
 
     [HttpPost("ToggleStatus/{id}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.ChargeType.Edit)]
+    [Authorize(Policy = PermissionCatalog.ChargeType.ToggleStatus)]
     public async Task<IActionResult> ToggleStatus(int id)
     {
         var entity = await chargeTypeService.GetByIdAsync(id);
@@ -113,7 +113,7 @@ public class AdminChargeTypeController(IChargeTypeService chargeTypeService) : C
 
     [HttpPost("ChangeSortOrder/{id}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.ChargeType.Edit)]
+    [Authorize(Policy = PermissionCatalog.ChargeType.ChangeSortOrder)]
     public async Task<IActionResult> ChangeSortOrder(int id, int newSortOrder)
     {
         var entity = await chargeTypeService.GetByIdAsync(id);

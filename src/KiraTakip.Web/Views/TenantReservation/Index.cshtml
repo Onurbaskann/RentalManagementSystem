@@ -23,7 +23,7 @@
 <div class="card p-0 overflow-hidden">
     <form method="get" action="/Tenant/MyReservations" class="table-toolbar">
         <input type="hidden" name="size" value="@query.Size" />
-        <input type="search" name="q" value="@query.Q" class="form-control toolbar-search" placeholder="Ara: birim, taşınmaz…" />
+        <input type="search" name="q" value="@query.Q" class="form-control toolbar-search" placeholder="Ara: alan adı…" />
         <button type="submit" class="btn btn-secondary">Ara</button>
         @if (!string.IsNullOrWhiteSpace(query.Q))
         {

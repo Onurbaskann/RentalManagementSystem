@@ -30,7 +30,7 @@ public class AdminRateController(IRateScheduleService rateScheduleService) : Con
         return View(ToViewModel(matrix));
     }
 
-    [Authorize(Policy = PermissionCatalog.RateSchedule.Edit)]
+    [Authorize(Policy = PermissionCatalog.RateSchedule.UpdateLine)]
     [HttpPost("Year/{year:int}/UpdateLine")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateLine(int year, RateMatrixPostViewModel vm)
@@ -97,7 +97,7 @@ public class AdminRateController(IRateScheduleService rateScheduleService) : Con
         return RedirectToAction(nameof(Detail), new { year = vm.Year });
     }
 
-    [Authorize(Policy = PermissionCatalog.RateSchedule.Edit)]
+    [Authorize(Policy = PermissionCatalog.RateSchedule.ToggleStatus)]
     [HttpPost("ToggleStatus/{year:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleStatus(int year)

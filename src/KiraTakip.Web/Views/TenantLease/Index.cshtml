@@ -19,7 +19,7 @@
 <div class="card p-0 overflow-hidden">
     <form method="get" action="/Tenant/Leases" class="flex items-center gap-3 p-3 bg-slate-50/50 border-b border-slate-200">
         <input type="hidden" name="size" value="@query.Size" />
-        <input type="search" name="q" value="@query.Q" class="form-control w-full max-w-sm" placeholder="Ara: birim, taşınmaz…" />
+        <input type="search" name="q" value="@query.Q" class="form-control w-full max-w-sm" placeholder="Ara: alan veya sözleşme no…" />
         <button type="submit" class="btn btn-secondary">Ara</button>
         @if (!string.IsNullOrWhiteSpace(query.Q))
         {

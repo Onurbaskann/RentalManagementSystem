@@ -130,7 +130,7 @@ public class BankTransactionController(
     }
 
     [HttpPost("Unmatch")]
-    [Authorize(Policy = PermissionCatalog.Payment.MatchBankTransaction)]
+    [Authorize(Policy = PermissionCatalog.Payment.UnmatchBankTransaction)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Unmatch(int matchId)
     {
@@ -141,7 +141,7 @@ public class BankTransactionController(
     }
 
     [HttpPost("RemovePaymentMatch")]
-    [Authorize(Policy = PermissionCatalog.Payment.MatchBankTransaction)]
+    [Authorize(Policy = PermissionCatalog.Payment.RemovePaymentMatch)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RemovePaymentMatch(int matchId)
     {

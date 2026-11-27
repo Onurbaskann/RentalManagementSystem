@@ -42,25 +42,12 @@ public enum LeaseActivityType
     Expiration = 7
 }
 
-public enum UnitStructure
-{
-    SingleUnit = 1,
-    MultipleUnits = 2
-}
-
 public enum OccupancyStatus
 {
     Vacant = 1,
     Leased = 2,
     ExpiringSoon = 3,
     PartiallyLeased = 4
-}
-
-public enum UnitTypeUsage
-{
-    Rentable = 1,
-    Reservable = 2,
-    NonRentable = 3
 }
 
 public enum ChargeStatus
@@ -195,11 +182,5 @@ public enum OnlinePaymentEventType
     InquiryPerformed = 4,
     Succeeded = 5,
     Failed = 6
-}
-
-public enum UnitRentalMode
-{
-    UnitBased = 1,
-    CapacityBased = 2
 }
 

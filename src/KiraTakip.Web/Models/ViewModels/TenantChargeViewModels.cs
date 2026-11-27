@@ -17,6 +17,7 @@ public class TenantChargeIndexViewModel
     public List<LeaseSpaceOptionDto> Spaces { get; set; } = [];
     public List<int> AvailableYears { get; set; } = [];
     public bool CanReportPayment { get; set; }
+    public bool CanStartOnlinePayment { get; set; }
 }
 
 public class TenantChargeDetailsViewModel
@@ -24,6 +25,7 @@ public class TenantChargeDetailsViewModel
     public ChargeDetailDto Charge { get; set; } = null!;
     public Dictionary<int, List<Document>> PaymentDocuments { get; set; } = [];
     public bool CanReportPayment { get; set; }
+    public bool CanStartOnlinePayment { get; set; }
 }
 
 public class TenantChargeQueryViewModel

@@ -55,7 +55,7 @@
                         </td>
                         <td class="flex gap-1.5 justify-end">
                             <a href="/Admin/ReservationRateOverride/Edit/@k.Id.ToHashId()" class="btn btn-sm btn-secondary">Düzenle</a>
-                            <form method="post" action="/Admin/ReservationRateOverride/ToggleStatus/@k.Id.ToHashId()" class="inline">
+                            <form asp-permission="@PermissionCatalog.ReservationRateRule.ToggleStatus" method="post" action="/Admin/ReservationRateOverride/ToggleStatus/@k.Id.ToHashId()" class="inline">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-sm @(k.IsActive ? "btn-danger" : "btn-amber")">
                                     @(k.IsActive ? "Pasif Yap" : "Aktif Yap")

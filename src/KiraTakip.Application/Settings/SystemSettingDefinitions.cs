@@ -41,7 +41,6 @@ public static class SystemSettingDefinitions
 
     public static class Lease
     {
-        public const string MinimumUsageArea = "Lease.MinimumUsageArea";
         public const string ExpiringSoonStatusDays = "Lease.ExpiringSoonStatusDays";
     }
 
@@ -92,7 +91,7 @@ public static class SystemSettingDefinitions
             "Bir davetin yeniden gönderilebilmesi için beklenecek dakika.", "60",
             SystemSettingInputKind.Integer, true, 0, 10080),
         new(13, Lease.ExpiringSoonStatusDays, "Yakında bitecek sözleşme eşiği", "Sözleşme",
-            "Birim ve sözleşme durumunda 'yakında bitiyor' kabul edilecek gün sayısı.", "30",
+            "Sözleşme durumunda 'yakında bitiyor' kabul edilecek gün sayısı.", "30",
             SystemSettingInputKind.Integer, true, 0, 3650),
         new(14, Dashboard.ExpiringLeaseLookaheadDays, "Dashboard sözleşme görünüm süresi", "Dashboard",
             "Dashboard üzerinde yaklaşan sözleşmelerin kaç gün önceden gösterileceği.", "60",
@@ -102,10 +101,7 @@ public static class SystemSettingDefinitions
             SystemSettingInputKind.Integer, true, 0, 100),
         new(16, BankMatching.DateToleranceDays, "Tarih yakınlık süresi", "Banka Eşleştirme",
             "Ödeme ve banka hareketi aday sıralamasında yakın tarih kabul edilecek gün sayısı.", "15",
-            SystemSettingInputKind.Integer, true, 0, 365),
-        new(17, Lease.MinimumUsageArea, "Min. kullanım m²", "Sözleşme",
-            "Paylaşımlı ve kontenjan bazlı sözleşmeler için minimum kullanım alanı.", "5",
-            SystemSettingInputKind.Decimal, true, 0)
+            SystemSettingInputKind.Integer, true, 0, 365)
     ];
 
     private static readonly IReadOnlyDictionary<string, SystemSettingDefinition> ByKey =
@@ -232,7 +228,6 @@ public static class SystemSettingDefinitions
             PaymentReminderCooldownDays = ParseRequiredInt(values, Payment.ReminderCooldownDays),
             InvitationValidityDays = ParseRequiredInt(values, Invitation.ValidityDays),
             InvitationResendCooldownMinutes = ParseRequiredInt(values, Invitation.ResendCooldownMinutes),
-            LeaseMinimumUsageArea = ParseRequiredDecimal(values, Lease.MinimumUsageArea),
             LeaseExpiringSoonStatusDays = ParseRequiredInt(values, Lease.ExpiringSoonStatusDays),
             DashboardExpiringLeaseLookaheadDays = ParseRequiredInt(values, Dashboard.ExpiringLeaseLookaheadDays),
             BankMatchingAmountTolerancePercent = ParseRequiredInt(values, BankMatching.AmountTolerancePercent),

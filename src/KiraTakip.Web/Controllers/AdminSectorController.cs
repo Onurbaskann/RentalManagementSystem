@@ -92,7 +92,7 @@ public class AdminSectorController(ISectorService sectorService) : Controller
 
     [HttpPost("ToggleStatus/{id}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.Sector.Edit)]
+    [Authorize(Policy = PermissionCatalog.Sector.ToggleStatus)]
     public async Task<IActionResult> ToggleStatus(int id)
     {
         await sectorService.ToggleStatusAsync(new ToggleSectorStatusInput(id));

@@ -78,7 +78,7 @@ public class AdminStoreController(IStoreService storeService) : Controller
 
     [HttpPost("ToggleStatus/{id}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.Store.Edit)]
+    [Authorize(Policy = PermissionCatalog.Store.ToggleStatus)]
     public async Task<IActionResult> ToggleStatus(int id)
     {
         await storeService.ToggleStatusAsync(id);
@@ -87,7 +87,7 @@ public class AdminStoreController(IStoreService storeService) : Controller
 
     [HttpPost("ReplaceAccount/{id}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.Store.Account)]
+    [Authorize(Policy = PermissionCatalog.Store.ReplaceAccount)]
     public async Task<IActionResult> ReplaceAccount(int id, StoreAccountFormViewModel model)
     {
         if (id != model.StoreId) return BadRequest();
@@ -115,7 +115,7 @@ public class AdminStoreController(IStoreService storeService) : Controller
 
     [HttpPost("DeactivateAccount/{id}/{accountId}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.Store.Account)]
+    [Authorize(Policy = PermissionCatalog.Store.DeactivateAccount)]
     public async Task<IActionResult> DeactivateAccount(int id, int accountId)
     {
         await storeService.DeactivateAccountAsync(id, accountId);

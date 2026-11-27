@@ -61,7 +61,9 @@ public class TenantUserController(
             Query = query,
             CanInvite = await permissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.System.User.Invite),
             CanEdit = await permissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.System.User.Edit),
-            CanDeactivate = await permissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.System.User.Deactivate)
+            CanDeactivate = await permissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.System.User.Deactivate),
+            CanResendInvite = await permissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.System.User.ResendInvite),
+            CanCancelInvite = await permissionService.HasPermissionAsync(PermissionCatalog.TenantPortal.System.User.CancelInvite)
         });
     }
 
@@ -106,7 +108,7 @@ public class TenantUserController(
     }
 
     [HttpPost("Invite/Cancel/{id}")]
-    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Invite)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.CancelInvite)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CancelInvite(int id)
     {
@@ -116,7 +118,7 @@ public class TenantUserController(
     }
 
     [HttpPost("Invite/Resend/{id}")]
-    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.Invite)]
+    [Authorize(Policy = PermissionCatalog.TenantPortal.System.User.ResendInvite)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ResendInvite(int id)
     {

@@ -14,7 +14,6 @@ using KiraTakip.Repositories.Interfaces.Documents;
 using KiraTakip.Repositories.Interfaces.Identity;
 using KiraTakip.Repositories.Interfaces.Leases;
 using KiraTakip.Repositories.Interfaces.Pricing;
-using KiraTakip.Repositories.Interfaces.Properties;
 using KiraTakip.Services.Interfaces.Charges;
 using KiraTakip.Services.Interfaces.Identity;
 using KiraTakip.Services.Interfaces.Leases;

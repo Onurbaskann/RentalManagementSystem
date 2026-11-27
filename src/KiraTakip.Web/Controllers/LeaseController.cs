@@ -245,7 +245,11 @@ public partial class LeaseController(
             UpdatedAt = draft.UpdatedAt,
             LatestRevision = draft.LatestRevision,
             ReviewHistory = await leaseService.GetReviewHistoryAsync(id),
-            CanEdit = isOwner && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Create),
+            CanEdit = isOwner && await permissionService.HasPermissionAsync(
+                draft.Status == LeaseStatus.RevisionRequested
+                    ? PermissionCatalog.Lease.ResubmitRevision
+                    : PermissionCatalog.Lease.UpdateDraft),
+            CanUploadDocument = isOwner && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.UploadDraftDocument),
             CanApprove = draft.Status == LeaseStatus.Draft && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.Approve),
             CanRequestRevision = draft.Status == LeaseStatus.Draft && await permissionService.HasPermissionAsync(PermissionCatalog.Lease.RequestRevision),
             CanDelete = await permissionService.HasPermissionAsync(PermissionCatalog.Lease.DeleteDraft),
@@ -275,7 +279,7 @@ public partial class LeaseController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.Lease.Create)]
+    [Authorize(Policy = PermissionCatalog.Lease.UpdateDraft)]
     public async Task<IActionResult> UpdateDraft(LeaseDraftViewModel viewModel)
     {
         if (!ModelState.IsValid) return await Draft(viewModel.LeaseId);
@@ -291,7 +295,7 @@ public partial class LeaseController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.Lease.Create)]
+    [Authorize(Policy = PermissionCatalog.Lease.ResubmitRevision)]
     public async Task<IActionResult> ResubmitRevision(LeaseDraftViewModel viewModel)
     {
         if (!ModelState.IsValid) return await Draft(viewModel.LeaseId);
@@ -343,7 +347,7 @@ public partial class LeaseController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.Lease.Create)]
+    [Authorize(Policy = PermissionCatalog.Lease.UploadDraftDocument)]
     public async Task<IActionResult> UploadDraftDocument(UploadLeaseDraftDocumentViewModel viewModel)
     {
         if (viewModel.File is null || viewModel.File.Length == 0)
@@ -395,7 +399,7 @@ public partial class LeaseController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.Lease.Edit)]
+    [Authorize(Policy = PermissionCatalog.Lease.UpdateDueDate)]
     public async Task<IActionResult> UpdateDueDate(int id, UpdateLeaseDueDateViewModel viewModel)
     {
         ThrowIfModelStateInvalid();

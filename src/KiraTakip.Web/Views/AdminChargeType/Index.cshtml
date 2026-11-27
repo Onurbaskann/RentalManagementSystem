@@ -55,13 +55,13 @@
                         <tr>
                             <td class="text-center">
                                 <div class="flex items-center justify-center gap-1">
-                                    <form method="post" action="/Admin/ChargeType/ChangeSortOrder/@bt.Id.ToHashId()" class="inline">
+                                    <form asp-permission="@PermissionCatalog.ChargeType.ChangeSortOrder" method="post" action="/Admin/ChargeType/ChangeSortOrder/@bt.Id.ToHashId()" class="inline">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="newSortOrder" value="@(bt.SortOrder - 1)" />
                                         <button type="submit" class="btn btn-sm btn-secondary px-1.5 py-0.5 text-[10px] leading-tight" title="Yukarı taşı" @(bt.SortOrder <= 1 ? "disabled" : "")>▲</button>
                                     </form>
                                     <span class="text-muted text-xs min-w-[1.25rem] text-center">@bt.SortOrder</span>
-                                    <form method="post" action="/Admin/ChargeType/ChangeSortOrder/@bt.Id.ToHashId()" class="inline">
+                                    <form asp-permission="@PermissionCatalog.ChargeType.ChangeSortOrder" method="post" action="/Admin/ChargeType/ChangeSortOrder/@bt.Id.ToHashId()" class="inline">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="newSortOrder" value="@(bt.SortOrder + 1)" />
                                         <button type="submit" class="btn btn-sm btn-secondary px-1.5 py-0.5 text-[10px] leading-tight" title="Aşağı taşı">▼</button>
@@ -95,7 +95,7 @@
                                 </a>
                                 @if (!bt.IsSystem)
                                 {
-                                    <form method="post" action="/Admin/ChargeType/ToggleStatus/@bt.Id.ToHashId()"
+                                    <form asp-permission="@PermissionCatalog.ChargeType.ToggleStatus" method="post" action="/Admin/ChargeType/ToggleStatus/@bt.Id.ToHashId()"
                                           data-confirm="@(bt.IsActive ? $"'{bt.Name}' pasif yapılsın mı?" : $"'{bt.Name}' aktif yapılsın mı?")"
                                           class="inline">
                                         @Html.AntiForgeryToken()

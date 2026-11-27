@@ -140,7 +140,7 @@ public class AdminReservationRateRuleController(
 
     [HttpPost("ToggleStatus/{id}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.ReservationRateRule.Edit)]
+    [Authorize(Policy = PermissionCatalog.ReservationRateRule.ToggleStatus)]
     public async Task<IActionResult> ToggleStatus(int id)
     {
         await reservationService.ToggleRateRuleStatusAsync(new ToggleRateRuleStatusInput(id, permissionScopeProvider.SpaceScope));

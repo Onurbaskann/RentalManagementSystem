@@ -11,7 +11,7 @@
         <div class="page-subtitle">Alan veya zaman değişirse uygunluk ve ücret yeniden hesaplanır.</div>
     </div>
 
-    <form method="post" asp-controller="Reservation" asp-action="Edit" asp-route-id="@Model.Id.ToHashId()">
+    <form asp-form-write-permission="@PermissionCatalog.Reservation.Edit" method="post" asp-controller="Reservation" asp-action="Edit" asp-route-id="@Model.Id.ToHashId()">
         @Html.AntiForgeryToken()
         <input asp-for="Id" type="hidden" />
         <input type="hidden" name="RowVersion" value="@Convert.ToBase64String(Model.RowVersion)" />

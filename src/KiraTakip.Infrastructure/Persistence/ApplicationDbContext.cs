@@ -100,8 +100,6 @@ public class ApplicationDbContext(
             .Any(property => property.Metadata.IsPrimaryKey() && property.IsTemporary);
     }
 
-    public DbSet<Property> Properties { get; set; }
-    public DbSet<Unit> Units { get; set; }
     public DbSet<Tenant> Tenants { get; set; }
     public DbSet<Lease> Leases { get; set; }
     public DbSet<LeaseGroup> LeaseGroups { get; set; }
@@ -111,11 +109,8 @@ public class ApplicationDbContext(
     public DbSet<UserPermissionScope> KullaniciYetkiKapsamlari { get; set; }
     public DbSet<UserPermission> UserPermissions { get; set; }
 
-    public DbSet<UnitType> UnitTypes { get; set; }
-    public DbSet<PropertyType> TasinmazTipleri { get; set; }
     public DbSet<Category> Kategoriler { get; set; }
 
-    public DbSet<PropertyRateOverride> TasinmazTarifeler { get; set; }
 
     public DbSet<ReservationRateOverride> RezervasyonTarifeler { get; set; }
     public DbSet<Reservation> Reservations { get; set; }
@@ -123,7 +118,6 @@ public class ApplicationDbContext(
 
     public DbSet<ChargeType> ChargeTypes { get; set; }
     public DbSet<RateSchedule> GenelTarifeler { get; set; }
-    public DbSet<UnitRate> UnitRates { get; set; }
 
     public DbSet<Space> Spaces { get; set; }
     public DbSet<SpaceType> SpaceTypes { get; set; }

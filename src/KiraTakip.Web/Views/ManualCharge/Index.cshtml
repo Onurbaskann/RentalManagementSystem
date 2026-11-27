@@ -61,7 +61,7 @@
 <form method="get" action="/ManualCharge" class="card p-3 mb-3 flex flex-wrap items-center gap-3">
     <input type="hidden" name="status" value="@activeStatus" />
     <input type="hidden" name="size" value="@query.Size" />
-    <input type="search" name="q" value="@query.Q" class="form-control w-full max-w-xs" placeholder="Ara: kiracı, taşınmaz, birim veya açıklama…" />
+    <input type="search" name="q" value="@query.Q" class="form-control w-full max-w-xs" placeholder="Ara: kiracı, alan veya açıklama…" />
     <select name="relation" class="form-control w-40 text-sm">
         <option value="" selected="@(activeRelation == "")">Bağlantı: Hepsi</option>
         <option value="sozlesmeli" selected="@(activeRelation == "sozlesmeli")">Sözleşmeli</option>

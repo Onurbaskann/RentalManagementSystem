@@ -57,7 +57,7 @@
                             </a>
                             @if (!r.IsSystemRole)
                             {
-                                <form method="post" action="/Admin/Roles/Delete/@r.Id.ToHashId()"
+                                <form asp-permission="@PermissionCatalog.Role.Delete" method="post" action="/Admin/Roles/Delete/@r.Id.ToHashId()"
                                       data-confirm="'@r.Name' rolünü silmek istediğinizden emin misiniz?" class="inline">
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="btn btn-sm btn-danger">Sil</button>

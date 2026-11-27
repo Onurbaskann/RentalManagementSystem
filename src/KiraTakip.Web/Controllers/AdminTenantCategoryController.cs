@@ -93,7 +93,7 @@ public class AdminTenantCategoryController(ITenantCategoryService tenantCategory
 
     [HttpPost("ToggleStatus/{id}")]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionCatalog.TenantCategory.Edit)]
+    [Authorize(Policy = PermissionCatalog.TenantCategory.ToggleStatus)]
     public async Task<IActionResult> ToggleStatus(int id)
     {
         await tenantCategoryService.ToggleStatusAsync(new ToggleTenantCategoryStatusInput(id));

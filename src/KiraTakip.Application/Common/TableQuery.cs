@@ -10,8 +10,6 @@ public class TableQuery
     public decimal? Min { get; set; }
     public decimal? Max { get; set; }
     public string? Status { get; set; }
-    public int? PropertyId { get; set; }
-    public int? UnitId { get; set; }
     public int? TenantId { get; set; }
     public string? Source { get; set; }
     public int? Year { get; set; }
@@ -39,8 +37,6 @@ public class TableQuery
         if (Max.HasValue) d["max"] = Max.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
         if (!string.IsNullOrWhiteSpace(Status) && Status != "tum") d["status"] = Status;
         
-        if (PropertyId.HasValue) d["propertyId"] = PropertyId.ToString();
-        if (UnitId.HasValue) d["unitId"] = UnitId.ToString();
         if (TenantId.HasValue) d["tenantId"] = TenantId.ToString();
         if (!string.IsNullOrWhiteSpace(Source)) d["source"] = Source;
         if (Year.HasValue) d["year"] = Year.ToString();
