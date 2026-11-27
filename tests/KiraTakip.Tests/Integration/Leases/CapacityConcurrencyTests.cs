@@ -348,7 +348,9 @@ public class CapacityConcurrencyTests(DatabaseFixture fixture)
         await context.UnitCapacityHistories.Where(h => h.UnitId == data.UnitId).ExecuteDeleteAsync();
         await context.Units.IgnoreQueryFilters().Where(u => u.Id == data.UnitId).ExecuteDeleteAsync();
         await context.UnitTypes.Where(t => t.Id == data.UnitTypeId).ExecuteDeleteAsync();
+        var categoryIds = await TestTenantCategory.IdsOfAsync(context, data.TenantIds);
         await context.Tenants.IgnoreQueryFilters().Where(t => data.TenantIds.Contains(t.Id)).ExecuteDeleteAsync();
+        await TestTenantCategory.DeleteAsync(context, categoryIds);
         await context.Properties.IgnoreQueryFilters().Where(p => p.Id == data.Seed.PropertyId).ExecuteDeleteAsync();
         await context.UnitTypes.Where(t => t.Id == data.Seed.UnitTypeId).ExecuteDeleteAsync();
         await context.Users.Where(u => u.Id == data.Seed.ApplicantId || u.Id == data.Seed.ReviewerId).ExecuteDeleteAsync();

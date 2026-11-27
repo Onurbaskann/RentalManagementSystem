@@ -987,8 +987,10 @@ public class LeaseApprovalServiceTests : IDisposable
             .Where(lease => lease.UnitId == seed.UnitId).ExecuteDeleteAsync();
         await _context.Units.IgnoreQueryFilters()
             .Where(unit => unit.Id == seed.UnitId).ExecuteDeleteAsync();
+        var categoryIds = await TestTenantCategory.IdsOfAsync(_context, [seed.TenantId]);
         await _context.Tenants.IgnoreQueryFilters()
             .Where(tenant => tenant.Id == seed.TenantId).ExecuteDeleteAsync();
+        await TestTenantCategory.DeleteAsync(_context, categoryIds);
         await _context.ChargeTypes.IgnoreQueryFilters()
             .Where(type => type.Id == seed.ChargeTypeId).ExecuteDeleteAsync();
         await _context.Properties.IgnoreQueryFilters()
